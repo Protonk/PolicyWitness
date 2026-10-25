@@ -6,8 +6,9 @@ fails to establish, and where activities that share the name *test* do
 different jobs or where differently named activities do the same job. It
 describes the tree at one revision. It proposes nothing; findings are
 statements about what a check does and does not do, cited to its lines.
-Catalog-case accounting is complete; the [survey plan](../../tests/TEST-WORK-SURVEY-PLAN.md)'s
-representative reading inside every batch group is not. The inspection limits
+All 235 catalog cases are accounted for. The batch-group reading required by
+the [survey plan](../../tests/TEST-WORK-SURVEY-PLAN.md) is recorded in Appendix B,
+including materially different work inside a group. The inspection limits
 below apply to all claims about coverage.
 
 ## 1. Scope and coverage
@@ -43,13 +44,16 @@ below apply to all claims about coverage.
   did not search, and the files exist), re-read 20 rows from all five passes
   beside the source text at their cited lines. Citation resolution establishes
   that a location exists, not that it supports the row's interpretation.
-  Section 2 contains fourteen investigations (2.0 through 2.13).
-- Review used a second detached worktree at the same revision, traced the
-  findings to their assertions and shared helpers, and recounted the Python
-  groups without importing or executing their tests. Appendix A preserves
-  the original per-case inspection levels; subsequent targeted reading is
-  identified in Appendix B. Neither the original survey nor the review ran
-  a case or credited a runtime result.
+  Section 2 contains fifteen investigations (2.0 through 2.14).
+- Review used detached worktrees at the same revision, traced findings to
+  assertions and shared helpers, and enumerated batch members from source
+  without importing or executing their tests. Assertion reading covers all
+  223 Rust test functions, 277 Swift `tk.run` sites and 205 Python unittest
+  methods in the listed batches. Names, comments, equipment guards, scenario
+  tables and relevant setup/helpers distinguish the jobs those assertions
+  perform. Appendix A accounts for cases; Appendix B accounts for their
+  groups. Neither the survey nor the review ran a case or credited a runtime
+  result.
 - Older accounts: the opt-in survey (`records/tests/OPT-IN-REPORT.md`)
   examined `2f23cad`, thirteen commits earlier; the intervening commits are a
   wording change, the commit recording that survey, the test-execution
@@ -123,17 +127,14 @@ are levels of reading, not a classification of test purposes:
 | --- | --- | --- |
 | Read individually | 163 | The case's own script or branch and its checker were read to the decisive assertions. |
 | Read through its driver function | 38 | One branch of a multi-case driver; the shared driver, the branch and the shared helper were read once. |
-| Pointer to a table or batch | 23 | The driver and checker were read; per-case expectations are rows of a table or members of a batch: the 8 menagerie specimens and their 8 BYOXPC copies (manifest rows), `comparison_matrix` and `extension_combinations` (matrix rows), `rust.unit` (209 functions counted per module, bodies not read), `cli.integration` (14 functions named, one gate body read), the Swift executable (32 functions named from the registry with their comments; `TestKit` and every equipment guard read; bodies not read), `clock_arithmetic` and `proceed_precedence` (the C fixtures' headers and assertion excerpts). |
-| Groups partly read | 11 | Large Python checkers whose classes or scenario functions were enumerated and partly read: `build_provenance_controls` excerpts from 6 of 16 test-bearing classes (68 methods); `build_refusal_controls` 3 of 49 control functions plus its tables; `release_publish_controls` 1 of 4 scenario functions fully; `release_rotation_controls` 2 of 9; seven `source_drift` cases with selected methods or rules read, and `build_rules.py` and the planner's `main` read in full. |
+| Read through a table or batch | 23 | The driver/checker and its nested assertions were read: 8 menagerie specimens and 8 BYOXPC reuses; `comparison_matrix` and `extension_combinations`; the Rust unit and CLI integration batches; the Swift executable; `clock_arithmetic` and `proceed_precedence`. Appendix B identifies the groups, member counts and fixture boundaries. |
+| Read by checker group | 11 | Large Python checkers accounted for by class or scenario: `build_provenance_controls` (16 classes, 68 methods), `build_refusal_controls` (49 control/sequence functions), `release_publish_controls` (4 scenarios), `release_rotation_controls` (9 scenarios), and seven `source_drift` cases. Assertion reading covers every method or listed scenario; shared rules and planner controls are accounted for separately in Appendix B. |
 
-The original notes enumerate 21 Rust test-bearing files, the 32 registered
-Swift functions with their comments and 55 group names, and Python classes.
-Reading a Rust test's `#[ignore]` attribute or a Swift equipment guard is
-not reading that member's assertions. The original passes did not read a
-representative body in every Rust, Swift or Python group, and did not identify
-every differently marked member for assertion reading as Stage 1 requires.
-Appendix B records the available group-level accounting and its gaps. These
-limits prevent claiming completion of that part of the plan.
+Appendix B records assertions read in all 21 Rust test-bearing files, all 32
+registered Swift functions with their 55 group names, and all 31 test-bearing
+Python classes. No member of those groups is credited on its name or equipment
+guard alone. The two ignored Rust receipt replays, real-worker Swift blocks,
+constructed comparisons and native fixtures are distinguished explicitly.
 
 ### Limits of inspection
 
@@ -143,11 +144,12 @@ limits prevent claiming completion of that part of the plan.
   Retained runs in the original checkout were not consulted for results.
 - BYOXPC, signing and build-driving cases were read, not run; their equipment
   paths (launchd, keychain, notarization stand-ins) are described from code.
-- Inside the native control fixtures (`clock_control.c`, `proceed_control.c`,
-  `terminal_control.c`, `first_touch_control.c`, `exec_control.c`) and the two largest Python drivers
-  (`build_refusals.py`, `check_build_provenance.py`), assertions were read at
-  group level and by excerpt; per-property coverage there is accounted for by
-  pointer to the fixture, not established.
+- Batch-member reading means reading assertion expressions, rejection paths
+  and relevant setup/helpers, not every line of every body or a transitive
+  audit of every called implementation. The five native control fixtures in
+  Appendix B were read in full. Table assertions were read with their scenario
+  distinctions; this is not an independent derivation of every expected value
+  in the shared corpora, nor proof that all possible behaviours are covered.
 - Where a pass's own words are quoted (registry, README, script comment), the
   quotation is the document's claim; what the code asserts is stated beside
   it.
@@ -482,9 +484,37 @@ those failures. `runner_exec_inheritance/mutation_controls`
 has the same shape (`opt_in/mutations.py`, reusing `check.run_worker` from
 the `contaminated_worker` case) and fails on any refactor that moves its two
 anchors regardless of behaviour, which its README (54-55) says.
-`runner_unit/exec_reader_mutations` and `reaped_ack_mutation` apply the
-pattern to disposable copies of the Swift package (three and two
-compilations, per the registry); the planner controls inside
+Two Swift mutation controls observe different boundaries in disposable
+package copies:
+
+- `runner_unit/exec_reader_mutations` requires the unmodified
+  `runExecObservationTests` to pass all three blocks, with no `FAIL` or `SKIP`.
+  Its baseline preserves independent exec facts and absent metadata through
+  decoding/encoding, refuses malformed present facts or degrades the reply,
+  and gates C-slot payload on completion. The native lifecycle fixture
+  publishes constructed exec evidence; it does not launch an exec child.
+  Bypassing the completion gate must leave exactly two blocks passing and
+  fail the named unpublished-payload assertion. Inventing absent metadata
+  must fail the named `absence cannot become not_requested` assertion in the
+  independent-combinations block; that variant requires at least one failure,
+  not an exact failure count. A generic nonzero exit is insufficient, and
+  `SKIP` is forbidden for every variant
+  (`tests/suites/runner_unit/opt_in/exec_reader_mutations.py:80-103`;
+  `runner/Tests/PWRunnerCoreTests/ExecObservationTests.swift:24-107`).
+- `runner_unit/reaped_ack_mutation` requires all three baseline scenarios to
+  pass: clean exit, signal exit and ownership loss. The first two establish
+  that final reconciliation recovers an acknowledgement not seen before
+  the native reap; the third preserves the raw acknowledgement while
+  withholding established ordering after an injected ownership fault.
+  They use a real fixture child and native wait, constructed query/attempt
+  evidence, and no sandbox application. Independent `waitpid` must report
+  `ECHILD` after the driver has reaped the child. Removing reconciliation
+  must fail **both** clean and signal acknowledgement assertions, with
+  exactly two failures and the ownership-loss scenario the sole passing
+  control (`tests/suites/runner_unit/opt_in/reaped_ack_mutation.py:89-99`;
+  `runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift:96-203`).
+
+The planner controls inside
 `source_drift/runner_source_manifests_agree` (`check_planner.py:156-162`)
 rewrite sources in a disposable checkout, run the real `check.py`, and
 require the expected return code and diagnostic for each mutation before
@@ -493,12 +523,21 @@ is the inverse: it runs the preserved `host_setup_controls` checker as a
 `legacy` module against three deliberately wrong host variants and passes
 only if that checker still accepts all 22 cases for every variant
 (`host_setup_oracle_sensitivity.py:334-336`); a sharper oracle would fail it.
-It pins the oracle's insensitivity, as 2.6's cases pin a limitation.
+It also requires ten rejected legacy controls and independent descriptor,
+argv and native mapping observations, including positive mapping detection,
+the partial-unmap suffix and its successful fixture cleanup
+(`tests/suites/runner_unit/host_setup_oracle_sensitivity.py:306-370`).
+The pass pins the old oracle's insensitivity while establishing that the
+supplemental observers detect the particular wrong operations.
 
 ### 2.6 Passing by observing a counterexample
 
-The registry calls seven non-default cases characterizations that assert no
-product behaviour. Three read to their assertions:
+The registry's “Worker resource challenge probes” entry names three cases
+and says a pass means the stated counterexample was observed, not a safety
+guarantee (`tests/OPT_IN_TESTS.md:75-92`). Its separate launch-inventory entry
+explicitly requires mandatory observations and production cleanup to succeed
+(94-106). These are bounded claims, consistent with assertions about the
+observed execution. The following cases illustrate different pass conditions:
 
 - `runner_exec_lifecycle/closed_streams_leader_exit`
   (`check_closed_streams_leader_exit.py`): the docstring says it "pins a
@@ -531,11 +570,10 @@ product behaviour. Three read to their assertions:
   `collection_basis == after_confirmed_reap`, the ready byte received or not
   per seam, the override echoed, and the worker gone after reap (100-117).
 
-The blanket claim that these cases assert no product behaviour is too broad:
-the two CLI cases assert product lifecycle facts, while the native-clock case
+The two CLI cases assert product lifecycle facts, while the native-clock case
 asserts the applicability of production helpers in a standalone probe. The
-survivor case requires its stated limitation. Neither a pass nor the registry's
-label makes those observations general beyond the tested host and OS.
+survivor case requires its stated limitation. These observations do not
+establish a general safety guarantee beyond the tested host and OS.
 Old-clock failures, unlike the survivor, need not occur for a pass.
 `witness_contract/path_query_observations`
 is a different kind of member of the group: it never submits a PolicyWitness
@@ -813,15 +851,23 @@ assertions are shared, but now apply to that runner context. Wrapper setup
 or cleanup can fail the invocation (`suite_exit`) without changing a leaf
 report already written; installation also has its own catalog case.
 
-Two pairs in the harness are closer than these. Scenario rows
+The harness contains an equivalent scenario pair and a pair with different
+delivery checks. Scenario rows
 `proceed_delayed_observed_quiescence` and `proceed_wait_budget_long` are
 identical in parameters apart from their names (`harness.c:344, 347`) and
 take the same checker branch (`check_proceed.py:21`): no difference in the
 worker stimulus or oracle was identified. Names and per-run conditions can
-still distinguish their executions. `policy_overflow_refused` (307200 bytes) and
-`policy_capacity_plus_one_refused` (262144) differ only in the oversize and
-share every expectation; a fault sensitive to input length could distinguish
-them. And `witness_contract/bug_report_returns_attempts`
+still distinguish their executions. `policy_overflow_refused` constructs
+307200 bytes consisting of a version-only prefix followed by whitespace;
+`policy_capacity_plus_one_refused` pads an allow-default policy to exactly
+262144 bytes (`tests/suites/runner_c_worker_harness/harness.c:692-718`).
+Both require the same overflow refusal,
+a header expectation of 262143 and no EOF receipt, but the first requires
+`policy_bytes_written > 262143` while the second requires exactly 262144
+(`tests/suites/runner_c_worker_harness/run.sh:118-127`). Their source content,
+submission length and delivery-count
+assertions differ; they share the refusal being tested, not every expectation.
+And `witness_contract/bug_report_returns_attempts`
 requires only a non-empty `steps` and an integer first
 `attempt.rc` (`bug_report_returns_attempts.sh:49-58`), over the same policy and
 probe plan as the main `bug_report_returns_verdicts` specimen, under a
@@ -840,11 +886,86 @@ capacity with exit 6; the argv disagreement is a later diagnostic, not the
 refusal that this case observes
 (`controller/tools/pw_probe_runner/pw_probe_runner.c:1676-1687`).
 
+### 2.14 Different work inside the batches
+
+`unit/rust.unit` is not uniformly a constructed-input batch. The `sbpl-check`
+parameter tests use `FakeNative` and assert its call ledger, including cleanup
+after injected errors; the integration suite instead invokes the selected
+native compiler (`controller/src/bin/sbpl-check.rs:653-1160`;
+`controller/integration/cli_contract.rs:73-1115`). Within the Rust unit batch,
+`runner_client` starts real Python children to test pipes, failed request
+delivery and transport timing, beside tests of constructed capture buffers
+(`controller/src/runner_client.rs:133-474`). `host_facts` reads live sysctl
+values, and `sbpl_imports` resolves real platform paths beside temporary import
+graphs and lexical checks (`controller/src/host_facts.rs:69-98`;
+`controller/src/sbpl_imports.rs:392-725`). Their passes establish different
+boundaries: a fake-call sequence, an actual child exchange, or an observation
+of the current host. None alone is a CLI witness run.
+
+The same distinction occurs inside one Swift function. `runCWorkerTests`
+contains 24 `tk.run` sites: real-worker file and sysctl attempts, parameter
+transfer, exec outcomes, deadline and post-apply controls, plus pre-spawn
+admission checks (`runner/Tests/PWRunnerCoreTests/CWorkerTests.swift:41-860`).
+`runCWorkerLifecycleTests` uses real child processes but a no-sandbox ABI
+fixture, with injected wait/kill faults; its acknowledgement controls require
+an independent final reap check. `runWorkerEvidenceTests` exercises production
+C compiled with native-call substitutions and also decodes constructed
+publications
+(`CWorkerLifecycleTests.swift:98-335`; `WorkerEvidenceTests.swift:24-294`).
+A child process is therefore not enough to identify a native policy
+observation. The failure contract's ownership table is useful at these
+boundaries, but its constructed-ordering row is not an inventory of all
+`OrderingTests` work: that function also drives the real host against a
+lifecycle fixture and uses the shipped validator
+(`tests/FAILURE-PROPAGATION-CONTRACT.md:617-629`;
+`OrderingTests.swift:69-88, 257-345`).
+
+`runComparisonEvidenceTests` feeds all 43 matrix rows through
+`comparisonEvidence`, checking all six fields, their exact encoded keys and
+the limitation vocabulary (`ComparisonEvidenceTests.swift:1-193`). These
+are constructed channel inputs, including S09's unsupported attempt, not
+observations of those actions. The matrix's live S/B/C cases, extension
+combinations M01–M07, in-flight deadline row T and combined-phase driver M08
+observe different routes before comparing the same record shape. M08's
+production-driver block separately checks failed validator cleanup, late
+EPIPE, distinct phase-local records and an independently prepared fresh read
+(`PhaseProtocolTests.swift:321-417`). The two ignored Rust tests then replay
+Swift-produced policy-transfer and clock replies through Rust assembly and
+the Python consumer (`controller/src/run_flow.rs:931-1213`). Replay adds a
+reader/transport boundary; it does not repeat the original native observation.
+
+The provenance batch similarly mixes host operations and constructed
+decisions. `ResolverTests` probes the actual pinned interpreter beside fake
+resolver inputs; `LockTests` and `ShimContainmentTests` exercise real process,
+lock and restrictive-profile boundaries. `SdkTests` and `OutputTargetTests`
+compile native fixtures, and the latter reads their bytes independently of
+the production decision. `SignatureDisplayTests` instead parses constructed
+display text, while stamp and Cargo-judgment tests supply controlled tool
+observations (`tests/suites/preflight/check_build_provenance.py:255-1093,
+1249-1471, 1820-1934, 2171-2608`). A pass of the display parser is not
+cryptographic verification; a pass of a stamp decision is not evidence that
+an actual compiler produced a particular app.
+
+The `source_drift` name also includes execution. Alongside text, manifest and
+generated-copy comparisons, build-documentation and planner controls run
+real Meson configurations in disposable copies and require specific refusal
+diagnostics; architecture controls render SVG with Graphviz
+(`tests/suites/source_drift/build.py:65-540`;
+`tests/suites/source_drift/check_planner.py`;
+`tests/suites/source_drift/architecture.py:58-293`). A failed batch can thus
+mean an assertion failure, missing equipment, compiler/configuration failure
+or failed fixture cleanup. The case status alone does not separate them;
+the batch log and named failing member do. Appendix B accounts for all member
+assertions and these distinct jobs without crediting any runtime outcome.
+
 ## 3. Consequential contrasts and overlaps
 
 Superficially similar, materially different:
 
 - "Controls": five jobs (2.2). "Validator": two programs (2.2).
+- "Unit" and "source drift" batches contain constructed decisions, real
+  child/process observations and native-tool execution within the same case
+  status (2.14).
 - The two smoke cases: same fixture, same invocation, different added assertions
   (2.1). `happy_path_baseline` and `validator_subprocess_populated`: same
   plan, different fields.
@@ -1007,17 +1128,12 @@ otherwise accurate claims.
 3. `tests/suites/blackbox_menagerie/README.md:25-27` and sixteen catalog
    `skip_reasons` describe an absent-annotated-mismatch skip. The current
    manifest's `attempt_ok` expectations make that skip unreachable (2.11).
-4. `tests/OPT_IN_TESTS.md`, “Worker resource challenge probes,” says the
-   characterization cases assert no product behaviour. The CLI examples
-   assert lifecycle facts, and `closed_streams_leader_exit` requires the
-   descendant to survive (2.6). The native-clock case instead exercises a
-   standalone probe containing production clock helpers.
-5. Catalog descriptions overstate the smoke and liveness cases:
+4. Catalog descriptions overstate the smoke and liveness cases:
    `smoke/specimen_file_read_deny_standard` says “Explicit standard runner
    returns the expected file denial,” although there is no explicit runner
    selector or denial assertion; `runner_mach_service_liveness` claims a
    bound listener from a process-state sample (2.1, 2.10).
-6. `tests/suites/witness_contract/README.md` omits six members:
+5. `tests/suites/witness_contract/README.md` omits six members:
    `attempt_outcome_matrix_enforced`, `bug_report_returns_attempts`,
    `debuggable_mode_rejected`, `instrumentation_field_rejected`,
    `shm_sentinel_under_deny_default`, and `validator_subprocess_populated`.
@@ -1026,21 +1142,21 @@ otherwise accurate claims.
    account says unavailable overrides include relative, NUL and overlong
    paths, while `check_dossier.py:339-346` tests a nonexistent path; it says
    three BYOXPC binary records, while the checker tests four roles (369-370).
-7. The witness README promises “no ordering object” after a failed spawn
+6. The witness README promises “no ordering object” after a failed spawn
    (584-586). `check_pre_apply_failure.py:288` checks absence only at the
    top level of `runner_result`, where the current response does not place
    ordering; this does not assert absence at the phase location. The same
    README says `worker_termination` asserts collection fields absent
    (476-482); `check_worker_termination.py:56` checks absence of `log_last`
    in `data`, not the broader collection-field claim.
-8. `tests/suites/runner_use_c_worker/README.md:75-81` says
+7. `tests/suites/runner_use_c_worker/README.md:75-81` says
    `access_failure_classified` asserts a `permission_failure` observation,
    while `run.sh:499-505` checks only attempt outcome, rc and errno. It says
    the unsupported-operation case's attempt spawns normally; that specimen's
    attempts are sysctl reads (`run.sh:938-943`). Its `happy_default_allow`
    relations are checked indirectly by the consumer against reported inputs,
    rather than by the inline literal assertions (2.1).
-9. Other assertion limits are narrower than their accounts:
+8. Other assertion limits are narrower than their accounts:
    `runner_ready_byte_resilience` omits from its success criteria the 1000 to
    1250 ms ready-wait window enforced by `run.sh:125-129`;
    `blackbox_e2e/README.md` names exactly
@@ -1049,7 +1165,7 @@ otherwise accurate claims.
    requires exactly one allowed `query_plan` limitation;
    the two IOKit READMEs say three filter callers, while the shared controls
    have four (`runner_filter_sysctl_name/checker_controls.py:23-28`).
-10. In-script accounts retain unsupported descriptions:
+9. In-script accounts retain unsupported descriptions:
     `bug_report_returns_attempts.sh:50-52` says bare deny-default for a policy
     that allows `file-read-data`; `check_attempt_in_flight.py:9-10` calls the
     a1 cause red/unknown while the controller has the
@@ -1057,7 +1173,7 @@ otherwise accurate claims.
     2733`; `controller/src/disposition.rs:66`). `harness.c:7-10` presents five
     scenario choices while its table contains 47 rows. These comments do not
     add assertions to the cases.
-11. Equipment declarations exceed or omit the operations reached:
+10. Equipment declarations exceed or omit the operations reached:
     `clock_arithmetic`, `proceed_precedence` and `exec_control_states` inherit
     `app`, `clang`, `worker`, although their checks compile production C into
     controls without launching the selected app or worker; witness cases
@@ -1068,22 +1184,22 @@ otherwise accurate claims.
     fixture (2.7). The preflight README says `release_deadline_controls` needs
     the suite compiler prerequisite (298-299), while its catalog entry and
     Python fixture require no compiler.
-12. `tests/COVERAGE.md:27-28` spells the two included validator-failure cases
+11. `tests/COVERAGE.md:27-28` spells the two included validator-failure cases
     under `witness_contract/`; the selector accepts their canonical
     `runner_validator_failure/` IDs, not those aliases (`test_cli.py:71-75`).
-13. `tests/suites/shell_helpers/README.md:57-58` says `test_check_python` uses
+12. `tests/suites/shell_helpers/README.md:57-58` says `test_check_python` uses
     `/usr/bin/python3`; `tests/lib/case.sh:53` uses `${PW_PYTHON} -B -S`, the
     pinned Homebrew interpreter. The README elsewhere correctly explains the
     pin. `tests/suites/source_drift/README.md:446` gives the build-control
     wrapper shebang without the final `-S` required by `direct_python.py:19`.
-14. `tests/suites/runner_unit/README.md:70-71` states success as exit 0 with a
+13. `tests/suites/runner_unit/README.md:70-71` states success as exit 0 with a
     matching summary. The wrapper also rejects `SKIP`/`FAIL` lines and
     requires two Cargo replays (2.4).
 
 ## 6. Open questions
 
 These are not results of this survey. Runtime observations would require
-separate authorized execution; source-reading gaps are listed in Appendix B.
+separate authorized execution; static inspection boundaries are listed in Appendix B.
 
 1. What margin does `runner_mach_service_liveness` have against its intended
    regression? A measured abort latency for the broken variant, under stated
@@ -1143,25 +1259,34 @@ command ran. The original checkout was not required to stay clean or at the
 examined revision, and nothing there besides this file is attributed to the
 survey.
 
-The review likewise used a disposable worktree at the examined revision and
+Review likewise used disposable worktrees at the examined revision and
 read-only source/Git commands, plus scratch files and edits to this report.
-At its final check (2026-10-25 17:51 UTC), that worktree still had the
-examined HEAD, empty status, no `tests/out` and no checkout lock. Focused
-review checks parsed the report, applied the Markdown command rule, resolved
-its relative link and reconciled all 235 IDs and inspection totals against
-the pinned catalog and saved plan. These are not executions of a catalog case. The original notes, ledger and command
-record remain session-local and are not committed. Their location is
+The final source check (2026-10-25 18:27 UTC) found the examined HEAD, empty
+status, no `tests/out` and no checkout lock. Focused review checks parsed the
+report, applied the Markdown command rule explicitly (records are normally
+excluded), resolved its relative link and reconciled all 235 IDs and inspection
+totals against the pinned catalog and saved plan. They also reconciled the
+21 Rust, 32 Swift and 31 Python group rows, their 705 members and the 55 Swift
+group labels, and checked cited file/line extents. These are not executions
+of a catalog case. Citation resolution does not establish semantic support;
+that is the purpose of the assertion reading above.
+
+The original notes, ledger and command record remain session-local and are
+not committed. Their location is
 `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/c8bb3630-28e3-4e53-af2b-2d5a68bc4727/scratchpad/survey/notes`;
-review scratch is `/private/tmp/pw-survey-review.GdtY8j`. The appendices
-preserve the inspection accounting needed to read this report without those
-scratch files, but do not reproduce the working ledger's interpretations.
+review scratch is `/private/tmp/pw-survey-review.GdtY8j` and
+`/private/tmp/pw-survey-completion.Gaqd2T` (member inventory, assertion-reading
+excerpts and validation record). The disposable source worktrees were removed.
+The appendices preserve the inspection accounting needed to read this report
+without those scratch files, but do not reproduce the working ledger's
+interpretations.
 
 ## Appendix A. Per-case inspection accounting
 
-These levels describe the original passes, using the definitions in section 1.
-They do not imply every nested fixture or batch member was read. The 235 IDs
-are unique and equal the saved all-case plan. Totals: 163 Individual, 38 Driver,
-23 Table/batch, 11 Partial groups. Appendix B qualifies nested and batch reading.
+These levels use the definitions in section 1. The 235 IDs are unique and
+equal the saved all-case plan. Totals: 163 Individual, 38 Driver, 23 Table/batch,
+11 Groups. Appendix B gives the member-level reading and boundaries for
+nested fixtures and batches.
 
 | Canonical case | Inspection |
 | --- | --- |
@@ -1195,15 +1320,15 @@ are unique and equal the saved all-case plan. Totals: 163 Individual, 38 Driver,
 | `failure_boundaries/validator_removed_target` | Individual |
 | `integration/cli.integration` | Table/batch |
 | `preflight/build_guard_controls` | Individual |
-| `preflight/build_provenance_controls` | Partial groups |
-| `preflight/build_refusal_controls` | Partial groups |
+| `preflight/build_provenance_controls` | Groups |
+| `preflight/build_refusal_controls` | Groups |
 | `preflight/build_toolchain_switch_controls` | Individual |
 | `preflight/byoxpc_verification_controls` | Individual |
 | `preflight/codesign.preflight` | Individual |
 | `preflight/release_controls` | Individual |
 | `preflight/release_deadline_controls` | Individual |
-| `preflight/release_publish_controls` | Partial groups |
-| `preflight/release_rotation_controls` | Partial groups |
+| `preflight/release_publish_controls` | Groups |
+| `preflight/release_rotation_controls` | Groups |
 | `preflight/signed_artifact_controls` | Individual |
 | `preflight/translated_build_refusal_controls` | Individual |
 | `run_capture/controls` | Individual |
@@ -1346,14 +1471,14 @@ are unique and equal the saved all-case plan. Totals: 163 Individual, 38 Driver,
 | `smoke/runner_caller_auth` | Individual |
 | `smoke/specimen_file_read_deny` | Individual |
 | `smoke/specimen_file_read_deny_standard` | Individual |
-| `source_drift/architecture_documentation` | Partial groups |
-| `source_drift/build_documentation` | Partial groups |
-| `source_drift/contract_versions` | Partial groups |
+| `source_drift/architecture_documentation` | Groups |
+| `source_drift/build_documentation` | Groups |
+| `source_drift/contract_versions` | Groups |
 | `source_drift/direct_python_start` | Individual |
-| `source_drift/generator_contract` | Partial groups |
-| `source_drift/limits_documentation` | Partial groups |
-| `source_drift/markdown_reader` | Partial groups |
-| `source_drift/runner_source_manifests_agree` | Partial groups |
+| `source_drift/generator_contract` | Groups |
+| `source_drift/limits_documentation` | Groups |
+| `source_drift/markdown_reader` | Groups |
+| `source_drift/runner_source_manifests_agree` | Groups |
 | `unit/rust.byoxpc_reds` | Individual |
 | `unit/rust.disposition_reds` | Individual |
 | `unit/rust.fmt` | Individual |
@@ -1403,50 +1528,58 @@ are unique and equal the saved all-case plan. Totals: 163 Individual, 38 Driver,
 
 ## Appendix B. Group and nested-fixture reading
 
-A named group is an inventory entry, not assertion coverage. Unless a member
-or excerpt is identified below, its assertions have no recorded reading in
-this survey. The additional reading during review was targeted at the findings;
-it did not complete Stage 1's representative-per-group requirement.
+“All” below identifies every test member in the cited group at `31b8195`,
+not just a representative. Assertions and rejection paths were read for all
+223 Rust functions, 277 Swift call sites and 205 Python unittest methods;
+none of these members is grouped on names alone. Counts are static, including
+loop bodies once and ignored Rust functions. They are not runtime pass totals.
+The work column records distinctions found in assertions, with relevant setup
+and helper reading; it does not claim every transitive implementation was audited.
 
 ### Rust
 
-The original passes counted attributes by file and read the integration gate
-and the two ignored-test attributes. They did not read representative bodies
-in every module. All files below are under `controller/`; a file can contain
-test functions without a `mod tests` wrapper. Review assertion reading is
-listed explicitly; other members remain unexamined at body level.
+Paths are under `controller/`. Each row covers all `#[test]` functions in the
+file, whether or not they have a `mod tests` wrapper. Ranges locate the members.
 
-| Test-bearing file | `#[test]` count | Assertions read during review |
+| Test-bearing file / member range | Members with assertions read | Work distinguished |
 | --- | --- | --- |
-| `integration/cli_contract.rs` | 14 | None recorded |
-| `src/app_layout.rs` | 1 | None recorded |
-| `src/augments.rs` | 8 | None recorded |
-| `src/bin/sbpl-check.rs` | 11 | None recorded |
-| `src/disposition.rs` | 22 | `exec_observations_preserve_independent_facts_and_refuse_malformed_combinations`, `phase_collection_states_gate_disposition_without_requiring_success`, `shared_evidence_type_corpus` |
-| `src/dossier.rs` | 12 | None recorded |
-| `src/evidence.rs` | 5 | None recorded |
-| `src/host_facts.rs` | 3 | None recorded |
-| `src/json_contract.rs` | 4 | None recorded |
-| `src/policy_check.rs` | 5 | None recorded |
-| `src/request_patch.rs` | 1 | None recorded |
-| `src/run_flow.rs` | 23 | None recorded |
-| `src/runner_acquisition.rs` | 6 | None recorded |
-| `src/runner_client.rs` | 12 | `path_wire_fixtures_survive_capture_serialization_and_independent_consumer` |
-| `src/runner_commands.rs` | 4 | None recorded |
-| `src/runner_manager.rs` | 21 | None recorded |
-| `src/runner_select.rs` | 31 | None recorded |
-| `src/sbpl_imports.rs` | 15 | None recorded |
-| `src/sbpl_lex.rs` | 19 | None recorded |
-| `src/shape.rs` | 3 | None recorded |
-| `src/utils.rs` | 3 | None recorded |
+| `integration/cli_contract.rs:73-1115` | All 14 | Selected CLI and native policy compiler: versions, smoke envelope, malformed requests, path-byte identity, augmentation admission and import resolution. Every member has the integration gate. |
+| `src/app_layout.rs:92-102` | All 1 | Layout constants agree with literal bundle paths; no bundle is inspected. |
+| `src/augments.rs:212-366` | All 8 | Temporary fragment files: metadata/source hashes, composition, explicit refusals and no partial request mutation. |
+| `src/bin/sbpl-check.rs:653-1160` | All 11 | FakeNative records parameter creation, setting, freeing and injected errors; separate manifest, limit, inventory and envelope checks. No native compile is established by the fake-call tests. |
+| `src/disposition.rs:1725-2423` | All 22 | Constructed lifecycle/exec/phase facts and shared corpora: independent facts survive, invalid combinations withhold claims, missing evidence stays missing, and future progress values do not become familiar states. |
+| `src/dossier.rs:697-1475` | All 12 | Temporary manifests, files and hash comparisons, override provenance and evidence lookup; host-fact member additionally reads actual sysctl strings. |
+| `src/evidence.rs:207-370` | All 5 | Temporary manifest bytes, positive and mismatched hashes, symbol parsing and exact typed lookup. |
+| `src/host_facts.rs:69-98` | All 3 | Live kern/hw sysctl strings plus unknown-name and embedded-NUL refusals. |
+| `src/json_contract.rs:155-252` | All 4 | Envelope key order, build metadata, result shape and versions against the manifest. |
+| `src/policy_check.rs:149-333` | All 5 | Constructed helper output: supported/unfamiliar outcomes, empty or invalid UTF-8, captured bounds, and absence of retired projections independent of exit code. |
+| `src/request_patch.rs:102-117` | All 1 | Only the requested JSON field changes; unrelated fields survive. |
+| `src/run_flow.rs:829-2826` | All 23 | Constructed admission/assembly and injected dependency-call order; two ignored members instead replay retained Swift driver replies through Rust assembly and an independent Python consumer. |
+| `src/runner_acquisition.rs:285-451` | All 6 | Injected generation observations and a simulated elapsed clock: retirement, PID reuse, refusal and shared wait budget; no launchd acquisition is observed. |
+| `src/runner_client.rs:133-474` | All 12 | Real Python child pipes, broken-pipe delivery and elapsed transport brackets beside constructed capture buffers, invalid UTF-8 and capture limits. |
+| `src/runner_commands.rs:897-989` | All 4 | Verify-request contents and default wait, explicit manifest requirements, missing-client failure and reply projection. |
+| `src/runner_manager.rs:1281-2242` | All 21 | Mocked signing/cleanup faults and serialization beside real temporary registry atomicity, open-reader survival and lock-inode preservation. |
+| `src/runner_select.rs:558-1273` | All 31 | Nested/top-level/null intent precedence, worker entitlements, temporary manifests/registries, privileged BYOXPC scope and pending-cleanup refusals. |
+| `src/sbpl_imports.rs:392-725` | All 15 | Temporary import graphs, identities, byte/file/depth limits and FIFO timeout; separate members resolve real system.sb and the /bin/sh platform path. |
+| `src/sbpl_lex.rs:224-381` | All 19 | Lexical import extraction across comments, escapes, quotes and malformed forms; not native SBPL acceptance. |
+| `src/shape.rs:250-371` | All 3 | Constructed JSON shape classification and field/type ordering. |
+| `src/utils.rs:221-307` | All 3 | Injected writer failure, UTF-8 byte capture and bounded diagnostics. |
+
+The ignored members are `run_flow::tests::policy_transfer_driver_replies_cross_assembly_and_consumer`
+and `worker_clock_driver_replies_cross_assembly_and_consumer`
+(`controller/src/run_flow.rs:931-1213`). Both read Swift-produced receipts,
+check their assembly/serialization and invoke the Python consumer; their
+assertions include constructed corruptions and lifecycle-oracle checks.
+They do not independently generate the worker observations. Ordinary
+`rust.unit` excludes them; the runner-unit wrapper explicitly invokes both
+after Swift has produced the receipts (2.4).
 
 ### Swift
 
-All functions below are registered in
-`runner/Tests/PWRunnerCoreTests/main.swift`; their one-line descriptions were
-read as hypotheses about the work. The original passes read `TestKit` and
-equipment guards, not each guarded block's assertion body. Group names below
-are literal source labels, not verified descriptions of every member.
+The 32 functions and their registry comments in
+`runner/Tests/PWRunnerCoreTests/main.swift` were checked against the members.
+These are the 55 literal group labels; labels alone are not the evidence for
+the work described in the following table.
 
 | Registered function | `tk.group` names |
 | --- | --- |
@@ -1483,105 +1616,159 @@ are literal source labels, not verified descriptions of every member.
 | `runCompiledProfileCaptureTests` | `Compiled-profile capture: bounded worker receipt` |
 | `runDispositionResolverTests` | `disposition observations (fixture, no sandbox)`; `disposition interpretation (constructed)`; `disposition contract mirror (tests/lib/lifecycle_contract.py)` |
 
-Targeted review read these assertion blocks (paths under
-`runner/Tests/PWRunnerCoreTests/`):
+Paths below are under `runner/Tests/PWRunnerCoreTests/`. Every `tk.run`
+assertion block in each listed file was read. `ServiceAdmissionTests.swift`
+contains two registered functions (three admission blocks and two selection
+blocks). Counts for Ordering and Lifecycle include their shared
+`runOrderingGateControl` and `runCWorkerReapedAcknowledgementControls` helpers;
+those helpers are called by the registered functions and are not extra registry
+entries. Loop-generated cases make runtime counts larger than call-site counts.
 
-- `OrderingTests.swift:69-88`: `runOrderingGateControl`, the hook/receipt
-  control also called by `runOrderingTests`.
-- `PhaseProtocolTests.swift:26-110`: the shared evidence-type corpus and
-  collection-state corpus blocks.
-- `ExecObservationTests.swift:24-67`: valid-combination preservation and
-  malformed-present-fact rejection/degradation.
-- `PathDiagnosticsTests.swift:8-110`: composed long paths, shared valid and
-  malformed fixtures, nine compact states, and missing-marker rejection;
-  assertion excerpts from the two attempt-path blocks at 114 onward.
-
-Other Swift member bodies have no recorded assertion reading; equipment-guard
-inspection alone is not credited as reading those members.
+| Registered function / member source range | Call sites with assertions read | Work distinguished |
+| --- | --- | --- |
+| `runEnvelopeInvariantTests`; `EnvelopeInvariantTests.swift:36-274` | All 15 | Constructed Codable replies preserve semantic absence, observed false/empty values and unknown diagnostics; reject wrong versions and retired keys. |
+| `runPredictionUnavailableTests`; `PredictionUnavailableTests.swift:35-60` | All 2 | Literal excluded operation/filter pairs and unknown kinds beside ordinary query-planning controls. |
+| `runFilterKindValidationTests`; `FilterKindValidationTests.swift:23-136` | All 9 | Required/forbidden values, unknown filters, duplicate IDs and unsupported attempts are refused before execution. |
+| `runComparisonEvidenceTests`; `ComparisonEvidenceTests.swift:108-238` | All 7 | All 43 matrix rows use constructed channel inputs; compare all six fields, exact keys and limitation vocabulary. Separate host-path provenance blocks read the filesystem. |
+| `runOrderingTests`; `OrderingTests.swift:70-652` | All 23 | Real host driver with lifecycle fixture, gate receipts and injected lifecycle faults; shipped validator in the death-during-collection block; constructed ordering/encoding and validator-deadline controls. |
+| `runPhaseProtocolTests`; `PhaseProtocolTests.swift:27-417` | All 12 | Constructed type/collection corpora beside production worker/validator phases, eight independently observed unlinks, ordinal refusal and interrupted phases; M08 combines failed cleanup, late EPIPE and fresh-read evidence. |
+| `runExtensionEvidenceTests`; `ExtensionEvidenceTests.swift:127-354` | All 11 | Issuer fixture and mapped channel erasure/closed descriptor observations, injected wait/kill faults, and constructed extension-event/wire shapes. |
+| `runExecObservationTests`; `ExecObservationTests.swift:24-109` | All 3 | Constructed exec facts and an ABI fixture publishing them: independent cleanup/leader state, malformed metadata and completion gating; no actual exec child. |
+| `runReplyFailureTests`; `ReplyFailureTests.swift:397-577` | All 9 | Real reply serializer with constructed contradictions and injected encoding failure; degradation preserves observations, withholds comparisons and accounts for every stored field. |
+| `runServiceAdmissionTests`; `ServiceAdmissionTests.swift:28-75` | All 3 | Concurrent in-process exported objects share one-use admission; failed invocation still consumes it and only its owner schedules exit. No XPC transport is exercised. |
+| `runValidatorSelectionTests`; `ServiceAdmissionTests.swift:83-133` | All 2 | Temporary bundle-local candidate and app-level decoy; explicit override precedence. |
+| `runHostOutcomeClassifierTests`; `HostOutcomeClassifierTests.swift:208-254` | All 4 | Constructed worker/validator/publication table: normalized outcome and diagnostic precedence; no child process observation. |
+| `runAttemptOutcomeMappingTests`; `AttemptOutcomeMappingTests.swift:82-189` | All 7 | Constructed kind/action/slot combinations: outcomes, incomplete/unsupported states and child PID/status distinctions. |
+| `runLimitsContractTests`; `LimitsContractTests.swift:14-136` | All 2 | Manifest/Swift/native-fixture constants and framed-receiver boundary values. |
+| `runQueryAdmissionTests`; `QueryAdmissionTests.swift:30-336` | All 13 | Constructed UTF-8/NUL/count limits and request admission; refusal must precede process work. |
+| `runContractVersionTests`; `ContractVersionTests.swift:254-319` | All 4 | Manifest versions, generated constants, shape classification and golden comparison. |
+| `runRequestContractTests`; `RequestContractTests.swift:35-178` | All 9 | Shared accepted/rejected request corpus, exact-version-first handling, unknown/null fields and separate structural/resource admission. |
+| `runReplyMaximumTests`; `ReplyMaximumTests.swift:369-393` | All 2 | Constructed maximal encoded reply against the receiver budget; an unclassified extra key is a negative control. |
+| `runPathDiagnosticsTests`; `PathDiagnosticsTests.swift:8-200` | All 6 | Shared valid/malformed wire fixtures and compact states, real host path resolution, long composed UTF-8 identity and absent observations. |
+| `runCWorkerTests`; `CWorkerTests.swift:41-860` | All 24 | Shipped worker file/sysctl attempts, parameter transfer, exec exits/refusal/deadlines and post-apply seams; other blocks check pre-spawn limits. Worker guards throw on absence. |
+| `runCWorkerLifecycleTests`; `CWorkerLifecycleTests.swift:98-335` | All 11 | Real ABI fixture child with injected kill/wait/poll faults, independent reap checks and subprocess JSON; clean/signal acknowledgement recovery versus ownership loss. Fixture applies no sandbox. |
+| `runCWorkerClockTests`; `CWorkerClockTests.swift:93-239` | All 13 | Controlled monotonic clock/sleep with native fixture children: elapsed allowances, oversleep and lifecycle cleanup. |
+| `runWorkerEvidenceTests`; `WorkerEvidenceTests.swift:24-294` | All 15 | Production C main with substituted native calls publishes failures/progress/partial writes; constructed ABI payloads additionally test publication gating and stale errno exclusion. |
+| `runPolicyTransferTests`; `PolicyTransferTests.swift:7-266` | All 7 | Stalled/draining fixture pipes, controlled partial-write deadline, shipped-worker truncated-input refusal, contradictory encoder inputs and retained replies for Rust replay. |
+| `runWorkerClockTests`; `WorkerClockTests.swift:225-406` | All 8 | Production C main with clock substitutions, real host driver and shipped validator: setup/phase refusals, retained predictions, sticky versus local faults and independently observed child cleanup. |
+| `runCWorkerValidatorTests`; `CWorkerValidatorTests.swift:55-290` | All 5 | Real worker plus validator: policy parameters/control characters, 256 probes, compile-failure hook absence; missing executable is a separate native launch-failure control. |
+| `runValidatorEvidenceTests`; `ValidatorEvidenceTests.swift:62-279` | All 17 | Constructed byte-frame/record acceptance and real fixture-child pipe/lifecycle observations with injected kill/wait failures; competing evidence survives. |
+| `runDiagnosticTransportTests`; `DiagnosticTransportTests.swift:15-104` | All 2 | Unfamiliar diagnostic payloads constructed independently of receiver enums survive worker/validator forwarding. |
+| `runAugmentTests`; `AugmentTests.swift:16-64` | All 4 | Codable augment shape and refusal of unresolved fragments; not fragment expansion. |
+| `runListenerConfigTests`; `ListenerConfigTests.swift:19-40` | All 4 | Pure argv-to-listener selection. |
+| `runCompiledProfileCaptureTests`; `CompiledProfileCaptureTests.swift:37-124` | All 8 | Independently constructed bytes/digests, selected versus ignored bytes, identity and publication gates; invalid nonce refused before spawn. Not a native compiler capture. |
+| `runDispositionResolverTests`; `DispositionResolverTests.swift:189-509` | All 16 | Native no-sandbox fixture publications for C2/C5, constructed interpretation/encoder cases, Python mirror and 2880 finite-model rows. |
 
 ### Python unittest groups
 
-Counts below include subclasses of the method-free `StampFixture`. They are
-static method counts, not observed execution counts. Paths are under
-`tests/suites/`. “Excerpt” identifies the methods intersecting source ranges
-the original notes record as read; it does not claim their full bodies or
-all helper paths were inspected. Other members have no recorded assertion
-reading. The generator module has 21 `test_` methods in source.
+Paths are under `tests/suites/`. Each row covers all `test_` methods in the
+named class, including the three test-bearing subclasses of the method-free
+`StampFixture` base. Assertions in delegated helpers and subtest/scenario
+loops were read as part of those methods. The 31 groups contain 205 methods:
+68 provenance methods and 137 source-drift methods.
 
-| Module / class | Methods | Recorded assertion reading |
+| Module / class and member range | Methods with assertions read | Work distinguished |
 | --- | --- | --- |
-| `preflight/check_build_provenance.py` / `LockTests` | 16 | Excerpts: `test_claims_are_admitted_only_by_a_live_owners_handoff` |
-| `preflight/check_build_provenance.py` / `ResolverTests` | 5 | Excerpts: `test_the_pin_resolves_and_probes_here` |
-| `preflight/check_build_provenance.py` / `ShimContainmentTests` | 10 | Excerpts: `test_profiles_apply_and_keep_exec_restrictions`, `test_structured_paths_cannot_add_profile_rules` |
-| `preflight/check_build_provenance.py` / `ProbeTests` | 3 | None recorded |
-| `preflight/check_build_provenance.py` / `StampTests` | 1 | Excerpts: `test_stamp_states_are_decided_without_adopting_unknowns` |
-| `preflight/check_build_provenance.py` / `OutputTargetStampTests` | 1 | None recorded |
-| `preflight/check_build_provenance.py` / `FailedObservationTests` | 1 | None recorded |
-| `preflight/check_build_provenance.py` / `FreshRemovalTests` | 1 | None recorded |
-| `preflight/check_build_provenance.py` / `OwnershipAndAdmissionTests` | 4 | None recorded |
-| `preflight/check_build_provenance.py` / `CargoJudgmentTests` | 3 | None recorded |
-| `preflight/check_build_provenance.py` / `CargoConfigurationTests` | 5 | None recorded |
-| `preflight/check_build_provenance.py` / `OutputTripleSelectionTests` | 1 | None recorded |
-| `preflight/check_build_provenance.py` / `SdkTests` | 1 | None recorded |
-| `preflight/check_build_provenance.py` / `OutputTargetTests` | 8 | Excerpts: `test_weakened_predicates_fail_these_controls` |
-| `preflight/check_build_provenance.py` / `SignatureDisplayTests` | 1 | None recorded |
-| `preflight/check_build_provenance.py` / `RecordTests` | 7 | Excerpts: `test_helper_subcommands_are_the_ones_the_script_invokes`, `test_opt_in_mutation_anchors_match_current_sources`, `test_unknown_wrapper_hashes_never_establish_stamp_compatibility` |
-| `source_drift/architecture.py` / `ArchitectureDocumentationTests` | 10 | Excerpts: `test_document_and_figures_are_current` |
-| `source_drift/build.py` / `BuildDocumentationTests` | 16 | Excerpts: `test_document_and_figure_are_current_and_the_rules_agree`, `test_meson_output_target_assertion_refuses_other_hosts` |
-| `source_drift/contract.py` / `ContractVersionTests` | 23 | Excerpts: `test_every_generated_copy_is_current`, `test_build_refuses_a_builder_it_cannot_confirm_before_anything_else` |
-| `source_drift/contract.py` / `WorkerIdentityTests` | 7 | Excerpts: `test_identity_is_current_relocatable_and_regeneration_is_idempotent` |
-| `source_drift/direct_python.py` / `DirectPythonTests` | 2 | Individual checker reading recorded for both methods |
-| `source_drift/generators.py` / `GeneratorContractTests` | 21 | Excerpts: `test_build_checks_every_generator_before_signing`, `test_prose_baseline_is_consistent_and_growth_is_explicit` |
-| `source_drift/limits.py` / `LimitsDocumentationTests` | 22 | Excerpts: `test_document_is_current`, `test_build_refuses_stale_guide_before_signing_or_creating_output` |
-| `source_drift/markdown.py` / `BlockTests` | 7 | None recorded |
-| `source_drift/markdown.py` / `CommentTests` | 5 | None recorded |
-| `source_drift/markdown.py` / `LinkTests` | 6 | None recorded |
-| `source_drift/markdown.py` / `HeadingTests` | 4 | None recorded |
-| `source_drift/markdown.py` / `TableTests` | 2 | None recorded |
-| `source_drift/markdown.py` / `LineTests` | 1 | None recorded |
-| `source_drift/markdown.py` / `VendorTests` | 5 | Excerpts: `test_only_the_reader_imports_the_parser`, `test_another_importer_is_named` |
-| `source_drift/markdown.py` / `ImportGuardTests` | 6 | None recorded |
+| `preflight/check_build_provenance.py:255-762` / `LockTests` | All 16 | Real process/socket lock handoff, competitor refusal, cancellation/descendant lifetime and environment/forwarder negative controls. |
+| `preflight/check_build_provenance.py:793-864` / `ResolverTests` | All 5 | Actual pinned Homebrew interpreter probe beside fake kegs/probes and path/environment refusals. |
+| `preflight/check_build_provenance.py:875-1093` / `ShimContainmentTests` | All 10 | Real restrictive-profile exec and mach-lookup observations, structured-path escaping, injected gate failures and SDK entry-point order. |
+| `preflight/check_build_provenance.py:1097-1210` / `ProbeTests` | All 3 | Real bounded child output, timeout and process cleanup; injected unreapable-child deadline is separate. |
+| `preflight/check_build_provenance.py:1249-1342` / `StampTests` | All 1 | Constructed tool/Meson observations drive read, publish, reuse, extension and refusal states. |
+| `preflight/check_build_provenance.py:1346-1435` / `OutputTargetStampTests` | All 1 | Output-target decisions precede tool probing; incompatible existing stamps remain unchanged. |
+| `preflight/check_build_provenance.py:1439-1471` / `FailedObservationTests` | All 1 | Tool failure and oversized output cannot publish an accepted observation or stamp. |
+| `preflight/check_build_provenance.py:1506-1568` / `FreshRemovalTests` | All 1 | Temporary owned cache removal, symlink refusal and preservation when admission/removal fails. |
+| `preflight/check_build_provenance.py:1574-1767` / `OwnershipAndAdmissionTests` | All 4 | Lock/session scope, path replacement and ownership races; rejected callers preserve outside paths and existing evidence. |
+| `preflight/check_build_provenance.py:1820-1934` / `CargoJudgmentTests` | All 3 | Constructed fingerprint freshness, literal boolean and flag-attribution decisions. |
+| `preflight/check_build_provenance.py:1940-2129` / `CargoConfigurationTests` | All 5 | Temporary TOML discovery/includes, wrappers, environment and permission/refusal cases; these parser checks do not compare actual Cargo execution. |
+| `preflight/check_build_provenance.py:2133-2149` / `OutputTripleSelectionTests` | All 1 | Explicit target overrides lower-priority configuration. |
+| `preflight/check_build_provenance.py:2171-2212` / `SdkTests` | All 1 | Constructed load-command text and numeric versions, plus a compiled Mach-O checked against the selected SDK. |
+| `preflight/check_build_provenance.py:2333-2564` / `OutputTargetTests` | All 8 | Compiled/mutated Mach-O fixtures, independent byte oracle, malformed/fat/DSYM scans, inconsistent tool reports, required observations and weakened-predicate controls. |
+| `preflight/check_build_provenance.py:2581-2608` / `SignatureDisplayTests` | All 1 | Constructed codesign display text; parsing is not cryptographic signature verification. |
+| `preflight/check_build_provenance.py:2635-2971` / `RecordTests` | All 7 | Fixture provenance/archive records, hashes/stages/signature metadata, current helper call routes, mutation anchors and unknown-wrapper stamp refusal. |
+| `source_drift/architecture.py:58-293` / `ArchitectureDocumentationTests` | All 10 | Generated text and real Graphviz SVG, model/reference refusals, stale copies and transactional publication. |
+| `source_drift/build.py:65-540` / `BuildDocumentationTests` | All 16 | Model/document/render checks and source agreement; real Meson configuration refusals and removed-guard controls are distinct work. |
+| `source_drift/contract.py:121-560` / `ContractVersionTests` | All 23 | Version/model/corpus checks and generated copies; copied-tree build frontends must refuse stale or unconfirmed inputs before later work; Make forwarding. |
+| `source_drift/contract.py:578-678` / `WorkerIdentityTests` | All 7 | Input hashes, relocatable/idempotent generation, symlinks and native source membership; tests are excluded from identity inputs. |
+| `source_drift/direct_python.py:137-202` / `DirectPythonTests` | All 2 | Repository source routing and positive/refused direct-start fixtures. |
+| `source_drift/generators.py:315-818` / `GeneratorContractTests` | All 21 | Manifest references and command forms, shared-helper refusals, transactional writer/render failures, citation spans and explicit baseline growth. |
+| `source_drift/limits.py:62-522` / `LimitsDocumentationTests` | All 22 | Model ranges/ownership, generated document, matrix membership, stale-build refusal, render/staging and transactional-write controls. |
+| `source_drift/markdown.py:90-135` / `BlockTests` | All 7 | Fences, indentation, lazy continuation, lists, quotes and code/prose separation in constructed Markdown. |
+| `source_drift/markdown.py:139-165` / `CommentTests` | All 5 | Comment-block and inline-comment handling in constructed Markdown. |
+| `source_drift/markdown.py:172-200` / `LinkTests` | All 6 | Inline/reference links, titles, escapes and unresolved references. |
+| `source_drift/markdown.py:204-243` / `HeadingTests` | All 4 | Heading forms, inline content and anchor/duplicate handling. |
+| `source_drift/markdown.py:247-256` / `TableTests` | All 2 | Table recognition and escaped cell separators. |
+| `source_drift/markdown.py:260-263` / `LineTests` | All 1 | Source line numbers for parsed constructs. |
+| `source_drift/markdown.py:267-318` / `VendorTests` | All 5 | Vendored parser bytes/licenses and static importer boundary; controlled importer violation. |
+| `source_drift/markdown.py:347-383` / `ImportGuardTests` | All 6 | Fresh subprocess import isolation under ambient paths/modules and allowed package imports. |
 
 ### Other tables, drivers and nested fixtures
 
-- Menagerie: all eight manifest rows are identified by their cases in
-  Appendix A, with eight BYOXPC reuses. The driver and shared checker were
-  read; review traced all annotated `attempt_ok`/policy combinations for 2.11.
-- Comparison matrix: `comparison_matrix` uses the S, B and C rows and
-  `extension_combinations` uses M01–M07. The driver/checker was read; the
-  ledger credits pointers to row expectations rather than separate per-row
-  assertion accounts.
-- `preflight/build_refusal_controls`: the `CONTROLS` and `SEQUENCES` tables
-  were enumerated; recorded function reading is `shim_install_detector`,
-  `release_battery`, `demonstrate_bypass` and shared assertion helpers. Other
-  control bodies and mutation effects were not individually traced.
-- `preflight/release_publish_controls`: `check_preflight` read in full,
-  `check_archive` and `check_publish` partly, `check_branch_names` named only.
-  Review additionally traced `make_dist` and `prepare_provenance_fixture`.
-- `preflight/release_rotation_controls`: `portable` and `interrupted` read;
-  `battery_contract`, `ordinary`, `protections`, `checkpoint_policy`,
-  `acceptance_lifetime`, `legacy`, and `atomic_and_locking` named only. Review
-  traced `make_release` into the shared compiler fixture.
-- `source_drift/runner_source_manifests_agree`: selected rules and planner
-  `main` read; individual scenario builders were not all traced. Review
-  additionally read the attempt-outcome matrix rule and the documentation
-  command rule. `build_rules.py` was read in full by the original pass.
-- `dispatcher/selection_controls`: `exercise` and the final assertion block
-  read; the scenario list at `check_selection.py:131-300` was not.
-  `dispatcher/retention_controls`: `run` read; locking, pruning and orphaned
-  descendant scenarios were not individually traced.
-- `runner_unit/host_setup_oracle_sensitivity`: `main` and
-  `assert_observations` read; variant preparation named only.
-- `runner_outcome_bad_request/accepted_input_contract`: driver/checker read,
-  corpus example IDs enumerated; not every example was read separately.
-- `runner_c_worker_harness/clock_arithmetic` and `proceed_precedence`:
-  `clock_control.c` and `proceed_control.c` read by header and assertion
-  excerpts. `terminal_erasure`, `first_touch_after_apply`, and
-  `exec_control_states` have individually read Python checkers, but only
-  headers/excerpts of `terminal_control.c`, `first_touch_control.c` and
-  `exec_control.c`. An Individual entry in Appendix A does not establish
-  per-property review of these nested native fixtures.
-- `blackbox_e2e/checker_controls`: its checker and the disposition/extension
-  control modules were read. `consumer.py` was inspected at relevant rules,
-  not line by line. The four contract corpora in 2.12 were traced to readers,
-  without a new assertion-by-assertion survey of every corpus row.
+- Menagerie: all eight manifest rows and their eight BYOXPC reuses, the
+  driver and shared checker were read. All annotated `attempt_ok`/policy
+  combinations were traced for 2.11.
+- Comparison matrix: all 43 row expectations, scenario/control descriptions
+  and the Swift producer loop were read. The live `comparison_matrix` uses
+  S/B/C rows except constructed-only S09; `extension_combinations` uses
+  M01–M07. T belongs to the in-flight deadline case; M08 belongs to the Swift
+  combined-phase driver and its Rust/Python replay. Sharing a comparison
+  expectation does not make these the same observation (2.14).
+- `preflight/build_refusal_controls`: assertions and relevant helpers in all
+  37 `CONTROLS` and 12 `SEQUENCES` functions in
+  `tests/suites/preflight/opt_in/build_refusals.py`, plus the 16 mutation entries,
+  were read. They distinguish early admission refusal, cache preservation,
+  real build/reuse transitions, compiler/tool-call receipts, signing/evidence
+  boundaries, interrupted recovery and a real nested release battery. The
+  Cargo-configuration sequence checks actual compiler invocation; the
+  post-build output-tamper sequence instead requires accepted provenance to
+  describe the changed bytes, limiting what freshness establishes. No listed
+  control or sequence is accounted for on its name alone.
+- `preflight/release_publish_controls`: all four scenarios in
+  `check_release_publish.py` (`check_preflight`, `check_archive`,
+  `check_publish`, `check_branch_names`) and their rejection assertions were
+  read. Local Git pushes, archive/provenance bytes and branch/build-stamp
+  handling are distinct from the fake GitHub replies. Shared compiler fixture
+  setup was traced.
+- `preflight/release_rotation_controls`: all nine scenarios in
+  `check_release_rotation.py` (`portable`, `battery_contract`, `ordinary`,
+  `protections`, `checkpoint_policy`, `acceptance_lifetime`, `interrupted`,
+  `legacy`, `atomic_and_locking`) were read to their assertions. Fixture
+  archives and inventories exercise selection/protection; real filesystem
+  locks and controlled interruptions exercise exclusion and recovery.
+- `source_drift/runner_source_manifests_agree`: shared drift/build rules and
+  `check_planner.py` were read, including every named mutation and configured
+  control. Copied-tree public-command selection/refusal is distinct from six
+  real C-only Meson configurations and their expected source/policy refusal
+  diagnostics. Markdown command and attempt-outcome rules were traced to
+  their exact comparisons.
+- Dispatcher: `check_selection.py`'s scenario list, `exercise` and final
+  assertions were read, including aliases, context, dependency/equipment
+  refusal and app-path/environment cases. `check_retention.py`'s locking,
+  orphaned-grandchild, pruning and final assertions were read: they test real
+  lock lifetime and descendant cleanup, and preservation/re-evaluation of
+  retained, interrupted, ambiguous and unmanaged fixture evidence.
+- `runner_unit/host_setup_oracle_sensitivity`: the variant preparation and
+  observation assertions were read. Baseline and wrong-ready-direction,
+  wrong-shared-memory-argument and partial-unmap variants are checked through
+  native descriptor/argv/mapping observations beside the old accepting oracle.
+- `runner_outcome_bad_request/accepted_input_contract`: driver/checker and
+  corpus groups were read, including malformed, unknown-field/kind, version,
+  structural versus resource-limit and valid-request paths. Not every JSON
+  example was independently re-derived; all share the traced table checker.
+- Five native fixtures were read in full, beside their owning checkers:
+  `tests/fixtures/worker_lifecycle/clock_control.c` checks controlled timebase
+  arithmetic, sample rejection, fault provenance and setup publication without
+  a child or sandbox; `proceed_control.c` uses fresh forked children, controlled
+  clock/release/cancel inputs and real ordinary-authority file opens across
+  17 modes, without applying a sandbox; `exec_control.c` substitutes native
+  exec/process/clock calls, checks a separate call ledger and published facts,
+  and launches no exec child. These do not establish native clock or policy
+  behaviour. `tests/fixtures/extension_controls/terminal_control.c` substitutes
+  native calls and a token, observing full mapped-buffer erasure at publication
+  and after reap. `tests/fixtures/worker_lifecycle/first_touch_control.c`
+  instead reaches the production worker's post-apply boundary; its terminal
+  touch and pre-touch variant distinguish actual backing-page observations.
+- `blackbox_e2e/checker_controls`: checker and disposition/extension control
+  modules were read; `consumer.py` was traced at relevant rules, not line by
+  line. Shared-corpus readers in 2.12 were read to their assertion loops.
+  Agreement over those rows is not an independent proof of each corpus's
+  expected value or exhaustiveness.
