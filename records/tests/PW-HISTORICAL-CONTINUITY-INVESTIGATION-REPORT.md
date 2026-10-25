@@ -13,6 +13,8 @@ The four leads support three limited reductions: remove an executable dependency
 on an old capture whose contents are rejected before interpretation; stop
 requiring a current checker to reproduce its previously demonstrated blind
 spots; and retire failure classification tied to completed test promotions.
+The author has approved retiring the wrapper machinery described in finding 4,
+with its diagnostic tradeoff and preservation requirements.
 The comparison baseline supplies provenance without an active requirement to
 operate or interpret its earlier producer. The wider screen found a separate,
 explicit historical service: current release tools verify and use an older
@@ -279,7 +281,7 @@ table, not against current Rust failure text. Green runs do not need message
 matching, and both classified and unclassified failures fail the case. The
 finding is stale diagnostic authority, not evidence of a passing regression.
 
-**Supported reduction, with a diagnostic tradeoff.** Remove the tables of former
+**Author decision: retire promotion machinery.** Remove the tables of former
 assertion messages and promotion/red categories from the two wrappers, and the
 corresponding diagnostic expectations in `rust_wrapper_controls`. Retain exact
 selection and count, per-test success, Cargo status, missing/empty/wrong-test
@@ -288,11 +290,11 @@ Rust regression assertions and their existing execution routes. Retiring this
 machinery removes a completed transition's message/count obligations; merely
 renaming the cases would not.
 
-The loss is the classifier's distinction between designated assertion failures
-and other failures, including the still-valid BYOXPC classifications. Raw Cargo
-diagnostics remain available. No product contract or admission rule changes;
+The accepted loss is the classifier's distinction between designated assertion
+failures and other failures, including the still-valid BYOXPC classifications.
+Raw Cargo diagnostics remain available. No product contract or admission rule changes;
 the wrapper's documented diagnostic purpose and its controlled transcripts
-would change. A future validation must show that fully selected passing tests
+will change. Implementation must show that fully selected passing tests
 succeed, while failed tests with arbitrary assertion wording, incomplete or
 wrong selection and nonzero Cargo status still fail. These are preservation
 requirements, not a claim that this implementation has been made or run.
@@ -399,10 +401,12 @@ real-capture rejection check. The setup change gives up reproduction of three
 checker limitations while preserving the native experiment. The wrapper change
 gives up designated-message classification while preserving regressions and
 selection guards. Each removes a specific dependency or obligation; none
-requires accepting a general reduction in current evidence quality. These three
-reductions remain proposals. The author has approved withdrawal of the older
-archive-format service with the losses and transition requirements stated in
-finding 5. Implementation remains separate work.
+requires accepting a general reduction in current evidence quality. The specific
+replacement for the known-loss capture and the setup-case reduction remain
+proposals. The author has approved retiring the wrapper promotion machinery in
+finding 4 and withdrawing the older archive-format service in finding 5, with
+the stated losses and preservation/transition requirements. Implementation
+remains separate work.
 
 The investigation stops at these traced dependencies. It does not establish
 repository-wide absence of historical obligations, resolve the value of every
