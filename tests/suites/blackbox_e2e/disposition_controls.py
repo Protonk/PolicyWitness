@@ -219,12 +219,12 @@ sys.exit(config['status'])
     (out / 'wrapper-controls.json').write_text(json.dumps(records, indent=2) + '\n')
 
 def expected_fixture_controls(out):
-    """E2: the accepted expected envelope, the known-loss capture, and named rejections.
+    """E2: current acceptance, unsupported-envelope refusal, and named rejections.
 
     The expected fixture is an unmodified live A1 capture. Its raw witnesses
     and disposition claims are checked together by the independent oracle.
-    Each rejection starts from a fresh copy of the accepted baseline and must be
-    rejected with the independently expected rule; the baseline stays accepted.
+    Semantic rejections start from fresh copies of the accepted baseline and
+    require independently expected rules. Version refusal uses an empty frame.
     """
     import copy
     sys.path.insert(0, str(ROOT / 'tests/lib'))
@@ -236,25 +236,30 @@ def expected_fixture_controls(out):
     out.mkdir(parents=True, exist_ok=True)
     fixtures = ROOT / 'tests/fixtures/disposition'
     expected = json.loads((fixtures / 'response23/a1_expected.json').read_text())
-    known = json.loads((fixtures / 'a1_known_loss.json').read_text())
+    unsupported = {'schema_version': contract.CONTROLLER_ENVELOPE - 1,
+                   'kind': 'run', 'data': {}}
     records = []
     assert not O.check_record(expected), O.check_record(expected)
     assert not validate(expected), validate(expected)
     records.append({'control': 'expected_accepted', 'rejected': False})
-    # Known loss: a captured reply under another version. It is refused as
-    # unsupported before any claim is read. A separate current-shaped control
-    # removes the disposition record without changing any version.
+    # Exact-version admission must refuse before the empty body produces any
+    # shape or disposition findings. Each reader must reach that boundary.
     try:
-        read_lifecycle(known)
+        read_lifecycle(unsupported)
     except ValueError as error:
         assert 'unsupported controller envelope' in str(error), error
+        adapter_error = str(error)
     else:
-        raise AssertionError('lifecycle adapter interpreted an unsupported capture')
-    refused = O.check_record(known)
-    assert refused and refused[0]['kind'] == 'unsupported_version', refused
-    errors = validate(known)
-    assert len(errors) == 1 and 'unsupported' in errors[0], errors
-    records.append({'control': 'known_loss_unsupported_version', 'rejected': True, 'findings': refused, 'errors': errors})
+        raise AssertionError('lifecycle adapter interpreted an unsupported envelope')
+    refused = O.check_record(unsupported)
+    assert len(refused) == 1 and refused[0]['rule'] == 'D8', refused
+    assert refused[0]['kind'] == 'unsupported_version', refused
+    assert 'unsupported controller envelope' in refused[0]['detail'], refused
+    errors = validate(unsupported)
+    assert len(errors) == 1 and 'unsupported controller envelope' in errors[0], errors
+    records.append({'control': 'unsupported_envelope', 'input': unsupported,
+                    'rejected': True, 'adapter_error': adapter_error,
+                    'findings': refused, 'errors': errors})
     loss = copy.deepcopy(expected)
     del loss['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]
     findings = O.check_record(loss)

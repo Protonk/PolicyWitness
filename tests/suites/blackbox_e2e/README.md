@@ -110,9 +110,9 @@ claim tables, a record built from it is accepted, its mutations are rejected wit
 the expected rule, and the core D-model evaluates totally. These are constructed
 controls; they establish interpretation, not live reachability.
 The expected-fixture controls accept `tests/fixtures/disposition/response23/a1_expected.json`
-(a live envelope of the a1 specimen at the current contract), refuse the
-captured `a1_known_loss.json` as the unsupported version it is before any
-claim is read, and reject named mutations of the accepted baseline (missing
+(a live envelope of the a1 specimen at the current contract), require only an
+unsupported-envelope version error from the lifecycle adapter, oracle and
+consumer for a constructed empty frame, and reject named mutations of the accepted baseline (missing
 disposition record, request
 removed while the cause is kept, exit code beside signal without a conflict,
 supported cause replaced by unknown, identical unresolved or swapped step

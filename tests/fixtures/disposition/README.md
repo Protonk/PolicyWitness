@@ -13,8 +13,8 @@ independent checker `tests/lib/lifecycle_oracle.py` and the offline controls in
   record from a copy of this current-format fixture.
 - `a1_known_loss.json`: a preserved response-9, envelope-2 capture. It witnesses
   the deadline, SIGKILL request, reaped signal and attempt-0 started progress
-  while that controller reported `termination_cause: unknown`. Rejection
-  controls refuse it before reading claims. It is never an acceptance baseline.
+  while that controller reported `termination_cause: unknown`. It is retained
+  evidence with no executable consumer and is never an acceptance baseline.
 
 `response23/a1_specimen.json` is the exact submitted request for the current
 capture; the two refresh together, as described below.
