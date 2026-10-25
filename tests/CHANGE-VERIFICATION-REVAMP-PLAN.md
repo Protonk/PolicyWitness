@@ -8,6 +8,10 @@ together while reframing the document around a practical question: given a
 change or an investigative question, which controls are relevant, under what
 conditions, and what would their results establish?
 
+As part of this implementation, put a compact index of established
+change-specific verification routes near the front of the guide. Include routes
+covering default tests as well as the inherited non-default controls.
+
 The current document combines selection instructions, a non-default-case
 registry, change-specific verification duties, execution conditions and detailed
 test descriptions. Selection already belongs to [catalog.json](catalog.json)
@@ -88,6 +92,39 @@ Use the existing case identifiers and links to owning suite accounts. Avoid a
 mandatory field template or a requirement to register every non-default case a
 second time. Keep detailed assertions and fixture descriptions with their suites
 as [the test guidance](AGENTS.md#add-or-change-tests) already requires.
+
+## Index established change-specific routes
+
+After the introduction and before the detailed control entries, add a short
+**Find verification for a change** index. Each row names a change or
+investigative question and links to its authoritative requirements or detailed
+control account. Organize the rows by the changed behavior, regardless of
+default membership.
+
+Bound the initial index to these established routes:
+
+| Change | Existing instruction or account to expose |
+| --- | --- |
+| Admission or validator receivers | [Integrated verification guidance](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior), including its boundary and reader checks. |
+| Limits | [Limit-change verification](AGENTS.md#verify-a-limit-change) and its linked coverage account. |
+| Ordering barriers, worker release or observers | The existing ordering requirement in root/test guidance and the retained order-barrier mutation entry. |
+| Worker clock source, timebase or sample validation | The retained native worker clock applicability entry. |
+| Exec publication, absence handling or confirmed-reap reconciliation | The retained exec-reader and confirmed-reap mutation entries. |
+| BYOXPC selection, installation, registry or cleanup | The applicable retained BYOXPC entries and existing controller test-selection guidance. |
+
+Leave requirements and detailed case lists with their current owners; the index
+provides routes to those accounts. Preserve each route's actual trigger,
+mandatory or investigative status, and qualifications. A link through to the
+existing default-test guidance is sufficient; do not copy its checklists into
+new control entries merely to make the index look uniform.
+
+The index does not claim exhaustive coverage or require a new investigation to
+map every component or test. If inspecting a route exposes missing or
+conflicting requirements, record the specific issue as a follow-up question in
+the completion account. Include the settled routes and preserve supported
+instructions without inventing or reconciling obligations through an index
+label. Creating this bounded index is part of the revamp, not a separate
+planning deliverable.
 
 ## Preserve meaning while cleaning up entries
 
@@ -195,6 +232,12 @@ the resource-based membership considerations have a usable home in
 that catalog registration is not being presented as membership-selection
 guidance. Mechanical link checks cannot establish that this meaning survived.
 
+Trace every initial index row to its destination and review whether the linked
+account supports the stated change and requirement strength. Confirm that the
+admission/receiver and limit routes expose existing default-test verification,
+and that the index preserves the qualifications on its other routes. Record any
+unsettled requirement question separately from successful navigation checks.
+
 Use [the Markdown reader](../docs/markdown_reader.py) to check local files and
 heading anchors in the new guide and every changed document. The existing
 generator link scan does not cover all test guides, suite READMEs, plans and
@@ -223,6 +266,12 @@ No native mutation, BYOXPC, signing or full application battery is needed for
 the planned documentation-only delta. Do not execute case scripts directly.
 
 ## Completion
+
+The guide opens with a compact index of established change-specific
+verification routes, covering both default and non-default controls. Each entry
+names the relevant change or investigative question and links to its
+authoritative requirements or detailed control account. The index preserves
+existing obligations and makes no claim to exhaustive coverage.
 
 The work is complete when the renamed guide explains applicability and evidence
 without organizing itself as an opt-in registry; substantive entries and
