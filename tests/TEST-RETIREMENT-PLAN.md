@@ -160,8 +160,10 @@ If such an operation exists, settle it through the existing
 [recovery procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup)
 while its reader remains available. An ambiguous or unresumable transaction
 blocks this retirement until its disposition is resolved; the two test
-retirements can proceed independently. Never bypass recovery by deleting its
-quarantine, changing journal state or unlinking `tests/.checkout.lock`.
+retirements can proceed, be verified and committed, and be reported individually
+complete under the criteria below. Retirement 3 and the overall plan remain
+incomplete. Never bypass recovery by deleting its quarantine, changing journal
+state or unlinking `tests/.checkout.lock`.
 
 The investigation's local-only observations found six schema-1 archives, all
 with completed rotation records and an empty quarantine. That observation is
@@ -242,9 +244,36 @@ within that file. Recheck the source state and preserve preexisting work before
 implementation. No historical release build or native setup experiment is
 required by these changes.
 
-After implementation, inspect this selection with `--list`, then run it through
-the dispatcher from the repository root. Choose a fresh unused output directory;
-the following name is an example:
+### Verification credited to each retirement
+
+Each retirement needs recorded verification against a source state containing
+its implementation and updated controls. Use this mapping:
+
+| Retirement | Required cases | Required evidence |
+| --- | --- | --- |
+| 1. Constructed unsupported envelope | `blackbox_e2e/checker_controls` | The three reader refusals, accepted current capture and preserved semantic mutations specified in section 1 |
+| 2. Wrapper promotion machinery | `blackbox_e2e/checker_controls`; `unit/rust.disposition_reds`; `unit/rust.byoxpc_reds`; `unit/rust.unit` | Controlled pass/failure transcripts for both revised wrappers, actual execution of their exact selections, and the continuing Rust batch route specified in section 2 |
+| 3. Schema-1 release-evidence support | `preflight/release_publish_controls`; `preflight/release_rotation_controls` | Schema-1 refusal through the narrowed reader and callers before side effects, plus preserved current-format verification, publication, cleanup and recovery specified in section 3 |
+
+Also run `source_drift/runner_source_manifests_agree` against each completed
+change's current documentation and registry state, with any additional generator
+checks described below. This case can be shared by retirements verified together.
+Review each mapped case's specific outcomes; an overall passing status does not
+establish an omitted assertion or a retirement that is not implemented.
+
+Three separate physical runs are not required. A shared run can credit several
+retirements when all of their changes and controls are present in its recorded
+source state and all of their mapped cases succeed. For example, retirements 1
+and 2 can share the checker, unit and source-drift cases while retirement 3 is
+blocked. Omit the release cases from that partial selection. If they run anyway
+against the unchanged reader, their results establish existing behavior and
+cannot credit schema-1 withdrawal.
+
+A single run of the following union can credit all three retirements after all
+three are implemented. It is not a required final rerun when separate applicable
+evidence already covers every retirement. Inspect the intended selection with
+`--list`, then execute through the dispatcher from the repository root. Use a
+fresh unused output directory for each run; the following name is an example:
 
 ```sh
 PW_TEST_OUT_DIR=tests/out/runs/test-retirement-implementation-01 tests/run.sh \
@@ -269,18 +298,38 @@ the corresponding source-drift case, such as
 `source_drift/architecture_documentation` for architecture inputs.
 
 Review the resulting evidence for the specific preservation/refusal outcomes
-above, not only the overall exit status. Confirm that active consumers no longer
-read the historical capture, classify expected old assertions or admit schema 1.
+of the retirements being credited, not only the overall exit status. For those
+retirements, confirm that active consumers no longer read the historical capture,
+classify expected old assertions or admit schema 1, respectively.
 Check affected source references, descriptions, links, canonical IDs, generated
 copies when applicable, and `git diff --check`. Keep existing evidence immutable
 and distinguish new test results from reused observations.
 
-Completion requires all three approved responsibilities to be removed, the
-specified current operations and regression guards to be demonstrated, and
-the accepted losses reflected in current documentation. Record commands,
-source/build applicability and evidence locations with the implementation
-commits. If a preservation check fails, resolve it before declaring that
-retirement complete; do not broaden the accepted losses to obtain a pass.
+Record an evidence mapping for each retirement with its implementation commits
+or completion notes: implementation revision, tested source snapshot (including
+any uncommitted delta), run ID/location, credited case IDs, command/configuration,
+app or equipment applicability, and the specific outcomes established. One run
+may appear in several mappings; no duplicate evidence files are needed. When
+later work changes a dependency, apply the test guidance's rerun or reviewed-
+exception rules before carrying earlier credit forward. In particular,
+retirements 1 and 2 share `disposition_controls.py`; their evidence is not
+automatically interchangeable across edits to that file.
+
+### Individual and overall completion
+
+A retirement is complete when its own approved responsibility is removed, its
+mapped verification and preservation checks succeed against the applicable
+implementation, and its affected documentation reflects the accepted loss.
+It may then be committed and reported complete independently of the other two.
+If a preservation check fails, resolve it before declaring that retirement
+complete; do not broaden the accepted losses to obtain a pass.
+
+The overall plan is complete only when all three retirements are complete.
+If schema-1 recovery blocks retirement 3, verified retirements 1 and 2 may be
+committed and reported as complete, with retirement 3 explicitly reported as
+blocked and the overall plan as incomplete. Record the recovery blocker and
+what must be resolved before the narrowed reader can be implemented and tested.
+Passing release controls against the unchanged reader do not change that status.
 
 This plan was prepared with source inspection and static document checks.
 No retirement, test execution, build, release operation or evidence cleanup
