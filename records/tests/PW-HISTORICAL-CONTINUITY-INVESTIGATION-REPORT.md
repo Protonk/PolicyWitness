@@ -16,7 +16,9 @@ spots; and retire failure classification tied to completed test promotions.
 The comparison baseline supplies provenance without an active requirement to
 operate or interpret its earlier producer. The wider screen found a separate,
 explicit historical service: current release tools verify and use an older
-release-evidence format. Withdrawing that service requires its own decision.
+release-evidence format. The author has decided to retire that older-format
+service, accepting the losses and preserving the current-release operations
+identified in finding 5. Implementation remains separate work.
 
 ## Basis and boundary
 
@@ -39,7 +41,7 @@ of current-format runs. An older admissible record remains subject to current
 reading rules: age is not a refusal condition. Changing those rules or their
 meaning would require the contract/version decision described in
 [When a number moves](../../docs/CONTRACT.md#when-a-number-moves). None of the
-three narrow proposals below needs such a change. The release-evidence proposal
+three narrow proposals below needs such a change. The release-evidence decision
 concerns a different, separately promised format service.
 
 Inspection used Git history, source and documentation reads, JSON parsing and
@@ -335,9 +337,16 @@ empty. No archive hashes, contents or verification result were checked. These
 reads establish neither that those archives currently pass verification nor
 that no interrupted operation exists in another checkout or copy.
 
-**Conditional service reduction.** If the author decides that current tools
-should cease serving this older archive format, the smallest complete target
-is schema-1 admission and battery-summary interpretation in `release_runs`,
+**Author decision: retire superseded-format support.** Current release tools
+will cease supporting the schema-1 release-evidence format. This decision
+accepts the loss of current-tool verification and publishing of those archives,
+and rotation/recovery driven by them. Retained historical bytes remain intact.
+Verification of newly prepared releases in the current format remains part of
+the release workflow, including verification before publication and before
+retiring working evidence.
+
+The smallest complete target is schema-1 admission and battery-summary
+interpretation in `release_runs`,
 the old-format construction and compatibility expectations in the rotation
 controls, and the corresponding promise. Removing only the test leaves the
 service in place. Preserving schema-2 verification requires keeping its hash,
@@ -346,16 +355,18 @@ rotation requires its ownership and interrupted-operation protections.
 New-format rotation can still retire older owned local runs using their
 retention metadata, without interpreting their old archive bundle.
 
-The explicit price is loss of current-tool verification/publishing and
-old-archive-driven rotation/recovery for existing schema-1 archives, including
-the latest local archived release observed here. That is a separate service
-decision, not a wire-response version change or an already authorized
-consequence of this investigation. A decision must address unfinished operations
-that depend on that service; the local metadata is insufficient to close that
-question. No archive rewriting, replacement historical reader or replay
-framework is proposed. Current-format verification, old owned-run cleanup and
-current-format interrupted recovery would need to be observed after any such
-change; none was executed here.
+The accepted loss includes the latest local archived release observed here.
+This is a decision to withdraw a release-tool service; it changes no PW
+wire-response admission rule. Any unfinished operations depending on the old
+service must be settled before removing their recovery route. No pending
+rotation was found locally; the metadata inspected does not establish the state
+of other checkouts or copies. That transition requirement does not create a
+continuing promise to serve completed historical archives. No archive rewriting,
+replacement historical reader or replay framework is proposed. Implementation
+must preserve current-format verification, old owned-run cleanup and
+current-format interrupted recovery, with those operations verified after the
+change. This report records the decision; no implementation or execution of
+those checks occurred here.
 
 ## Wider-screen boundaries and individual follow-up
 
@@ -388,10 +399,10 @@ real-capture rejection check. The setup change gives up reproduction of three
 checker limitations while preserving the native experiment. The wrapper change
 gives up designated-message classification while preserving regressions and
 selection guards. Each removes a specific dependency or obligation; none
-requires accepting a general reduction in current evidence quality. The
-archive-format proposal additionally requires withdrawal of an explicit service
-and a decision about its recovery consequences. Those choices remain proposals,
-not implementation authorization.
+requires accepting a general reduction in current evidence quality. These three
+reductions remain proposals. The author has approved withdrawal of the older
+archive-format service with the losses and transition requirements stated in
+finding 5. Implementation remains separate work.
 
 The investigation stops at these traced dependencies. It does not establish
 repository-wide absence of historical obligations, resolve the value of every
@@ -399,5 +410,5 @@ current experiment, or infer kernel behavior from static tests. The remaining
 execution questions are the narrow preservation observations identified with
 each proposal. Source paths, cited line ranges and commits, canonical case IDs,
 Markdown structure, relative links/anchors and documented command routing were
-checked statically. Only this report was added; no product, test, fixture,
+checked statically. Only this report was written; no product, test, fixture,
 contract, plan or retained evidence was changed.
