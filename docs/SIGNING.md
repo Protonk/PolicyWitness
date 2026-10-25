@@ -250,12 +250,11 @@ the acceptance is the battery summary, and checksums of the compressed archive
 and the standalone `acceptance.json` and `battery.json` summaries.
 `release.json` binds that manifest by SHA-256. Its `acceptance.path` and
 `battery.path` resolve to summaries within the release archive;
-`original_path` records the former location under `tests/out`. Archives
-through 0.3.3 carry `schema_version` 1 with the battery as a separate
-`battery/` role and a separate retained run; they verify, publish and rotate
-unchanged, and nothing rewrites them. Original command receipts retain their
-original paths. Verification reads the portable copy directly, independently
-of the working test directories.
+`original_path` records the former location under `tests/out`. Verification,
+publication and rotation accept exactly evidence-bundle schema 2; other formats
+are unsupported. Stored archives are not migrated or rewritten. Original
+command receipts retain their original paths. Verification reads the portable
+copy directly, independently of the working test directories.
 
 Successful release packaging is the automatic cleanup checkpoint. Test output
 accumulates during development until the next packaged release or explicit
@@ -301,17 +300,19 @@ It never deletes a replacement run at an original path. Keep the quarantine and
 journal together until completion. A later checkpoint refuses to start while
 an earlier transaction still has quarantined output; resume that transaction first.
 
-Preview or resume just this last step with the archived version:
+Set `RELEASE_ARCHIVE` to the path of the current-format release archive, then
+preview or resume just this last step:
 
 ```sh
-tests/lib/python.sh tests/lib/release_rotate.py dist/archive/v0.2.7
-tests/lib/python.sh tests/lib/release_rotate.py dist/archive/v0.2.7 --apply
+tests/lib/python.sh tests/lib/release_rotate.py "$RELEASE_ARCHIVE"
+tests/lib/python.sh tests/lib/release_rotate.py "$RELEASE_ARCHIVE" --apply
 ```
 
 Preview is read-only. `--apply` either creates a journal or resumes its existing
 transaction; a completed journal is a no-op, so later test runs cannot trigger
 another sweep under the same release. Resume a failed cleanup through the same
-journal. Evidence archives, including the test evidence bundle, remain local,
+journal. An unsupported evidence format cannot be a new or resumed cleanup
+checkpoint. Evidence archives, including the test evidence bundle, remain local,
 ignored files.
 
 ### Publication

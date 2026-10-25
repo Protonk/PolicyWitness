@@ -34,8 +34,7 @@ def plan(archive, root, record, manifest):
     pending = retention.bounded_path(root, root / 'tests/out/.release-rotation')
     if pending.exists() and any(pending.iterdir()):
         raise ValueError('unfinished release cleanup; resume its existing archive journal before starting another')
-    if release_runs.battery_source(manifest) is None:
-        raise ValueError('rotation requires a verified default battery for the new release')
+    release_runs.battery_source(manifest)  # Require the supported nested battery.
     entries = index(root)['runs']
     current = {run['retained']['path']: run['retained']['run_id'] for run in manifest['runs'].values()}
     for path, run_id in current.items():

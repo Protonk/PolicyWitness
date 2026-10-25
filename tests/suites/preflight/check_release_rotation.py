@@ -48,61 +48,6 @@ def make_release(repo, version):
     return archive, acceptance
 
 
-def legacy_pack(destination, *, tag, source, runs):
-    """The schema 1 bundle as releases through 0.3.3 wrote it: the acceptance and a separate
-    battery run as two roles, each with its own summary. Written here so the verifier and
-    rotation are exercised against that format without copying a historical archive."""
-    snapshots = {role: dict(retained=entry, inventory=artifact.inventory(path)) for role, (path, entry) in runs.items()}
-    destination.mkdir()
-    archive = destination / 'runs.tar.gz'
-    with tarfile.open(archive, 'x:gz', dereference=False) as packed:
-        for role, (path, _) in runs.items():
-            packed.add(path, arcname=role)
-    summaries = {}
-    for role, (path, _) in runs.items():
-        name = 'acceptance.json' if role == 'acceptance' else 'run.json'
-        shutil.copy2(path / name, destination / (role + '.json'))
-        summaries[role + '.json'] = artifact.digest(destination / (role + '.json'))
-    manifest = dict(schema_version=1, tag=tag, source_commit=source, archive=archive.name,
-                    sha256=artifact.digest(archive), runs=snapshots, summaries=summaries)
-    retention.atomic_json(destination / 'manifest.json', manifest)
-    return dict(path=release_runs.BUNDLE + '/manifest.json', sha256=artifact.digest(destination / 'manifest.json'))
-
-
-def make_legacy_release(repo, version):
-    """A release in the separate-battery format: the archived current release is rewritten in
-    place into schema 1, with the battery copied beside the acceptance as its own retained run."""
-    archive, acceptance = make_release(repo, version)
-    record = retention.read_object(archive / 'release.json')
-    battery = repo / 'tests/out/runs' / f'release-{version}-default'
-    shutil.copytree(acceptance / 'tests', battery, symlinks=True)
-    for name in ('owner.json', 'run.json'):
-        value = retention.read_object(battery / name)
-        if name == 'owner.json':
-            value['out_dir'] = str(battery)
-        else:
-            value['configuration']['out_dir'] = str(battery)
-            value['plan']['configuration'] = value['configuration']
-        retention.atomic_json(battery / name, value)
-    assert retention.disposition(battery) == 'completed'
-    index = retention.read_object(repo / 'tests/RETAINED.json')
-    acceptance_entry = next(e for e in index['runs'] if e['path'] == str(acceptance.relative_to(repo / 'tests/out')))
-    battery_entry = dict(path=str(battery.relative_to(repo / 'tests/out')), run_id=record['battery']['run_id'],
-                         reason=f'legacy fixture battery {version}', source=record['source_commit'],
-                         app_inventory='artifact-integrity/before.json', release=record['tag'])
-    index['runs'].append(battery_entry)
-    with retention.checkout_lock(repo):
-        retention.write_index(repo, index)
-    shutil.rmtree(archive / release_runs.BUNDLE)
-    record['test_evidence'] = legacy_pack(archive / release_runs.BUNDLE, tag=record['tag'], source=record['source_commit'],
-                                          runs={'acceptance': (acceptance, acceptance_entry), 'battery': (battery, battery_entry)})
-    record['battery']['original_path'] = battery_entry['path']
-    retention.atomic_json(archive / 'release.json', record)
-    _, manifest = release_runs.verify_release(archive)
-    assert manifest['schema_version'] == 1 and set(manifest['runs']) == {'acceptance', 'battery'}, manifest
-    return archive, acceptance, battery
-
-
 def set_times(path, started, finished=None, *, ok=True):
     owner = retention.read_object(path / 'owner.json')
     owner['started_at_unix_ms'] = started
@@ -123,19 +68,15 @@ def local_run(repo, name, started, finished=None, *, ok=True):
     return path
 
 
-def fixture(out, name, *, legacy=False):
+def fixture(out, name):
     work = out / name
     work.mkdir()
     repo = make_repo(work)
     (repo / 'outside').write_bytes(b'do not follow or delete this symlink target')
     (repo / '.tmp').mkdir()
     (repo / '.tmp/scratch').write_bytes(b'not release rotation')
-    if legacy:
-        old, previous, _ = make_legacy_release(repo, '0.9.0')
-        new, current, _ = make_legacy_release(repo, '0.9.1')
-    else:
-        old, previous = make_release(repo, '0.9.0')
-        new, current = make_release(repo, '0.9.1')
+    old, previous = make_release(repo, '0.9.0')
+    new, current = make_release(repo, '0.9.1')
     return repo, old, previous, new, current
 
 
@@ -180,48 +121,79 @@ def portable(out):
 
 
 def battery_contract(out):
-    """Reject a complete all-selection run even with empty explicit selectors in either format."""
-    for schema in (1, 2):
-        work = out / f'battery-contract-{schema}'
-        work.mkdir()
-        repo = make_repo(work)
-        if schema == 1:
-            archive, acceptance, battery = make_legacy_release(repo, '0.9.0')
-        else:
-            archive, acceptance = make_release(repo, '0.9.0')
-            battery = acceptance / 'tests'
-        record, manifest = release_runs.verify_release(archive)
-        run = retention.read_object(battery / 'run.json')
-        run['plan']['selection']['mode'] = 'all'
-        retention.atomic_json(battery / 'run.json', run)
-        runs = {role: (repo / 'tests/out' / value['retained']['path'], value['retained'])
-                for role, value in manifest['runs'].items()}
-        shutil.rmtree(archive / release_runs.BUNDLE)
-        if schema == 1:
-            reference = legacy_pack(archive / release_runs.BUNDLE, tag=record['tag'],
-                                    source=record['source_commit'], runs=runs)
-        else:
-            with retention.checkout_lock(repo):
-                reference = release_runs.pack(archive / release_runs.BUNDLE, tag=record['tag'],
-                                              source=record['source_commit'], runs=runs,
-                                              battery=('acceptance', 'tests/run.json'))
-        record['test_evidence'] = reference
-        retention.atomic_json(archive / 'release.json', record)
-        reject(lambda: release_runs.verify_release(archive), 'not the default selection')
-        if schema == 2:
-            # Malformed references must produce a refusal, not an uncaught TypeError.
-            record['battery'] = None
-            retention.atomic_json(archive / 'release.json', record)
-            reject(lambda: release_runs.verify_release(archive), 'does not support the release')
-            manifest = retention.read_object(archive / release_runs.BUNDLE / 'manifest.json')
-            manifest['battery']['path'] = 'acceptance.json'
-            retention.atomic_json(archive / release_runs.BUNDLE / 'manifest.json', manifest)
-            reject(lambda: release_runs.verify_bundle(archive / release_runs.BUNDLE),
-                   'must be acceptance/tests/run.json')
+    """Only a default-selection nested battery can support the release."""
+    work = out / 'battery-contract'
+    work.mkdir()
+    repo = make_repo(work)
+    archive, acceptance = make_release(repo, '0.9.0')
+    battery = acceptance / 'tests'
+    record, manifest = release_runs.verify_release(archive)
+    run = retention.read_object(battery / 'run.json')
+    run['plan']['selection']['mode'] = 'all'
+    retention.atomic_json(battery / 'run.json', run)
+    runs = {role: (repo / 'tests/out' / value['retained']['path'], value['retained'])
+            for role, value in manifest['runs'].items()}
+    shutil.rmtree(archive / release_runs.BUNDLE)
+    with retention.checkout_lock(repo):
+        reference = release_runs.pack(archive / release_runs.BUNDLE, tag=record['tag'],
+                                      source=record['source_commit'], runs=runs,
+                                      battery=('acceptance', 'tests/run.json'))
+    record['test_evidence'] = reference
+    retention.atomic_json(archive / 'release.json', record)
+    reject(lambda: release_runs.verify_release(archive), 'not the default selection')
+    # Malformed references must produce a refusal, not an uncaught TypeError.
+    record['battery'] = None
+    retention.atomic_json(archive / 'release.json', record)
+    reject(lambda: release_runs.verify_release(archive), 'does not support the release')
+    manifest = retention.read_object(archive / release_runs.BUNDLE / 'manifest.json')
+    manifest['battery']['path'] = 'acceptance.json'
+    retention.atomic_json(archive / release_runs.BUNDLE / 'manifest.json', manifest)
+    reject(lambda: release_runs.verify_bundle(archive / release_runs.BUNDLE),
+           'must be acceptance/tests/run.json')
+
+
+def unsupported_format(out):
+    repo, old, previous, new, current = fixture(out, 'unsupported-format')
+    release_runs.verify_release(new)
+    manifest_path = new / release_runs.BUNDLE / 'manifest.json'
+    manifest = retention.read_object(manifest_path)
+    manifest['schema_version'] = 1
+    retention.atomic_json(manifest_path, manifest)
+    record = retention.read_object(new / 'release.json')
+    record['test_evidence']['sha256'] = artifact.digest(manifest_path)
+    retention.atomic_json(new / 'release.json', record)
+    before = artifact.inventory(repo)
+    lock = repo / 'tests/.checkout.lock'
+    lock_inode = lock.stat().st_ino
+    diagnostic = 'unsupported release test evidence schema'
+    reject(lambda: release_runs.verify_bundle(new / release_runs.BUNDLE), diagnostic)
+    reject(lambda: release_runs.verify_release(new), diagnostic)
+    reject(lambda: release_rotate.rotate(new, root=repo, apply=True), diagnostic)
+    # Taking the checkout lock refreshes its owner record before format admission.
+    after = artifact.inventory(repo)
+    changes = artifact.changes(before, after)
+    assert set(changes) <= {'tests/.checkout.lock'}, changes
+    assert after['tests/.checkout.lock']['mode'] == before['tests/.checkout.lock']['mode']
+    assert lock.stat().st_ino == lock_inode
+    assert previous.is_dir() and current.is_dir()
+    assert not (new / 'evidence/rotation.json').exists()
+    release_runs.verify_release(old)  # The unchanged current-format neighbor still verifies.
 
 
 def ordinary(out):
     repo, old, previous, new, current = fixture(out, 'ordinary')
+    # Old working output can be retained separately from its acceptance without
+    # making its archive an input to this release's cleanup.
+    separate = local_run(repo, 'release-0.9.0-default', 100, 101)
+    old_record = retention.read_object(old / 'release.json')
+    index = retention.read_object(repo / 'tests/RETAINED.json')
+    index['runs'].append(dict(path='runs/release-0.9.0-default',
+                             run_id=retention.read_object(separate / 'run.json')['run_id'],
+                             reason='separately retained battery output',
+                             source=old_record['source_commit'], app_inventory=None,
+                             release='v0.9.0'))
+    with retention.checkout_lock(repo):
+        retention.write_index(repo, index)
     loose = local_run(repo, 'zzz-old-development', 120, 121)
     latest = local_run(repo, 'aaa-newest-failed', 300, 301, ok=False)
     os.utime(loose, (999999999, 999999999))
@@ -231,12 +203,14 @@ def ordinary(out):
     before = artifact.inventory(repo)
     preview = release_rotate.rotate(new, root=repo)
     assert before == artifact.inventory(repo), 'preview changed files'
-    assert {r['path'] for r in preview['runs']} == {'release-acceptance/' + OLD_ACCEPTANCE, 'runs/zzz-old-development'}
+    assert {r['path'] for r in preview['runs']} == {
+        'release-acceptance/' + OLD_ACCEPTANCE, 'runs/release-0.9.0-default', 'runs/zzz-old-development'}
     assert preview['newest'] == ['runs/aaa-newest-failed']
     lock_inode = (repo / 'tests/.checkout.lock').stat().st_ino
     result = release_rotate.rotate(new, root=repo, apply=True)
     assert result['state'] == 'complete' and result['runs'][0]['state'] == 'removed'
-    assert not previous.exists() and current.is_dir() and latest.is_dir() and not loose.exists()
+    assert not previous.exists() and not separate.exists()
+    assert current.is_dir() and latest.is_dir() and not loose.exists()
     assert artifact.inventory(old) == old_archive, 'rotation rewrote the historical archive'
     assert artifact.inventory(current) == accepted
     assert (repo / '.tmp/scratch').read_bytes() == b'not release rotation'
@@ -448,48 +422,6 @@ def interrupted(out):
     assert all(e['release'] == 'v0.9.2' for e in retention.read_object(repo / 'tests/RETAINED.json')['runs'])
 
 
-def legacy(out):
-    """Archives written before the nested format keep verifying, rotation driven by a
-    legacy archive still works, and an interrupted legacy rotation resumes. Nothing
-    rewrites a historical archive."""
-    # A legacy previous release beside a current one: the current archiver's rotation
-    # retires the legacy acceptance and its separate battery, and the legacy archive
-    # verifies unchanged before and after.
-    work = out / 'legacy-previous'
-    work.mkdir()
-    repo = make_repo(work)
-    (repo / 'outside').write_bytes(b'do not follow or delete this symlink target')
-    old, previous, battery = make_legacy_release(repo, '0.9.0')
-    new, current = make_release(repo, '0.9.1')
-    history = artifact.inventory(old)
-    _, manifest = release_runs.verify_release(old)
-    assert manifest['schema_version'] == 1 and release_runs.battery_source(manifest) == ('battery', 'run.json')
-    preview = release_rotate.rotate(new, root=repo)
-    assert {r['path'] for r in preview['runs']} == {'release-acceptance/' + OLD_ACCEPTANCE, 'runs/release-0.9.0-default'}
-    result = release_rotate.rotate(new, root=repo, apply=True)
-    assert result['state'] == 'complete' and not previous.exists() and not battery.exists() and current.is_dir()
-    assert artifact.inventory(old) == history, 'rotation rewrote the legacy archive'
-    release_runs.verify_release(old)
-    retained = retention.read_object(repo / 'tests/RETAINED.json')['runs']
-    assert [e['path'] for e in retained] == ['release-acceptance/run-0-9-1']
-    # A legacy current release: its own rotation plans from battery.json as before, and a
-    # rotation interrupted at the rename boundary resumes through the same journal.
-    repo, old, previous, new, current = fixture(out, 'legacy-current', legacy=True)
-    legacy_battery = repo / 'tests/out/runs/release-0.9.0-default'
-    assert legacy_battery.is_dir()
-    process = subprocess.run([sys.executable, '-B', '-S', __file__, '--crash', str(repo), 'rename'],
-                             capture_output=True, timeout=30)
-    assert process.returncode == 91, process.stderr
-    receipt = retention.read_object(new / 'evidence/rotation.json')
-    assert {r['path'] for r in receipt['runs']} >= {'release-acceptance/' + OLD_ACCEPTANCE, 'runs/release-0.9.0-default'}
-    result = release_rotate.rotate(new, root=repo, apply=True)
-    assert result['state'] == 'complete' and not previous.exists() and not legacy_battery.exists()
-    assert current.is_dir() and (repo / 'tests/out/runs/release-0.9.1-default').is_dir()
-    release_runs.verify_release(new)
-    retained = retention.read_object(repo / 'tests/RETAINED.json')['runs']
-    assert sorted(e['path'] for e in retained) == ['release-acceptance/run-0-9-1', 'runs/release-0.9.1-default']
-
-
 def atomic_and_locking(out):
     repo, _, previous, new, _ = fixture(out, 'locking')
     index_path = repo / 'tests/RETAINED.json'
@@ -525,16 +457,16 @@ def main(out):
     out.mkdir(parents=True, exist_ok=True)
     portable(out)
     battery_contract(out)
+    unsupported_format(out)
     ordinary(out)
     protections(out)
     checkpoint_policy(out)
     acceptance_lifetime(out)
     interrupted(out)
-    legacy(out)
     atomic_and_locking(out)
     print('release cleanup controls passed: latest release and newest local output, '
           'acceptance lifetime, abandoned output, resource cleanup, pins, atomic retention, '
-          'both evidence formats and four abrupt-exit recovery boundaries')
+          'unsupported-format refusal and four abrupt-exit recovery boundaries')
 
 
 if __name__ == '__main__':

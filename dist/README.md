@@ -23,9 +23,10 @@ BYOXPC use; an older copy without the issuer can still serve ordinary specimens
 but cannot perform an extension experiment.
 
 Portable test evidence lives under `evidence/test-runs/`: `runs.tar.gz` holds
-the complete acceptance and battery directories; `manifest.json` inventories
-and hashes them; standalone JSON summaries are addressed relative to the
+the complete acceptance directory with its nested battery; `manifest.json`
+inventories and hashes it; standalone JSON summaries are addressed relative to the
 archive by `release.json`. Raw receipts keep their original paths as provenance.
+Current release tools accept only schema-2 evidence bundles.
 `evidence/rotation.json` records cleanup of older managed test output, including
 enough state to resume an interrupted deletion. Successful packaging keeps the
 latest release's working acceptance and battery plus the newest completed local

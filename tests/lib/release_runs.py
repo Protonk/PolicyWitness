@@ -3,10 +3,9 @@
 Archive members are inspected as streams, never extracted. Symlinks are recorded
 without following them. Original paths remain provenance, not archive lookups.
 
-Two bundle formats verify. Schema 1, written through release 0.3.3, packs the
-acceptance directory and a separate battery run as two roles. Schema 2 packs
-the acceptance directory alone and declares the battery as the dispatcher run
-nested inside it (`tests/run.json`); the packer writes only schema 2.
+Only schema 2 verifies. It packs the acceptance directory alone and declares
+the battery as the dispatcher run nested inside it (`tests/run.json`).
+The packer writes that format; unsupported bundles remain unchanged.
 """
 import hashlib
 import os
@@ -84,24 +83,22 @@ def pack(destination, *, tag, source, runs, battery):
 
 
 def battery_source(manifest):
-    """The role and in-role path of the battery summary a bundle manifest declares, or None."""
-    if manifest.get('schema_version') == 2:
-        declared = manifest.get('battery')
-        if not isinstance(declared, dict):
-            raise ValueError('a schema 2 evidence manifest declares its battery')
-        if declared != dict(role='acceptance', path='tests/run.json'):
-            raise ValueError('a schema 2 battery must be acceptance/tests/run.json')
-        return declared.get('role'), declared.get('path')
-    return ('battery', 'run.json') if 'battery' in manifest.get('runs', {}) else None
+    """The required battery's role and path in a supported bundle manifest."""
+    if manifest.get('schema_version') != 2:
+        raise ValueError('unsupported release test evidence schema; expected schema 2')
+    declared = manifest.get('battery')
+    if not isinstance(declared, dict):
+        raise ValueError('a schema 2 evidence manifest declares its battery')
+    if declared != dict(role='acceptance', path='tests/run.json'):
+        raise ValueError('a schema 2 battery must be acceptance/tests/run.json')
+    return declared['role'], declared['path']
 
 
 def verify_bundle(destination):
     destination = real_path(destination)
     manifest = retention.read_object(destination / 'manifest.json')
-    schema, roles = manifest.get('schema_version'), set(manifest.get('runs', {}))
-    if manifest.get('archive') != 'runs.tar.gz' or not (
-            (schema == 1 and roles in ({'acceptance'}, {'acceptance', 'battery'}) and 'battery' not in manifest)
-            or (schema == 2 and roles == {'acceptance'})):
+    battery = battery_source(manifest)
+    if manifest.get('archive') != 'runs.tar.gz' or set(manifest.get('runs', {})) != {'acceptance'}:
         raise ValueError('invalid release test evidence manifest')
     archive = real_path(destination / 'runs.tar.gz')
     if artifact.digest(archive) != manifest['sha256']:
@@ -135,14 +132,11 @@ def verify_bundle(destination):
             found[member.name] = entry
     if found != expected:
         raise ValueError('release test evidence differs from its file inventory')
-    sources = {role + '.json': (role, 'acceptance.json' if role == 'acceptance' else 'run.json') for role in manifest['runs']}
-    battery = battery_source(manifest)
-    if schema == 2:
-        role, relative = battery
-        inventory = manifest['runs'].get(role, {}).get('inventory', {})
-        if not isinstance(relative, str) or 'sha256' not in inventory.get(relative, {}):
-            raise ValueError('release test evidence names no battery summary inside its runs')
-        sources['battery.json'] = battery
+    role, relative = battery
+    inventory = manifest['runs'].get(role, {}).get('inventory', {})
+    if 'sha256' not in inventory.get(relative, {}):
+        raise ValueError('release test evidence names no battery summary inside its runs')
+    sources = {'acceptance.json': ('acceptance', 'acceptance.json'), 'battery.json': battery}
     if set(manifest.get('summaries', {})) != set(sources):
         raise ValueError('release test evidence summaries are incomplete')
     for name, (role, relative) in sources.items():
@@ -208,27 +202,20 @@ def verify_release(archive):
             or accepted.get('ok') is not True or accepted.get('sha256_before') != record['sha256']
             or accepted.get('sha256_after') != record['sha256']):
         raise ValueError('archived acceptance does not support the ZIP')
-    source = battery_source(manifest)
-    if source is not None:
-        role, relative = source
-        battery = retention.read_object(archive / BUNDLE / 'battery.json')
-        entry = manifest['runs'][role]['retained']
-        reference = record.get('battery')
-        if not isinstance(reference, dict):
-            raise ValueError('archived battery does not support the release')
-        if manifest.get('schema_version') == 2:
-            original = entry['path'] + '/' + str(PurePosixPath(relative).parent)
-            consistent = reference.get('original_path') == original
-        else:
-            consistent = battery.get('run_id') == entry['run_id']
-        if (reference.get('path') != BUNDLE + '/battery.json'
-                or battery.get('ok') is not True or battery.get('terminal') is not True
-                or reference.get('run_id') != battery.get('run_id') or not consistent
-                or entry.get('release') != tag or entry['source'] != record['source_commit']):
-            raise ValueError('archived battery does not support the release')
-        if (battery.get('requested_cases') or battery.get('requested_suites')
-                or (battery.get('plan') or {}).get('selection', {}).get('mode') != 'default'):
-            raise ValueError('archived battery is not the default selection')
-    elif record.get('battery') is not None:
-        raise ValueError('missing archived battery evidence')
+    role, relative = battery_source(manifest)
+    battery = retention.read_object(archive / BUNDLE / 'battery.json')
+    entry = manifest['runs'][role]['retained']
+    reference = record.get('battery')
+    if not isinstance(reference, dict):
+        raise ValueError('archived battery does not support the release')
+    original = entry['path'] + '/' + str(PurePosixPath(relative).parent)
+    if (reference.get('path') != BUNDLE + '/battery.json'
+            or battery.get('ok') is not True or battery.get('terminal') is not True
+            or reference.get('run_id') != battery.get('run_id')
+            or reference.get('original_path') != original
+            or entry.get('release') != tag or entry['source'] != record['source_commit']):
+        raise ValueError('archived battery does not support the release')
+    if (battery.get('requested_cases') or battery.get('requested_suites')
+            or (battery.get('plan') or {}).get('selection', {}).get('mode') != 'default'):
+        raise ValueError('archived battery is not the default selection')
     return record, manifest

@@ -647,6 +647,29 @@ def check_publish(out, repo, dest, notes):
             raise AssertionError('an archive without portable test evidence was published')
     assert not refusing.calls, refusing.calls
 
+    # A supported neighbor has verified and published above. Change only this
+    # copy's format number and repair the outer hash to reach format admission.
+    unsupported = work / 'unsupported-format'
+    shutil.copytree(dest, unsupported)
+    manifest_path = unsupported / release_runs.BUNDLE / 'manifest.json'
+    manifest = json.loads(manifest_path.read_text())
+    manifest['schema_version'] = 1
+    retention.atomic_json(manifest_path, manifest)
+    record = json.loads((unsupported / 'release.json').read_text())
+    record['test_evidence']['sha256'] = artifact.digest(manifest_path)
+    retention.atomic_json(unsupported / 'release.json', record)
+    before = artifact.inventory(unsupported)
+    refusing = GitHub(work / 'unsupported-format.jsonl')
+    with patch.object(release_publish, 'run', refusing):
+        try:
+            release_publish.publish(unsupported, root=repo)
+        except ValueError as exc:
+            assert 'unsupported release test evidence schema' in str(exc), exc
+        else:
+            raise AssertionError('unsupported evidence format was published')
+    assert not refusing.calls, refusing.calls
+    assert artifact.inventory(unsupported) == before, 'refusal changed the archive'
+
 
 def main(out):
     out.mkdir(parents=True, exist_ok=True)

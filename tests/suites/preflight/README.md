@@ -346,11 +346,13 @@ Offline release controls also exercise the release procedure's decision points.
   completed deletion must resume from the journal without deleting a replacement
   at the original path. Competing processes must respect the stable checkout
   lock, and a failed atomic index replacement must preserve its prior bytes.
-  Both evidence formats are exercised: a previous release in the separate-battery
-  format (schema 1, as releases through 0.3.3 were archived) verifies, has its
-  acceptance and battery retired by the current archiver's rotation, and still
-  verifies unchanged afterwards; a rotation driven by a schema 1 archive plans
-  from its battery summary and resumes after an interrupted rename.
+  Current-format rotation retires older owned acceptance and separately retained
+  battery output while leaving historical archive bytes unchanged. Unsupported
+  evidence formats are refused by bundle/release verification and rotation
+  before any index, journal or output change. The publication controls also
+  require format refusal before any external command or archive change. These
+  controls change a current fixture's format number and rebind its manifest hash;
+  unchanged current-format evidence still verifies, publishes and recovers.
 
 ## Fixtures
 
