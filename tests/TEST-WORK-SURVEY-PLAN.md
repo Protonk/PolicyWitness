@@ -242,7 +242,8 @@ describe as local debugging, and the `records/performance/` equipment.
 Choose from the observed differences in Stage 1, not from suite names or
 default membership. The candidates below were selected during preparation
 from facts already verified in source; the executor may substitute, with a
-stated reason, but should keep at least ten and keep every counterexample.
+stated reason, but should keep at least ten. Counterexamples follow the rule
+at the end of this stage, and overlap claims follow the standard beside it.
 For each, read the named files to the assertion lines, state exactly what a
 pass supports and what it leaves open, and state what a failure would and
 would not establish.
@@ -294,10 +295,12 @@ found one likely rejection, noted under candidate 5.
    the string `AttemptOutcome` to occur in the drift checker, and compares
    enum constants with matrix rows. `source_drift/check.py`
    `check_attempt_outcomes_have_matrix_rows` (line 429) performs the same
-   comparison mechanically through the Markdown reader. Determine whether
-   the two are the same job, what the string-presence check establishes, and
-   whether either can pass while the other fails. This is a candidate finding
-   and a candidate overlap; report it as whichever the evidence supports.
+   comparison mechanically through the Markdown reader. Determine, under the
+   overlap standard at the end of this stage, whether the two are the same
+   job: what the string-presence check establishes, and what change to the
+   enum, the matrix or the checker would fail one and pass the other. This
+   is a candidate finding and a candidate overlap; report it as whichever
+   the evidence supports.
 
 4. **Batch cases as populations.** `unit/rust.unit` collapses 209 functions
    into one status and one log. `unit/rust.disposition_reds` and
@@ -423,7 +426,41 @@ found one likely rejection, noted under candidate 5.
     `runner_filter_iokit_registry_entry_class` and `runner_filter_iokit_user_client_class`
     (filter name differs); the 10 `runner_byoxpc` specimens that run the
     smoke, menagerie and BBX scripts under `PW_TEST_SUITE_OVERRIDE` with an
-    installed external runner. State what the second copy adds in each pair.
+    installed external runner. State what the second copy adds in each pair,
+    under the overlap standard below.
+
+**What an overlap finding must establish.** Saying that two checks do the
+same job requires more than finding the same proposition in both. For each
+of the two, the report states: the proposition asserted, cited to the
+assertion; the inputs read (the same file, fixture or live run, or different
+ones); the implementation path (a regular expression over a source file
+against the Markdown reader's parse, say, or the CLI against the direct
+ABI); the execution facts (suite, default membership, equipment, what else
+runs in the same invocation); and the failures each can detect that the
+other cannot, found by asking what change to the checked subject would fail
+one and pass the other. "Same job" is warranted when the propositions agree
+and no such differential failure is found. When one is found, the report
+records a contrast with a shared proposition, not an overlap. In either case
+the report says whether the second implementation is independence by design,
+which this repository documents for several readers (the consumer beside the
+Swift encoder, the lifecycle oracle beside the disposition reader, checker
+controls that import neither the checker nor production code), or an
+undocumented duplicate. An overlap finding describes a relation; it does not
+say that either check is redundant or that one should be removed.
+
+**Counterexamples.** A counterexample is a case whose assertions contradict a
+hypothesis about a kind of work, whether the hypothesis is this plan's, a
+repository document's, or one the executor forms while building the Stage 1
+ledger. Candidates 3, 4 and 5 already carry one each (a documentation check
+inside a live suite; the disagreement over what a guarded Swift block
+reports; a product observation inside a mutation case) and cannot be dropped
+by substitution. For each distinct contradiction found in Stage 1 or Stage 2,
+the report investigates one example to the standard above and lists the
+other cases showing the same contradiction by ID, one line each, in that
+investigation. Two contradictions are distinct when they contradict different
+hypotheses, or the same hypothesis by different mechanisms. Stage 2 is
+complete when at least ten investigations are written and every distinct
+contradiction found has its investigated example.
 
 ### Stage 3: follow relationships
 
@@ -510,8 +547,8 @@ Structure, following the commission:
    symbols and lines, with "a pass supports" and "a pass leaves open" stated
    separately, and failure meaning stated with the dispatcher's and the
    case's own vocabulary.
-3. Consequential contrasts and overlaps, including cases that resist
-   characterization.
+3. Consequential contrasts and overlaps, each overlap stated to the Stage 2
+   standard, including cases that resist characterization.
 4. Relationships from Stage 3.
 5. Documentation versus implementation from Stage 4.
 6. Open questions, each with the evidence that would settle it and, for
@@ -550,6 +587,14 @@ line.
 8. **The footprint claim is narrow.** Tracked content unchanged and no
    mutating command run, as `git status --porcelain` and the command record
    show; not a byte-level inventory of ignored paths (Verification).
+9. **An overlap needs differential failures examined.** The same proposition
+   is not enough; inputs, implementation path, execution facts and the
+   failures each check alone can detect are stated, and the finding never
+   asserts redundancy (Stage 2, "What an overlap finding must establish").
+10. **One investigated example per distinct contradiction.** Counterexamples
+    from Stage 1 and Stage 2 are kept one per distinct contradiction, with
+    the rest listed by ID; candidates 3, 4 and 5 are fixed (Stage 2,
+    "Counterexamples").
 
 Routine for the executor: the ledger's exact columns, the order of
 investigations, how many lines of a checker to quote, and the report's
