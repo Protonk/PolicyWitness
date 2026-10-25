@@ -101,7 +101,9 @@ investigative question and links to its authoritative requirements or detailed
 control account. Organize the rows by the changed behavior, regardless of
 default membership.
 
-Bound the initial index to these established routes:
+Include these initial established routes. Their basis is an explicit trigger in
+current guidance; a fixed number of rows is not a reason to exclude a documented
+route. Group related triggers to keep the index compact.
 
 | Change | Existing instruction or account to expose |
 | --- | --- |
@@ -111,6 +113,7 @@ Bound the initial index to these established routes:
 | Worker clock source, timebase or sample validation | The retained native worker clock applicability entry. |
 | Exec publication, absence handling or confirmed-reap reconciliation | The retained exec-reader and confirmed-reap mutation entries. |
 | BYOXPC selection, installation, registry or cleanup | The applicable retained BYOXPC entries and existing controller test-selection guidance. |
+| Build, toolchain, signing or artifact inspection | The retained signed-artifact, build-guard, build-refusal, translated-build-refusal and toolchain-switch entries, preserving their distinct change triggers and equipment conditions. |
 
 Leave requirements and detailed case lists with their current owners; the index
 provides routes to those accounts. Preserve each route's actual trigger,
@@ -119,12 +122,25 @@ existing default-test guidance is sufficient; do not copy its checklists into
 new control entries merely to make the index look uniform.
 
 The index does not claim exhaustive coverage or require a new investigation to
-map every component or test. If inspecting a route exposes missing or
-conflicting requirements, record the specific issue as a follow-up question in
-the completion account. Include the settled routes and preserve supported
-instructions without inventing or reconciling obligations through an index
-label. Creating this bounded index is part of the revamp, not a separate
-planning deliverable.
+map every component or test. Creating this bounded index is part of the revamp,
+not a separate planning deliverable.
+
+If inspection exposes missing or conflicting requirements, first check whether
+the existing authoritative instructions resolve the issue. If uncertainty
+remains, make it visible where readers choose verification: mark the index row
+**Requirement unresolved** and link it to a short qualification in the guide,
+within the detailed control entry when one exists. Identify the
+affected change and controls, the precise disputed requirement (including
+whether execution is mandatory), and the current sources that leave it
+unsettled. Preserve any unambiguous instructions and qualifications. The note
+describes the present uncertainty, without adding a change-history narrative.
+
+An unsettled route may remain discoverable, but must not be presented or credited
+as a settled required or optional selection. The guide must not invent an
+obligation, waive one, or choose between conflicting instructions through an
+index label. Continue the independently settled routes and editorial work.
+Also record the follow-up question in the completion account; that account
+cannot substitute for the qualification in the published guide.
 
 ## Preserve meaning while cleaning up entries
 
@@ -156,9 +172,9 @@ Replace obsolete project-stage wording with a supported present-day trigger
 where one is already established. For example, the order-barrier entry can
 retain its release/barrier and observer-change duties without its old
 "Gate 3 acceptance" reference. Do not add change-history notes to the guide.
-When intent remains uncertain, preserve the supported existing obligation and
-report the specific unresolved point in the completion account; do not silently
-strengthen or withdraw it. Continue the independently settled editorial work.
+When intent remains uncertain, preserve supported instructions and use the
+published qualification described above; do not silently strengthen or withdraw
+an obligation. Continue the independently settled editorial work.
 
 ## Repair navigation and guidance
 
@@ -235,8 +251,12 @@ guidance. Mechanical link checks cannot establish that this meaning survived.
 Trace every initial index row to its destination and review whether the linked
 account supports the stated change and requirement strength. Confirm that the
 admission/receiver and limit routes expose existing default-test verification,
-and that the index preserves the qualifications on its other routes. Record any
-unsettled requirement question separately from successful navigation checks.
+and that the build/signing/artifact route exposes the already documented
+triggers. Review the qualifications on every route. For an unsettled requirement,
+verify that the index flags it and links to the qualification and its sources.
+Readers arriving directly at an affected detailed guide entry must also see the
+qualification. A reader using only the guide must encounter the uncertainty;
+a passing navigation check does not settle that requirement.
 
 Use [the Markdown reader](../docs/markdown_reader.py) to check local files and
 heading anchors in the new guide and every changed document. The existing
@@ -271,14 +291,17 @@ The guide opens with a compact index of established change-specific
 verification routes, covering both default and non-default controls. Each entry
 names the relevant change or investigative question and links to its
 authoritative requirements or detailed control account. The index preserves
-existing obligations and makes no claim to exhaustive coverage.
+existing obligations, visibly qualifies unsettled routes and makes no claim to
+exhaustive coverage.
 
 The work is complete when the renamed guide explains applicability and evidence
 without organizing itself as an opt-in registry; substantive entries and
 verification obligations survive; the two obsolete general policies are gone;
 resource-based membership guidance remains available; current links and
-operational path references resolve; and the unchanged selection plus
-documentation checks pass. Commit the guide and its navigation changes together,
+operational path references resolve; unresolved requirements are disclosed at
+the point of use; and the unchanged selection plus documentation checks pass.
+Completion of the documentation revamp does not declare those requirements
+resolved. Commit the guide and its navigation changes together,
 recording the tested source, commands, run location and any unresolved editorial
 questions in the completion account. Do not claim those questions were settled
 by a passing mechanical check.
