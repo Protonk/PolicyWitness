@@ -11,7 +11,8 @@ conditions, and what would their results establish?
 The current document combines selection instructions, a non-default-case
 registry, change-specific verification duties, execution conditions and detailed
 test descriptions. Selection already belongs to [catalog.json](catalog.json)
-and [the dispatcher](lib/test_cli.py); the
+and [the dispatcher](lib/test_cli.py). The catalog records membership decisions;
+contribution guidance explains how to choose that membership. The
 [harness README](README.md#how-to-run) owns the public interface. The guide's
 continuing value is explaining verification choices that those sources cannot
 make for an implementer.
@@ -47,7 +48,7 @@ Make these structural changes:
 | Current material | Treatment |
 | --- | --- |
 | Title and introductory selection account | Use the new title and purpose; point to the harness for selection and output conventions. |
-| What makes a test opt-in | Remove the general classification policy. Retain concrete costs and operating constraints in their applicable entries. |
+| What makes a test opt-in | Replace the category policy with default-membership guidance in `tests/AGENTS.md`, as specified below. Retain concrete costs and operating constraints in their applicable entries. |
 | How to run opt-in tests | Reduce to ordinary dispatcher selection, inspection with `--list`, and links to execution guidance. Examples should select a relevant canonical case. |
 | Registry (current opt-in tests) | Rename to **Controls and their applicability**. |
 | Opt-in reason fields | Rename to **Execution considerations**; separate any embedded change trigger into **When to run**. |
@@ -62,6 +63,24 @@ Remove the generic instruction to keep specified red tests non-default until
 they turn green, and the instruction to move a stabilized test into the smoke
 suite. Neither rule is needed to describe current controls. Their removal does
 not change any case's membership or expected result.
+
+Carry the useful resource criteria into **Add or change tests** in
+`tests/AGENTS.md`, where contributors choose and register default membership.
+Cover interactive TTY/PTY or UI needs, network and GUI/other host services,
+Developer ID signing or notarization, substantial execution cost, and access to
+Unified Logging or other sandbox-sensitive telemetry. Explain how these needs
+can justify non-default membership in relation to the ordinary battery's
+equipment and operating conditions. Preserve case-specific reasons in the
+owning suite account or applicable guide entry, with the actual membership
+recorded in the catalog.
+
+These are considerations for a concrete membership decision, not an automatic
+rule that every case using a named facility belongs to a separate test class.
+Default membership, suite ownership and expected results remain separate
+decisions. Removing the old classification section does not retire resource
+selection guidance or transfer that policy to the catalog. The two obsolete
+rules above are the policies being retired. No current membership changes are
+part of this move.
 
 The maintenance section should explain that an entry earns its place by
 clarifying applicability, interpretation or consequential operating conditions.
@@ -106,10 +125,14 @@ strengthen or withdraw it. Continue the independently settled editorial work.
 
 ## Repair navigation and guidance
 
-Search tracked sources for the old filename, its relevant anchors and prose
-such as "opt-in registry". Update current navigation and nearby descriptions
-to name change-specific verification or the applicable control. Known callers
-include:
+Inventory occurrences of the old filename, its relevant anchors and prose such
+as "opt-in registry" throughout tracked sources. Include Markdown links,
+plain-text paths, code spans, examples and path strings. Classify each occurrence
+by its purpose before editing: current navigation or an operational instruction,
+a historical/revision-specific reference, or an intentional rename instruction.
+Record the disposition of retained old-path occurrences in the review notes or
+completion account. Update current navigation and nearby descriptions to name
+change-specific verification or the applicable control. Known callers include:
 
 - `tests/README.md` and `tests/AGENTS.md`.
 - `runner/AGENTS.md`, `controller/AGENTS.md` and the root ordering guidance.
@@ -117,11 +140,14 @@ include:
   `docs/ARCHITECTURE.md`.
 - The `runner_exec_inheritance`, `witness_contract`, `preflight` and `opt_in`
   suite READMEs.
-- Working plans and reports containing navigational links to preserved entries.
+- Working plans and reports containing navigational links or plain-text inputs
+  to current or planned work.
 
 In `tests/AGENTS.md`, replace the instruction to maintain an opt-in registry
 with maintaining applicable change-verification guidance. Preserve the existing
 order-barrier requirement and the force of other change-specific controls.
+Add the default-membership guidance specified above alongside catalog
+registration, keeping the guide focused on applicability and evidence.
 
 The harness account should continue to explain the real default/non-default
 distinction and `opt_in` group. Its suite-map row can describe that group as
@@ -130,11 +156,19 @@ the new guide must not be presented as its complete membership registry.
 Update incidental "opt-in" wording in touched navigation where it obscures
 the new purpose. A repository-wide terminology purge is unnecessary.
 
-Retarget navigational links in existing plans and reports to the same preserved
-entry when their meaning is unchanged. Leave quoted text, revision-specific
-claims, findings and literal historical path references intact. Inspect these
-uses individually rather than globally replacing the old filename. Apply the
-same distinction to this plan's references when implementing it.
+Retarget current links and operational path references to the new guide or the
+same preserved entry. For example, the code-span path in
+`tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md` names an input to planned
+work; update it even though a link checker will not see it. Code-span formatting,
+quotation marks, or placement in a plan/report do not make a reference historical.
+
+Preserve genuinely revision-specific claims, quotations, findings and historical
+path references where changing the path would misrepresent their subject.
+Retarget navigational links in those documents when the same preserved entry
+still serves their meaning. Inspect uses individually rather than globally
+replacing the filename. Apply the same distinction to this plan: an old path
+identifying the source of the rename remains intentional, while an instruction
+to consult the current guide must point to its new location.
 
 Keep one maintained guide at the new path. Repair links rather than retaining a
 duplicate guide at the old path. Read directory guidance before editing its
@@ -155,15 +189,21 @@ resolution, not an assumed consequence of the rename.
 
 Review the document diff entry by entry for preserved triggers, requirement
 strength, interpretation limits and operating conditions. Check the final
-section hierarchy and the destinations of any shortened text. Mechanical link
-checks cannot establish that this meaning survived.
+section hierarchy and the destinations of any shortened text. Confirm that
+the resource-based membership considerations have a usable home in
+`tests/AGENTS.md`, that the two retired policies were not recreated there, and
+that catalog registration is not being presented as membership-selection
+guidance. Mechanical link checks cannot establish that this meaning survived.
 
 Use [the Markdown reader](../docs/markdown_reader.py) to check local files and
 heading anchors in the new guide and every changed document. The existing
 generator link scan does not cover all test guides, suite READMEs, plans and
-records, so include those changed files explicitly. Search remaining old-path
-references and account for deliberate historical mentions; current navigation
-must resolve. Check `git diff --check`.
+records, so include those changed files explicitly. Repeat the textual occurrence
+search independently of the link check. Every remaining old-path occurrence
+must be accounted for as historical/revision-specific or intentional rename
+text; no active navigation, planned-work input or operating instruction may
+point at the removed file, including in plain text or code spans. Check
+`git diff --check`.
 
 Run `tests/lib/python.sh docs/generate_limits.py --check` as required by the
 documentation guidance. Inspect this selection with `--list`, then execute it
@@ -187,11 +227,12 @@ the planned documentation-only delta. Do not execute case scripts directly.
 The work is complete when the renamed guide explains applicability and evidence
 without organizing itself as an opt-in registry; substantive entries and
 verification obligations survive; the two obsolete general policies are gone;
-current links and guidance agree; and the unchanged selection plus documentation
-checks pass. Commit the guide and its navigation changes together, recording the
-tested source, commands, run location and any unresolved editorial questions in
-the completion account. Do not claim those questions were settled by a passing
-mechanical check.
+resource-based membership guidance remains available; current links and
+operational path references resolve; and the unchanged selection plus
+documentation checks pass. Commit the guide and its navigation changes together,
+recording the tested source, commands, run location and any unresolved editorial
+questions in the completion account. Do not claim those questions were settled
+by a passing mechanical check.
 
 Implementation is limited to this bounded documentation change. Preparing and
 committing the plan does not itself rename the guide or change test behavior.
