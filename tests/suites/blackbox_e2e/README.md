@@ -100,9 +100,12 @@ Disposition controls reject missing or malformed worker-exit witnesses and
 exercise the actual FIFO case's cleanup with controlled capture outcomes. They
 check staging retention, setup failure before launch, metadata and removal
 failures, preservation of the primary exception, and refusal of reused evidence.
-No worker launches in these controls. The real Rust-red wrapper runs against
-controlled Cargo output to distinguish the intended assertion from build and
-unrelated failures, reject zero/wrong-test runs, and accept the exact passing test.
+No worker launches in these controls. Both exact-selection Rust wrappers run
+against controlled Cargo output with independently specified test names. They
+accept the exact passing selection and reject failures with arbitrary or absent
+assertion text, missing/ignored results, zero/wrong/extra-test runs, nonzero Cargo
+status after passing results, and build/equipment failures. Assertion-failure
+controls use zero Cargo status so per-test guards must establish the failure.
 Artifacts retain cleanup receipts, recovery records, wrapper reports and arguments.
 The disposition contract's structural self-check and the independent oracle's
 self-check also run here: every hand-reviewed example row is reproduced by the
@@ -112,9 +115,9 @@ controls; they establish interpretation, not live reachability.
 The expected-fixture controls accept `tests/fixtures/disposition/response23/a1_expected.json`
 (a live envelope of the a1 specimen at the current contract), require only an
 unsupported-envelope version error from the lifecycle adapter, oracle and
-consumer for a constructed empty frame, and reject named mutations of the accepted baseline (missing
-disposition record, request
-removed while the cause is kept, exit code beside signal without a conflict,
+consumer for a constructed empty frame, and reject named mutations of the accepted
+baseline (missing disposition record, request removed while the cause is kept,
+exit code beside signal without a conflict,
 supported cause replaced by unknown, identical unresolved or swapped step
 answers, with or without differing debug indices), each with its expected rule.
 The consumer library reports an envelope of another version as `unsupported`

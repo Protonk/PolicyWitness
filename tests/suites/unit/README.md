@@ -12,11 +12,14 @@ Rust unit tests and formatting for the controller crate.
   `cargo fmt` in `controller/`.
 - `rust.disposition_reds` selects the four disposition record controller tests by
   their full names with `cargo test --bin policy-witness -- --include-ignored --exact`
-  (B1's status-conflict report and E1's projection and withholding of the carried
-  record). They also run inside `rust.unit`; this case keeps them individually
-  selectable and classifies build, equipment and unrelated failures separately.
-- `rust.byoxpc_reds` selects the two BYOXPC selection tests the same way (a required entitlement key present with value `false` is
-  refused, naming the worker and the key); promoted from red.
+  (status conflict, projection and withholding of the carried record).
+- `rust.byoxpc_reds` selects the two BYOXPC selection tests the same way: a required
+  entitlement key present with value `false` is refused, naming the worker and key.
+- Both selections also run inside `rust.unit`. Each wrapper requires all named
+  tests to report success, the exact test count, and a zero Cargo exit status.
+  Missing/ignored results, wrong selections, test failures and build/equipment
+  failures fail the case. Raw Cargo diagnostics are retained without classifying
+  assertion messages.
 - No case requires a built `.app` bundle.
 
 `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`

@@ -260,7 +260,7 @@
         },
         {
           "id": "rust.disposition_reds",
-          "description": "The disposition record's controller tests by exact name (B1 status conflict, E1 projection and withholding); promoted from red",
+          "description": "Disposition controller regressions by exact name: status conflict, record projection and withholding; every selected test must pass",
           "command": [
             "bash",
             "tests/suites/unit/disposition_reds.sh"
@@ -271,7 +271,7 @@
         },
         {
           "id": "rust.byoxpc_reds",
-          "description": "BYOXPC selection controller tests by exact name (a required entitlement key present with value false is refused, naming the worker and the key); promoted from red",
+          "description": "BYOXPC selection controller tests by exact name: a false-valued required entitlement is refused, naming the worker and the key; every selected test must pass",
           "command": [
             "bash",
             "tests/suites/unit/byoxpc_reds.sh"

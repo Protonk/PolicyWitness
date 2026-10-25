@@ -132,16 +132,22 @@ def capture_controls(out):
 
 
 def rust_wrapper_controls(out):
-    """The real Rust-red wrapper against controlled cargo output.
-
-    The wrapper selects four tests by exact name with --include-ignored. Each
-    scenario supplies the whole cargo transcript; the wrapper must identify each
-    expected assertion, count promoted tests, and fail build, equipment, empty,
-    wrong-test and unrelated-assertion runs separately.
-    """
+    """Both exact-selection wrappers reject incomplete or failed Cargo runs."""
+    wrappers = (
+        ('rust.disposition_reds', 'tests/suites/unit/disposition_reds.sh', (
+            'disposition::tests::conflicting_status_representation_is_not_silently_resolved',
+            'disposition::tests::conflicting_status_reports_the_status_rule',
+            'disposition::tests::disposition_record_projects_witnessed_host_cleanup_cause',
+            'disposition::tests::record_contradicting_its_basis_is_withheld',
+        )),
+        ('rust.byoxpc_reds', 'tests/suites/unit/byoxpc_reds.sh', (
+            'runner_manager::tests::false_valued_key_does_not_satisfy_a_requirement',
+            'runner_select::tests::selection_refuses_a_false_valued_required_key',
+        )),
+    )
     repo = out / 'fixture repo'
-    wrapper = 'tests/suites/unit/disposition_reds.sh'
-    for relative in (wrapper, 'tests/lib/testlib.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh'):
+    for relative in (*[w[1] for w in wrappers], 'tests/lib/testlib.sh',
+                     'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh'):
         destination = repo / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, destination)
@@ -149,74 +155,74 @@ def rust_wrapper_controls(out):
     cargo.parent.mkdir()
     cargo.write_text('''#!/usr/bin/env -S ${PW_PYTHON} -B -S
 import json, os, pathlib, sys
-p = pathlib.Path(os.environ['DISPOSITION_CARGO_FIXTURE'])
+p = pathlib.Path(os.environ['WRAPPER_CARGO_FIXTURE'])
 config = json.loads(p.read_text())
 p.with_name('argv.json').write_text(json.dumps(sys.argv[1:]))
 sys.stdout.write(config['stdout'])
 sys.exit(config['status'])
 ''')
     cargo.chmod(0o755)
-    # Exact names and the assertion each red is identified by, as the wrapper lists them.
-    tests = []
-    for line in (ROOT / wrapper).read_text().splitlines():
-        line = line.strip()
-        if line.startswith('"') and '|' in line and line.endswith('"'):
-            name, message = line.strip('"').split('|', 1)
-            tests.append((f'disposition::tests::{name}', message))
-    assert len(tests) == 4, tests
 
-    def transcript(results):
-        lines = [f'running {len(results)} tests']
-        failed = 0
+    def transcript(results, count=None):
+        lines = [f'running {len(results) if count is None else count} tests']
         for name, outcome, message in results:
-            lines.append(f'test {name} ... {"ok" if outcome else "FAILED"}')
-            if not outcome:
-                failed += 1
-                if message:
-                    lines.append(f"---- {name} stdout ----\nthread panicked: {message}")
-        passed = len(results) - failed
-        verdict = 'ok' if failed == 0 else 'FAILED'
-        lines.append(f'test result: {verdict}. {passed} passed; {failed} failed; 0 ignored;')
+            lines.append(f'test {name} ... {outcome}')
+            if message:
+                lines.append(f"---- {name} stdout ----\nthread panicked: {message}")
+        failed = sum(outcome == 'FAILED' for _, outcome, _ in results)
+        passed = sum(outcome == 'ok' for _, outcome, _ in results)
+        ignored = sum(outcome == 'ignored' for _, outcome, _ in results)
+        verdict = 'FAILED' if failed else 'ok'
+        lines.append(f'test result: {verdict}. {passed} passed; {failed} failed; {ignored} ignored;')
         return '\n'.join(lines) + '\n'
 
-    all_red = transcript([(n, False, m) for n, m in tests])
-    all_green = transcript([(n, True, None) for n, m in tests])
-    partial = transcript([(n, i < 2, m) for i, (n, m) in enumerate(tests)])
-    other = transcript([(n, False, 'unrelated assertion failed' if i == 0 else m) for i, (n, m) in enumerate(tests)])
-    scenarios = (
-        ('red', 101, all_red, 'fail', 'behavioral reds still open: 4 of 4 (0 promoted)'),
-        ('partial_promotion', 101, partial, 'fail', 'behavioral reds still open: 2 of 4 (2 promoted)'),
-        ('build_failure', 101, 'error: could not compile policy-witness\n', 'fail', 'did not run'),
-        ('other_failure', 101, other, 'fail', 'without their expected assertion'),
-        ('missing_cargo', 127, 'cargo: not found\n', 'fail', 'did not run'),
-        ('empty', 0, 'running 0 tests\ntest result: ok. 0 passed; 0 failed; 0 ignored;\n', 'fail', 'did not run'),
-        ('wrong_test', 0, all_green.replace('disposition::tests::', 'other::'), 'fail', 'did not run'),
-        ('green', 0, all_green, 'pass', 'disposition tests pass'),
-    )
     records = []
-    for name, status, stdout, expected_status, message in scenarios:
-        work = out / name
-        work.mkdir(parents=True)
-        config = work / 'cargo.json'
-        config.write_text(json.dumps({'stdout': stdout, 'status': status}))
-        env = {k: v for k, v in os.environ.items() if not k.startswith('PW_') and k != 'BASH_ENV'}
-        env.update(PATH=str(cargo.parent) + os.pathsep + env['PATH'],
-                   DISPOSITION_CARGO_FIXTURE=str(config), PW_TEST_OUT_DIR=str(work / 'output'),
-                   PW_TEST_CASES='rust.disposition_reds', PW_TEST_EVENTS=str(work / 'output/events.jsonl'),
-                   PW_TEST_RUN_ID='disposition_control')
-        result = subprocess.run(['bash', str(repo / wrapper)], env=env, cwd=work,
-                                stdin=subprocess.DEVNULL, capture_output=True, timeout=15)
-        (work / 'wrapper.stdout').write_bytes(result.stdout)
-        (work / 'wrapper.stderr').write_bytes(result.stderr)
-        report = json.loads((work / 'output/suites/unit/rust.disposition_reds/report.json').read_text())
-        assert report['status'] == expected_status and message in report['message'], (name, report)
-        assert result.returncode == (0 if expected_status == 'pass' else 1), (name, result)
-        argv = json.loads((work / 'argv.json').read_text())
-        assert argv[argv.index('--bin') + 1] == 'policy-witness', argv
-        assert '--include-ignored' in argv and '--exact' in argv, argv
-        assert all(n in argv for n, _ in tests), argv
-        records.append({'mode': name, 'returncode': result.returncode, 'report': report})
+    for case_id, wrapper, names in wrappers:
+        # Independent names above constrain both the observed argv and the
+        # supplied transcripts; no expectations are read from the wrapper.
+        passing = [(name, 'ok', '') for name in names]
+        mixed = [(names[0], 'FAILED', 'arbitrary assertion detail'), *passing[1:]]
+        silent = [(names[0], 'FAILED', ''), *passing[1:]]
+        ignored = [(names[0], 'ignored', ''), *passing[1:]]
+        wrong = [('other::unselected', 'ok', ''), *passing[1:]]
+        scenarios = (
+            ('passing', 0, transcript(passing), 'pass', 'tests pass'),
+            ('failed_zero_exit', 0, transcript(mixed), 'fail', 'test failed'),
+            ('failed_without_text', 0, transcript(silent), 'fail', 'test failed'),
+            ('missing_result', 0, transcript(passing[1:], count=len(names)), 'fail', 'did not run or pass'),
+            ('ignored_result', 0, transcript(ignored), 'fail', 'did not run or pass'),
+            ('empty', 0, transcript([]), 'fail', 'did not run or pass'),
+            ('wrong_test', 0, transcript(wrong), 'fail', 'did not run or pass'),
+            ('extra_test', 0, transcript([*passing, ('other::extra', 'ok', '')]), 'fail', 'unexpected test selection'),
+            ('nonzero_exit', 101, transcript(passing), 'fail', 'cargo exited'),
+            ('build_failure', 101, 'error: could not compile policy-witness\n', 'fail', 'did not run or pass'),
+            ('missing_cargo', 127, 'cargo: not found\n', 'fail', 'did not run or pass'),
+        )
+        for name, status, stdout, expected_status, message in scenarios:
+            work = out / case_id / name
+            work.mkdir(parents=True)
+            config = work / 'cargo.json'
+            config.write_text(json.dumps({'stdout': stdout, 'status': status}))
+            env = {k: v for k, v in os.environ.items() if not k.startswith('PW_') and k != 'BASH_ENV'}
+            env.update(PATH=str(cargo.parent) + os.pathsep + env['PATH'],
+                       WRAPPER_CARGO_FIXTURE=str(config), PW_TEST_OUT_DIR=str(work / 'output'),
+                       PW_TEST_CASES=case_id, PW_TEST_EVENTS=str(work / 'output/events.jsonl'),
+                       PW_TEST_RUN_ID='wrapper_control')
+            result = subprocess.run(['bash', str(repo / wrapper)], env=env, cwd=work,
+                                    stdin=subprocess.DEVNULL, capture_output=True, timeout=15)
+            (work / 'wrapper.stdout').write_bytes(result.stdout)
+            (work / 'wrapper.stderr').write_bytes(result.stderr)
+            case_out = work / 'output/suites/unit' / case_id
+            report = json.loads((case_out / 'report.json').read_text())
+            assert report['status'] == expected_status and message in report['message'], (case_id, name, report)
+            assert result.returncode == (0 if expected_status == 'pass' else 1), (case_id, name, result)
+            argv = json.loads((work / 'argv.json').read_text())
+            assert argv == ['test', '--manifest-path', str(repo / 'controller/Cargo.toml'),
+                            '--bin', 'policy-witness', '--', '--include-ignored', '--exact', *names], argv
+            assert (case_out / 'artifacts/cargo-test-ignored.log').read_text() == stdout
+            records.append({'case': case_id, 'mode': name, 'returncode': result.returncode, 'report': report})
     (out / 'wrapper-controls.json').write_text(json.dumps(records, indent=2) + '\n')
+
 
 def expected_fixture_controls(out):
     """E2: current acceptance, unsupported-envelope refusal, and named rejections.
