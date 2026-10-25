@@ -37,6 +37,18 @@ its implementation and the assertions it actually makes:
 - Which apparent differences matter, and which apparent similarities hide
   different jobs?
 
+Granularity. The catalog case is the unit of complete accounting: every one
+receives a stated inspection level. Inside the batch cases the unit is the
+test group (a Rust `mod tests` in one source file, a Swift `run*Tests`
+function with its `tk.group` names, a Python `unittest` class, or a checker's
+scenario table), and the survey reads the assertions of representatives in
+each group and of any member whose name, comment or equipment guard suggests
+a job different from its neighbours'. The report says, per group, which
+members were read and which were grouped on their names alone. Stage 1 states
+the rule, and the promise in the first sentence above is bounded by it: an
+account grounded in actual assertions for every case and every group, not an
+assertion-by-assertion account of every function.
+
 These are investigative questions. They are not proposed fields, and the
 report does not answer them with a schema. The commission that this plan
 implements forbids a taxonomy, per-test metadata or labels, release
@@ -199,10 +211,24 @@ a classification to publish. The report states, for every case, whether it
 was inspected individually, inspected through its driver function, or
 accounted for by pointer to a scenario table, and what remains unknown.
 
-For the two batch cases and the large Python checkers, expand one level by
-pointer: Rust test modules per file (the per-file counts above), Swift
-`run*Tests` functions with their one-line registry comments in `main.swift`,
-and `unittest` classes per module. Do not write an essay per method.
+For the batch cases (`unit/rust.unit`, `integration/cli.integration`,
+`runner_unit/pwrunner_core_unit_executable`) and the large Python checkers
+(`preflight/check_build_provenance.py` with 68 methods, the `source_drift`
+modules, `preflight/opt_in/build_refusals.py` whose single `def test_` drives
+the build manifest's whole refusal list), the rule from the Question section
+applies: list the groups (Rust test modules per file with the per-file counts
+above; the 32 Swift `run*Tests` functions with their one-line registry
+comments in `main.swift` and their `tk.group` names; `unittest` classes per
+module; scenario tables), read the assertions of at least one representative
+per group, and read every member that its name, comment or guard marks as a
+different job. Preparation already saw such members: the two `#[ignore]` Rust
+tests that replay Swift driver receipts; the `CWorkerTests` blocks guarded by
+`workerExists()` that run the real worker beside constructed-input blocks in
+the same executable; `ComparisonEvidenceTests`, driven row by row from
+`tests/fixtures/comparison/matrix.json`; and the ownership table in
+`tests/FAILURE-PROPAGATION-CONTRACT.md`, which already names Swift functions
+as constructed, real-driver or encoder controls and is a map to verify, not
+to adopt. Do not write an essay per method; do say which members were read.
 
 Account separately for procedures that are not catalog cases: release
 acceptance, the dispatcher's own artifact inspection (a check that runs once
@@ -220,6 +246,16 @@ stated reason, but should keep at least ten and keep every counterexample.
 For each, read the named files to the assertion lines, state exactly what a
 pass supports and what it leaves open, and state what a failure would and
 would not establish.
+
+Status of the statements below. Paths, line numbers, equipment, commands and
+quoted text were verified during preparation and may be relied on until the
+executor's own re-read. Every statement about what a pass "establishes", "is
+evidence about" or "asserts", whether written here or quoted from a registry
+entry, README or script comment, is a hypothesis: the executor tests it
+against the assertions and keeps, narrows or rejects it. A rejected
+hypothesis that came from a repository document is a Stage 4 item; one that
+came from this plan is simply corrected in the report. Preparation already
+found one likely rejection, noted under candidate 5.
 
 1. **One specimen, three claims.** `smoke/specimen_file_read_deny`
    (`tests/suites/smoke/pw_specimen_smoke.sh`), `witness_contract/happy_path_baseline`
@@ -298,9 +334,16 @@ would not establish.
    the scripts how each distinguishes "the detector missed the mutation" from
    "the mutation did not build" or "equipment failed"; the registry says of
    the barrier control that a build, signing, transport or equipment error
-   never counts as detecting a mutation. State what a pass establishes about
-   PolicyWitness (nothing directly) and about the baseline cases it pairs
-   with.
+   never counts as detecting a mutation. Test the hypothesis that a pass
+   establishes nothing about PolicyWitness directly, only the sensitivity of
+   the baseline assertions the case pairs with. The barrier case is a likely
+   counterexample: its registry entry requires the unmodified component and
+   signed CLI controls to pass before the mutants run, and a passing
+   unmodified control is an observation of PolicyWitness made inside a
+   mutation case. Read `tests/suites/witness_contract/opt_in/mutations.sh`
+   and its checker to see whether that observation is asserted in its own
+   right or is only a precondition for the mutant comparisons, and report
+   which.
 
 6. **Passing by observing a counterexample.**
    `runner_exec_lifecycle/closed_streams_leader_exit`,
@@ -310,10 +353,13 @@ would not establish.
    neighbour's "intermittent failure need not recur in a given run"),
    `witness_contract/path_query_observations`, `path_query_integrated` and
    `sandbox_extensions_native/feasibility`. The registry calls these
-   characterizations that assert no product behavior. Read each checker to
-   find what does fail it, and state precisely the claim a pass supports
-   (an observation was recorded on this host under these conditions) and the
-   claims it does not.
+   characterizations that assert no product behavior; that is the registry's
+   claim, to be tested. Read each checker to find what does fail it. If the
+   hypothesis holds, the claim a pass supports is that an observation was
+   recorded on this host under these conditions, and the report says which
+   claims it does not support; if a checker asserts a product property after
+   all, the report says so and treats the registry wording as a Stage 4
+   item.
 
 7. **Tests of the instrument.** The `dispatcher` suite (6 cases, no app),
    `shell_helpers` (8), `run_capture/controls`, `exec_fixture/controls`,
@@ -331,9 +377,11 @@ would not establish.
    lookup, and its script comment says it does not establish a matched
    local-name enforcement operation; the two IOKit suites use a file-open
    placeholder and their READMEs say they do not establish IOKit enforcement.
-   State what the pass establishes (the unavailable-query contract and that
-   the named attempt completed) and what the near-identical scripts in two
-   suites add to each other.
+   The scripts' own account is that a pass establishes the unavailable-query
+   contract and that the named attempt completed; test that against
+   `tests/lib/unavailable_prediction.py` and the per-suite expectations, then
+   state what the pass establishes and what the near-identical scripts in
+   two suites add to each other.
 
 9. **Independent observation before decoding.**
    `run_effects/file_actions_have_exact_effects` and
@@ -492,6 +540,16 @@ line.
 5. **The commission's prohibitions are honoured literally.** The ledger's
    free-text columns are not turned into categories in the report; the report
    groups cases only to say what was inspected.
+6. **"Every test" means every case and every group.** Complete accounting is
+   at the catalog case; inside batch cases the test group is the unit, with
+   representatives and marked members read (Question section and Stage 1).
+7. **Meaning statements are hypotheses.** Stage 2's accounts of what a pass
+   establishes, including those quoted from repository documents, are tested
+   against assertions and may be rejected (Stage 2, "Status of the
+   statements").
+8. **The footprint claim is narrow.** Tracked content unchanged and no
+   mutating command run, as `git status --porcelain` and the command record
+   show; not a byte-level inventory of ignored paths (Verification).
 
 Routine for the executor: the ledger's exact columns, the order of
 investigations, how many lines of a checker to quote, and the report's
@@ -499,13 +557,21 @@ section lengths.
 
 ## Verification of the survey
 
-The checks establish that the report is faithful and that the survey changed
-nothing, not merely that it was written.
+The checks establish that the report is faithful and state exactly what they
+show about the survey's footprint, not merely that the report was written.
 
-- **Revision and tree.** The report quotes `git rev-parse HEAD`; `git status
-  --porcelain` at the end lists only the report; `ls tests/out/runs` before
-  and after are identical; `controller/target/`, `runner/.build/` and
-  `builddir` have no newer mtime than at the start (`stat -f %m`).
+- **Revision and footprint.** The report quotes `git rev-parse HEAD`, and
+  `git status --porcelain` at the end lists only the report. That establishes
+  that no tracked file's content and no untracked path under the checkout
+  changed. It establishes nothing about ignored paths (`tests/out/`,
+  `controller/target/`, `runner/.build/`, `builddir`, `.tmp/`). For those,
+  the evidence is the executor's record of commands, which contains only the
+  permitted discovery commands, plus one cheap check: `ls tests/out/runs`
+  before and after are identical, which detects the forbidden act most likely
+  to happen by accident, a case execution. The report words the claim at that
+  strength: the survey ran no mutating command and left the tracked tree
+  unchanged. It does not claim that no byte under the checkout changed, and
+  no fuller inventory is taken.
 - **Regenerable counts.** Every count in the report names the command or
   parse that produced it; the executor re-runs each at the end and the
   numbers agree. The two `--list` plans are regenerated last and compared
