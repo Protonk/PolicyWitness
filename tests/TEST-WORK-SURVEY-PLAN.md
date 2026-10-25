@@ -8,14 +8,11 @@ same job. The deliverable is one report at
 `records/tests/TEST-WORK-SURVEY-REPORT.md`. Nothing else in the tree changes.
 
 This plan follows [Planning a change](../CONTRIBUTING.md#planning-a-change)
-and the [test working guidance](AGENTS.md). It was prepared on 2026-10-25
-against revision `87d5fb2d08d430ffabde6d6a3316257e8190e6c3` (2026-10-24,
-"Validate release battery selection and complete acceptance coverage"), the
-tip of `main` after the test-execution consolidation recorded in
-[its plan](../records/tests/UNIFY-TEST-EXECUTION-PLAN.md). The earlier
-[opt-in survey](../records/tests/OPT-IN-REPORT.md) examined `2f23cad`, five
-commits earlier; its counts and entry points are historical context here, and
-every one the report relies on is re-established at the examined revision.
+and the [test working guidance](AGENTS.md). The report belongs in
+`records/tests/` under `records/README.md` and `records/AGENTS.md`. It may
+link outward to source, tests and documentation; repository links to it may
+come only from its associated plan. Keep local links resolvable and use no
+reference-style links.
 
 ## Question
 
@@ -37,53 +34,16 @@ its implementation and the assertions it actually makes:
 - Which apparent differences matter, and which apparent similarities hide
   different jobs?
 
-Granularity. The catalog case is the unit of complete accounting: every one
-receives a stated inspection level. Inside the batch cases the unit is the
-test group (a Rust `mod tests` in one source file, a Swift `run*Tests`
-function with its `tk.group` names, a Python `unittest` class, or a checker's
-scenario table), and the survey reads the assertions of representatives in
-each group and of any member whose name, comment or equipment guard suggests
-a job different from its neighbours'. The report says, per group, which
-members were read and which were grouped on their names alone. Stage 1 states
-the rule, and the promise in the first sentence above is bounded by it: an
-account grounded in actual assertions for every case and every group, not an
-assertion-by-assertion account of every function.
+Complete accounting is at the catalog case and, inside batch cases, at the
+test group. Stage 1 specifies representative assertion reading within each
+group and disclosure of which members were read or grouped on names alone.
+The survey does not promise an assertion-by-assertion account of every
+function.
 
-These are investigative questions. They are not proposed fields, and the
-report does not answer them with a schema. The commission that this plan
-implements forbids a taxonomy, per-test metadata or labels, release
-membership judgments and refactoring proposals. A concrete defect found while
-reading may be reported as a finding.
-
-## Grounding and what this preparation did
-
-Executed: two read-only planning invocations of the public command, which
-print the selected plan and return before the checkout lock is taken
-(`tests/lib/test_cli.py` lines 169 and 210-212; `tests/README.md` lines
-71-78 document them as writing nothing). Their output was kept in the
-session scratch directory outside the checkout.
-
-```sh
-./tests/run.sh --list        # 196 cases, selection mode "default"
-./tests/run.sh --all --list  # 235 cases, selection mode "all"
-```
-
-Read: `tests/catalog.json`, `tests/run.sh`, `tests/lib/test_cli.py`,
-`tests/lib/suite_run.py`, `tests/lib/testlib.sh`, `tests/lib/case.sh`,
-`tests/README.md`, `tests/AGENTS.md`, `tests/OPT_IN_TESTS.md`,
-`tests/COVERAGE.md`, the ownership sections of
-`tests/FAILURE-PROPAGATION-CONTRACT.md`, `tests/fixtures/README.md`,
-`records/tests/*`, the suite drivers named below, every suite README's
-heading structure and a dozen READMEs in full, `runner/Package.swift`,
-`runner/Tests/PWRunnerCoreTests/main.swift` and `TestKit.swift`, the Rust
-test attributes, and `tests/suites/source_drift/check.py` lines 173-275 (the
-rules a Markdown file under `tests/` must satisfy, which this plan obeys).
-
-Not executed: any catalog case, `cargo`, `swift`, `meson`, a build, or a
-prune. The working tree was clean at `87d5fb2` apart from the commission
-prompt, which the commit adding this plan removes. The counts below were
-taken at that revision and must be re-established by the executor before use
-(Stage 0).
+Write a descriptive report without a taxonomy, per-test metadata or labels,
+release membership judgments or refactoring proposals. Group cases only to
+say what was inspected. Concrete defects may be reported as findings with
+their evidence, without repairing them or proposing repairs.
 
 ## Boundaries made operational
 
@@ -92,21 +52,27 @@ taken at that revision and must be re-established by the executor before use
   scratch directory, not in `.tmp/` (which is inside the checkout) and not in
   `tests/out/`.
 - **Permitted discovery commands.** `tests/run.sh --list` with any selectors
-  (verified read-only above); `git show`, `git log`, `git blame`; `grep`,
-  `find`, `wc`; and Python run with `-I` against copies of catalog or plan
-  JSON. Loading `tests/lib/test_cli.py`'s `catalog()` and `select()` in a
-  `-I` interpreter is permitted because they only read the catalog; the
-  prior survey did this and it keeps suite-level inheritance of `default`,
-  `requires`, `command` and `context` identical to the implementation.
+  prints a plan and returns before taking the checkout lock
+  (`tests/lib/test_cli.py` lines 169 and 210-212; `tests/README.md` lines
+  71-78). Use read-only Git, file-reading, search and comparison commands,
+  and Python with `-I -B` for static parsing. Loading
+  `tests/lib/test_cli.py`'s `catalog()` and `select()` is permitted because
+  they only read the catalog and preserve suite-level inheritance of
+  `default`, `requires`, `command` and `context`.
 - **Not permitted.** `cargo test -- --list` and `swift run` compile into the
   managed `controller/target/` and `runner/.build` and take the checkout
   lock; they are builds, not discovery. Rust and Swift populations are
   counted statically (attributes and `tk.run(` call sites) and labelled as
-  static counts. `tests/run.sh --prune` is not needed and is not run.
+  static counts; dynamic multiplicity from loops or helpers is not measured.
+  Do not execute catalog cases, builds or `tests/run.sh --prune`.
 - **Runtime questions.** Where a material question needs an execution (for
   example how long a process takes to abort), the report records the
   proposed observation, the case it would inform and why static reading
   cannot settle it. It does not run it.
+- **Retained evidence.** Runs under `tests/out/runs/` are local only; the
+  committed index is `tests/RETAINED.json`. Cite them only for the date of a
+  past execution, never as a present result. The survey makes no claim that
+  a case passes on this machine.
 - **Out of scope as subjects, in scope as population.** The harnesses under
   `records/performance/` are historical investigation equipment that
   `records/performance/README.md` says require a retired application; they
@@ -118,16 +84,130 @@ taken at that revision and must be re-established by the executor before use
   requires two named envelopes to report the standard runner) and are
   accounted for and compared with the catalog cases that exercise them
   offline.
-- **No execution-route questions.** The consolidation closed direct
-  invocation of case scripts (`tests/lib/testlib.sh` `testlib_init` and
-  `test_selected`, lines 60 and 178, refuse without the dispatcher's
-  context; `shell_helpers/controls` asserts the refusal at
-  `tests/suites/shell_helpers/check.py` line 133). The report states this as
-  an operational fact and does not reopen it.
 
-## The population at the examined revision
+## Reading and evidence standards
 
-Counts the executor re-derives in Stage 0. Each row names its source.
+### Claims and investigation notes
+
+Treat claims about what a result establishes, whether from this plan, a
+registry, a README or a script comment, as hypotheses to keep, narrow or
+reject against the assertions. Record a rejected documentation claim with
+the text and implemented check that contradict it; correct a rejected plan
+hypothesis in the report.
+
+For each investigation, retain paths, symbols and assertion lines at the
+examined revision. Keep operational facts (selection, equipment, side
+effects, artifacts and result handling) together and separate from the
+claims about what a pass supports, what it leaves open, and what a failure
+would or would not establish. Use the dispatcher's and case's own outcome
+vocabulary. These notes supply the report without a second collection pass.
+
+### Documentation and history
+
+Read the relevant descriptions alongside each case's assertions, so that
+discrepancies can inform the investigation and its selection. Sources are:
+
+- Catalog `description` fields (some run to a paragraph, for example
+  `preflight/build_provenance_controls`).
+- The suite-coverage table in `tests/README.md` and each suite README's
+  stated limits; the Tier column is historical and operational, not a
+  premise.
+- `tests/COVERAGE.md` rows and notes, including "primary coverage" naming.
+- The registry `tests/OPT_IN_TESTS.md` entries' purpose and equipment.
+- `docs/ARCHITECTURE.md` "How the system verifies itself" and the document
+  graph, whose figure caption states that "whether a test asserts the row is
+  not verified".
+- In-script comments and `test_pass` messages, which are the words a reader
+  of `run.json` actually sees (for example `disposition_reds.sh`).
+
+Report each discrepancy with the two texts and the implemented check, and
+say whether it changes the interpretation of a pass or a failure. Separate
+confirmed observations from unresolved intent.
+
+Use `git log -S`, `git blame` and `git show <rev>:<path>` when a question
+about current purpose or a discrepancy needs historical evidence. Relevant
+leads include the regression named by `runner_mach_service_liveness`, the
+relative introduction of `attempt_outcome_matrix_enforced` and the drift
+rule, the choice to ignore the two Rust tests, and the red convention
+behind `disposition_reds.sh`. Consult only the history needed to answer the
+question. Distinguish original intention, present documentation,
+implemented checks and inference.
+
+### Overlap findings
+
+Saying that two checks do the same job requires more than finding the same
+proposition in both. For each of the two, the report states: the proposition
+asserted, cited to the assertion; the inputs read (the same file, fixture or
+live run, or different ones); the implementation path (a regular expression
+over a source file against the Markdown reader's parse, say, or the CLI
+against the direct ABI); the execution facts (suite, default membership, equipment, what else
+runs in the same invocation); and the failures each can detect that the
+other cannot, found by asking what change to the checked subject would fail
+one and pass the other. "Same job" is warranted when the propositions agree
+and no such differential failure is found. When one is found, the report
+records a contrast with a shared proposition, not an overlap. In either case
+the report says whether the second implementation is independence by design,
+which this repository documents for several readers (the consumer beside the
+Swift encoder, the lifecycle oracle beside the disposition reader, checker
+controls that import neither the checker nor production code), or an
+undocumented duplicate. An overlap finding describes a relation; it does not
+say that either check is redundant or that one should be removed.
+
+### Counterexamples and selection
+
+Choose at least ten investigations from the differences observed while
+accounting for the population. Preserve candidates 3, 4 and 5: the
+documentation check inside a live suite, guarded Swift block reporting, and
+product observations inside mutation cases. Other candidates may be
+substituted with a stated reason; suite names and default membership do not
+determine the selection.
+
+A counterexample is a case whose assertions contradict a hypothesis about a
+kind of work, whether the hypothesis comes from this plan, a repository
+document or the investigation. For each distinct contradiction found during
+population accounting or in-depth reading, investigate one example and list
+the other cases showing it by ID, one line each, in that investigation.
+Contradictions are distinct when they contradict different hypotheses, or
+the same hypothesis by different mechanisms. Selection is complete when at
+least ten investigations are written and every distinct contradiction found
+has its investigated example.
+
+### Relationships
+
+Trace these relationships while reading the cases and their shared helpers.
+Record a relationship only where it changes what a result means:
+
+- Positive controls as dependencies: `launch_inventory` on
+  `contaminated_worker` (catalog `depends_on`; `tests/suites/runner_exec_inheritance/run.sh`).
+- Installation as dependency: eleven `runner_byoxpc` leaves on
+  `runner_install`; shared session and cleanup ownership in
+  `tests/fixtures/byoxpc/session.py`.
+- Mutation controls and the baseline assertions they prove sensitive
+  (candidate 5).
+- Checker controls and the live cases that use the same checker:
+  `blackbox_e2e/checker_controls` and every consumer of `tests/lib/blackbox.py`
+  and `tests/lib/consumer.py` (listed in `tests/README.md` "Black-box
+  validation"); `run_effects/checker_controls` and `effects.py`;
+  `runner_filter_sysctl_name/checker_controls` and the filter suites.
+- Ownership tables: `tests/FAILURE-PROPAGATION-CONTRACT.md` "Ownership" and
+  "Coverage audit and acceptance ownership", `tests/COVERAGE.md`'s two
+  matrices and the drift rule that holds them equal to the Swift enums.
+- Change-triggered controls: `tests/AGENTS.md` requires
+  `witness_contract/order_barrier_mutations` after wait, release or
+  eligibility changes; the registry's "When to run" entries.
+- The dispatcher's artifact inspection and `preflight/codesign.preflight`
+  (one inspector, two roles); the dispatcher's sleep record and TestKit's
+  per-block sleep line (one rule, two implementations).
+- Release acceptance and the offline cases that exercise it:
+  `preflight/release_controls`, `release_deadline_controls`,
+  `release_publish_controls`, `release_rotation_controls` against
+  `tests/lib/release_*.py`.
+
+## Population reference
+
+The reference counts are from revision
+`87d5fb2d08d430ffabde6d6a3316257e8190e6c3`. Re-derive them at the survey's
+examined revision in Stage 0; each row names its source.
 
 | Level | At `87d5fb2` | Source |
 | --- | --- | --- |
@@ -164,8 +244,15 @@ two that read `meson.build`), all eight `shell_helpers` cases,
 suites whose other members need the app; they are the first place to look for
 different jobs under one suite name.
 
-How a result is recorded, which the report must describe before interpreting
-any outcome: a case ends with `test_pass`, `test_fail` or `test_skip`
+### Result recording
+
+Case scripts require the dispatcher's context: `testlib_init` and
+`test_selected` in `tests/lib/testlib.sh` refuse direct invocation, and
+`shell_helpers/controls` asserts that refusal in
+`tests/suites/shell_helpers/check.py` line 133.
+
+Describe result recording before interpreting outcomes. A case ends with
+`test_pass`, `test_fail` or `test_skip`
 (`tests/lib/testlib.sh` lines 269-292), each writing a terminal event and a
 `report.json`; `test_fail` exits 1 immediately. The dispatcher
 (`tests/lib/suite_run.py`) separately produces `unrun` for missing equipment
@@ -174,8 +261,8 @@ or a failed dependency, the harness errors `unexpected_skip`, `unrun_case`,
 `build_tree_in_evidence` and `scratch_retained`, an artifact-integrity
 failure independent of case statuses, and a `system_sleep_ms` record whose
 nonzero value marks a failure as not creditable product evidence without
-changing its status (`tests/suites/dispatcher/README.md`, "Contract"). Inside
-the two batch cases the mapping is coarser: `unit/rust.unit` passes only when
+changing its status (`tests/suites/dispatcher/README.md`, "Contract"). Batch
+cases have coarser mappings: `unit/rust.unit` passes only when
 `cargo test --bins` exits 0 and retains one log;
 `runner_unit/pwrunner_core_unit_executable` fails on a nonzero exit, on any
 `SKIP` or `FAIL` line in the Swift log, or on a missing summary line
@@ -187,15 +274,28 @@ uses them rather than inventing others.
 
 ### Stage 0: establish the state
 
-1. Record `git rev-parse HEAD`, `git log -1 --date=iso`, `git status
+1. Create a scratch directory outside the checkout for the command record,
+   parsed plans, count scripts and investigation notes. Record commands as
+   they are used so final footprint verification has its evidence.
+2. Confirm a clean starting tree for the footprint comparison. Record
+   `git rev-parse HEAD`, `git log -1 --date=iso`, `git status
    --porcelain` and `ls tests/out/runs` at the start; repeat all four at the
-   end. The report's scope section quotes them.
-2. Regenerate the two plans and the counts in the table above. Record every
-   difference from this plan and from the opt-in survey's B.2 and B.5 tables.
-3. Read the five commits since `2f23cad` (`git log --stat dd352cd..HEAD`)
-   and note which inventory facts they changed: deleted wrappers, the
-   `sbpl_allowdeny_consistency` command path, the refusal in `testlib.sh`,
-   acceptance running the battery.
+   end. Use the recorded revision for source citations. The report's scope
+   section quotes these observations.
+3. Read `tests/README.md`, `tests/AGENTS.md`, `tests/fixtures/README.md` and
+   the dispatcher and result-recording code named above before interpreting
+   individual cases. Use `runner/AGENTS.md` for runner tests and native helpers.
+4. Save the two selection plans in scratch:
+
+   ```sh
+   ./tests/run.sh --list
+   ./tests/run.sh --all --list
+   ```
+
+   Re-derive the population reference counts and record each command or
+   parse used. Record differences from the reference and proceed with the
+   population at the examined revision. Use `catalog()` and `select()` for
+   inherited catalog fields and static source counts for batch populations.
 
 ### Stage 1: account for the whole population
 
@@ -206,29 +306,34 @@ nothing; what it reads before asserting (CLI envelope, independent file or
 process observation, constructed input, a document, a build artifact); the
 exact terminal paths (`test_pass`, `test_fail`, `test_skip`, early `exit 0`,
 `test_require_pw`); and whether its assertions live in the shell, a Python
-checker, Cargo or TestKit. The ledger is an instrument for completeness, not
-a classification to publish. The report states, for every case, whether it
-was inspected individually, inspected through its driver function, or
+checker, Cargo or TestKit. Carry over selection flags, suite membership,
+equipment, dependencies and runner context from the catalog plan as
+operational facts. Record case-specific side effects and artifacts alongside
+them. The ledger is an instrument for completeness, not a classification to
+publish. The report states, for every case, whether it was inspected
+individually, inspected through its driver function, or
 accounted for by pointer to a scenario table, and what remains unknown.
 
 For the batch cases (`unit/rust.unit`, `integration/cli.integration`,
 `runner_unit/pwrunner_core_unit_executable`) and the large Python checkers
 (`preflight/check_build_provenance.py` with 68 methods, the `source_drift`
 modules, `preflight/opt_in/build_refusals.py` whose single `def test_` drives
-the build manifest's whole refusal list), the rule from the Question section
-applies: list the groups (Rust test modules per file with the per-file counts
-above; the 32 Swift `run*Tests` functions with their one-line registry
-comments in `main.swift` and their `tk.group` names; `unittest` classes per
-module; scenario tables), read the assertions of at least one representative
-per group, and read every member that its name, comment or guard marks as a
-different job. Preparation already saw such members: the two `#[ignore]` Rust
-tests that replay Swift driver receipts; the `CWorkerTests` blocks guarded by
+the build manifest's whole refusal list), enumerate the groups: Rust
+`mod tests` modules per source file with static counts; Swift `run*Tests`
+functions with their registry comments in `main.swift` and `tk.group` names;
+Python `unittest` classes per module; and checker scenario tables. Read the
+assertions of at least one representative per group and every member whose
+name, comment or equipment guard marks a different job. Record per group
+which members were read and which were grouped on names alone.
+
+Members requiring separate attention include the two `#[ignore]` Rust tests
+that replay Swift driver receipts; the `CWorkerTests` blocks guarded by
 `workerExists()` that run the real worker beside constructed-input blocks in
 the same executable; `ComparisonEvidenceTests`, driven row by row from
-`tests/fixtures/comparison/matrix.json`; and the ownership table in
-`tests/FAILURE-PROPAGATION-CONTRACT.md`, which already names Swift functions
-as constructed, real-driver or encoder controls and is a map to verify, not
-to adopt. Do not write an essay per method; do say which members were read.
+`tests/fixtures/comparison/matrix.json`; and Swift functions identified as
+constructed, real-driver or encoder controls in the ownership table in
+`tests/FAILURE-PROPAGATION-CONTRACT.md`. Verify that table's descriptions
+against the assertions.
 
 Account separately for procedures that are not catalog cases: release
 acceptance, the dispatcher's own artifact inspection (a check that runs once
@@ -239,24 +344,9 @@ describe as local debugging, and the `records/performance/` equipment.
 
 ### Stage 2: investigate a varied set in depth
 
-Choose from the observed differences in Stage 1, not from suite names or
-default membership. The candidates below were selected during preparation
-from facts already verified in source; the executor may substitute, with a
-stated reason, but should keep at least ten. Counterexamples follow the rule
-at the end of this stage, and overlap claims follow the standard beside it.
-For each, read the named files to the assertion lines, state exactly what a
-pass supports and what it leaves open, and state what a failure would and
-would not establish.
-
-Status of the statements below. Paths, line numbers, equipment, commands and
-quoted text were verified during preparation and may be relied on until the
-executor's own re-read. Every statement about what a pass "establishes", "is
-evidence about" or "asserts", whether written here or quoted from a registry
-entry, README or script comment, is a hypothesis: the executor tests it
-against the assertions and keeps, narrows or rejects it. A rejected
-hypothesis that came from a repository document is a Stage 4 item; one that
-came from this plan is simply corrected in the report. Preparation already
-found one likely rejection, noted under candidate 5.
+Apply the selection and evidence standards to these candidates and the
+differences found in Stage 1. Read the selected cases to their assertions,
+tracing relevant relationships and documentation in the same investigation.
 
 1. **One specimen, three claims.** `smoke/specimen_file_read_deny`
    (`tests/suites/smoke/pw_specimen_smoke.sh`), `witness_contract/happy_path_baseline`
@@ -296,37 +386,36 @@ found one likely rejection, noted under candidate 5.
    enum constants with matrix rows. `source_drift/check.py`
    `check_attempt_outcomes_have_matrix_rows` (line 429) performs the same
    comparison mechanically through the Markdown reader. Determine, under the
-   overlap standard at the end of this stage, whether the two are the same
-   job: what the string-presence check establishes, and what change to the
-   enum, the matrix or the checker would fail one and pass the other. This
-   is a candidate finding and a candidate overlap; report it as whichever
-   the evidence supports.
+   overlap standard, whether the two are the same job: what the
+   string-presence check establishes, and what change to the enum, the
+   matrix or the checker would fail one and pass the other.
 
 4. **Batch cases as populations.** `unit/rust.unit` collapses 209 functions
    into one status and one log. `unit/rust.disposition_reds` and
    `unit/rust.byoxpc_reds` re-run 4 and 2 of those functions by exact name
    with `--include-ignored` and classify each outcome as green, expected red
    or unexpected (`tests/suites/unit/disposition_reds.sh` lines 32-57); their
-   job is failure classification of tests that `rust.unit` also runs. At
-   `87d5fb2` the `disposition_reds.sh` header (lines 7-12) still describes
-   the case as non-default and red by design while the catalog makes it
-   default and the four functions carry no `#[ignore]`; the opt-in survey
-   reported this at `2f23cad` (C.1 item 1) and it is unchanged. Also read
-   `tests/suites/unit/run.sh` lines 7-10: the `rust.fmt` branch inside
+   job is failure classification of tests that `rust.unit` also runs. The
+   `disposition_reds.sh` header (lines 7-12) describes the case as non-default
+   and red by design while the catalog makes it
+   default and the four functions carry no `#[ignore]`. Record this
+   discrepancy and the unselectable `rust.fmt` branch in
+   `tests/suites/unit/run.sh` lines 7-10: the branch inside
    `rust.unit`'s command cannot be selected under the dispatcher because
-   `rust.fmt` has its own catalog command; confirm by reading how
-   `suite_run.py` groups cases by command, and report what that branch is.
+   `rust.fmt` has its own catalog command and `suite_run.py` groups cases
+   by command.
    For `runner_unit/pwrunner_core_unit_executable`, resolve a disagreement
    between two documents: `tests/FAILURE-PROPAGATION-CONTRACT.md` ("TestKit.run
    counts a guarded early return as passed", under "Coverage audit and
-   acceptance ownership") and the opt-in survey B.5 ("the equipment guards
-   throw a failure"). Read `workerExists()`, `bothBinariesExist()` and the
-   `PW_LIFECYCLE_WORKER_FIXTURE` guards in `runner/Tests/PWRunnerCoreTests/`
+   acceptance ownership") and the
+   [opt-in survey](../records/tests/OPT-IN-REPORT.md) B.5 ("the equipment
+   guards throw a failure"). Read `workerExists()`, `bothBinariesExist()`
+   and the `PW_LIFECYCLE_WORKER_FIXTURE` guards in `runner/Tests/PWRunnerCoreTests/`
    and state what a Swift block does when its equipment is absent and what
    the wrapper's `SKIP|FAIL` grep then sees. This decides what a passing
    Swift batch establishes about live-worker rows.
 
-5. **Mutation controls: a pass is about a detector.**
+5. **Mutation controls and their unmodified baselines.**
    `runner_exec_inheritance/mutation_controls` (patches and rebuilds the C
    worker, then requires the ordinary assertions to fail with specific leak
    evidence), `witness_contract/order_barrier_mutations`,
@@ -337,16 +426,13 @@ found one likely rejection, noted under candidate 5.
    the scripts how each distinguishes "the detector missed the mutation" from
    "the mutation did not build" or "equipment failed"; the registry says of
    the barrier control that a build, signing, transport or equipment error
-   never counts as detecting a mutation. Test the hypothesis that a pass
-   establishes nothing about PolicyWitness directly, only the sensitivity of
-   the baseline assertions the case pairs with. The barrier case is a likely
-   counterexample: its registry entry requires the unmodified component and
-   signed CLI controls to pass before the mutants run, and a passing
-   unmodified control is an observation of PolicyWitness made inside a
-   mutation case. Read `tests/suites/witness_contract/opt_in/mutations.sh`
-   and its checker to see whether that observation is asserted in its own
-   right or is only a precondition for the mutant comparisons, and report
-   which.
+   never counts as detecting a mutation. The barrier case requires unmodified
+   driver, harness and signed CLI controls to pass before the mutants run
+   (`tests/suites/witness_contract/opt_in/mutations.py`, `main`,
+   `driver`, `harness_control` and `cli_control`). Account separately for
+   the product observations required by those baseline assertions and the
+   detector sensitivity established by rejecting the mutants. Trace the
+   corresponding baseline requirements in the other mutation cases.
 
 6. **Passing by observing a counterexample.**
    `runner_exec_lifecycle/closed_streams_leader_exit`,
@@ -360,9 +446,8 @@ found one likely rejection, noted under candidate 5.
    claim, to be tested. Read each checker to find what does fail it. If the
    hypothesis holds, the claim a pass supports is that an observation was
    recorded on this host under these conditions, and the report says which
-   claims it does not support; if a checker asserts a product property after
-   all, the report says so and treats the registry wording as a Stage 4
-   item.
+   claims it does not support. Record any product assertion that contradicts
+   the registry wording as a documentation discrepancy.
 
 7. **Tests of the instrument.** The `dispatcher` suite (6 cases, no app),
    `shell_helpers` (8), `run_capture/controls`, `exec_fixture/controls`,
@@ -427,196 +512,44 @@ found one likely rejection, noted under candidate 5.
     (filter name differs); the 10 `runner_byoxpc` specimens that run the
     smoke, menagerie and BBX scripts under `PW_TEST_SUITE_OVERRIDE` with an
     installed external runner. State what the second copy adds in each pair,
-    under the overlap standard below.
+    under the overlap standard.
 
-**What an overlap finding must establish.** Saying that two checks do the
-same job requires more than finding the same proposition in both. For each
-of the two, the report states: the proposition asserted, cited to the
-assertion; the inputs read (the same file, fixture or live run, or different
-ones); the implementation path (a regular expression over a source file
-against the Markdown reader's parse, say, or the CLI against the direct
-ABI); the execution facts (suite, default membership, equipment, what else
-runs in the same invocation); and the failures each can detect that the
-other cannot, found by asking what change to the checked subject would fail
-one and pass the other. "Same job" is warranted when the propositions agree
-and no such differential failure is found. When one is found, the report
-records a contrast with a shared proposition, not an overlap. In either case
-the report says whether the second implementation is independence by design,
-which this repository documents for several readers (the consumer beside the
-Swift encoder, the lifecycle oracle beside the disposition reader, checker
-controls that import neither the checker nor production code), or an
-undocumented duplicate. An overlap finding describes a relation; it does not
-say that either check is redundant or that one should be removed.
+### Stage 3: write the report
 
-**Counterexamples.** A counterexample is a case whose assertions contradict a
-hypothesis about a kind of work, whether the hypothesis is this plan's, a
-repository document's, or one the executor forms while building the Stage 1
-ledger. Candidates 3, 4 and 5 already carry one each (a documentation check
-inside a live suite; the disagreement over what a guarded Swift block
-reports; a product observation inside a mutation case) and cannot be dropped
-by substitution. For each distinct contradiction found in Stage 1 or Stage 2,
-the report investigates one example to the standard above and lists the
-other cases showing the same contradiction by ID, one line each, in that
-investigation. Two contradictions are distinct when they contradict different
-hypotheses, or the same hypothesis by different mechanisms. Stage 2 is
-complete when at least ten investigations are written and every distinct
-contradiction found has its investigated example.
+Write `records/tests/TEST-WORK-SURVEY-REPORT.md` from the collected evidence:
 
-### Stage 3: follow relationships
-
-Record a relationship only where it changes what a result means. Known
-pairings to trace, with the files that implement them:
-
-- Positive controls as dependencies: `launch_inventory` on
-  `contaminated_worker` (catalog `depends_on`; `tests/suites/runner_exec_inheritance/run.sh`).
-- Installation as dependency: eleven `runner_byoxpc` leaves on
-  `runner_install`; shared session and cleanup ownership in
-  `tests/fixtures/byoxpc/session.py`.
-- Mutation controls and the baseline assertions they prove sensitive
-  (candidate 5).
-- Checker controls and the live cases that use the same checker:
-  `blackbox_e2e/checker_controls` and every consumer of `tests/lib/blackbox.py`
-  and `tests/lib/consumer.py` (listed in `tests/README.md` "Black-box
-  validation"); `run_effects/checker_controls` and `effects.py`;
-  `runner_filter_sysctl_name/checker_controls` and the filter suites.
-- Ownership tables: `tests/FAILURE-PROPAGATION-CONTRACT.md` "Ownership" and
-  "Coverage audit and acceptance ownership", `tests/COVERAGE.md`'s two
-  matrices and the drift rule that holds them equal to the Swift enums.
-- Change-triggered controls: `tests/AGENTS.md` requires
-  `witness_contract/order_barrier_mutations` after wait, release or
-  eligibility changes; the registry's "When to run" entries.
-- The dispatcher's artifact inspection and `preflight/codesign.preflight`
-  (one inspector, two roles); the dispatcher's sleep record and TestKit's
-  per-block sleep line (one rule, two implementations).
-- Release acceptance and the offline cases that exercise it:
-  `preflight/release_controls`, `release_deadline_controls`,
-  `release_publish_controls`, `release_rotation_controls` against
-  `tests/lib/release_*.py`.
-
-### Stage 4: documentation against implementation
-
-Compare, for the investigated cases and for any case whose description reads
-as a broader claim than its script makes:
-
-- Catalog `description` fields (some run to a paragraph, for example
-  `preflight/build_provenance_controls`).
-- The suite-coverage table in `tests/README.md` and each suite README's
-  stated limits; the Tier column is historical and operational, not a
-  premise.
-- `tests/COVERAGE.md` rows and notes, including "primary coverage" naming.
-- The registry `tests/OPT_IN_TESTS.md` entries' purpose and equipment.
-- `docs/ARCHITECTURE.md` "How the system verifies itself" and the document
-  graph, whose figure caption states that "whether a test asserts the row is
-  not verified".
-- In-script comments and `test_pass` messages, which are the words a reader
-  of `run.json` actually sees (for example `disposition_reds.sh`).
-
-Report each discrepancy with the two texts and the implemented check, and
-say whether it changes the interpretation of a pass or a failure. Separate
-confirmed observations from unresolved intent.
-
-### Stage 5: consult history selectively
-
-Use `git log -S`, `git blame` and `git show <rev>:<path>` only to settle a
-question about current purpose or an apparent discrepancy. Questions already
-worth a look: the origin of `runner_mach_service_liveness` and the regression
-it names; when `attempt_outcome_matrix_enforced` was added relative to the
-drift rule; why the two Rust tests carry `#[ignore]` (the attribute text
-explains the mechanism; the commit explains the choice); the prior survey's
-D.3 account of the red convention, re-read only as far as `disposition_reds.sh`
-needs. Distinguish original intention, present documentation, implemented
-checks and inference in every historical statement.
-
-### Stage 6: write the report
-
-Destination `records/tests/TEST-WORK-SURVEY-REPORT.md`, beside the opt-in
-survey. `records/README.md` places investigations there, and
-`records/AGENTS.md` permits inbound links to a record only from its associated
-plan, which is this file; the report may link outward to source, tests and
-documentation. Files under `records/` are excluded from the drift suite's
-Markdown command rule (`check.py` line 173), but keep every local link
-resolvable and use no reference-style links.
-
-Structure, following the commission:
-
-1. Scope and coverage: revision, enumeration method and commands, levels of
-   granularity, the population accounted for with the inspected, grouped and
-   unknown portions stated, and limits of inspection (static counts, no
+1. Scope and coverage: examined revision, enumeration commands, levels of
+   granularity, per-case inspection accounting and per-group members read
+   or grouped on names alone, plus unknowns and limits (static counts, no
    execution, BYOXPC and signing cases read only).
-2. Representative investigations: the Stage 2 accounts, each citing paths,
-   symbols and lines, with "a pass supports" and "a pass leaves open" stated
-   separately, and failure meaning stated with the dispatcher's and the
-   case's own vocabulary.
-3. Consequential contrasts and overlaps, each overlap stated to the Stage 2
-   standard, including cases that resist characterization.
-4. Relationships from Stage 3.
-5. Documentation versus implementation from Stage 4.
+2. Representative investigations: paths, symbols and assertion lines, with
+   operational facts separate from what a pass supports and leaves open,
+   and failure meaning stated in the implemented vocabulary.
+3. Consequential contrasts and overlaps, each overlap meeting the evidence
+   standard above, including cases that resist characterization.
+4. Relationships that affect the meaning of results.
+5. Documentation versus implementation, with both texts and the implemented
+   check for each discrepancy.
 6. Open questions, each with the evidence that would settle it and, for
    runtime questions, the proposed observation.
 
-Write descriptively. A sentence that reads as a recommendation ("should",
-"ought", "could be merged") is rewritten as an observation or removed. A
-finding is a statement about what a check does and does not do, cited to its
-line.
-
-## Consequential choices settled here
-
-1. **Report location** is `records/tests/`, following the opt-in survey and
-   the records guidance. The report is the only file the survey adds.
-2. **Unit of accounting** is the canonical catalog case, with the batch cases
-   expanded one level by static count and scenario tables accounted for by
-   pointer. Selection flags, suite membership and the `opt_in` group are
-   recorded as operational facts of each case, not as the frame.
-3. **No compilation for counting.** Rust and Swift populations are static
-   counts and are labelled as such; a block inside a loop or helper would not
-   be counted, and the opt-in survey's B.8 states the same limit.
-4. **Equipment-sensitive cases are read, not run.** Nothing in the report
-   claims a case passes on this machine. Retained runs under `tests/out/runs/`
-   (local only; the committed index is `tests/RETAINED.json`) may be cited
-   for the date of a past execution, never for a present result.
-5. **The commission's prohibitions are honoured literally.** The ledger's
-   free-text columns are not turned into categories in the report; the report
-   groups cases only to say what was inspected.
-6. **"Every test" means every case and every group.** Complete accounting is
-   at the catalog case; inside batch cases the test group is the unit, with
-   representatives and marked members read (Question section and Stage 1).
-7. **Meaning statements are hypotheses.** Stage 2's accounts of what a pass
-   establishes, including those quoted from repository documents, are tested
-   against assertions and may be rejected (Stage 2, "Status of the
-   statements").
-8. **The footprint claim is narrow.** Tracked content unchanged and no
-   mutating command run, as `git status --porcelain` and the command record
-   show; not a byte-level inventory of ignored paths (Verification).
-9. **An overlap needs differential failures examined.** The same proposition
-   is not enough; inputs, implementation path, execution facts and the
-   failures each check alone can detect are stated, and the finding never
-   asserts redundancy (Stage 2, "What an overlap finding must establish").
-10. **One investigated example per distinct contradiction.** Counterexamples
-    from Stage 1 and Stage 2 are kept one per distinct contradiction, with
-    the rest listed by ID; candidates 3, 4 and 5 are fixed (Stage 2,
-    "Counterexamples").
-
-Routine for the executor: the ledger's exact columns, the order of
-investigations, how many lines of a checker to quote, and the report's
-section lengths.
+Write findings as observations cited to their assertions. Remove
+recommendations, release judgments and refactoring proposals. The ledger's
+exact columns, investigation order, quotation lengths and report section
+lengths are routine choices for the executor.
 
 ## Verification of the survey
 
-The checks establish that the report is faithful and state exactly what they
-show about the survey's footprint, not merely that the report was written.
-
-- **Revision and footprint.** The report quotes `git rev-parse HEAD`, and
-  `git status --porcelain` at the end lists only the report. That establishes
-  that no tracked file's content and no untracked path under the checkout
-  changed. It establishes nothing about ignored paths (`tests/out/`,
-  `controller/target/`, `runner/.build/`, `builddir`, `.tmp/`). For those,
-  the evidence is the executor's record of commands, which contains only the
-  permitted discovery commands, plus one cheap check: `ls tests/out/runs`
-  before and after are identical, which detects the forbidden act most likely
-  to happen by accident, a case execution. The report words the claim at that
-  strength: the survey ran no mutating command and left the tracked tree
-  unchanged. It does not claim that no byte under the checkout changed, and
-  no fuller inventory is taken.
+- **Revision and footprint.** Repeat Stage 0's revision, status and run-list
+  observations. The examined revision must agree with the citations and
+  counts; reconcile any intervening source changes before finishing.
+  `git status --porcelain` lists only the report, establishing unchanged
+  tracked content and no other visible untracked paths relative to the
+  initial clean state. It does not inventory ignored paths (`tests/out/`,
+  `controller/target/`, `runner/.build/`, `builddir`, `.tmp/`). The command
+  record documents the discovery commands and the permitted scratch and
+  report writes. An unchanged `ls tests/out/runs` checks for added or removed
+  run directories. State the footprint claim at that strength.
 - **Regenerable counts.** Every count in the report names the command or
   parse that produced it; the executor re-runs each at the end and the
   numbers agree. The two `--list` plans are regenerated last and compared
@@ -624,8 +557,8 @@ show about the survey's footprint, not merely that the report was written.
 - **Cited assertions.** Every "a pass establishes" sentence cites a file and
   the line of the assertion or terminal call it rests on, and a reader can
   open the file at the stated revision and find it. Before finishing, the
-  executor re-reads each cited line against `git show 87d5fb2:<path>` or the
-  then-current head and corrects drift.
+  executor re-reads each cited line at the examined revision with
+  `git show <rev>:<path>` and corrects citation errors.
 - **Separated claims.** Each investigation has operational facts (selection,
   equipment, side effects, artifacts, result handling) in one place and
   interpretive claims in another; a reviewer can find the boundary.
@@ -635,16 +568,8 @@ show about the survey's footprint, not merely that the report was written.
 - **Misleading completion.** A report that accounts for every case by suite
   description alone has not done Stage 1; the coverage section must say,
   per case, which inspection level it received, and a count of cases at each
-  level must sum to 235 (or the re-established total).
-
-## What would require reconsidering this plan
-
-- The re-established population differs from 235 cases or 196 defaults, or
-  `tests/run.sh --list` is found to write anything; Stage 0 then records the
-  difference and the method proceeds against the new facts.
-- A material question cannot be answered without executing a case. The
-  report records the proposed observation and stops there; this plan does
-  not authorize the execution, and a separate plan would.
-- Reading reveals a defect that makes a default case's pass meaningless.
-  Report it as a finding with its evidence; do not repair it or propose the
-  repair.
+  level must sum to the re-established total. Each batch group states which
+  members were read and which were grouped on names alone. At least ten
+  investigations are present, including candidates 3, 4 and 5 and one
+  example for every distinct contradiction found; any additional cases
+  showing the same contradiction are listed by ID.
