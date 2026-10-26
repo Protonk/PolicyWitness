@@ -1,7 +1,7 @@
 # Verification requirement examination plan
 
 This handoff identifies unresolved verification requirements exposed by the
-[guide revamp](CHANGE-VERIFICATION-REVAMP-PLAN.md). Examine each item with the
+guide revamp(c.f. 47e280a7fc9f5e1bd53f87f8ed3bc1eb30a5bd9c). Examine each item with the
 user before changing the obligation. The guide's qualifications remain in place
 until the corresponding question is settled; preparing this plan does not settle
 it or require executing the controls.
