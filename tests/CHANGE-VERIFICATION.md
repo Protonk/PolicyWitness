@@ -1,50 +1,71 @@
-# Opt-in Tests (dev-only)
+# Verification for changes and investigations
 
-`<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`.
+This guide connects changes and investigative questions to relevant
+verification controls. It records when a control is needed, what its
+observations establish, and the conditions required to run and interpret it.
+The [test catalog](catalog.json) owns case membership, prerequisites and
+dependencies; the [harness README](README.md#how-to-run) describes selection
+and execution.
 
-Opt-in cases are excluded from the default `tests/run.sh` battery. They remain
-part of `--all`; explicit `--suite` selectors include every member of that suite,
-including non-default cases. `tests/catalog.json` defines membership and required
-equipment, and `tests/run.sh --suite opt_in --list` shows the complete plan.
+Existing change-triggered requirements retain their force. Investigative entries
+describe useful observations; inclusion here does not make a control mandatory.
+This guide is not an exhaustive inventory of default or non-default cases.
+Use `tests/run.sh --all --list` for the full catalog and
+`tests/run.sh --suite opt_in --list` for the non-default selection and its
+dependencies. [Contribution guidance](AGENTS.md#add-or-change-tests) explains
+how to choose default membership.
 
-## What makes a test opt-in
+## Find verification for a change
 
-Any of the following is usually sufficient:
+Follow the linked accounts for the actual triggers, required observations and
+execution conditions. These routes include default and non-default controls;
+they do not exhaust the verification relevant to a change. A route marked
+**Requirement unresolved** identifies a specific unsettled requirement at its
+linked entry; its unambiguous instructions still apply.
 
-- Requires a **TTY/PTY**, window size ioctls, or UI interaction.
-- Requires **network access**, GUI services, or other host capabilities that are
-  unstable in CI.
-- Requires a **Developer ID identity** or notarization.
-- Takes a long time or is intentionally heavy (multi-minute).
-- Reads from **Unified Logging** or other sandbox-sensitive telemetry streams.
-- Is a specified red test for planned behavior. Keep it non-default until it
-  turns green, so the default battery stays green on main while the red is
-  demonstrable through explicit selection.
+| Change or investigative question | Verification account |
+| --- | --- |
+| Admission or validator receivers | [Integrated verification guidance](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior), including the boundary and its readers. |
+| Limits | [Limit-change verification](AGENTS.md#verify-a-limit-change) and the [limits coverage account](../docs/LIMITS.md#grounding-and-coverage). |
+| Ordering barriers, worker wait/release, query eligibility or observers | [Required ordering controls](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior) and [order-barrier mutations](#order-barrier-mutation-controls). |
+| Worker clock source, timebase or sample validation; OS/SDK updates or another supported machine | [Native worker clock applicability](#native-worker-clock-applicability), including its required worker-change control and environmental scope. |
+| Exec publication, compatible absence handling or confirmed-reap reconciliation and race controls | [Exec-reader mutations](#exec-reader-publication-and-absence-mutations) and [confirmed-reap mutation](#confirmed-reap-acknowledgement-mutation). |
+| Exec spawning, process-state inspection, inheritance assertions or retirement of overlapping coverage | [Exec inheritance mutations](#exec-inheritance-mutation-controls). |
+| BYOXPC selection, installation, registry or cleanup; shared response/comparison contracts | [Controller verification guidance](../controller/AGENTS.md#verify-the-changed-boundary), [BYOXPC shared cases](#runner_byoxpc), [registry recovery](#registry-recovery) and [default-location control](#byoxpc-default-location). |
+| BYOXPC dossier records, native extension execution, phase handling, issuer signing or provenance | [Dossier witness](#byoxpc-dossier-witness) and [extension and phase witness](#byoxpc-extension-and-phase-witness). |
+| Built-in or external caller authorization; host admission/exit, client re-acquisition or launchd throttle | [Built-in caller authentication](#built-in-caller-authentication), [external caller authentication](#runner_auth_external) and [occupied-claim attribution](#byoxpc-occupied-claim-attribution), including session-cleanup and registry triggers. |
+| Build, toolchain, signing or artifact inspection — **Requirement unresolved** for broader toolchain-switch acceptance | [Signed-artifact controls](#signed-artifact-controls), [build guards](#build-guard-controls), [build refusals](#build-refusal-controls), [translated-build refusals](#translated-build-refusal-controls) and [toolchain-switch controls and qualification](#build-toolchain-switch-controls). Their individual triggers and equipment conditions apply; the qualification concerns only the broader acceptance scope. |
+| Native file-extension authority, call representation, issuer lifetime or allocation assumptions; experiment or checker changes | [Native sandbox-extension experiment](#native-sandbox-extensions). |
 
-If the test depends on one of these, make it opt-in and document the dependency.
+## Select and run a control
 
-## How to run opt-in tests
-
-Inspect before choosing resource-sensitive work:
+Inspect a relevant canonical case before execution, then select it through the
+public dispatcher, for example:
 
 ```sh
-tests/run.sh --suite opt_in --list
 tests/run.sh --case runner_byoxpc/BBX-001 --list
+PW_TEST_OUT_DIR=tests/out/runs/byoxpc-verification tests/run.sh --case runner_byoxpc/BBX-001
 ```
 
-Execute with `--case`, an owning `--suite`, `--suite opt_in`, or `--all`.
-Selecting a BYOXPC specimen adds `runner_byoxpc/runner_install` as a dependency.
-Required app/toolchain/GUI/signing/Rosetta equipment missing causes a failed run with
-explicit unrun selections. Run launchd/XPC tests from an unsandboxed, logged-in
-GUI session. Signing tests accept `PW_BYOXPC_IDENTITY`, then `IDENTITY`, otherwise
-resolve a matching Developer ID from the app's team. Configuration and output
-rules are documented in `tests/README.md`.
+Selection adds declared dependencies. Missing required equipment fails with
+unrun selections. The [harness](README.md#how-to-run) owns suite and case
+selection; its [configuration](README.md#configuration),
+[equipment checks](README.md#equipment-checks) and
+[output contract](README.md#output-contract-testsout) describe execution and
+results. Follow the [test guidance](AGENTS.md#choose-and-run-verification) for
+fresh output and sandboxed-harness diagnostics. Case scripts are invoked only
+through the dispatcher.
 
-Case scripts refuse to start outside the dispatcher; `tests/run.sh` supplies
-selection, deduplication, configuration validation and complete accounting.
+For BYOXPC controls, launchd/XPC needs an unsandboxed, logged-in GUI session.
+Signing identity selection uses `PW_BYOXPC_IDENTITY`, then `IDENTITY`, otherwise
+an identity matching the app's team, where the case supports that fallback.
+Individual entries state stricter identity requirements. Follow the
+[external-runner ownership and recovery guidance](../AGENTS.md#external-runner-workflow).
 
-## Registry (current opt-in tests)
+`<run>` below is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`.
+
+## Controls and their applicability
 
 ### Exec reader publication and absence mutations
 
@@ -52,8 +73,9 @@ selection, deduplication, configuration validation and complete accounting.
 - **Purpose:** Bypass the completed-slot gate or invent an exec account when
   metadata is absent in disposable Swift host sources. Unchanged reader
   assertions must reject exposed unpublished facts and invented cleanup absence.
-- **Opt-in reason:** Three isolated Swift package compilations. Required when
-  changing exec payload publication or compatible absence handling.
+- **Execution considerations:** Three isolated Swift package compilations.
+- **When to run:** Required when changing exec payload publication or compatible
+  absence handling.
 - **Equipment:** Swift and clang; no signed app or service installation.
 - **Artifacts:** Exact source copies/hashes, native fixture, command logs and
   structured baseline/rejection receipts naming each failed assertion.
@@ -65,8 +87,9 @@ selection, deduplication, configuration validation and complete accounting.
 - **Purpose:** Remove final acknowledgement reconciliation in a disposable host
   copy. Previously unseen clean and fatal acknowledgements must lose ordering
   credit; prior ownership loss must remain unqualified.
-- **Opt-in reason:** Two isolated Swift package builds. Required when changing
-  confirmed-reap reconciliation or its race controls.
+- **Execution considerations:** Two isolated Swift package builds.
+- **When to run:** Required when changing confirmed-reap reconciliation or its
+  race controls.
 - **Equipment:** Swift and clang; no signed app or service installation.
 - **Artifacts:** Exact source copies/hashes, build/run commands and logs, both
   host variants, and structured passing/rejected results.
@@ -81,7 +104,7 @@ selection, deduplication, configuration validation and complete accounting.
   disposable host copies, same-group descendant survival after normal exec
   completion, and child stderr delivery with worker fd 2 closed. Passing means
   the stated counterexample was observed; it is not a safety guarantee.
-- **Opt-in reason:** Exploratory native resource/failure observations and
+- **Execution considerations:** Exploratory native resource/failure observations and
   multiple disposable Swift builds. Run outside the automation sandbox.
 - **Equipment:** Swift/clang for setup controls; signed app/clang for lifecycle;
   signed app, embedded worker and clang for closed stderr. No service install.
@@ -99,7 +122,7 @@ selection, deduplication, configuration validation and complete accounting.
 - **Purpose:** Record descriptors, environment and accessible mappings/ports
   of signed production workers at the pre-ready and post-apply sleep seams.
   The contaminated-worker case is a required positive control.
-- **Opt-in reason:** Exploratory process inspection, optional task-port access
+- **Execution considerations:** Exploratory process inspection, optional task-port access
   and two twenty-second holds. Run outside the automation sandbox.
 - **Equipment:** Signed app, embedded worker, clang for the dependency, macOS
   `ps`, `lsof`, `vmmap` and `lsmp`. No service installation or signing mutation.
@@ -114,7 +137,7 @@ selection, deduplication, configuration validation and complete accounting.
 - **Purpose:** Investigate host-resolution eligibility using the shipped
   validator and independent native targets, with retained query returns, file
   operations, path state and same-process unlink/recreate observations.
-- **Opt-in reason:** Exploratory OS-sensitive native behavior and Developer ID
+- **Execution considerations:** Exploratory OS-sensitive native behavior and Developer ID
   signing. No expected prediction/enforcement agreement is asserted.
 - **Equipment:** Built app, clang and an explicit `IDENTITY` or
   `PW_BYOXPC_IDENTITY`. Run outside the automation sandbox. No service install,
@@ -130,7 +153,7 @@ selection, deduplication, configuration validation and complete accounting.
 - **Purpose:** Observe extra native queries against actual PW workers through a
   validator wrapper, preserving the current planner's reports and separately
   retaining the extra transcript. Covers unlink/recreate, create and symlink unlink.
-- **Opt-in reason:** Exploratory OS-sensitive interpretation with extra query
+- **Execution considerations:** Exploratory OS-sensitive interpretation with extra query
   instrumentation; no product behavior change or universal agreement assertion.
 - **Equipment:** Built app and live XPC outside the automation sandbox. Uses
   owned `/private/tmp` targets, no service installation or signing.
@@ -175,7 +198,7 @@ selection, deduplication, configuration validation and complete accounting.
   with one installed macOS SDK. Builds run offline in a disposable checkout under
   `/private/tmp`; signing still needs the timestamp service and an
   unsandboxed shell. No app is launched.
-- **Opt-in reason:** Runs multiple builds and signs both variants with keychain
+- **Execution considerations:** Runs multiple builds and signs both variants with keychain
   access. The source checkout's caches and distribution are untouched.
 - **When to run:** After changing the minimum, SDK, output target or signing
   checks or their placement relative to compilation, assembly and packaging.
@@ -259,7 +282,7 @@ selection, deduplication, configuration validation and complete accounting.
   release-battery sequence launches the built app through real acceptance
   and the default battery. Notarization, staple validation and Gatekeeper
   responses are controlled locally; nothing is submitted to Apple.
-- **Opt-in reason:** Runs many builds, several of them fresh, and signs with
+- **Execution considerations:** Runs many builds, several of them fresh, and signs with
   keychain access, then runs the default battery against an extracted build
   ZIP. The source checkout's caches and distribution are untouched.
 - **When to run:** After changing a refusal, its placement, the tool wrappers'
@@ -295,7 +318,7 @@ selection, deduplication, configuration validation and complete accounting.
   started with `arch -x86_64` must read `sysctl.proc_translated` as `1`.
   Missing Rosetta leaves the case unrun as an equipment failure; nothing is
   installed. No app, identity, compiler or signing is needed.
-- **Opt-in reason:** Rosetta is optional on Apple Silicon Macs, and the
+- **Execution considerations:** Rosetta is optional on Apple Silicon Macs, and the
   general refusal controls must stay runnable without it.
 - **When to run:** After changing the native builder check, its position in
   `build.sh`, the Makefile's build entry or SDK guard, or the `rosetta`
@@ -324,10 +347,17 @@ selection, deduplication, configuration validation and complete accounting.
   with distinct C compiler identities. Indistinct or missing equipment is a
   failure, never a skip or a wrapper fallback. No second Rust toolchain is
   needed.
-- **Opt-in reason:** Two fresh full builds under different toolchains with
+- **Execution considerations:** Two fresh full builds under different toolchains with
   keychain access.
-- **When to run:** After changing the stamp's fields or comparison, and for
-  acceptance of the build provenance work.
+- **When to run:** After changing the stamp's fields or comparison.
+- **Requirement unresolved — broader acceptance:** The instruction also calls
+  for this control for "acceptance of the build provenance work", without defining
+  which present-day changes that covers or whether it is a recurring mandatory
+  selection beyond stamp changes. The [build account](../docs/BUILD.md#refusals)
+  and [suite account](suites/preflight/README.md#success-criteria) describe the
+  control but do not settle that scope. The stamp-change trigger remains in force;
+  the broader acceptance requirement is neither waived nor extended to all build
+  changes. See the [examination item](VERIFICATION-OUTFLOW-EXAMINATION-PLAN.md#build-provenance-acceptance-scope).
 - **Artifacts:** `<run>/suites/preflight/build_toolchain_switch_controls/artifacts/`
   holds the equipment probes, the distinct and equal fields, each build's raw
   output, receipts, stamp and record, and the switch summary.
@@ -341,7 +371,7 @@ selection, deduplication, configuration validation and complete accounting.
   service and registry id, and every binary record carries the bundle-local
   path, its independently computed hash and the shipped manifest baseline,
   with `match`/`mismatch` agreeing with the hashes.
-- **Opt-in reason:** Requires launchd service install/bootstrapping, a
+- **Execution considerations:** Requires launchd service install/bootstrapping, a
   logged-in GUI session and a matching Developer ID identity.
 - **Resource dependency:** `dist/PolicyWitness.app` built + GUI session +
   signing identity. Uses the shared BYOXPC session machinery
@@ -359,7 +389,7 @@ selection, deduplication, configuration validation and complete accounting.
   Compare issuer and worker authority read-backs with registry and envelope
   provenance; exercise maximum replies and an actual missing installed issuer
   with exact-byte restoration; verify removal afterward.
-- **Opt-in reason:** Installs a launchd service in a logged-in GUI session and
+- **Execution considerations:** Installs a launchd service in a logged-in GUI session and
   requires the selected app's Developer ID identity.
 - **Resource dependency:** Signed app, signing identity, GUI session and clang.
   Targets live in the owned `/private/tmp` staging directory. The shared session
@@ -383,7 +413,7 @@ selection, deduplication, configuration validation and complete accounting.
 
 - **Location:** `tests/suites/runner_byoxpc/run.sh`
 - **Purpose:** Run smoke + blackbox suites through an owned, disposable BYOXPC runner copy; preserve the selected app and verify removal, including partial setup.
-- **Opt-in reason:** Requires launchd service install/bootstrapping and an
+- **Execution considerations:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
 - **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.
 - **When to run:** After changing BYOXPC install/verify behavior, runner-mode
@@ -399,7 +429,7 @@ selection, deduplication, configuration validation and complete accounting.
   normal controller/client. (A BYOXPC runner that
   keeps those keys instead requires a team-matched Developer ID caller — that
   path is covered by `runner_install.sh`.)
-- **Opt-in reason:** Requires launchd service install/bootstrapping and an
+- **Execution considerations:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
 - **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.
 - **When to run:** After changing runner caller authorization or session cleanup.
@@ -416,7 +446,7 @@ selection, deduplication, configuration validation and complete accounting.
   recovery after diagnostic output deletion. It uses child-process HOME/registry
   overrides and uniquely owned user services; cleanup verifies service and plist
   absence before deleting durable staging.
-- **Opt-in reason:** Creates and removes launchd services in the actual GUI domain.
+- **Execution considerations:** Creates and removes launchd services in the actual GUI domain.
 - **Resource dependency:** Signed app, GUI session, unsandboxed execution.
 - **When to run:** After changing runner registration, selection or cleanup.
 - **Artifacts:** `<run>/suites/runner_byoxpc/registry_recovery/artifacts/` contains
@@ -430,7 +460,7 @@ selection, deduplication, configuration validation and complete accounting.
 - **Purpose:** Confirm that the unchanged worker passes and disposable workers
   with environment or descriptor isolation disabled fail the ordinary contract
   assertions with specific leak evidence.
-- **Opt-in reason:** Development diagnostic that deliberately transforms and
+- **Execution considerations:** Development diagnostic that deliberately transforms and
   rebuilds the current C implementation. Its mutation anchors need review when
   spawn implementation changes; the baseline contract tests remain independent
   of those transformations.
@@ -449,7 +479,7 @@ selection, deduplication, configuration validation and complete accounting.
   bypasses the release wait and a host that releases before its hook must cause
   early effects detected by the same observers. Both early unlink and exec
   connections must be observed while native collection remains held.
-- **Opt-in reason:** Builds source mutations and signs disposable app copies;
+- **Execution considerations:** Builds source mutations and signs disposable app copies;
   exact mutation anchors deliberately require review when implementation changes.
 - **Resource dependency:** Built signed app, matching Developer ID Application
   identity, clang, Swift, Meson and unsandboxed live XPC. Identity resolution follows
@@ -458,8 +488,11 @@ selection, deduplication, configuration validation and complete accounting.
   meson.build's `PWRunner` target declares, read by file-mode introspection and
   checked against the on-disk core set, so it cannot silently diverge from the
   production list.
-- **When to run:** After release/barrier or observer changes, and for order-plan
-  Gate 3 acceptance. Select with `tests/run.sh --case witness_contract/order_barrier_mutations`.
+- **When to run:** Required after release/barrier or observer changes, including
+  changes to the worker wait, release store or query eligibility rule, as specified
+  by the [root ordering guidance](../AGENTS.md#core-ideas) and
+  [test guidance](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior).
+  Select with `tests/run.sh --case witness_contract/order_barrier_mutations`.
 - **Artifacts:** `<run>/suites/witness_contract/order_barrier_mutations/artifacts/`:
   `mutations.json`, component logs, exact patched sources, per-candidate binary
   and manifest hashes, signature/evidence checks, raw envelopes, gate receipts,
@@ -484,7 +517,7 @@ selection, deduplication, configuration validation and complete accounting.
   Every sample must validate and no continuous-clock process may have a deny
   record. The standalone `CLOCK_MONOTONIC` neighbour is recorded as observed;
   its intermittent failure need not recur in a given run.
-- **Opt-in reason:** Reads unified logging and observes OS-sensitive native
+- **Execution considerations:** Reads unified logging and observes OS-sensitive native
   behavior; its claims are scoped to the recorded machine and implementation.
 - **Resource dependency:** clang and an unsandboxed shell for `log show`. A
   refused log query leaves deny records unavailable, which is not proof of
@@ -509,7 +542,7 @@ selection, deduplication, configuration validation and complete accounting.
   from the installed copy and from the registry record. The worker must hold the
   supplied plist; the validator must hold none; every binary carries the team's
   signature.
-- **Opt-in reason:** Requires launchd service install/bootstrapping, a logged-in
+- **Execution considerations:** Requires launchd service install/bootstrapping, a logged-in
   GUI session and a matching Developer ID.
 - **Resource dependency:** Signed app, GUI session, matching identity; shared
   session helper for ownership and verified removal.
@@ -525,28 +558,11 @@ selection, deduplication, configuration validation and complete accounting.
   bytes read independently; the second is refused before any host is reached,
   naming the worker and the key, and without a requirement its conditioned
   write is denied by the kernel.
-- **Opt-in reason:** Requires launchd service install/bootstrapping, a logged-in
+- **Execution considerations:** Requires launchd service install/bootstrapping, a logged-in
   GUI session and a matching Developer ID.
 - **Resource dependency:** Signed app, GUI session, matching identity; owned
   temporary targets under `/private/tmp`; shared session helper per copy.
 - **Artifacts:** `<run>/suites/runner_byoxpc/entitlement_transfer/artifacts/`
-
-## Adding a new opt-in test
-
-When you add an opt-in test, document it here with:
-
-- **Suite name:** use the runner suite name (for example `runner_byoxpc`)
-  so results group under `<run>/suites/<suite>/`.
-- **Location:** the script path under `tests/suites/runner_*/opt_in/`.
-- **Purpose:** the behavior under test.
-- **Opt-in reason:** the resource or OS behavior that makes it non-default.
-- **When to run:** a trigger tied to code changes or regressions.
-- **Artifacts:** where the test writes output.
-- **Gating:** required equipment and any legitimate case-specific skip code.
-  Missing required equipment fails; a skip code must also be declared in the catalog.
-
-If the opt-in reason is removed (for example, you can make it stable without a
-PTY), move the test into the smoke suite and remove it from this registry.
 
 ### BYOXPC single-use admission
 
@@ -568,7 +584,7 @@ PTY), move the test into the smoke suite and remove it from this registry.
   with each refused attempt attributed to a host generation and its owner: local retirement lag, a foreign authorized client holding a
   host, and clients queued together during launchd's respawn throttle. Also
   observes registry lock contention on a fixture registry.
-- **Opt-in reason:** Live launchd service, timing-sensitive schedules and a
+- **Execution considerations:** Live launchd service, timing-sensitive schedules and a
   same-UID foreign client.
 - **When to run:** After changing host admission or exit, client connection or
   re-acquisition, the generated plist's throttle, or the session helper's
@@ -601,8 +617,22 @@ PTY), move the test into the smoke suite and remove it from this registry.
 - **Location:** `tests/suites/runner_byoxpc/opt_in/default_location.sh`
 - **Purpose:** Exercise installation, listing, a specimen and verified removal
   without a registry override, including the real user LaunchAgents plist.
-- **Opt-in reason:** Shared default registry and live signed user service.
+- **Execution considerations:** Shared default registry and live signed user service.
 - **When to run:** After registry path, installation or session-helper changes.
 - **Equipment:** Signed app, matching Developer ID and GUI launchd session.
 - **Ownership:** Shared session helper; registry-busy is a failure, never retried.
 - **Artifacts:** Default listing, plist observations, run envelope and cleanup receipts.
+
+## Maintaining this guide
+
+Maintain an entry when it clarifies applicability, interpretation or consequential
+operating conditions. Use canonical case identifiers and link to the owning
+suite account for detailed assertions and fixtures, following
+[test contribution guidance](AGENTS.md#add-or-change-tests). New non-default
+cases do not automatically need an entry here.
+
+Keep the index's routes aligned with their owning instructions. Preserve the
+strength of existing requirements and distinguish them from investigative uses;
+explain concrete equipment, cost and cleanup conditions where they affect the
+verification choice. Membership and dependencies belong in the catalog, and
+selection and execution belong in the harness README.

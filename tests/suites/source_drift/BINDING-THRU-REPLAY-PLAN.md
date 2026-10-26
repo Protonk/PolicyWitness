@@ -314,7 +314,7 @@ it, what that rule establishes, and the binding class:
 - `docs/worker-launch-observation.json`;
 - the 10 capability rows in `docs/architecture.json` that cite
   `launch_inventory`;
-- `launch_inventory` in `tests/catalog.json` and `tests/OPT_IN_TESTS.md`, and
+- `launch_inventory` in `tests/catalog.json` and `tests/CHANGE-VERIFICATION.md`, and
   the production launch inventory section of
   `tests/suites/runner_exec_inheritance/README.md`;
 - the two pins in `tests/RETAINED.json`.

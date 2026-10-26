@@ -34,7 +34,7 @@ Prefer literal descriptions of operations over adversarial metaphors. Describe t
 - **One-way sandbox per process**: preserve a fresh host and worker per specimen; never reuse a sandboxed process.
 - **Host/worker split**: keep sandbox API calls and specimen application out of the XPC host so its reply path stays available.
 - **Witness over interpretation**: record the observation supporting an effect; `rc == 0` alone is insufficient.
-- **Predictions precede attempts**: preserve the collection/release barrier and the limited meaning of `query_first`. Rerun the opt-in `witness_contract/order_barrier_mutations` control whenever the wait, release store or eligibility rule changes.
+- **Predictions precede attempts**: preserve the collection/release barrier and the limited meaning of `query_first`. Rerun the [order-barrier mutation control](tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls) (`witness_contract/order_barrier_mutations`) whenever the wait, release store or eligibility rule changes.
 - **No dishonest attribution**: never turn a permission-shaped failure into a sandbox-cause claim without supporting evidence, or claim agreement or disagreement between prediction and enforcement.
 - **Runner simplicity**: keep orchestration in the host and post-apply work in the C worker; avoid clever abstractions and hidden pre-sandbox resource acquisition.
 

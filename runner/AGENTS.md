@@ -14,7 +14,7 @@ request owner. Keep orchestration in the host and post-apply attempts in the wor
 Preserve collection closure, release publication and worker acknowledgement.
 Do not infer `query_first` from paired fields alone. Changes to the worker wait,
 release store or eligibility rule require
-[the ordering mutation control](../tests/OPT_IN_TESTS.md), as specified by the
+[the ordering mutation control](../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls), as specified by the
 root guidance. Retain partial native observations and independent cleanup
 facts; a summary or requested signal must not replace an observed effect.
 

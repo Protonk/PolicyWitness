@@ -44,7 +44,8 @@ file state and exact child cleanup remain separate. The case asserts equipment,
 framing, coordination and observed effects, not prediction/enforcement agreement
 or a universal API outcome. This is exploratory native evidence, not a product
 eligibility-rule change or acceptance gate. Targets stay under `/private/tmp`.
-See the [fixture](../../fixtures/path_query/README.md) and opt-in registry.
+See the [fixture](../../fixtures/path_query/README.md) and
+[path-query observation account](../../CHANGE-VERIFICATION.md#native-path-query-observations).
 
 The separate opt-in `path_query_integrated` case retains extra native query
 receipts against the actual PW worker through a validator wrapper. It forwards
@@ -315,7 +316,7 @@ file gate opened by the observer after the validator connects. This places the
 fault inside the held collection instead of letting the host reject premature
 publication before any collection starts. The direct C control opens that gate
 before launch and must still detect the missing worker wait. Hashes, signatures, source patches, command logs and effect receipts
-are retained. See [opt-in prerequisites](../../OPT_IN_TESTS.md).
+are retained. See [ordering-control applicability and prerequisites](../../CHANGE-VERIFICATION.md#order-barrier-mutation-controls).
 
 The unmodified C scenario must complete its 500 ms hold before release. A bypass
 can complete before the first poll: `early_completion` then rejects it immediately,
@@ -439,7 +440,7 @@ any step. Missing attempts use the outcome
 operation started.
 
 This is the one override-driven case exempt from the exact-outcome assertion in
-the `_test_overrides` recipe in [`runner/AGENTS.md`](../../../runner/AGENTS.md).
+the `_test_overrides` recipe in [runner guidance](../../../runner/AGENTS.md).
 It checks that `normalized_outcome` excludes `ok` and `bad_policy`, and the
 spellings `sandbox_apply_failed` and `runner_sandbox_denied` that no constant
 defines, rather than pinning one replacement outcome, so it protects the
@@ -527,7 +528,7 @@ fault and child disposition are independently observed. The controls establish
 preservation of these records, not attribution or comparability between them.
 
 Fixture inputs and limitations are documented in
-[`diagnostic_transport`](../../fixtures/diagnostic_transport/README.md).
+[diagnostic transport](../../fixtures/diagnostic_transport/README.md).
 Direct Swift and Rust receiver controls complement this CLI route. Temporary
 known-code filtering or detail-dropping mutations must fail these controls.
 The [unfamiliar diagnostic preservation contract](../../FAILURE-PROPAGATION-CONTRACT.md#unfamiliar-diagnostic-preservation-controls)
@@ -537,7 +538,7 @@ requires no retained mutation experiment or acceptance output.
 ## Comparison matrix
 
 `comparison_matrix` runs the three live specimens of
-[`tests/fixtures/comparison/matrix.json`](../../fixtures/comparison/matrix.json)
+[comparison matrix](../../fixtures/comparison/matrix.json)
 through the CLI: S (real validator, twenty-three rows),
 B (the validator steered by `stub_validator.py` through
 `_test_overrides.validator_executable_path` and the I/O deadline seam; its

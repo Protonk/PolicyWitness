@@ -221,7 +221,7 @@ Offline release controls also exercise the release procedure's decision points.
   were forwarded and which flags they carried. The same case runs the
   fresh-mode state sequence with interruptions, the canary, replaced-output,
   lock-lifetime, Cargo oracle, Cargo selection and make-entrypoint controls
-  described in the opt-in registry. For the output target: outputs outside it
+  described in the [build-refusal account](../../CHANGE-VERIFICATION.md#build-refusal-controls). For the output target: outputs outside it
   substituted at each of the four checked boundaries (after Cargo, including
   a corrupted cached unit refused again on reuse; after the native compile,
   the worker before it is run; in the assembled bundle with an unlisted file,

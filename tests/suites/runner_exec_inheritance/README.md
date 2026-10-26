@@ -54,7 +54,8 @@ summary are retained. The app and production source files are not modified.
 This development recipe deliberately depends on the C source's spawn details;
 it must be reviewed when those details change. It is opt-in so the normal
 contract suite continues to exercise the built distributable without requiring
-these source transformations. See `tests/OPT_IN_TESTS.md`.
+these source transformations. See the
+[mutation applicability account](../../CHANGE-VERIFICATION.md#exec-inheritance-mutation-controls).
 
 ## Production launch inventory (opt-in)
 
@@ -76,7 +77,8 @@ inventories. `lsof`'s text mappings are not a complete library census. The
 positive control establishes that a parent-supplied descriptor and environment
 value can reach a worker; ordinary CLI exec controls cover the child's narrower
 contract. Signal state, resource limits and extension-bearing workers remain
-outside this observation. See [opt-in guidance](../../OPT_IN_TESTS.md).
+outside this observation. See the
+[launch-inventory account](../../CHANGE-VERIFICATION.md#production-worker-launch-inventory).
 
 Each boundary retains the exact specimen, CLI capture, process listings, each
 observer's argv/status/raw streams, and `observations.json`. The case takes

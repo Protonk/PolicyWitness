@@ -52,8 +52,10 @@ implicit skip ([equipment checks](../tests/README.md#equipment-checks)).
 | Rosetta 2 | One control runs the build script translated and requires the refusal; `softwareupdate --install-rosetta` installs it | `rosetta`: `preflight/translated_build_refusal_controls`, opt-in |
 
 Live cases also need a working XPC lookup, which the dispatcher does not
-preflight: a blocked case runs and fails with evidence. The opt-in cases and their equipment are listed in
-[tests/OPT_IN_TESTS.md](../tests/OPT_IN_TESTS.md).
+preflight: a blocked case runs and fails with evidence. The
+[change-verification guide](../tests/CHANGE-VERIFICATION.md) explains control
+applicability and consequential operating conditions; the catalog and `--list`
+own the complete membership and equipment inventory.
 
 ## Conditions no package supplies
 

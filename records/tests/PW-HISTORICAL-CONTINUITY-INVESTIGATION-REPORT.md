@@ -193,7 +193,7 @@ case would fail because the copied checker no longer accepts the counterexample.
 That is not just a stale source-substitution anchor. The requirement deliberately
 preserves an investigative result about a checker limitation. Its
 [suite account](../../tests/suites/runner_unit/README.md#host-setup-oracle-sensitivity-opt-in)
-and [opt-in account](../../tests/OPT_IN_TESTS.md) make that continuing experiment
+and [control account](../../tests/CHANGE-VERIFICATION.md#worker-resource-challenge-probes) make that continuing experiment
 explicit. It supplies useful present information about the checker, but it
 also obliges maintenance of a known weakness as a passing result.
 

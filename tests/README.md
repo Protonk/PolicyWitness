@@ -19,7 +19,7 @@ choose checks, change tests, evaluate evidence and clean up output.
 | [fixtures/](fixtures/README.md) | Specimens, independent observations and fixture builders. |
 | [lib/](lib/) | Shared dispatch, capture, validation, artifact and cleanup helpers. |
 | [COVERAGE.md](COVERAGE.md) and [FAILURE-PROPAGATION-CONTRACT.md](FAILURE-PROPAGATION-CONTRACT.md) | Outcome coverage and evidence ownership. |
-| [OPT_IN_TESTS.md](OPT_IN_TESTS.md) | Resource-sensitive and mutation controls. |
+| [CHANGE-VERIFICATION.md](CHANGE-VERIFICATION.md) | Verification routes, control applicability, evidence limits and execution considerations. |
 | [RETAINED.json](RETAINED.json) | Committed retention index, outside disposable output. |
 | `out/` | Local run and release-acceptance evidence, including cleanup staging. |
 
@@ -98,8 +98,10 @@ Inspection never repairs the app or regenerates its evidence.
 These checks do not certify notarization and cannot detect a transient mutation
 restored before the final inventory.
 
-[Opt-in cases](OPT_IN_TESTS.md) are selectable by exact case, owning suite,
-`--suite opt_in`, or `--all`.
+Non-default cases are selectable by exact case, owning suite, `--suite opt_in`,
+or `--all`. Inspect `tests/run.sh --suite opt_in --list` for the complete selection
+and its dependencies. The [change-verification guide](CHANGE-VERIFICATION.md)
+explains applicable controls and their evidence; it is not a membership registry.
 
 Release ZIP acceptance is a release-stage artifact check, not a test entry
 point: `bash tests/accept-release.sh dist/PolicyWitness.zip` inspects a
@@ -382,7 +384,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `run_effects` | Baseline | Independent before/after file observations for allowed/denied attempts; plain runs leave the runner registry and launchd plists unchanged. | App/XPC and fixtures for live cases; Python for controls. | [Suite](suites/run_effects/README.md) |
 | `runner_exec_lifecycle` | Baseline + opt-in | CLI exec deadlines stop observed helper trees, preserve output and allow later effects; early EOF, surviving descendants and worker death are covered, including an opt-in combined EOF/leader-exit observation. | App, XPC, clang and Python. | [Suite](suites/runner_exec_lifecycle/README.md) |
 | `runner_exec_inheritance` | Baseline + opt-in | Children report isolated environments/descriptors and usable streams; controlled resources and opt-in mutations establish leak detection; opt-in production launch inventory records accessible worker state and observer boundaries; a closed-worker-stderr probe characterizes child delivery. | App/XPC for CLI and launch inventory; clang/Python for worker and mutation controls. | [Suite](suites/runner_exec_inheritance/README.md) |
-| `opt_in` | Opt-in | Selection of all non-default catalog cases. | Varies by case. | [Registry](OPT_IN_TESTS.md) |
+| `opt_in` | Opt-in | Selection of all non-default catalog cases. | Varies by case. | [Selection](#how-to-run) |
 | `witness_contract` | Baseline + opt-in | Per-phase ordering and fresh planning, native extension lifecycle/interruption, combined faults and token confinement, bounded collection, independent query/attempt effects, comparison limits, partial evidence, diagnostics and dossier; opt-in barrier mutations, BYOXPC dossier and independent native path-query observations. | App/XPC and toolchains for live cases; signing/GUI for applicable opt-ins; offline cases vary. | [Suite](suites/witness_contract/README.md) |
 
 ## Shared test infrastructure

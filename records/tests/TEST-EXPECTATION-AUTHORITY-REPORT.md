@@ -25,7 +25,7 @@ same-group descendant to survive normal completion. Its authority is unusually
 explicit: the [suite account](../../tests/suites/runner_exec_lifecycle/README.md#same-group-descendant-after-normal-completion)
 calls it characterization of an observation limit and disclaims a desired
 process-tree containment rule. The
-[opt-in registry](../../tests/OPT_IN_TESTS.md#worker-resource-challenge-probes)
+[control account](../../tests/CHANGE-VERIFICATION.md#worker-resource-challenge-probes)
 says passing means the stated counterexample was observed.
 
 The origin supports that reading. Commit `2d63c98` (2026-10-17) introduced the

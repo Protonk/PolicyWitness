@@ -13,8 +13,8 @@ map and output contracts. These instructions govern test work alongside the
 - For evidence assertions, use the
   [comparison ownership table](FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
   and the [wire contract](../docs/CONTRACT.md).
-- For resource-sensitive or mutation controls, consult the
-  [opt-in registry](OPT_IN_TESTS.md).
+- For change-specific verification and investigative controls, consult
+  [Verification for changes and investigations](CHANGE-VERIFICATION.md).
 - For release acceptance and interrupted release cleanup, follow the
   [release procedure](../docs/SIGNING.md#release-procedure).
 
@@ -58,8 +58,9 @@ validator receiver changes, run `failure_boundaries` with `runner_unit`,
 `runner_validator_failure` and `witness_contract` assertions.
 
 Rerun `witness_contract/order_barrier_mutations` whenever the worker wait,
-release store or query eligibility rule changes. Follow the opt-in registry's
-other change-specific controls. When comparing native builds, run the live
+release store or query eligibility rule changes. Follow the
+[change-verification guide](CHANGE-VERIFICATION.md) for other change-specific
+controls. When comparing native builds, run the live
 battery against the candidate, including worker and ordering cases; structural
 comparison alone cannot establish behavioral equivalence.
 
@@ -115,8 +116,19 @@ default membership, dependencies and any supported skip reason. A case is
 reached only through `tests/run.sh`: a wrapper script no case names, a
 documented direct command or a release-specific selection fails the drift suite. Keep the
 [suite map](README.md#suite-coverage), owning suite README, applicable outcome
-coverage and opt-in registry aligned. Put detailed assertions and fixture
-descriptions beside their suite rather than duplicating them in the map.
+coverage and applicable [change-verification guidance](CHANGE-VERIFICATION.md)
+aligned. Put detailed assertions and fixture descriptions beside their suite
+rather than duplicating them in the map.
+
+Choose default membership in relation to the ordinary battery's equipment and
+operating conditions. Interactive TTY/PTY or UI needs, network access, GUI or
+other host services, Developer ID signing or notarization, substantial execution
+cost, and Unified Logging or other sandbox-sensitive telemetry can justify
+non-default membership. Consider the case's actual needs; using one of these
+facilities does not automatically exclude it from the default battery.
+Record the reason in its owning suite account or applicable guide entry and
+the membership in the catalog. Default membership, suite ownership and expected
+results are separate decisions.
 
 Use the [shared test infrastructure](README.md#shared-test-infrastructure) for
 setup, command capture and structural validation. Keep case-specific policies,

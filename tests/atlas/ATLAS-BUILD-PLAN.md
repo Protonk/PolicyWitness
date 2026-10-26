@@ -262,7 +262,7 @@ are detectable.
 **Equipment:** the ordinary cases require `app` and `clang`, live XPC, Python,
 local sockets, and process observation. The opt-in also requires Swift, Meson,
 and a matching Developer ID identity. Follow the
-[opt-in entry](../../tests/OPT_IN_TESTS.md#order-barrier-mutation-controls);
+[ordering-control entry](../../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls);
 only its disposable copies may be patched or signed. Preserve its cleanup and
 source-app inventory checks. A different external change, such as replacing a
 target instead of removing it, remains an unexecuted variation.

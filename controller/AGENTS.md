@@ -72,7 +72,7 @@ Select the cases that establish the change:
 | Rust helpers, orchestration or formatting | [unit](../tests/suites/unit/README.md): binary unit tests, controlled dependencies and rustfmt. |
 | Public CLI arguments and envelope behavior | [integration](../tests/suites/integration/README.md); use live suites when the behavior needs XPC or the kernel. |
 | Request/reply admission or evidence interpretation | [failure_boundaries](../tests/suites/failure_boundaries/README.md), [blackbox_e2e](../tests/suites/blackbox_e2e/README.md) consumer controls and affected [witness_contract](../tests/suites/witness_contract/README.md) cases; follow the coordinated runner checks in test guidance. |
-| Selection, signing, registry or recovery | Rust selection/registry controls and applicable [runner_byoxpc](../tests/suites/runner_byoxpc/README.md) cases, including change-specific controls in the [opt-in registry](../tests/OPT_IN_TESTS.md). |
+| Selection, signing, registry or recovery | Rust selection/registry controls and applicable [runner_byoxpc](../tests/suites/runner_byoxpc/README.md) cases, including applicable controls in the [change-verification guide](../tests/CHANGE-VERIFICATION.md). |
 | Documentation or generated contracts | [source_drift](../tests/suites/source_drift/README.md), plus behavioral checks when meanings change. |
 
 Use [sandboxed-harness diagnostics](../tests/AGENTS.md#sandboxed-automation-harnesses)

@@ -261,7 +261,7 @@ Where each stage is pinned:
   immutable phase acknowledgement records preserve earlier observations.
   `PWRunnerOrdering` is assembled independently per phase. `PhaseProtocolTests`,
   `OrderingTests` and the opt-in
-  [order-barrier mutation control](../tests/OPT_IN_TESTS.md) check the protocol.
+  [order-barrier mutation control](../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls) check the protocol.
 - **Attempts and publication.** `run_attempt` writes each slot and releases
   `completed`; an exec attempt acquires its pipes and spawn handles after
   apply and releases them before its slot completes. Checked by
