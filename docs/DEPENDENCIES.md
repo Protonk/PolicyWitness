@@ -54,8 +54,10 @@ implicit skip ([equipment checks](../tests/README.md#equipment-checks)).
 Live cases also need a working XPC lookup, which the dispatcher does not
 preflight: a blocked case runs and fails with evidence. The
 [change-verification guide](../tests/CHANGE-VERIFICATION.md) explains control
-applicability and consequential operating conditions; the catalog and `--list`
-own the complete membership and equipment inventory.
+applicability and consequential operating conditions. The catalog and `--list`
+record membership and declared equipment requirements. Individual controls can
+impose additional conditions, such as the
+[toolchain-switch control's distinct developer toolchains](../tests/CHANGE-VERIFICATION.md#build-toolchain-switch-controls).
 
 ## Conditions no package supplies
 
