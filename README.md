@@ -80,22 +80,9 @@ observed.
 
 ## Build and bundle
 
-Build on an Apple Silicon Mac, natively: `build.sh` refuses, before its other
-checks and before taking the checkout lock, when the machine is not Apple
-Silicon or the script runs translated by Rosetta. Through `make build`, make
-itself and its `SDKROOT` check have already run by then. Building
-PolicyWitness requires Rust with Cargo and its `aarch64-apple-darwin` target
-(the default on Apple Silicon), Xcode Command Line Tools (or Xcode), Meson
-and Ninja on `PATH`, and Homebrew's `python@3.14` formula
-(`brew install meson ninja python@3.14`): the build and test helpers run on
-that formula's interpreter at its keg path, checked before any of them
-starts, and import nothing outside the standard library and this tree. The
-build checks every
-executable it produces against that one output target, thin arm64 macOS code.
-The Developer ID Application signing identity must already be in your
-login keychain. [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) lists what
-each of these does for the build, the versions the build enforces, and what
-the tests need besides. From the repository root:
+Build on an Apple Silicon Mac, natively. A Developer ID Application signing identity must already be in your login keychain. [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) lists these and other required dependencies.
+
+From the repository root:
 
 ```sh
 make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
