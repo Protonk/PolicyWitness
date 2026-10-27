@@ -30,6 +30,13 @@
       "app_inventory": null
     },
     {
+      "path": "runs/drift-cost-candidate-01",
+      "run_id": "20261027T230701Z_a7cce91f",
+      "reason": "Drift cost reduction final credit: the plan's selected command (all eight source_drift cases and the three rehomed preflight cases) passed with zero recorded sleep on the final candidate revision; every case's receipts and the planner's controls.json are retained for the acceptance review. Retire with records/drift-cost-reduction.",
+      "source": "22f688d7d4c1aefe890c41db03a897141796f0e9",
+      "app_inventory": null
+    },
+    {
       "path": "release-acceptance/run-54d51e0ad1cc46e1bbeeba9182358569",
       "run_id": "accept-4bbfb70ce2a245499ccc63834699f283",
       "reason": "PolicyWitness 0.3.3 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.3.3.",
