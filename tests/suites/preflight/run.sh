@@ -53,6 +53,30 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "BYOXPC verification con
 test_pass "installation and validation verify the copied bundle recursively; a changed worker or issuer is refused and reported"
 fi
 
+if test_selected build_entry_controls; then
+test_begin preflight build_entry_controls
+test_step entry "drive the unchanged build script to each early refusal in disposable checkouts, offline"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build entry controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/check_build_entry.py" "${PW_TEST_ARTIFACTS}"
+test_pass "every early refusal fires before the step it protects; no output, build directory or lock is created"
+fi
+
+if test_selected native_policy_controls; then
+test_begin preflight native_policy_controls
+test_step policy "poison every asserted Meson option, bypass one assertion, and configure an x86_64 host"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "native policy controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/check_native_policy.py" "${PW_TEST_ARTIFACTS}"
+test_pass "every asserted option and the output target are refused by name before anything compiles; a removed assertion fails its control and is named"
+fi
+
+if test_selected native_source_controls; then
+test_begin preflight native_source_controls
+test_step configured "configure and compile the C-only targets on a declared-input copy and read the configured directory"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "native source controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/check_native_sources.py" "${PW_TEST_ARTIFACTS}"
+test_pass "the configured directory evaluates the tree; substituted, escaping and copied inputs are refused by name"
+fi
+
 if test_selected build_provenance_controls; then
 test_begin preflight build_provenance_controls
 test_step helpers "exercise the lock, stamp, fresh-mode, Cargo judgment, SDK, signature-display and record readers with constructed inputs"

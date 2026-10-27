@@ -431,10 +431,8 @@ import of either package anywhere else.
   independent faults in different rules with stderr in table order, a reader
   refusal beside a host finding, the combined precondition scenario, the
   omitted-rule dispatcher and restoration, each with its exact status, the
-  summary lines, stdout, stderr and `results.json`. Configured-directory
-  controls run `meson setup` with `xpc=false` on the copied checkout and
-  require the build-time reading to pass unmodified and to name a substituted
-  worker file.
+  summary lines, stdout, stderr and `results.json`. The configured-directory controls that run `meson setup` with
+  `xpc=false` on a declared copy are `preflight/native_source_controls`.
 
 ## Artifacts
 
@@ -461,8 +459,8 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 ./tests/run.sh --suite source_drift
 ```
 
-No build required; the manifest reader needs Meson on `PATH`, which the
-catalog declares as equipment. The `limits_documentation` case checks
+No build required; the manifest reader needs Meson on `PATH` for
+`runner_source_manifests_agree`, which the catalog declares as equipment. The `limits_documentation` case checks
 [docs/limits.json](../../../docs/limits.json), generated tables (the limits
 tables and the failure contract's scenario matrix rendered from
 `tests/fixtures/comparison/matrix.json`), the user guide's copied limits,
@@ -471,26 +469,20 @@ generator command with stale, missing and altered content; preserve both source
 files and an existing staged guide on rejection; and validate a staged guide
 after removing its source checkout. Internal-anchor and companion-file checks
 also reject defects introduced into the shared source, even when generation
-would otherwise copy them consistently. A build control proves stale guide
-content stops before signing or output creation. The suite does
+would otherwise copy them consistently. The control showing stale guide
+content stopping the build before signing or output creation is
+`preflight/build_entry_controls`. The suite does
 not compare production constants: those checks belong to `runner_abi_layout`,
 `runner_unit` and the Rust unit tests. See the
 [documentation guidance](../../../docs/AGENTS.md#editing-limits-and-shared-guide-content)
 and [limit-change verification guidance](../../AGENTS.md#verify-a-limit-change).
 
 The `contract_versions` case checks [docs/contract.json](../../../docs/contract.json)
-against every generated copy in code and documents, exercises the real generator in
-a disposable checkout with changed, stale, broken-marker and malformed inputs, and
-proves a stale copy stops the build before signing. The same case pins the
-native builder check as `build.sh`'s first executable block, built from
-builtins and the two `/usr/sbin/sysctl` probes ahead of the knobs, arguments,
-tracked inputs, Python and SDK setup and the lock front end. Under a profile
-that lets only bash and sysctl execute and denies Mach lookups, an unreadable
-`hw.optional.arm64` beside a bad knob, an unknown argument and an invalid
-`SDKROOT` yields the builder refusal as the only output; the same native shell
-without that rule passes the check and meets the knob refusal; and a probe the
-profile forbids to execute names both failed probes instead of exiting under
-`set -e`. Compiled values are compared elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
+against every generated copy in code and documents and exercises the real generator in
+a disposable checkout with changed, stale, broken-marker and malformed inputs.
+The controls that drive the unchanged build script to its early refusals,
+including the stale contract copy, the native builder check and the make
+entry, are `preflight/build_entry_controls`. Compiled values are compared elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
 See [docs/CONTRACT.md](../../../docs/CONTRACT.md).
 
 The `architecture_documentation` case checks
@@ -534,16 +526,9 @@ helper, a changed helper subcommand), its neighbours (a Meson option added,
 removed or reordered, the family's template, the Makefile's build banner, the
 three inventories, the baseline) and the forms the parser refuses (a banner
 in a function, a refusal without an exit, an elif, an unknown codesign form),
-and each must be named by its rule. The per-option Meson control poisons
-every asserted option in turn and requires the next regeneration to refuse it
-by name; a bypass control removes one assertion from a disposable copy of
-`meson.build` and shows that option's control failing while the rule names
-the option. The output-target control gives Meson an x86_64 macOS host
-through a cross file and requires setup to refuse it by name, refuses at the
-regeneration of a copy configured for x86_64 before the assertion existed and
-before anything compiles, and shows the setup succeeding and the rule naming
-the missing row when the assertion is removed, and naming a changed host
-requirement. Agreement is textual: it does not establish that a refusal fires
+and each must be named by its rule. The controls that configure Meson to
+show the policy and output-target assertions refusing are
+`preflight/native_policy_controls`; this case needs no Meson. Agreement is textual: it does not establish that a refusal fires
 or precedes the operation it protects; the manifest's behavioral and helper
 citations and the baseline carry that distinction, and release preflight
 refuses a grown baseline.

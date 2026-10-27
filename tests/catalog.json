@@ -23,6 +23,31 @@
           ]
         },
         {
+          "id": "build_entry_controls",
+          "description": "The unchanged build script refuses each early fault before the step it protects, offline: builder, knobs, arguments, interpreter, plist minimum, build directory, identity, stale identity, architecture, build-document, contract and guide copies, and the make entry",
+          "default": true,
+          "requires": []
+        },
+        {
+          "id": "native_policy_controls",
+          "description": "meson.build's fixed policy assertions refuse every poisoned option by name before compiling, a removed assertion fails its control and is named by the rule, and the output-target assertion refuses an x86_64 host",
+          "default": true,
+          "requires": [
+            "meson",
+            "clang",
+            "swift"
+          ]
+        },
+        {
+          "id": "native_source_controls",
+          "description": "The configured directory build.sh reads evaluates the tree: a substituted worker file, symlinked, relative and absolute include escapes and a copied checkout are each refused by name",
+          "default": true,
+          "requires": [
+            "meson",
+            "clang"
+          ]
+        },
+        {
           "id": "signed_artifact_controls",
           "description": "Real codesign accepts the intact copy and rejects damaged or validly re-signed stale evidence; validly signed x86_64 and universal code fails for architecture, with a contradicting record a separate fault",
           "default": false,
@@ -139,10 +164,7 @@
         },
         {
           "id": "build_documentation",
-          "description": "Build manifest, dot file, SVG stamp and document regions agree with build.sh; grounding rules over the script, meson.build, the Makefile, the inventories and the baseline, parser refusals, mutation controls and the Meson policy controls pass",
-          "requires": [
-            "meson"
-          ]
+          "description": "Build manifest, dot file, SVG stamp and document regions agree with build.sh; grounding rules over the script, meson.build, the Makefile, the inventories and the baseline, their banner gate, parser refusals and mutation controls pass"
         },
         {
           "id": "generator_contract",

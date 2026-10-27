@@ -2158,6 +2158,42 @@
       "where": "tests/suites/source_drift/check_planner.py::isolation_controls (weakened_evaluator)",
       "reason": "The plan's weakened-evaluator demonstration.",
       "receipt": "20261027T224540Z_ac45b859 (tests/out/runs/drift-cost-stage4-01)"
+    },
+    {
+      "old": "source_drift/contract_versions:ContractVersionTests.test_build_refuses_* and test_make_* (fourteen build-entry controls)",
+      "obligation": "The unchanged build script refuses each early fault before the step it protects; the make header and build recipe behave.",
+      "disposition": "moved",
+      "destination": "preflight/build_entry_controls",
+      "where": "tests/suites/preflight/check_build_entry.py::BuildEntryTests (same method names)",
+      "reason": "Rehomed intact with its existing equipment and assertions as a default, offline preflight case with its own requires; the case cost is reported beside the source_drift total, not as a saving.",
+      "receipt": "stage 5 run, see implementation.md"
+    },
+    {
+      "old": "source_drift/limits_documentation:LimitsDocumentationTests.test_build_refuses_stale_guide_before_signing_or_creating_output",
+      "obligation": "A stale copied guide stops the build before signing or output creation.",
+      "disposition": "moved",
+      "destination": "preflight/build_entry_controls",
+      "where": "tests/suites/preflight/check_build_entry.py::BuildEntryTests.test_build_refuses_stale_guide_before_signing_or_creating_output",
+      "reason": "Rehomed intact with its existing equipment and assertions as a default, offline preflight case with its own requires; the case cost is reported beside the source_drift total, not as a saving.",
+      "receipt": "stage 5 run, see implementation.md"
+    },
+    {
+      "old": "source_drift/build_documentation:BuildDocumentationTests.test_meson_policy_assertions_refuse_each_option, test_bypassing_one_meson_policy_assertion_fails_its_control, test_meson_output_target_assertion_refuses_other_hosts",
+      "obligation": "meson.build's policy and output-target assertions refuse by name before compiling; a removed assertion fails its control and is named by the rule.",
+      "disposition": "moved",
+      "destination": "preflight/native_policy_controls",
+      "where": "tests/suites/preflight/check_native_policy.py::NativePolicyTests (same method names; native copies from declarations, not Git)",
+      "reason": "Rehomed intact with its existing equipment and assertions as a default, offline preflight case with its own requires; the case cost is reported beside the source_drift total, not as a saving.",
+      "receipt": "stage 5 run, see implementation.md"
+    },
+    {
+      "old": "source_drift/runner_source_manifests_agree:check_planner.configured_controls (seven configured-native receipts)",
+      "obligation": "The configured directory build.sh reads evaluates the tree, and the worker consumed nothing outside the identity; a copied checkout is refused.",
+      "disposition": "moved",
+      "destination": "preflight/native_source_controls",
+      "where": "tests/suites/preflight/check_native_sources.py::configured_controls (same scenario names; setup, compile and check launches counted)",
+      "reason": "Rehomed intact with its existing equipment and assertions as a default, offline preflight case with its own requires; the case cost is reported beside the source_drift total, not as a saving.",
+      "receipt": "stage 5 run, see implementation.md"
     }
   ],
   "dispositions": {

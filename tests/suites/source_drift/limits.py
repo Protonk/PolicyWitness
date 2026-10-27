@@ -2,7 +2,6 @@
 import copy
 import importlib.util
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -33,9 +32,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-guide-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        # The generator's declared inputs, plus what build.sh admits and reads before the limits check it makes first.
-        copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'limits'),
-                                              extra=fixture_inputs.build_entry_inputs(ROOT))
+        copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'limits'))
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         return root
 
@@ -434,18 +431,6 @@ class LimitsDocumentationTests(unittest.TestCase):
                 self.assertIn('level-two headings', result.stderr)
                 self.assertEqual((root / 'docs/PolicyWitness.md').read_bytes(), before)
 
-    def test_build_refuses_stale_guide_before_signing_or_creating_output(self):
-        root = self.checkout()
-        path = root / 'docs/PolicyWitness.md'
-        path.write_text(path.read_text().replace('262,143', '262,144', 1))
-        destination = root / 'dist'
-        excluded = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE', 'PW_CHECKOUT_LOCK_CHANNEL')
-        result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
-            env={**{k: v for k, v in os.environ.items() if k not in excluded}, 'IDENTITY': '', 'DIST_DIR': str(destination)},
-            capture_output=True, text=True, timeout=10)
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn('stale PolicyWitness.md', result.stderr)
-        self.assertFalse(destination.exists())
 
     def test_every_value_has_an_exercised_owner(self):
         # Each of these tests compares its declared inventory IDs with its

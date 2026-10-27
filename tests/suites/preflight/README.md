@@ -50,6 +50,32 @@ Offline release controls also exercise the release procedure's decision points.
 - The shared `tests/lib/artifact.py` inspector also gates app-dependent selections
   in the public dispatcher. It never repairs a failed artifact.
 
+- Three default, offline cases hold the build and native controls that need
+  no signed app and no identity. `build_entry_controls` drives the unchanged
+  build script, in disposable checkouts built from declared inputs, to each
+  early refusal: the native builder check under a nested sandbox profile with
+  the real `sysctl`, knob values, an unknown argument, an unexecutable
+  interpreter, a malformed plist minimum, a build directory configured for
+  another checkout or without a toolchain stamp, an identity the keychain
+  lacks in every class, a stale identity, architecture, build-document,
+  contract or guide copy, and the `make` entry with its header and build
+  recipe; each asserts the banners that did and did not print and that no
+  output, build directory or lock was created. `native_policy_controls`
+  poisons every option `meson.build` asserts in a configured directory of the
+  real checkout and requires the next compile's regeneration to refuse it by
+  name before anything compiles; with one assertion removed from a declared
+  copy of the native sources that option's control fails and the grounding
+  rule names it; an x86_64 macOS host is refused at setup, a directory
+  configured for it before the assertion existed is refused at its next
+  compile, and a copy without the assertion configures while the rule names
+  the missing row. `native_source_controls` configures and compiles the C-only
+  targets on a declared copy and runs the configured-directory reading
+  `build.sh` uses: the unmodified copy passes, and a substituted worker file,
+  a symlinked, relative or absolute include escape and a copied checkout are
+  each refused by name. Intermediates go under `PW_TEST_SCRATCH`; mutated
+  inputs, command output and receipts with per-launch timings stay in the
+  artifacts.
+
 ## Success criteria
 
 - `codesign.preflight` succeeds only when the inspector reports no errors.
@@ -356,6 +382,11 @@ Offline release controls also exercise the release procedure's decision points.
 
 ## Fixtures
 
+- The build-entry and native fixtures are built by the shared copier in
+  [fixture_inputs.py](../../lib/fixture_inputs.py) from declarations: the
+  contract, limits, architecture, build and worker identity generators'
+  `input_paths`, the build entry's admitted files and the build script's
+  helpers, or the native source directories; never from Git or the whole tree.
 - `tests/fixtures/caller_auth/bundle.py`: copying, signing, and command receipts.
 - `tests/fixtures/build_guards/tools.py`: real-tool delegation with output
   replacements or a replaced codesign argument list at the selected boundary.
@@ -398,12 +429,18 @@ Offline release controls also exercise the release procedure's decision points.
 public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/preflight/codesign.preflight/artifacts/preflight.json`
+- `<run>/suites/preflight/build_entry_controls/artifacts/assertions.log` and `receipts.json` (one receipt per control with its elapsed time)
+- `<run>/suites/preflight/native_policy_controls/artifacts/assertions.log` and `receipts.json` (each control's Meson launches and elapsed time)
+- `<run>/suites/preflight/native_source_controls/artifacts/<scenario>/` (the mutated manifest and worker, setup, compile and check output, `command.json` with each launch) and `receipts.json`
 
 Run:
 
 ```
 ./tests/run.sh --case preflight/codesign.preflight
 ./tests/run.sh --case preflight/build_provenance_controls
+./tests/run.sh --case preflight/build_entry_controls
+./tests/run.sh --case preflight/native_policy_controls
+./tests/run.sh --case preflight/native_source_controls
 ./tests/run.sh --case preflight/signed_artifact_controls
 ./tests/run.sh --case preflight/build_guard_controls
 ./tests/run.sh --case preflight/build_refusal_controls

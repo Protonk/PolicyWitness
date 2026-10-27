@@ -173,6 +173,65 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - **When to run:** After changing artifact inspection, inventory, the output
   target check, or signing setup.
 
+### build entry controls
+
+- **Case:** `preflight/build_entry_controls`
+- **Location:** `tests/suites/preflight/check_build_entry.py`
+- **Purpose:** Drive the unchanged build script, in disposable checkouts built
+  from declared inputs, to each early refusal before the step it protects:
+  the native builder check under a nested sandbox profile, knob values, an
+  unknown argument, an unexecutable interpreter, a malformed plist minimum, a
+  build directory configured for another checkout or without a stamp, an
+  identity the keychain lacks in every class, stale identity, architecture,
+  build-document, contract and guide copies, and the `make` header and build
+  recipe. Assert the banners that did and did not print and that no output,
+  build directory or lock was created.
+- **Resource dependency:** The macOS shell, `sysctl`, `sandbox-exec`, `make`
+  and keychain queries for an identity the keychain does not hold; no signed
+  app, identity or toolchain. Runs in the default battery.
+- **When to run:** After changing `build.sh`'s early steps, their order, the
+  Makefile entry, or the generators' stale-copy refusals the script runs.
+- **Artifacts:** `<run>/suites/preflight/build_entry_controls/artifacts/`
+  holds the assertion log and `receipts.json` with each control's elapsed time.
+
+### native policy controls
+
+- **Case:** `preflight/native_policy_controls`
+- **Location:** `tests/suites/preflight/check_native_policy.py`
+- **Purpose:** Poison every option `meson.build` asserts in a configured
+  directory and require the next compile's regeneration to refuse it by name
+  before anything compiles; remove one assertion from a declared copy of the
+  native sources and show that option's control failing while the grounding
+  rule names it; refuse an x86_64 macOS host at setup and at the regeneration
+  of a directory configured before the assertion existed, and show the rule
+  naming a removed or changed requirement.
+- **Resource dependency:** Meson, Ninja and the C and Swift toolchains; no
+  signed app or identity. Needs the unsandboxed shell for Swift discovery.
+  Intermediates go under `PW_TEST_SCRATCH`. Runs in the default battery.
+- **When to run:** After changing `meson.build`'s assertions, options or
+  output target, or the build manifest's Meson rows.
+- **Artifacts:** `<run>/suites/preflight/native_policy_controls/artifacts/`
+  holds the assertion log and `receipts.json` with each control's Meson
+  launches and elapsed time.
+
+### native source controls
+
+- **Case:** `preflight/native_source_controls`
+- **Location:** `tests/suites/preflight/check_native_sources.py`
+- **Purpose:** Configure and compile the C-only targets on a declared copy of
+  the native sources and run the configured-directory reading `build.sh`
+  uses: the unmodified copy passes; a substituted worker file, a symlinked,
+  relative or absolute include escape and a copied checkout are each refused
+  by name.
+- **Resource dependency:** Meson, Ninja and the C toolchain; no Swift
+  discovery, signed app or identity. Intermediates and the copied checkout go
+  under `PW_TEST_SCRATCH`. Runs in the default battery.
+- **When to run:** After changing the native sources reader, the worker's
+  includes, the identity's source directories or `meson.build`'s targets.
+- **Artifacts:** `<run>/suites/preflight/native_source_controls/artifacts/`
+  holds each scenario's mutated manifest and worker, setup, compile and check
+  output and `command.json`, plus `receipts.json` with every launch counted.
+
 ### build guard controls
 
 - **Case:** `preflight/build_guard_controls`

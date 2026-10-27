@@ -5,8 +5,8 @@ the copy and calls only the rules it names, in process, asserting the complete
 record set of every named rule. The entry point itself is exercised by a few
 subprocess scenarios: the baseline, independent faults in several rules, a
 reader refusal and a precondition failure beside an independent fault, a
-dispatcher that omits a registered rule, and restoration. Configured-native
-controls stay on the real Meson boundary.
+dispatcher that omits a registered rule, and restoration. The configured-native
+controls on the real Meson boundary are `preflight/native_source_controls`.
 """
 from dataclasses import dataclass, field
 import json
@@ -69,9 +69,9 @@ class Scenario:
     exact: dict = field(default_factory=dict)  # rule ID -> the exact ordered messages, where the key alone is not enough
 
 
-# The checker itself and what its command imports, and what the configured-native controls need beyond the
-# rules' declared inputs: the manifest options, every C source and header of the native targets, the runner
-# sources Meson evaluates, and the shared readers the configured check runs.
+# The checker itself and what its command imports, plus what file-mode Meson introspection needs beyond the
+# rules' declared inputs: the manifest options, every C source and header of the native targets and the runner
+# sources the manifest names, and the worker identity generator the native sources reader imports.
 FIXTURE_INPUTS = (required('tests/suites/source_drift/check.py'), required('docs/repository_tree.py'),
                   required('tests/lib/drift_rules.py'), required('meson.options'),
                   directory('controller/tools/pw_probe_runner', ('.c', '.h')),
@@ -80,8 +80,8 @@ FIXTURE_INPUTS = (required('tests/suites/source_drift/check.py'), required('docs
 
 
 def fixture(out):
-    """A copy of only the declared inputs of the checker's rules and of the configured controls; never build
-    products or previous runs. The receipt records what was copied and what it cost."""
+    """A copy of only the declared inputs of the checker's rules and its command; never build products or
+    previous runs. The receipt records what was copied and what it cost."""
     repo = out / 'repo'
     paths = set(fixture_inputs.rule_inputs(ROOT, check.RULES)) | set(fixture_inputs.expand(ROOT, FIXTURE_INPUTS))
     copied = fixture_inputs.copy_declared(ROOT, repo, paths)
@@ -106,10 +106,6 @@ def main(out):
     receipts += inventory_controls(out)
     receipts += isolation_controls(out)
     receipts += host_invariance_controls(out)
-    manifest_original = (repo / 'meson.build').read_text()
-    worker_line = "  files('controller/tools/pw_probe_runner/pw_probe_runner.c'),"
-    assert manifest_original.count(worker_line) == 1
-    receipts += configured_controls(repo, manifest_original, worker_line, out)
     (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
     print(f'{len(receipts)} source and guidance controls passed')
 
@@ -1290,118 +1286,6 @@ def host_invariance_controls(out):
     if problems:
         raise AssertionError('host invariance controls: ' + '; '.join(problems))
     return [dict(scenario='host-invariance-controls', mode='in-process')]
-
-
-# ---------------------------------------------------------------------------
-# Configured-native controls on the real Meson boundary (moving to preflight in stage 5)
-# ---------------------------------------------------------------------------
-
-def configured_controls(repo, manifest_original, worker_line, out):
-    """The configured-directory reading build.sh uses: what Meson evaluated must be the tree,
-    and what the compiler consumed for the worker must be in the identity.
-
-    xpc=false configures and compiles only the C executables (the worker, the validator and the
-    extension issuer), so these controls need no Swift discovery. The unmodified manifest passes; a worker
-    declaration pointing at a substitute file, present on disk so Meson accepts
-    it, is refused by name; a worker include reaching outside the digest's
-    directories through a symlinked directory, or by a relative path, is
-    refused by the closure check, and so is an include of an absolute path
-    outside the checkout that is neither the SDK nor the developer directory.
-    Finally the configured directory is copied
-    along with the checkout, as build.sh invokes the check: the copy is named
-    as the checkout and the directory's recorded source is refused."""
-    checker = repo / 'tests/lib/native_sources.py'
-    substitute = repo / 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c'
-    substitute.parent.mkdir()
-    shutil.copy2(repo / 'controller/tools/pw_probe_runner/pw_probe_runner.c', substitute)
-    for header in (repo / 'controller/tools/pw_probe_runner').glob('*.h'):
-        shutil.copy2(header, substitute.parent / header.name)
-    worker = repo / 'controller/tools/pw_probe_runner/pw_probe_runner.c'
-    worker_original = worker.read_text()
-    escape = repo / 'controller/src/escape.h'
-    escape.parent.mkdir(exist_ok=True)
-    escape.write_text('#define PW_AUDIT_ESCAPE 1\n')
-    (repo / 'audit-headers').mkdir()
-    (repo / 'audit-headers/audit.h').write_text('#define PW_AUDIT_VALUE 17\n')
-    outside = out / 'outside-checkout'
-    outside.mkdir()
-    (outside / 'escape.h').write_text('#define PW_OUTSIDE_VALUE 23\n')
-    link = repo / 'controller/tools/pw_probe_runner/audit-link'
-    include_line = '#include "pw_probe_runner_abi.h"\n'
-    assert worker_original.count(include_line) == 1
-    receipts = []
-    for name, manifest, source, symlink, expected, diagnostic in [
-        ('configured-unmodified', manifest_original, worker_original, False, 0, None),
-        ('configured-worker-substituted',
-         manifest_original.replace(worker_line, "  files('controller/tools/pw_probe_runner/substitute/pw_probe_runner.c'),"),
-         worker_original, False, 1,
-         "pw-probe-runner has 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c' which the tree does not expect"),
-        ('configured-symlinked-include', manifest_original,
-         worker_original.replace(include_line, include_line + '#include "audit-link/audit.h"\n'), True, 1,
-         "symlink under identity sources: controller/tools/pw_probe_runner/audit-link"),
-        ('configured-relative-escape', manifest_original,
-         worker_original.replace(include_line, include_line + '#include "../../src/escape.h"\n'), False, 1,
-         "pw-probe-runner consumed 'controller/src/escape.h' which is not an identity input"),
-        ('configured-absolute-escape', manifest_original,
-         worker_original.replace(include_line, include_line + f'#include "{(outside / "escape.h").resolve()}"\n'), False, 1,
-         f"pw-probe-runner consumed '{(outside / 'escape.h').resolve()}' outside the checkout, the SDK and the developer directory"),
-        ('configured-restored', manifest_original, worker_original, False, 0, None),
-    ]:
-        evidence = out / name
-        evidence.mkdir()
-        (repo / 'meson.build').write_text(manifest)
-        (evidence / 'meson.build').write_text(manifest)
-        worker.write_text(source)
-        (evidence / 'pw_probe_runner.c').write_text(source)
-        if link.is_symlink():
-            link.unlink()
-        if symlink:
-            link.symlink_to('../../../audit-headers')
-        builddir = repo / 'builddir'
-        shutil.rmtree(builddir, ignore_errors=True)
-        launches = []
-        for step, argv in (('setup', ['meson', 'setup', str(builddir), str(repo), '-Dxpc=false']),
-                           ('compile', ['meson', 'compile', '-C', str(builddir)])):
-            start = time.perf_counter()
-            result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=300)
-            launches.append(dict(step=step, argv=argv, returncode=result.returncode, elapsed_seconds=time.perf_counter() - start))
-            (evidence / f'{step}.stdout').write_text(result.stdout)
-            (evidence / f'{step}.stderr').write_text(result.stderr)
-            if result.returncode != 0:
-                raise AssertionError(f'{name}: meson {step} failed: {result.stderr}')
-        argv = [sys.executable, '-B', '-S', str(checker), '--builddir', str(builddir), '--root', str(repo)]
-        start = time.perf_counter()
-        result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=60)
-        launches.append(dict(step='check', argv=argv, returncode=result.returncode, elapsed_seconds=time.perf_counter() - start))
-        (evidence / 'stdout').write_text(result.stdout)
-        (evidence / 'stderr').write_text(result.stderr)
-        record = dict(scenario=name, mode='meson', argv=argv, returncode=result.returncode,
-                      expected_returncode=expected, expected_diagnostic=diagnostic, launches=launches)
-        (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
-        if result.returncode != expected or (diagnostic and diagnostic not in result.stderr):
-            raise AssertionError(f'{name}: unexpected configured check result: {record}\n{result.stdout}\n{result.stderr}')
-        receipts.append(record)
-    (repo / 'meson.build').write_text(manifest_original)
-    worker.write_text(worker_original)
-    copy = out / 'copied-checkout'
-    shutil.copytree(repo, copy, symlinks=True)
-    evidence = out / 'configured-copied-checkout'
-    evidence.mkdir()
-    argv = [sys.executable, '-B', '-S', str(copy / 'tests/lib/native_sources.py'), '--builddir', str(copy / 'builddir'), '--root', str(copy)]
-    start = time.perf_counter()
-    result = subprocess.run(argv, cwd=copy, capture_output=True, text=True, timeout=60)
-    elapsed = time.perf_counter() - start
-    (evidence / 'stdout').write_text(result.stdout)
-    (evidence / 'stderr').write_text(result.stderr)
-    diagnostic = f'builddir: configured for {repo.resolve()}, not {copy.resolve()}'
-    record = dict(scenario='configured-copied-checkout', mode='meson', argv=argv, returncode=result.returncode,
-                  expected_returncode=1, expected_diagnostic=diagnostic,
-                  launches=[dict(step='check', argv=argv, returncode=result.returncode, elapsed_seconds=elapsed)])
-    (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
-    if result.returncode != 1 or diagnostic not in result.stderr:
-        raise AssertionError(f'copied checkout: unexpected configured check result: {record}\n{result.stdout}\n{result.stderr}')
-    receipts.append(record)
-    return receipts
 
 
 if __name__ == '__main__':

@@ -32,7 +32,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
           "form": "test",
           "coverage": "behavioral"
@@ -66,7 +66,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
           "form": "test",
           "coverage": "behavioral"
@@ -100,7 +100,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
           "form": "test",
           "coverage": "behavioral"
@@ -151,7 +151,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal",
           "form": "test",
           "coverage": "behavioral"
@@ -209,13 +209,13 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
           "form": "test",
           "coverage": "behavioral"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_an_unknown_argument_before_any_check",
           "form": "test",
           "coverage": "behavioral"
@@ -233,13 +233,13 @@
           "coverage": "behavioral"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_an_unexecutable_interpreter_before_any_python",
           "form": "test",
           "coverage": "behavioral"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_builder_it_cannot_confirm_before_anything_else",
           "form": "test",
           "coverage": "behavioral"
@@ -570,7 +570,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
           "form": "test",
           "coverage": "behavioral"
@@ -630,13 +630,13 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo",
           "form": "test",
           "coverage": "behavioral"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_an_identity_of_another_class_as_absent_before_cargo",
           "form": "test",
           "coverage": "behavioral"
@@ -1468,7 +1468,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_builder_it_cannot_confirm_before_anything_else",
           "form": "test",
           "coverage": "behavioral"
@@ -1513,7 +1513,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
           "form": "test",
           "coverage": "behavioral"
@@ -1546,7 +1546,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_an_unknown_argument_before_any_check",
           "form": "test",
           "coverage": "behavioral"
@@ -1784,7 +1784,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_an_unexecutable_interpreter_before_any_python",
           "form": "test",
           "coverage": "behavioral"
@@ -1999,7 +1999,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_malformed_plist_minimum_after_its_banner_and_before_the_sdk",
           "form": "test",
           "coverage": "behavioral"
@@ -2098,7 +2098,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
           "form": "test",
           "coverage": "behavioral"
@@ -2131,7 +2131,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
           "form": "test",
           "coverage": "behavioral"
@@ -2472,13 +2472,13 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
           "form": "test",
           "coverage": "behavioral"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal",
           "form": "test",
           "coverage": "behavioral"
@@ -2511,13 +2511,13 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo",
           "form": "test",
           "coverage": "behavioral"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_an_identity_of_another_class_as_absent_before_cargo",
           "form": "test",
           "coverage": "behavioral"
@@ -3034,13 +3034,13 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/build.py",
+          "path": "tests/suites/preflight/check_native_policy.py",
           "symbol": "test_meson_policy_assertions_refuse_each_option",
           "form": "test",
           "coverage": "helper"
         },
         {
-          "path": "tests/suites/source_drift/build.py",
+          "path": "tests/suites/preflight/check_native_policy.py",
           "symbol": "test_bypassing_one_meson_policy_assertion_fails_its_control",
           "form": "test",
           "coverage": "helper"
@@ -3113,7 +3113,7 @@
           "coverage": "behavioral"
         },
         {
-          "path": "tests/suites/source_drift/build.py",
+          "path": "tests/suites/preflight/check_native_policy.py",
           "symbol": "test_meson_output_target_assertion_refuses_other_hosts",
           "form": "test",
           "coverage": "helper"
@@ -3150,7 +3150,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/limits.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_stale_guide_before_signing_or_creating_output",
           "form": "test",
           "coverage": "behavioral"
@@ -3187,7 +3187,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_stale_contract_copy_before_signing_or_creating_output",
           "form": "test",
           "coverage": "behavioral"
@@ -3230,7 +3230,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_stale_architecture_copy_before_compiling",
           "form": "test",
           "coverage": "behavioral"
@@ -3273,7 +3273,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_stale_build_document_copy_before_compiling",
           "form": "test",
           "coverage": "behavioral"
@@ -3310,7 +3310,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_stale_identity_copy_before_compiling_and_writes_nothing",
           "form": "test",
           "coverage": "behavioral"
@@ -3492,7 +3492,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/check_planner.py",
+          "path": "tests/suites/preflight/check_native_sources.py",
           "symbol": "configured_controls",
           "form": "test",
           "coverage": "helper"
@@ -4789,7 +4789,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/check_planner.py",
+          "path": "tests/suites/preflight/check_native_sources.py",
           "symbol": "configured_controls",
           "form": "test",
           "coverage": "helper"
@@ -5322,7 +5322,7 @@
           "coverage": "textual"
         },
         {
-          "path": "tests/suites/source_drift/contract.py",
+          "path": "tests/suites/preflight/check_build_entry.py",
           "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
           "form": "test",
           "coverage": "behavioral"

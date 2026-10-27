@@ -347,6 +347,13 @@ def main():
             'the general build refusal case must stay runnable without Rosetta')
     require(translated['requires'] == ['rosetta'] and translated['default'] is False and not translated['depends_on'],
             'the translated build refusal case must require only Rosetta and stay opt-in')
+    # The rehomed build-entry, native-policy and native-source controls are default, offline cases with their
+    # own equipment: neither the suite's app requirement nor the opt-in build cases' signing requirement.
+    for case_id, requires in (('preflight/build_entry_controls', []), ('preflight/native_policy_controls', ['meson', 'clang', 'swift']),
+                              ('preflight/native_source_controls', ['meson', 'clang'])):
+        case = by_id[case_id]
+        require(case['default'] is True and case['requires'] == requires and case_id in default_ids and not case['depends_on'],
+                f'{case_id} must be a default case requiring exactly {requires}')
     opt = real_list('--suite', 'opt_in')['cases']
     # Independent controls include a transitive default dependency. The old
     # equality incorrectly treated every expanded dependency as opt-in membership.

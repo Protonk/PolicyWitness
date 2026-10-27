@@ -316,9 +316,94 @@ the measured effect of this stage.
 | `architecture_documentation` | 13820 | 13282 | 0 |
 | `markdown_reader` | 945 | 1492 | 0 |
 
-## Handoff: stages 5 and 6
+## Stage 5: build-control ownership and honest cost accounting
 
-Stage 5 rehomes `configured_controls` (recording per-launch timings), the
-contract suite's build-entry controls and the build suite's Meson policy
-controls under `preflight` as default, offline cases. Stage 6 versions the
-receipt schema and completes this account.
+Change: three default, offline `preflight` cases with their own `requires`:
+`build_entry_controls` (`[]`; the fourteen `ContractVersionTests` build-entry
+methods including both Make controls, plus the limits stale-guide build
+control, fifteen controls as `BuildEntryTests` in `check_build_entry.py`),
+`native_policy_controls` (`meson`, `clang`, `swift`; the three Meson methods
+of `BuildDocumentationTests` as `NativePolicyTests` in
+`check_native_policy.py`, with native copies built from declarations instead
+of Git) and `native_source_controls` (`meson`, `clang`; the planner's
+`configured_controls` and its seven receipts in `check_native_sources.py`,
+with the fixture, build directory and copied checkout under
+`PW_TEST_SCRATCH` and every setup, compile and check launch counted). The
+`preflight/run.sh` selects them; `source_drift/build_documentation` no longer
+requires Meson; the build manifest's 33 citations of the moved functions now
+name the preflight modules (same symbols) and `docs/BUILD.md` was regenerated
+from it (its dot text and SVG did not change). The dispatcher's selection
+controls pin the three memberships against the real catalog. The suite map,
+both suite READMEs, the build guide's troubleshooting note and the
+change-verification guide name the new cases.
+
+Moving work reduces the `source_drift` subtotal but is not a saving: the
+comparison below is the old eight-case total against the new `source_drift`
+total plus all three preflight cases.
+
+STAGE5_CREDIT
+
+## Stage 6: receipts, verification and handoff
+
+Change: `tests/lib/receipts.py` (schema version 2) holds the receipt file
+(`Receipts`, written after every control so a failure leaves a partial file
+marked `complete: false`), the direct-launch wrapper (`launch`) and the
+unittest runner (`timed_main`) that prints each test's elapsed time and
+writes a receipt under `PW_TEST_ARTIFACTS`. The planner writes
+`controls.json` through it, with its fixture statistics first and, for every
+entry-point scenario, the stdout, stderr and results paths and the one
+launch; the three preflight modules use it (the native-source receipts count
+each setup, compile and check launch; the native-policy receipts print each
+control's launches); every unittest suite of `source_drift` runs through it,
+and the generator suites print each command's elapsed time beside the fixture
+and snapshot counts. The suite script keeps the checker's and the build
+rules' result records as `check-results.json` and `build-rules-results.json`.
+The field meanings are documented in the `source_drift` and `preflight`
+READMEs.
+
+STAGE6_CREDIT
+
+## Live contracts, remaining costs and limitations
+
+Live interfaces the later binding inventory reads (this package is not one
+of them):
+
+- `docs/repository_tree.py`: `Tree`, `Scope`, the two named scopes, the
+  `Input` declarations and `expand`.
+- `tests/lib/drift_rules.py`: `Rule`, `Problem`, `InputFailure`, `run_rules`,
+  `run_gated`, `status`, `summary_lines`, `to_json`.
+- `tests/suites/source_drift/check.py::RULES` and
+  `tests/suites/source_drift/build_rules.py::RULES` with `GATE`, read
+  statically by `docs/generator_common.py::rule_declarations`.
+- Each generator's `INPUTS` and `input_paths(root)`;
+  `tests/lib/fixture_inputs.py` (`generator_inputs`, `rule_inputs`,
+  `build_entry_inputs`, `build_script_inputs`, `copy_declared`, `snapshot`);
+  `generators.py::prose_inputs`.
+- `tests/lib/receipts.py` and the receipt files named in the suite READMEs.
+
+Remaining justified costs:
+
+- Each planner run still starts the checker eight times (six entry-point
+  scenarios and the two omitted-rule scenarios) and runs real file-mode
+  Meson introspection seven times; both establish boundaries the in-process
+  calls cannot (the command's status, output and order; the manifest reader
+  on Meson itself).
+- The seven configured-native receipts configure and compile the C-only
+  targets six times and read a copied checkout once; the native policy
+  controls perform 69 Meson launches. These establish behavior textual rules
+  cannot, as the plan says, and are reported as their own cases.
+- The generic generator fixture is copied for each of the tests that mutate
+  it; copy reduction never licenses mutation leakage, and the fixture is now
+  3.4 times smaller than the tracked tree it replaced.
+
+Limitations:
+
+- Declarations are a reviewed account of what is read. No read audit,
+  deny-read profile or OS tracing was added; a newly introduced read or
+  import must be reviewed against the declarations by hand.
+- Launch counts are the controls' direct children; Meson, compilers and the
+  build script start descendants that are not counted.
+- Case durations in this account are single runs on one machine, taken while
+  other controls may have been running; they are context, not thresholds.
+- The planner's scenario records assert diagnostic keys (and exact messages
+  for the Meson scenarios); message wording may still evolve.
