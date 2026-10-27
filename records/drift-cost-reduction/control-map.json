@@ -1,7 +1,7 @@
 {
   "schema": "drift-cost-reduction control map, version 1",
   "baseline_revision": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
-  "candidate_revision": "0f68d1615bb449ff6fc9a79138a9025a8f859898",
+  "candidate_revision": "587661863abf92779172473515e7e84dac8a92bd",
   "rows": [
     {
       "old": "source_drift/runner_source_manifests_agree:check.py::markdown_documents",
@@ -2166,7 +2166,7 @@
       "destination": "preflight/build_entry_controls",
       "where": "tests/suites/preflight/check_build_entry.py::BuildEntryTests (same method names)",
       "reason": "Rehomed intact with its existing equipment and assertions as a default, offline preflight case with its own requires; the case cost is reported beside the source_drift total, not as a saving.",
-      "receipt": "stage 5 run, see implementation.md"
+      "receipt": "20261027T225807Z_02c0c737 (tests/out/runs/drift-cost-stage5-01)"
     },
     {
       "old": "source_drift/limits_documentation:LimitsDocumentationTests.test_build_refuses_stale_guide_before_signing_or_creating_output",
@@ -2175,7 +2175,7 @@
       "destination": "preflight/build_entry_controls",
       "where": "tests/suites/preflight/check_build_entry.py::BuildEntryTests.test_build_refuses_stale_guide_before_signing_or_creating_output",
       "reason": "Rehomed intact with its existing equipment and assertions as a default, offline preflight case with its own requires; the case cost is reported beside the source_drift total, not as a saving.",
-      "receipt": "stage 5 run, see implementation.md"
+      "receipt": "20261027T225807Z_02c0c737 (tests/out/runs/drift-cost-stage5-01)"
     },
     {
       "old": "source_drift/build_documentation:BuildDocumentationTests.test_meson_policy_assertions_refuse_each_option, test_bypassing_one_meson_policy_assertion_fails_its_control, test_meson_output_target_assertion_refuses_other_hosts",
@@ -2184,7 +2184,7 @@
       "destination": "preflight/native_policy_controls",
       "where": "tests/suites/preflight/check_native_policy.py::NativePolicyTests (same method names; native copies from declarations, not Git)",
       "reason": "Rehomed intact with its existing equipment and assertions as a default, offline preflight case with its own requires; the case cost is reported beside the source_drift total, not as a saving.",
-      "receipt": "stage 5 run, see implementation.md"
+      "receipt": "20261027T225807Z_02c0c737 (tests/out/runs/drift-cost-stage5-01)"
     },
     {
       "old": "source_drift/runner_source_manifests_agree:check_planner.configured_controls (seven configured-native receipts)",
@@ -2193,7 +2193,7 @@
       "destination": "preflight/native_source_controls",
       "where": "tests/suites/preflight/check_native_sources.py::configured_controls (same scenario names; setup, compile and check launches counted)",
       "reason": "Rehomed intact with its existing equipment and assertions as a default, offline preflight case with its own requires; the case cost is reported beside the source_drift total, not as a saving.",
-      "receipt": "stage 5 run, see implementation.md"
+      "receipt": "20261027T225807Z_02c0c737 (tests/out/runs/drift-cost-stage5-01)"
     }
   ],
   "dispositions": {

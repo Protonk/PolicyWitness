@@ -341,7 +341,28 @@ Moving work reduces the `source_drift` subtotal but is not a saving: the
 comparison below is the old eight-case total against the new `source_drift`
 total plus all three preflight cases.
 
-STAGE5_CREDIT
+Credited run: `tests/out/runs/drift-cost-stage5-01` (ID `20261027T225807Z_02c0c737`), on commit
+`5876618`: all eight `source_drift` cases, the three preflight cases and
+the two dispatcher cases passed with zero recorded sleep (`dispatcher/selection_controls` 44688 ms, `dispatcher/controls` 14093 ms).
+
+| Case | Baseline ms | Stage 5 ms | Recorded sleep ms |
+| --- | ---: | ---: | ---: |
+| `source_drift/runner_source_manifests_agree` | 188679 | 25424 | 0 |
+| `source_drift/direct_python_start` | 25151 | 821 | 0 |
+| `source_drift/build_documentation` | 36867 | 7539 | 0 |
+| `source_drift/generator_contract` | 32508 | 29601 | 0 |
+| `source_drift/limits_documentation` | 24458 | 25561 | 0 |
+| `source_drift/contract_versions` | 26670 | 3580 | 0 |
+| `source_drift/architecture_documentation` | 13820 | 13167 | 0 |
+| `source_drift/markdown_reader` | 945 | 1360 | 0 |
+| `preflight/build_entry_controls` | (inside source_drift) | 25904 | 0 |
+| `preflight/native_policy_controls` | (inside source_drift) | 31448 | 0 |
+| `preflight/native_source_controls` | (inside source_drift) | 10136 | 0 |
+
+Totals, single runs: the old eight-case `source_drift` sum was 349098 ms;
+the new `source_drift` sum is 107053 ms and the three preflight cases
+add 67488 ms, 174541 ms together. The
+relocated work is reported beside the suite, not as a saving.
 
 ## Stage 6: receipts, verification and handoff
 
