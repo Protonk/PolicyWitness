@@ -11,8 +11,56 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 import native_sources  # noqa: E402
 sys.path.insert(0, str(ROOT / 'docs'))
 import markdown_reader  # noqa: E402  (only for its file list; the fixtures below read Markdown themselves)
+import generator_common  # noqa: E402  (static reading of the checker's RULES table)
+import drift_rules  # noqa: E402
 HOST = Path('runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift')
 CALL = 'if predictionUnavailableOpFilters.contains(PredictionUnavailablePair(operation: check.operation, filterKind: kind)) {'
+HOST_BINDING = '@_silgen_name("sandbox_check") func forbidden() -> Int32'
+
+
+def declared_rules(repo):
+    """The rule IDs the fixture's checker declares, read statically; never obtained by running it."""
+    return [rule_id for rule_id, _ in generator_common.rule_declarations((repo / 'tests/suites/source_drift/check.py').read_text())]
+
+
+def integrity_problems(repo, reported, extra=()):
+    """Execution evidence that the dispatcher reported every declared rule exactly once, in table order."""
+    if reported is None:
+        return ['the checker wrote no result records']
+    declared = declared_rules(repo)
+    selected = [extra[i + 1] for i, argument in enumerate(extra[:-1]) if argument == '--rule'] or declared
+    ids = [result['rule_id'] for result in reported['results']]
+    expected = [rule_id for rule_id in declared if rule_id in selected]
+    problems = []
+    if ids != expected:
+        problems.append(f'reported rules {ids} != declared {expected}')
+    unknown = [result['rule_id'] for result in reported['results'] if result['outcome'] not in ('evaluated', 'input_blocked')]
+    if unknown:
+        problems.append(f'rules outside the two outcome categories: {unknown}')
+    return problems
+
+
+def run_checker(repo, evidence, extra=()):
+    """The real checker over the fixture, with its stdout, stderr and result records captured beside the inputs."""
+    results_path = evidence / 'results.json'
+    argv = [sys.executable, '-B', '-S', str(repo / 'tests/suites/source_drift/check.py'), '--json', str(results_path), *extra]
+    result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=30)
+    (evidence / 'stdout').write_text(result.stdout)
+    (evidence / 'stderr').write_text(result.stderr)
+    reported = json.loads(results_path.read_text()) if results_path.is_file() else None
+    return argv, result, reported, integrity_problems(repo, reported, extra)
+
+
+def expect_checker(repo, evidence, name, expected, diagnostic, extra=()):
+    """Require the exact status, the diagnostic and a complete reported rule set; the receipt carries each rule's outcome."""
+    argv, result, reported, integrity = run_checker(repo, evidence, extra)
+    outcomes = {r['rule_id']: r['outcome'] for r in reported['results']} if reported else None
+    record = dict(scenario=name, argv=argv, returncode=result.returncode, expected_returncode=expected,
+                  expected_diagnostic=diagnostic, outcomes=outcomes, integrity=integrity)
+    (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
+    if result.returncode != expected or (diagnostic and diagnostic not in result.stderr) or integrity:
+        raise AssertionError(f'{name}: unexpected checker result: {record}\n{result.stdout}\n{result.stderr}')
+    return record
 
 
 def main(out):
@@ -36,7 +84,7 @@ def main(out):
     paths += sorted(set().union(*native_sources.expected(ROOT, xpc=False).values()))
     paths += [str(p.relative_to(ROOT)) for p in (ROOT / 'runner/Sources').rglob('*') if p.is_file()]
     paths += markdown_reader.source_files()
-    paths += ['docs/repository_tree.py']
+    paths += ['docs/repository_tree.py', 'tests/lib/drift_rules.py']
     paths += [str(p.relative_to(ROOT)) for pattern in ('*/run.sh', '*/README.md')
               for p in (ROOT / 'tests/suites').glob(pattern)]
     for name in paths:
@@ -145,22 +193,17 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
             captured = evidence / path
             captured.parent.mkdir(parents=True, exist_ok=True)
             captured.write_text(source)
-        argv = [sys.executable, '-B', '-S', str(repo / 'tests/suites/source_drift/check.py')]
-        result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=30)
-        (evidence / 'stdout').write_text(result.stdout)
-        (evidence / 'stderr').write_text(result.stderr)
-        record = dict(scenario=name, argv=argv, returncode=result.returncode,
-                      expected_returncode=expected, expected_diagnostic=diagnostic)
-        (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
-        if result.returncode != expected or (diagnostic and diagnostic not in result.stderr):
-            raise AssertionError(f'{name}: unexpected checker result: {record}\n{result.stdout}\n{result.stderr}')
-        receipts.append(record)
+        receipts.append(expect_checker(repo, evidence, name, expected, diagnostic))
     for path, source in originals.items():
         (repo / path).write_text(source)
         if (ROOT / path).read_text() != source:
             raise AssertionError(f'source controls changed the working input: {path}')
     receipts += registry_scenarios(repo, out)
+    receipts += precondition_scenarios(repo, out)
+    receipts += dispatch_omission_scenario(repo, out)
     receipts += inventory_controls(out)
+    receipts += isolation_controls(out)
+    receipts += host_invariance_controls(out)
     receipts += configured_controls(repo, manifest_original, worker_line, out)
     (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
     print(f'{len(receipts)} source and guidance controls passed')
@@ -198,7 +241,6 @@ def route_scenarios(repo):
 def registry_scenarios(repo, out):
     """The suite registry's on-disk side: a run.sh no case names, a suite directory
     without a README and one the catalog lacks are each named by the real checker."""
-    checker = [sys.executable, '-B', '-S', str(repo / 'tests/suites/source_drift/check.py')]
     wrapper = repo / 'tests/suites/smoke/run.sh'
     nested = repo / 'tests/suites/smoke/retired/run.sh'
     stray = repo / 'tests/suites/stray_suite'
@@ -257,15 +299,7 @@ def registry_scenarios(repo, out):
         setup()
         evidence = out / name
         evidence.mkdir()
-        result = subprocess.run(checker, cwd=repo, capture_output=True, text=True, timeout=30)
-        (evidence / 'stdout').write_text(result.stdout)
-        (evidence / 'stderr').write_text(result.stderr)
-        record = dict(scenario=name, argv=checker, returncode=result.returncode,
-                      expected_returncode=expected, expected_diagnostic=diagnostic)
-        (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
-        if result.returncode != expected or (diagnostic and diagnostic not in result.stderr):
-            raise AssertionError(f'{name}: unexpected checker result: {record}\n{result.stdout}\n{result.stderr}')
-        receipts.append(record)
+        receipts.append(expect_checker(repo, evidence, name, expected, diagnostic))
     assert not wrapper.exists() and not stray.exists() and not control.exists()
     return receipts
 
@@ -827,6 +861,238 @@ def inventory_controls(out):
         raise AssertionError('inventory controls: ' + '\n'.join(problems))
     return [dict(scenario='inventory-scopes', expected_returncode=None, returncode=None,
                  expected_diagnostic=None, markdown_entered=len(markdown_entered), shell_entered=len(shell_entered))]
+
+
+def precondition_scenarios(repo, out):
+    """A shared bad input blocks exactly the rules that read it, each with its own record, while every other rule
+    runs: the suite-coverage heading is removed and a host binding is added in one scenario, and a later rule's
+    nonzero finding proves the dispatcher continued past the precondition failures."""
+    readme = repo / 'tests/README.md'
+    host = repo / HOST
+    originals = {path: path.read_text() for path in (readme, host)}
+    assert originals[readme].count('## Suite coverage') == 1, 'fixture requires the suite coverage heading'
+    declared = declared_rules(repo)
+    assert len(declared) == 19, declared
+    receipts = []
+
+    def scenario(name, mutate, expect):
+        for path, text in originals.items():
+            path.write_text(text)
+        mutate()
+        evidence = out / name
+        evidence.mkdir()
+        for path in originals:
+            captured = evidence / path.relative_to(repo)
+            captured.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, captured)
+        argv, result, reported, integrity = run_checker(repo, evidence)
+        outcomes = {r['rule_id']: r for r in reported['results']} if reported else {}
+        record = dict(scenario=name, argv=argv, returncode=result.returncode, integrity=integrity,
+                      outcomes={rule_id: r['outcome'] for rule_id, r in outcomes.items()},
+                      records={rule_id: r['problems'] for rule_id, r in outcomes.items() if r['problems']})
+        (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
+        problems = expect(result, outcomes) + integrity
+        if problems:
+            raise AssertionError(f'{name}: {problems}\n{result.stdout}\n{result.stderr}')
+        receipts.append(record)
+
+    def combined():
+        readme.write_text(originals[readme].replace('## Suite coverage', '## Missing coverage', 1))
+        host.write_text(originals[host] + '\n' + HOST_BINDING + '\n')
+
+    def expect_combined(result, outcomes):
+        problems = []
+        blocked = sorted(rule_id for rule_id, r in outcomes.items() if r['outcome'] == 'input_blocked')
+        evaluated = [rule_id for rule_id, r in outcomes.items() if r['outcome'] == 'evaluated']
+        if result.returncode != 2:
+            problems.append(f'status {result.returncode} != 2')
+        if blocked != ['baseline_in_catalog_defaults', 'index_vs_disk']:
+            problems.append(f'input_blocked {blocked}')
+        for rule_id in blocked:
+            records = outcomes[rule_id]['problems']
+            if (len(records) != 1 or records[0]['key'] != 'section.missing' or records[0]['path'] != 'tests/README.md'
+                    or records[0]['severity'] != 'precondition'):
+                problems.append(f'{rule_id} records {records}')
+        if len(outcomes) != 19 or len(evaluated) != 17:
+            problems.append(f'{len(outcomes)} rules reported, {len(evaluated)} evaluated')
+        host_records = outcomes.get('host_invariance', {}).get('problems', [])
+        if not any(r['key'] == 'host.native_use' and r['path'] == HOST.as_posix() for r in host_records):
+            problems.append(f'host diagnostic missing from the records: {host_records}')
+        for text in ('the XPC host never links, loads or calls libsandbox', "tests/README.md is missing the ## 'Suite coverage' section",
+                     'input_blocked: index_vs_disk, baseline_in_catalog_defaults'):
+            if text not in result.stderr + result.stdout:
+                problems.append(f'output lacks {text!r}')
+        others = [rule_id for rule_id, r in outcomes.items() if r['problems'] and rule_id not in blocked and rule_id != 'host_invariance']
+        if others:
+            problems.append(f'unexpected records from {others}')
+        return problems
+
+    def expect_restored(result, outcomes):
+        problems = []
+        if result.returncode != 0:
+            problems.append(f'status {result.returncode} != 0')
+        if len(outcomes) != 19 or any(r['outcome'] != 'evaluated' or r['problems'] for r in outcomes.values()):
+            problems.append('not every rule evaluated cleanly after restoration')
+        return problems
+
+    scenario('precondition-combined', combined, expect_combined)
+    scenario('precondition-restored', lambda: None, expect_restored)
+    return receipts
+
+
+def dispatch_omission_scenario(repo, out):
+    """A dispatcher that omits a registered rule is caught by execution evidence, not by static reading: the
+    mutated checker still declares the row and main() still uses the table, it passes a host binding it never
+    examined, and the reported rule set lacks the declared row."""
+    checker = repo / 'tests/suites/source_drift/check.py'
+    host = repo / HOST
+    originals = {path: path.read_text() for path in (checker, host)}
+    marker = 'results = drift_rules.run_rules(tree, RULES, args.rules, refused=(markdown_reader.Refused,))'
+    assert originals[checker].count(marker) == 1, 'fixture requires the current dispatcher call'
+    mutated = originals[checker].replace(
+        marker, "results = drift_rules.run_rules(tree, [rule for rule in RULES if rule.id != 'host_invariance'], "
+                "args.rules, refused=(markdown_reader.Refused,))")
+    assert any(rule_id == 'host_invariance' for rule_id, _ in generator_common.rule_declarations(mutated))
+    receipts = []
+    for name, texts, expect_status, expect_integrity in (
+            ('dispatch-omission', {checker: mutated, host: originals[host] + '\n' + HOST_BINDING + '\n'}, 0, True),
+            ('dispatch-restored', originals, 0, False)):
+        for path, text in texts.items():
+            path.write_text(text)
+        evidence = out / name
+        evidence.mkdir()
+        for path in texts:
+            captured = evidence / path.relative_to(repo)
+            captured.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, captured)
+        argv, result, reported, integrity = run_checker(repo, evidence)
+        reported_ids = [r['rule_id'] for r in reported['results']] if reported else []
+        record = dict(scenario=name, argv=argv, returncode=result.returncode, reported=reported_ids, integrity=integrity)
+        (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
+        problems = []
+        if result.returncode != expect_status:
+            problems.append(f'status {result.returncode} != {expect_status}')
+        if expect_integrity:
+            if 'host_invariance' in reported_ids:
+                problems.append('the omitted rule was reported')
+            if not any('host_invariance' in line for line in integrity):
+                problems.append(f'the integrity check did not name the omitted rule: {integrity}')
+        elif integrity or len(reported_ids) != 19:
+            problems.append(f'restored dispatcher: {integrity} {reported_ids}')
+        if problems:
+            raise AssertionError(f'{name}: {problems}\n{result.stdout}\n{result.stderr}')
+        receipts.append(record)
+    return receipts
+
+
+def isolation_controls(out):
+    """Fresh trees observe current bytes: two roots sharing a relative path give their own records in either
+    order, a same-size rewrite with its mtime restored is seen, and a deleted input blocks the rule until it
+    is recreated. The rule is called in process over each root."""
+    import os
+    import tempfile
+    sys.path.insert(0, str(ROOT / 'tests/suites/source_drift'))
+    import check  # noqa: E402
+    import repository_tree  # noqa: E402
+    scratch = os.environ.get('PW_TEST_SCRATCH')
+    if scratch:
+        Path(scratch).mkdir(parents=True, exist_ok=True)
+    base = Path(tempfile.mkdtemp(prefix='isolation-', dir=scratch))
+    rule = next(r for r in check.RULES if r.id == 'cli_surface_agreement')
+    roots = {}
+    for name in ('a', 'b'):
+        root = base / name
+        for relative in (check.CLI_RS, check.CONTROLLER_README):
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, target)
+        roots[name] = root
+    original = (roots['a'] / check.CONTROLLER_README).read_text()
+    line = next(l for l in original.splitlines() if l.startswith('policy-witness '))
+    altered = line[:-1] + ('X' if line[-1] != 'X' else 'Y')
+    (roots['b'] / check.CONTROLLER_README).write_text(original.replace(line, altered, 1))
+
+    def observe(root):
+        result = drift_rules.attempt(repository_tree.Tree(root), rule, refused=(check.markdown_reader.Refused,))
+        return [result.outcome, sorted({p.key for p in result.problems})]
+
+    clean, mismatch = ['evaluated', []], ['evaluated', ['cli.mismatch']]
+    observations = {'a_then_b': [observe(roots['a']), observe(roots['b'])],
+                    'b_then_a': [observe(roots['b']), observe(roots['a'])]}
+    readme_a = roots['a'] / check.CONTROLLER_README
+    before = readme_a.stat()
+    readme_a.write_text(original.replace(line, altered, 1))
+    os.utime(readme_a, ns=(before.st_atime_ns, before.st_mtime_ns))
+    after = readme_a.stat()
+    observations['same_size_mtime_restored'] = observe(roots['a'])
+    observations['same_size_identity'] = dict(size_unchanged=after.st_size == before.st_size,
+                                              mtime_unchanged=after.st_mtime_ns == before.st_mtime_ns)
+    readme_a.write_text(original)
+    observations['rewritten_back'] = observe(roots['a'])
+    readme_a.unlink()
+    observations['deleted'] = observe(roots['a'])
+    readme_a.write_text(original)
+    observations['recreated'] = observe(roots['a'])
+    shutil.rmtree(base)
+    expected = {'a_then_b': [clean, mismatch], 'b_then_a': [mismatch, clean], 'same_size_mtime_restored': mismatch,
+                'same_size_identity': dict(size_unchanged=True, mtime_unchanged=True), 'rewritten_back': clean,
+                'deleted': ['input_blocked', ['input.missing']], 'recreated': clean}
+    problems = [f'{name}: {observations[name]} != {expected[name]}' for name in expected if observations[name] != expected[name]]
+    record = dict(scenario='isolation-fresh-trees', rule=rule.id, observations=observations, problems=problems)
+    (out / 'isolation-controls.json').write_text(json.dumps(record, indent=2) + '\n')
+    if problems:
+        raise AssertionError('isolation controls: ' + '; '.join(problems))
+    return [dict(scenario='isolation-fresh-trees', expected_returncode=None, returncode=None, expected_diagnostic=None)]
+
+
+def host_invariance_controls(out):
+    """Controls distinguish native use from schema, prose and unrelated APIs; they test the rule, once per case."""
+    sys.path.insert(0, str(ROOT / 'tests/suites/source_drift'))
+    import check  # noqa: E402
+    accepted = [
+        'let name = "sandbox_check(pid) and dlopen(x) are examples"',
+        '// sandbox_apply(p)\n/* outer /* sandbox_free_error(e) */ dlsym(h, "sandbox_check") */',
+        'var sandbox_check: PWRunnerSandboxCheckResult\nenum CodingKeys { case sandbox_check }',
+        'let label = "sandbox_check"\nlet policy = """\n(allow default)\n"""',
+        'let f: @convention(c) (Int32) -> Int32 = ptr',
+        'let h = dlopen("/usr/lib/libSystem.B.dylib", RTLD_NOW)',
+        'let f = dlsym(h, "malloc")',
+        'let library = "/usr/lib/libSystem.B.dylib"\nlet h = dlopen(library, RTLD_NOW)',
+        'let name: String = "malloc"\nlet f = dlsym(h, name)',
+        '@_silgen_name("posix_spawn") func spawn() -> Int32',
+        'let example = #"dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW)"#',
+    ]
+    rejected = []
+    for name in sorted(check.HOST_SANDBOX_SYMBOLS):
+        rejected += [
+            f'{name}(value)',
+            f'int {name}(void *value);',
+            f'@_silgen_name("{name}") func native() -> Int32',
+            f'let f = dlsym(handle, "{name}")',
+            f'let symbol: String = "{name}"\nlet f = dlsym(handle, symbol)',
+            f'const char *symbol = "{name}"; void *f = dlsym(handle, symbol);',
+            f'#define SYMBOL "{name}"\nvoid *f = dlsym(handle, SYMBOL);',
+        ]
+    rejected += [
+        'let h = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW)',
+        'let library = "/usr/lib/libsandbox.1.dylib"\nlet h = dlopen(library, RTLD_NOW)',
+        'const char *library = "/usr/lib/libsandbox.dylib"; void *h = dlopen(library, RTLD_NOW);',
+        '@_silgen_name(#"sandbox_check"#) func native() -> Int32',
+        'extern int native(void) __asm__("sandbox_check");',
+    ]
+    problems = []
+    outcomes = []
+    for expected, snippets in ((False, accepted), (True, rejected)):
+        for snippet in snippets:
+            found = check.host_invariance_problems('control', snippet)
+            outcomes.append(dict(snippet=snippet, expected_rejection=expected, records=[p.message for p in found]))
+            if bool(found) != expected:
+                problems.append(f'expected rejection={expected}: {snippet!r}: {found}')
+    record = dict(scenario='host-invariance-controls', accepted=len(accepted), rejected=len(rejected), outcomes=outcomes, problems=problems)
+    (out / 'host-invariance-controls.json').write_text(json.dumps(record, indent=2) + '\n')
+    if problems:
+        raise AssertionError('host invariance controls: ' + '; '.join(problems))
+    return [dict(scenario='host-invariance-controls', expected_returncode=None, returncode=None, expected_diagnostic=None)]
 
 
 if __name__ == '__main__':

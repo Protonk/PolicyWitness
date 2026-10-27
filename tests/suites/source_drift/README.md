@@ -118,6 +118,33 @@ case for a shared value, leave a numeric gap in the C enum, malform the C enum
 a document-only prediction-unavailable pair and add an unknown landing path;
 each is named, and every restoration passes.
 
+Every rule is a row of the checker's `RULES` table: a stable ID, the function
+and its declared inputs (required and optional files, directory membership,
+patterns and named inventory scopes) plus the helper modules a fixture must
+carry. A rule reads the tree it is given and returns records carrying its rule
+ID, a stable diagnostic key, the path and line when known, a severity and the
+message. The shared dispatcher in [drift_rules.py](../../lib/drift_rules.py)
+runs each selected row once, in table order; no row depends on another's
+result. A missing file or section, an enum or struct the parser cannot locate,
+invalid JSON or a Meson introspection failure is a precondition record for that
+rule alone: every other rule still runs, several rules reading the same bad
+input each report it, and the status is chosen after all rules ran, 2 when any
+rule was blocked by its input, 1 for drift (including a document the reader
+refuses), otherwise 0. The summary names every rule in exactly one category,
+`evaluated` or `input_blocked`, without reparsing inputs. `--root` points the
+checker at a fixture, `--rule` selects rows and `--json` writes the records.
+Planner controls remove the suite-coverage heading and add a host binding in
+one scenario and require exactly `index_vs_disk` and
+`baseline_in_catalog_defaults` blocked, each with its own record, the other 17
+rules evaluated with the host diagnostic reported, and status 2. Every
+scenario's reported rule set must equal the statically declared table, and a
+dispatcher mutated to skip a registered rule passes an unexamined host binding
+and is caught by that execution evidence. In-process controls call one rule
+over two roots that share a relative path, in either order, over a same-size
+rewrite with its mtime restored, and over a deleted then recreated input. The
+host-invariance accepted and rejected snippets run once per case in the
+planner; they test the rule and are not a production rule.
+
 Two rules read the handwritten text of `docs/ARCHITECTURE.md`: every
 top-level paragraph opening with "Known gap" is indexed, in order, by the
 bullets of the document's last section, which lists nothing else; every row of
@@ -284,7 +311,7 @@ locate definitions, not test assertions. The shared helpers live in
 | Form | Allowed files | Definition convention |
 | --- | --- | --- |
 | `test` | `tests/suites/**`, `runner/Tests/**`, or Rust sources with `#[test]` | Python function; Rust function within three lines after `#[test]`; Swift function or run label ending in a colon; shell `test_selected` or `PW_TEST_ID`; or a case ID in the cited file's owning suite in `tests/catalog.json`. |
-| `rule` | `tests/suites/source_drift/*.py` | Python function with a call from `main()`. |
+| `rule` | `tests/suites/source_drift/*.py` | Python function registered in the module's `RULES` table, which `main()` runs; `build_rules.py` runs its banner row first and reports the others as blocked when it fails. |
 | `control` | `tests/fixtures/**`, `tests/lib/**`, `build.sh`, or C sources under `tests/` | Symbol presence; Python functions and C function-line definitions are required in those languages. |
 
 
@@ -368,6 +395,9 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/inventory-controls.json`
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/<scenario>/results.json`
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/isolation-controls.json`
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/host-invariance-controls.json`
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
 - `<run>/suites/source_drift/contract_versions/artifacts/contract.log`
 - `<run>/suites/source_drift/architecture_documentation/artifacts/architecture.log`
@@ -440,7 +470,13 @@ Meson assertion family (one manifest row carrying the shared message
 template and every asserted option in `meson.build`'s order) and the signed
 inventory (against `EXECUTABLES`, the evidence generator and the README), and
 require the baseline in `tests/fixtures/docs/build_baseline.json` to list
-exactly the refusals without a behavioral or helper control. Controls mutate
+exactly the refusals without a behavioral or helper control. Those rules form
+the one gated table: the banner row runs first, because the other nine map
+records to steps through it, and when it reports or cannot parse its inputs
+they are reported as blocked by it and never called; once it is clean, a later
+row's input failure blocks that row alone, and the command's status stays
+0/1. A control exercises a banner mismatch beside a knob mismatch, repairs
+each in turn, an unparseable script and a corrupt baseline. Controls mutate
 a disposable copy of the script (a reordered or removed banner, a banner
 moved out of its fresh-mode condition, an added, removed or moved refusal, a
 changed status, a renamed knob, a removed or moved signing call, a moved

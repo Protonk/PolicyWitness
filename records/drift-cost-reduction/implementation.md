@@ -108,20 +108,58 @@ non-file semantics; it is not an audit of every filesystem read the checker
 makes. A selected input that cannot be read still terminates the checker with
 an exception until stage 2 converts it to a precondition record.
 
-## Handoff: stages 2 to 6
+## Stage 2: explicit rules, inputs and complete failure reporting
 
-Not started. The next stage converts `check.py` rules to accept a
-`repository_tree.Tree`, declares the ordered `RULES` table with inputs,
-replaces the thirteen `sys.exit(2)` branches with typed precondition records
-(status 2 after all rules run), moves `host_invariance_controls` into the
-planner and migrates `generator_common.citation` to read the table. The
-scenarios added in stage 1 keep their expectations through that change: the
-malformed C enum control expects status 2 and its diagnostic, which the
-precondition policy preserves while the other rules continue.
+Change: `tests/lib/drift_rules.py` holds the rule row (`Rule`), the record
+(`Problem`), the expected-input failure (`InputFailure`), the flat dispatcher
+(`run_rules`), the one gated dispatcher (`run_gated`) and the status and
+summary functions. `check.py` declares its 19 rules in `RULES` with inputs
+(required and optional files, directory membership, patterns and the
+command-document scope) and helper modules; every rule takes a tree and
+returns records with a stable key, a path and a line when known. The
+thirteen terminating branches are `InputFailure`s raised at the owning parser;
+the dispatcher turns each into one precondition record for that rule and
+continues. `--root`, `--rule` and `--json` were added. `build_rules.py`
+declares its ten rules with `banner_order` as the gate. The host-invariance
+snippets moved to the planner. `generator_common.rule_declarations` reads the
+table statically for the `rule` citation form; the form table, the graph test
+and the README copy follow it. `docs/build.json` cited the planner's
+`configured_controls` as a rule; the planner has no table, so those two
+citations now carry the `test` form (same path and symbol; the rendered
+document did not change).
 
-`check_planner.py::inventory_controls` and the new scenarios still start the
-whole checker per scenario; stage 3 converts them to focused in-process rule
-calls over a fresh tree per scenario. The inventory fixture is built in
-`PW_TEST_SCRATCH` (the harness refuses a `runner/.build` directory under
-artifacts), and its receipt `inventory-controls.json` lists every created
-path, the selected entries and the directories each walk entered.
+Planner additions: every scenario runs the checker with `--json` and requires
+the reported rule set to equal the declared table; `precondition_scenarios`,
+`dispatch_omission_scenario`, `isolation_controls` and
+`host_invariance_controls`. The build case gained
+`test_rule_table_gates_on_the_banner_rule`.
+
+Behavior that changed on purpose, for review:
+
+- A selected input that cannot be read (a missing `cli.rs` or README, a
+  directory or broken symlink named with `.md`) is a precondition record
+  (status 2) where it was drift or a traceback before.
+- The build rules load the manifest per tree against the fixture's own
+  script, so a script mutation that removes a cited symbol is a manifest
+  precondition of the gate rather than a banner finding; the gate control
+  uses a reordered banner and an accepted knob value, which keep every cited
+  symbol present, and asserts the removed-banner case as the precondition.
+- Precondition lines print as `<rule>: blocked by input: <message>`; the
+  message text of every existing diagnostic is unchanged, and the summary
+  lines `rules: ...`, `evaluated: ...`, `input_blocked: ...` precede them.
+
+STAGE2_CREDIT
+
+Cost: the planner still starts the whole checker per scenario (now with
+`--json`), so the manifests case is not expected to be faster in this stage;
+stage 3 converts the scenarios to focused in-process calls.
+
+## Handoff: stages 3 to 6
+
+Stage 3 converts the planner scenarios to focused in-process rule calls over a
+fresh tree per scenario (the `--rule` selection and `drift_rules.attempt` are
+in place), consolidates the 42 repeated guidance reader shapes into
+`markdown.py` assertions with the retained representatives, and exposes
+`direct_python.py`'s file and text checks to focused controls. Stage 4 adds
+generator input declarations and the shared fixture copier; the `Rule.inputs`
+and `Rule.helpers` declarations are the inputs it consumes.

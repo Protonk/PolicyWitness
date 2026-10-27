@@ -74,7 +74,9 @@ class Input:
 
     `file` must exist; `optional` is used when present; `directory` selects the
     non-directory entries under a directory, by suffix when suffixes are given,
-    recursively unless stated otherwise; `scope` selects a named inventory. A declaration is an auditable account of
+    recursively unless stated otherwise; `members` selects the immediate entries
+    of a directory, directories included; `pattern` selects what a glob matches;
+    `scope` selects a named inventory. A declaration is an auditable account of
     what is read, not a claim of complete program reachability."""
     kind: str
     path: str = ''
@@ -93,6 +95,14 @@ def optional(path):
 
 def directory(path, suffixes=(), recursive=True):
     return Input('directory', path, tuple(suffixes), recursive)
+
+
+def members(path):
+    return Input('members', path)
+
+
+def pattern(glob):
+    return Input('pattern', glob)
 
 
 def inventory(scope):
@@ -160,14 +170,15 @@ class Tree:
         except UnicodeDecodeError as error:
             raise UnreadableInput(relative, f'not {encoding}: {error}') from error
 
-    def parsed(self, relative, parser):
-        """`parser(text, relative)` over the current text; reused within this Tree by content and name."""
+    def parsed(self, relative, parser, *args):
+        """`parser(text, relative, *args)` over the current text; reused within this Tree by parser, content, name
+        and arguments. A parser that raises caches nothing."""
         text = self.read_text(relative)
-        key = (parser, relative, text)
+        key = (parser, relative, text, args)
         try:
             return self._parsed[key]
         except KeyError:
-            value = self._parsed[key] = parser(text, relative)
+            value = self._parsed[key] = parser(text, relative, *args)
             return value
 
     def expand(self, inputs):
@@ -184,6 +195,14 @@ class Tree:
             elif declared.kind == 'directory':
                 found.update(self.inventory(Scope(declared.path, declared.suffixes, base=declared.path,
                                                   recursive=declared.recursive)))
+            elif declared.kind == 'members':
+                try:
+                    with os.scandir(self.root / declared.path) as entries:
+                        found.update(f'{declared.path}/{entry.name}' for entry in entries)
+                except FileNotFoundError as error:
+                    raise MissingInput(declared.path, 'no such directory') from error
+            elif declared.kind == 'pattern':
+                found.update(path.relative_to(self.root).as_posix() for path in self.root.glob(declared.path))
             elif declared.kind == 'scope':
                 found.update(self.inventory(declared.scope))
             else:

@@ -3494,7 +3494,7 @@
         {
           "path": "tests/suites/source_drift/check_planner.py",
           "symbol": "configured_controls",
-          "form": "rule",
+          "form": "test",
           "coverage": "helper"
         }
       ]
@@ -4791,7 +4791,7 @@
         {
           "path": "tests/suites/source_drift/check_planner.py",
           "symbol": "configured_controls",
-          "form": "rule",
+          "form": "test",
           "coverage": "helper"
         }
       ]

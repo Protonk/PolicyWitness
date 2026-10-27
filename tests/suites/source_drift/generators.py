@@ -782,11 +782,8 @@ class GeneratorContractTests(unittest.TestCase):
             common.allowed_file('maybe', 'tests/suites/source_drift/check.py')
 
     def test_document_graph_cites_every_drift_rule(self):
-        import ast
-        tree = ast.parse((ROOT / 'tests/suites/source_drift/check.py').read_text())
-        main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'main')
-        rules = {n.func.id for n in ast.walk(main)
-                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id.startswith('check_')}
+        common = module('rule_table', ROOT / 'docs/generator_common.py')
+        rules = {function for _, function in common.rule_declarations((ROOT / 'tests/suites/source_drift/check.py').read_text())}
         self.assertTrue(rules)
         data = json.loads((ROOT / 'docs/architecture.json').read_text())
         graph = next(g for g in data['graphs'] if g['id'] == 'documents')
@@ -794,6 +791,40 @@ class GeneratorContractTests(unittest.TestCase):
         cited = {r['symbol'] for r in node['checks']
                  if r['form'] == 'rule' and r['path'] == 'tests/suites/source_drift/check.py'}
         self.assertEqual(cited, rules)
+
+    def test_rule_citations_read_the_rules_table(self):
+        """A rule citation resolves through the module's static RULES table: a defined but unregistered function,
+        an orphan table, a removed or duplicated row and an undefined function are refused without running it."""
+        common = module('rule_table_citations', ROOT / 'docs/generator_common.py')
+        good = ('def check_a(tree):\n    return []\n\n\nRULES = (\n    Rule("a", check_a),\n)\n\n\n'
+                'def main():\n    return run(RULES)\n')
+
+        def cite(text, symbol='check_a'):
+            with tempfile.TemporaryDirectory(prefix='pw-rule-table-') as directory:
+                path = Path(directory) / 'tests/suites/source_drift/x.py'
+                path.parent.mkdir(parents=True)
+                path.write_text(text)
+                common.citation(dict(path='tests/suites/source_drift/x.py', symbol=symbol, form='rule'), Path(directory), check=True)
+
+        cite(good)
+        self.assertEqual(common.rule_declarations(good), (('a', 'check_a'),))
+        for name, text, symbol, message in [
+            ('defined but unregistered', good.replace('def check_a(tree):', 'def check_b(tree):\n    return []\n\n\ndef check_a(tree):'),
+             'check_b', 'not defined'),
+            ('orphan table', good.replace('return run(RULES)', 'return run(())'), 'check_a', 'does not use the RULES table'),
+            ('removed row', good.replace('    Rule("a", check_a),\n', ''), 'check_a', 'not defined'),
+            ('duplicated row', good.replace('    Rule("a", check_a),\n', '    Rule("a", check_a),\n    Rule("a", check_a),\n'),
+             'check_a', 'duplicate rule ID'),
+            ('undefined function', good.replace('Rule("a", check_a)', 'Rule("a", check_missing)'), 'check_a', 'undefined function'),
+            ('malformed row', good.replace('Rule("a", check_a)', 'Rule(check_a)'), 'check_a', 'each RULES row'),
+            ('two tables', good + '\nRULES = ()\n', 'check_a', 'expected one'),
+            ('call from main without a table', 'def check_a(tree):\n    return []\n\n\ndef main():\n    return check_a(None)\n',
+             'check_a', 'not defined'),
+        ]:
+            with self.subTest(case=name):
+                with self.assertRaises(ValueError) as context:
+                    cite(text, symbol)
+                self.assertIn(message, str(context.exception))
 
     def test_ownership_is_unique_and_unknown_prefixes_are_rejected(self):
         owners, whole_files = {}, {}

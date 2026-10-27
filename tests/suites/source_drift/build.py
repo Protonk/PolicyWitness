@@ -394,6 +394,75 @@ class BuildDocumentationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             generator.load_baseline(root / 'docs/build.json')
 
+    def test_rule_table_gates_on_the_banner_rule(self):
+        """The banner row runs first. When it reports, or cannot parse its inputs, the nine other rows are blocked
+        by it and never called; once it is clean, a later row's input failure blocks that row alone."""
+        spec = importlib.util.spec_from_file_location('build_rules_gate', ROOT / 'tests/suites/source_drift/build_rules.py')
+        rules = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(rules)
+        root = self.checkout()
+        suffix = [rule.id for rule in rules.RULES if rule.id != rules.GATE]
+        self.assertEqual(len(suffix), 9)
+
+        def outcomes():
+            return {result.rule_id: result for result in rules.run(rules.repository_tree.Tree(root))}
+
+        def clean(results):
+            return [rule_id for rule_id, result in results.items() if result.outcome != 'evaluated' or result.problems]
+
+        self.assertEqual(clean(outcomes()), [])
+        script = root / 'build.sh'
+        original = script.read_text()
+        reordered = SCRIPT.replace(
+            'echo "==> Checking limits documentation"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking contract versions"',
+            'echo "==> Checking contract versions"\n"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking limits documentation"', 1)
+        self.assertNotEqual(reordered, original)
+        # The knob mutation must keep every cited symbol present, or the manifest load itself becomes the precondition.
+        knob_changed = lambda text: text.replace('    0|1) ;;', '    0|1|2) ;;', 1)
+        self.assertNotEqual(knob_changed(original), original)
+        script.write_text(knob_changed(reordered))
+        both = outcomes()
+        self.assertEqual(both[rules.GATE].outcome, 'evaluated')
+        self.assertTrue(any('banner order' in p.message for p in both[rules.GATE].problems), both[rules.GATE].problems)
+        for name in suffix:
+            self.assertEqual((both[name].outcome, both[name].blocked_by, both[name].problems), ('gate_blocked', rules.GATE, []), name)
+        # A removed banner is also the manifest's cited symbol: the manifest load is a precondition failure of
+        # the gate, and the rows behind it are still gate-blocked.
+        script.write_text(self.mutated('echo "==> Compiling native executables"\n', ''))
+        removed = outcomes()
+        self.assertEqual((removed[rules.GATE].outcome, removed[rules.GATE].problems[0].key), ('input_blocked', 'manifest.invalid'))
+        self.assertEqual({name: removed[name].outcome for name in suffix}, {name: 'gate_blocked' for name in suffix})
+        script.write_text(knob_changed(original))
+        banner_repaired = outcomes()
+        self.assertEqual(banner_repaired[rules.GATE].problems, [])
+        self.assertEqual([name for name in suffix if banner_repaired[name].outcome != 'evaluated'], [])
+        self.assertTrue(any('knob BUILD_XPC: manifest values' in p.message for p in banner_repaired['knobs'].problems))
+        self.assertEqual([name for name in suffix if name != 'knobs' and banner_repaired[name].problems], [])
+        script.write_text(original)
+        self.assertEqual(clean(outcomes()), [])
+        script.write_text(self.mutated('usage() {\n', 'usage() {\n  echo "==> inside"\n'))
+        unparsed = outcomes()
+        self.assertEqual((unparsed[rules.GATE].outcome, unparsed[rules.GATE].problems[0].key), ('input_blocked', 'script.unparseable'))
+        self.assertEqual({name: unparsed[name].outcome for name in suffix}, {name: 'gate_blocked' for name in suffix})
+        script.write_text(original)
+        baseline = root / generator.BASELINE_NAME
+        baseline_text = baseline.read_text()
+        baseline.write_text('{')
+        later = outcomes()
+        self.assertEqual(later[rules.GATE].outcome, 'evaluated')
+        self.assertEqual((later['baseline'].outcome, later['baseline'].problems[0].key), ('input_blocked', 'baseline.invalid'))
+        self.assertEqual([name for name in suffix if name != 'baseline' and later[name].outcome != 'evaluated'], [])
+        baseline.write_text(baseline_text)
+        self.assertEqual(clean(outcomes()), [])
+        script.write_text(knob_changed(reordered))
+        result = subprocess.run([sys.executable, '-B', '-S', str(ROOT / 'tests/suites/source_drift/build_rules.py'), '--root', str(root)],
+                                cwd=root, capture_output=True, text=True, timeout=120)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('check_knobs: not evaluated: blocked by check_banner_order', result.stderr)
+        self.assertNotIn('knob BUILD_XPC', result.stderr)
+        self.assertIn('gate_blocked: refusals, meson_assertions', result.stdout)
+        script.write_text(original)
+
     def test_meson_policy_assertions_refuse_each_option(self):
         """Every option meson.build asserts: a configured directory accepts the changed value, and the regeneration
         the next compile triggers refuses it by name, before anything compiles. The label option is reached only

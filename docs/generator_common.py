@@ -20,6 +20,49 @@ def python_definitions(text):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
 
 
+RULE_ID = re.compile(r'[a-z][a-z0-9_]*')
+
+
+@lru_cache(maxsize=128)
+def rule_declarations(text):
+    """The (rule ID, function name) rows of a module's RULES table, read statically.
+
+    The table is one module-level `RULES = (...)` of `Rule("<id>", <function>, ...)` rows: a lowercase identifier
+    ID and a bare name of a function the module defines, and `main()` must use `RULES`. A module without a table
+    declares no rules. A malformed row, a duplicate ID, an undefined function, a second table or an unused table
+    is refused. Nothing here imports or runs the module."""
+    tree = ast.parse(text)
+    tables = [node for node in tree.body if isinstance(node, ast.Assign)
+              and any(isinstance(target, ast.Name) and target.id == 'RULES' for target in node.targets)]
+    if not tables:
+        return ()
+    if len(tables) > 1:
+        raise ValueError('expected one module-level RULES table')
+    value = tables[0].value
+    if not isinstance(value, (ast.Tuple, ast.List)):
+        raise ValueError('RULES must be a tuple or list of Rule(...) rows')
+    defined = python_definitions(text)
+    rows = []
+    for element in value.elts:
+        well_formed = (isinstance(element, ast.Call) and isinstance(element.func, ast.Name) and element.func.id == 'Rule'
+                       and len(element.args) >= 2 and isinstance(element.args[0], ast.Constant)
+                       and isinstance(element.args[0].value, str) and RULE_ID.fullmatch(element.args[0].value)
+                       and isinstance(element.args[1], ast.Name))
+        if not well_formed:
+            raise ValueError('each RULES row is Rule("<id>", <function>, ...) with a lowercase identifier ID')
+        rule_id, function = element.args[0].value, element.args[1].id
+        if any(rule_id == existing for existing, _ in rows):
+            raise ValueError(f'duplicate rule ID {rule_id!r}')
+        if function not in defined:
+            raise ValueError(f'rule {rule_id!r} names an undefined function {function!r}')
+        rows.append((rule_id, function))
+    main = next((node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'main'), None)
+    if main is None or not any(isinstance(node, ast.Name) and node.id == 'RULES' and isinstance(node.ctx, ast.Load)
+                               for node in ast.walk(main)):
+        raise ValueError('main() does not use the RULES table')
+    return tuple(rows)
+
+
 def catalog_case(root, path, symbol):
     if not path.startswith('tests/suites/'):
         return False
@@ -35,7 +78,9 @@ FORM_RULES = (
      'Python function; Rust function within three lines after `#[test]`; Swift function or run '
      "label ending in a colon; shell `test_selected` or `PW_TEST_ID`; or a case ID in the cited file's "
      'owning suite in `tests/catalog.json`.'),
-    ('rule', '`tests/suites/source_drift/*.py`', 'Python function with a call from `main()`.'),
+    ('rule', '`tests/suites/source_drift/*.py`',
+     "Python function registered in the module's `RULES` table, which `main()` runs; `build_rules.py` runs its "
+     'banner row first and reports the others as blocked when it fails.'),
     ('control', '`tests/fixtures/**`, `tests/lib/**`, `build.sh`, or C sources under `tests/`',
      'Symbol presence; Python functions and C function-line definitions are required in those languages.'),
 )
@@ -89,11 +134,7 @@ def citation(ref, root, *, check=False, forbidden=()):
             defined = defined or catalog_case(root, path, symbol)
     elif form == 'rule':
         if allowed:
-            tree = ast.parse(text)
-            main = next((n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'main'), None)
-            defined = symbol in python_definitions(text) and main is not None and any(
-                isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == symbol
-                for n in ast.walk(main))
+            defined = symbol in {function for _, function in rule_declarations(text)}
     elif form == 'control':
         if allowed:
             if relative.suffix == '.py':
