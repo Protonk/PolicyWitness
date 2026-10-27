@@ -28,7 +28,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generator_common import citation, require_test, DURATION_SIZE_RE, LIMIT_RE, strings, format_value, render_spans, span_problems
+from generator_common import citation, cited_paths, require_test, DURATION_SIZE_RE, LIMIT_RE, strings, format_value, render_spans, span_problems
 import generate_limits
 import markdown_reader
 
@@ -36,6 +36,10 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_NAME = "docs/architecture.json"
 GENERATOR_NAME = "docs/generate_architecture.py"
 SPAN_DOCUMENTS = ("docs/ARCHITECTURE.md", "docs/WORKER.md")
+# What a run reads besides the files the manifests cite and the figures: this generator and its helpers, the
+# limits manifest it resolves placeholders through, and the span documents. The reader's files are added by input_paths.
+INPUTS = (GENERATOR_NAME, "docs/generator_common.py", "docs/generate_limits.py", "docs/limits.json", "tests/catalog.json",
+          MANIFEST_NAME, *SPAN_DOCUMENTS)
 REGION_START = "<!-- BEGIN GENERATED ARCHITECTURE GRAPH {graph} -->"
 REGION_END = "<!-- END GENERATED ARCHITECTURE GRAPH {graph} -->"
 STAMP_RE = re.compile(r"<!-- architecture\.json graph (\S+); dot sha256 ([0-9a-f]{64}) -->")
@@ -80,11 +84,37 @@ def _attrs(owner, attrs):
             raise ValueError(f"{owner}: bad style attribute {key!r}")
 
 
+def figure_paths(root):
+    """The dot and svg files of every graph, in its document's directory; discovery only."""
+    try:
+        data = json.loads((Path(root) / MANIFEST_NAME).read_text())
+        found = set()
+        for graph in data["graphs"]:
+            document = graph.get("document", data["document"])
+            found.add(document)
+            found.update(f"{Path(document).parent.as_posix()}/{graph['file']}{suffix}" for suffix in (".dot", ".svg"))
+        return found
+    except (OSError, ValueError, TypeError, KeyError):
+        return set()
+
+
+def input_paths(root):
+    """Every path a run reads under root; discovery only, so a malformed manifest still reaches load_manifest."""
+    root = Path(root)
+    return sorted({*INPUTS, *markdown_reader.source_files(root), *cited_paths(root / "docs/limits.json"),
+                   *cited_paths(root / MANIFEST_NAME), *figure_paths(root)})
+
+
 def load_manifest(path: Path, root: Path = ROOT):
+    """The validated manifest; loads and validates the limits it resolves placeholders through."""
+    return _load_manifest(path, root, generate_limits.load_limits(root / "docs/limits.json", root))
+
+
+def _load_manifest(path: Path, root: Path, limits):
+    """One invocation's manifest validation against limits the caller has just loaded and validated."""
     data = json.loads(path.read_text(), object_pairs_hook=unique_object)
     if set(data) != {"schema_version", "document", "styles", "graphs"} or data["schema_version"] != 4:
         raise ValueError("expected architecture manifest schema_version 4")
-    limits = generate_limits.load_limits(root / "docs/limits.json", root)
     known_limits = {row["id"] for row in limits}
     for text in strings(data):
         if DURATION_SIZE_RE.search(text):
@@ -489,9 +519,10 @@ def expected_outputs(root: Path, manifest):
 
 
 def check(root: Path):
-    manifest = load_manifest(root / MANIFEST_NAME, root)
-    problems = []
+    # One validated limits value serves the manifest's validation and every rendering of this invocation.
     limits = generate_limits.load_limits(root / "docs/limits.json", root)
+    manifest = _load_manifest(root / MANIFEST_NAME, root, limits)
+    problems = []
     for graph in manifest["graphs"]:
         document_path = root / graph_document(manifest, graph)
         document_name = document_path.name
@@ -524,8 +555,8 @@ def check(root: Path):
 
 
 def write(root: Path, skip_svg: bool):
-    manifest = load_manifest(root / MANIFEST_NAME, root)
     limits = generate_limits.load_limits(root / "docs/limits.json", root)
+    manifest = _load_manifest(root / MANIFEST_NAME, root, limits)
     pending = {}
     # Validate every destination before rendering, and finish all rendering before writing.
     for document in SPAN_DOCUMENTS:

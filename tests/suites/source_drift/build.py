@@ -12,6 +12,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import fixture_inputs  # noqa: E402
 import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_build', ROOT / 'docs/generate_build.py')
 generator = importlib.util.module_from_spec(spec)
@@ -37,18 +39,8 @@ class BuildDocumentationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-build-doc-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        paths = {'docs/generator_common.py', 'docs/generate_architecture.py', 'docs/generate_limits.py', 'docs/limits.json',
-                 'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, generator.BASELINE_NAME,
-                 self.manifest['document'], 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
-                 'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py',
-                 'tests/lib/build_provenance.py', 'tests/lib/signer_check.py', 'tests/lib/output_target.py',
-                 *markdown_reader.source_files()}
-        paths.update(str(p.relative_to(ROOT)) for p in self.figures)
-        paths |= self.cited()
-        for name in paths:
-            target = root / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / name, target)
+        copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'build'))
+        print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         return root
 
     def command(self, root, *args):
@@ -68,10 +60,7 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertTrue(result.stdout.startswith('ok: build manifest'), result.stdout)
         for path in self.figures:
             self.assertTrue(path.is_file(), path)
-        rules = subprocess.run([sys.executable, '-B', '-S', str(ROOT / 'tests/suites/source_drift/build_rules.py')],
-                               cwd=ROOT, capture_output=True, text=True, timeout=120)
-        self.assertEqual(rules.returncode, 0, rules.stderr)
-        self.assertIn('10 build documentation rules agree', rules.stdout)
+        # The grounding rules' command runs once per case, from the suite script; its gate is controlled below.
 
     def test_manifest_rejects_broken_citations_references_and_ids(self):
         self.load(self.manifest)

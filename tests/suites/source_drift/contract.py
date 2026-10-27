@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import abi_golden
+import fixture_inputs
 import shim_probe
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -31,47 +32,24 @@ architecture_spec.loader.exec_module(architecture_generator)
 
 # build.sh admits its tracked inputs and takes the checkout lock before any check; a build
 # checkout needs those files and the lock launcher, then the limits documents it checks first.
-ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh', 'Info.plist', 'PolicyWitness.entitlements',
-               'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
-               *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb'))}
-LIMITS_FILES = ENTRY_FILES | {*markdown_reader.source_files(), 'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
-                'docs/QUESTIONS.md', 'docs/ARCHITECTURE.md', 'docs/REQUEST-GRAMMAR.md', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
-                'tests/fixtures/comparison/matrix.json'}
+ENTRY_FILES = set(fixture_inputs.build_entry_inputs(ROOT))
+LIMITS_FILES = ENTRY_FILES | set(fixture_inputs.generator_inputs(ROOT, 'limits'))
 # The build's environment: the knobs and an inherited lock claim never leak into a control build.
 BUILD_ENV_EXCLUDED = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE', 'PW_CHECKOUT_LOCK_CHANNEL')
 
 
 def limits_references():
-    manifest = json.loads((ROOT / 'docs/limits.json').read_text())
-    return {ref['path'] for row in manifest['limits'] for key in ('sources', 'checks') for ref in row[key]}
+    return set(fixture_inputs.generator_inputs(ROOT, 'limits'))
 
 
 def build_references():
-    """Everything the build generator's check reads: its manifest, script inputs, inventories, baseline, copies and every cited file."""
-    manifest = json.loads((ROOT / 'docs/build.json').read_text())
-    paths = {*markdown_reader.source_files(), 'docs/generate_build.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
-             'tests/fixtures/docs/build_baseline.json', 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
-             'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py',
-             'tests/lib/build_provenance.py', 'tests/lib/checkout_lock.py', 'tests/lib/signer_check.py', 'tests/lib/output_target.py',
-             'tests/lib/cargo_config.py', 'tests/lib/vendor/README.md', 'tests/lib/vendor/tomli/__init__.py', 'tests/lib/vendor/tomli/_parser.py', 'tests/lib/vendor/tomli/_re.py', 'tests/lib/vendor/tomli/_types.py', 'tests/lib/vendor/tomli/py.typed', 'tests/lib/vendor/tomli/LICENSE'} | ENTRY_FILES
-    for group in ('steps', 'refusals', 'signing', 'invocations', 'knobs', 'directories'):
-        for item in manifest[group]:
-            paths.update(ref['path'] for key in ('sources', 'checks') for ref in item[key])
-    return paths
+    """Everything the build generator's check reads, plus what the script reads on the way to it."""
+    return set(fixture_inputs.generator_inputs(ROOT, 'build')) | set(fixture_inputs.build_script_inputs(ROOT))
 
 
 def architecture_references():
     """Everything the architecture check reads: the manifest, its generator, the document, the figures and every cited file."""
-    manifest = json.loads((ROOT / 'docs/architecture.json').read_text())
-    paths = {'docs/architecture.json', 'docs/generate_architecture.py', *architecture_generator.SPAN_DOCUMENTS,
-             *markdown_reader.source_files()}
-    for graph in manifest['graphs']:
-        document = graph.get('document', manifest['document'])
-        paths.add(document)
-        paths |= {str(Path(document).parent / (graph['file'] + suffix)) for suffix in ('.dot', '.svg')}
-        for item in graph['nodes'] + graph['edges']:
-            paths |= {ref['path'] for key in ('sources', 'checks') for ref in item[key]}
-    return paths
+    return set(fixture_inputs.generator_inputs(ROOT, 'architecture'))
 
 
 class ContractVersionTests(unittest.TestCase):
@@ -85,10 +63,8 @@ class ContractVersionTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-contract-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        for name in {'docs/generate_contract.py', 'docs/contract.json', *self.targets, *extra}:
-            target = root / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / name, target)
+        copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'contract'), extra=extra)
+        print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         return root
 
     def command(self, root, *args):
@@ -565,10 +541,8 @@ class WorkerIdentityTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-identity-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        for name in {*identity_generator.source_paths(ROOT), *identity_generator.TARGETS}:
-            target = root / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / name, target)
+        copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'worker_identity'))
+        print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         return root
 
     def command(self, root, *args):

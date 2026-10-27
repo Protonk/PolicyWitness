@@ -3,7 +3,6 @@ import copy
 import importlib.util
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -14,13 +13,12 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import fixture_inputs  # noqa: E402
 import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_limits', ROOT / 'docs/generate_limits.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
-
-
-from generators import broken_links, scanned_documents
 
 
 class LimitsDocumentationTests(unittest.TestCase):
@@ -35,18 +33,10 @@ class LimitsDocumentationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-guide-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        # build.sh admits its tracked inputs and takes the checkout lock before the limits check it makes first.
-        paths = {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md',
-                 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh', 'Info.plist',
-                 'PolicyWitness.entitlements', 'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
-                 *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb')),
-                 generator.CONTRACT_NAME, generator.MATRIX_NAME, *generator.SPAN_DOCUMENTS, *markdown_reader.source_files()}
-        for row in self.manifest['limits']:
-            paths.update(ref['path'] for key in ['sources', 'checks'] for ref in row[key])
-        for name in paths:
-            target = root / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / name, target)
+        # The generator's declared inputs, plus what build.sh admits and reads before the limits check it makes first.
+        copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'limits'),
+                                              extra=fixture_inputs.build_entry_inputs(ROOT))
+        print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         return root
 
     def command(self, root, *args):
@@ -512,14 +502,6 @@ class LimitsDocumentationTests(unittest.TestCase):
         rendered = generator.update_document(before, limits)
         self.assertTrue(rendered.startswith('handwritten introduction\n'))
         self.assertTrue(rendered.endswith('\nhandwritten end\n'))
-
-    def test_links_in_moved_and_routing_documents(self):
-        paths = scanned_documents(ROOT)
-        self.assertEqual(broken_links(paths), [])
-        with tempfile.TemporaryDirectory(prefix='pw-link-') as directory:
-            path = Path(directory) / 'doc.md'
-            path.write_text('[missing](missing.md) [web](https://example.com)')
-            self.assertEqual(len(broken_links([path])), 1)
 
 
 if __name__ == '__main__':

@@ -21,12 +21,13 @@ import time
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-import native_sources  # noqa: E402
 sys.path.insert(0, str(ROOT / 'docs'))
 import markdown_reader  # noqa: E402  (its file list and refusal; the fixtures below read Markdown themselves)
 import generator_common  # noqa: E402  (static reading of the checker's RULES table)
 import drift_rules  # noqa: E402
+import fixture_inputs  # noqa: E402
 import repository_tree  # noqa: E402
+from repository_tree import directory, required  # noqa: E402
 sys.path.insert(0, str(ROOT / 'tests/suites/source_drift'))
 import check  # noqa: E402  (the rule implementation; every scenario hands it a fixture tree)
 
@@ -68,33 +69,24 @@ class Scenario:
     exact: dict = field(default_factory=dict)  # rule ID -> the exact ordered messages, where the key alone is not enough
 
 
+# The checker itself and what its command imports, and what the configured-native controls need beyond the
+# rules' declared inputs: the manifest options, every C source and header of the native targets, the runner
+# sources Meson evaluates, and the shared readers the configured check runs.
+FIXTURE_INPUTS = (required('tests/suites/source_drift/check.py'), required('docs/repository_tree.py'),
+                  required('tests/lib/drift_rules.py'), required('meson.options'),
+                  directory('controller/tools/pw_probe_runner', ('.c', '.h')),
+                  directory('controller/tools/sb_api_validator', ('.c', '.h')), directory('runner/Sources'),
+                  required('tests/lib/native_sources.py'), required('docs/generate_worker_identity.py'))
+
+
 def fixture(out):
-    """A copy of only the checker's inputs, never build products or previous runs."""
+    """A copy of only the declared inputs of the checker's rules and of the configured controls; never build
+    products or previous runs. The receipt records what was copied and what it cost."""
     repo = out / 'repo'
-    paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'runner/AGENTS.md', 'tests/README.md', 'tests/AGENTS.md',
-             'tests/lib/native_sources.py', 'docs/generate_worker_identity.py',
-             'controller/tools/pw_probe_runner/pw_worker_evidence.h', 'controller/tools/pw_probe_runner/pw_profile_capture.h',
-             'controller/tools/pw_probe_runner/pw_extension_channel.h',
-             'runner/Services/PWRunner/main.swift', 'runner/Clients/PWRunnerClient/main.swift',
-             'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
-             'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
-             'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md', 'docs/BUILD.md', 'docs/WORKER.md',
-             'tests/fixtures/contract/response_shape.json',
-             'tests/fixtures/contract/envelope_shape.json',
-             'tests/suites/source_drift/check.py',
-             'Makefile', 'tests/accept-release.sh', 'tests/lib/release_accept.py', 'tests/lib/release_archive.py']
-    # The C sources are whatever the native expectation names for a C-only configuration,
-    # so a new C target cannot be left out of the fixture.
-    paths += sorted(set().union(*native_sources.expected(ROOT, xpc=False).values()))
-    paths += [str(p.relative_to(ROOT)) for p in (ROOT / 'runner/Sources').rglob('*') if p.is_file()]
-    paths += markdown_reader.source_files()
-    paths += ['docs/repository_tree.py', 'tests/lib/drift_rules.py']
-    paths += [str(p.relative_to(ROOT)) for pattern in ('*/run.sh', '*/README.md')
-              for p in (ROOT / 'tests/suites').glob(pattern)]
-    for name in paths:
-        target = repo / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / name, target)
+    paths = set(fixture_inputs.rule_inputs(ROOT, check.RULES)) | set(fixture_inputs.expand(ROOT, FIXTURE_INPUTS))
+    copied = fixture_inputs.copy_declared(ROOT, repo, paths)
+    (out / 'fixture.json').write_text(json.dumps(dict(paths=sorted(paths), files=copied.files, directories=copied.directories,
+                                                      bytes=copied.bytes, seconds=copied.seconds), indent=2) + '\n')
     return repo
 
 
@@ -810,6 +802,11 @@ def entry_point_scenarios(repo, out):
             problems.append('summary line missing')
         return problems
 
+    # The command-document scan reads the refused document under every name the scope lists for it: the file
+    # and each symlink to it (CLAUDE.md is one in this repository).
+    aliases = [relative for relative in check.markdown_documents(repository_tree.Tree(repo))
+               if (repo / relative).is_symlink() and (repo / relative).resolve() == (repo / readme).resolve()]
+
     def expect_refusal(result, reported):
         problems = []
         outcomes = {r['rule_id']: r for r in reported['results']}
@@ -817,8 +814,11 @@ def entry_point_scenarios(repo, out):
             problems.append(f'status {result.returncode}')
         keys = {rule_id: sorted(p['key'] for p in r['problems']) for rule_id, r in outcomes.items() if r['problems']}
         # The refused document is read by the command-document scan and by the guidance rule; both report it.
-        if keys != {COMMANDS: ['reader.refused'], GUIDANCE: ['reader.refused'], HOSTS: ['host.native_use']}:
-            problems.append(f'records {keys}')
+        if keys != {COMMANDS: ['reader.refused'] * (1 + len(aliases)), GUIDANCE: ['reader.refused'], HOSTS: ['host.native_use']}:
+            problems.append(f'records {keys} with aliases {aliases}')
+        refused = sorted(p['path'] for p in outcomes[COMMANDS]['problems'])
+        if refused != sorted([readme.as_posix(), *aliases]):
+            problems.append(f'refused documents {refused}')
         if any(outcomes[rule_id]['outcome'] != 'evaluated' for rule_id in (COMMANDS, GUIDANCE)):
             problems.append('a refused document is not an evaluated rule')
         positions = order_of(result.stderr, ['  commands: AGENTS.md', '  markdown: AGENTS.md', 'the XPC host never links, loads or calls libsandbox'])
@@ -1221,11 +1221,21 @@ def isolation_controls(out):
     observations['deleted'] = observe(roots['a'])
     readme_a.write_text(original)
     observations['recreated'] = observe(roots['a'])
+    # A deliberately weakened evaluator that ignores the supplied root and reads the real checkout cannot meet
+    # the same expectations: it sees no mismatch for root b and no missing input after the deletion.
+    weakened = {'b': [drift_rules.attempt(repository_tree.Tree(ROOT), rule, refused=REFUSED).outcome,
+                      sorted({p.key for p in drift_rules.attempt(repository_tree.Tree(ROOT), rule, refused=REFUSED).problems})]}
+    readme_a.unlink()
+    weakened['deleted'] = weakened['b']
+    readme_a.write_text(original)
     shutil.rmtree(base)
     expected = {'a_then_b': [clean, mismatch], 'b_then_a': [mismatch, clean], 'same_size_mtime_restored': mismatch,
                 'same_size_identity': dict(size_unchanged=True, mtime_unchanged=True), 'rewritten_back': clean,
                 'deleted': ['input_blocked', ['input.missing']], 'recreated': clean}
     problems = [f'{name}: {observations[name]} != {expected[name]}' for name in expected if observations[name] != expected[name]]
+    if weakened['b'] == mismatch or weakened['deleted'] == expected['deleted']:
+        problems.append(f'a root-ignoring evaluator met the expectations: {weakened}')
+    observations['weakened_evaluator'] = weakened
     record = dict(scenario='isolation-fresh-trees', mode='in-process', rule=rule.id, observations=observations, problems=problems)
     (out / 'isolation-controls.json').write_text(json.dumps(record, indent=2) + '\n')
     if problems:

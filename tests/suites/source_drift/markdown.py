@@ -20,6 +20,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import fixture_inputs  # noqa: E402
 import markdown_reader as reader  # noqa: E402
 
 
@@ -315,9 +317,7 @@ class VendorTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-vendor-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        for name in reader.source_files():
-            (root / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / name, root / name)
+        fixture_inputs.copy_declared(ROOT, root, fixture_inputs.reader_inputs(ROOT))
         vendor = root / 'tests/lib/vendor'
         changed = vendor / 'markdown_it/rules_inline/html_inline.py'
         changed.write_text(changed.read_text() + '\n')
@@ -333,9 +333,7 @@ class VendorTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-record-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        for name in reader.source_files():
-            (root / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / name, root / name)
+        fixture_inputs.copy_declared(ROOT, root, fixture_inputs.reader_inputs(ROOT))
         vendor = root / 'tests/lib/vendor'
         changed = vendor / 'markdown_it/rules_inline/html_inline.py'
         changed.write_text(changed.read_text() + '\n')
@@ -375,9 +373,7 @@ class ImportGuardTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-markdown-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        for name in reader.source_files() if vendored else ['docs/markdown_reader.py']:
-            (root / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / name, root / name)
+        fixture_inputs.copy_declared(ROOT, root, fixture_inputs.reader_inputs(ROOT) if vendored else ['docs/markdown_reader.py'])
         return root
 
     def stand_in(self, name, body):

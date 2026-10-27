@@ -2,7 +2,6 @@
 import copy
 import importlib.util
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -11,6 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import fixture_inputs  # noqa: E402
 import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_architecture', ROOT / 'docs/generate_architecture.py')
 generator = importlib.util.module_from_spec(spec)
@@ -29,20 +30,8 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-architecture-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        paths = {'docs/generator_common.py', 'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, self.manifest['document'],
-                 *markdown_reader.source_files()}
-        paths.update(generator.SPAN_DOCUMENTS)
-        paths.update(str(p.relative_to(ROOT)) for p in self.figures)
-        paths.update({'docs/generate_limits.py', 'docs/limits.json'})
-        limits = json.loads((ROOT / 'docs/limits.json').read_text())
-        paths.update(ref['path'] for row in limits['limits'] for key in ('sources', 'checks') for ref in row[key])
-        for graph in self.manifest['graphs']:
-            for item in graph['nodes'] + graph['edges']:
-                paths.update(ref['path'] for key in ('sources', 'checks') for ref in item[key])
-        for name in paths:
-            target = root / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / name, target)
+        copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'architecture'))
+        print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         return root
 
     def command(self, root, *args):

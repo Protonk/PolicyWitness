@@ -385,8 +385,28 @@ import of either package anywhere else.
 
 ## Fixtures
 
-- Source-set checks read live files. Limits controls create disposable checkouts
-  containing the actual generator, documents and referenced source files.
+- Source-set checks read live files. Every disposable checkout is built by
+  the shared copier in [fixture_inputs.py](../../lib/fixture_inputs.py) from
+  declarations: a generator's `input_paths(root)` beside its target and span
+  declarations (the worker identity generator hashes its own source, so its
+  adapter is the copier's), the checker's rule inputs and helper modules, the
+  build entry's admitted files, or the reader's `source_files()`. Expansion
+  is discovery and validation stays with the generator, so a malformed
+  manifest still reaches the command that refuses it; a missing declared
+  path is a refusal. The copier reports files, bytes and seconds, and each
+  suite prints them. Declarations are a reviewed account of what is read,
+  not a claim that every read is declared or an observation of subprocess
+  reads: review new reads and imports against them. The generic generator
+  fixture holds the union of the five generators' inputs plus sentinel
+  files no generator owns, and snapshots cover the whole fixture.
+- The generator contract case checks each generator's declarations against
+  an independently listed set of known inputs, follows a new citation, a new
+  target document and a new native helper into the declarations, loads every
+  helper module from inside a relocated fixture without Git in a fresh
+  interpreter per generator, and shows an omitted helper refusing clearly;
+  the prose scope's declaration closes over every local link destination.
+  Planner isolation controls add a root-ignoring evaluator that fails the
+  same expectations.
 - Inventory controls build their own tree under the planner's output and in a
   temporary directory for the shell scope; the selected entries, entered
   directories and timings are retained as `inventory-controls.json`.

@@ -147,6 +147,30 @@ def citation(ref, root, *, check=False, forbidden=()):
         raise ValueError(f'{form} citation is not defined in an allowed file: {path}: {symbol}')
 
 
+def cited_paths(path):
+    """Paths a manifest cites, read leniently for fixture discovery: every object holding a `path` and a `symbol`.
+
+    Validation belongs to the manifest's loader; a manifest that does not parse cites nothing here, so the
+    fixture still carries it for the generator to refuse."""
+    try:
+        data = json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return set()
+    found = set()
+
+    def walk(node):
+        if isinstance(node, dict):
+            if isinstance(node.get('path'), str) and 'symbol' in node:
+                found.add(node['path'])
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+    walk(data)
+    return found
+
+
 def require_test(owner, checks):
     if not any(ref.get('form') in {'test', 'rule'} for ref in checks):
         raise ValueError(f'{owner}: at least one test or rule is required')

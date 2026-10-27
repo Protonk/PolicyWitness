@@ -237,10 +237,72 @@ entry-point scenarios and the two omitted-rule scenarios), beside the seven
 configured-native receipts whose setup, compile and check launches are now
 counted individually.
 
-## Handoff: stages 4 to 6
+## Stage 4: declared fixture inputs and bounded reuse
 
-Stage 4 adds generator input declarations and the shared fixture copier under
-`tests/lib/`; `Rule.inputs` and `Rule.helpers` are the inputs it consumes for
-the checker, and the planner's `fixture()` list is the account it replaces.
-Stage 5 rehomes `configured_controls` (now recording per-launch timings) and
-the build entry and native policy controls under `preflight`.
+Change: `tests/lib/fixture_inputs.py` holds the copier (`copy_declared`,
+reporting files, directories, bytes and seconds), `expand` for declaration
+lists, `rule_inputs` for a rule table, `generator_inputs` (the worker identity
+adapter lives here, so `generate_worker_identity.py` is unchanged and the
+identity is unchanged), the build entry and build script declarations, the
+reader's files and a whole-fixture `snapshot`. Each other generator declares
+`INPUTS` beside its target and span declarations and an `input_paths(root)`
+that adds the reader's files, the manifest's cited paths (read leniently by
+`generator_common.cited_paths`, so a malformed manifest still reaches its
+loader) and the figures. Every suite's checkout helper uses the copier: the
+planner (rule inputs plus the configured controls' native sources), the
+direct-Python check, the generic generator fixture (the union of the five
+generators' inputs plus sentinels), limits (plus the build entry), contract
+(whose `ENTRY_FILES`, `LIMITS_FILES`, `build_references` and
+`architecture_references` are now the shared declarations), identity,
+architecture, build and the reader's vendored-source fixtures.
+
+Fixture sizes by declaration (files, bytes):
+
+| Fixture | Before | After |
+| --- | --- | --- |
+| Generic generator fixture (`generators.py`) | 1,282 files, 19,206,995 bytes (tracked tree) | 266 files, 5,953,299 bytes (declared inputs plus two sentinels) |
+| Planner fixture (`check_planner.py`) | 74 files (hand-listed) | 261 files and 42 suite directories, 3,037,321 bytes (every command-scope document included) |
+| Contract | 7 | 9 |
+| Worker identity | 25 | 25 |
+| Limits | hand-listed plus citations | 140 |
+| Architecture | hand-listed plus citations | 238 |
+| Build | hand-listed plus citations | 167 |
+
+Reductions applied, as the plan lists them: the second `build_rules.py` start
+in the build currency test is gone (the suite script's execution and the gate
+control remain); `LimitsDocumentationTests.test_links_in_moved_and_routing_documents`
+and its import are gone (the generator contract case keeps the scan and its
+mutations); `generate_architecture.check` and `write` validate the manifest
+against one freshly loaded limits value through the internal `_load_manifest`
+and render with the same value, while the public `load_manifest` still
+validates standalone. The build rules already share one manifest load and one
+script parse per tree through the tree's parse reuse (stage 2).
+
+Controls: `test_fixture_declarations_cover_each_generators_inputs`
+(independent known-input inventory per generator; a new citation, a new target
+document and a new native helper reach the declarations; five fresh-interpreter
+import probes from a relocated fixture without Git; an omitted helper refuses
+clearly), `test_prose_inputs_include_every_local_link_destination`, and the
+planner's root-ignoring evaluator demonstration beside its two-root and
+missing-input observations.
+
+Review notes:
+
+- The planner fixture now carries every document in the command-document
+  scope, including the `CLAUDE.md` symlink to `AGENTS.md`, so a refused
+  `AGENTS.md` is reported under both names by the command-document rule; the
+  entry-point refusal scenario expects one record per alias, as the real tree
+  behaves.
+- The prose-baseline test's fixture is the generic fixture plus the prose
+  closure and the baseline file, which no generator declares.
+- No read audit, deny-read profile or tracing was added; the declarations are
+  a reviewed account.
+
+STAGE4_CREDIT
+
+## Handoff: stages 5 and 6
+
+Stage 5 rehomes `configured_controls` (recording per-launch timings), the
+contract suite's build-entry controls and the build suite's Meson policy
+controls under `preflight` as default, offline cases. Stage 6 versions the
+receipt schema and completes this account.

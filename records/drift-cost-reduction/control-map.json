@@ -2097,6 +2097,67 @@
       "disposition": "retained",
       "where": "tests/suites/source_drift/check_planner.py::configured_controls (configured-copied-checkout)",
       "reason": "Unchanged: real meson setup and compile with the native sources checker; moves to preflight in stage 5."
+    },
+    {
+      "old": "source_drift/limits_documentation:LimitsDocumentationTests.test_links_in_moved_and_routing_documents",
+      "obligation": "The prose scope has no broken local links, heading anchors or symbol labels, and a constructed broken link is reported.",
+      "disposition": "consolidated",
+      "destination": "source_drift/generator_contract",
+      "where": "tests/suites/source_drift/generators.py::GeneratorContractTests.test_prose_links_resolve_anchors_and_symbol_links",
+      "reader_assertion": null,
+      "representative": "test_prose_links_resolve_anchors_and_symbol_links",
+      "reason": "The same scan with the same independent link mutations already ran in the generator contract case; the limits copy added a second start of the same scan and one weaker mutation.",
+      "receipt": "stage 4 run, see implementation.md"
+    },
+    {
+      "old": "source_drift/build_documentation:BuildDocumentationTests.test_document_and_figure_are_current_and_the_rules_agree (second build_rules.py start)",
+      "obligation": "The grounding rules' command agrees with the current build script and manifest.",
+      "disposition": "consolidated",
+      "destination": "source_drift/build_documentation",
+      "where": "tests/suites/source_drift/run.sh (build_rules.py execution); BuildDocumentationTests.test_rule_table_gates_on_the_banner_rule",
+      "reader_assertion": null,
+      "representative": "run.sh build_rules.py execution",
+      "reason": "The suite script runs the same command once per case and fails the case on any disagreement; the test keeps the generator's currency and figure assertions and the gate control covers the command's status and output.",
+      "receipt": "stage 4 run, see implementation.md"
+    },
+    {
+      "old": "source_drift/generator_contract:GeneratorContractTests.checkout (whole tracked tree)",
+      "obligation": "Generator commands run in a disposable checkout and every byte outside owned regions is compared before and after.",
+      "disposition": "retained",
+      "destination": "source_drift/generator_contract",
+      "where": "tests/suites/source_drift/generators.py::GeneratorContractTests.checkout (declared inputs plus sentinels); tests/lib/fixture_inputs.py",
+      "reason": "The fixture is the union of the five generators' declared inputs plus sentinel files no generator owns; snapshots still cover the whole fixture, so a write outside owned regions remains visible, while archive and evidence content is no longer copied.",
+      "receipt": "stage 4 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "Each generator's declared inputs include an independently listed set of known inputs; discovery follows a new citation, a new target document and a new native helper; a relocated fixture loads helpers from inside itself; an omitted helper refuses clearly.",
+      "disposition": "added",
+      "rule": "fixtures",
+      "destination": "source_drift/generator_contract",
+      "where": "tests/suites/source_drift/generators.py::GeneratorContractTests.test_fixture_declarations_cover_each_generators_inputs",
+      "reason": "The plan's structural fixture controls.",
+      "receipt": "stage 4 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "The prose scope's declaration closes over every local link destination.",
+      "disposition": "added",
+      "rule": "fixtures",
+      "destination": "source_drift/generator_contract",
+      "where": "tests/suites/source_drift/generators.py::GeneratorContractTests.test_prose_inputs_include_every_local_link_destination; prose_inputs",
+      "reason": "The plan's link-closure declaration.",
+      "receipt": "stage 4 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "A root-ignoring evaluator fails the fresh-tree isolation expectations.",
+      "disposition": "added",
+      "rule": "cli_surface_agreement",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::isolation_controls (weakened_evaluator)",
+      "reason": "The plan's weakened-evaluator demonstration.",
+      "receipt": "stage 4 run, see implementation.md"
     }
   ],
   "dispositions": {

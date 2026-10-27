@@ -2,17 +2,21 @@
 import importlib.util
 import json
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import fixture_inputs  # noqa: E402
 import markdown_reader  # noqa: E402
-GENERATORS = ('contract', 'worker_identity', 'limits', 'architecture', 'build')
+GENERATORS = fixture_inputs.GENERATORS
+# Files no generator owns, placed in every fixture so a write outside owned regions is visible in a snapshot.
+SENTINELS = {'SENTINEL.md': '# Sentinel\n\nNo generator owns this file.\n', 'sentinel/notes.txt': 'unrelated\n'}
 
 
 def module(name, path):
@@ -113,6 +117,22 @@ def scanned_documents(root=ROOT):
         regions, _ = region_ownership(root, name)
         paths.update(root / name for name in regions if name.endswith('.md'))
     return sorted(paths)
+
+
+def prose_inputs(root=ROOT):
+    """The prose scope and the local files its links name, as relative paths: a fixture for the link rule
+    needs the destinations, not only the documents."""
+    root = Path(root)
+    found = set()
+    for path in scanned_documents(root):
+        found.add(path.relative_to(root).as_posix())
+        for link in markdown_reader.read(path).links:
+            target = link.target.split('#')[0]
+            if target and not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                destination = (path.parent / target).resolve()
+                if destination.is_relative_to(root.resolve()):
+                    found.add(destination.relative_to(root.resolve()).as_posix())
+    return sorted(found)
 
 
 def broken_links(paths):
@@ -288,20 +308,20 @@ def measurements(root=ROOT):
 
 
 class GeneratorContractTests(unittest.TestCase):
-    def checkout(self):
+    def checkout(self, generators=GENERATORS):
+        """The declared inputs of the named generators, never build products or accumulated evidence, plus
+        sentinel files no generator owns; the fixture is not a Git repository."""
         directory = tempfile.TemporaryDirectory(prefix='pw-generators-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        # Source files only; never copy build products or accumulated evidence.
-        names = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others',
-                                         '--exclude-standard'], cwd=ROOT).decode().split('\0')
-        for name in filter(None, names):
-            source = ROOT / name
-            if not source.is_file():
-                continue
-            target = root / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
+        paths = set()
+        for name in generators:
+            paths.update(fixture_inputs.generator_inputs(ROOT, name))
+        copied = fixture_inputs.copy_declared(ROOT, root, paths)
+        for name, text in SENTINELS.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(text)
+        print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         return root
 
     def command(self, root, name, *args):
@@ -309,8 +329,10 @@ class GeneratorContractTests(unittest.TestCase):
                               cwd=root, capture_output=True, text=True, timeout=60)
 
     def snapshot(self, root):
-        return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob('*')
-                if p.is_file() and '__pycache__' not in p.parts}
+        start = time.perf_counter()
+        taken = fixture_inputs.snapshot(root)
+        print(f'snapshot: {len(taken)} files, {sum(map(len, taken.values()))} bytes, {time.perf_counter() - start:.3f} s')
+        return taken
 
     def test_build_checks_every_generator_before_signing(self):
         text = (ROOT / 'build.sh').read_text()
@@ -650,7 +672,9 @@ class GeneratorContractTests(unittest.TestCase):
 
     def test_prose_baseline_is_consistent_and_growth_is_explicit(self):
         self.assertEqual(baseline_problems(), [])
+        # The scan reads the prose scope and the files its citation pairs link to, beside the baseline itself.
         root = self.checkout()
+        fixture_inputs.copy_declared(ROOT, root, prose_inputs(ROOT), extra=[BASELINE_NAME])
         baseline = json.loads((root / BASELINE_NAME).read_text())['entries']
         path = root / 'docs/ARCHITECTURE.md'
         for prose, kind in [('A new delay lasts 7 seconds.', 'literal'),
@@ -825,6 +849,89 @@ class GeneratorContractTests(unittest.TestCase):
                 with self.assertRaises(ValueError) as context:
                     cite(text, symbol)
                 self.assertIn(message, str(context.exception))
+
+    def test_fixture_declarations_cover_each_generators_inputs(self):
+        """Each generator's declared inputs include an independently listed set of files it is known to read;
+        discovery follows a new citation, a new target document and a new native helper; a relocated fixture
+        without Git loads every helper module from inside the fixture; an omitted helper is a clear refusal."""
+        known = {
+            'contract': ['docs/contract.json', 'docs/generate_contract.py', 'docs/CONTRACT.md', 'tests/lib/contract.py',
+                         'controller/src/json_contract.rs', 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift'],
+            'worker_identity': ['docs/generate_worker_identity.py', 'build.sh', 'meson.build', 'meson.options', 'runner/Package.swift',
+                                'controller/tools/pw_probe_runner/pw_probe_runner.c', 'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
+                                'runner/Sources/PWRunnerCore/CWorker.swift', 'tests/lib/contract.py'],
+            'limits': ['docs/generate_limits.py', 'docs/generator_common.py', 'docs/markdown_reader.py', 'docs/limits.json',
+                       'docs/LIMITS.md', 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
+                       'tests/fixtures/comparison/matrix.json', 'tests/catalog.json', 'docs/ARCHITECTURE.md', 'controller/README.md'],
+            'architecture': ['docs/generate_architecture.py', 'docs/generate_limits.py', 'docs/generator_common.py',
+                             'docs/markdown_reader.py', 'docs/architecture.json', 'docs/limits.json', 'docs/ARCHITECTURE.md',
+                             'docs/WORKER.md', 'tests/catalog.json', 'tests/suites/source_drift/check.py'],
+            'build': ['docs/generate_build.py', 'docs/generate_architecture.py', 'docs/generate_limits.py', 'docs/generator_common.py',
+                      'docs/markdown_reader.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
+                      'tests/fixtures/docs/build_baseline.json', 'build.sh', 'meson.build', 'Makefile', 'README.md',
+                      'tests/lib/artifact.py', 'tests/build-evidence.py', 'tests/suites/source_drift/build_rules.py'],
+        }
+        for name in GENERATORS:
+            with self.subTest(generator=name):
+                declared = set(fixture_inputs.generator_inputs(ROOT, name))
+                self.assertEqual(sorted(set(known[name]) - declared), [], name)
+                self.assertTrue(all((ROOT / path).is_file() for path in declared), name)
+        # A new citation, a new target document and a new native helper reach the declarations.
+        with tempfile.TemporaryDirectory(prefix='pw-declared-') as directory:
+            root = Path(directory)
+            fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'limits')
+                                         + fixture_inputs.generator_inputs(ROOT, 'architecture')
+                                         + fixture_inputs.generator_inputs(ROOT, 'worker_identity'))
+            limits = json.loads((root / 'docs/limits.json').read_text())
+            limits['limits'][0]['sources'].append(dict(path='tests/fixtures/new_cited.py', symbol='cited'))
+            (root / 'docs/limits.json').write_text(json.dumps(limits))
+            self.assertIn('tests/fixtures/new_cited.py', fixture_inputs.generator_inputs(root, 'limits'))
+            arch = json.loads((root / 'docs/architecture.json').read_text())
+            arch['graphs'][0]['document'] = 'docs/NEW-TOUR.md'
+            (root / 'docs/architecture.json').write_text(json.dumps(arch))
+            declared = fixture_inputs.generator_inputs(root, 'architecture')
+            self.assertIn('docs/NEW-TOUR.md', declared)
+            self.assertIn(f"docs/{arch['graphs'][0]['file']}.dot", declared)
+            (root / 'controller/tools/pw_probe_runner/pw_new_helper.c').write_text('/* new helper */\n')
+            self.assertIn('controller/tools/pw_probe_runner/pw_new_helper.c', fixture_inputs.generator_inputs(root, 'worker_identity'))
+            (root / 'docs/limits.json').write_text('{')
+            self.assertTrue({'docs/limits.json', 'docs/generate_limits.py'} <= set(fixture_inputs.generator_inputs(root, 'limits')))
+        # Copied command entry points run in fresh interpreters from inside the fixture, importing helpers from it.
+        root = self.checkout()
+        probe = ('import importlib.util, json, sys\n'
+                 'spec = importlib.util.spec_from_file_location("probe", sys.argv[1]); module = importlib.util.module_from_spec(spec)\n'
+                 'spec.loader.exec_module(module)\n'
+                 'print(json.dumps({name: sys.modules[name].__file__ for name in ("generator_common", "markdown_reader", "generate_limits", '
+                 '"generate_architecture") if name in sys.modules}))\n')
+        for name in GENERATORS:
+            with self.subTest(fresh_import=name):
+                result = subprocess.run([sys.executable, '-B', '-S', '-c', probe, str(root / f'docs/generate_{name}.py')],
+                                        cwd=root, capture_output=True, text=True, timeout=60)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                loaded = json.loads(result.stdout)
+                for module_name, path in loaded.items():
+                    self.assertTrue(Path(path).resolve().is_relative_to(root.resolve()), (name, module_name, path))
+                if name in ('limits', 'architecture', 'build'):
+                    self.assertIn('generator_common', loaded)
+        # An omitted helper is a clear refusal, not a silent pass.
+        (root / 'docs/generator_common.py').unlink()
+        result = self.command(root, 'limits', '--check')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('generator_common', result.stderr)
+
+    def test_prose_inputs_include_every_local_link_destination(self):
+        """The prose scope's declaration closes over the local files its links name, not only the documents."""
+        documents = [p.relative_to(ROOT).as_posix() for p in scanned_documents(ROOT)]
+        declared = set(prose_inputs(ROOT))
+        self.assertTrue(set(documents) <= declared)
+        targets = set()
+        for path in scanned_documents(ROOT):
+            for link in markdown_reader.read(path).links:
+                target = link.target.split('#')[0]
+                if target and not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                    targets.add((path.parent / target).resolve().relative_to(ROOT.resolve()).as_posix())
+        self.assertTrue(targets)
+        self.assertEqual(sorted(targets - declared), [])
 
     def test_ownership_is_unique_and_unknown_prefixes_are_rejected(self):
         owners, whole_files = {}, {}

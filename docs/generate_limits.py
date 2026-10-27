@@ -24,7 +24,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generator_common import citation, require_test, format_value, render_spans, span_problems
+from generator_common import citation, cited_paths, require_test, format_value, render_spans, span_problems
 import markdown_reader
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,6 +53,10 @@ GUIDE_EXTENSION_END = "<!-- END COPIED EXTENSION STATUSES -->"
 SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md", "docs/PolicyWitness.md", "docs/REQUEST-GRAMMAR.md",
                   "tests/FAILURE-PROPAGATION-CONTRACT.md", "controller/README.md", "runner/README.md")
 GUIDE_NAME = "PolicyWitness.md"
+# What a run reads besides the files the manifest cites: this generator and its helpers, the manifest, the
+# documents it renders or copies, the questions and the matrix. The reader's files are added by input_paths.
+INPUTS = ("docs/generate_limits.py", "docs/generator_common.py", "tests/catalog.json", "docs/limits.json",
+          "docs/LIMITS.md", "docs/PolicyWitness.md", "docs/QUESTIONS.md", *SPAN_DOCUMENTS)
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
 MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
 COMPARISON_KEYS = ("observation", "observation_basis", "operation_relation", "target_relation", "order", "limitations")
@@ -83,6 +87,13 @@ def unique_object(pairs):
             raise ValueError(f"duplicate JSON key: {key}")
         result[key] = value
     return result
+
+
+def input_paths(root):
+    """Every path a run reads under root; discovery only, so a malformed manifest still reaches load_limits."""
+    root = Path(root)
+    return sorted({*INPUTS, CONTRACT_NAME, MATRIX_NAME, *markdown_reader.source_files(root),
+                   *cited_paths(root / "docs/limits.json")})
 
 
 def load_limits(path: Path, root: Path = ROOT):

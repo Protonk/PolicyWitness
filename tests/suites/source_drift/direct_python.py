@@ -17,7 +17,10 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import fixture_inputs  # noqa: E402
 import repository_tree  # noqa: E402
+from repository_tree import inventory, required  # noqa: E402
 ENTRIES = ('build.sh', 'tests/lib/checkout_lock.sh', 'tests/run.sh', 'tests/lib/python.sh', 'tests/accept-release.sh', 'Makefile')
 # Entry points that start helpers: each calls the resolver's two functions, without arguments.
 PROBING = ('build.sh', 'tests/lib/checkout_lock.sh', 'tests/run.sh', 'tests/lib/python.sh', 'tests/accept-release.sh')
@@ -29,6 +32,8 @@ SHEBANG = '#!/usr/bin/env -S ${PW_PYTHON} -B -S'
 INTERPRETER = '${PW_PYTHON}'
 # Shell scripts under tests/ that may still start the shim: none. A deliberate shim start lives in a Python control.
 SHIM_ALLOWED = ()
+# What check(root) reads: the entry points, the resolvers, the wrappers and every shell script under tests/.
+INPUTS = (*(required(name) for name in ENTRIES + RESOLVING + WRAPPERS), inventory(repository_tree.TEST_SHELL_SCRIPTS))
 
 
 def words_of(line):
@@ -223,10 +228,8 @@ class DirectPythonTests(unittest.TestCase):
 
     def checkout(self, temporary):
         root = Path(temporary)
-        for path in [ROOT / name for name in ENTRIES + RESOLVING + WRAPPERS] + shell_scripts(ROOT):
-            target = root / path.relative_to(ROOT)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(path.read_text())
+        copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.expand(ROOT, INPUTS))
+        print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         return root
 
     def test_full_tree_scan_dispatches_discovery_to_the_checks(self):

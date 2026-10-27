@@ -129,6 +129,11 @@ def render_all(root: Path, versions):
     return results
 
 
+# What a run reads: the manifest, this generator and every file holding a generated copy.
+def input_paths(root):
+    return sorted({MANIFEST, "docs/generate_contract.py", *TARGETS})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="verify every generated copy; do not write")

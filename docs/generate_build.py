@@ -59,7 +59,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generator_common import citation, require_test, DURATION_SIZE_RE, strings, format_value, render_spans, span_problems
+from generator_common import citation, cited_paths, require_test, DURATION_SIZE_RE, strings, format_value, render_spans, span_problems
 import generate_architecture as arch
 import markdown_reader
 
@@ -68,6 +68,13 @@ MANIFEST_NAME = "docs/build.json"
 GENERATOR_NAME = "docs/generate_build.py"
 BASELINE_NAME = "tests/fixtures/docs/build_baseline.json"
 SPAN_DOCUMENTS = ("docs/BUILD.md",)
+# What a run reads besides the files the manifests cite and the figure: this generator and its helpers, the
+# manifest and baseline, the script and the files its rules compare, and the inventories. The reader's files
+# are added by input_paths.
+INPUTS = (GENERATOR_NAME, "docs/generator_common.py", "docs/generate_architecture.py", "docs/generate_limits.py",
+          "docs/limits.json", "tests/catalog.json", MANIFEST_NAME, BASELINE_NAME, *SPAN_DOCUMENTS, "build.sh", "meson.build",
+          "Makefile", "README.md", "Info.plist", "runner/Services/PWRunner/Info.plist", "tests/lib/artifact.py",
+          "tests/build-evidence.py", "tests/lib/build_provenance.py", "tests/lib/signer_check.py", "tests/lib/output_target.py")
 REGIONS = ("FIGURE", "STEPS", "REFUSALS", "SIGNING", "INVOCATIONS", "KNOBS", "DIRECTORIES")
 REGION_START = "<!-- BEGIN GENERATED BUILD {region} -->"
 REGION_END = "<!-- END GENERATED BUILD {region} -->"
@@ -370,6 +377,19 @@ def _ids(owner, items, fields, optional=()):
 def _variants(owner, value):
     if not isinstance(value, list) or not value or set(value) - set(VARIANTS) or len(set(value)) != len(value):
         raise ValueError(f"{owner}: variants must be a nonempty subset of {VARIANTS}")
+
+
+def input_paths(root):
+    """Every path a run reads under root; discovery only, so a malformed manifest still reaches load_manifest."""
+    root = Path(root)
+    figures = set()
+    try:
+        data = json.loads((root / MANIFEST_NAME).read_text())
+        figures = {f"{Path(data['document']).parent.as_posix()}/{data['figure']}{suffix}" for suffix in (".dot", ".svg")}
+    except (OSError, ValueError, TypeError, KeyError):
+        pass
+    return sorted({*INPUTS, *markdown_reader.source_files(root), *cited_paths(root / "docs/limits.json"),
+                   *cited_paths(root / MANIFEST_NAME), *figures})
 
 
 def load_manifest(path: Path, root: Path = ROOT):
