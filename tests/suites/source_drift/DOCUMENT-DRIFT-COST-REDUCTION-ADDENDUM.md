@@ -3,9 +3,8 @@
 ## Purpose and authority
 
 A second read-only assessment was performed on 2026-10-27 at `3a555b6`, after
-the document drift cost reduction plan was written. That plan was held in
-`.tmp/DOCUMENT-DRIFT-COST-REDUCTION-PLAN.md` when this addendum was written. It
-proposes three repairs: pruning excluded subtrees before document discovery
+[the document drift cost reduction plan](DOCUMENT-DRIFT-COST-REDUCTION-PLAN.md)
+was written. That plan proposes three repairs: pruning excluded subtrees before document discovery
 (Repair 1), ending the replay of the whole checker for every narrow mutation
 (Repair 2), and removing duplicated setup and work in the generator tests
 (Repair 3).
