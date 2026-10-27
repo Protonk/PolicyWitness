@@ -1,6 +1,6 @@
 # Investigating subordinate pytest adoption in PolicyWitness
 
-## 1. Patterns worth investigating
+## Patterns worth investigating
 
 Investigate pytest as a subordinate harness for build and mutation checks, with `tests/run.sh` retaining project-level dispatch. Existing checks already use `unittest`; the opportunity is to replace organizational work with familiar machinery where that improves clarity and maintenance.
 
@@ -41,14 +41,4 @@ In PW, the record-shape mutation family in `check_build_provenance.py` is a prom
 Examine failure phases, empty selection, and combined failures. Distinguish in-process protocol checks from execution through a command boundary. The [supporting pytester implementation](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/src/_pytest/pytester.py) has its own environment, capture, and timeout policies; assess their fit separately from the synthetic-test pattern.
 
 PW already constructs dispatcher failures. The useful comparison is how pytest-specific scenarios could exercise the eventual subordinate invocation and its retained evidence, within the existing dispatcher contract. It does not call for adopting pytest's internal runner APIs or migrating the dispatcher tests.
-
-## 2. Freezing a baseline and learning from the variants
-
-Freeze a comparison baseline: the selected checks, what they exercise and assert, and how their outcomes are recorded. This gives later changes something concrete to be compared with. It does not turn every existing expectation into a permanent requirement. If an expectation deserves revision, make that decision distinguishable from changing the machinery that executes it.
-
-Adopt a recognizable common pattern far enough to experience its advantages and constraints. The purpose is partly to stop maintaining ordinary infrastructure ourselves, and partly to discover which choices become unnecessary when another tool supplies the organization. Reconstructing the old framework through elaborate fixtures and hooks would obscure that distinction.
-
-Then examine the variants that remain. Resistance might reveal a real PW requirement, an inherited arrangement that can change, or a poor framework fit. Keep necessary exceptions understandable and local. Over time, compare which exceptions persist, disappear, or move as more work adopts the common pattern.
-
-Success is not the proportion migrated. It is less machinery that requires PW-specific knowledge, with clearer reasons for what remains particular to PW. Ordinary tests should demonstrate that practice through their structure, while retaining the different forms their jobs require.
 
