@@ -4,9 +4,15 @@
 
 Investigate the effort required to introduce pytest beneath PolicyWitness's existing test infrastructure, with the specific aim of eventually refactoring [check_build_provenance.py](check_build_provenance.py). The opportunity is to replace ordinary organizational work with familiar machinery where that improves clarity and maintenance.
 
-This plan contains the research findings, rationale, comparison targets, and remaining questions needed for the investigation. The external comparison is bounded to the four projects below. Their source was inspected on 2026-10-26; neither those tests nor a PW migration prototype were executed. The comparison baseline, integration design, and effort estimate remain to be established.
+Judge the proposal by whether it reduces infrastructure that requires PW-specific knowledge and makes the remaining special cases clearer. Substantial portions of the file may remain unchanged; the proportion converted is not a success criterion.
 
-This is an investigation, not implementation. Do not refactor tests, install a new repository dependency, or change the dispatcher while carrying it out. Do not create or run pytest prototypes inside or outside the repository, including disposable pytest environments or synthetic suites through a copied invocation path. Ground claims about pytest behavior in the pinned source; describe a later trial where execution or implementation experience is needed to resolve a question. Return the assessment in the task response unless a separate destination is requested; the baseline record has the destination given under Deliverable.
+## Scope and invariants
+
+- **Scope.** Limit proposed migration work to `check_build_provenance.py` and the integration changes necessary to run it subordinately. Preserve the dispatcher's authority over the responsibilities described below. Other test migrations and wider test-system restructuring are outside scope. Inspect surrounding code as needed; keep external comparison within the four projects below. A Python upgrade or interpreter migration is not a prerequisite.
+- **Investigation only.** Do not refactor tests, add repository dependencies, change the dispatcher, or create or run pytest prototypes in any location. The current case may be run under the [execution-reference rules](#execution-reference).
+- **Evidence.** Label source-derived findings separately from measured behavior, and ground claims about pytest behavior in the pinned source. Method/parameter counts and passing status are cross-checks, not proof of preservation, unconditional collection, absence of skips, `subTest` coverage, execution of individual assertions, per-method cost, or isolation behavior.
+- **Unresolved questions.** For each consequential uncertainty, identify the observation or later trial that would resolve it and the work depending on that answer.
+- **Trial preservation.** The later trial preserves every baseline expectation. Isolation improvements are permitted and labeled. If preserving an expectation requires reconstructing the old machinery, record blocked preservation and leave its test unmigrated. Corrections to flagged expectations follow the trial as separate labeled changes.
 
 ## Current PW boundary and comparison targets
 
@@ -14,15 +20,15 @@ The following observations are grounded in PW source at `95a08b7`. Recheck them 
 
 - [tests/run.sh](../../run.sh) enters [test_cli.py](../../lib/test_cli.py), which selects work from [catalog.json](../../catalog.json). The public case is `preflight/build_provenance_controls`; its declared equipment is `clang`, without a distribution-app requirement.
 - [The preflight entry](run.sh) starts that case, calls `test_check_python`, retains `artifacts/assertions.log`, and emits the outer result. [case.sh](../../lib/case.sh) captures both streams and refuses a nonzero checker exit before the success event. The checker currently ends in `unittest.main(verbosity=2)`.
-- [python_start.sh](../../lib/python_start.sh) resolves and checks the Homebrew `python@3.14` interpreter and rejects most inherited `PYTHON*` variables. `test_check_python` starts that interpreter with `-B -S`. The checker sets `PYTHON = sys.executable`, imports production helpers in-process, and launches subprocesses. Introducing a pytest host environment can therefore change tested inputs unless those boundaries are kept explicit. The investigation does not depend on a Python upgrade or interpreter migration.
+- [python_start.sh](../../lib/python_start.sh) resolves and checks the Homebrew `python@3.14` interpreter and rejects most inherited `PYTHON*` variables. `test_check_python` starts that interpreter with `-B -S`. The checker sets `PYTHON = sys.executable`, imports production helpers in-process, and launches subprocesses. Introducing a pytest host environment can therefore change tested inputs unless those boundaries are kept explicit.
 - The dispatcher owns case selection, prerequisites, checkout locking, outer accounting, interruption, and evidence retention. [suite_run.py](../../lib/suite_run.py) is the execution boundary. [Dispatcher controls](../dispatcher/check.py) already exercise the public command with constructed failures, retain streams and exit receipts, inspect summaries/journals, and check that an ordinary failure does not suppress a later passing case. [Cancellation controls](../dispatcher/check_cancellation.py) separately observe signal delivery and descendant exit.
 
-These are concrete starting points within `check_build_provenance.py`, not a completed inventory:
+Candidate targets within `check_build_provenance.py`:
 
 | Target | Candidate organization | Behavior or uncertainty to preserve |
 | --- | --- | --- |
 | `RecordTests.test_records_are_validated_by_shape_in_every_reader` | Named independent faults applied to fresh copies of an accepted record. | Each fault reaches both the shape checker and bundle reader. Retain accepted neighbours and the separate metadata/signature cases; expectations must remain independent of the production validator. |
-| `RecordTests.test_records_are_bounded_redacted_and_complete` | Isolated mutable input per fault, with authored expected diagnostic codes. | The current loop restores the record after assertions inside `subTest`; a failure can skip restoration and affect the next variant. This is an inspected risk, not a reproduced failure. Any isolation improvement must be identified in the comparison. |
+| `RecordTests.test_records_are_bounded_redacted_and_complete` | Isolated mutable input per fault, with authored expected diagnostic codes. | The current loop restores the record after assertions inside `subTest`; a failure can skip restoration and affect the next variant. This is an inspected risk, not a reproduced failure. |
 | `StampTests.test_stamp_states_are_decided_without_adopting_unknowns` and `StampFixture` | A prepared checkout plus a visible stateful sequence. | Preserve publication, unchanged reuse, refusal without rewriting bytes, and extension of only permitted fields. Independent malformed-stamp inputs may separate; lifecycle transitions should stay understandable. |
 | `own`, lock/process controls, and environment-preservation checks | Fixtures may prepare resources while specialized observations remain explicit. | Lock handoff, descendant lifetime, raw environment comparisons, and deadlines are subjects of the checks, not incidental runner machinery. |
 
@@ -30,7 +36,7 @@ These are concrete starting points within `check_build_provenance.py`, not a com
 
 ## Four patterns to evaluate
 
-The links pin the inspected source revisions. The summaries carry the findings needed for this plan; consult the linked implementations and their supporting fixtures when a specific transfer question needs more detail.
+The external findings are source-derived from the revisions pinned below, inspected on 2026-10-26. No external tests or PW migration prototypes were executed. Consult the linked implementations, supporting fixtures, and invocation paths when a transfer question needs more detail.
 
 ### Zephyr: outer authority and prepared resources
 
@@ -84,29 +90,29 @@ Borrow the synthetic-scenario technique to test the eventual PW invocation and r
 
 ## Investigation
 
-1. **Establish the current boundary.** Trace how `check_build_provenance.py` is invoked, how its tests are selected and executed, and how failures, output, cleanup, and evidence reach the existing dispatcher. Identify the responsibilities pytest should assume and those that should remain with the surrounding infrastructure. Examine the dependency and interpreter boundary without making the investigation contingent on a particular Python version or interpreter migration.
+1. **Establish the current boundary.** Trace how `check_build_provenance.py` is invoked, how its tests are selected and executed, and how failures, output, cleanup, and evidence reach the existing dispatcher. Identify the responsibilities pytest should assume within that boundary.
 
-2. **Inventory the file and freeze a comparison baseline.** Examine its `unittest` classes, fixtures, setup and cleanup behavior, assertions, subprocess controls, and shared helpers. Distinguish organizational machinery from meaningful test-specific behavior. The baseline is derived from source and covers the whole file: record the source revision and every test method and meaningful variant, including `subTest` variants, what they exercise and assert, their inputs and expectations, relevant state transitions, and how outcomes are recorded. Compact tables may describe variants without repeating each loop iteration. The representative selection in step 5 does not narrow this coverage. This gives a later migration a concrete baseline against which to assess organizational changes; write it as the separate record described under Deliverable. Flag questionable expectations separately: freezing the comparison does not make every expectation a permanent requirement, and revising one must remain distinguishable from changing the machinery that executes it.
+2. **Freeze a whole-file comparison baseline.** Inventory the `unittest` classes, fixtures, setup and cleanup behavior, assertions, subprocess controls, and shared helpers. Distinguish organizational machinery from meaningful test-specific behavior. Derive the baseline from source: record the revision and every test method and meaningful variant, including `subTest` variants, what they exercise and assert, their inputs and expectations, relevant state transitions, and how outcomes are recorded. Compact tables may describe variants without repeating each loop iteration. Flag questionable expectations in the record.
 
-   Separately, record an execution reference: the run's path, source revision, command/configuration, interpreter, duration, method count compared with the inventory, and the shape of retained evidence. Reuse and fresh execution follow the applicability rules below. Matching method counts are a cross-check, not proof of unconditional collection or absence of skips. Do not infer `subTest` coverage, execution of individual assertions, per-method cost, or isolation behavior from a passing log.
+3. **Apply the four pattern families.** Select a few patterns worth trying, identifying the conditions that make them work and important differences from PW.
 
-3. **Apply the four pattern families.** Use the findings above to identify a few patterns worth trying, the conditions that make them work, and important differences from PW. Consult the linked test bodies and supporting fixtures or invocation paths for unresolved transfer questions. The external survey is complete; keep further comparison bounded to these four projects.
+4. **Evaluate subordinate integration.** Design pytest execution within the existing catalog and dispatcher. Compare running the current tests largely unchanged with gradually adopting pytest fixtures, parametrization, and assertions. Propose how dependencies and plugin/configuration discovery are controlled, which interpreter runs the tested helpers, and whether a structured inner report supplies information the outer case needs. Consider temporary-directory and cache ownership, execution ordering, diagnostics, cleanup, interruption, and retained evidence. Assess the value of an invocation-only transition separately from file-local refactoring.
 
-4. **Evaluate subordinate integration.** Determine how pytest could execute within the existing catalog and dispatcher without replacing their authority. Compare running the current tests largely unchanged with gradually adopting pytest fixtures, parametrization, and assertions. Propose how dependencies and plugin/configuration discovery are controlled, which interpreter runs the tested helpers, and whether a structured inner report supplies information the outer case needs; identify arrangements that still require trial validation. Consider temporary-directory and cache ownership, execution ordering, diagnostics, cleanup, interruption, and retained evidence. Distinguish a useful transitional step from an organizational improvement; do not assume that swapping the invocation alone reduces maintenance.
+5. **Examine representative refactors and remaining variants.** Select tests with materially different characteristics, including independent variations and an intentionally stateful sequence. Describe each under a recognizable common pytest pattern: what machinery could disappear, and what might become harder to understand or verify. For necessary departures, distinguish real requirements, inherited arrangements that can change, and poor fits. Keep exceptions understandable and local. Propose a later trial that adopts the patterns far enough to evaluate these tradeoffs.
 
-5. **Examine representative refactors and the variants that remain.** Select several tests with materially different characteristics. Include independent variations and an intentionally stateful sequence where the file provides them. Describe how each might look under a recognizable common pytest pattern, what existing machinery could disappear, and what might become harder to understand or verify. Propose a later trial that adopts the pattern far enough to experience its advantages and constraints. The purpose is both to reduce ordinary infrastructure maintained by PW and to discover which inherited choices become unnecessary when pytest supplies the organization; reconstructing the old framework through elaborate fixtures and hooks would obscure that learning. Examine necessary departures: do they preserve a real requirement, accommodate an inherited arrangement that can change, or indicate a poor fit? Keep necessary exceptions understandable and local while retaining the different forms the tests' jobs require. Identify which judgments need the trial rather than source inspection.
+6. **Estimate the work.** Estimate initial integration, subsequent file-local refactoring, and verification, distinguishing mechanical work from changes requiring judgment. Explain how successive stages could show which exceptions persist, disappear, or move as more checks adopt the common patterns.
 
-6. **Estimate the work.** Identify the changes needed for initial integration, subsequent file-local refactoring, and verification. Distinguish mechanical work from changes requiring judgment. Explain how a later implementation could compare the frozen baseline with the migrated checks while keeping deliberate expectation changes identifiable. Include how successive stages within this file could show which exceptions persist, disappear, or move as more checks adopt the common patterns.
+## Verification to design
 
-## Verification to design, and evidence limits
-
-The assessment must explain how a later trial would compare named scenarios, assertions, state transitions, and failure continuation with the frozen baseline. Equal method/parameter counts or a zero exit do not establish preservation. Keep deliberate expectation revisions and isolation improvements identifiable. Label source-derived findings separately from measured behavior; no passing migration evidence exists from this investigation yet.
-
-The trial preserves every baseline expectation. Isolation improvements are permitted and labeled. An expectation that cannot be preserved without reconstructing the old machinery is recorded as blocked preservation and its test stays unmigrated. Corrections to flagged expectations follow the trial as separate labeled changes, each updating its baseline row, so that the organizational comparison and the expectation comparison are read apart.
+Design the later trial's comparisons of named scenarios, assertions, state transitions, and failure continuation against the frozen baseline.
 
 For the integration boundary, propose small synthetic suites through the actual PW invocation path with passing, failing, setup-error, teardown-error, combined-failure, empty/deselected, and supported-skip cases. Include a malformed invocation or collection failure. Check the outer result and retained diagnostics, not just inner totals. A passing body with failing teardown must not become success; multiple faults must remain distinguishable. Settle PW's skip and no-test policy explicitly. A body-execution receipt can establish nonexecution after setup failure. Preserve selection and identity accounting without making each inner parameter a new catalog case.
 
 Identify how interruption and fixture cleanup would be checked through the existing process ownership boundary. A raised `KeyboardInterrupt`, normal `finally` cleanup, or observation of a different PID does not establish OS signal delivery or descendant exit. Identify which raw inputs, output, and receipts the trial must retain and which build intermediates belong in scratch.
+
+## Execution reference
+
+Record an execution reference separately from the source baseline: the run's path, source revision, command/configuration, interpreter, duration, method count compared with the inventory, and the shape of retained evidence.
 
 An existing run can supply the execution reference after an applicability check against current scripts, helpers, fixtures, configuration, and equipment. Record the dependency trace and any reviewed exceptions for changed files under [the evidence reuse guidance](../../AGENTS.md#evaluate-and-reuse-evidence); source identity alone does not prove completeness. Run fresh only when no applicable execution reference is available or a named investigative question needs a current observation that the case can supply.
 
@@ -114,25 +120,12 @@ When running the current case, use the repository root and `tests/run.sh --case 
 
 ## Deliverable
 
-The deliverable has two parts.
+Write the baseline from step 2 as a separate record at `records/tests/pytest/`, titled with its revision and linked only from this plan. It is a snapshot; current-behavior corrections it reveals go to the suite README as separate changes. It names no direct invocation of the checker. Each later trial or migration stage appends its comparison row by row, using only the labels preserved, isolation-improved, blocked and revised. A flagged expectation stays in the record until its correction lands, when the row is updated and the commit named. Archive the record under `records/archive/tests/` when this plan closes.
 
-The baseline from step 2 is a separate record at `records/tests/pytest/`, titled with its revision and linked only from this plan. It is a snapshot, not documentation: current-behavior corrections it reveals go to the suite README as separate changes. It names no direct invocation of the checker. Each later trial or migration stage appends its comparison to the record row by row, using only the labels preserved, isolation-improved, blocked and revised; a flagged expectation stays in the record until its correction lands, when the row is updated and the commit named. The record is archived under `records/archive/tests/` when this plan closes.
+Return a short assessment in the task response unless a separate destination is requested. Cite the record by path with its summary counts and flagged expectations. Include:
 
-The assessment is short and cites the record by path with its summary counts and flagged expectations. Write it containing:
-
-- A proposed integration boundary, dependency/interpreter arrangement, a citation of the source-derived comparison baseline record, and a separate execution reference with its applicability assessment.
-- A few useful external patterns, with source references and their transfer limits.
-- Promising and unpromising refactor targets within `check_build_provenance.py`.
-- Significant variants likely to remain, with reasons or unresolved questions and a proposed trial to resolve judgments that need experience with the patterns.
-- A staged effort estimate, including important uncertainties.
-- A verification design covering preservation, reporting failures, cleanup, and evidence ownership; for each unresolved consequential question, the observation or trial that would answer it and the work depending on that answer.
+- The proposed integration and dependency/interpreter arrangement, with the execution reference and its applicability assessment.
+- Useful external patterns and their source references, transfer limits, promising and unpromising refactor targets, and remaining variants.
+- The proposed trial, staged effort estimate, and verification design.
 - The smallest productive first implementation step.
 - Reasons to defer or reject the refactor, if warranted.
-
-Preserve the possibility that pytest integration is worthwhile even if substantial portions of the file remain unchanged. Judge the proposal by whether it reduces infrastructure that requires PW-specific knowledge and makes the remaining special cases clearer, rather than by the proportion converted.
-
-## Scope
-
-Keep proposed migration work within `check_build_provenance.py` and the integration changes necessary to run it subordinately. Inspect surrounding code and related projects as needed to understand that boundary.
-
-Do not propose migrating other test files, replacing PolicyWitness’s dispatcher, or restructuring the wider test system. Leave implementation and changes to existing expectations for a subsequent decision.
