@@ -1,5 +1,9 @@
 # Late-publication fixture
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 Equipment for the late-publication investigation. The fixture drives the
 shipped C worker through the runner's internal driver,
 `runCWorker(_:processCalls:phaseBoundary:)`, reached with `@testable import` as

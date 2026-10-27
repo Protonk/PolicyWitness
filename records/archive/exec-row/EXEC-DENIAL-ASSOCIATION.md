@@ -6,6 +6,10 @@ bytes retain their original provenance. `live_probe_existing.py` requires
 the former application; maintained PolicyWitness cannot reproduce its log
 observations.
 
+Command examples retain the original `records/exec-row/` layout. The archived
+script and patch preserve their recorded bytes; using them requires that layout
+and the pinned former application in a separate checkout.
+
 Problem record for the `exec/spawn` row of the controller's denial-log
 eligibility table. The kernel records a denied worker `posix_spawn` under an
 operation name the row does not admit, so a captured exec denial is never

@@ -41,7 +41,7 @@ in Desktop/Documents/Downloads. The app remained version 0.2.8 build 597 from
 Before/after app inventories agree, and all recorded hashes still match the app.
 
 1. **Direct native sweep.** A separately signed, empty-entitlement
-   [native target](../tests/fixtures/path_query/target.c) compiles and applies one
+   [native target](../../tests/fixtures/path_query/target.c) compiles and applies one
    policy in each fresh process using the compile/apply entrypoints. The shipped
    `sb_api_validator` queries that PID with its normal PATH and NO_REPORT flags.
    After query collection has exited, the parent releases actual read, exclusive
@@ -49,7 +49,7 @@ Before/after app inventories agree, and all recorded hashes still match the app.
    recreates paths under one fixed policy. This fixture is not the PW worker.
 2. **Actual-worker confirmation.** The ordinary PW CLI runs three specimens
    with the unchanged production worker. A
-   [validator observer](../tests/fixtures/path_query/validator_observer.py)
+   [validator observer](../../tests/fixtures/path_query/validator_observer.py)
    forwards requested queries to an unchanged copy of the shipped validator and
    adds independent queries for the paths the host excluded. It saves the full
    native transcript but returns only originally requested records to PW.
@@ -121,18 +121,19 @@ beside identical extra native query returns. Production consumer checks pass.
 
 ## Calibration, verification and retained evidence
 
-All evidence below is gitignored and available only in this local checkout.
-Each run has matching ownership and terminal records, source identities, raw
+The evidence below was gitignored and is not present in this checkout. The
+table records its original locations and results. Each run had matching ownership
+and terminal records, source identities, raw
 streams, exact commands, app inventories and cleanup observations. Checkpoints
 include named source-input copies/hashes; those are not a complete dependency
 proof. No failed historical run was rewritten.
 
 | Run | Source | Result / credit |
 | --- | --- | --- |
-| [Initial native sweep](../tests/out/runs/path-query-investigation-20261014/) `20261014T141457Z_d0ba808a` | `ffa6935` | One exploratory case passed. The initial regex spelling did not select the intended existing target; its raw results are retained, but it is not credited as calibrated regex coverage. |
-| [Initial actual-worker confirmation](../tests/out/runs/path-query-integrated-20261014/) `20261014T141821Z_4b10c3eb` | `4be8be2` | One case passed; three specimens, six collections. |
-| [Calibrated sweep and supporting checks](../tests/out/runs/path-query-calibrated-20261014/) `20261014T141953Z_88eafbea` | `9aafcea` | Ten of ten passed: both investigations, all six source-drift cases, shell script grouping and dispatcher selection. No skips/unrun. |
-| [Observer cleanup recheck](../tests/out/runs/path-query-observer-recheck-20261014/) `20261014T142317Z_b080924a` | `88ba708` | One case passed after adding explicit ownership/reap receipts for the observer's native-validator children. All three specimens repeated. |
+| Initial native sweep (`tests/out/runs/path-query-investigation-20261014/`) `20261014T141457Z_d0ba808a` | `ffa6935` | One exploratory case passed. The initial regex spelling did not select the intended existing target; its raw results are retained, but it is not credited as calibrated regex coverage. |
+| Initial actual-worker confirmation (`tests/out/runs/path-query-integrated-20261014/`) `20261014T141821Z_4b10c3eb` | `4be8be2` | One case passed; three specimens, six collections. |
+| Calibrated sweep and supporting checks (`tests/out/runs/path-query-calibrated-20261014/`) `20261014T141953Z_88eafbea` | `9aafcea` | Ten of ten passed: both investigations, all six source-drift cases, shell script grouping and dispatcher selection. No skips/unrun. |
+| Observer cleanup recheck (`tests/out/runs/path-query-observer-recheck-20261014/`) `20261014T142317Z_b080924a` | `88ba708` | One case passed after adding explicit ownership/reap receipts for the observer's native-validator children. All three specimens repeated. |
 
 The corrected regex covers both `/private/tmp` and Data-volume spellings and
 adds explicit existing-path calibration. This identifies the initial control's
@@ -141,7 +142,7 @@ The later observer change only strengthens fixture cleanup accounting. The
 native sweep and eight supporting checks retain their original source identity;
 no product source or permanent behavior documentation changed afterward.
 
-The [derived findings](../tests/out/runs/path-query-calibrated-20261014/checkpoint/findings.json)
+The derived findings (`tests/out/runs/path-query-calibrated-20261014/checkpoint/findings.json`)
 record the counts above. Exact observations establish all 219 calibrated native
 targets reaped with exit 0, and the final three PW workers, six wrappers and six
 native-validator children reaped. Owned temporary directories are absent. Earlier

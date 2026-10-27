@@ -4,6 +4,12 @@ Records of the runtime investigation of PolicyWitness as a running program,
 and the evidence behind them. The first built-in-runner cycle, two
 log-observer pilots and the host-lifetime, phase-barrier, late-publication
 and pre-touch investigations of build 853 are complete.
+The original raw runs are not retained. Committed reports, summaries, manifests,
+checksums and terminal records remain; calculations requiring raw observations
+cannot be reproduced from these exports alone. All fixture commands describe
+the original `records/performance/` layout and recorded dependencies. Scripts
+and captured evidence retain their original bytes and paths; this archive is
+not a runnable replacement for that environment.
 The first-cycle and log-observer procedures and their source files are
 historical, unmaintained equipment for those runs. They require the recorded pre-retirement application and inputs;
 they are not measurement commands for the maintained application. The
@@ -70,10 +76,8 @@ Layout:
   without its raw files.
 - `evidence/<control-batch>/`: the external terminal transcripts, observed exit
   statuses and assertion ledger for each bounded control or pilot in that batch.
-- `runs/<run-id>/`: the complete raw output of a run, shared specimen copies
-  and one directory per invocation with argv, stdout, stderr and status. Ignored
-  by git and present only in the checkout that produced it; a record that
-  cites a raw file says so.
+- `runs/<run-id>/` (not retained): the original ignored raw output, shared
+  specimen copies and per-invocation argv, stdout, stderr and status.
 
 A run identifier is `<UTC stamp>-<config>-b<build number>`; host-lifetime
 runs are `<UTC stamp>-hostlife-<label>`, phase-barrier runs

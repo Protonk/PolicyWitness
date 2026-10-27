@@ -1,5 +1,9 @@
 # Late publication during worker exit grace: build 853
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 All four controlled cases were reached, through the driver seam (three runs
 each) and through the public CLI (one run each). When the host's sentinel
 deadline expired while the worker was blocked inside a released attempt, the
@@ -39,7 +43,7 @@ The run is
 - no worker process remained after any unit or at the end;
 - every owned FIFO was removed.
 
-Raw files are local to this checkout.
+Original raw files are not retained; the committed derived evidence remains.
 
 Differences from production:
 
@@ -56,7 +60,7 @@ worker instruction, schema or production timeout was changed.
 
 ## The implementation as verified
 
-Driver, [`CWorker.swift`](../../runner/Sources/PWRunnerCore/CWorker.swift):
+Driver, [`CWorker.swift`](../../../runner/Sources/PWRunnerCore/CWorker.swift):
 
 1. The sentinel loop polls at 2 ms (line 1283).
 2. On its exit the driver stores `exit_requested` (line 1380) and records the
@@ -70,10 +74,10 @@ Driver, [`CWorker.swift`](../../runner/Sources/PWRunnerCore/CWorker.swift):
 
 Orchestrator: any run whose disposition stop reason is `sentinel_deadline` is
 classified `runner_timeout`
-([`CWorkerOrchestrator.swift`](../../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift),
+([`CWorkerOrchestrator.swift`](../../../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift),
 line 1407), whatever the final snapshot holds.
 
-Worker, [`pw_probe_runner.c`](../../controller/tools/pw_probe_runner/pw_probe_runner.c):
+Worker, [`pw_probe_runner.c`](../../../controller/tools/pw_probe_runner/pw_probe_runner.c):
 
 - `run_attempt` stores the slot's `completed` flag after the native work
   returns (line 1530).
@@ -200,7 +204,7 @@ Observed behavior agrees with the user guide:
 - `runner_timeout` "remains a timeout if the child voluntarily exits during
   grace."
 
-It agrees with [WORKER.md](../../docs/WORKER.md): the exit request "still
+It agrees with [WORKER.md](../../../docs/WORKER.md): the exit request "still
 cancels a worker waiting for release; grace and termination remain fallback
 cleanup". It agrees with the failure-propagation contract's rows for a
 voluntary exit during grace and for `done` published during grace.

@@ -1,5 +1,9 @@
 # Host lifetime investigation: build 853
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 On the built-in runner, launchd started a separate host generation for every
 client process, in a launchd domain named for that client. For all 49
 invocations that received a reply, launchd recorded that the host exited from
@@ -44,7 +48,7 @@ The pilot 1 start snapshot shows a Python process not started by this
 harness (parent PID 96824) at 100% CPU, absent from later snapshots.
 
 Every invocation used
-[`specimen_mach_deny.json`](../../tests/fixtures/pw_runner/specimen_mach_deny.json)
+[`specimen_mach_deny.json`](../../../tests/fixtures/pw_runner/specimen_mach_deny.json)
 (SHA-256 `fe7c5e04…e604`): `(version 1) (allow default) (deny mach-lookup)`,
 one step, one validator collection. Each run therefore has one worker and one
 validator. The harness
@@ -66,19 +70,19 @@ validator. The harness
 Run identifiers begin `20261024T`. All seven series completed their schedules
 within their ceilings. Every listed raw checksum verified, with no unattested
 files. No observed owned process was alive at any series end. Controller exit
-was 0 for every `ok` and 1 for every `xpc_timeout`. Raw directories are under
-`records/performance/runs/` and are local to this checkout. The committed
+was 0 for every `ok` and 1 for every `xpc_timeout`. Original raw directories under
+`records/performance/runs/` are not retained. The committed
 `summary.json`, `units.json` and `run-record.json` under each `evidence/` link
 were written by `analyze.py` from verified raw files.
 
 ## The source-level model
 
-The client ([`main.swift`](../../runner/Clients/PWRunnerClient/main.swift))
+The client ([`main.swift`](../../../runner/Clients/PWRunnerClient/main.swift))
 reads the whole request and opens one `NSXPCConnection(serviceName:)`. It
 makes one `runSpecimen` call, waits up to `--timeout-ms`, writes the reply
 or a synthetic `xpc_timeout`/`xpc_error`, and exits.
 
-In the host ([`PWRunnerService.swift`](../../runner/Sources/PWRunnerCore/PWRunnerService.swift)),
+In the host ([`PWRunnerService.swift`](../../../runner/Sources/PWRunnerCore/PWRunnerService.swift)),
 the listener delegate authorizes the caller when it accepts a connection, and
 every connection's service object shares one `PWRunnerAdmission`.
 `runSpecimen` first calls `claim()`:
@@ -92,17 +96,17 @@ every connection's service object shares one `PWRunnerAdmission`.
 The admission rule is therefore a per-process flag. Process termination is a
 separate scheduled event. The reply's `pid` is the worker's when a worker was
 launched, and the host's `getpid()` for pre-worker replies. The controller
-([`runner_acquisition.rs`](../../controller/src/runner_acquisition.rs)) retries
+([`runner_acquisition.rs`](../../../controller/src/runner_acquisition.rs)) retries
 after a qualifying `already_ran` only for a Mach-service (external) runner;
 the built-in path makes one client attempt.
 
 The documentation states:
 
-- [ARCHITECTURE.md](../../docs/ARCHITECTURE.md): the host "exits shortly after
+- [ARCHITECTURE.md](../../../docs/ARCHITECTURE.md): the host "exits shortly after
   replying" (in the topology table, "50 milliseconds after replying").
 - The same document: after a client timeout, "Host work continues
   independently."
-- [LIMITS.md](../../docs/LIMITS.md) `host_exit_delay`: "The unsandboxed host
+- [LIMITS.md](../../../docs/LIMITS.md) `host_exit_delay`: "The unsandboxed host
   exits when the delay elapses."
 - LIMITS.md's grounding row: flushing and scheduling are source-inspected, not
   guaranteed.

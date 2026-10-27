@@ -15,12 +15,12 @@ responsibility; inline Rust tests are counted with tests.
 
 | Area and location | Code lines | Share | General responsibility |
 | --- | ---: | ---: | --- |
-| Rust runtime — [controller/src](../../controller/src/) | 7,093 | 8.0% | CLI dispatch, request preparation, runner selection and registry, provenance, reply admission, evidence projection and the `sbpl-check` helper. |
-| Swift host/client and C shim — [runner/Sources](../../runner/Sources/), [Clients](../../runner/Clients/), [Services](../../runner/Services/) | 6,350 | 7.1% | XPC transport, wire types, admission, child lifetimes, phase ordering and result assembly. |
-| Native helpers and headers — [controller/tools](../../controller/tools/) | 2,409 | 2.7% | Policy compilation/application, probe attempts, live-process sandbox queries, extension issuance and shared-memory publication. |
-| Tests, harnesses and fixture programs — [tests](../../tests/), [runner/Tests](../../runner/Tests/), Rust test-only code | 64,090 | 72.0% | Independent evidence readers, unit and integrated controls, native observers, fixture builders, dispatch and result accounting. |
-| Build/release/shared tooling — [build.sh](../../build.sh), build manifests, [notarize.py](../../notarize.py), selected [tests/lib](../../tests/lib/) helpers | 6,553 | 7.4% | Compilation, bundle assembly, signing/provenance, release acceptance and publication, interpreter/toolchain checks and checkout locking. |
-| Documentation and contract generators — [docs/*.py](../../docs/) | 2,576 | 2.9% | Generate and check architecture/build accounts, limits, contract versions and worker identity; parse documentation. |
+| Rust runtime — [controller/src](../../../controller/src/) | 7,093 | 8.0% | CLI dispatch, request preparation, runner selection and registry, provenance, reply admission, evidence projection and the `sbpl-check` helper. |
+| Swift host/client and C shim — [runner/Sources](../../../runner/Sources/), [Clients](../../../runner/Clients/), [Services](../../../runner/Services/) | 6,350 | 7.1% | XPC transport, wire types, admission, child lifetimes, phase ordering and result assembly. |
+| Native helpers and headers — [controller/tools](../../../controller/tools/) | 2,409 | 2.7% | Policy compilation/application, probe attempts, live-process sandbox queries, extension issuance and shared-memory publication. |
+| Tests, harnesses and fixture programs — [tests](../../../tests/), [runner/Tests](../../../runner/Tests/), Rust test-only code | 64,090 | 72.0% | Independent evidence readers, unit and integrated controls, native observers, fixture builders, dispatch and result accounting. |
+| Build/release/shared tooling — [build.sh](../../../build.sh), build manifests, [notarize.py](../../../notarize.py), selected [tests/lib](../../../tests/lib/) helpers | 6,553 | 7.4% | Compilation, bundle assembly, signing/provenance, release acceptance and publication, interpreter/toolchain checks and checkout locking. |
+| Documentation and contract generators — [docs/*.py](../../../docs/) | 2,576 | 2.9% | Generate and check architecture/build accounts, limits, contract versions and worker identity; parse documentation. |
 | **Total** | **89,071** | **100%** | |
 
 Across these areas, the language distribution is **Python 43.0k**, **Rust
@@ -30,7 +30,7 @@ and tooling; the runtime is approximately 45% Rust, 40% Swift and 15% C/headers.
 
 The test total includes 35.0k lines of suite programs, 9.2k of Rust tests and
 test support, and 8.2k of Swift tests. The remainder is fixture programs and
-shared harness code. The [catalog](../../tests/catalog.json) registers 235
+shared harness code. The [catalog](../../../tests/catalog.json) registers 235
 cases across 41 suites containing cases, plus the `opt_in` selection group.
 
 ## Runtime concentration and responsibilities
@@ -39,11 +39,11 @@ Five files contain **7,921 lines: half of the runtime**.
 
 | File | Runtime code lines | Responsibility |
 | --- | ---: | --- |
-| [PWRunnerAPI.swift](../../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | 2,337 | Request/reply types, decoding/admission and evidence records. |
-| [disposition.rs](../../controller/src/disposition.rs) | 1,649 | Validate lifecycle claims against supporting observations and project execution diagnostics. |
-| [pw_probe_runner.c](../../controller/tools/pw_probe_runner/pw_probe_runner.c) | 1,448 | Apply the policy, perform ordered attempts and publish native observations. |
-| [CWorker.swift](../../runner/Sources/PWRunnerCore/CWorker.swift) | 1,313 | Host-side shared-memory layout, worker launch, phase handshake, collection and child lifecycle. |
-| [CWorkerOrchestrator.swift](../../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | 1,174 | Translate requests, plan queries, associate observations and assemble classifications/comparisons. |
+| [PWRunnerAPI.swift](../../../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | 2,337 | Request/reply types, decoding/admission and evidence records. |
+| [disposition.rs](../../../controller/src/disposition.rs) | 1,649 | Validate lifecycle claims against supporting observations and project execution diagnostics. |
+| [pw_probe_runner.c](../../../controller/tools/pw_probe_runner/pw_probe_runner.c) | 1,448 | Apply the policy, perform ordered attempts and publish native observations. |
+| [CWorker.swift](../../../runner/Sources/PWRunnerCore/CWorker.swift) | 1,313 | Host-side shared-memory layout, worker launch, phase handshake, collection and child lifecycle. |
+| [CWorkerOrchestrator.swift](../../../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | 1,174 | Translate requests, plan queries, associate observations and assemble classifications/comparisons. |
 
 The process structure is small, with distinct responsibilities:
 

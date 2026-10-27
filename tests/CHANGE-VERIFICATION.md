@@ -19,9 +19,7 @@ how to choose default membership.
 
 Follow the linked accounts for the actual triggers, required observations and
 execution conditions. These routes include default and non-default controls;
-they do not exhaust the verification relevant to a change. A route marked
-**Requirement unresolved** identifies a specific unsettled requirement at its
-linked entry; its unambiguous instructions still apply.
+they do not exhaust the verification relevant to a change.
 
 | Change or investigative question | Verification account |
 | --- | --- |
@@ -34,7 +32,7 @@ linked entry; its unambiguous instructions still apply.
 | BYOXPC selection, installation, registry or cleanup; shared response/comparison contracts | [Controller verification guidance](../controller/AGENTS.md#verify-the-changed-boundary), [BYOXPC shared cases](#runner_byoxpc), [registry recovery](#registry-recovery) and [default-location control](#byoxpc-default-location). |
 | BYOXPC dossier records, native extension execution, phase handling, issuer signing or provenance | [Dossier witness](#byoxpc-dossier-witness) and [extension and phase witness](#byoxpc-extension-and-phase-witness). |
 | Built-in or external caller authorization; host admission/exit, client re-acquisition or launchd throttle | [Built-in caller authentication](#built-in-caller-authentication), [external caller authentication](#runner_auth_external) and [occupied-claim attribution](#byoxpc-occupied-claim-attribution), including session-cleanup and registry triggers. |
-| Build, toolchain, signing or artifact inspection — **Requirement unresolved** for broader toolchain-switch acceptance | [Signed-artifact controls](#signed-artifact-controls), [build guards](#build-guard-controls), [build refusals](#build-refusal-controls), [translated-build refusals](#translated-build-refusal-controls) and [toolchain-switch controls and qualification](#build-toolchain-switch-controls). Their individual triggers and equipment conditions apply; the qualification concerns only the broader acceptance scope. |
+| Build, toolchain, signing or artifact inspection | [Signed-artifact controls](#signed-artifact-controls), [build guards](#build-guard-controls), [build refusals](#build-refusal-controls), [translated-build refusals](#translated-build-refusal-controls) and [toolchain-switch controls](#build-toolchain-switch-controls). Their individual triggers and equipment conditions apply. |
 | Native file-extension authority, call representation, issuer lifetime or allocation assumptions; experiment or checker changes | [Native sandbox-extension experiment](#native-sandbox-extensions). |
 
 ## Select and run a control
@@ -349,15 +347,7 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   needed.
 - **Execution considerations:** Two fresh full builds under different toolchains with
   keychain access.
-- **When to run:** After changing the stamp's fields or comparison.
-- **Requirement unresolved — broader acceptance:** The instruction also calls
-  for this control for "acceptance of the build provenance work", without defining
-  which present-day changes that covers or whether it is a recurring mandatory
-  selection beyond stamp changes. The [build account](../docs/BUILD.md#refusals)
-  and [suite account](suites/preflight/README.md#success-criteria) describe the
-  control but do not settle that scope. The stamp-change trigger remains in force;
-  the broader acceptance requirement is neither waived nor extended to all build
-  changes. See the [examination item](VERIFICATION-OUTFLOW-EXAMINATION-PLAN.md#build-provenance-acceptance-scope).
+- **When to run:** Required after changing the toolchain stamp's fields or comparison.
 - **Artifacts:** `<run>/suites/preflight/build_toolchain_switch_controls/artifacts/`
   holds the equipment probes, the distinct and equal fields, each build's raw
   output, receipts, stamp and record, and the switch summary.

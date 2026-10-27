@@ -6,8 +6,7 @@ fails to establish, and where activities that share the name *test* do
 different jobs or where differently named activities do the same job. It
 describes the tree at one revision. It proposes nothing; findings are
 statements about what a check does and does not do, cited to its lines.
-All 235 catalog cases are accounted for. The batch-group reading required by
-the [survey plan](../../tests/TEST-WORK-SURVEY-PLAN.md) is recorded in Appendix B,
+All 235 catalog cases are accounted for. The batch-group reading is recorded in Appendix B,
 including materially different work inside a group. The inspection limits
 below apply to all claims about coverage.
 
@@ -56,7 +55,7 @@ below apply to all claims about coverage.
   accounts for cases; Appendix B accounts for their
   groups. Neither the survey nor the review ran a case or credited a runtime
   result.
-- Older accounts: the opt-in survey (`records/tests/OPT-IN-REPORT.md`)
+- Older accounts: the opt-in survey (`records/archive/tests/OPT-IN-REPORT.md`)
   examined `2f23cad`, thirteen commits earlier; the intervening commits are a
   wording change, the commit recording that survey, the test-execution
   consolidation (`bcc21fa` to `87d5fb2`, which closed direct invocation of
@@ -112,8 +111,8 @@ ID with underscores replaced by spaces (`test_cli.py:37`).
 - Standalone `cargo test` and `swift run PWRunnerCoreTests`: local debugging
   of the crate or package under the tool's own rules; `tests/README.md:238-246`
   says they are not runs of any catalog case.
-- `records/performance/` harnesses: historical investigation equipment for a
-  retired application (`records/performance/README.md`); not registered, not
+- `records/archive/performance/` harnesses: historical investigation equipment for a
+  retired application (`records/archive/performance/README.md`); not registered, not
   inspected. `tests/build-evidence.py` is a build tool and
   `tests/compare_json_fixture.py` a two-file JSON differ; neither is a test.
 

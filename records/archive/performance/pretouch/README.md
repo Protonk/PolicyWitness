@@ -1,5 +1,9 @@
 # Pre-touch fixture
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 Equipment for the pre-touch investigation: does touching the shared evidence
 region before the worker applies its policy change whether the worker can
 publish into it afterwards? Nothing here is part of the application; the

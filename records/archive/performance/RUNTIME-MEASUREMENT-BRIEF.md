@@ -124,8 +124,8 @@ On this successful path `runner_result.pid` is the worker PID. It cannot
 establish a separate count of host processes. Summary format 2 preserves that
 field as `runner_result_pid` without assigning it a host role.
 
-All raw directories are under `records/performance/runs/`, gitignored and
-available only in this checkout. The corresponding `evidence/<run-id>/`
+The original raw directories under `records/performance/runs/` were gitignored
+and are not retained. The corresponding `evidence/<run-id>/`
 directories hold manifests, conditions, checksums and summaries; the control
 batch directories retain each run's external terminal records. Their checksum paths refer to the full raw directory; the exported
 metadata directory is not a complete copy of the raw evidence.

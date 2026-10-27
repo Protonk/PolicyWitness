@@ -1,5 +1,9 @@
 # Runtime investigation, first cycle: build 841
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 The operator-run series completed 1,452 invocations in 473.357 s (7 min
 53 s), with complete evidence and no detected system sleep. Each of the
 11 cells has 132 observations. Capture-cell median wall spans were
@@ -58,8 +62,8 @@ No detected system sleep during invocations does not exclude display waking,
 unlocking or other user interaction; the operator's waking description does
 not identify which of those events occurred.
 
-The complete raw directory is `records/performance/runs/20261023T212050Z-short-b841/`;
-it is gitignored and available only in the producing checkout. Committed
+The original raw directory was `records/performance/runs/20261023T212050Z-short-b841/`;
+its ignored contents are not retained. Committed
 [evidence and per-observation summaries](evidence/20261023T212050Z-short-b841/summary.json)
 retain the manifest, conditions, status accounting and distributions.
 [Analysis calculations](evidence/20261023T212050Z-short-b841/analysis.json) and their
@@ -228,7 +232,8 @@ an independent host identity. Summary format 2 calls the field
 no distinct-host count. The reader correction and re-export check are recorded
 in `reader-correction.json`: only the PID label, summary version and its
 explanation changed; timing statistics, counts and exclusions are identical.
-Original exports remain in commit `1fb5a52`; all raw files are unchanged.
+Original exports remain in commit `1fb5a52`; that correction left raw files
+unchanged. The original raw files are not retained in this archive.
 
 ## Interpretation and unresolved boundaries
 

@@ -1,5 +1,9 @@
 # Supplementary log collection: two build-841 pilots
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 Both pilots completed their 44 planned invocations with complete evidence and
 cleanup: 65.950 s and 65.607 s against separate 180 s ceilings. Direct historical
 `/usr/bin/log show` invocations took 649–695 ms across the tested conditions,
@@ -66,8 +70,8 @@ Evidence:
   [analyze.py](log-observer/analyze.py).
 - [Final preparation-control ledger](evidence/20261023T230543377500Z-log-preparation-controls/controls.json).
 
-Complete raw output is under `records/performance/runs/<run-id>/`, gitignored
-and available only in this checkout. New raw directories are mode 0700 and files
+Original raw output under `records/performance/runs/<run-id>/` was gitignored
+and is not retained. Raw directories were mode 0700 and files
 were created under a 077 umask. Raw logs are not copied into derived evidence:
 content-level comparisons require those local files. Exported checksum lists
 attest the named raw files, not a portable copy of them.
@@ -263,7 +267,7 @@ No speedup, batching, streaming, caching or evidence-semantics proposal follows
 from these observations. A later investigation may narrowly instrument a
 consequential unresolved boundary; these results do not require that change.
 
-Reproduce the checks/calculations from retained local raw files with:
+The historical reproduction command required the original raw files:
 
 ```sh
 tests/lib/python.sh records/performance/log-observer/analyze.py

@@ -1,5 +1,9 @@
 # Host-lifetime observation harness
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 Equipment for the host-lifetime investigation recorded in
 `HOST-LIFETIME-INVESTIGATION-REPORT.md`.
 It launches ordinary `policy-witness run` invocations against an existing app

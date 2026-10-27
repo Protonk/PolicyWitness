@@ -1,5 +1,9 @@
 # Phase-barrier measurement fixture
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 Equipment for the phase-barrier investigation. It drives the shipped C worker
 (`dist/PolicyWitness.app/.../pw-probe-runner`) through the runner's internal
 driver, `runCWorker(_:phaseBoundary:)`, reached with `@testable import` as

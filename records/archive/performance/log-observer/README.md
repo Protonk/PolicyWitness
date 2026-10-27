@@ -1,5 +1,9 @@
 # Log-observer pilot procedure
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 Historical, unmaintained equipment for the completed build-841 investigation.
 The live commands below require the former observer and CLI in the
 [archived source tree](https://github.com/Protonk/Observer/tree/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source);

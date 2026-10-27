@@ -1,5 +1,9 @@
 # Pre-touching the evidence region: build 853
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 Under the conditions tested, pre-touching the shared evidence region did not
 change whether a sandboxed process could publish into it after applying a
 restrictive profile. A process that had applied `(version 1)`, `(version 2)`
@@ -52,12 +56,12 @@ It ran 105 units in a recorded shuffled order, seed 20261024:
 - the unified log returned 211 kernel sandbox reports naming either
   executable in the run's window, every one attributable to a unit's process.
 
-Raw files are local to this checkout. A one-repeat pilot of the same schedule
+Original raw files are not retained. A one-repeat pilot of the same schedule
 (48 units, all published) ran first into scratch and is not retained.
 
 ## What pre-touching is in the implementation
 
-Host, [`CWorker.swift`](../../runner/Sources/PWRunnerCore/CWorker.swift):
+Host, [`CWorker.swift`](../../../runner/Sources/PWRunnerCore/CWorker.swift):
 `runCWorker` creates the object with `shm_open`, unlinks it, sizes it with
 `ftruncate` and maps it once (`MAP_SHARED`, read-write). It then zeroes the
 whole region with `memset` (line 990), writes the header, slots and
@@ -67,7 +71,7 @@ already writes every byte of every page, so the page loop is a second write
 to pages the host has already backed. The host comment says as much: touching
 "does not establish worker page residency or eliminate post-apply faults".
 
-Worker, [`pw_probe_runner.c`](../../controller/tools/pw_probe_runner/pw_probe_runner.c):
+Worker, [`pw_probe_runner.c`](../../../controller/tools/pw_probe_runner/pw_probe_runner.c):
 `map_region` (line 561, called at 1648) makes the worker's own mapping before
 compilation. Before `sandbox_apply` (line 1945) the worker writes the
 evidence header (first progress word at line 1663) and, for every populated

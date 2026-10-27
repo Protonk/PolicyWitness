@@ -1,5 +1,9 @@
 # Phase barrier under delayed collection: build 853
 
+> Archive availability: original raw runs are not retained. Reproduction
+> procedures describe the original `records/performance/` layout and pinned
+> environment; committed derived evidence remains available.
+
 While the host held the phase-boundary callback, the sandboxed worker ran on
 one CPU for essentially the whole interval. Over 200 ms holds its CPU was
 0.957–0.998 of the observed window, and over 800 ms holds 0.993–1.000, almost
@@ -49,7 +53,7 @@ either end.
 All raw checksums verified with no unattested files. The measured series ran
 every planned unit; 30 distinct worker generations were identified, and none
 survived its unit or the run. The `measure.py` that ran it has SHA-256
-`f6f39c6b…`, and the raw directories are local to this checkout. The
+`f6f39c6b…`; the original raw directories are not retained. The
 measured order, seed 20261024, is in that run's `summary.json`. In brief,
 across sequences 0–29, the three hold-0, 200 and 800 boundary conditions
 recur in all five rounds. The dense, unsampled and deadline conditions fall
@@ -57,7 +61,7 @@ in rounds one to three.
 
 ## The implementation as verified
 
-Worker, [`pw_probe_runner.c`](../../controller/tools/pw_probe_runner/pw_probe_runner.c),
+Worker, [`pw_probe_runner.c`](../../../controller/tools/pw_probe_runner/pw_probe_runner.c),
 `wait_for_proceed` (line 1560):
 
 - It stores `arrived`, then samples continuous time to start its own
@@ -72,7 +76,7 @@ Worker, [`pw_probe_runner.c`](../../controller/tools/pw_probe_runner/pw_probe_ru
 - The allowance defaults to 60,000 ms (line 292) and is set by
   `--proceed-wait-ms`.
 
-Driver, [`CWorker.swift`](../../runner/Sources/PWRunnerCore/CWorker.swift):
+Driver, [`CWorker.swift`](../../../runner/Sources/PWRunnerCore/CWorker.swift):
 
 - After observing arrival, the driver calls the `phaseBoundary` callback
   between `clock.mark()` and `clock.excludeSince` (lines 1322–1325), so the
