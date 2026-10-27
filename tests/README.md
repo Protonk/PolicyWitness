@@ -347,7 +347,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `preflight` | Baseline + opt-in | Bundle signatures, layout, evidence hashes and the provenance record against the bytes; offline controls over the lock, stamp, fresh-mode, Cargo-judgment, SDK, signature-display and record readers; release acceptance, publication and cleanup controls; opt-in build guard, refusal and toolchain-switch controls that drive the unchanged build script, and a translated-build refusal control that needs Rosetta. Inspection is read-only; mutations use copies. | App for inspection; clang for the offline helper controls; signing identity and toolchains for opt-ins, Rosetta alone for the translated-build control; offline release controls vary. | [Suite](suites/preflight/README.md) |
 | `source_drift` | Baseline | Source manifests, direct Python ancestry, test registry, documentation contracts, generated copies and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for source and build checks. | [Suite](suites/source_drift/README.md) |
 | `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures, the interpreter boundary at a case and its child, and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
-| `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result; the pytest host's refusals, receipts, lock lifetime and cancellation. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
+| `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
 | `unit` | Baseline | Rust controller/helper contracts, orchestration calls, envelope shape and formatting. Constructed inputs cover interpretation and refusal branches. | Cargo and rustfmt. | [Suite](suites/unit/README.md) |
 | `runner_unit` | Baseline + opt-in | Swift host admission, drivers, lifecycle and evidence encoding; actual transfer replies cross Rust/Python readers. Constructed build-receipt layouts need only Python. Internal SKIP/FAIL output fails the wrapper. | Swift; driver case also needs clang, Cargo and a signed app, without XPC. Launch-descriptor ownership controls require the signed worker. Isolated host setup faults, descriptor collisions and opt-in oracle-sensitivity, confirmed-reap and exec-reader mutations use Swift/clang without the app. | [Suite](suites/runner_unit/README.md) |
 | `integration` | Baseline | CLI and runner envelopes for the request fixtures. | App and XPC. | [Suite](suites/integration/README.md) |
@@ -409,26 +409,6 @@ the API and independent controls.
 creating it. Public finalizers remove that directory for pass, fail and skip
 before writing terminal evidence; interrupted cases retain it inside their run.
 Sources, logs and receipts belong in `PW_TEST_ARTIFACTS`.
-
-### The pytest host
-
-`tests/lib/pytest_host.py` runs a test file under the vendored pytest beneath
-the dispatcher. A case starts it through `test_check_python`, naming a receipt
-path, the collected count it expects and the test file. The parent refuses any
-inherited `PYTEST*` variable, then starts the vendored pytest in a child with
-the pinned interpreter and `-B -S -P`, plugin autoloading disabled, the
-checkout-lock claim's descriptors passed on and no new session, with exactly
-the arguments it chooses: no configuration file, no `conftest.py`, no cache,
-no capture, a base temp directory under the case scratch path, and verbose
-reporting with every duration. The child writes one JSON line per event to the
-receipt. The parent accepts only when the child exited 0, the session finished
-with status 0, the recorded pytest is the vendored pin loaded from the vendored
-directory, something was collected and nothing deselected, every collected item
-has exactly one passed report for each of setup, call and teardown with no
-report for another item, and every subtest report passed; it names the first
-violated rule and exits 1. `preflight/build_provenance_controls` is the one
-case that uses it; [the dispatcher suite](suites/dispatcher/README.md#pytest-host-controls)
-holds its independent controls.
 
 ### SwiftPM build receipts
 

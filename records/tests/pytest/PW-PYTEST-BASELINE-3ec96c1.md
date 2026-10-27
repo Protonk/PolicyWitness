@@ -805,3 +805,85 @@ Judged against the decision criteria:
 Decision: reject, and revert stage 1 and then stage 0 by the plan's procedure.
 The flagged expectations F1 to F4 are then corrected in `unittest` form as
 separate changes.
+
+| BP01 | closing | `LockTests.test_unrelated_socket_cannot_handoff_a_copied_nonce_and_unheld_descriptor` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP02 | closing | `LockTests.test_admission_send_is_bounded_when_the_channel_queue_is_full` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP03 | closing | `LockTests.test_nested_scope_cannot_admit_after_acquisition_owner_exits` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP04 | closing | `LockTests.test_another_socket_from_the_owner_process_is_not_the_acquisition_channel` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP05 | closing | `LockTests.test_cancellation_bounds_a_command_and_descendant_that_ignore_signals` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP06 | closing | `LockTests.test_claims_are_admitted_only_by_a_live_owners_handoff` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP07 | closing | `LockTests.test_owner_exit_during_admission_creates_no_hold` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP08 | closing | `LockTests.test_protected_children_keep_the_hold_after_the_owner_dies` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP09 | closing | `LockTests.test_witness_preserves_bytes_and_nested_front_end_records_its_own` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP10 | closing | `LockTests.test_witness_refusals_precede_lock_writes` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP11 | closing | `LockTests.test_direct_python_children_inherit_the_callers_environment` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP12 | closing | `LockTests.test_forwarder_preserves_the_environment_and_a_shim_control_does_not` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP13 | closing | `LockTests.test_helper_wrapper_children_inherit_the_callers_environment` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP14 | closing | `LockTests.test_a_coerced_locale_is_named_as_such` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP15 | closing | `LockTests.test_helpers_import_only_the_interpreter_and_the_tree` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP16 | closing | `LockTests.test_entrypoints_refuse_an_unexecutable_interpreter_before_any_python` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP17 | closing | `ResolverTests.test_the_pin_resolves_and_probes_here` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP18 | closing | `ResolverTests.test_a_revision_suffixed_keg_is_accepted_with_its_upstream_version` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP19 | closing | `ResolverTests.test_the_path_checks_refuse_by_name_without_starting_anything` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP20 | closing | `ResolverTests.test_python_environment_is_refused_except_the_three_the_helpers_own` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP21 | closing | `ResolverTests.test_the_probe_refuses_a_stand_in_that_disagrees_or_fails` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP22 | closing | `ShimContainmentTests.test_detector_sent_blocked_and_neighbours` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP23 | closing | `ShimContainmentTests.test_constructed_gate_refusals_stop_dispatch_and_prepare` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP24 | closing | `ShimContainmentTests.test_constructed_sysctl_gate_refusals_stop_dispatch_and_prepare` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP25 | closing | `ShimContainmentTests.test_combined_profile_keeps_containment_and_reads_arm64_empty` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP26 | closing | `ShimContainmentTests.test_profiles_apply_and_keep_exec_restrictions` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP27 | closing | `ShimContainmentTests.test_structured_paths_cannot_add_profile_rules` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP28 | closing | `ShimContainmentTests.test_nested_sandbox_refuses_without_dispatch` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP29 | closing | `ShimContainmentTests.test_entrypoints_refuse_sdk_at_admission` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP30 | closing | `ShimContainmentTests.test_valid_sdk_requests_reach_each_entrypoints_next_boundary` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP31 | closing | `ShimContainmentTests.test_make_checks_command_line_and_inherited_sdk_before_recipes` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP32 | closing | `ProbeTests.test_cleanup_has_one_deadline_even_when_the_group_cannot_be_reaped` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP33 | closing | `ProbeTests.test_probes_are_bounded_and_failures_carry_no_output` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP34 | closing | `ProbeTests.test_comparison_inputs_are_complete_within_their_bounds` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP35 | closing | `StampTests.test_stamp_states_are_decided_without_adopting_unknowns` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP36 | closing | `OutputTargetStampTests.test_stamps_carry_the_output_target_and_refuse_another` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP37 | closing | `FailedObservationTests.test_failed_required_observations_refuse_compatibility_and_publication` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP38 | closing | `FreshRemovalTests.test_fresh_removal_admits_only_owned_real_directories` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP39 | closing | `OwnershipAndAdmissionTests.test_refused_start_does_not_create_a_missing_target_directory` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP40 | closing | `OwnershipAndAdmissionTests.test_session_witness_refusals_preserve_the_session_and_missing_target` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP41 | closing | `OwnershipAndAdmissionTests.test_helpers_refuse_without_ownership` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP42 | closing | `OwnershipAndAdmissionTests.test_cache_paths_are_admitted_before_any_write` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP43 | closing | `CargoJudgmentTests.test_cargo_judgments_bind_fingerprints_without_guessing` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP44 | closing | `CargoJudgmentTests.test_fresh_judgments_are_literal_booleans_bound_to_the_admitted_executable` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP45 | closing | `CargoJudgmentTests.test_requested_flags_are_attributed_by_precedence` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP46 | closing | `CargoConfigurationTests.test_failed_launcher_observations_never_fall_back_to_standalone_cargo` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP47 | closing | `CargoConfigurationTests.test_toml_forms_discovery_and_precedence` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP48 | closing | `CargoConfigurationTests.test_program_paths_resolve_as_cargo_resolves_them` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP49 | closing | `CargoConfigurationTests.test_includes_follow_cargo_order_and_refuse_what_cannot_be_read` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP50 | closing | `CargoConfigurationTests.test_env_entries_apply_as_cargo_applies_them` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP51 | closing | `OutputTripleSelectionTests.test_the_command_line_target_overrides_lower_defaults` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP52 | closing | `SdkTests.test_sdk_versions_normalize_and_unknowns_never_agree` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP53 | closing | `OutputTargetTests.test_fixtures_are_what_their_bytes_say` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP54 | closing | `OutputTargetTests.test_observations_are_kept_apart_from_the_decision` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP55 | closing | `OutputTargetTests.test_failed_and_inconsistent_tool_reports_refuse` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP56 | closing | `OutputTargetTests.test_runnable_code_is_found_by_header_and_dsym_data_is_not_code` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP57 | closing | `OutputTargetTests.test_malformed_fat_debug_slices_are_not_exempted` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP58 | closing | `OutputTargetTests.test_the_build_gate_records_each_stage_and_refuses_any_departure` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP59 | closing | `OutputTargetTests.test_app_gates_check_required_paths_without_macho_headers_in_both_variants` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP60 | closing | `OutputTargetTests.test_weakened_predicates_fail_these_controls` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP61 | closing | `SignatureDisplayTests.test_signature_displays_establish_class_team_and_timestamp` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP62 | closing | `RecordTests.test_records_are_bounded_redacted_and_complete` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP63 | closing | `RecordTests.test_records_are_validated_by_shape_in_every_reader` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP64 | closing | `RecordTests.test_the_archive_reader_validates_the_record_and_binds_its_outputs` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP65 | closing | `RecordTests.test_the_producer_validates_before_sealing` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP66 | closing | `RecordTests.test_helper_subcommands_are_the_ones_the_script_invokes` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP67 | closing | `RecordTests.test_opt_in_mutation_anchors_match_current_sources` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+| BP68 | closing | `RecordTests.test_unknown_wrapper_hashes_never_establish_stamp_compatibility` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
+
+### Closing
+
+The trial was rejected at the end of stage 1 on criterion 1. Stage 1 and
+stage 0 were reverted in that order, each by reverting its own commit, with
+this record kept. Run `20261027T161845Z_320a8829` in
+`tests/out/runs/pytest-trial-closing-01` (gitignored, local) then ran the
+restored case with the whole `source_drift` and `dispatcher` suites: 15 cases,
+all passed, no harness error, no system sleep; the checker reported `Ran 68
+tests`, `OK` in 71.2 s, the case took 71425 ms, and the 68 logged names equal
+the inventory. The tree outside `records/` is byte for byte the pre-trial
+state. The flagged expectations are corrected next, in `unittest` form, as a
+separate change.

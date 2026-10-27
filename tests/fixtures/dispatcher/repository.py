@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 
 
-def install_runner(source, destination, suites, *, signed_fixtures=False, pytest_host=False):
+def install_runner(source, destination, suites, *, signed_fixtures=False):
     for relative in ('tests/run.sh', 'tests/lib/test_cli.py', 'tests/lib/suite_run.py',
                      'tests/lib/testlib.sh', 'tests/lib/case.sh', 'tests/lib/artifact.py',
                      'tests/lib/signer_check.py', 'tests/lib/build_provenance.py', 'tests/lib/output_target.py', 'tests/lib/retention.py',
@@ -16,10 +16,6 @@ def install_runner(source, destination, suites, *, signed_fixtures=False, pytest
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source / relative, target)
     (destination / 'tests/catalog.json').write_text(json.dumps({'schema_version': 1, 'suites': suites}) + '\n')
-    if pytest_host:
-        shutil.copyfile(source / 'tests/lib/pytest_host.py', destination / 'tests/lib/pytest_host.py')
-        shutil.copytree(source / 'tests/lib/vendor', destination / 'tests/lib/vendor',
-                        ignore=shutil.ignore_patterns('__pycache__'), dirs_exist_ok=True)
     if signed_fixtures:
         tool = destination / 'fixture-codesign'
         tool.write_text('#!/usr/bin/env -S ${PW_PYTHON} -B -S\n' + (source / 'tests/fixtures/dispatcher/seal_tool.py').read_text())
