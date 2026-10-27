@@ -843,7 +843,7 @@ class ResolverTests(unittest.TestCase):
                 self.assertIn('python_environment_set', result.stderr)
                 self.assertIn(name, result.stderr)
         for name, value in (('PYTHONOPTIMIZE', '0'), ('PYTHONOPTIMIZE', ''), ('PYTHONDONTWRITEBYTECODE', '1'), ('PYTHONCOERCECLOCALE', '0')):
-            with self.subTest(name):
+            with self.subTest(name=name, value=value):
                 result = self.resolve(env={name: value})
                 self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -1196,9 +1196,7 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(a[:prov.LINE_LIMIT], b[:prov.LINE_LIMIT], 'the identities agree within the former truncation boundary')
         seen = [prov.version_line(prov.probe(['/bin/echo', identity])) for identity in (a, b)]
         self.assertEqual([s['kind'] for s in seen], ['oversized_output', 'oversized_output'])
-        stamped = dict(observation=seen[0])
         self.assertEqual(prov.compare_fields({'rustc.identity': None}, {'rustc.identity': None}, ['rustc.identity'])[3], 'unavailable')
-        self.assertIsNotNone(stamped)
         # A configured command longer than the bound is unknown, not a prefix; Cargo's oversized flag list is not recorded.
         builddir = self.work / 'builddir'
         (builddir / 'meson-info').mkdir(parents=True)
@@ -2644,12 +2642,13 @@ class RecordTests(unittest.TestCase):
         self.assertIsNone(prov.forbidden_content(prov.HOME_MARKER + '/x', dict(HOME=home, PATH='/p')))
         valid, other = self.app('valid'), self.app('other')
         self.assertEqual(self.problems(valid), [])
-        # A record for another bundle with the same inventory but other bytes is refused by hash and load-command metadata.
+        # A record for another bundle with the same inventory but other bytes is refused by hash. Appended bytes leave the
+        # load-command UUID unchanged, so the metadata agrees and only the hash finding is expected here.
         with (other / 'Contents/MacOS/pw-runner-client').open('ab') as stream:
             stream.write(b'\0other bytes')
         fixture_bundle.record(other)
         shutil.copy2(other / prov.RECORD_PATH, valid / prov.RECORD_PATH)
-        self.assertTrue(any(code in ('provenance_hash', 'provenance_metadata') for code, _ in self.problems(valid)))
+        self.assertEqual({code for code, _ in self.problems(valid)}, {'provenance_hash'})
         fixture_bundle.record(valid)
         self.assertEqual(self.problems(valid), [])
         cases = {
@@ -2671,9 +2670,11 @@ class RecordTests(unittest.TestCase):
         for name, (mutate, code) in cases.items():
             with self.subTest(case=name):
                 self.rewrite(valid, mutate)
-                found = self.problems(valid)
-                self.assertTrue(any(c == code for c, _ in found), (name, found))
-                fixture_bundle.record(valid)
+                try:
+                    found = self.problems(valid)
+                    self.assertTrue(any(c == code for c, _ in found), (name, found))
+                finally:
+                    fixture_bundle.record(valid)
         (valid / prov.RECORD_PATH).write_text('[]')
         self.assertEqual(self.problems(valid), [('provenance', prov.RECORD_PATH)])
         # A manifest that disagrees with the record about a helper hash is named too.
