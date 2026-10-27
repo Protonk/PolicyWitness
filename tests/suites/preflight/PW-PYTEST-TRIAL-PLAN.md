@@ -274,11 +274,19 @@ Required controls:
   [the cancellation controls](../dispatcher/check_cancellation.py), signal the
   dispatcher while an inner test holds a sleeping child and observe descendant
   exit through kernel exit events.
-- **Lock lifetime.** An inner test finds the claim's descriptors open in the
-  child and is admitted under the inherited claim. When the launcher's parent
-  is killed while an inner test sleeps, a separate open observes the lock held
-  until the child exits, as `lock_free` observes it in the checker's own
-  lifetime controls.
+- **Lock admission.** An inner test finds the claim's descriptors open in the
+  child and is admitted under the inherited claim. Keep this control separate
+  from the lifetime control so its handed-over descriptor cannot supply the
+  lifetime hold.
+- **Lock lifetime.** Wait until the inner child is ready and waiting for
+  release. Kill the fixture dispatcher, case shell, launcher parent and any
+  other intermediate holders with `SIGKILL` by individual PID. Observe their
+  exits and confirm the child remains alive as the only holder; then use a
+  separate open to observe the lock held. Release the child, observe its exit
+  and confirm the lock becomes available. Repeat with the launcher's
+  descriptor forwarding omitted and require the same held-after-kills
+  assertion to fail, following the checker's `lifetime` and `check_lifetime`
+  controls.
 
 Each stage runs the case into a fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>`
 with `PYTHONOPTIMIZE` unset, through `tests/run.sh --case preflight/build_provenance_controls`,
