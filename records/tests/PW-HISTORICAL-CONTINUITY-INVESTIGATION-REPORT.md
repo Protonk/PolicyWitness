@@ -1,10 +1,9 @@
 # Historical continuity obligations in tests
 
 Examined `main` at `2d15b1138c973181eef23e38b4a4669d890f9fa2`, with a clean
-working tree. This report carries out
-`PW-HISTORICAL-CONTINUITY-INVESTIGATION-PLAN.md`, using
+working tree. This report investigates historical continuity obligations using
 `TEST-WORK-SURVEY-REPORT.md` and `TEST-EXPECTATION-AUTHORITY-REPORT.md` as companion
-accounts; all three are alongside this report in `records/tests/`.
+accounts; both are alongside this report in `records/tests/`.
 Between their source revision, `31b81951c9c8c4124089aa4dd342b2b63c0a86de`,
 and the examined revision, only six files under `records/` changed. The product,
 tests and current contracts examined here are unchanged from that source pin.

@@ -11,10 +11,10 @@ or guarantee the same log delivery. Do not refresh the configuration to make
 these historical results appear applicable to a new application.
 
 This standalone investigation harness leaves application sources and binaries
-unchanged. `LOG-OBSERVER-INVESTIGATION-PLAN.md` in the parent directory owns the
-questions, schedule, interpretation and limits. The existing runtime harness
-supplies clock, identity, condition and cleanup helpers; its raw evidence is
-never edited.
+unchanged. `LOG-OBSERVER-INVESTIGATION-REPORT.md` in the parent directory records
+the executed pilots, interpretation and limits; `pilot-config.json` pins the
+schedule and inputs. The existing runtime harness supplies clock, identity,
+condition and cleanup helpers; its raw evidence is never edited.
 
 From the repository root, preparation inspects version, hashes, sources and
 saved envelopes without a live specimen or unified-log query:

@@ -27,8 +27,6 @@ Layout:
   operator-run measurements, pilot comparison and unresolved boundaries.
 - `PolicyWitness-Log-Observer-Investigation.md`: the log-observer investigation's
   questions about supplementary-collection cost and delayed retrieval.
-- `LOG-OBSERVER-INVESTIGATION-PLAN.md`: the recorded collection-path audit and
-  executed log-observer pilot procedure, with the associated report link.
 - `LOG-OBSERVER-INVESTIGATION-REPORT.md`: two completed log-observer pilots,
   historical-query costs and fixed-event retrieval comparisons.
 - `PolicyWitness-Host-Lifetime-Investigation.md`: the host-lifetime
