@@ -43,8 +43,10 @@ class Scope:
     excludes every path with a component beginning with '.'. A directory symlink
     is never followed. An entry whose name matches is a candidate whatever it is:
     a file symlink, a broken symlink or a directory named with the suffix, so a
-    reader sees the failure instead of a silent omission. Enumeration errors are
-    ignored, as the standard library's recursive glob ignores them."""
+    reader sees the failure instead of a silent omission. Empty `suffixes` select
+    every entry that is not a directory. Enumeration errors are ignored and an
+    entry whose metadata cannot be read is kept as a candidate without descent,
+    as the standard library's recursive glob behaves."""
     name: str
     suffixes: tuple[str, ...]
     base: str = ''
@@ -71,8 +73,8 @@ class Input:
     """One declared input of a rule or generator.
 
     `file` must exist; `optional` is used when present; `directory` selects the
-    entries under a directory by suffix, recursively unless stated otherwise;
-    `scope` selects a named inventory. A declaration is an auditable account of
+    non-directory entries under a directory, by suffix when suffixes are given,
+    recursively unless stated otherwise; `scope` selects a named inventory. A declaration is an auditable account of
     what is read, not a claim of complete program reachability."""
     kind: str
     path: str = ''
@@ -129,9 +131,14 @@ class Tree:
                 child = f'{relative}/{name}' if relative else name
                 if scope.hidden and name.startswith('.'):
                     continue
-                if name.endswith(scope.suffixes) and not scope.excludes(child):
+                try:
+                    is_directory = entry.is_dir(follow_symlinks=False)
+                except OSError:
+                    is_directory = False  # unreadable metadata: a candidate, never descended
+                matches = name.endswith(scope.suffixes) if scope.suffixes else not is_directory
+                if matches and not scope.excludes(child):
                     selected.append(child)
-                if scope.recursive and entry.is_dir(follow_symlinks=False) and not scope.excludes(child + '/'):
+                if scope.recursive and is_directory and not scope.excludes(child + '/'):
                     pending.append((entry.path, child))
         return sorted(selected)
 

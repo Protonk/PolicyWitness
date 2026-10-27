@@ -769,6 +769,53 @@ def inventory_controls(out):
                                      repository_tree.inventory(repository_tree.TEST_SHELL_SCRIPTS)])
     if expanded != sorted({'README.md', 'nested/.hidden.md', 'nested/untracked.md', *expected_shell}):
         problems.append(f'expand selected {expanded}')
+    # A directory declared without suffixes selects every non-directory entry beneath it.
+    unsuffixed = markdown_tree.expand([repository_tree.directory('nested')])
+    if unsuffixed != ['nested/.hidden.md', 'nested/.hidden/b.md', 'nested/builddir/a.md', 'nested/deeper/leaf.md',
+                      'nested/untracked.md']:
+        problems.append(f'unsuffixed directory declaration selected {unsuffixed}')
+    # An entry whose metadata cannot be read stays a candidate and discovery completes. The failure is
+    # raised at the enumeration boundary the walker uses, since an unreadable parent would fail the
+    # listing itself rather than one entry's metadata.
+    (root / 'metadata.md').write_text('metadata\n')
+    (root / 'metadata-dir').mkdir()
+    (root / 'metadata-dir/inner.md').write_text('inner\n')
+
+    class FailingEntry:
+        def __init__(self, entry):
+            self.name, self.path = entry.name, entry.path
+
+        def is_dir(self, follow_symlinks=True):
+            raise PermissionError(13, 'Permission denied', self.path)
+
+    class Listing:
+        def __init__(self, inner):
+            self.inner = inner
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            self.inner.close()
+
+        def __iter__(self):
+            for entry in self.inner:
+                yield FailingEntry(entry) if entry.name in ('metadata.md', 'metadata-dir') else entry
+
+    original = os.scandir
+    os.scandir = lambda path='.': Listing(original(path))
+    try:
+        with_failure = check.markdown_documents(repository_tree.Tree(root))
+    except OSError as error:
+        problems.append(f'discovery aborted on unreadable metadata: {error!r}')
+        with_failure = []
+    finally:
+        os.scandir = original
+    if with_failure != sorted(expected_markdown + ['metadata.md']):
+        problems.append(f'discovery with unreadable metadata selected {with_failure}')
+    for name in ('metadata.md', 'metadata-dir/inner.md'):
+        (root / name).unlink()
+    (root / 'metadata-dir').rmdir()
     unreadable.chmod(0o644)
     shutil.rmtree(root)
     record = dict(scenario='inventory-scopes', root=str(root), created=created, large_excluded_entries=large,
