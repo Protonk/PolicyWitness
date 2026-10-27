@@ -39,7 +39,7 @@ RECORDS = {**PARSER_RECORDS, **PYTEST_RECORDS}
 PACKAGE_LICENSE_LAYOUT = frozenset(PARSER_RECORDS)
 PYTEST_HOST = 'tests/lib/pytest_host.py'
 # Test files the pytest host runs that import pytest themselves; a migration stage adds its file here.
-PYTEST_TEST_FILES = ()
+PYTEST_TEST_FILES = ('tests/suites/preflight/check_build_provenance.py',)
 # Which files may import a vendored package outside the vendored directory, and the message otherwise.
 IMPORT_RULES = (
     (PARSER_MODULES, ('docs/markdown_reader.py',), 'imports the Markdown parser; use docs/markdown_reader.py'),

@@ -6,6 +6,11 @@ directories. Observed probes use real tools where one is needed (clang for a
 Mach-O); every other expectation is independent of the helper under test.
 The build-driving controls in the opt-in preflight cases establish the same
 refusals through the unchanged script.
+
+The case runs this file under the vendored pytest through tests/lib/pytest_host.py.
+Fixtures prepare disposable directories, lock ownership and the record
+controls' compiled host; publication, mutation and observation stay in the
+tests. The stateful sequences remain unittest methods.
 """
 import copy
 import errno
@@ -29,6 +34,8 @@ import textwrap
 import time
 import unittest
 from unittest import mock
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
@@ -141,12 +148,30 @@ def witnessed(env):
                 PYTHONCOERCECLOCALE='0')
 
 
-def own(test, root):
-    """An in-process owner of a disposable checkout's lock for the test's duration: its scope and a claimed environment."""
-    stack = ExitStack()
-    test.addCleanup(stack.close)
-    scope = stack.enter_context(checkout_lock.owned(root, env=clean_env()))
-    return scope, scope.child_env(witnessed({k: v for k, v in clean_env().items() if k not in NAMES}))
+@pytest.fixture
+def work():
+    """A disposable directory under /private/tmp for one test."""
+    with tempfile.TemporaryDirectory(prefix='pw-check-', dir='/private/tmp') as directory:
+        yield Path(directory).resolve()
+
+
+@pytest.fixture
+def owner():
+    """owner(root): an in-process owner of a disposable checkout's lock for the test's duration, as its scope and a
+    claimed, witnessed environment; every scope closes after the test, before its directory goes."""
+    with ExitStack() as stack:
+        def own(root):
+            scope = stack.enter_context(checkout_lock.owned(root, env=clean_env()))
+            return scope, scope.child_env(witnessed({k: v for k, v in clean_env().items() if k not in NAMES}))
+        yield own
+
+
+@pytest.fixture(scope='class')
+def target_work():
+    """The output target fixtures, linked once for the class that reads them."""
+    with tempfile.TemporaryDirectory(prefix='pw-output-target-', dir='/private/tmp') as directory:
+        work = Path(directory).resolve()
+        yield work, target_fixtures(work)
 
 
 def lock_free(root):
@@ -391,10 +416,11 @@ class LockTests(unittest.TestCase):
                     owner.kill()
                     owner.wait()
 
+    @pytest.fixture(autouse=True)
+    def _resources(self, work):
+        self.work = work
+
     def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-lock-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.work = Path(directory.name).resolve()
         self.root = self.work / 'checkout'
         (self.root / 'tests').mkdir(parents=True)
         self.lock = self.root / checkout_lock.LOCK
@@ -768,10 +794,9 @@ PINNED_PYTHON = '/opt/homebrew/opt/python@3.14/bin/python3.14'
 class ResolverTests(unittest.TestCase):
     """pw_python_start and pw_python_probe against stand-ins, one refusal at a time; neither takes anything from the environment."""
 
-    def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-resolver-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.work = Path(directory.name).resolve()
+    @pytest.fixture(autouse=True)
+    def _resources(self, work):
+        self.work = work
 
     def resolve(self, *arguments, env=None, probe=None):
         """Source the resolver and call pw_python_start with arguments, then pw_python_probe with probe when given."""
@@ -865,10 +890,11 @@ class ResolverTests(unittest.TestCase):
 
 
 class ShimContainmentTests(unittest.TestCase):
+    @pytest.fixture(autouse=True)
+    def _resources(self, work):
+        self.work = work
+
     def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-shim-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.work = Path(directory.name).resolve()
         if os.environ.get('PW_TEST_ARTIFACTS'):
             self.addCleanup(lambda: shutil.copytree(self.work, Path(os.environ['PW_TEST_ARTIFACTS']) / self._testMethodName))
 
@@ -1107,10 +1133,9 @@ class ProbeTests(unittest.TestCase):
             self.assertEqual(prov.terminate_group(mock.Mock(pid=123)), 'failed')
             self.assertLess(time.monotonic() - started, .32)
 
-    def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-probe-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.work = Path(directory.name)
+    @pytest.fixture(autouse=True)
+    def _resources(self, work):
+        self.work = work
 
     def timed(self, argv, **kwargs):
         started = time.monotonic()
@@ -1213,14 +1238,15 @@ class ProbeTests(unittest.TestCase):
 class StampFixture(unittest.TestCase):
     """A disposable checkout with an owned session and a substituted toolchain observation."""
 
+    @pytest.fixture(autouse=True)
+    def _resources(self, work, owner):
+        self.root, self.owner = work, owner
+
     def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-stamp-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name).resolve()
         (self.root / 'controller').mkdir()
         self.builddir = self.root / 'builddir'
         self.session = self.root / 'controller/target/pw-build-session.json'
-        self.scope, self.env = own(self, self.root)
+        self.scope, self.env = self.owner(self.root)
         status, _, err = run_main(['session-start', '--root', str(self.root), '--knob', 'BUILD_XPC=0',
                                    '--describe', 'v0.0.0-control', '--commit', 'c' * 40, '--version', '0.0.0', '--build-number', '1'], self.env)
         self.assertEqual(status, 0, err)
@@ -1472,10 +1498,11 @@ class FailedObservationTests(StampFixture):
 
 
 class FreshRemovalTests(unittest.TestCase):
+    @pytest.fixture(autouse=True)
+    def _resources(self, work, owner):
+        self.work, self.owner = work, owner
+
     def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-fresh-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.work = Path(directory.name).resolve()
         self.root = self.work / 'checkout'
         self.root.mkdir()
         (self.root / 'controller/target/release/deps').mkdir(parents=True)
@@ -1492,7 +1519,7 @@ class FreshRemovalTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text)
         self.session = self.root / 'controller/target/pw-build-session.json'
-        self.scope, self.env = own(self, self.root)
+        self.scope, self.env = self.owner(self.root)
         self.assertEqual(run_main(['session-start', '--root', str(self.root), '--describe', 'x', '--commit', 'x',
                                    '--version', '0', '--build-number', '0'], self.env)[0], 0)
 
@@ -1614,10 +1641,11 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
             self.assertEqual(json.loads(self.session.read_text())['requests']['SDKROOT'],
                              dict(state='set', value='requested sdk\n'))
 
+    @pytest.fixture(autouse=True)
+    def _resources(self, work, owner):
+        self.work, self.owner = work, owner
+
     def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-admit-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.work = Path(directory.name).resolve()
         self.root = self.work / 'checkout'
         (self.root / 'controller').mkdir(parents=True)
         self.outside = self.work / 'outside'
@@ -1656,7 +1684,7 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
         self.assertFalse(self.session.exists())
         self.assertTrue((self.root / 'controller/target/release/keep').exists() and (self.root / 'builddir/build.ninja').exists())
         self.assertFalse((self.root / 'builddir' / prov.STAMP_NAME).exists())
-        scope, env = own(self, self.root)
+        scope, env = self.owner(self.root)
         original = prov.observe_toolchain
         prov.observe_toolchain = lambda *a, **k: fake_observation()
         self.addCleanup(setattr, prov, 'observe_toolchain', original)
@@ -1693,7 +1721,7 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
         self.assertIn('the owner of this claim is gone', err)
 
     def test_cache_paths_are_admitted_before_any_write(self):
-        scope, env = own(self, self.root)
+        scope, env = self.owner(self.root)
         before = self.outside_inventory()
         components = {
             'controller/target': self.outside,
@@ -1768,16 +1796,17 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
 
 
 class CargoJudgmentTests(unittest.TestCase):
+    @pytest.fixture(autouse=True)
+    def _resources(self, work, owner):
+        self.root, self.owner = work, owner
+
     def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-cargo-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name).resolve()
         self.target = self.root / 'controller/target'
         self.release = self.target / prov.TRIPLE / 'release'
         (self.release / 'deps').mkdir(parents=True)
         self.session = self.target / 'pw-build-session.json'
         (self.root / 'controller').mkdir(exist_ok=True)
-        self.scope, self.env = own(self, self.root)
+        self.scope, self.env = self.owner(self.root)
         self.assertEqual(run_main(['session-start', '--root', str(self.root), '--describe', 'x', '--commit', 'x',
                                    '--version', '0', '--build-number', '0'], self.env)[0], 0)
 
@@ -1950,10 +1979,11 @@ class CargoConfigurationTests(unittest.TestCase):
             with self.assertRaises(cargo_config.Unresolved):
                 cargo_config.launcher(self.work, {}, lambda *a, **k: None)
 
+    @pytest.fixture(autouse=True)
+    def _resources(self, work):
+        self.work = work
+
     def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-cargo-config-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.work = Path(directory.name).resolve()
         self.home = self.work / 'cargo-home'
         self.home.mkdir()
         self.cwd = self.work / 'a/b/c'
@@ -2150,6 +2180,10 @@ class OutputTripleSelectionTests(unittest.TestCase):
 
 
 class SdkTests(unittest.TestCase):
+    @pytest.fixture(autouse=True)
+    def _resources(self, work, owner):
+        self.work, self.owner = work, owner
+
     OTOOL = textwrap.dedent('''\
         Load command 8
               cmd LC_UUID
@@ -2185,16 +2219,14 @@ class SdkTests(unittest.TestCase):
         self.assertTrue(prov.parse_build_version('Load command 0\n      cmd LC_MAIN\n')['problems'])
         self.assertIn('LC_UUID', prov.parse_build_version(self.OTOOL.format(sdk='27.0').replace('LC_UUID', 'LC_OTHER'))['problems'][0])
         # Over a real Mach-O: equivalent numeric forms agree with the selected SDK; another version or a malformed selection refuses.
-        directory = tempfile.TemporaryDirectory(prefix='pw-sdk-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        work = Path(directory.name)
+        work = self.work
         source = work / 'probe.c'
         source.write_text('int main(void) { return 0; }\n')
         binary = work / 'probe'
         subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', str(source), '-o', str(binary)], check=True, capture_output=True)
         sdk = subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-version'], check=True, capture_output=True, text=True).stdout.strip()
         (work / 'controller').mkdir()
-        _, env = own(self, work)
+        _, env = self.owner(work)
         self.assertEqual(run_main(['session-start', '--root', str(work), '--describe', 'x', '--commit', 'x',
                                    '--version', '0', '--build-number', '0'], env)[0], 0)
         metadata = prov.output_metadata(binary)
@@ -2317,15 +2349,10 @@ class OutputTargetTests(unittest.TestCase):
                  'text': 'not a Mach-O file', 'empty': 'not a Mach-O file', 'class-file': 'not a Mach-O file',
                  'missing': 'unreadable (FileNotFoundError)'}
 
-    @classmethod
-    def setUpClass(cls):
-        cls.directory = tempfile.TemporaryDirectory(prefix='pw-output-target-', dir='/private/tmp')
-        cls.work = Path(cls.directory.name).resolve()
-        cls.fixtures = target_fixtures(cls.work)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.directory.cleanup()
+    @pytest.fixture(autouse=True)
+    def _resources(self, target_work, owner):
+        self.work, self.fixtures = target_work
+        self.owner = owner
 
     def observe(self, path, module=output_target):
         return module.observe(path, probe=prov.probe, read_metadata=prov.output_metadata)
@@ -2453,7 +2480,7 @@ class OutputTargetTests(unittest.TestCase):
     def test_the_build_gate_records_each_stage_and_refuses_any_departure(self):
         root = self.work / 'gate'
         (root / 'controller').mkdir(parents=True)
-        _, env = own(self, root)
+        _, env = self.owner(root)
         self.assertEqual(run_main(['session-start', '--root', str(root), '--describe', 'x', '--commit', 'x', '--version', '0',
                                    '--build-number', '0', '--knob', 'BUILD_XPC=1'], env)[0], 0)
         session = root / 'controller/target/pw-build-session.json'
@@ -2503,7 +2530,7 @@ class OutputTargetTests(unittest.TestCase):
     def test_app_gates_check_required_paths_without_macho_headers_in_both_variants(self):
         root = self.work / 'required-gate'
         (root / 'controller').mkdir(parents=True)
-        _, env = own(self, root)
+        _, env = self.owner(root)
         for xpc, expected in (('0', prov.PARTIAL_OUTPUTS), ('1', prov.FULL_OUTPUTS)):
             self.assertEqual(run_main(['session-start', '--root', str(root), '--describe', 'x', '--commit', 'x', '--version', '0',
                                        '--build-number', '0', '--knob', f'BUILD_XPC={xpc}'], env)[0], 0)
@@ -2608,205 +2635,254 @@ class SignatureDisplayTests(unittest.TestCase):
         self.assertIn('timestamp=secure', signer_check.observation('x', valid))
 
 
-class RecordTests(unittest.TestCase):
-    def setUp(self):
-        directory = tempfile.TemporaryDirectory(prefix='pw-record-', dir='/private/tmp')
-        self.addCleanup(directory.cleanup)
-        self.work = Path(directory.name).resolve()
-        host = self.work / 'host'
+# ---- the provenance record: readers, producer and archive reader over fake bundles (BP62 to BP68) -----------------
+
+def drop(*keys):
+    """A mutation that removes the last key on a nested path."""
+    def mutate(r):
+        node = r
+        for key in keys[:-1]:
+            node = node[key]
+        node.pop(keys[-1])
+    return mutate
+
+
+def put(value, *keys):
+    """A mutation that assigns a value at a nested path."""
+    def mutate(r):
+        node = r
+        for key in keys[:-1]:
+            node = node[key]
+        node[keys[-1]] = value
+    return mutate
+
+
+# Each fault is applied to a fresh copy of the accepted bundle's record; the inspector must name the expected code.
+RECORD_FAULTS = {
+    'missing entry': (lambda r: r['outputs'].pop(), 'provenance_output'),
+    'duplicate entry': (lambda r: r['outputs'].append(dict(r['outputs'][1])), 'provenance_output'),
+    'invalid path': (lambda r: r['outputs'][1].__setitem__('rel_path', '../escape'), 'provenance_output'),
+    'absolute path': (lambda r: r['outputs'][1].__setitem__('rel_path', '/Contents/MacOS/x'), 'provenance_output'),
+    'unshipped executable': (lambda r: r['outputs'].append(dict(r['outputs'][1], rel_path='Contents/MacOS/extra')), 'provenance_output'),
+    'controller hash inside the seal': (lambda r: r['outputs'][0].__setitem__('sha256', 'a' * 64), 'provenance_hash'),
+    'wrong hash': (lambda r: r['outputs'][1].__setitem__('sha256', 'b' * 64), 'provenance_hash'),
+    'wrong uuid': (lambda r: r['outputs'][1].__setitem__('uuid', 'FFFFFFFF-0000-0000-0000-000000000000'), 'provenance_metadata'),
+    'wrong sdk': (lambda r: r['outputs'][1].__setitem__('sdk', '1.0'), 'provenance_metadata'),
+    'missing section': (lambda r: r.pop('toolchain'), 'provenance'),
+    'other schema': (lambda r: r.__setitem__('schema_version', prov.SCHEMA_VERSION + 1), 'provenance'),
+    'an earlier build\'s schema': (lambda r: r.__setitem__('schema_version', 1), 'provenance'),
+    'wrong architectures': (lambda r: r['outputs'][1].__setitem__('architectures', ['x86_64']), 'provenance_metadata'),
+    'wrong container': (lambda r: r['outputs'][1].__setitem__('container', 'fat'), 'provenance_metadata'),
+}
+
+# Valid neighbours: each optional observation the field policy lets stay unknown, applied to a fresh copy.
+ACCEPTED_NEIGHBOURS = {
+    'xcode unknown': lambda r: r['toolchain'].__setitem__('xcode', dict(status='unknown', reason='nonzero_exit', returncode=1)),
+    'meson options unknown': lambda r: r['configuration'].__setitem__('meson_options', dict(status='unknown')),
+    'stamp projection unavailable': lambda r: r['configuration']['toolchain_stamp'].__setitem__('projection', dict(status='unavailable', reason='x')),
+    'fingerprint ambiguous': lambda r: r['outputs'][0]['cargo'].__setitem__('fingerprint', dict(status='ambiguous', binding=None, limitation='x')),
+    'wrapper without a hash': lambda r: r['toolchain']['rustc'].__setitem__('wrappers', dict(wrapper=dict(source='RUSTC_WRAPPER', command='/w'))),
+    'explicitly empty SDK request': lambda r: r['configuration']['requests'].__setitem__('SDKROOT', dict(state='set', value='')),
+}
+
+# Every required section and representative nested fields: missing, null and the wrong type; each is a problem.
+SHAPE_FAULTS = {}
+for section in ('generated_at', 'source', 'toolchain', 'configuration', 'outputs', 'signing', 'limits'):
+    SHAPE_FAULTS[f'{section} missing'] = drop(section)
+    SHAPE_FAULTS[f'{section} null'] = put(None, section)
+    SHAPE_FAULTS[f'{section} wrong type'] = put(7, section)
+SHAPE_FAULTS.update({
+    'dirty is a string': put('no', 'source', 'dirty'),
+    'an input hash missing': drop('source', 'input_hashes', 'meson.build'),
+    'worker identity not hex': put('z' * 64, 'source', 'worker_identity'),
+    'SDK version null': put(None, 'toolchain', 'sdk', 'version'),
+    'C compiler observation failed': put(dict(status='failed', kind='timeout'), 'toolchain', 'compilers', 'c', 'observed'),
+    'Swift compiler missing in a full build': put(dict(status='not applicable', reason='partial build: the XPC pieces were not compiled'),
+                                                  'toolchain', 'compilers', 'swift'),
+    'rustc selection missing': drop('toolchain', 'rustc', 'selection'),
+    'rustc source unknown': put('guess', 'toolchain', 'rustc', 'source'),
+    'xcode status unknown kind': put(dict(status='maybe'), 'toolchain', 'xcode'),
+    'knob is an integer': put(1, 'configuration', 'knobs', 'BUILD_XPC'),
+    'deployment target null': put(None, 'configuration', 'deployment_target'),
+    'deployment target disagrees with the outputs': put('1.0', 'configuration', 'deployment_target'),
+    'sdkroot disagrees with the SDK': put('/other/SDK', 'configuration', 'sdkroot'),
+    'request state unknown': put(dict(state='maybe'), 'configuration', 'requests', 'SDKROOT'),
+    'request missing': drop('configuration', 'requests', 'CPATH'),
+    'set SDK request without value': put(dict(state='set'), 'configuration', 'requests', 'SDKROOT'),
+    'private request leaks its value': put(dict(state='set', value='/private/includes'), 'configuration', 'requests', 'CPATH'),
+    'SDK source contradicts request': put('SDKROOT named by the caller', 'toolchain', 'sdk', 'source'),
+    'empty stamp projection': put({}, 'configuration', 'toolchain_stamp', 'projection'),
+    'wrong replacement type': put('garbage', 'configuration', 'build_directories', 'fresh_mode', 'replacement'),
+    'absent replacement observation': put(None, 'configuration', 'build_directories', 'fresh_mode', 'replacement'),
+    'fresh mode knob disagrees': put('0', 'configuration', 'knobs', 'PW_FRESH_BUILD'),
+    'fresh mode reused a target': lambda r: r['outputs'][0]['cargo'].__setitem__('fresh', True),
+    'Meson xpc is a string': put(dict(status='ok', values=dict(xpc='not-a-boolean')), 'configuration', 'meson_options'),
+    'empty Cargo profile': lambda r: r['outputs'][0]['cargo'].__setitem__('profile', {}),
+    'an output field null': lambda r: r['outputs'][1].__setitem__('uuid', None),
+    'an output tools list of strings': lambda r: r['outputs'][1].__setitem__('tools', ['ld']),
+    'a Cargo judgment null': lambda r: next(o for o in r['outputs'] if 'cargo' in o)['cargo'].__setitem__('fresh', None),
+    'a signature timestamp string': lambda r: r['outputs'][1]['signature'].__setitem__('timestamp', 'true'),
+    'signing nested disagrees': lambda r: r['signing']['nested'][0].__setitem__('timestamp', True),
+    'an unknown top-level field': put('x', 'extra'),
+    'a partial knob with full outputs': put('0', 'configuration', 'knobs', 'BUILD_XPC'),
+    'a string beyond its bound': put('x' * (prov.LINE_LIMIT + 1), 'toolchain', 'rustc', 'identity'),
+    'output target missing': drop('configuration', 'output_target'),
+    'output target of another architecture': put('x86_64', 'configuration', 'output_target', 'architecture'),
+    'output target of another triple': put('x86_64-apple-darwin', 'configuration', 'output_target', 'cargo_triple'),
+    'Meson machines missing': drop('configuration', 'meson_machines'),
+    'Meson host of another architecture': put(dict(system='darwin', cpu_family='x86_64'), 'configuration', 'meson_machines', 'host'),
+    'Cargo target selection missing': drop('toolchain', 'rustc', 'selection', 'target'),
+    'Cargo target of another triple': put('x86_64-apple-darwin', 'toolchain', 'rustc', 'selection', 'target', 'triple'),
+    "the triple's release area missing": drop('configuration', 'build_directories', 'cargo_target_release'),
+    'an output architecture missing': lambda r: r['outputs'][1].pop('architectures'),
+    'an output of another architecture': lambda r: r['outputs'][1].__setitem__('architectures', ['x86_64']),
+    'a universal output': lambda r: r['outputs'][1].update(architectures=['arm64', 'x86_64'], container='fat'),
+    'an output of another platform': lambda r: r['outputs'][1].__setitem__('platform', '6'),
+})
+
+
+@pytest.fixture(scope='module')
+def fixture_host():
+    """The fixture host stubs, compiled once for this module; every bundle gets a copy of their bytes."""
+    with tempfile.TemporaryDirectory(prefix='pw-record-host-', dir='/private/tmp') as directory:
+        host = Path(directory).resolve() / 'host'
         subprocess.run(['bash', str(ROOT / 'tests/fixtures/dispatcher/build.sh'), str(host)], check=True, capture_output=True)
-        self.host = host
+        yield host
 
-    def app(self, name):
-        app = self.work / f'{name}.app'
-        fixture_bundle.bundle(app, self.host)
-        return app
 
-    def problems(self, app):
+@pytest.fixture(scope='module')
+def accepted_app(fixture_host):
+    """An accepted bundle laid out once around the host; tests copy it and never change it."""
+    with tempfile.TemporaryDirectory(prefix='pw-record-accepted-', dir='/private/tmp') as directory:
+        app = Path(directory).resolve() / 'accepted.app'
+        fixture_bundle.bundle(app, fixture_host)
+        assert record_codes(app) == []
+        yield app
+
+
+@pytest.fixture(scope='module')
+def accepted_record(accepted_app):
+    return json.loads((accepted_app / prov.RECORD_PATH).read_text())
+
+
+def copy_app(accepted_app, work, name):
+    """A test's own copy of the accepted bundle, free to mutate."""
+    app = work / f'{name}.app'
+    shutil.copytree(accepted_app, app, symlinks=True)
+    return app
+
+
+def record_codes(app, manifest=None, **kwargs):
+    """The inspector's (code, path) findings over the bundle's manifest."""
+    if manifest is None:
         manifest = json.loads((app / 'Contents/Resources/Evidence/manifest.json').read_text())
-        return [(code, path) for code, path, _ in prov.record_problems(app, manifest)]
+    return [(code, path) for code, path, _ in prov.record_problems(app, manifest, **kwargs)]
 
-    def rewrite(self, app, mutate):
-        path = app / prov.RECORD_PATH
-        record = json.loads(path.read_text())
-        mutate(record)
-        path.write_text(json.dumps(record))
 
-    def test_records_are_bounded_redacted_and_complete(self):
+def rewrite(app, mutate):
+    path = app / prov.RECORD_PATH
+    record = json.loads(path.read_text())
+    mutate(record)
+    path.write_text(json.dumps(record))
+
+
+def partial_record(record):
+    """The partial build's record for the same stand-ins: Cargo's outputs only, no Swift compiler."""
+    out = copy.deepcopy(record)
+    out['configuration']['knobs']['BUILD_XPC'] = '0'
+    out['toolchain']['compilers']['swift'] = dict(status='not applicable', reason='partial build: the XPC pieces were not compiled')
+    out['outputs'] = [o for o in out['outputs'] if o['rel_path'] in prov.PARTIAL_OUTPUTS]
+    out['signing']['nested'] = [n for n in out['signing']['nested'] if n['rel_path'] in prov.PARTIAL_OUTPUTS]
+    return out
+
+
+class TestRecords:
+    """The record's readers decide from constructed inputs; every variant gets its own copy of the accepted bundle."""
+
+    def test_records_are_bounded_and_redacted(self):
         home = os.environ.get('HOME', '/Users/nobody')
-        self.assertEqual(prov.redact(home + '/x/y', home), prov.HOME_MARKER + '/x/y')
-        self.assertEqual(prov.redact(home, home), prov.HOME_MARKER)
-        self.assertEqual(prov.redact('/opt/x', home), '/opt/x')
-        self.assertEqual(prov.redact([home + '/a', '/b'], home), [prov.HOME_MARKER + '/a', '/b'])
-        self.assertEqual(prov.redact('path+file://' + home + '/x/controller#0.1.0', home), 'path+file://' + prov.HOME_MARKER + '/x/controller#0.1.0')
-        self.assertEqual(prov.forbidden_content('text ' + home + '/x', dict(HOME=home, PATH='/p')), 'a home-prefixed path')
-        self.assertEqual(prov.forbidden_content('path=/usr/bin:/bin', dict(HOME=home, PATH='/usr/bin:/bin')), 'the PATH value')
-        self.assertIsNone(prov.forbidden_content(prov.HOME_MARKER + '/x', dict(HOME=home, PATH='/p')))
-        valid, other = self.app('valid'), self.app('other')
-        self.assertEqual(self.problems(valid), [])
+        assert prov.redact(home + '/x/y', home) == prov.HOME_MARKER + '/x/y'
+        assert prov.redact(home, home) == prov.HOME_MARKER
+        assert prov.redact('/opt/x', home) == '/opt/x'
+        assert prov.redact([home + '/a', '/b'], home) == [prov.HOME_MARKER + '/a', '/b']
+        assert prov.redact('path+file://' + home + '/x/controller#0.1.0', home) == 'path+file://' + prov.HOME_MARKER + '/x/controller#0.1.0'
+        assert prov.forbidden_content('text ' + home + '/x', dict(HOME=home, PATH='/p')) == 'a home-prefixed path'
+        assert prov.forbidden_content('path=/usr/bin:/bin', dict(HOME=home, PATH='/usr/bin:/bin')) == 'the PATH value'
+        assert prov.forbidden_content(prov.HOME_MARKER + '/x', dict(HOME=home, PATH='/p')) is None
+
+    def test_a_record_for_another_bundle_with_the_same_inventory_is_refused(self, work, fixture_host, accepted_app):
         # A record for another bundle with the same inventory but other bytes is refused by hash and load-command metadata.
+        valid = copy_app(accepted_app, work, 'valid')
+        other = work / 'other.app'
+        fixture_bundle.bundle(other, fixture_host)
         with (other / 'Contents/MacOS/pw-runner-client').open('ab') as stream:
             stream.write(b'\0other bytes')
         fixture_bundle.record(other)
         shutil.copy2(other / prov.RECORD_PATH, valid / prov.RECORD_PATH)
-        self.assertTrue(any(code in ('provenance_hash', 'provenance_metadata') for code, _ in self.problems(valid)))
+        assert any(code in ('provenance_hash', 'provenance_metadata') for code, _ in record_codes(valid))
         fixture_bundle.record(valid)
-        self.assertEqual(self.problems(valid), [])
-        cases = {
-            'missing entry': (lambda r: r['outputs'].pop(), 'provenance_output'),
-            'duplicate entry': (lambda r: r['outputs'].append(dict(r['outputs'][1])), 'provenance_output'),
-            'invalid path': (lambda r: r['outputs'][1].__setitem__('rel_path', '../escape'), 'provenance_output'),
-            'absolute path': (lambda r: r['outputs'][1].__setitem__('rel_path', '/Contents/MacOS/x'), 'provenance_output'),
-            'unshipped executable': (lambda r: r['outputs'].append(dict(r['outputs'][1], rel_path='Contents/MacOS/extra')), 'provenance_output'),
-            'controller hash inside the seal': (lambda r: r['outputs'][0].__setitem__('sha256', 'a' * 64), 'provenance_hash'),
-            'wrong hash': (lambda r: r['outputs'][1].__setitem__('sha256', 'b' * 64), 'provenance_hash'),
-            'wrong uuid': (lambda r: r['outputs'][1].__setitem__('uuid', 'FFFFFFFF-0000-0000-0000-000000000000'), 'provenance_metadata'),
-            'wrong sdk': (lambda r: r['outputs'][1].__setitem__('sdk', '1.0'), 'provenance_metadata'),
-            'missing section': (lambda r: r.pop('toolchain'), 'provenance'),
-            'other schema': (lambda r: r.__setitem__('schema_version', prov.SCHEMA_VERSION + 1), 'provenance'),
-            'an earlier build\'s schema': (lambda r: r.__setitem__('schema_version', 1), 'provenance'),
-            'wrong architectures': (lambda r: r['outputs'][1].__setitem__('architectures', ['x86_64']), 'provenance_metadata'),
-            'wrong container': (lambda r: r['outputs'][1].__setitem__('container', 'fat'), 'provenance_metadata'),
-        }
-        for name, (mutate, code) in cases.items():
-            with self.subTest(case=name):
-                self.rewrite(valid, mutate)
-                found = self.problems(valid)
-                self.assertTrue(any(c == code for c, _ in found), (name, found))
-                fixture_bundle.record(valid)
-        (valid / prov.RECORD_PATH).write_text('[]')
-        self.assertEqual(self.problems(valid), [('provenance', prov.RECORD_PATH)])
+        assert record_codes(valid) == []
+
+    @pytest.mark.parametrize('label', list(RECORD_FAULTS), ids=list(RECORD_FAULTS))
+    def test_record_faults_are_named(self, label, work, accepted_app):
+        mutate, code = RECORD_FAULTS[label]
+        app = copy_app(accepted_app, work, 'fault')
+        rewrite(app, mutate)
+        found = record_codes(app)
+        assert any(c == code for c, _ in found), (label, found)
+
+    def test_a_non_object_record_and_a_disagreeing_manifest_are_named(self, work, accepted_app):
+        app = copy_app(accepted_app, work, 'valid')
+        (app / prov.RECORD_PATH).write_text('[]')
+        assert record_codes(app) == [('provenance', prov.RECORD_PATH)]
         # A manifest that disagrees with the record about a helper hash is named too.
-        fixture_bundle.record(valid)
-        manifest = json.loads((valid / 'Contents/Resources/Evidence/manifest.json').read_text())
+        fixture_bundle.record(app)
+        manifest = json.loads((app / 'Contents/Resources/Evidence/manifest.json').read_text())
         manifest['entries'][0]['sha256'] = 'c' * 64
-        self.assertTrue(any(c == 'provenance_hash' for c, _ in [(c, p) for c, p, _ in prov.record_problems(valid, manifest)]))
+        assert any(c == 'provenance_hash' for c, _ in record_codes(app, manifest))
 
-    def partial(self, record):
-        """The partial build's record for the same stand-ins: Cargo's outputs only, no Swift compiler."""
-        out = copy.deepcopy(record)
-        out['configuration']['knobs']['BUILD_XPC'] = '0'
-        out['toolchain']['compilers']['swift'] = dict(status='not applicable', reason='partial build: the XPC pieces were not compiled')
-        out['outputs'] = [o for o in out['outputs'] if o['rel_path'] in prov.PARTIAL_OUTPUTS]
-        out['signing']['nested'] = [n for n in out['signing']['nested'] if n['rel_path'] in prov.PARTIAL_OUTPUTS]
-        return out
+    def test_the_partial_record_passes_the_shape_check(self, accepted_record):
+        assert prov.record_shape_problems(partial_record(accepted_record)) == []
 
-    def test_records_are_validated_by_shape_in_every_reader(self):
-        valid = self.app('shape')
-        self.assertEqual(self.problems(valid), [])
-        record = json.loads((valid / prov.RECORD_PATH).read_text())
-        # Valid neighbours: the partial build's record, and each optional observation the field policy lets stay unknown.
-        self.assertEqual(prov.record_shape_problems(self.partial(record)), [])
-        neighbours = {
-            'xcode unknown': lambda r: r['toolchain'].__setitem__('xcode', dict(status='unknown', reason='nonzero_exit', returncode=1)),
-            'meson options unknown': lambda r: r['configuration'].__setitem__('meson_options', dict(status='unknown')),
-            'stamp projection unavailable': lambda r: r['configuration']['toolchain_stamp'].__setitem__('projection', dict(status='unavailable', reason='x')),
-            'fingerprint ambiguous': lambda r: r['outputs'][0]['cargo'].__setitem__('fingerprint', dict(status='ambiguous', binding=None, limitation='x')),
-            'wrapper without a hash': lambda r: r['toolchain']['rustc'].__setitem__('wrappers', dict(wrapper=dict(source='RUSTC_WRAPPER', command='/w'))),
-            'explicitly empty SDK request': lambda r: r['configuration']['requests'].__setitem__('SDKROOT', dict(state='set', value='')),
-        }
-        for label, mutate in neighbours.items():
-            with self.subTest(neighbour=label):
-                changed = copy.deepcopy(record)
-                mutate(changed)
-                self.assertEqual(prov.record_shape_problems(changed), [], label)
-        # Every required section and representative nested fields: missing, null and the wrong type; each is a problem.
-        def drop(*keys):
-            def mutate(r):
-                node = r
-                for key in keys[:-1]:
-                    node = node[key]
-                node.pop(keys[-1])
-            return mutate
+    @pytest.mark.parametrize('label', list(ACCEPTED_NEIGHBOURS), ids=list(ACCEPTED_NEIGHBOURS))
+    def test_accepted_neighbours_pass_the_shape_check(self, label, accepted_record):
+        changed = copy.deepcopy(accepted_record)
+        ACCEPTED_NEIGHBOURS[label](changed)
+        assert prov.record_shape_problems(changed) == [], label
 
-        def put(value, *keys):
-            def mutate(r):
-                node = r
-                for key in keys[:-1]:
-                    node = node[key]
-                node[keys[-1]] = value
-            return mutate
-        faults = {}
-        for section in ('generated_at', 'source', 'toolchain', 'configuration', 'outputs', 'signing', 'limits'):
-            faults[f'{section} missing'] = drop(section)
-            faults[f'{section} null'] = put(None, section)
-            faults[f'{section} wrong type'] = put(7, section)
-        faults.update({
-            'dirty is a string': put('no', 'source', 'dirty'),
-            'an input hash missing': drop('source', 'input_hashes', 'meson.build'),
-            'worker identity not hex': put('z' * 64, 'source', 'worker_identity'),
-            'SDK version null': put(None, 'toolchain', 'sdk', 'version'),
-            'C compiler observation failed': put(dict(status='failed', kind='timeout'), 'toolchain', 'compilers', 'c', 'observed'),
-            'Swift compiler missing in a full build': put(dict(status='not applicable', reason='partial build: the XPC pieces were not compiled'),
-                                                          'toolchain', 'compilers', 'swift'),
-            'rustc selection missing': drop('toolchain', 'rustc', 'selection'),
-            'rustc source unknown': put('guess', 'toolchain', 'rustc', 'source'),
-            'xcode status unknown kind': put(dict(status='maybe'), 'toolchain', 'xcode'),
-            'knob is an integer': put(1, 'configuration', 'knobs', 'BUILD_XPC'),
-            'deployment target null': put(None, 'configuration', 'deployment_target'),
-            'deployment target disagrees with the outputs': put('1.0', 'configuration', 'deployment_target'),
-            'sdkroot disagrees with the SDK': put('/other/SDK', 'configuration', 'sdkroot'),
-            'request state unknown': put(dict(state='maybe'), 'configuration', 'requests', 'SDKROOT'),
-            'request missing': drop('configuration', 'requests', 'CPATH'),
-            'set SDK request without value': put(dict(state='set'), 'configuration', 'requests', 'SDKROOT'),
-            'private request leaks its value': put(dict(state='set', value='/private/includes'), 'configuration', 'requests', 'CPATH'),
-            'SDK source contradicts request': put('SDKROOT named by the caller', 'toolchain', 'sdk', 'source'),
-            'empty stamp projection': put({}, 'configuration', 'toolchain_stamp', 'projection'),
-            'wrong replacement type': put('garbage', 'configuration', 'build_directories', 'fresh_mode', 'replacement'),
-            'absent replacement observation': put(None, 'configuration', 'build_directories', 'fresh_mode', 'replacement'),
-            'fresh mode knob disagrees': put('0', 'configuration', 'knobs', 'PW_FRESH_BUILD'),
-            'fresh mode reused a target': lambda r: r['outputs'][0]['cargo'].__setitem__('fresh', True),
-            'Meson xpc is a string': put(dict(status='ok', values=dict(xpc='not-a-boolean')), 'configuration', 'meson_options'),
-            'empty Cargo profile': lambda r: r['outputs'][0]['cargo'].__setitem__('profile', {}),
-            'an output field null': lambda r: r['outputs'][1].__setitem__('uuid', None),
-            'an output tools list of strings': lambda r: r['outputs'][1].__setitem__('tools', ['ld']),
-            'a Cargo judgment null': lambda r: next(o for o in r['outputs'] if 'cargo' in o)['cargo'].__setitem__('fresh', None),
-            'a signature timestamp string': lambda r: r['outputs'][1]['signature'].__setitem__('timestamp', 'true'),
-            'signing nested disagrees': lambda r: r['signing']['nested'][0].__setitem__('timestamp', True),
-            'an unknown top-level field': put('x', 'extra'),
-            'a partial knob with full outputs': put('0', 'configuration', 'knobs', 'BUILD_XPC'),
-            'a string beyond its bound': put('x' * (prov.LINE_LIMIT + 1), 'toolchain', 'rustc', 'identity'),
-            'output target missing': drop('configuration', 'output_target'),
-            'output target of another architecture': put('x86_64', 'configuration', 'output_target', 'architecture'),
-            'output target of another triple': put('x86_64-apple-darwin', 'configuration', 'output_target', 'cargo_triple'),
-            'Meson machines missing': drop('configuration', 'meson_machines'),
-            'Meson host of another architecture': put(dict(system='darwin', cpu_family='x86_64'), 'configuration', 'meson_machines', 'host'),
-            'Cargo target selection missing': drop('toolchain', 'rustc', 'selection', 'target'),
-            'Cargo target of another triple': put('x86_64-apple-darwin', 'toolchain', 'rustc', 'selection', 'target', 'triple'),
-            "the triple's release area missing": drop('configuration', 'build_directories', 'cargo_target_release'),
-            'an output architecture missing': lambda r: r['outputs'][1].pop('architectures'),
-            'an output of another architecture': lambda r: r['outputs'][1].__setitem__('architectures', ['x86_64']),
-            'a universal output': lambda r: r['outputs'][1].update(architectures=['arm64', 'x86_64'], container='fat'),
-            'an output of another platform': lambda r: r['outputs'][1].__setitem__('platform', '6'),
-        })
-        for label, mutate in faults.items():
-            with self.subTest(fault=label):
-                changed = copy.deepcopy(record)
-                mutate(changed)
-                self.assertTrue(prov.record_shape_problems(changed), label)
-                (valid / prov.RECORD_PATH).write_text(json.dumps(changed))
-                self.assertIn('provenance', {code for code, _ in self.problems(valid)}, label)
+    @pytest.mark.parametrize('label', list(SHAPE_FAULTS), ids=list(SHAPE_FAULTS))
+    def test_shape_faults_are_refused_by_the_shape_check_and_the_inspector(self, label, work, accepted_app, accepted_record):
+        changed = copy.deepcopy(accepted_record)
+        SHAPE_FAULTS[label](changed)
+        assert prov.record_shape_problems(changed), label
+        app = copy_app(accepted_app, work, 'shape')
+        (app / prov.RECORD_PATH).write_text(json.dumps(changed))
+        assert 'provenance' in {code for code, _ in record_codes(app)}, label
+
+    def test_a_changed_linker_tool_version_alone_is_a_metadata_finding(self, work, accepted_app, accepted_record):
         # Only a linker tool's version changes: the shape holds and the load commands disagree.
-        changed = copy.deepcopy(record)
+        changed = copy.deepcopy(accepted_record)
         changed['outputs'][1]['tools'] = [dict(t, version=t['version'] + '.1') for t in changed['outputs'][1]['tools']] or [dict(tool='3', version='1')]
-        self.assertEqual(prov.record_shape_problems(changed), [])
-        (valid / prov.RECORD_PATH).write_text(json.dumps(changed))
-        self.assertEqual({code for code, _ in self.problems(valid)}, {'provenance_metadata'})
-        # A signature claim that differs from codesign's display of the bytes: the inspector names it.
-        fixture_bundle.record(valid)
-        observed = {o['rel_path']: dict(o['signature']) for o in record['outputs'] if 'signature' in o}
-        manifest = json.loads((valid / 'Contents/Resources/Evidence/manifest.json').read_text())
-        self.assertEqual(prov.record_problems(valid, manifest, signatures=observed), [])
-        observed[record['outputs'][1]['rel_path']]['adhoc'] = False
-        self.assertEqual({c for c, _, _ in prov.record_problems(valid, manifest, signatures=observed)}, {'provenance_signature'})
+        assert prov.record_shape_problems(changed) == []
+        app = copy_app(accepted_app, work, 'linker')
+        (app / prov.RECORD_PATH).write_text(json.dumps(changed))
+        assert {code for code, _ in record_codes(app)} == {'provenance_metadata'}
 
-    def test_the_archive_reader_validates_the_record_and_binds_its_outputs(self):
-        valid = self.app('archive')
-        record = self.partial(json.loads((valid / prov.RECORD_PATH).read_text()))
+    def test_a_signature_claim_the_display_contradicts_is_named(self, work, accepted_app, accepted_record):
+        app = copy_app(accepted_app, work, 'signature')
+        observed = {o['rel_path']: dict(o['signature']) for o in accepted_record['outputs'] if 'signature' in o}
+        manifest = json.loads((app / 'Contents/Resources/Evidence/manifest.json').read_text())
+        assert prov.record_problems(app, manifest, signatures=observed) == []
+        observed[accepted_record['outputs'][1]['rel_path']]['adhoc'] = False
+        assert {c for c, _, _ in prov.record_problems(app, manifest, signatures=observed)} == {'provenance_signature'}
+
+    def test_the_archive_reader_validates_the_record_and_binds_its_outputs(self, work, accepted_app):
+        valid = copy_app(accepted_app, work, 'archive')
+        record = partial_record(json.loads((valid / prov.RECORD_PATH).read_text()))
 
         def archive(record, members=None, name='release.zip'):
             import zipfile
-            path = self.work / name
+            path = work / name
             members = dict(members if members is not None else {rel: (valid / rel).read_bytes() for rel in prov.PARTIAL_OUTPUTS})
             with zipfile.ZipFile(path, 'w') as zipped:
                 for relative, data in members.items():
@@ -2814,19 +2890,19 @@ class RecordTests(unittest.TestCase):
                 zipped.writestr('PolicyWitness.app/' + prov.RECORD_PATH, json.dumps(record))
             return path
         data, controller = prov.read_zip_record(archive(record))
-        self.assertEqual(json.loads(data), record)
-        self.assertEqual(controller, hashlib.sha256((valid / prov.CONTROLLER).read_bytes()).hexdigest())
+        assert json.loads(data) == record
+        assert controller == hashlib.sha256((valid / prov.CONTROLLER).read_bytes()).hexdigest()
         oversized = dict(record, padding='x' * prov.RECORD_LIMIT)
-        with self.assertRaisesRegex(ValueError, 'beyond .* bytes'):
+        with pytest.raises(ValueError, match='beyond .* bytes'):
             prov.read_zip_record(archive(oversized, name='oversized.zip'))
         (valid / prov.RECORD_PATH).write_text(json.dumps(oversized))
         manifest = json.loads((valid / 'Contents/Resources/Evidence/manifest.json').read_text())
-        self.assertIn('exceeds', prov.record_problems(valid, manifest)[0][2])
+        assert 'exceeds' in prov.record_problems(valid, manifest)[0][2]
         broken = copy.deepcopy(record)
         broken['configuration']['deployment_target'] = None
-        with self.assertRaises(ValueError) as refused:
+        with pytest.raises(ValueError) as refused:
             prov.read_zip_record(archive(broken, name='null.zip'))
-        self.assertIn('invalid provenance record', str(refused.exception))
+        assert 'invalid provenance record' in str(refused.value)
         for label in ('load commands', 'signature facts'):
             changed = copy.deepcopy(record)
             output = changed['outputs'][1]
@@ -2834,46 +2910,46 @@ class RecordTests(unittest.TestCase):
                 output['tools'] = [dict(tool='3', version='999.0')]
             else:
                 output['signature']['adhoc'] = False
-            self.assertEqual(prov.record_shape_problems(changed), [])
-            with self.assertRaisesRegex(ValueError, label):
+            assert prov.record_shape_problems(changed) == []
+            with pytest.raises(ValueError, match=label):
                 prov.read_zip_record(archive(changed, name=label + '.zip'))
         members = {rel: (valid / rel).read_bytes() for rel in prov.PARTIAL_OUTPUTS}
         members['Contents/MacOS/sbpl-check'] += b'\0other bytes'
-        with self.assertRaises(ValueError) as refused:
+        with pytest.raises(ValueError) as refused:
             prov.read_zip_record(archive(record, members, 'swapped.zip'))
-        self.assertIn('differs from its provenance record', str(refused.exception))
+        assert 'differs from its provenance record' in str(refused.value)
         members.pop('Contents/MacOS/sbpl-check')
-        with self.assertRaises(ValueError) as refused:
+        with pytest.raises(ValueError) as refused:
             prov.read_zip_record(archive(record, members, 'missing.zip'))
-        self.assertIn('lacks Contents/MacOS/sbpl-check', str(refused.exception))
+        assert 'lacks Contents/MacOS/sbpl-check' in str(refused.value)
         # A one-slice fat container of the same arm64 slice: its load commands and the record's hash agree, so only the
         # container read from the member's own bytes separates it from the thin file the record claims.
-        fat = self.work / 'one-slice-fat'
+        fat = work / 'one-slice-fat'
         subprocess.run(['/usr/bin/lipo', '-create', str(valid / 'Contents/MacOS/sbpl-check'), '-output', str(fat)], check=True, capture_output=True)
-        self.assertEqual(oracle(fat)['container'], 'fat')
-        self.assertEqual({k: prov.output_metadata(fat)[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')},
-                         {k: prov.output_metadata(valid / 'Contents/MacOS/sbpl-check')[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')})
+        assert oracle(fat)['container'] == 'fat'
+        assert ({k: prov.output_metadata(fat)[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')}
+                == {k: prov.output_metadata(valid / 'Contents/MacOS/sbpl-check')[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')})
         members = {rel: (valid / rel).read_bytes() for rel in prov.PARTIAL_OUTPUTS}
         members['Contents/MacOS/sbpl-check'] = fat.read_bytes()
         rehashed = copy.deepcopy(record)
         next(o for o in rehashed['outputs'] if o['rel_path'] == 'Contents/MacOS/sbpl-check')['sha256'] = hashlib.sha256(fat.read_bytes()).hexdigest()
-        with self.assertRaisesRegex(ValueError, 'architectures or container'):
+        with pytest.raises(ValueError, match='architectures or container'):
             prov.read_zip_record(archive(rehashed, members, 'one-slice-fat.zip'))
         # Only the current schema is read: a version 1 record is refused, not interpreted, and nothing is supplied to an
         # incomplete current one.
         stale = dict(copy.deepcopy(record), schema_version=1)
-        self.assertEqual(prov.record_shape_problems(stale), [f'record.schema_version is not {prov.SCHEMA_VERSION}'])
-        with self.assertRaisesRegex(ValueError, 'unsupported provenance record'):
+        assert prov.record_shape_problems(stale) == [f'record.schema_version is not {prov.SCHEMA_VERSION}']
+        with pytest.raises(ValueError, match='unsupported provenance record'):
             prov.read_zip_record(archive(stale, name='version-1.zip'))
         missing = copy.deepcopy(record)
         missing['outputs'][0].pop('architectures')
-        with self.assertRaisesRegex(ValueError, 'invalid provenance record'):
+        with pytest.raises(ValueError, match='invalid provenance record'):
             prov.read_zip_record(archive(missing, name='incomplete.zip'))
 
-    def test_the_producer_validates_before_sealing(self):
-        app = self.app('producer')
+    def test_the_producer_validates_before_sealing(self, work, accepted_app, subtests):
+        app = copy_app(accepted_app, work, 'producer')
         record = json.loads((app / prov.RECORD_PATH).read_text())
-        root = self.work / 'producer-root'
+        root = work / 'producer-root'
         for relative in prov.SOURCE_INPUTS:
             (root / relative).parent.mkdir(parents=True, exist_ok=True)
             (root / relative).write_text(relative)
@@ -2903,10 +2979,9 @@ class RecordTests(unittest.TestCase):
             return prov.collect(session, app, root, 'fixture: linker-signed stand-ins', manifest_entries=manifest['entries'],
                                 signature=lambda path: dict(fixture_bundle.LINKER_SIGNED))
         produced = produce(session)
-        self.assertEqual(prov.record_shape_problems(produced), [])
-        self.assertEqual({(o['container'], tuple(o['architectures'])) for o in produced['outputs']}, {('thin', ('arm64',))})
-        self.assertEqual(produced['configuration']['output_target'],
-                         dict(output_target.DECLARED, note=produced['configuration']['output_target']['note']))
+        assert prov.record_shape_problems(produced) == []
+        assert {(o['container'], tuple(o['architectures'])) for o in produced['outputs']} == {('thin', ('arm64',))}
+        assert produced['configuration']['output_target'] == dict(output_target.DECLARED, note=produced['configuration']['output_target']['note'])
         for label, mutate, needle in (
                 ('no effective deployment target (the null the accepted app carried)', lambda s: s['cargo']['selection']['child_environment'].__setitem__('MACOSX_DEPLOYMENT_TARGET', None),
                  'no effective deployment target'),
@@ -2918,24 +2993,24 @@ class RecordTests(unittest.TestCase):
                 ('no Meson machines', lambda s: s.pop('meson_machines'), 'no Meson host and build machines'),
                 ('a Meson host of another architecture', lambda s: s['meson_machines'].__setitem__('host', dict(system='darwin', cpu_family='x86_64')),
                  'fails its own validation')):
-            with self.subTest(producer=label):
+            with subtests.test(producer=label):
                 changed = copy.deepcopy(session)
                 mutate(changed)
-                with self.assertRaises(prov.Refusal) as refused:
+                with pytest.raises(prov.Refusal) as refused:
                     produce(changed)
-                self.assertIn(needle, str(refused.exception))
+                assert needle in str(refused.value)
         # An output outside the target is refused from its bytes, whatever the session says.
         helper = app / 'Contents/MacOS/sbpl-check'
-        source = self.work / 'x86_64.c'
+        source = work / 'x86_64.c'
         source.write_text('int main(void) { return 0; }\n')
         subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-arch', 'x86_64', str(source), '-o', str(helper)],
                        check=True, capture_output=True)
         for entry in manifest['entries']:
             if entry['rel_path'] == 'Contents/MacOS/sbpl-check':
                 entry['sha256'] = prov.sha256_file(helper)
-        with self.assertRaises(prov.Refusal) as refused:
+        with pytest.raises(prov.Refusal) as refused:
             produce(session)
-        self.assertIn('Contents/MacOS/sbpl-check: outside the output target (architecture x86_64, not exactly arm64)', str(refused.exception))
+        assert 'Contents/MacOS/sbpl-check: outside the output target (architecture x86_64, not exactly arm64)' in str(refused.value)
 
     def test_helper_subcommands_are_the_ones_the_script_invokes(self):
         import importlib.util
@@ -2944,10 +3019,10 @@ class RecordTests(unittest.TestCase):
         spec.loader.exec_module(generator)
         model = generator.parse_script((ROOT / 'build.sh').read_text())
         invoked = {i['command'].split()[1] for i in model['invocations'] if i['command'].startswith('tests/lib/build_provenance.py')}
-        self.assertEqual(invoked, set(prov.SUBCOMMANDS) - {'inspect'})
-        self.assertIn('inspect', prov.SUBCOMMANDS)
+        assert invoked == set(prov.SUBCOMMANDS) - {'inspect'}
+        assert 'inspect' in prov.SUBCOMMANDS
 
-    def test_opt_in_mutation_anchors_match_current_sources(self):
+    def test_opt_in_mutation_anchors_match_current_sources(self, subtests):
         # Loading and applying mutations in memory needs no build or signing.
         # Execution remains opt-in; stale anchors fail the default battery.
         import importlib.util
@@ -2955,21 +3030,17 @@ class RecordTests(unittest.TestCase):
         controls = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(controls)
         for refusal, label, mutate, *where in controls.MUTATIONS:
-            with self.subTest(refusal=refusal, mutation=label):
+            with subtests.test(refusal=refusal, mutation=label):
                 source = (ROOT / (where[0] if where else 'build.sh')).read_text()
-                self.assertNotEqual(source, mutate(source))
+                assert source != mutate(source)
         script = (ROOT / 'build.sh').read_text()
-        self.assertEqual(script.count(controls.REQUIRE_REBUILT), 1)
-        self.assertNotEqual(controls._without_self_checks(script), script)
+        assert script.count(controls.REQUIRE_REBUILT) == 1
+        assert controls._without_self_checks(script) != script
 
     def test_unknown_wrapper_hashes_never_establish_stamp_compatibility(self):
         for missing in (None, {'wrapper': dict(command='/wrapper', sha256=None)}):
             fields = {'rustc.wrappers': missing}
             difference = prov.compare_fields(fields, fields, ['rustc.wrappers'])
-            self.assertEqual(difference[-1], 'unavailable')
+            assert difference[-1] == 'unavailable'
         fields = {'rustc.wrappers': {'wrapper': dict(command='/wrapper', sha256='a' * 64)}}
-        self.assertIsNone(prov.compare_fields(fields, fields, ['rustc.wrappers']))
-
-
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
+        assert prov.compare_fields(fields, fields, ['rustc.wrappers']) is None
