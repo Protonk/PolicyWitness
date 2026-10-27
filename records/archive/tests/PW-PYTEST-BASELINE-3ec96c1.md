@@ -604,13 +604,26 @@ subtest counts equal the variant counts in the tables above.
 | Measure | Value |
 | --- | --- |
 | Case duration, `report.json` | 73065 ms (reference 74682 ms) |
-| Sum of item durations in the receipt | 72.6 s; the rest is the launcher, collection and pytest |
+| Sum of item durations in the receipt | 72.6 s; the remainder of the case duration holds the case shell's steps and event writes, the launcher's start and judgment, collection and pytest's own work, which this run does not separate |
 | `RecordTests` call durations | bounded, redacted and complete 7.3 s; validated by shape in every reader 16.6 s; archive reader 1.2 s; producer 2.0 s; helper subcommands 0.6 s; opt-in anchors 0.5 s; unknown wrapper hashes 0.5 s |
 | First `OutputTargetTests` item, setup phase | 0.53 s, the class fixture's linking of the target fixtures |
 
 The `RecordTests` figures hold `setUp`, the body and the cleanups together, so
 they bound the fixture-host compile from above; stage 1 isolates it.
 
+**Source of the stage 0 run and its rerun.** The stage 0 run above preceded
+its commit, so its receipts cannot establish which uncommitted bytes produced
+it; the rows cite it because the rerun reproduced it. Run
+`20261027T170401Z_558c384a` in `tests/out/runs/stage0-clean` of a separate
+worktree at `/Users/raccoon/Desktop/Security/PolicyWitness-pytest-trial-evidence`
+(gitignored, local to that worktree) ran the same selection at the clean
+commit `a33b645`, recorded with the equipment in its `console.log`: 16 cases
+passed, no harness error, no sleep, the case in 72555 ms, the host controls in
+18434 ms, and the receipt again holds 68 items with 204 passed item reports and
+344 passed subtest reports.
+
+| Baseline ID | Stage | Migrated check or unmigrated code | Label | Evidence |
+| --- | --- | --- | --- | --- |
 | BP01 | 1 | `LockTests.test_unrelated_socket_cannot_handoff_a_copied_nonce_and_unheld_descriptor` unchanged; its directory and lock ownership now come from the `work` and `owner` fixtures (an autouse fixture on the class) | preserved | `tests/out/runs/pytest-stage1-smoke-01` |
 | BP02 | 1 | `LockTests.test_admission_send_is_bounded_when_the_channel_queue_is_full` unchanged; its directory and lock ownership now come from the `work` and `owner` fixtures (an autouse fixture on the class) | preserved | `tests/out/runs/pytest-stage1-smoke-01` |
 | BP03 | 1 | `LockTests.test_nested_scope_cannot_admit_after_acquisition_owner_exits` unchanged; its directory and lock ownership now come from the `work` and `owner` fixtures (an autouse fixture on the class) | preserved | `tests/out/runs/pytest-stage1-smoke-01` |
@@ -781,7 +794,7 @@ and `BP63` variants that became items).
 | Measure | Value |
 | --- | --- |
 | Case duration, `report.json` | 65520 ms (stage 0 73065 ms, reference 74682 ms) |
-| Fixture host compile and accepted bundle, isolated | 0.94 s, the setup phase of the first `TestRecords` item that requests the module fixtures |
+| Setup phase of the first `TestRecords` item that requests the module fixtures | 0.94 s, which holds the host compile, the accepted bundle's construction and its inspection, and that item's other fixtures together; the compile alone is not separated |
 | `TestRecords`, all phases | 21.0 s, against 28.7 s of `RecordTests` call phases at stage 0 |
 | Record-fault variants | 14 calls, 0.18 s mean; shape-fault variants 66 calls, 0.21 s mean |
 | Checker lines | +350 and −279 against stage 0, net +71 (3046 lines) |
@@ -800,12 +813,47 @@ Judged against the decision criteria:
 3. **Maintenance surface: met.** The launcher, its rules and the vendored set
    did not change for stage 1; only the drift allowlist named the checker.
 4. **Cost: met.** The case shortened by 7.5 s against stage 0 and 9.2 s
-   against the reference, with the host compile isolated at 0.94 s.
+   against the reference. The module fixtures' whole setup took 0.94 s; the
+   compile alone was not separated. Each duration is one run on a shared
+   machine, not an alternating measurement.
 
 Decision: reject, and revert stage 1 and then stage 0 by the plan's procedure.
 The flagged expectations F1 to F4 are then corrected in `unittest` form as
 separate changes.
 
+**What stage 1 actually verified, and its rerun.** The run above selected only
+the case and the `markdown_reader` drift case; the host controls and the rest
+of the `source_drift` suite, which the plan requires at every stage, were not
+run at that state, and no evidence-reuse exception was recorded. The run also
+preceded the stage's commit, so its receipts cannot establish which
+uncommitted checker bytes produced it. Run `20261027T171412Z_07432e66` in
+`tests/out/runs/stage1-clean` of the separate worktree at
+`/Users/raccoon/Desktop/Security/PolicyWitness-pytest-trial-evidence`
+(gitignored, local to that worktree) ran the required selection at the clean
+commit `e1db41a`, recorded with the equipment in its `console.log`:
+
+| Result | Value |
+| --- | --- |
+| `preflight/build_provenance_controls` | passed, 73058 ms; 158 items with 474 passed item reports and 258 passed subtest reports; the first `TestRecords` setup phase 1.05 s; `TestRecords` all phases 28.1 s |
+| `dispatcher/pytest_host_controls` | passed, 21097 ms |
+| `source_drift` | four of eight failed: `limits_documentation`, `contract_versions`, `build_documentation`, `generator_contract` |
+
+The four failures have one cause: `docs/build.json` cites the symbol
+`test_records_are_bounded_redacted_and_complete` in the checker to ground the
+build's `provenance_required_unknown` refusal, and stage 1 split and renamed
+that method without updating the manifest and regenerating `docs/BUILD.md`.
+The link rules refuse the missing symbol, and the build script's own
+documentation check refuses before the stages the contract controls expect to
+reach. Stage 1 therefore did not pass its verification: the refactor needed a
+documentation and manifest change the plan's machinery count did not include.
+This does not change the decision, which criterion 1 already settled, but it
+corrects the earlier account that both stages passed every verification. The
+durations here differ from the first stage 1 run (73.1 s against 65.5 s for the
+case) under the same source and equipment, which is the kind of variation the
+future-trial instruction on alternating measurements addresses.
+
+| Baseline ID | Stage | Migrated check or unmigrated code | Label | Evidence |
+| --- | --- | --- | --- | --- |
 | BP01 | closing | `LockTests.test_unrelated_socket_cannot_handoff_a_copied_nonce_and_unheld_descriptor` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
 | BP02 | closing | `LockTests.test_admission_send_is_bounded_when_the_channel_queue_is_full` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
 | BP03 | closing | `LockTests.test_nested_scope_cannot_admit_after_acquisition_owner_exits` in the restored `unittest` checker, every variant as before | preserved | `tests/out/runs/pytest-trial-closing-01` |
@@ -888,14 +936,53 @@ the inventory. The tree outside `records/` is byte for byte the pre-trial
 state. The flagged expectations are corrected next, in `unittest` form, as a
 separate change.
 
+That run preceded the revert's commit. Run `20261027T172245Z_d0e2a7be` in
+`tests/out/runs/closing-clean` of the separate worktree at
+`/Users/raccoon/Desktop/Security/PolicyWitness-pytest-trial-evidence`
+(gitignored, local to that worktree) reran the same selection at the clean
+commit `6304fef`, recorded with the equipment in its `console.log`: 15 cases
+passed, no harness error, no sleep, the case in 73973 ms, `Ran 68 tests`, `OK`.
+
+| Baseline ID | Stage | Migrated check or unmigrated code | Label | Evidence |
+| --- | --- | --- | --- | --- |
 | BP34 | correction | F1: the unused dictionary and the assertion that could not fail are gone; the oversized readings remain asserted | revised | commit `ee8f620`, run `tests/out/runs/pytest-corrections-01` |
 | BP62 | correction | F2: the record is regenerated in a `finally` block after each variant, so a failed variant leaves the next one the accepted record | revised | commit `ee8f620`, run `tests/out/runs/pytest-corrections-01` |
 | BP20 | correction | F3: the accepted variables carry name and value as their `subTest` identity | revised | commit `ee8f620`, run `tests/out/runs/pytest-corrections-01` |
 | BP62 | correction | F4: the refusal of another bundle's record is asserted to be exactly `provenance_hash`; a direct observation showed only that code, because appended bytes leave the UUID unchanged | revised | commit `ee8f620`, run `tests/out/runs/pytest-corrections-01` |
 
+### Departures from the trial plan
+
+Two parts of the stage 0 implementation departed from the plan's text, and
+neither was disclosed before the review that found the second:
+
+- The import rule allowlisted the launcher file as a whole, where the plan
+  named only its child mode; both modes live in one file.
+- The launcher's parent caught `KeyboardInterrupt` while waiting and went on
+  waiting for the child, where the plan said the parent neither intercepts nor
+  forwards signals. The child received the same signal directly, so the
+  cancellation control passed, but the parent did intercept one.
+
+### For a future trial
+
+Three instructions from the review of this trial, for any later attempt:
+
+- Add a control with a real failed subtest followed by a passing variant and
+  another method; verify the failure's identity, that the later variant and
+  method still execute, and that the outer case fails.
+- Before a decision rests on performance, measure baseline and candidate
+  alternately, and define what counts as a material slowdown before judging.
+- If the integration is kept, declare the host command's supported public
+  contract and exercise it through an independent consumer using existing
+  fixtures, without importing its internal receipt reader or copying its
+  integration logic.
+
 ### Corrections
 
 Commit `ee8f620` corrected F1 to F4 in `unittest` form; run
 `20261027T162934Z_decec1db` in `tests/out/runs/pytest-corrections-01` (gitignored, local) passed the case
-with the corrections, `Ran 68 tests`, `OK`. F5 to F9 are limits of observation
-or environment couplings, not defects, and stay as recorded.
+with the corrections, `Ran 68 tests`, `OK`. That run preceded the commit. Run
+`20261027T173238Z_7284777d` in `tests/out/runs/pytest-corrections-02`
+(gitignored, local) reran the case at commit `7ee8fa7`, whose checker is byte
+for byte the corrections commit's, with a `console.log` naming the source:
+passed, 75276 ms, `Ran 68 tests`, `OK`. F5 to F9 are limits of observation or
+environment couplings, not defects, and stay as recorded.
