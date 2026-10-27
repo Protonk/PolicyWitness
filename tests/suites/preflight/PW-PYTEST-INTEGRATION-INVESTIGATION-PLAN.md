@@ -92,7 +92,7 @@ Borrow the synthetic-scenario technique to test the eventual PW invocation and r
 
 1. **Establish the current boundary.** Trace how `check_build_provenance.py` is invoked, how its tests are selected and executed, and how failures, output, cleanup, and evidence reach the existing dispatcher. Identify the responsibilities pytest should assume within that boundary.
 
-2. **Freeze a whole-file comparison baseline.** Inventory the `unittest` classes, fixtures, setup and cleanup behavior, assertions, subprocess controls, and shared helpers. Distinguish organizational machinery from meaningful test-specific behavior. Derive the baseline from source: record the revision and every test method and meaningful variant, including `subTest` variants, what they exercise and assert, their inputs and expectations, relevant state transitions, and how outcomes are recorded. Compact tables may describe variants without repeating each loop iteration. Flag questionable expectations in the record.
+2. **Freeze a whole-file comparison baseline.** Inventory the `unittest` classes, fixtures, setup and cleanup behavior, assertions, subprocess controls, and shared helpers. Distinguish organizational machinery from meaningful test-specific behavior. Use the source at investigation start, recording the full commit and any relevant uncommitted differences. Give every test method and meaningful variant, including `subTest` variants, a stable identifier; record what they exercise and assert, their inputs and expectations, relevant state transitions, and how outcomes are recorded. Compact tables may describe variants without repeating each loop iteration, provided each scenario remains identifiable. Flag questionable expectations in the record.
 
 3. **Apply the four pattern families.** Select a few patterns worth trying, identifying the conditions that make them work and important differences from PW.
 
@@ -100,7 +100,7 @@ Borrow the synthetic-scenario technique to test the eventual PW invocation and r
 
 5. **Examine representative refactors and remaining variants.** Select tests with materially different characteristics, including independent variations and an intentionally stateful sequence. Describe each under a recognizable common pytest pattern: what machinery could disappear, and what might become harder to understand or verify. For necessary departures, distinguish real requirements, inherited arrangements that can change, and poor fits. Keep exceptions understandable and local. Propose a later trial that adopts the patterns far enough to evaluate these tradeoffs.
 
-6. **Estimate the work.** Estimate initial integration, subsequent file-local refactoring, and verification, distinguishing mechanical work from changes requiring judgment. Explain how successive stages could show which exceptions persist, disappear, or move as more checks adopt the common patterns.
+6. **Estimate the work.** Give effort ranges for initial integration, subsequent file-local refactoring, and verification, stating assumptions about implementer familiarity and setup costs. Distinguish mechanical work from changes requiring judgment. Explain how successive stages could show which exceptions persist, disappear, or move as more checks adopt the common patterns.
 
 ## Verification to design
 
@@ -120,12 +120,15 @@ When running the current case, use the repository root and `tests/run.sh --case 
 
 ## Deliverable
 
-Write the baseline from step 2 as a separate record at `records/tests/pytest/`, titled with its revision and linked only from this plan. It is a snapshot; current-behavior corrections it reveals go to the suite README as separate changes. It names no direct invocation of the checker. Each later trial or migration stage appends its comparison row by row, using only the labels preserved, isolation-improved, blocked and revised. A flagged expectation stays in the record until its correction lands, when the row is updated and the commit named. Archive the record under `records/archive/tests/` when this plan closes.
+Write the baseline from step 2 as a separate record at `records/tests/pytest/`, titled with its revision, and add its link to this plan. Repository links to the record belong only in this plan. It is a snapshot; current-behavior corrections it reveals go to the suite README as separate changes. It names no direct invocation of the checker.
 
-Return a short assessment in the task response unless a separate destination is requested. Cite the record by path with its summary counts and flagged expectations. Include:
+Each later trial or migration stage appends its comparison row by row, identifying the corresponding migrated checks or unmigrated code and supporting evidence, using only the labels preserved, isolation-improved, blocked and revised. A flagged expectation stays in the record until its correction lands, when the row is updated and the commit named. Retain the original source findings alongside these updates. Archive the record under `records/archive/tests/` when this plan closes.
+
+Return a short assessment in the task response unless a separate destination is requested. Recommend proceeding to a trial, deferring, or rejecting the refactor, and explain the choice against retaining the current arrangement. Cite the record by path with its summary counts and flagged expectations. Include:
 
 - The proposed integration and dependency/interpreter arrangement, with the execution reference and its applicability assessment.
 - Useful external patterns and their source references, transfer limits, promising and unpromising refactor targets, and remaining variants.
 - The proposed trial, staged effort estimate, and verification design.
-- The smallest productive first implementation step.
-- Reasons to defer or reject the refactor, if warranted.
+- The smallest productive first implementation step, if recommending a trial.
+
+The investigation is complete when the record and assessment satisfy these requirements. Empirical questions assigned to a later trial under the invariants do not block completion.
