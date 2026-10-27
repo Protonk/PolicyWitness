@@ -75,8 +75,8 @@ def import_problems(root, paths):
     return problems
 
 
-def tracked_python(root=ROOT):
-    listed = subprocess.run(['git', 'ls-files', '*.py'], cwd=root, capture_output=True, text=True, check=True)
+def tracked_python(root=ROOT, run=subprocess.run):
+    listed = run(['git', 'ls-files', '*.py'], cwd=root, capture_output=True, text=True, check=True)
     return [name for name in listed.stdout.split() if (root / name).is_file()]
 
 
@@ -89,7 +89,7 @@ def prose(text):
     return [document.text.split('\n')[line] for line in sorted(document.prose_lines)]
 
 
-class BlockTests(unittest.TestCase):
+class BlockTests(receipts.TestCase):
     def test_fences_close_only_on_the_same_marker_at_least_as_long(self):
         document = parse('''\
             ````text
@@ -158,7 +158,7 @@ class BlockTests(unittest.TestCase):
                          [('a', None, None), (None, 'Label', None), (None, None, '#y'), (None, None, None)])
 
 
-class CommentTests(unittest.TestCase):
+class CommentTests(receipts.TestCase):
     def test_comments_are_not_prose(self):
         document = parse('text <!-- inline [a](a.md) --> after\n\n<!--\n[b](b.md)\n-->\n\n<!-- one line -->\n')
         self.assertEqual(document.links, [])
@@ -195,7 +195,7 @@ class CommentTests(unittest.TestCase):
         self.assertEqual(prose(document.text), ['one', 'three'])
 
 
-class LinkTests(unittest.TestCase):
+class LinkTests(receipts.TestCase):
     def links(self, text):
         return [(l.target, l.label, l.code_label, l.image, l.autolink) for l in parse(text).links]
 
@@ -239,7 +239,7 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(parse('[x][undefined]\n').links, [])
 
 
-class HeadingTests(unittest.TestCase):
+class HeadingTests(receipts.TestCase):
     def test_levels_text_and_where_headings_are_not(self):
         document = parse('''\
             Title
@@ -290,7 +290,7 @@ class HeadingTests(unittest.TestCase):
         self.assertEqual(reader.slug('One build in time'), 'one-build-in-time')
 
 
-class TableTests(unittest.TestCase):
+class TableTests(receipts.TestCase):
     def test_cells_hold_inline_content(self):
         document = parse('| A | B |\n| --- | --- |\n| `a\\|b` | [l](t.md) |\n| x | y |\n')
         table, = document.tables
@@ -303,14 +303,14 @@ class TableTests(unittest.TestCase):
         self.assertEqual(parse('<!--\n| A |\n| --- |\n| x |\n-->\n\n```\n| A |\n| --- |\n```\n').tables, [])
 
 
-class LineTests(unittest.TestCase):
+class LineTests(receipts.TestCase):
     def test_lines_and_offsets(self):
         document = parse('a\n\nb\nc\n')
         self.assertEqual([i.lines for i in document.inlines], [(0, 1), (2, 4)])
         self.assertEqual([document.line_of(o) for o in (0, 1, 2, 3, 5)], [0, 0, 1, 2, 3])
 
 
-class VendorTests(unittest.TestCase):
+class VendorTests(receipts.TestCase):
     def test_vendored_files_are_the_wheels_bytes(self):
         self.assertEqual(vendor_problems(), [])
 
@@ -319,6 +319,7 @@ class VendorTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         fixture_inputs.copy_declared(ROOT, root, fixture_inputs.reader_inputs(ROOT))
+        self.track_inputs(root)
         vendor = root / 'tests/lib/vendor'
         changed = vendor / 'markdown_it/rules_inline/html_inline.py'
         changed.write_text(changed.read_text() + '\n')
@@ -335,6 +336,7 @@ class VendorTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         fixture_inputs.copy_declared(ROOT, root, fixture_inputs.reader_inputs(ROOT))
+        self.track_inputs(root)
         vendor = root / 'tests/lib/vendor'
         changed = vendor / 'markdown_it/rules_inline/html_inline.py'
         changed.write_text(changed.read_text() + '\n')
@@ -346,12 +348,13 @@ class VendorTests(unittest.TestCase):
         self.assertEqual(vendor_problems(root), ['markdown_it_py-3.0.0.RECORD: not the RECORD of the verified wheel'])
 
     def test_only_the_reader_imports_the_parser(self):
-        self.assertEqual(import_problems(ROOT, tracked_python()), [])
+        self.assertEqual(import_problems(ROOT, tracked_python(run=self.run_command)), [])
 
     def test_another_importer_is_named(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-importer-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
+        self.track_inputs(root)
         (root / 'a.py').write_text('import os\nimport markdown_it.main\n')
         (root / 'b.py').write_text('from mdurl import decode\n')
         (root / 'c.py').write_text('"""import markdown_it"""\n# from mdurl import x\nname = "markdown_it"\n')
@@ -361,13 +364,13 @@ class VendorTests(unittest.TestCase):
         ])
 
 
-class ImportGuardTests(unittest.TestCase):
+class ImportGuardTests(receipts.TestCase):
     """The parser loads only from the vendored copies, and linkify_it never loads."""
 
     def run_reader(self, root, env=None, before=''):
         script = (before + 'import sys; sys.path.insert(0, sys.argv[1]); import markdown_reader; '
                   'print(markdown_reader.parse("x").inlines[0].text)')
-        return subprocess.run([sys.executable, '-B', '-S', '-P', '-c', script, str(root / 'docs')], capture_output=True, text=True,
+        return self.run_command([sys.executable, '-B', '-S', '-P', '-c', script, str(root / 'docs')], capture_output=True, text=True,
                               env=dict(os.environ, **(env or {})), timeout=60)
 
     def checkout(self, vendored=True):
@@ -375,6 +378,7 @@ class ImportGuardTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         fixture_inputs.copy_declared(ROOT, root, fixture_inputs.reader_inputs(ROOT) if vendored else ['docs/markdown_reader.py'])
+        self.track_inputs(root)
         return root
 
     def stand_in(self, name, body):
@@ -383,6 +387,7 @@ class ImportGuardTests(unittest.TestCase):
         package = Path(directory.name) / name
         package.mkdir()
         (package / '__init__.py').write_text(body)
+        self.track_inputs(package.parent)
         return directory.name
 
     def test_the_vendored_copy_loads(self):

@@ -38,14 +38,13 @@ def scratch(prefix):
     return tempfile.TemporaryDirectory(prefix=prefix, dir=base)
 
 
-class NativePolicyTests(unittest.TestCase):
+class NativePolicyTests(receipts.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / generator.MANIFEST_NAME).read_text())
-        self.launches = []
-        self.addCleanup(lambda: print(f'launches: {self.id().split(".")[-1]} {json.dumps(self.launches)}'))
+        self.track_inputs(ROOT, fixture_inputs.expand(ROOT, NATIVE_INPUTS) + ['docs/build.json'])
 
     def run_meson(self, argv, timeout=300):
-        return receipts.launch(argv, self.launches, argv[1], capture_output=True, text=True, timeout=timeout)
+        return self.run_command(argv, capture_output=True, text=True, timeout=timeout)
 
     def native_copy(self):
         """A copy of the native sources under scratch, from declarations rather than Git."""
@@ -54,6 +53,7 @@ class NativePolicyTests(unittest.TestCase):
         root = Path(held.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.expand(ROOT, NATIVE_INPUTS))
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root, fixture_inputs.expand(ROOT, NATIVE_INPUTS))
         return root
 
     def test_meson_policy_assertions_refuse_each_option(self):
@@ -126,6 +126,8 @@ class NativePolicyTests(unittest.TestCase):
         cross = work / 'x86_64.ini'
         cross.write_text("[binaries]\nc = 'cc'\n[host_machine]\nsystem = 'darwin'\n"
                          "cpu_family = 'x86_64'\ncpu = 'x86_64'\nendian = 'little'\n")
+
+        self.track_inputs(work, ['x86_64.ini'])
 
         def setup(source, name):
             return self.run_meson(['meson', 'setup', str(work / name), str(source), '-Dxpc=false', '--cross-file', str(cross)])

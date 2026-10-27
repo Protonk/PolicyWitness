@@ -21,6 +21,7 @@ generator's `check`/`write` keep their own banner gate and refusal before write.
 import argparse
 import importlib.util
 import json
+import plistlib
 import sys
 from pathlib import Path
 
@@ -30,7 +31,7 @@ sys.path.insert(0, str(ROOT / 'docs'))
 import drift_rules  # noqa: E402
 import repository_tree  # noqa: E402
 from drift_rules import InputFailure, Problem, Rule  # noqa: E402
-from repository_tree import required  # noqa: E402
+from repository_tree import pattern, required  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_build', ROOT / 'docs/generate_build.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
@@ -40,9 +41,11 @@ SCRIPT = 'build.sh'
 BASELINE = generator.BASELINE_NAME
 MESON = 'meson.build'
 MAKEFILE = 'Makefile'
-INVENTORY_FILES = ('tests/lib/artifact.py', 'tests/build-evidence.py', 'README.md')
+INVENTORY_FILES = ('tests/lib/artifact.py', 'tests/build-evidence.py', 'README.md', 'Info.plist')
 GENERATOR_HELPERS = ('docs/generate_build.py', 'docs/generator_common.py', 'docs/generate_architecture.py',
-                     'docs/generate_limits.py', 'docs/limits.json', 'tests/catalog.json')
+                     'docs/generate_limits.py', 'tests/catalog.json', 'docs/repository_tree.py',
+                     'tests/lib/drift_rules.py', 'tests/suites/source_drift/build_rules.py',
+                     *generator.markdown_reader.source_files(ROOT))
 GATE = 'banner_order'
 
 
@@ -110,7 +113,16 @@ def check_inventory(tree):
     for name in INVENTORY_FILES:
         if not tree.exists(name):
             raise repository_tree.MissingInput(name, 'no such file')
-    return records('build.inventory', generator.inventory_problems(manifest(tree), model(tree), tree.root), INVENTORY_FILES[0])
+    # This generator boundary reads plists, Python inventories and Markdown itself. Its input errors
+    # belong to this row; they must not discard earlier results or prevent the baseline row from running.
+    validated, script = manifest(tree), model(tree)
+    try:
+        lines = generator.inventory_problems(validated, script, tree.root)
+    except (OSError, ValueError, SyntaxError, KeyError, plistlib.InvalidFileException) as error:
+        filename = getattr(error, 'filename', None)
+        path = tree.relative(filename) if filename and Path(filename).is_absolute() else filename
+        raise InputFailure('inventory.invalid', f'inventory: {error}', path) from error
+    return records('build.inventory', lines, INVENTORY_FILES[0])
 
 
 def _baseline(text, name, tree):
@@ -125,19 +137,42 @@ def check_baseline(tree):
     return records('build.baseline', generator.baseline_problems(manifest(tree), baseline), BASELINE)
 
 
-SCRIPT_INPUTS = (required(MANIFEST), required(SCRIPT))
+def manifest_inputs(root):
+    """Validation reads each cited file, including citations added since this module was imported."""
+    return (required(MANIFEST), *(required(path) for path in sorted(generator.cited_paths(root / MANIFEST))))
+
+
+def script_inputs(root):
+    return (*manifest_inputs(root), required(SCRIPT))
+
+
+def meson_inputs(root):
+    return (*manifest_inputs(root), required(MESON))
+
+
+def makefile_inputs(root):
+    return (*manifest_inputs(root), required(MAKEFILE))
+
+
+def inventory_inputs(root):
+    return (*script_inputs(root), *(required(path) for path in INVENTORY_FILES), pattern('runner/Services/*/Info.plist'))
+
+
+def baseline_inputs(root):
+    return (*manifest_inputs(root), required(BASELINE))
+
+
 RULES = (
-    Rule('banner_order', check_banner_order, inputs=SCRIPT_INPUTS, helpers=GENERATOR_HELPERS),
-    Rule('refusals', check_refusals, inputs=SCRIPT_INPUTS, helpers=GENERATOR_HELPERS),
-    Rule('meson_assertions', check_meson_assertions, inputs=(required(MANIFEST), required(MESON)), helpers=GENERATOR_HELPERS),
-    Rule('propagated_refusals', check_propagated_refusals, inputs=SCRIPT_INPUTS, helpers=GENERATOR_HELPERS),
-    Rule('knobs', check_knobs, inputs=SCRIPT_INPUTS, helpers=GENERATOR_HELPERS),
-    Rule('signing', check_signing, inputs=SCRIPT_INPUTS, helpers=GENERATOR_HELPERS),
-    Rule('invocations', check_invocations, inputs=SCRIPT_INPUTS, helpers=GENERATOR_HELPERS),
-    Rule('makefile_entry', check_makefile_entry, inputs=(required(MANIFEST), required(MAKEFILE)), helpers=GENERATOR_HELPERS),
-    Rule('inventory', check_inventory, inputs=(*SCRIPT_INPUTS, *(required(name) for name in INVENTORY_FILES)),
-         helpers=GENERATOR_HELPERS),
-    Rule('baseline', check_baseline, inputs=(required(MANIFEST), required(BASELINE)), helpers=GENERATOR_HELPERS),
+    Rule('banner_order', check_banner_order, inputs=script_inputs, helpers=GENERATOR_HELPERS),
+    Rule('refusals', check_refusals, inputs=script_inputs, helpers=GENERATOR_HELPERS),
+    Rule('meson_assertions', check_meson_assertions, inputs=meson_inputs, helpers=GENERATOR_HELPERS),
+    Rule('propagated_refusals', check_propagated_refusals, inputs=script_inputs, helpers=GENERATOR_HELPERS),
+    Rule('knobs', check_knobs, inputs=script_inputs, helpers=GENERATOR_HELPERS),
+    Rule('signing', check_signing, inputs=script_inputs, helpers=GENERATOR_HELPERS),
+    Rule('invocations', check_invocations, inputs=script_inputs, helpers=GENERATOR_HELPERS),
+    Rule('makefile_entry', check_makefile_entry, inputs=makefile_inputs, helpers=GENERATOR_HELPERS),
+    Rule('inventory', check_inventory, inputs=inventory_inputs, helpers=GENERATOR_HELPERS),
+    Rule('baseline', check_baseline, inputs=baseline_inputs, helpers=GENERATOR_HELPERS),
 )
 
 

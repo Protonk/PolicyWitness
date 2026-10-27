@@ -1,5 +1,6 @@
 """Uniform generator contracts, measurements and adversarial controls."""
 import importlib.util
+import io
 import json
 import re
 import subprocess
@@ -308,7 +309,7 @@ def measurements(root=ROOT):
                 baseline=dict({'G9': 0, 'G11': 0}, **Counter(row['invariant'] for row in entries)))
 
 
-class GeneratorContractTests(unittest.TestCase):
+class GeneratorContractTests(receipts.TestCase):
     def checkout(self, generators=GENERATORS):
         """The declared inputs of the named generators, never build products or accumulated evidence, plus
         sentinel files no generator owns; the fixture is not a Git repository."""
@@ -323,11 +324,14 @@ class GeneratorContractTests(unittest.TestCase):
             (root / name).parent.mkdir(parents=True, exist_ok=True)
             (root / name).write_text(text)
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root)
         return root
 
     def command(self, root, name, *args):
+        if root == ROOT:
+            self.track_inputs(root, fixture_inputs.generator_inputs(root, name))
         start = time.perf_counter()
-        result = subprocess.run([sys.executable, '-B', '-S', str(root / f'docs/generate_{name}.py'), *args],
+        result = self.run_command([sys.executable, '-B', '-S', str(root / f'docs/generate_{name}.py'), *args],
                                 cwd=root, capture_output=True, text=True, timeout=60)
         print(f'command: generate_{name} {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
         return result
@@ -604,6 +608,7 @@ class GeneratorContractTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-citations-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
+        self.track_inputs(root)
         (root / 'doc.md').write_text(
             '## Real heading\n\n## Test seam: `_seam`\n\n<!-- BEGIN GENERATED THING -->\n<!-- END GENERATED THING -->\n\n'
             '<!--\n## Commented heading\n-->\n\n```text\n## Fenced heading\n<!-- BEGIN GENERATED FENCED -->\n```\n\n'
@@ -639,6 +644,7 @@ class GeneratorContractTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-prose-links-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
+        self.track_inputs(root)
         (root / 'source.py').write_text('def defined():\n    pass\n')
         (root / 'target.md').write_text('# Target\n## Repeated\n## Repeated\n')
         path = root / 'doc.md'
@@ -730,8 +736,9 @@ class GeneratorContractTests(unittest.TestCase):
                 directory = tempfile.TemporaryDirectory(prefix='pw-baseline-release-')
                 self.addCleanup(directory.cleanup)
                 root = Path(directory.name)
+                self.track_inputs(root)
                 def git(*args):
-                    result = subprocess.run(['git', '-C', str(root), '-c', 'user.name=Generator Control',
+                    result = self.run_command(['git', '-C', str(root), '-c', 'user.name=Generator Control',
                         '-c', 'user.email=generator@example.invalid', '-c', 'commit.gpgsign=false',
                         '-c', 'tag.gpgsign=false', *args], capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
@@ -883,6 +890,7 @@ class GeneratorContractTests(unittest.TestCase):
         # A new citation, a new target document and a new native helper reach the declarations.
         with tempfile.TemporaryDirectory(prefix='pw-declared-') as directory:
             root = Path(directory)
+            self.track_inputs(root)
             fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'limits')
                                          + fixture_inputs.generator_inputs(ROOT, 'architecture')
                                          + fixture_inputs.generator_inputs(ROOT, 'worker_identity'))
@@ -909,7 +917,7 @@ class GeneratorContractTests(unittest.TestCase):
                  '"generate_architecture") if name in sys.modules}))\n')
         for name in GENERATORS:
             with self.subTest(fresh_import=name):
-                result = subprocess.run([sys.executable, '-B', '-S', '-c', probe, str(root / f'docs/generate_{name}.py')],
+                result = self.run_command([sys.executable, '-B', '-S', '-c', probe, str(root / f'docs/generate_{name}.py')],
                                         cwd=root, capture_output=True, text=True, timeout=60)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 loaded = json.loads(result.stdout)
@@ -959,6 +967,94 @@ class GeneratorContractTests(unittest.TestCase):
         authored = common.authored_spans('Value <!-- span unknown.value -->1<!-- /span -->')
         self.assertTrue(any(m[1].split('.', 1)[0] not in {'architecture', 'limits', 'build'} for m in authored))
 
+
+
+class ReceiptContractTests(receipts.TestCase):
+    def test_failed_subtests_and_fixture_errors_have_their_own_receipts(self):
+        class Probe(receipts.TestCase):
+            def test_a(self):
+                with self.subTest(value='rejected'):
+                    self.fail('deliberate subtest failure')
+                with self.subTest(value='accepted'):
+                    self.assertTrue(True)
+
+            def test_b(self):
+                pass
+
+            def test_c(self):
+                raise ValueError('deliberate error')
+
+            def test_d(self):
+                self.addCleanup(lambda: (_ for _ in ()).throw(ValueError('cleanup failure')))
+
+        class SetupProbe(receipts.TestCase):
+            @classmethod
+            def setUpClass(cls):
+                raise ValueError('class setup failure')
+
+            def test_never_reached(self):
+                raise AssertionError('must not run')
+
+        with tempfile.TemporaryDirectory(prefix='pw-receipts-') as directory:
+            root = Path(directory)
+            file = receipts.Receipts(root / 'receipts.json', 'probe', 'unittest')
+            runner = unittest.TextTestRunner(stream=io.StringIO(), resultclass=lambda *a, **kw: receipts.TimedResult(*a, receipts=file, **kw))
+            result = runner.run(unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(cls)
+                                                   for cls in (Probe, SetupProbe)]))
+            file.finish(result.wasSuccessful())
+            data = json.loads(file.path.read_text())
+            self.assertFalse(data['ok'])
+            self.assertTrue(data['complete'])
+            self.assertEqual([c['status'] for c in data['controls']], ['fail', 'pass', 'error', 'error', 'error'])
+            self.assertEqual([s['status'] for s in data['controls'][0]['subtests']], ['fail', 'pass'])
+            self.assertEqual(data['controls'][1]['subtests'], [])
+            self.assertEqual(data['controls'][1]['failed_subtests'], [])
+            self.assertTrue(all(c['elapsed_seconds'] >= 0 for c in data['controls']))
+            self.evidence.capture(root, label='receipt outcomes')
+
+    def test_command_receipts_keep_inputs_output_and_failed_launches(self):
+        with tempfile.TemporaryDirectory(prefix='pw-receipt-command-') as directory:
+            root = Path(directory)
+            inputs = root / 'inputs'
+            inputs.mkdir()
+            (inputs / 'changed').write_text('before')
+            (inputs / 'deleted').write_text('remove me')
+            file = receipts.Receipts(root / 'receipts.json', 'probe', 'unittest')
+            record = file.add(id='000', inputs=[], launches=[])
+            evidence = receipts.Control(file, record)
+            evidence.track(inputs)
+            (inputs / 'changed').write_text('after')
+            (inputs / 'deleted').unlink()
+            (inputs / 'added').write_text('new')
+            (inputs / 'alias').symlink_to('changed')
+            result = evidence.run([sys.executable, '-B', '-S', '-P', '-c',
+                                   'import sys; print("output"); print("diagnostic", file=sys.stderr); sys.exit(3)'],
+                                  capture_output=True, text=True)
+            self.assertEqual(result.returncode, 3)
+            launch = record['launches'][0]
+            self.assertEqual((root / launch['stdout']).read_text(), 'output\n')
+            self.assertEqual((root / launch['stderr']).read_text(), 'diagnostic\n')
+            snapshot = json.loads((root / launch['inputs'][0]).read_text())
+            self.assertEqual(snapshot['changed'], ['added', 'alias', 'changed', 'deleted'])
+            self.assertEqual(snapshot['entries']['alias']['target'], 'changed')
+            self.assertEqual((root / snapshot['entries']['changed']['blob']).read_text(), 'after')
+            with self.assertRaises(subprocess.TimeoutExpired):
+                evidence.run([sys.executable, '-B', '-S', '-P', '-c',
+                              'import time; print("started", flush=True); time.sleep(60)'], timeout=1, capture_output=True)
+            self.assertEqual(record['launches'][-1]['status'], 'timeout')
+            self.assertEqual((root / record['launches'][-1]['stdout']).read_bytes(), b'started\n')
+            with self.assertRaises(FileNotFoundError):
+                evidence.run([str(root / 'absent-command')])
+            self.assertEqual(record['launches'][-1]['status'], 'error')
+            with self.assertRaises(subprocess.CalledProcessError):
+                evidence.run([sys.executable, '-B', '-S', '-P', '-c', 'raise SystemExit(4)'], check=True)
+            self.assertEqual(record['launches'][-1]['returncode'], 4)
+            file.finish(False, complete=False)
+            data = json.loads(file.path.read_text())
+            self.assertFalse(data['complete'])
+            self.assertEqual(len(data['controls'][0]['launches']), 4)
+            self.assertTrue(all(c['elapsed_seconds'] >= 0 for c in record['launches']))
+            self.evidence.capture(root, label='command evidence')
 
 
 if __name__ == '__main__':

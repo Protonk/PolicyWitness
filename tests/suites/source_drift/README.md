@@ -121,7 +121,12 @@ each is named, and every restoration passes.
 Every rule is a row of the checker's `RULES` table: a stable ID, the function
 and its declared inputs (required and optional files, directory membership,
 patterns and named inventory scopes) plus the helper modules a fixture must
-carry. A rule reads the tree it is given and returns records carrying its rule
+carry. Inputs may also be a function from a root to a declaration tuple: the
+build rules use this to discover the current manifest's cited files at fixture
+expansion time. Their inventory declaration includes the application and service
+plists. A fixture built from the build table alone must pass every row; a new
+citation must enter that fixture's input set.
+A rule reads the tree it is given and returns records carrying its rule
 ID, a stable diagnostic key, the path and line when known, a severity and the
 message. The shared dispatcher in [drift_rules.py](../../lib/drift_rules.py)
 runs each selected row once, in table order; no row depends on another's
@@ -457,23 +462,49 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 ### Receipts
 
 Every case writes receipts through [receipts.py](../../lib/receipts.py),
-schema version 2. A receipt file is one object: `schema_version`, `case`, the
-file's `mode`, `ok`, `complete` (false while controls are still running or
-after an exception, so a partial file is never mistaken for a finished one)
-and `controls`. A control names its `scenario` or `test`; its `mode`
-(`in-process`, `entry-point`, `meson`, `build-script`, `unittest` or
-`fixture`); the owner `rules` and the `changed` inputs when it has them; its
-`expected` and `actual` records or status; the `stdout`, `stderr` and
-`results` paths when output was captured; its monotonic `elapsed_seconds`;
-and `launches`, the direct child processes it started with their argv, return
-code and elapsed time. A launch count is the control's own children, never an
-OS-wide count of what Meson, a compiler or the build script started in turn.
+schema version 2. The file contains `schema_version`, `case`, `mode`, `ok`,
+`complete` and `controls`. `complete` stays false while execution is in progress
+or after an abort. A finished suite with failing assertions is complete and
+has `ok: false`.
+
+A planner control names its `scenario`, `mode`, owner `rules`, `changed`
+inputs, expected and actual records, output paths and monotonic elapsed time.
+Unittest controls name their full `test` ID and mode, expect a passing test,
+and record the actual status, assertion/error text, each subtest's identity
+and status, elapsed time, `inputs` and `launches`. Failed subtests belong to
+their parent test; setup and cleanup failures also produce a test receipt.
+
+Unittest `inputs` point to snapshot JSON files beneath
+`<module>-receipts-evidence/`. Paths are relative to the receipt's directory.
+Each snapshot names its original root, observation label, complete selected
+path map, changed paths since the previous observation, bytes and elapsed time.
+File entries name content-addressed blobs and modes; symlinks record their
+targets, and missing or unreadable files remain explicit. The test source is
+retained as an input. Fixture helpers register disposable input trees; live
+checkouts and native fixtures register explicit file sets to exclude build
+products. Subtests, command boundaries and fixture cleanup capture their current
+state. These observations cover registered inputs, not an audit of filesystem
+reads. Git metadata is outside whole-fixture receipt snapshots.
+
+`launches` records direct commands at the case's explicit command wrappers:
+argv, working directory, selected test environment settings, input snapshot
+paths, output paths, status, return code and elapsed time. A pending launch is
+written before execution; timeout and launch errors retain the available output
+and leave an attempted-launch record. Inherited environment values outside the
+documented test settings are not copied. Helpers invoked internally and children
+started by Meson, compilers or build scripts are outside this wrapper count;
+it is not an OS process census. Test assertions own command expectations; the
+receipt records their outcome, while planner scenarios carry explicit record
+expectations. Command output is retained before temporary inputs are cleaned.
 The planner's `controls.json` begins with the fixture's file, directory, byte
 and second counts; the unittest suites write `<module>-receipts.json` with one
 control per test and print each test's elapsed time, each generator command's
 elapsed time and return code, and each fixture copy and snapshot with its file
 and byte counts; `check-results.json` and `build-rules-results.json` are the
 checker's and the build rules' result records for the live tree.
+The generator-contract case exercises the receipt boundary with failing and
+passing subtests, test and cleanup errors, changed/deleted/symlink inputs,
+captured output, nonzero commands, a timeout and a failed launch.
 
 ## Run
 

@@ -22,7 +22,7 @@ generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
 
 
-class LimitsDocumentationTests(unittest.TestCase):
+class LimitsDocumentationTests(receipts.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / 'docs/limits.json').read_text())
         self.document = (ROOT / 'docs/LIMITS.md').read_text()
@@ -36,11 +36,14 @@ class LimitsDocumentationTests(unittest.TestCase):
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'limits'))
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root)
         return root
 
     def command(self, root, *args):
+        if root == ROOT:
+            self.track_inputs(root, fixture_inputs.generator_inputs(root, 'limits'))
         start = time.perf_counter()
-        result = subprocess.run([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
+        result = self.run_command([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
                                 cwd=root, capture_output=True, text=True, timeout=10)
         print(f'command: {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
         return result
@@ -49,6 +52,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='pw-limits-') as directory:
             path = Path(directory) / 'limits.json'
             path.write_text(json.dumps(data))
+            self.evidence.capture(path.parent, [path.name], 'manifest mutation')
             return generator.load_limits(path)
 
     def test_document_is_current(self):
@@ -58,7 +62,8 @@ class LimitsDocumentationTests(unittest.TestCase):
         self.assertEqual(self.guide, generator.update_guide_questions(self.guide, self.questions))
         self.assertEqual(self.guide, generator.update_guide_rules(self.guide, self.contract))
         self.assertEqual(self.guide, generator.update_guide_extension_statuses(self.guide, self.contract))
-        subprocess.run([sys.executable, '-B', '-S', str(ROOT / 'docs/generate_limits.py'), '--check'], check=True)
+        result = self.command(ROOT, '--check')
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_matrix_table_equals_the_generator_output_for_every_fixture_row(self):
         rows = generator.load_matrix(ROOT / generator.MATRIX_NAME)
@@ -182,6 +187,7 @@ class LimitsDocumentationTests(unittest.TestCase):
             with tempfile.TemporaryDirectory(prefix='pw-matrix-') as directory:
                 path = Path(directory) / 'matrix.json'
                 path.write_text(json.dumps(data))
+                self.evidence.capture(path.parent, [path.name], 'manifest mutation')
                 with self.assertRaises(ValueError):
                     generator.load_matrix(path)
 

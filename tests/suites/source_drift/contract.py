@@ -28,7 +28,7 @@ architecture_spec = importlib.util.spec_from_file_location('generate_architectur
 architecture_generator = importlib.util.module_from_spec(architecture_spec)
 architecture_spec.loader.exec_module(architecture_generator)
 
-class ContractVersionTests(unittest.TestCase):
+class ContractVersionTests(receipts.TestCase):
     def setUp(self):
         self.manifest_path = ROOT / 'docs/contract.json'
         self.manifest = json.loads(self.manifest_path.read_text())
@@ -41,11 +41,14 @@ class ContractVersionTests(unittest.TestCase):
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'contract'), extra=extra)
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root)
         return root
 
     def command(self, root, *args):
+        if root == ROOT:
+            self.track_inputs(root, fixture_inputs.generator_inputs(root, 'contract'))
         start = time.perf_counter()
-        result = subprocess.run([sys.executable, '-B', '-S', str(root / 'docs/generate_contract.py'), *args],
+        result = self.run_command([sys.executable, '-B', '-S', str(root / 'docs/generate_contract.py'), *args],
                                 cwd=root, capture_output=True, text=True, timeout=10)
         print(f'command: {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
         return result
@@ -206,17 +209,20 @@ class ContractVersionTests(unittest.TestCase):
 
 
 
-class WorkerIdentityTests(unittest.TestCase):
+class WorkerIdentityTests(receipts.TestCase):
     def checkout(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-identity-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'worker_identity'))
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root)
         return root
 
     def command(self, root, *args):
-        return subprocess.run([sys.executable, '-B', '-S', str(root / 'docs/generate_worker_identity.py'), *args],
+        if root == ROOT:
+            self.track_inputs(root, fixture_inputs.generator_inputs(root, 'worker_identity'))
+        return self.run_command([sys.executable, '-B', '-S', str(root / 'docs/generate_worker_identity.py'), *args],
                               cwd=root, capture_output=True, text=True, timeout=10)
 
     def test_identity_is_current_relocatable_and_regeneration_is_idempotent(self):

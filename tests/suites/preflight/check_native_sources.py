@@ -153,7 +153,7 @@ def main(argv):
     try:
         found = configured_controls(repo, scratch, out, file)
     except BaseException:
-        file.finish(ok=False)
+        file.finish(ok=False, complete=False)
         raise
     file.finish(ok=True)
     shutil.rmtree(scratch, ignore_errors=True)

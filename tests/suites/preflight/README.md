@@ -430,7 +430,7 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/preflight/codesign.preflight/artifacts/preflight.json`
 - `<run>/suites/preflight/build_entry_controls/artifacts/assertions.log` and `check_build_entry-receipts.json` (one control per test with its status and elapsed time)
-- `<run>/suites/preflight/native_policy_controls/artifacts/assertions.log` and `check_native_policy-receipts.json`; the log prints each control's Meson launches
+- `<run>/suites/preflight/native_policy_controls/artifacts/assertions.log` and `check_native_policy-receipts.json`; the receipt records each control's Meson launches, input snapshots and captured output
 - `<run>/suites/preflight/native_source_controls/artifacts/<scenario>/` (the mutated manifest and worker, setup, compile and check output, `command.json` with each launch) and `receipts.json`, whose controls count every setup, compile and check launch
 
 Receipt files follow the schema that the `source_drift` README describes under

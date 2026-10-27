@@ -457,3 +457,76 @@ Limitations:
   other controls may have been running; they are context, not thresholds.
 - The planner's scenario records assert diagnostic keys (and exact messages
   for the Meson scenarios); message wording may still evolve.
+
+
+## Acceptance corrections
+
+The four acceptance findings at `d3ded47` are corrected in this change.
+
+- The build inventory boundary reports expected read, plist, Python and Markdown
+  input failures for its own rule. Controls combine each bad input with a later
+  invalid baseline and assert both records, every rule result, command status 1,
+  no traceback, and clean restoration.
+- Rule inputs accept either a declaration tuple or a function from the supplied
+  root to that tuple. The build table discovers its manifest citations during
+  expansion and declares its plist and module dependencies. A fixture made from
+  that table alone passes; a new citation is discovered and its removal is refused.
+- Unittest receipts start with the test and finalize at stopTest, after cleanup.
+  Subtest failures remain with their parent; instance errors, cleanup errors and
+  class setup errors each retain their own outcome. An aborted run remains
+  incomplete; a finished run with failing assertions is complete and unsuccessful.
+- Explicit command wrappers and registered input trees retain source, snapshots,
+  changed/deleted paths, symlinks, content-addressed bytes, command arguments,
+  selected environment settings, stdout/stderr, elapsed times and attempted
+  launches. Timeout and launch-error controls retain partial output. Assertions
+  remain the owners of expectations; receipts retain their pass/fail/error outcome.
+  The command count covers the explicit wrappers, not a trace of helper-internal
+  calls or descendant processes. No API is monkeypatched to observe execution.
+
+Verification: `drift-acceptance-fixes-01` is an uncredited development failure
+caused by an indentation error in a newly inserted limits-test observation. It
+was corrected before `drift-acceptance-fixes-02` (ID
+`20261027T232742Z_67c9c0d8`), which passed build_documentation,
+generator_contract, markdown_reader and direct_python_start. The complete
+selected command then passed as `drift-acceptance-fixes-03`, ID
+`20261027T233059Z_1f7c68fa`: all eight source_drift cases and all three rehomed
+preflight cases, no skips or unrun cases, zero recorded sleep. It used the
+pinned Python 3.14.9 outside the restrictive automation sandbox.
+
+Source provenance: the full run used `d3ded47` plus the implementation diff.
+No files were edited during execution. Immediately after completion, under the
+checkout lock, `investigation/source.json` recorded the tracked-file hashes and
+`investigation/working.diff` retained that exact diff, before this account was
+updated. These are local gitignored evidence, alongside
+`investigation/receipt-summary.json`. The following table is generated from the
+completed run's case reports. It is a single sample, not a performance threshold.
+
+| Case | Acceptance ms |
+| --- | ---: |
+| `preflight/build_entry_controls` | 27172 |
+| `preflight/native_policy_controls` | 32674 |
+| `preflight/native_source_controls` | 10482 |
+| `source_drift/runner_source_manifests_agree` | 25459 |
+| `source_drift/limits_documentation` | 34612 |
+| `source_drift/contract_versions` | 5612 |
+| `source_drift/architecture_documentation` | 13567 |
+| `source_drift/build_documentation` | 10778 |
+| `source_drift/generator_contract` | 39093 |
+| `source_drift/markdown_reader` | 1448 |
+| `source_drift/direct_python_start` | 913 |
+
+The nine unittest receipt files hold 148 test controls and 469 direct wrapper
+launches. Build-entry controls retain 42 launches and native-policy controls
+69; native-source controls separately retain their 19 setup/compile/check
+launches. Every unittest receipt's outcome, input reference, output reference
+and content blob hash was checked after the run. The two receipt-contract tests
+exercise failing subtests beside a later passing test, test/cleanup/class errors,
+changed/deleted/symlink inputs, successful output capture, nonzero status, timeout
+output, failed execution and incomplete-file state.
+
+The permanent source_drift README documents the root-dependent declarations,
+receipt fields, input/output paths, lifecycle and counting boundaries. The
+preflight README names the retained native command evidence. Acceptance of
+these corrections permits retirement of this account, map and plan together;
+the old package-specific retention entries retire with them. The new local runs
+remain ordinary managed output under the existing pruning policy.

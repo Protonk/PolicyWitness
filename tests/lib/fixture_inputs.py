@@ -70,7 +70,11 @@ def generator_inputs(root, name):
 
 
 def expand(root, inputs, helpers=()):
-    """The relative paths a declaration list selects under `root`, plus named helper modules."""
+    """Expand a declaration tuple, or a function returning that tuple for `root`, plus helper modules.
+
+    A function discovers manifest-selected inputs at expansion time, never at module import time."""
+    if callable(inputs):
+        inputs = inputs(Path(root))
     return sorted(set(repository_tree.Tree(root).expand(tuple(inputs))) | set(helpers))
 
 

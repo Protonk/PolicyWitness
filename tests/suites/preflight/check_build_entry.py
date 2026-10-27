@@ -44,7 +44,7 @@ ENTRY_FILES = set(fixture_inputs.build_entry_inputs(ROOT))
 LIMITS_FILES = ENTRY_FILES | set(fixture_inputs.generator_inputs(ROOT, 'limits'))
 
 
-class BuildEntryTests(unittest.TestCase):
+class BuildEntryTests(receipts.TestCase):
     def setUp(self):
         self.versions = generator.load_versions(ROOT / 'docs/contract.json')
 
@@ -55,6 +55,7 @@ class BuildEntryTests(unittest.TestCase):
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'contract'), extra=extra)
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root)
         return root
 
     def build_checkout(self):
@@ -68,7 +69,7 @@ class BuildEntryTests(unittest.TestCase):
         """Run build.sh in a checkout with the knobs unset unless env sets them; return the result and the output path."""
         destination = root / 'dist'
         base = {name: value for name, value in os.environ.items() if name not in BUILD_ENV_EXCLUDED}
-        result = subprocess.run(['bash', str(root / 'build.sh'), *args], cwd=root,
+        result = self.run_command(['bash', str(root / 'build.sh'), *args], cwd=root,
                                 env={**base, 'DIST_DIR': str(destination), **env}, capture_output=True, text=True, timeout=timeout)
         return result, destination
 
@@ -126,7 +127,7 @@ class BuildEntryTests(unittest.TestCase):
                            '(allow process-exec (literal "/bin/bash") (literal "/usr/sbin/sysctl") (literal "/usr/bin/dirname"))')
         env = {k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}
         env.update(SDKROOT='', PW_PYTHON='/usr/bin/false')
-        result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(root / 'build.sh')],
+        result = self.run_command(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(root / 'build.sh')],
                                 cwd=root, env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertIn('direct Python unavailable', result.stderr)
@@ -161,7 +162,7 @@ class BuildEntryTests(unittest.TestCase):
         def run(profile, *args):
             path = root / 'native.sb'
             path.write_text(profile)
-            return subprocess.run(['/usr/bin/sandbox-exec', '-f', str(path), '/bin/bash', str(root / 'build.sh'), *args],
+            return self.run_command(['/usr/bin/sandbox-exec', '-f', str(path), '/bin/bash', str(root / 'build.sh'), *args],
                                   cwd=root, env=env, capture_output=True, text=True, timeout=30)
         refused = run(rules + shim_probe.UNREADABLE_ARM64, '--bogus')
         self.assertEqual(refused.returncode, 2, refused.stdout + refused.stderr)
@@ -302,6 +303,7 @@ class BuildEntryTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-make-help-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
+        self.track_inputs(root)
         makefile = root / 'Makefile'
         (root / 'tests/lib').mkdir(parents=True)
         shutil.copy2(ROOT / 'tests/lib/sdk_guard.sh', root / 'tests/lib/sdk_guard.sh')
@@ -325,7 +327,7 @@ class BuildEntryTests(unittest.TestCase):
             expected = '\n'.join(lines) + '\n'
             before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
             for args in ([], ['help']):
-                result = subprocess.run(['make', *args], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+                result = self.run_command(['make', *args], cwd=root, env=env, capture_output=True, text=True, timeout=30)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(result.stdout, expected)
                 self.assertEqual(result.stderr, '')
@@ -337,6 +339,7 @@ class BuildEntryTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-make-build-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
+        self.track_inputs(root)
         shutil.copy2(ROOT / 'Makefile', root / 'Makefile')
         (root / 'tests/lib').mkdir(parents=True)
         shutil.copy2(ROOT / 'tests/lib/sdk_guard.sh', root / 'tests/lib/sdk_guard.sh')
@@ -348,12 +351,12 @@ class BuildEntryTests(unittest.TestCase):
         # well as individual variables; removing IDENTITY alone is insufficient.
         env = {name: value for name, value in os.environ.items()
                if name not in ('IDENTITY', 'PW_FRESH_BUILD', 'MAKEFLAGS', 'MFLAGS', 'MAKEOVERRIDES', 'MAKELEVEL')}
-        result = subprocess.run(['make', 'build'], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+        result = self.run_command(['make', 'build'], cwd=root, env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('==> [build] build, sign and embed evidence into dist/PolicyWitness.app', result.stdout)
         self.assertEqual(json.loads(marker.read_text()), {'IDENTITY': '', 'DIST_DIR': 'dist', 'PW_FRESH_BUILD': 'unset'})
         identity = 'Developer ID Application: Control (TEAMID00AA)'
-        result = subprocess.run(['make', 'build', f'IDENTITY={identity}', 'DIST_DIR=out', 'PW_FRESH_BUILD=1'], cwd=root, env=env,
+        result = self.run_command(['make', 'build', f'IDENTITY={identity}', 'DIST_DIR=out', 'PW_FRESH_BUILD=1'], cwd=root, env=env,
                                 capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(json.loads(marker.read_text()), {'IDENTITY': identity, 'DIST_DIR': 'out', 'PW_FRESH_BUILD': '1'})
@@ -369,7 +372,7 @@ class BuildEntryTests(unittest.TestCase):
         root = self.checkout(extra=LIMITS_FILES)
         self.stale_copy(root, 'controller/src/json_contract.rs')
         destination = root / 'dist'
-        result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
+        result = self.run_command(['bash', str(root / 'build.sh')], cwd=root,
                                 env={**{k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}, 'IDENTITY': '', 'DIST_DIR': str(destination)},
                                 capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
@@ -384,7 +387,7 @@ class BuildEntryTests(unittest.TestCase):
         self.assertIn('262,143', path.read_text())
         path.write_text(path.read_text().replace('262,143', '262,144', 1))
         destination = root / 'dist'
-        result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
+        result = self.run_command(['bash', str(root / 'build.sh')], cwd=root,
                                 env={**{k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}, 'IDENTITY': '', 'DIST_DIR': str(destination)},
                                 capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)

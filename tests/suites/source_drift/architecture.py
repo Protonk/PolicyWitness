@@ -20,7 +20,7 @@ generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
 
 
-class ArchitectureDocumentationTests(unittest.TestCase):
+class ArchitectureDocumentationTests(receipts.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / generator.MANIFEST_NAME).read_text())
         self.document = ROOT / self.manifest['document']
@@ -34,11 +34,14 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'architecture'))
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root)
         return root
 
     def command(self, root, *args):
+        if root == ROOT:
+            self.track_inputs(root, fixture_inputs.generator_inputs(root, 'architecture'))
         start = time.perf_counter()
-        result = subprocess.run([sys.executable, '-B', '-S', str(root / generator.GENERATOR_NAME), *args],
+        result = self.run_command([sys.executable, '-B', '-S', str(root / generator.GENERATOR_NAME), *args],
                                 cwd=root, capture_output=True, text=True, timeout=60)
         print(f'command: {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
         return result
@@ -47,6 +50,7 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='pw-arch-manifest-') as directory:
             path = Path(directory) / 'architecture.json'
             path.write_text(json.dumps(data))
+            self.evidence.capture(path.parent, [path.name], 'manifest mutation')
             return generator.load_manifest(path, ROOT)
 
     def test_document_and_figures_are_current(self):

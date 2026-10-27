@@ -22,7 +22,7 @@ spec.loader.exec_module(generator)
 SCRIPT = (ROOT / 'build.sh').read_text()
 
 
-class BuildDocumentationTests(unittest.TestCase):
+class BuildDocumentationTests(receipts.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / generator.MANIFEST_NAME).read_text())
         self.document = ROOT / self.manifest['document']
@@ -42,11 +42,14 @@ class BuildDocumentationTests(unittest.TestCase):
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'build'))
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root)
         return root
 
     def command(self, root, *args):
+        if root == ROOT:
+            self.track_inputs(root, fixture_inputs.generator_inputs(root, 'build'))
         start = time.perf_counter()
-        result = subprocess.run([sys.executable, '-B', '-S', str(root / generator.GENERATOR_NAME), *args],
+        result = self.run_command([sys.executable, '-B', '-S', str(root / generator.GENERATOR_NAME), *args],
                                 cwd=root, capture_output=True, text=True, timeout=120)
         print(f'command: {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
         return result
@@ -55,6 +58,7 @@ class BuildDocumentationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='pw-build-manifest-') as directory:
             path = Path(directory) / 'build.json'
             path.write_text(json.dumps(data))
+            self.evidence.capture(path.parent, [path.name], 'manifest mutation')
             return generator.load_manifest(path, root)
 
     # ---- currency ----
@@ -433,6 +437,7 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertEqual([name for name in suffix if name != 'knobs' and banner_repaired[name].problems], [])
         script.write_text(original)
         self.assertEqual(clean(outcomes()), [])
+
         script.write_text(self.mutated('usage() {\n', 'usage() {\n  echo "==> inside"\n'))
         unparsed = outcomes()
         self.assertEqual((unparsed[rules.GATE].outcome, unparsed[rules.GATE].problems[0].key), ('input_blocked', 'script.unparseable'))
@@ -448,7 +453,7 @@ class BuildDocumentationTests(unittest.TestCase):
         baseline.write_text(baseline_text)
         self.assertEqual(clean(outcomes()), [])
         script.write_text(knob_changed(reordered))
-        result = subprocess.run([sys.executable, '-B', '-S', str(ROOT / 'tests/suites/source_drift/build_rules.py'), '--root', str(root)],
+        result = self.run_command([sys.executable, '-B', '-S', str(ROOT / 'tests/suites/source_drift/build_rules.py'), '--root', str(root)],
                                 cwd=root, capture_output=True, text=True, timeout=120)
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn('check_knobs: not evaluated: blocked by check_banner_order', result.stderr)
@@ -458,6 +463,55 @@ class BuildDocumentationTests(unittest.TestCase):
 
 
 
+
+    def test_rule_declarations_make_a_complete_fixture(self):
+        import build_rules as rules
+        directory = tempfile.TemporaryDirectory(prefix='pw-build-rule-inputs-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        paths = fixture_inputs.rule_inputs(ROOT, rules.RULES)
+        fixture_inputs.copy_declared(ROOT, root, paths)
+        self.track_inputs(root)
+        results = rules.run(rules.repository_tree.Tree(root))
+        self.assertEqual([(r.rule_id, r.problems) for r in results if r.outcome != 'evaluated' or r.problems], [])
+        # Discovery follows this root's manifest, including references introduced after import.
+        manifest = json.loads((root / rules.MANIFEST).read_text())
+        manifest['steps'][0]['sources'].append(dict(path='new-citation.py', symbol='new_citation'))
+        (root / rules.MANIFEST).write_text(json.dumps(manifest))
+        (root / 'new-citation.py').write_text('def new_citation(): pass\n')
+        self.assertIn('new-citation.py', fixture_inputs.rule_inputs(root, rules.RULES))
+        (root / 'new-citation.py').unlink()
+        with self.assertRaisesRegex(rules.repository_tree.MissingInput, 'new-citation.py'):
+            fixture_inputs.rule_inputs(root, rules.RULES)
+
+    def test_inventory_input_failures_do_not_hide_the_later_baseline(self):
+        import build_rules as rules
+        root = self.checkout()
+        baseline = root / rules.BASELINE
+        baseline_original = baseline.read_bytes()
+        mutations = [('Info.plist', None), ('runner/Services/PWRunner/Info.plist', b'not a plist'),
+                     ('tests/lib/artifact.py', (root / 'tests/lib/artifact.py').read_bytes() + b'\ninvalid Python (\n'),
+                     ('README.md', (root / 'README.md').read_bytes().replace(b'## Build and bundle', b'## Removed section'))]
+        for name, changed in mutations:
+            with self.subTest(input=name):
+                path = root / name
+                original = path.read_bytes()
+                path.unlink() if changed is None else path.write_bytes(changed)
+                baseline.write_text('{')
+                results = rules.run(rules.repository_tree.Tree(root))
+                self.assertEqual([r.rule_id for r in results], [r.id for r in rules.RULES])
+                self.assertEqual({r.rule_id: r.outcome for r in results if r.outcome != 'evaluated'},
+                                 {'inventory': 'input_blocked', 'baseline': 'input_blocked'})
+                self.assertEqual([p.key for r in results if r.rule_id == 'baseline' for p in r.problems], ['baseline.invalid'])
+                report = root / 'result.json'
+                command = self.run_command([sys.executable, '-B', '-S', str(ROOT / 'tests/suites/source_drift/build_rules.py'),
+                                           '--root', str(root), '--json', str(report)], capture_output=True, text=True)
+                self.assertEqual(command.returncode, 1, command.stderr)
+                self.assertEqual(len(json.loads(report.read_text())['results']), len(rules.RULES))
+                self.assertNotIn('Traceback', command.stderr)
+                path.write_bytes(original)
+                baseline.write_bytes(baseline_original)
+                self.assertEqual([r.rule_id for r in rules.run(rules.repository_tree.Tree(root)) if r.problems], [])
 
     def test_release_preflight_refuses_a_grown_build_baseline(self):
         release_spec = importlib.util.spec_from_file_location('preflight_build_baseline', ROOT / 'tests/lib/release_preflight.py')
@@ -472,8 +526,9 @@ class BuildDocumentationTests(unittest.TestCase):
                 directory = tempfile.TemporaryDirectory(prefix='pw-build-baseline-release-')
                 self.addCleanup(directory.cleanup)
                 root = Path(directory.name)
+                self.track_inputs(root)
                 def git(*args):
-                    result = subprocess.run(['git', '-C', str(root), '-c', 'user.name=Build Control', '-c', 'user.email=build@example.invalid',
+                    result = self.run_command(['git', '-C', str(root), '-c', 'user.name=Build Control', '-c', 'user.email=build@example.invalid',
                                              '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', *args], capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
                 def commit(rows, tag):

@@ -111,7 +111,7 @@ def main(out):
             receipts += produced
             file.extend(record for record in produced if record.get('scenario') not in {c.get('scenario') for c in file.controls})
     except BaseException:
-        file.finish(ok=False)
+        file.finish(ok=False, complete=False)
         raise
     file.finish(ok=True)
     print(f'{len(receipts)} source and guidance controls passed')

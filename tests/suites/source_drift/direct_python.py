@@ -177,7 +177,7 @@ ACCEPTED_STARTS = ('# python3 and /usr/bin/python3 are forbidden ancestry',
                    'reply="$("${PW_PYTHON}" -B -S "${ROOT_DIR}/helper.py" x 2>&1)"')
 
 
-class DirectPythonTests(unittest.TestCase):
+class DirectPythonTests(receipts.TestCase):
     def test_current_sources(self):
         self.assertEqual(check(ROOT), [])
 
@@ -231,6 +231,7 @@ class DirectPythonTests(unittest.TestCase):
         root = Path(temporary)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.expand(ROOT, INPUTS))
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
+        self.track_inputs(root)
         return root
 
     def test_full_tree_scan_dispatches_discovery_to_the_checks(self):

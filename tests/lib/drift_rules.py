@@ -45,10 +45,11 @@ class InputFailure(Exception):
 
 @dataclass(frozen=True)
 class Rule:
-    """A table row: a stable ID, the callable, its declared inputs and the helper modules fixtures must carry."""
+    """A table row: ID, callable, inputs and helper modules. Inputs are a declaration tuple or a function
+    from an explicit root to that tuple, for dependencies selected by a manifest."""
     id: str
     call: object
-    inputs: tuple = ()
+    inputs: object = ()
     helpers: tuple = ()
 
 
