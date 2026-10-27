@@ -1,7 +1,12 @@
 """Keep every Python start under the resolver's form: entry points resolve and probe without arguments, every shell
 start of the interpreter is ${PW_PYTHON} with -B -S (and -P for an inline or stdin start), no shell script under
 tests/ names the shim or a bare python3, and the wrappers' shebang agrees. Behavior is established elsewhere; this
-is the mechanical agreement over the tree."""
+is the mechanical agreement over the tree.
+
+Each check reads one file's lines and names its problems; `check(root)` dispatches the tree's entry points,
+resolvers, discovered shell scripts and wrappers to them. The controls exercise each check on its own text, and
+one full-tree scan establishes discovery-to-check dispatch.
+"""
 import os
 import re
 import shlex
@@ -79,7 +84,6 @@ def start_problems(name, lines):
             if flags != ['-B', '-S']:
                 out.append(f'{name}:{number}: a ${{PW_PYTHON}} start carries -B -S first, found {flags}')
                 continue
-            inline = rest[:1] in (['-'], ['-c']) or rest[:2] == ['-P', '-'] or rest[:2] == ['-P', '-c']
             if rest[:1] == ['-P'] and rest[1:2] not in (['-'], ['-c']):
                 out.append(f'{name}:{number}: -P belongs only to an inline or stdin start')
             elif rest[:1] in (['-'], ['-c']):
@@ -110,6 +114,24 @@ def resolver_problems(name, lines, *, probe):
     return out
 
 
+def entry_problems(name, lines):
+    """An entry point: no shim, well-formed starts, and the resolver calls when it starts helpers."""
+    problems = shim_problems(name, lines) + start_problems(name, lines)
+    if name in PROBING:
+        problems += resolver_problems(name, lines, probe=True)
+    return problems
+
+
+def script_problems(name, lines):
+    """A discovered shell script: no shim unless allowed, and well-formed starts."""
+    problems = [] if name in SHIM_ALLOWED else shim_problems(name, lines)
+    return problems + start_problems(name, lines)
+
+
+def wrapper_problems(name, lines):
+    return [] if lines[:1] == [SHEBANG] else [f'{name}: wrapper must start with {SHEBANG}']
+
+
 def shell_scripts(root):
     """Every shell script under tests/ except retained output, through the test-shell scope's pruned walk."""
     tree = repository_tree.Tree(root)
@@ -117,31 +139,87 @@ def shell_scripts(root):
 
 
 def check(root):
+    """Every file the tree holds, dispatched to its check; an entry point found by discovery is checked once."""
+    tree = repository_tree.Tree(root)
     problems = []
     for name in ENTRIES:
-        lines = (root / name).read_text().splitlines()
-        problems += shim_problems(name, lines)
-        problems += start_problems(name, lines)
-        if name in PROBING:
-            problems += resolver_problems(name, lines, probe=True)
+        problems += entry_problems(name, tree.read_text(name).splitlines())
     for name in RESOLVING:
-        lines = (root / name).read_text().splitlines()
-        problems += resolver_problems(name, lines, probe=False)
-    for path in shell_scripts(root):
-        name = path.relative_to(root).as_posix()
-        lines = path.read_text().splitlines()
-        if name not in SHIM_ALLOWED:
-            problems += shim_problems(name, lines)
-        problems += start_problems(name, lines)
+        problems += resolver_problems(name, tree.read_text(name).splitlines(), probe=False)
+    for name in tree.inventory(repository_tree.TEST_SHELL_SCRIPTS):
+        if name not in ENTRIES:
+            problems += script_problems(name, tree.read_text(name).splitlines())
     for name in WRAPPERS:
-        if (root / name).read_text().splitlines()[0] != SHEBANG:
-            problems.append(f'{name}: wrapper must start with {SHEBANG}')
+        problems += wrapper_problems(name, tree.read_text(name).splitlines())
     return problems
+
+
+FORBIDDEN_STARTS = ('/usr/bin/python3 -B helper.py', 'env python3 helper.py',
+                    'python3 helper.py', 'exec "/usr/bin/python3" helper.py',
+                    'answer="$(python3 helper.py)"',
+                    '/usr/bin/python3 -B helper.py \\\n  --check',
+                    "python3 -c 'import sys\nprint(sys.version)'")
+MALFORMED_STARTS = ('"${PW_PYTHON}" -B helper.py', '"${PW_PYTHON}" -B -S -P helper.py',
+                    '"${PW_PYTHON}" -B -S -I helper.py', '"${PW_PYTHON}" -B -S - <<\'PY\'',
+                    '"${PW_PYTHON}" -B -S -c "print(1)"',
+                    'answer="$("${PW_PYTHON}" -B -P -c \'print(1)\')"',
+                    'answer="$("${PW_PYTHON}" -B -S -c \'print(1)\')"',
+                    'if ! answer="$("${PW_PYTHON}" -S -B "${ROOT_DIR}/helper.py" "$1" 2>/dev/null)"; then :; fi')
+ACCEPTED_STARTS = ('# python3 and /usr/bin/python3 are forbidden ancestry',
+                   '"${PW_PYTHON}" -B -S helper.py', '"${PW_PYTHON}" -B -S -P -c "print(1)"',
+                   'answer="$("${PW_PYTHON}" -B -S -P -c \'print(1)\')"',
+                   'reply="$("${PW_PYTHON}" -B -S "${ROOT_DIR}/helper.py" x 2>&1)"')
 
 
 class DirectPythonTests(unittest.TestCase):
     def test_current_sources(self):
         self.assertEqual(check(ROOT), [])
+
+    def test_forbidden_and_malformed_starts_are_named_by_their_check(self):
+        """Each forbidden ancestry form is named by the shim check, each malformed start by the start check,
+        and the accepted forms by neither; the text is checked on its own, not through a tree scan."""
+        for command in FORBIDDEN_STARTS:
+            with self.subTest(command=command):
+                lines = command.split('\n')
+                self.assertTrue(shim_problems('x.sh', lines), command)
+                self.assertTrue(all(p.startswith('x.sh:') and 'PW_PYTHON' in p for p in shim_problems('x.sh', lines)))
+        for command in MALFORMED_STARTS:
+            with self.subTest(command=command):
+                lines = command.split('\n')
+                self.assertEqual(shim_problems('x.sh', lines), [])
+                self.assertTrue(start_problems('x.sh', lines), command)
+        for command in ACCEPTED_STARTS:
+            with self.subTest(command=command):
+                lines = command.split('\n')
+                self.assertEqual(shim_problems('x.sh', lines) + start_problems('x.sh', lines), [])
+
+    def test_resolver_calls_are_named_by_their_check(self):
+        """A probing entry point must call both resolver functions once without arguments; a resolver must not probe."""
+        for name in PROBING:
+            original = (ROOT / name).read_text()
+            self.assertEqual(entry_problems(name, original.splitlines()), [], name)
+            for mutation in (('pw_python_start || exit 2', 'pw_python_start /usr/bin/python3 || exit 2'),
+                             ('pw_python_probe || exit 2', 'pw_python_probe /usr/bin/python3 || exit 2'),
+                             ('pw_python_probe || exit 2', ': probe removed')):
+                with self.subTest(name=name, mutation=mutation):
+                    self.assertIn(mutation[0], original, name)
+                    mutated = original.replace(mutation[0], mutation[1], 1).splitlines()
+                    problems = resolver_problems(name, mutated, probe=True)
+                    self.assertTrue(problems, (name, mutation))
+                    self.assertTrue(all(p.startswith(name) for p in problems))
+        for name in RESOLVING:
+            lines = (ROOT / name).read_text().splitlines()
+            self.assertEqual(resolver_problems(name, lines, probe=False), [], name)
+            self.assertEqual(resolver_problems(name, lines + ['pw_python_probe || exit 2'], probe=False),
+                             [f'{name}: only entry points probe'])
+
+    def test_wrapper_shebangs_are_named_by_their_check(self):
+        for name in WRAPPERS:
+            lines = (ROOT / name).read_text().splitlines()
+            self.assertEqual(wrapper_problems(name, lines), [], name)
+            for shebang in ('#!/usr/bin/python3', '#!/usr/bin/env -S ${PW_PYTHON} -B'):
+                with self.subTest(name=name, shebang=shebang):
+                    self.assertEqual(wrapper_problems(name, [shebang] + lines[1:]), [f'{name}: wrapper must start with {SHEBANG}'])
 
     def checkout(self, temporary):
         root = Path(temporary)
@@ -151,60 +229,36 @@ class DirectPythonTests(unittest.TestCase):
             target.write_text(path.read_text())
         return root
 
-    def test_independent_passing_and_rejected_sources(self):
+    def test_full_tree_scan_dispatches_discovery_to_the_checks(self):
+        """A copied checkout passes; faults in an entry point, a suite script, a wrapper and a newly discovered
+        script are each named once in one scan, an entry point found by discovery is not reported twice, and
+        the restored copy passes."""
         with tempfile.TemporaryDirectory(prefix='pw-python-drift-') as temporary:
             root = self.checkout(temporary)
             self.assertEqual(check(root), [])
-            for name in ENTRIES:
-                path = root / name
-                original = path.read_text()
-                for command in ('/usr/bin/python3 -B helper.py', 'env python3 helper.py',
-                                'python3 helper.py', 'exec "/usr/bin/python3" helper.py',
-                                'answer="$(python3 helper.py)"',
-                                '/usr/bin/python3 -B helper.py \\\n  --check',
-                                "python3 -c 'import sys\nprint(sys.version)'",
-                                '"${PW_PYTHON}" -B helper.py', '"${PW_PYTHON}" -B -S -P helper.py',
-                                '"${PW_PYTHON}" -B -S -I helper.py', '"${PW_PYTHON}" -B -S - <<\'PY\'',
-                                '"${PW_PYTHON}" -B -S -c "print(1)"',
-                                'answer="$("${PW_PYTHON}" -B -P -c \'print(1)\')"',
-                                'answer="$("${PW_PYTHON}" -B -S -c \'print(1)\')"',
-                                'if ! answer="$("${PW_PYTHON}" -S -B "${ROOT_DIR}/helper.py" "$1" 2>/dev/null)"; then :; fi'):
-                    path.write_text(original + '\n' + command + '\n')
-                    self.assertTrue(any(name in p for p in check(root)), (name, command))
-                path.write_text(original + '\n# python3 and /usr/bin/python3 are forbidden ancestry\n')
-                self.assertEqual(check(root), [])
-                path.write_text(original + '\n"${PW_PYTHON}" -B -S helper.py\n"${PW_PYTHON}" -B -S -P -c "print(1)"\n'
-                                'answer="$("${PW_PYTHON}" -B -S -P -c \'print(1)\')"\nreply="$("${PW_PYTHON}" -B -S "${ROOT_DIR}/helper.py" x 2>&1)"\n')
-                self.assertEqual(check(root), [])
-                path.write_text(original)
-            for name in PROBING:
-                path = root / name
-                original = path.read_text()
-                for mutation in (('pw_python_start || exit 2', 'pw_python_start /usr/bin/python3 || exit 2'),
-                                 ('pw_python_probe || exit 2', 'pw_python_probe /usr/bin/python3 || exit 2'),
-                                 ('pw_python_probe || exit 2', ': probe removed')):
-                    self.assertIn(mutation[0], original, name)
-                    path.write_text(original.replace(mutation[0], mutation[1], 1))
-                    self.assertTrue(any(name in p for p in check(root)), (name, mutation))
-                path.write_text(original)
-            testlib = root / 'tests/lib/testlib.sh'
-            original = testlib.read_text()
-            testlib.write_text(original + '\npw_python_probe || exit 2\n')
-            self.assertTrue(any('testlib.sh' in p for p in check(root)))
-            testlib.write_text(original)
+            entry = root / 'tests/run.sh'
             suite = root / 'tests/suites/unit/run.sh'
-            original = suite.read_text()
-            for command in ('/usr/bin/python3 - <<\'PY\'', '"${PW_PYTHON}" -B - <<\'PY\'', 'python3 "${ROOT_DIR}/x.py"'):
-                suite.write_text(original + '\n' + command + '\n')
-                self.assertTrue(any('tests/suites/unit/run.sh' in p for p in check(root)), command)
-            suite.write_text(original)
-            for name in WRAPPERS:
-                path = root / name
-                original = path.read_text()
-                for shebang in ('#!/usr/bin/python3', '#!/usr/bin/env -S ${PW_PYTHON} -B'):
-                    path.write_text(original.replace(SHEBANG, shebang, 1))
-                    self.assertTrue(any(name in p for p in check(root)), (name, shebang))
-                path.write_text(original)
+            wrapper = root / WRAPPERS[0]
+            discovered = root / 'tests/suites/new_suite/extra.sh'
+            originals = {path: path.read_text() for path in (entry, suite, wrapper)}
+            entry.write_text(originals[entry] + '\npython3 helper.py\n')
+            suite.write_text(originals[suite] + '\n"${PW_PYTHON}" -B - <<\'PY\'\n')
+            wrapper.write_text(originals[wrapper].replace(SHEBANG, '#!/usr/bin/python3', 1))
+            discovered.parent.mkdir()
+            discovered.write_text('#!/usr/bin/env bash\n/usr/bin/python3 - <<\'PY\'\n')
+            problems = check(root)
+            by_file = {}
+            for problem in problems:
+                by_file.setdefault(problem.split(':')[0], []).append(problem)
+            self.assertEqual(sorted(by_file), ['tests/fixtures/build_refusals/tools.py', 'tests/run.sh', 'tests/suites/new_suite/extra.sh',
+                                               'tests/suites/unit/run.sh'])
+            self.assertEqual({name: len(found) for name, found in by_file.items()},
+                             {'tests/fixtures/build_refusals/tools.py': 1, 'tests/run.sh': 1, 'tests/suites/new_suite/extra.sh': 1,
+                              'tests/suites/unit/run.sh': 1})
+            for path, text in originals.items():
+                path.write_text(text)
+            discovered.unlink()
+            discovered.parent.rmdir()
             self.assertEqual(check(root), [])
 
     def test_inventory_is_a_pruned_walk_of_the_shell_scope(self):

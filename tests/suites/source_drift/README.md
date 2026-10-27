@@ -195,6 +195,23 @@ an inline comment containing `--`, which the reader refuses. Every touched input
 is restored between controls and the restored documents must pass. Inputs and
 command receipts are retained alongside the planner controls.
 
+At the rule layer the planner keeps every policy variant for all four
+documents and all three routes: rewritten, rewrapped, reordered and locally
+extended bodies, a missing, duplicate, empty or headings-only section, a
+removed, wrong-path, wrong-fragment, relabeled, relative-path and
+outside-section route, and each restoration. It keeps the nine reader body
+shapes (fenced, commented and indented bodies, fenced and commented sections,
+a body after a peer or parent heading, a short fence close and a fake heading
+before the real one) for one level-2 section (`AGENTS.md`) and one level-3
+section (`tests/AGENTS.md`), the twelve route shapes (fenced, commented,
+inline-example, image, code-label, code-label-example, wrapped, split,
+indented-continuation, indented-example, indented-after-heading and
+list-continuation) for one target (`runner/AGENTS.md`), and the refused
+inline comment. The other documents' and targets' repetitions of those shapes
+are literal expectations in [markdown.py](markdown.py): fences and headings,
+comments, indentation with links, list continuation with a link, section
+bounds after peer and parent headings, code labels, images and the refusal.
+
 ### Generator contracts
 
 The `generator_contract` case in [generators.py](generators.py) holds these
@@ -373,19 +390,31 @@ import of either package anywhere else.
 - Inventory controls build their own tree under the planner's output and in a
   temporary directory for the shell scope; the selected entries, entered
   directories and timings are retained as `inventory-controls.json`.
-- Planner controls run the actual checker in a disposable checkout with a
-  three-pair mirror, an extra fourth pair, inferred literal entries, shadowing,
-  and missing/comment-only/string-only membership checks. Formatting and
-  commented/string examples remain accepted. Inputs and command receipts are
-  retained, and the restored fixture must pass. Additional mutations check
-  native Swift bindings and C-shim calls/lookups, accepting explanatory text
-  and unrelated native APIs. Manifest mutations drop a core file from or add
-  a missing file to meson.build's host target, rename the host and shim
-  targets, add a dead duplicate host declaration beside a live one missing a
-  file, and point the worker at a substitute file; each must be named by the
-  checker and the restored manifest passes. Configured-directory controls run
-  `meson setup` with `xpc=false` on the copied checkout and require the
-  build-time reading to pass unmodified and to name a substituted worker file.
+- Planner scenarios mutate a disposable checkout of the checker's inputs,
+  build a fresh tree over it and call only the rules they name, in process,
+  asserting the complete record set of each named rule (its diagnostic keys,
+  or the exact messages for the Meson scenarios) and a diagnostic substring;
+  the mutated inputs and `records.json` are retained per scenario, and the
+  whole list runs again in reverse order and must give the same records. The
+  planner scenarios use a three-pair mirror, an extra fourth pair, inferred
+  literal entries, shadowing, and missing/comment-only/string-only membership
+  checks; formatting and commented/string examples remain accepted. Host
+  mutations check native Swift bindings and C-shim calls/lookups, accepting
+  explanatory text and unrelated native APIs. Manifest mutations drop a core
+  file from or add a missing file to meson.build's host target, rename the
+  host and shim targets, add a dead duplicate host declaration beside a live
+  one missing a file, and point the worker at a substitute file; the source
+  list rule runs on real file-mode introspection and names each, and the
+  restored manifest passes. Registry scenarios create and delete suite
+  directories and scripts and record each created or deleted path with its
+  contents. A few scenarios run the command itself: the baseline, three
+  independent faults in different rules with stderr in table order, a reader
+  refusal beside a host finding, the combined precondition scenario, the
+  omitted-rule dispatcher and restoration, each with its exact status, the
+  summary lines, stdout, stderr and `results.json`. Configured-directory
+  controls run `meson setup` with `xpc=false` on the copied checkout and
+  require the build-time reading to pass unmodified and to name a substituted
+  worker file.
 
 ## Artifacts
 
@@ -395,7 +424,8 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/inventory-controls.json`
-- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/<scenario>/results.json`
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/<scenario>/records.json` (in-process scenarios) or `results.json`, `stdout`, `stderr` and `command.json` (entry-point and Meson scenarios)
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/reversed-order.json`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/isolation-controls.json`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/host-invariance-controls.json`
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
@@ -514,6 +544,12 @@ and the `runner_unit` host-driver control.
 build-control wrappers to start with `#!/usr/bin/env -S ${PW_PYTHON} -B`.
 Disposable copies with each forbidden invocation or a changed wrapper line
 must fail; restored copies and comments pass. Leaf Python scripts are outside
-this check. Its shell inventory is the pruned test-shell scope described under
-the invariants, checked against a fixture of its own. Runtime preservation and contained resolver refusals belong to
+this check. Each check reads one file's lines: the controls hand every
+forbidden ancestry form to the shim check, every malformed start to the start
+check, the resolver mutations and the wrapper shebangs to theirs, and the
+accepted forms to all of them, without rescanning a tree; one full scan of a
+copied checkout establishes that discovery dispatches an entry point, a suite
+script, a wrapper and a newly added script to their checks, each named once.
+Its shell inventory is the pruned test-shell scope described under the
+invariants, checked against a fixture of its own. Runtime preservation and contained resolver refusals belong to
 `preflight/build_provenance_controls` and `contract_versions`.

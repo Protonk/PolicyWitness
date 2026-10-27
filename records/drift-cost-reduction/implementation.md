@@ -166,12 +166,66 @@ Cost: the planner still starts the whole checker per scenario (now with
 `--json`), so the manifests case is not expected to be faster in this stage;
 stage 3 converts the scenarios to focused in-process calls.
 
-## Handoff: stages 3 to 6
+## Stage 3: focused planner and direct-Python controls
 
-Stage 3 converts the planner scenarios to focused in-process rule calls over a
-fresh tree per scenario (the `--rule` selection and `drift_rules.attempt` are
-in place), consolidates the 42 repeated guidance reader shapes into
-`markdown.py` assertions with the retained representatives, and exposes
-`direct_python.py`'s file and text checks to focused controls. Stage 4 adds
-generator input declarations and the shared fixture copier; the `Rule.inputs`
-and `Rule.helpers` declarations are the inputs it consumes.
+Change: `check_planner.py` builds a fresh tree over the disposable checkout
+for each scenario and calls only the rules the scenario names, in process,
+asserting the complete record set of every named rule (diagnostic keys, or the
+exact messages for the seven Meson scenarios, which stay on real file-mode
+introspection) plus a diagnostic substring; `records.json` and the mutated
+inputs are retained per scenario, and the list runs again in reverse order
+and must give the same records. Registry scenarios record every created or
+deleted path with its contents. The entry point keeps six subprocess
+scenarios: the baseline, three independent faults in different rules (stderr
+in table order), a reader refusal beside a host finding, the combined
+precondition scenario, the omitted-rule dispatcher and restoration, each with
+exact status, summary lines and `results.json`. The configured-native
+receipts now record each setup, compile and check launch with its elapsed
+time.
+
+Guidance: all 56 policy and restoration scenarios are kept for every document
+and route. Of the 73 reader-shape scenarios, 31 stay at the rule layer (nine
+body shapes for `AGENTS.md` at level 2 and `tests/AGENTS.md` at level 3, twelve
+route shapes for the `runner/AGENTS.md` route, and the refused comment); the
+other 42 are literal expectations in `markdown.py`, added to the eight reader
+tests the plan names, with the retained scenario as each one's rule-layer
+representative. The control map rows with disposition `consolidated` list
+each old ID, its reader assertion and its representative.
+
+`direct_python.py` exposes each check on one file's lines (`entry_problems`,
+`script_problems`, `resolver_problems`, `wrapper_problems`); the controls hand
+every forbidden, malformed and accepted form to its check directly, and one
+full scan of a copied checkout establishes discovery-to-check dispatch with
+an entry point, a suite script, a wrapper and a newly added script, each
+named once. An entry point found by discovery is no longer reported twice.
+
+Record-set review that changed an expectation, for the reviewer:
+
+- `mirror-three` also loses the shared `contains` call, so the planner rule
+  reports `planner.local_table` and `planner.missing_contains`; the old
+  control asserted only the first by substring.
+- `route-makefile-selector` adds a `--suite` line that is also an argument
+  line, so the release rule reports `release.selector` and
+  `release.arguments`.
+- `registry-directory-without-readme` and `-outside-catalog` also make the
+  catalog and the coverage table disagree with the suite directories, so
+  `index_vs_disk` reports `catalog.suite_mismatch` and `index.missing_row`
+  beside the README finding.
+- `rule-runner-outcome-suite-row-removed` also removes a normalized outcome's
+  row, so both matrix rules report.
+- `entry-refusal-with-fault`: the refused `AGENTS.md` is in the
+  command-document scope as well as the guidance rule, so both report the
+  refusal.
+- `meson-duplicate-host-declaration`: the reader drops a target declared
+  twice, so the exact records are the duplicate diagnostic and
+  `no 'PWRunner' target`.
+
+STAGE3_CREDIT
+
+## Handoff: stages 4 to 6
+
+Stage 4 adds generator input declarations and the shared fixture copier under
+`tests/lib/`; `Rule.inputs` and `Rule.helpers` are the inputs it consumes for
+the checker, and the planner's `fixture()` list is the account it replaces.
+Stage 5 rehomes `configured_controls` (now recording per-launch timings) and
+the build entry and native policy controls under `preflight`.

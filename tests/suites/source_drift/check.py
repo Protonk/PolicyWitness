@@ -1032,10 +1032,9 @@ def check_cli_surface_agreement(tree: repository_tree.Tree) -> list[Problem]:
         problems.append(problem("cli.readme_missing", "controller/README.md: could not locate the CLI surface (contract) text block",
                                 CONTROLLER_README))
     if cli and readme and cli != readme:
-        problems.append(problem("cli.mismatch", "CLI surface drift between controller/src/cli.rs usage and controller/README.md:",
-                                CONTROLLER_README))
-        problems.extend(problem("cli.mismatch", f"  cli.rs   : {line}", CLI_RS) for line in cli)
-        problems.extend(problem("cli.mismatch", f"  README.md: {line}", CONTROLLER_README) for line in readme)
+        lines = ["CLI surface drift between controller/src/cli.rs usage and controller/README.md:"]
+        lines += [f"  cli.rs   : {line}" for line in cli] + [f"  README.md: {line}" for line in readme]
+        problems.append(problem("cli.mismatch", "\n".join(lines), CONTROLLER_README))
     return problems
 
 

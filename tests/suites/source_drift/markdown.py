@@ -100,6 +100,16 @@ class BlockTests(unittest.TestCase):
             ''')
         self.assertEqual([(b.info, b.lines) for b in document.fences()], [('text', (0, 4)), ('', (4, 7))])
         self.assertEqual(prose(document.text), ['seen'])
+        # A comment opener inside a fence, before a real heading, hides nothing: the fence ends at its
+        # marker and the heading that follows is the one section of that name.
+        document = parse('```text\n<!--\n## Sandboxed automation harnesses\n```\n\n## Sandboxed automation harnesses\n\nbody\n')
+        self.assertEqual([(h.level, h.text, h.line) for h in document.headings], [(2, 'Sandboxed automation harnesses', 5)])
+        self.assertEqual(document.section('Sandboxed automation harnesses').lines, (5, 9))
+        self.assertEqual(prose(document.text), ['## Sandboxed automation harnesses', 'body'])
+        # A body wrapped in a longer fence whose first line is a shorter marker stays hidden to its own marker.
+        document = parse('## H\n\n````text\n```\nbody [a](a.md)\n````\n\nseen\n')
+        self.assertEqual(prose(document.text), ['## H', 'seen'])
+        self.assertEqual(document.links, [])
 
     def test_a_backtick_in_the_info_string_does_not_open_a_backtick_fence(self):
         self.assertEqual(prose('```a`b\nseen\n'), ['```a`b', 'seen'])
@@ -114,6 +124,11 @@ class BlockTests(unittest.TestCase):
         self.assertEqual(prose('para\n\n    code\n'), ['para'])
         self.assertEqual(prose('# Heading\n    code\n'), ['# Heading'])
         self.assertEqual([b.kind for b in parse('# Heading\n    code\n').blocks], ['code'])
+        link = '[route](runner/AGENTS.md#sandboxed-automation-harnesses)'
+        self.assertEqual([l.target for l in parse('continued\n    ' + link + '\n').links], ['runner/AGENTS.md#sandboxed-automation-harnesses'])
+        self.assertEqual(parse('para\n\n    ' + link + '\n').links, [])
+        self.assertEqual(parse('#### Example\n    ' + link + '\n').links, [])
+        self.assertEqual(prose('#### Example\n    ' + link + '\n'), ['#### Example'])
 
     def test_list_content_after_a_blank_line_is_prose(self):
         # The shape of the nested list under step 3 of runner/augments/README.md.
@@ -122,6 +137,11 @@ class BlockTests(unittest.TestCase):
         document = parse(text)
         self.assertEqual([(i.ordered, i.number, i.depth, i.first.text) for i in document.items],
                          [(True, '1', 0, 'Step'), (False, '', 1, 'nested after a blank line continued')])
+        # A link in an item's continuation after a blank line is a link, inside the item's lines.
+        document = parse('- Diagnostics are\n\n    [route](runner/AGENTS.md#sandboxed-automation-harnesses)\n')
+        self.assertEqual([l.target for l in document.links], ['runner/AGENTS.md#sandboxed-automation-harnesses'])
+        self.assertEqual([i.lines for i in document.items], [(0, 3)])
+        self.assertTrue(document.items[0].lines[0] <= document.links[0].inline.lines[0] < document.items[0].lines[1])
 
     def test_an_item_opening_with_another_block_has_no_first_paragraph(self):
         document = parse('- - `inner.xpc`\n\n  `Contents/MacOS/outer` trailing\n- ```\n  code\n  ```\n  after\n')
@@ -141,10 +161,17 @@ class CommentTests(unittest.TestCase):
         self.assertEqual(document.links, [])
         self.assertEqual(prose(document.text), ['text <!-- inline [a](a.md) --> after'])
         self.assertEqual([(b.kind, b.lines) for b in document.blocks], [('html', (2, 5)), ('html', (6, 7))])
+        document = parse('<!--\n## Hidden\n\n[route](x.md#y)\n-->\n\n## Shown\n\ntext\n')
+        self.assertEqual([(h.level, h.text, h.line) for h in document.headings], [(2, 'Shown', 6)])
+        self.assertIsNone(document.section('Hidden'))
+        self.assertEqual(document.section('Shown').lines, (6, 10))
+        self.assertEqual(document.links, [])
+        self.assertEqual(prose(document.text), ['## Shown', 'text'])
 
     def test_an_inline_comment_containing_two_hyphens_is_refused(self):
         # CommonMark 0.30 reads it as text; GitHub hides it.
-        for text in ('text <!-- a -- b --> after\n', '![alt <!-- a -- b -->](x.png)\n'):
+        for text in ('text <!-- a -- b --> after\n', '![alt <!-- a -- b -->](x.png)\n',
+                     'see <!-- a -- b [route](runner/AGENTS.md#sandboxed-automation-harnesses) -->\n'):
             with self.subTest(text=text), self.assertRaisesRegex(reader.Refused, 'remove the "--"'):
                 parse(text)
 
@@ -173,11 +200,20 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(self.links('[`a.py`](a.py) [wrapped\nlabel](b.md#c)\n'),
                          [('a.py', 'a.py', 'a.py', False, False), ('b.md#c', 'wrapped label', None, False, False)])
         self.assertEqual(self.links('[split\n\nlabel](b.md)\n'), [])
+        self.assertEqual(self.links('[Split `diagnostic\n\nwording`](runner/AGENTS.md#sandboxed-automation-harnesses)\n'), [])
+        self.assertEqual(self.links('[Wrapped diagnostic\nwording](runner/AGENTS.md#x)\n'),
+                         [('runner/AGENTS.md#x', 'Wrapped diagnostic wording', None, False, False)])
 
     def test_images_escapes_code_and_autolinks(self):
         self.assertEqual(self.links('![alt](p.png) \\[x](y.md) `[c](d.md)` <https://example.com/a>\n'),
                          [('p.png', 'alt', None, True, False),
                           ('https://example.com/a', 'https://example.com/a', None, False, True)])
+        route = 'runner/AGENTS.md#sandboxed-automation-harnesses'
+        self.assertEqual(self.links('```markdown\n[l](' + route + ')\n```\n'), [])
+        self.assertEqual(self.links('`` [`runner/AGENTS.md`](' + route + ') ``\n'), [])
+        self.assertEqual(self.links('`[l](' + route + ')`\n'), [])
+        self.assertEqual(self.links('![l](' + route + ')\n'), [(route, 'l', None, True, False)])
+        self.assertEqual(self.links('[`runner/AGENTS.md`](' + route + ')\n'), [(route, 'runner/AGENTS.md', 'runner/AGENTS.md', False, False)])
 
     def test_destinations_are_decoded(self):
         self.assertEqual(self.links('[a](<two words.md>) [b](a\\_b.py#frag)\n'),
@@ -223,11 +259,19 @@ class HeadingTests(unittest.TestCase):
             ''')
         self.assertEqual([(h.level, h.text, h.line, h.atx) for h in document.headings],
                          [(1, 'Title', 0, False), (2, 'Sub', 3, False), (2, 'ATX code link', 6, True)])
+        self.assertEqual([(h.level, h.text, h.line) for h in parse('```text\n<!--\n## fake\n```\n\n## real\n').headings],
+                         [(2, 'real', 5)])
 
     def test_sections_end_at_the_same_or_a_higher_level(self):
         document = parse('# A\n## B\ntext\n### C\nmore\n## D\n# E\n')
         self.assertEqual(document.section('B').lines, (1, 5))
         self.assertEqual(document.section('A').lines, (0, 6))
+        for text in ('## A\n\n## Other\n\nbody\n', '## A\n\n# Other\n\nbody\n', '### A\n\n### Other\n\nbody\n', '### A\n\n## Other\n\nbody\n'):
+            with self.subTest(text=text):
+                document = parse(text)
+                section = document.section('A')
+                self.assertEqual(section.lines, (0, 2))
+                self.assertEqual([i.text for i in document.inlines if i.kind != 'heading' and section.holds(i.lines)], [])
         self.assertIsNone(document.section('Z'))
         with self.assertRaises(reader.Refused):
             parse('## B\n## B\n').section('B')
