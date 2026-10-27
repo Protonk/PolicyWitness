@@ -382,7 +382,36 @@ rules' result records as `check-results.json` and `build-rules-results.json`.
 The field meanings are documented in the `source_drift` and `preflight`
 READMEs.
 
-STAGE6_CREDIT
+Credited run, the plan's final selected command: `tests/out/runs/drift-cost-candidate-01`
+(ID `20261027T230701Z_a7cce91f`), on commit `22f688d` with a clean working tree; all
+eight `source_drift` cases and the three preflight cases passed with zero
+recorded sleep. The planner's receipt file is complete with 188 controls
+({'fixture': 1, 'in-process': 179, 'entry-point': 8}); receipt files in the run: 11.
+
+| Case | Baseline ms | Final ms | Recorded sleep ms |
+| --- | ---: | ---: | ---: |
+| `source_drift/runner_source_manifests_agree` | 188679 | 32021 | 0 |
+| `source_drift/direct_python_start` | 25151 | 831 | 0 |
+| `source_drift/build_documentation` | 36867 | 7786 | 0 |
+| `source_drift/generator_contract` | 32508 | 31425 | 0 |
+| `source_drift/limits_documentation` | 24458 | 27038 | 0 |
+| `source_drift/contract_versions` | 26670 | 3736 | 0 |
+| `source_drift/architecture_documentation` | 13820 | 13799 | 0 |
+| `source_drift/markdown_reader` | 945 | 1323 | 0 |
+| `preflight/build_entry_controls` | (inside source_drift) | 27368 | 0 |
+| `preflight/native_policy_controls` | (inside source_drift) | 40058 | 0 |
+| `preflight/native_source_controls` | (inside source_drift) | 13275 | 0 |
+
+Totals, single runs: the old eight-case `source_drift` sum was 349098 ms;
+the final `source_drift` sum is 117959 ms and the three preflight cases
+add 80701 ms, 198660 ms together. The sums
+are context, not thresholds: each is one sample on one machine. The measured
+effects of the plan are the ones reported per stage: discovery listings from
+222,124 to 177 and from 214,946 to 141; whole-checker starts per planner run
+from 197 to 8; the generic generator fixture from 1,282 files and 19.2 MB to
+266 files and 6.0 MB; the planner fixture from a hand-kept list to 261
+declared files; and every planner scenario asserting its complete record set
+with its own receipt.
 
 ## Live contracts, remaining costs and limitations
 

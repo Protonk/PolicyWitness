@@ -1,7 +1,7 @@
 {
   "schema": "drift-cost-reduction control map, version 1",
   "baseline_revision": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
-  "candidate_revision": "587661863abf92779172473515e7e84dac8a92bd",
+  "candidate_revision": "22f688d7d4c1aefe890c41db03a897141796f0e9",
   "rows": [
     {
       "old": "source_drift/runner_source_manifests_agree:check.py::markdown_documents",

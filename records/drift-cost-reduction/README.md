@@ -11,9 +11,9 @@ Revisions:
 - Baseline source revision: `1612eb5e0bd503f0185dda9cda0331be0d9a764f`
   (the investigation revision; the executable sources at the plan's commit
   `6b465f5` are byte-identical to it).
-- Candidate source revision: recorded per stage in
-  [implementation.md](implementation.md); the final candidate is the revision
-  the acceptance review reads.
+- Candidate source revision: `22f688d7d4c1aefe890c41db03a897141796f0e9`, the revision the acceptance review
+  reads; each stage's own revision is recorded in
+  [implementation.md](implementation.md).
 
 Files:
 
