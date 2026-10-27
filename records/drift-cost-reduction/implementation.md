@@ -298,7 +298,23 @@ Review notes:
 - No read audit, deny-read profile or tracing was added; the declarations are
   a reviewed account.
 
-STAGE4_CREDIT
+Credited run: `tests/out/runs/drift-cost-stage4-01` (ID `20261027T224540Z_ac45b859`), on commit
+`0f68d16`, all eight `source_drift` cases passed with zero recorded sleep.
+Durations are single runs beside the baseline; the eight-case sums are
+349098 ms at the baseline and 186500 ms here. No speedup is
+claimed from one sample each; the fixture sizes and launch counts above are
+the measured effect of this stage.
+
+| Case | Baseline ms | Stage 4 ms | Recorded sleep ms |
+| --- | ---: | ---: | ---: |
+| `runner_source_manifests_agree` | 188679 | 42056 | 0 |
+| `direct_python_start` | 25151 | 813 | 0 |
+| `build_documentation` | 36867 | 40602 | 0 |
+| `generator_contract` | 32508 | 29531 | 0 |
+| `limits_documentation` | 24458 | 28192 | 0 |
+| `contract_versions` | 26670 | 30532 | 0 |
+| `architecture_documentation` | 13820 | 13282 | 0 |
+| `markdown_reader` | 945 | 1492 | 0 |
 
 ## Handoff: stages 5 and 6
 

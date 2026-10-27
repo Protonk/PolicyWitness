@@ -1,7 +1,7 @@
 {
   "schema": "drift-cost-reduction control map, version 1",
   "baseline_revision": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
-  "candidate_revision": "78f3fffa3d5f47373dbf4097888a8181de40988f",
+  "candidate_revision": "0f68d1615bb449ff6fc9a79138a9025a8f859898",
   "rows": [
     {
       "old": "source_drift/runner_source_manifests_agree:check.py::markdown_documents",
@@ -2107,7 +2107,7 @@
       "reader_assertion": null,
       "representative": "test_prose_links_resolve_anchors_and_symbol_links",
       "reason": "The same scan with the same independent link mutations already ran in the generator contract case; the limits copy added a second start of the same scan and one weaker mutation.",
-      "receipt": "stage 4 run, see implementation.md"
+      "receipt": "20261027T224540Z_ac45b859 (tests/out/runs/drift-cost-stage4-01)"
     },
     {
       "old": "source_drift/build_documentation:BuildDocumentationTests.test_document_and_figure_are_current_and_the_rules_agree (second build_rules.py start)",
@@ -2118,7 +2118,7 @@
       "reader_assertion": null,
       "representative": "run.sh build_rules.py execution",
       "reason": "The suite script runs the same command once per case and fails the case on any disagreement; the test keeps the generator's currency and figure assertions and the gate control covers the command's status and output.",
-      "receipt": "stage 4 run, see implementation.md"
+      "receipt": "20261027T224540Z_ac45b859 (tests/out/runs/drift-cost-stage4-01)"
     },
     {
       "old": "source_drift/generator_contract:GeneratorContractTests.checkout (whole tracked tree)",
@@ -2127,7 +2127,7 @@
       "destination": "source_drift/generator_contract",
       "where": "tests/suites/source_drift/generators.py::GeneratorContractTests.checkout (declared inputs plus sentinels); tests/lib/fixture_inputs.py",
       "reason": "The fixture is the union of the five generators' declared inputs plus sentinel files no generator owns; snapshots still cover the whole fixture, so a write outside owned regions remains visible, while archive and evidence content is no longer copied.",
-      "receipt": "stage 4 run, see implementation.md"
+      "receipt": "20261027T224540Z_ac45b859 (tests/out/runs/drift-cost-stage4-01)"
     },
     {
       "old": null,
@@ -2137,7 +2137,7 @@
       "destination": "source_drift/generator_contract",
       "where": "tests/suites/source_drift/generators.py::GeneratorContractTests.test_fixture_declarations_cover_each_generators_inputs",
       "reason": "The plan's structural fixture controls.",
-      "receipt": "stage 4 run, see implementation.md"
+      "receipt": "20261027T224540Z_ac45b859 (tests/out/runs/drift-cost-stage4-01)"
     },
     {
       "old": null,
@@ -2147,7 +2147,7 @@
       "destination": "source_drift/generator_contract",
       "where": "tests/suites/source_drift/generators.py::GeneratorContractTests.test_prose_inputs_include_every_local_link_destination; prose_inputs",
       "reason": "The plan's link-closure declaration.",
-      "receipt": "stage 4 run, see implementation.md"
+      "receipt": "20261027T224540Z_ac45b859 (tests/out/runs/drift-cost-stage4-01)"
     },
     {
       "old": null,
@@ -2157,7 +2157,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::isolation_controls (weakened_evaluator)",
       "reason": "The plan's weakened-evaluator demonstration.",
-      "receipt": "stage 4 run, see implementation.md"
+      "receipt": "20261027T224540Z_ac45b859 (tests/out/runs/drift-cost-stage4-01)"
     }
   ],
   "dispositions": {
