@@ -6,6 +6,8 @@ Investigate the effort required to introduce pytest beneath PolicyWitness’s ex
 
 Read this alongside [the investigation brief](PW-PYTEST-INVESTIGATION-BRIEF.md), which supplies external examples and the rationale for freezing a baseline, adopting common patterns, and examining the variants that remain. This plan defines the scope of the investigation.
 
+The [external-pattern report](PW-PYTEST-PATTERNS-REPORT.md) records the three-project source investigation for item 3 and limited PW comparisons. The remaining investigation and implementation decisions are still open.
+
 This is an investigation, not an implementation. Do not modify tracked files or undertake the refactor.
 
 ## Investigation
