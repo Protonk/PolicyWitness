@@ -2,41 +2,6 @@
   "schema_version": 1,
   "runs": [
     {
-      "path": "runs/drift-plan-investigation-20261027-02",
-      "run_id": "20261027T175448Z_a3635ceb",
-      "reason": "Drift cost reduction baseline: all eight source_drift cases passed with zero recorded sleep; investigation/ holds the read-only discovery, parse, build-rule, architecture and fixture measurements the implementation plan cites. Retire with records/drift-cost-reduction.",
-      "source": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
-      "app_inventory": null
-    },
-    {
-      "path": "runs/drift-plan-investigation-20261027-01",
-      "run_id": "20261027T174605Z_08a98a78",
-      "reason": "Drift cost reduction: the restricted automation-sandbox run that failed limits, contract build and Swift policy controls (sysctl, nested sandbox and module-cache writes refused); preserved as the evidence behind the plan's sandbox-refusal account, not a performance baseline. Retire with records/drift-cost-reduction.",
-      "source": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
-      "app_inventory": null
-    },
-    {
-      "path": "runs/drift-plan-generator-profile-20261027-01",
-      "run_id": "20261027T180108Z_d44f791d",
-      "reason": "Drift cost reduction generator attribution: generator_contract passed with temporary timing wrappers whose diff and per-call helper-costs.json are retained under its artifacts; the source was restored byte-for-byte afterwards. Stage 4 compares against it. Retire with records/drift-cost-reduction.",
-      "source": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
-      "app_inventory": null
-    },
-    {
-      "path": "runs/drift-cost-stage1-04",
-      "run_id": "20261027T203111Z_728f49ca",
-      "reason": "Drift cost reduction stage 1 credit: runner_source_manifests_agree and direct_python_start passed with zero recorded sleep on the pruned-discovery walker, 225 planner receipts; investigation/ holds the post-stage discovery remeasurement. Retire with records/drift-cost-reduction.",
-      "source": "e2462f9167ca55a2de50fd7e75f2322eb8f8aea6",
-      "app_inventory": null
-    },
-    {
-      "path": "runs/drift-cost-candidate-01",
-      "run_id": "20261027T230701Z_a7cce91f",
-      "reason": "Drift cost reduction final credit: the plan's selected command (all eight source_drift cases and the three rehomed preflight cases) passed with zero recorded sleep on the final candidate revision; every case's receipts and the planner's controls.json are retained for the acceptance review. Retire with records/drift-cost-reduction.",
-      "source": "22f688d7d4c1aefe890c41db03a897141796f0e9",
-      "app_inventory": null
-    },
-    {
       "path": "release-acceptance/run-54d51e0ad1cc46e1bbeeba9182358569",
       "run_id": "accept-4bbfb70ce2a245499ccc63834699f283",
       "reason": "PolicyWitness 0.3.3 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.3.3.",
