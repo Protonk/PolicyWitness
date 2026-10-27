@@ -220,7 +220,22 @@ Record-set review that changed an expectation, for the reviewer:
   twice, so the exact records are the duplicate diagnostic and
   `no 'PWRunner' target`.
 
-STAGE3_CREDIT
+Credited run: `tests/out/runs/drift-cost-stage3-01` (ID `20261027T222920Z_04fe03b2`), on commit
+`78f3fff`, all four selected cases passed with zero recorded sleep. The
+planner wrote 194 receipts: {'in-process': 179, 'entry-point': 8, 'meson': 7}; the 175 timed in-process
+scenarios took 7.28 s together.
+
+| Case | Baseline ms | Stage 2 ms | Stage 3 ms | Recorded sleep ms |
+| --- | ---: | ---: | ---: | ---: |
+| `runner_source_manifests_agree` | 188679 | 213612 | 33006 | 0 |
+| `generator_contract` | 32508 | 35811 | 41821 | 0 |
+| `markdown_reader` | 945 | 1096 | 1347 | 0 |
+| `direct_python_start` | 25151 | 13277 | 794 | 0 |
+
+Whole-checker starts per planner run: 197 at the baseline, 8 now (six
+entry-point scenarios and the two omitted-rule scenarios), beside the seven
+configured-native receipts whose setup, compile and check launches are now
+counted individually.
 
 ## Handoff: stages 4 to 6
 
