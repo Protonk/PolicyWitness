@@ -2,8 +2,10 @@
 
 An investigation into how this repository binds documentation claims to code,
 tests and receipts, ending in a design on paper and a package for whoever
-later plans `docs/CHECK.md`. Facts below were established at `f468200`
-(2026-10-22) unless another revision is named.
+later plans improvements to that machinery and its account in `docs/CHECK.md`.
+The current starting point below is `289dc30074559cfb3dcf065cab5eb8d57fe7aef5`
+(2026-10-27). Historical replay examples keep their named revisions; refreshing
+the inventory does not move those examples to a new baseline.
 
 ## Purpose and where this stops
 
@@ -15,15 +17,15 @@ supports the claim. Recent defects in exactly that gap were found by outside
 readers, not by the batteries or the drift checks.
 
 The intended result is a package under `records/check-support/` that lets a
-future planner write `docs/CHECK.md`: an account of the checking machinery as
-current behavior, which that planner's team will make true. This plan has
-three phases:
+future planner distinguish the checking machinery's current behavior from
+proposed changes, and plan both implementation and its documentation. This
+plan has three phases:
 
 1. **Investigation**: inventory the source_drift machinery, then trace one
    claim (observation L) through it.
-2. **Design**: a design on paper, tested by replaying historical defects
-   against it.
-3. **Outflow**: freeze the material and hand it to the CHECK.md planner.
+2. **Design**: a design on paper, refined through open historical replays,
+   then frozen before evaluating held-back cases.
+3. **Outflow**: review the findings and hand them to the successor planner.
 
 This plan builds nothing. It does not change source_drift, the generators,
 `docs/`, tests, the catalog, the build, `WORKER.md`, L's receipt or
@@ -34,44 +36,54 @@ catalog or any battery.
 
 ## Background
 
-### Three strengths of binding
+### What each binding establishes
 
 - **Identity.** The text is rendered from one source of truth: generated
   regions, spans and copied guide sections (G1–G3 and G9 in the
   [generator contracts](README.md#generator-contracts)).
-  The copies cannot disagree because only one copy exists.
-- **Witness.** A test reads the documented claim as its expected value, so
-  changing either side fails. The reference case is the limits value check:
-  `compare` in `tests/suites/runner_abi_layout/limits.py` loads
-  `docs/limits.json` and compares it with compiled values.
+  Checked-in copies can disagree; currency checks detect that disagreement
+  with the output rendered from the owning input.
+- **Value agreement.** `compare` in
+  `tests/suites/runner_abi_layout/limits.py` loads `docs/limits.json` and
+  compares it with compiled values. This establishes equality of the selected
+  values, not their behavioral consequences. Behavioral controls need their
+  own assertions and independent expectations; changing the manifest must
+  not silently change their oracle.
+- **Behavioral witness.** A test asserts an observation under stated
+  conditions. Its support for a claim depends on those assertions and
+  conditions. A claim ID can locate that relationship; it does not prove it.
 - **Pointer.** The citation names a place and a check confirms the place
   exists. `citation` in `docs/generator_common.py` accepts a non-Markdown
   citation when `symbol in text`, so a comment satisfies it; the `form` check
-  adds that a definition of the right kind exists. `scope` strings and G10
-  captions say honestly that this is not support.
+  adds requirements for the named check form. For `rule` citations, the
+  function must be registered in the module's statically read `RULES` table.
+  These checks do not establish the support described by `scope` strings.
 
-Pointer binding is most of the system. A regex count of backticked symbol
-links into `.swift`, `.rs`, `.c`, `.h`, `.py` and `.sh` files finds about
-2,000 in five documents (WORKER 330, ARCHITECTURE 751, BUILD 558, LIMITS 354,
-CONTRACT 8). In the other direction, 22 lines in five source files
-(`build.sh`, `controller/src/disposition.rs`, `pw_probe_runner_abi.h`,
-`CWorkerOrchestrator.swift`, `PWRunnerAPI.swift`) refer to those documents.
-Someone editing code gets almost no signal about which sentences depend on it.
+Presence and navigation checks also establish structure without asserting a
+claim. The inventory distinguishes these relationships instead of assigning
+one strength to an entire document or test. For each claim-to-evidence
+relationship, identify the claim, the asserted observation or comparison, its
+conditions, the supporting source or receipt, and any judgment about applying
+that evidence to the current implementation. A declared dependency, a recorded
+input and semantic support are different facts.
 
 ### Five ways a citation fails
 
 1. The referent disappears. G4 catches this.
-2. The referent changes meaning but keeps its name. Nothing catches this.
-3. The prose changes while the referent does not. Caught only for spans.
+2. The referent changes meaning but keeps its name. Existence checks still pass.
+3. The prose changes while the referent does not. Currency checks cover owned
+   spans, but do not judge independently written prose.
 4. The citation is coarser than the claim: a function cited for one line, or
    a token matched in a comment.
 5. The cited check exists but does not assert the claim. Acknowledged in
    `scope` text; not checked.
 
-No mechanism can decide whether a place supports a claim; that is a judgment
-about meaning. A mechanism can always tell that one end of a citation has
-changed since someone last judged it. The working goal is therefore: verify
-identity, witness behavior, and make the age of each human judgment visible.
+Human review remains responsible for whether the evidence supports the claim.
+A mechanism can identify changes to represented, fingerprinted inputs since
+that review; it cannot establish that the representation includes every
+relevant dependency. The working goal is to verify identity and value
+agreement, witness behavior, and expose changes that call an applicability
+judgment into question.
 
 ### Why observation L
 
@@ -84,51 +96,82 @@ descriptors 0–4, null-device stdout and stderr, cwd `/`, matching `ps` and
   `20261018T223601Z_85d8418b`. It records the source revision `f85c7b0`, the
   worker source identity `4cb19db0…`, SHA-256 hashes of seven source files,
   selected raw captures and hashes of 59 original artifacts. The raw run is
-  gitignored; `tests/RETAINED.json` pins it and
+  gitignored. The receipt and WORKER.md still describe a pinned run, but
+  `tests/RETAINED.json` no longer pins it or
   `validator-selection-receipts-20261018`, whose `before.json` identifies the
-  observed app. Nothing reads the receipt's hashes or identity.
+  observed app. At the current starting point, five of the seven source hashes
+  differ: the C worker, its ABI header, `CWorker.swift`, `launch_inventory.py`
+  and its suite's `run.sh`. The current worker identity is `1df328dc…`.
+  No current check compares these identities or hashes for applicability.
 - **Its weight.** In the `worker_capabilities` graph of
   `docs/architecture.json`, rendered into WORKER.md, 10 rows cite
   `launch_inventory` (s7, s13a, s13b, s13c, s14a, s15, s16e, s16f, s16g, s17).
   For seven of them (s13a, s14a, s15, s16e, s16f, s16g, s17) it is the only
-  check. Its scope text says the inventory contents are "the separately
-  identified observation L". The case is opt-in (`tests/catalog.json`,
-  `default: false`), and it asserts only that captures, readiness and reaping
-  succeed.
+  check. Most of these scopes refer inventory contents to the separately
+  identified observation L. The case is opt-in (`tests/catalog.json`,
+  `default: false`). It asserts capture success, readiness behavior, completion
+  and confirmed reap, including readiness `EPIPE` in the pre-ready window;
+  s17 explicitly cites that behavior. It does not assert L's exact descriptor
+  inventory or the equality of its two `ps` captures. The trace must separate
+  those observations from the behavior the case already asserts.
 - **Its history.** An audit recorded in `51487f7` (finding WA-05 in
   `records/worker-pass6/initial-report.md`, removed in `d9346a3`) found that L
   had no provenance and had been recorded on a different worker build. It
   proposed three corrections: name the run, build and identity; state the
   sleep overrides; and make a worker-identity change trigger a
   `launch_inventory` rerun. The first two landed with the receipt in
-  `69c7dfe`. The third, the only one that binds anything, did not. Three days
-  later an outside reader found the same kind of drift again.
+  `69c7dfe`, establishing provenance and conditions. The automatic rerun
+  trigger did not. A later outside review again found evidence whose
+  applicability to the changed implementation had not been reviewed.
 
-L is harder than most claims (it needs a signed app, an opt-in case and
-process inspection), which is why it is the test case: a flow that handles L
-handles the easy path too. The limits witness binding stays beside it as the
-model of the easy path.
+L is useful because it needs a signed app, an opt-in case and process
+inspection. It also distinguishes a dated observation from reuse in a
+current-behavior account: changing the source does not falsify the historical
+observation. The limits comparison provides a simpler, mechanically checkable
+relationship alongside it. Neither covers every class; Example B introduces
+prose disagreement without a citation.
 
 ### The source_drift suite
 
 The suite began in `c9f61c5` (2026-05-28) as one 186-line `check.py` and a
 27-line `run.sh`, comparing native source lists across `meson.build`,
-`build.sh` and `Package.swift`. Its name fitted that job. It now has eight
-cases (`runner_source_manifests_agree`, `limits_documentation`,
-`contract_versions`, `architecture_documentation`, `build_documentation`,
-`generator_contract`, `markdown_reader`, `direct_python_start`) in 5,506 lines
-across twelve files, including a 436-line README. `check.py` alone has 50
-top-level functions; the original case now also runs the Known gap index,
-harness guidance routes, the sandbox-API ban, registry checks and the
-override-table lock. The suite became the place any checkable rule lands.
-That, and the letter "L", are names given after the fact.
+`build.sh` and `Package.swift`. Its name fitted that job. At the current
+starting point it has eight cases, with 19 registered rules in `check.py` and
+10 in `build_rules.py`, plus generator, reader and command controls outside
+those tables. Build-entry, native-policy and native-source controls now run
+as three default offline cases in `preflight`.
+
+The rule tables, generator input declarations and per-control receipts give
+the investigation concrete starting points. Their contracts are in the
+[suite README](README.md), [fixture helper](../../lib/fixture_inputs.py) and
+[receipt helper](../../lib/receipts.py). Declarations are a reviewed account
+of inputs, and receipts observe registered inputs and explicit command
+wrappers; neither is an audit of all reads or descendant processes.
 
 ## Replay, by example
 
 A replay asks: at a fixed historical revision, judging only from that
 revision's tree and history, would a proposed design have flagged a claim, and
-for the right reason? Its inputs are commits, which last; it needs no test
-output, no network and no knowledge of later revisions.
+for the right reason? Historical facts come from commits, not surviving local
+test output. The design is new, and old trees may lack the registrations and
+review metadata it would require. Each replay therefore separates:
+
+- facts extracted from the tree and history available at the replay revision;
+- proposed annotations supplied to model adoption of the design, with their
+  provenance and the information needed to author them at that time;
+- the design version and its prediction, committed before evaluation.
+
+A replay with supplied annotations tests the proposed contract under those
+assumptions. It does not demonstrate that the historical repository would
+have discovered the relationship automatically. Later findings can select a
+case and establish its evaluation target, but cannot silently supply a
+connection or applicability review to the simulated checker.
+
+Results distinguish a detected discrepancy, missing registration or evidence,
+and a declared exclusion from scope. A clean negative means the required
+inputs were present and the applicable check passed. Missing inputs do not
+count as a clean negative. Report both the result and its reason; the tables
+below describe the distinctions the design should explain.
 
 The two cases below are examples, not the first task. They show what a replay
 must state. Do not start by automating them. Read them during the inventory:
@@ -140,15 +183,15 @@ the register.
 | Revision | Tree at that revision | Expected verdict |
 | --- | --- | --- |
 | `51487f7` (2026-10-18) | `docs/WORKER.md:51` credits L ("L is the recorded production launch observation") and no receipt exists. `WORKER_IDENTITY` is `e1c88f81…`. | Flag: an observation is credited without provenance. |
-| `69c7dfe` (2026-10-18) | The receipt is added. Its identity `4cb19db0…` equals `WORKER_IDENTITY`, and all seven recorded hashes match the tree. | No flag. This is the negative case. |
-| `f468200` (2026-10-22) | The receipt is unchanged. `WORKER_IDENTITY` is `0da3a70a…`, and three recorded hashes differ (`pw_probe_runner.c`, `pw_probe_runner_abi.h`, `CWorker.swift`). | Flag: the receipt no longer identifies the tree, and nobody has reviewed applicability. The flag reports what changed. |
+| `69c7dfe` (2026-10-18) | The receipt is added. Its identity `4cb19db0…` equals `WORKER_IDENTITY`, and all seven recorded hashes match the tree. | No identity-change flag. This is the paired negative; matching identity alone does not prove support. |
+| `f468200` (2026-10-22) | The receipt is unchanged. `WORKER_IDENTITY` is `0da3a70a…`, and three recorded hashes differ (`pw_probe_runner.c`, `pw_probe_runner_abi.h`, `CWorker.swift`). | Flag: the receipt no longer identifies the tree, with no recorded applicability review. The flag reports what changed. |
 
 Every fact is readable from the tree. `docs/generate_worker_identity.py`
 writes the identity into `tests/lib/contract.py`, `pw_probe_runner_abi.h` and
 `CWorker.swift`, so at any revision:
 
 ```sh
-git show <rev>:tests/lib/contract.py | grep WORKER_IDENTITY
+git show <rev>:tests/lib/contract.py | rg WORKER_IDENTITY
 git show <rev>:docs/worker-launch-observation.json   # absent before 69c7dfe
 git show <rev>:<path> | shasum -a 256                 # against source_files
 ```
@@ -156,9 +199,12 @@ git show <rev>:<path> | shasum -a 256                 # against source_files
 **What the positives mean.** Neither positive establishes that L's facts
 became false. The audit reports that its rerun (run
 `20261018T150641Z_12585892`) reproduced L's facts at its revision. At
-`f468200` nobody has re-observed. A replay cannot tell whether a fact still
-holds; it can only tell that the evidence no longer identifies the tree. The
-expected verdicts are about visible, unreviewed age.
+`f468200` the tree records no replacement observation. A replay cannot tell
+whether a fact still holds; it can tell that the evidence no longer identifies
+the tree. The expected verdicts concern unreviewed reuse for a changed
+implementation, not the truth of the dated observation. The replay must state
+how the design recognizes that reuse and where its initial applicability
+judgment comes from.
 
 **The churn series.** This is a measurement, not a pass or fail. After
 `69c7dfe` the worker identity changed five times:
@@ -184,8 +230,10 @@ So a trigger keyed to the whole worker identity fires five times for one
 launch-path code change, and that change removes code the only supported
 architecture never compiled. A trigger keyed to source lines would miss build
 flag changes such as `e04ec96`, which can change the compiled worker without
-touching those files. The design must predict its flag count over this series
-and justify it either way.
+touching those files. Predict both the flag count and the work needed to
+resolve those flags: which changes require a review, a new observation or no
+action, and what evidence permits each disposition. The series measures the
+design's maintenance cost as well as its sensitivity.
 
 ### Example B: two statements about `/usr/bin/python3`
 
@@ -229,10 +277,12 @@ The register at `records/check-support/replays.md` holds one entry per case:
 - the claim sites;
 - the class (failure mode, or out of scope);
 - who found the defect and where that is recorded;
-- each revision with its expected verdict and reason;
+- each revision, design version, expected verdict and reason;
 - how each fact is established from the tree (commands);
-- open or held back;
-- the prediction, written before evaluation;
+- any proposed annotations, their provenance and whether the result depends
+  on them;
+- open or held back, including who has seen the case and its expectation;
+- the prediction and the commit that fixed it before evaluation;
 - the result.
 
 ### Misleading passes to guard against
@@ -240,50 +290,70 @@ The register at `records/check-support/replays.md` holds one entry per case:
 - **A design that always flags.** Every positive must have a paired negative.
 - **A flag for the wrong reason.** The verdict must match the stated reason,
   not just flag versus no flag.
-- **Knowledge from outside the tree.** WA-05's facts about run `b7815087` and
-  build `6fd44fb` came from test output that existed then. A replay at
-  `51487f7` may not use them.
-- **Passing only the cases the design was shaped around.** Held-back cases are
-  evaluated only after the design is frozen.
+- **Knowledge from outside the tree.** WA-05 reports facts about run
+  `b7815087` and build `6fd44fb` drawn from local output. At `51487f7` the
+  committed report establishes what the audit said; it does not supply the
+  missing raw output or app inventory for an independent comparison.
+- **Passing only the cases the design was shaped around.** Delayed evaluation
+  is useful, but is not independent if the designer already knows the case and
+  its expected result. Record that exposure. Independent evaluation requires
+  another person to withhold cases or expectations until after the freeze.
 - **A rule that names the example's files or commits.** Naming L's receipt
   path as configuration is fine. A rule that works only for L is not a design.
 
 ## Working rules
 
 - **Location.** Outputs live in `records/check-support/`, starting with a
-  README that states its purpose, its single consumer (the CHECK.md planner)
-  and its retirement condition: when `docs/CHECK.md` lands, the contents are
-  absorbed or deleted.
+  README that states its purpose, its single handoff consumer (the successor
+  planner for checking changes and CHECK.md) and its retirement condition:
+  acceptance and absorption of that handoff. This plan and its package retire
+  together; material still needed moves into the successor plan's own records.
 - **Links.** Under `records/AGENTS.md`, only this plan may link into
-  `records/check-support/`. CHECK.md will have to absorb the material, not
-  link to it.
-- **No dependence on `tests/out`.** Run evidence enters only as a committed,
-  self-sufficient receipt. Replay inputs are commits.
+  `records/check-support/`. Permanent documentation absorbs the useful account
+  rather than linking to the package.
+- **Evidence.** Commit the facts and compact summaries needed to assess the
+  findings, including provenance for any measurements taken from receipts.
+  Label raw `tests/out` evidence as local and gitignored; its later removal
+  must not make the handoff unintelligible. Historical replay facts come from
+  commits, with proposed annotations identified separately.
 - **Stamps.** Every inventory and trace artifact names the commit it describes.
   Others will keep changing the repository; stamps let a reader diff instead
   of trusting.
 - **Commits.** Commit each phase's outputs before starting the next phase, so
   the next phase builds on a fixed record.
-- **Replays.** Use only `git show` and `git log` up to the replay revision.
+- **Replays.** Extract historical facts through `git show` and `git log` up to
+  the replay revision. Keep the evaluated tree separate from the proposed
+  design and annotations supplied to the replay.
 
 ## Phase 1: Investigation
 
-The two parts are staged, not run in parallel. The inventory is much larger
-and may take several sessions, and each settled part of it can change what may
-honestly be said about L's path. The L trace may be drafted early, but it stays
-provisional until the inventory settles, and it is rewritten whenever an
-inventory finding changes a statement in it.
+Settle the inventory before crediting the L trace. Both describe the same
+chosen revision; refresh the starting facts if the investigation begins on a
+later tree. The fixed historical examples remain unchanged.
 
 ### 1a. Inventory of the source_drift machinery
 
-**Scope.** The source_drift suite and everything it runs or reads:
-- the five generators and their shared modules (`docs/generate_*.py`,
-  `docs/generator_common.py`, `docs/markdown_reader.py`);
-- the baselines in `tests/fixtures/docs/`;
-- the places the same rules run outside the suite: the generators' `--check`
-  calls in `build.sh` (G3) and the baseline-growth refusal in release preflight.
+**Scope.** Start from a finite set of entry points:
 
-Behavioral suites are in scope only as citation targets.
+- the 19 `check.py` and 10 `build_rules.py` rows, using their stable rule IDs,
+  callables, declared inputs, helpers and execution contracts;
+- the eight source_drift cases, the five generators and shared readers, their
+  input/target/span declarations, and the baselines in `tests/fixtures/docs/`;
+- `preflight/build_entry_controls`, `preflight/native_policy_controls` and
+  `preflight/native_source_controls`, including their canonical commands;
+- the places the same checks run outside these cases, including generator
+  currency checks in `build.sh` and baseline-growth refusal in release
+  preflight.
+
+The tables are a starting inventory, not a claim of completeness. Add checks
+outside them when they enforce a distinct contract in these entry points;
+group controls under the rule they exercise. Follow shared readers far enough
+to establish that contract and its inputs. Keep separate checkpoint entries
+where the same mechanism runs with different inputs, equipment or refusal
+policy. Behavioral suites otherwise enter as citation targets, with the limits
+comparison and L traced in detail. Record a proposed scope extension when a
+finding depends on another suite, rather than recursively inventorying every
+dependency.
 
 **What to record for each rule**, with the design question each column serves:
 
@@ -291,18 +361,27 @@ Behavioral suites are in scope only as citation targets.
 | --- | --- |
 | Name and location (file and function), and the case or entry point that runs it | Which checkpoint owns which binding |
 | Where it runs: build gate, default battery, release preflight or opt-in | Where a new binding could run at acceptable cost |
-| Inputs read: documents, manifests, source, fixtures, baselines | Raw material for a reverse index |
-| Binding class: identity, witness, pointer, or structure (presence and navigation) | The census; which claims can move to stronger binding |
+| Declared inputs, observed inputs where available, and gaps established by source review | Raw material and limits for a reverse index |
+| Binding class: identity, value agreement, behavioral witness, pointer, or structure | What the check establishes about the related claims |
 | Failure modes caught, and failure modes not caught | Coverage the design must add or label |
-| Controls and their cost | Whether the apparatus earns its keep |
+| Controls, equipment and cost, distinguishing measurements from estimates | Whether the apparatus earns its keep |
 | Name fit: does the name or location describe the job? | Split or rename questions for CHECK.md |
 | Known misses, from git history or replay candidates | Entries for the replay register |
 
 A cell may say "unknown" only together with what would settle it. Record
 replay candidates in the register as soon as they appear.
 
-**Done when** every rule in scope has a row, every unknown says what would
-settle it, and the inventory is stamped with its commit.
+Use the current receipt contract when accounting for cost: registered input
+snapshots are observations of those inputs, and direct launches count explicit
+command wrappers, not all helper invocations or descendant processes. Preserve
+those boundaries in comparisons. Existing usable evidence can supply measured
+costs; missing measurements need a settling action, not a full battery run by
+default.
+
+**Done when** the entry points reconcile with the inventory, including checks
+outside the rule tables, and each row has its checkpoint, contract, evidence
+and remaining questions. Stamp the inventory and commit any receipt-derived
+summary needed by its reader.
 
 ### 1b. Trace of L through the machinery
 
@@ -317,108 +396,130 @@ it, what that rule establishes, and the binding class:
 - `launch_inventory` in `tests/catalog.json` and `tests/CHANGE-VERIFICATION.md`, and
   the production launch inventory section of
   `tests/suites/runner_exec_inheritance/README.md`;
-- the two pins in `tests/RETAINED.json`.
+- the receipt's retention claims against the current `tests/RETAINED.json`.
 
-The expectation to confirm or refute is that the chain is pointer-only where
-it matters. The capability rows' `launch_inventory` citation is satisfied
-because `test_selected launch_inventory` exists. The scope text is not
-checked, the receipt's hashes are not compared, and the receipt's worker
-identity is not compared with `WORKER_IDENTITY`.
+Separate the dated census, assertions already made by `launch_inventory`,
+and claims that reuse L as support for current behavior. Citation validation
+does not check the meaning of the scope text. Trace the existing EPIPE,
+completion and reap assertions as well as the unasserted inventory contents;
+do not classify every relationship as pointer-only because citation validation
+itself is mechanical. The receipt's hashes and worker identity currently have
+no automated applicability comparison, and its former pins are absent.
 
-**Done when** each claim site has its rule, what that rule establishes and its
-class, consistent with the settled inventory, and the trace carries the same
-stamp as the inventory.
+**Done when** each relationship identifies its claim, evidence, conditions,
+what the check establishes and any remaining applicability judgment, consistent
+with the inventory and carrying the same stamp.
 
 ## Phase 2: Design
 
 ### 2a. Design on paper
 
-Write `records/check-support/design.md`. Consider these directions in this
-order:
+Write `records/check-support/design.md`. Use the inventory and trace to assess
+these directions:
 
 1. **A reverse index:** for a changed file or symbol, which claims cite it.
-2. **Witness binding for behavioral claims:** tests declare a claim ID and a
-   statement beside the assertion, and documents cite the ID.
-3. **Checkpoint assignment:** identity binding at build time; source-level
-   witnesses in the default battery; witnesses that need a signed app (L) at
-   release acceptance; aging reports in drift checks, refused only at release
-   preflight.
+2. **Explicit claim relationships:** identify assertions, observations and
+   conditions beside the test or receipt, with claim IDs that documents can
+   cite. Decide who reviews support and how that judgment is represented.
+3. **Checkpoint assignment:** consider currency at build time, source-level
+   checks in the default battery, and signed-app witnesses at acceptance.
+   Decide where changed applicability is reported and where it blocks a
+   checkpoint; the assignment is an output of the investigation.
 4. **A generated census** of claims by binding class.
 
-Review stamps, meaning fingerprints of cited regions that mark a citation
-unreviewed when they change, are considered only in a narrow form: keyed on
-fingerprints the repository already computes, such as the worker identity,
-the ABI layout golden or generated identities. Stamps on arbitrary text
-regions tend to make re-stamping a reflex.
+Prefer contracts with explicit inputs, results and review responsibilities.
+For any proposed review stamp, start with fingerprints the repository already
+computes, such as the worker identity or ABI layout golden. If these cannot
+identify the relevant changes, explain what another representation adds and
+what it costs. A fingerprint detects changed represented inputs; re-stamping
+alone must not stand in for an applicability judgment.
 
-For L in particular, decide:
-- which of L's facts become test expectations and which remain a dated census;
-- what trigger marks the receipt unreviewed, using the churn series to choose
-  its grain;
-- where its witness runs.
+The design needs to settle the consequential choices, not just list possible
+mechanisms: what registers a relationship, what triggers review, how review or
+new evidence restores applicability, what each checkpoint reports or refuses,
+and how absent registrations, unavailable inputs and unsupported claims appear.
+For L, decide which facts become expectations, which remain a dated census,
+what change triggers review and where any new witness runs.
 
-Also state the design's own cost (new rules and their controls), held to the
-same standard as the inventory's cost column.
+Show a complete worked path from changed input through affected claims and
+diagnostic to review action and its recorded outcome. Use L and the simpler
+limits comparison to expose differences in the contracts. Example B must
+either have an explicit proposed connection or a stated exclusion. Account
+for new rules, controls, equipment and required review work; distinguish
+measured costs from estimates. The replay results should support these choices
+or identify what evidence is still needed to choose.
 
-### 2b. Replay the examples
+### 2b. Develop through open replays
 
 Write each prediction into the register first, then evaluate Examples A and B
-with read-only scripts in `records/check-support/replay/`. A script takes a
-revision, reads only through `git show` and `git log`, and writes only to its
-output directory. A wrong verdict or a wrong reason sends the work back to
-2a, after which every replay runs again, not just the failing one. A replay
-that shows the inventory misdescribed a rule reopens that inventory row.
+with read-only scripts in `records/check-support/replay/`. Each evaluation
+names its revision, design version and any supplied annotations; historical
+facts are read through `git show` and `git log`. Scripts write only to their
+output directory. A wrong verdict or reason calls for a revised design or a
+justified correction to the expectation, retaining the earlier result. Rerun
+the open cases against a changed design. If a replay shows that the inventory
+misdescribed a rule, correct that row too.
 
-### 2c. Broaden to N replays
+### 2c. Broaden, freeze and evaluate
 
 N is set by coverage, not by count:
+
 - at least one positive replay for each failure mode the design claims to
   catch;
 - a negative paired with every positive;
 - at least one replay for each class the design declares out of scope.
 
-Before the design is frozen, mark some register entries as held back (at
-least one in each class that has more than one candidate). Evaluate them only
-after the freeze, and report their results separately. If the design passes
-only the open cases, that is the most important thing the CHECK.md planner
-can learn from this plan.
+Reserve held-back cases before refining the design against them, at least one
+in each class with multiple candidates. Freeze and commit the design,
+annotation policy, open results and predictions before evaluating those cases.
+Record whether the designer knew the held-back expectations; if independent
+selection is unavailable, describe this as delayed evaluation rather than
+independent validation.
+
+Report held-back results separately. A resulting design change creates a new
+version, with those exposed cases now part of its development set. Rerun them
+with the other open cases; a further claim of independent evaluation needs
+fresh withheld cases or expectations. A failed frozen design is a useful
+finding, not a reason to rewrite its earlier predictions.
 
 **Done when** the coverage rule is met, held-back results are reported, and
-the churn series has the design's predicted and actual flag counts.
+the churn series records predicted and replayed flag counts plus the review
+or observation work required to resolve them. Every result identifies the
+design version and assumptions it evaluates.
 
 ## Phase 3: Outflow
 
-1. **Freeze.** No design changes from here on.
-2. **Package.** The `records/check-support/` README indexes every artifact and
+1. **Package.** The `records/check-support/` README indexes every artifact and
    marks each as either "current behavior at `<commit>`" (inventory, trace) or
-   "proposed" (design). It lists the replay register with results, including
-   held-back and out-of-scope cases, and the open questions with what would
-   answer each.
-3. **Readiness.** Apply CONTRIBUTING's test for a plan: the CHECK.md planner
-   can write their plan from this package without reconstructing its
-   rationale, and can recognize evidence that would require reconsideration.
-   Ask it as a concrete question: could they proceed without this plan's
-   conversation history and without re-deriving any fact here?
-4. **Hand-off notes for the CHECK.md planner:**
-   - CHECK.md absorbs this material and does not link to it.
-   - CHECK.md's own claims fall under the machinery it describes: generator
-     registration, the prose scan, G11 symbol links and the Known gap rule.
-     If its claims about checks cannot be bound, that is itself a finding.
-   - Today's closest thing to CHECK.md is the "Generator contracts" section of
-     the source_drift README. Ownership moves, and that README shrinks to facts
-     about the suite.
-   - Whether to rename or split source_drift is answered by the inventory's
-     name-fit column.
-   - `records/check-support/` retires when CHECK.md lands.
+   "proposed at design version `<version>`". It includes the replay register,
+   supplied annotations, open and held-back results, exclusions, cost summaries
+   and unresolved questions with what would answer each.
+2. **Acceptance review.** Apply the
+   [planning guidance](../../../CONTRIBUTING.md#planning-a-change): can the
+   successor planner understand the recommendation, its evidence and its limits
+   without this conversation or missing local output? Distinguish settled
+   decisions from alternatives that still need evidence. Acceptance concerns the quality
+   of the investigation and handoff; it does not implement the proposed design.
+3. **Downstream decisions.** Recommend CHECK.md's scope and ownership from the
+   inventory. The source_drift README's "Generator contracts" section is an
+   existing owner to consider, not a precommitted move. Likewise, use the
+   name-fit findings to inform a possible suite rename or split. Explain how
+   CHECK.md's own claims would enter the chosen checking machinery, including
+   document registration, prose scanning and citation checks where applicable.
+4. **Retirement.** Once the successor planner accepts and absorbs the handoff,
+   transfer still-needed material into that plan's own records and retire this
+   plan and `records/check-support/` together. The successor plan carries the
+   links to its records. Do not keep this package alive until CHECK.md lands;
+   permanent documentation takes the useful account into its own text.
 
 ## Open questions
 
 | Question | What would answer it | What depends on the answer |
 | --- | --- | --- |
-| Is source_drift plus the generators the right boundary for "the checking machinery", or do structural checks in other suites belong too? | The inventory's inputs column, and any rule found outside the boundary that binds documentation | Design scope and CHECK.md's scope |
-| What fingerprint grain should observation receipts use: the whole worker identity, the receipt's file hashes, or anchored regions? | The churn series in Example A, and the inventory of fingerprints the repository already computes | L's trigger; whether review stamps are used at all |
+| Does a claim need checks outside the named source_drift, preflight and build/release entry points? | A traced relationship whose support crosses that boundary | Any scope extension and CHECK.md's scope |
+| What fingerprint grain should observation receipts use? | The churn series, existing identities and file hashes, and the cost and coverage of any proposed alternative | L's review trigger and the work required to resolve it |
 | Can disagreement between two pieces of prose (Example B) be detected without a registry of claim subjects? | A design attempt and its replay | Whether CHECK.md covers comments outside the prose scan |
-| Should `launch_inventory`'s stable facts become assertions, and at which checkpoint? | The L trace and the checkpoint assignment in 2a | Whether the seven capability rows with only `launch_inventory` as their check gain a witness |
+| Which unasserted facts in L should become expectations, and at which checkpoint? | The L trace's distinction between existing assertions, dated observations and present-tense reuse | Which capability claims gain additional witnesses and which retain an applicability judgment |
 
 Re-observing L, changing its pins and editing WORKER.md are outside this plan.
 Someone may do them independently; replays are fixed to commits and are not
