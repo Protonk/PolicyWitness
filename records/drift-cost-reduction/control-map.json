@@ -1,7 +1,7 @@
 {
   "schema": "drift-cost-reduction control map, version 1",
   "baseline_revision": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
-  "candidate_revision": "a9f67e028a898b96526ffc0a4813b067aaad3407",
+  "candidate_revision": "e2462f9167ca55a2de50fd7e75f2322eb8f8aea6",
   "rows": [
     {
       "old": "source_drift/runner_source_manifests_agree:check.py::markdown_documents",
@@ -10,7 +10,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "docs/repository_tree.py::COMMAND_DOCUMENTS; tests/suites/source_drift/check.py::markdown_documents; tests/suites/source_drift/check_planner.py::inventory_controls (scenario inventory-scopes)",
       "reason": "The selected set is unchanged for the real checkout (compared with the baseline run's retained inventory) and the fixture control states the prefix, hidden, symlink and non-file semantics literally; pruning before descent is shown by an independent enumeration instrument.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": "source_drift/direct_python_start:direct_python.py::shell_scripts",
@@ -19,7 +19,7 @@
       "destination": "source_drift/direct_python_start",
       "where": "docs/repository_tree.py::TEST_SHELL_SCRIPTS; tests/suites/source_drift/direct_python.py::shell_scripts; DirectPythonTests.test_inventory_is_a_pruned_walk_of_the_shell_scope",
       "reason": "The selected set is unchanged for the real checkout (compared with the baseline run's retained inventory); hidden and vendored paths and a nested out directory stay included, and the walk never enters tests/out.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": null,
@@ -29,7 +29,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::registry_scenarios (registry-baseline-suite-nondefault, registry-baseline-suite-default, registry-baseline-suite-removed)",
       "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": null,
@@ -39,7 +39,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-runner-outcome-suite-row-removed)",
       "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": null,
@@ -49,7 +49,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-normalized-matrix-extra-row)",
       "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": null,
@@ -59,7 +59,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-attempt-matrix-row-removed, rule-attempt-matrix-extra-row, rule-matrix-restored)",
       "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": null,
@@ -69,7 +69,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-attempt-kind-swift-extra, rule-attempt-kind-c-extra, rule-attempt-kind-name-mismatch, rule-attempt-kind-c-gap, rule-attempt-kind-malformed-c-enum, rule-attempt-kind-restored)",
       "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": null,
@@ -79,7 +79,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-test-overrides-extra-row, rule-test-overrides-restored)",
       "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": null,
@@ -89,7 +89,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-pair-document-only, rule-pair-restored)",
       "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     },
     {
       "old": null,
@@ -99,7 +99,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-evidence-unknown-landing, rule-evidence-restored)",
       "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
-      "receipt": "20261027T201614Z_dc800ffe (tests/out/runs/drift-cost-stage1-03)"
+      "receipt": "20261027T203111Z_728f49ca (tests/out/runs/drift-cost-stage1-04)"
     }
   ],
   "dispositions": {

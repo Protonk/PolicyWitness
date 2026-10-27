@@ -49,24 +49,26 @@ documents that changed after the baseline revision; the shell inventory is
 identical (149 scripts). See `comparison` in the measurement report below.
 
 Discovery after stage 1 (read-only helper, three samples each, warm
-filesystem, under the checkout lock after the credited run; retained with the
-helper script and selected inventories in the credited run's `investigation/`
-directory):
+filesystem, taken under the checkout lock after the credited run on commit
+`e2462f9` with a clean working tree; the helper script, selected
+inventories and `report.json` are retained in
+`tests/out/runs/drift-cost-stage1-04/investigation/`):
 
 | Observation | Baseline | Stage 1 (3 samples) |
 | --- | --- | --- |
 | Markdown discovery listings | 222,124 (214,664 under `tests/out`) | 177 (0 under `tests/out`) |
-| Markdown discovery seconds | 7.116 | 0.005, 0.003, 0.003 |
+| Markdown discovery seconds | 7.116 | 0.003, 0.003, 0.003 |
 | Markdown documents selected | 101 | 100 (two plan documents removed, one added since the baseline revision) |
 | Shell discovery listings | 214,946 (214,664 under `tests/out`) | 141 (0 under `tests/out`) |
 | Shell discovery seconds | 6.802 | 0.003, 0.003, 0.003 |
 | Shell scripts selected | 149 | 149, identical set |
-| Reading/parsing the selected documents, empty reader cache | 0.328 | 0.335 |
+| Reading/parsing the selected documents, empty reader cache | 0.328 | 0.340 |
 
-The retained `tests/out` tree held 1,803 fixture entries inside the inventory
-control plus every earlier run at measurement time; the stage-1 walker never
-lists it, so its population no longer affects discovery time. These remain
-helper samples, not case durations or thresholds.
+`tests/out` held 413,844 entries at measurement time; the stage-1
+walker never lists it, so its population no longer affects discovery time.
+These remain helper samples, not case durations or thresholds. An earlier
+measurement of the uncommitted stage-1 working tree is retained under
+`tests/out/runs/drift-cost-stage1-01/investigation/` and is superseded by this one.
 
 Also in this stage, ahead of the stage-2 rule table: the plan's required
 missing-rule controls were added to the planner as real-checker scenarios
@@ -74,25 +76,29 @@ missing-rule controls were added to the planner as real-checker scenarios
 `control-map.json` rows with disposition `added` list them. The planner now
 runs 225 receipts per case (204 before).
 
-Credited run: `tests/out/runs/drift-cost-stage1-03` (ID `20261027T201614Z_dc800ffe`), both cases
-passed with zero recorded sleep, on commit `a9f67e0` with a clean working
-tree apart from this records package. The planner wrote 225 receipts.
-Case durations are shown beside the baseline as context only; they are single
-runs, and the planner's whole-checker starts dominate the first case.
+Credited run: `tests/out/runs/drift-cost-stage1-04` (ID `20261027T203111Z_728f49ca`), both cases
+passed with zero recorded sleep, on commit `e2462f9` with a clean working
+tree. The planner wrote 225 receipts. Case durations are shown
+beside the baseline as context only; they are single runs, and the planner's
+whole-checker starts dominate the first case.
 
 | Case | Baseline ms | Stage 1 ms | Recorded sleep ms |
 | --- | ---: | ---: | ---: |
-| `runner_source_manifests_agree` | 188679 | 186063 | 0 |
-| `direct_python_start` | 25151 | 11326 | 0 |
+| `runner_source_manifests_agree` | 188679 | 186350 | 0 |
+| `direct_python_start` | 25151 | 11356 | 0 |
+
+Superseded credited run: `tests/out/runs/drift-cost-stage1-03` (ID
+`20261027T201614Z_dc800ffe`, commit `a9f67e0`) passed, but review found two
+walker defects in that commit (an unguarded metadata call that aborted
+discovery, and suffix-less directory declarations selecting nothing); commit
+`e2462f9` fixes both with controls, and the run above credits that commit.
 
 Preserved uncredited runs: `drift-cost-stage1-01` (ID
 `20261027T200543Z_79b9b4e5`; both cases passed, but the harness refused the
 run because the inventory fixture placed a `runner/.build` directory under
 artifacts) and `drift-cost-stage1-02` (ID `20261027T201214Z_bf335fca`; the
 relocated fixture failed because `PW_TEST_SCRATCH` is exported but not
-created; every scenario before the inventory control had passed). The
-post-stage discovery measurement was taken after the first of those runs and
-is unaffected by either defect, which concern only where the fixture lives.
+created; every scenario before the inventory control had passed).
 
 Limitations: the listing counts are the walker's `os.scandir` calls as seen by
 an instrument installed in the same process; they are not an OS-wide count.
