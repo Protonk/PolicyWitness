@@ -150,7 +150,7 @@
         },
         {
           "id": "markdown_reader",
-          "description": "Markdown reader controls, vendored parser bytes and the parser import boundary"
+          "description": "Markdown reader controls, vendored wheel bytes for the parser and the pytest host, and their import boundaries"
         },
         {
           "id": "direct_python_start",
@@ -231,6 +231,11 @@
         {
           "id": "retention_controls",
           "description": "Retained inventories, managed run ownership and checkout serialization protect execution evidence"
+        },
+        {
+          "id": "pytest_host_controls",
+          "description": "The pytest host refuses inherited pytest settings and configuration files, accepts only receipts with every phase of every item passed, keeps the checkout lock in its child and stops under cancellation",
+          "requires": []
         }
       ]
     },

@@ -183,6 +183,39 @@ clang.
 Fixtures, receipts, raw stdout/stderr, exit status, plans, journals, summaries,
 and `controls.json` remain in artifacts for inspection.
 
+## pytest host controls
+
+`pytest_host_controls` runs `check_pytest_host.py`: fixture repositories whose
+one case starts [the pytest host](../../README.md#the-pytest-host) on an inner
+test file the control writes, through the public command. Every control is
+judged on the outer evidence: the command's exit, `run.json`, the case report
+and events, the retained log and receipt, the absence of scratch, and marker
+files the inner tests write on body entry, so nonexecution after a setup
+failure is a file observation. Reporting controls cover a passing test, a
+failing body, a `TestCase` setup error and a fixture setup error, a teardown
+error after a passing body, a body failure beside a teardown error with both
+visible, an empty file, a deselect-all expression, a skip (which pytest exits 0
+for and only the receipt refuses), a bad option and a syntax error. Receipt
+controls give the child `--collect-only` and `--setup-only`, call `os._exit(0)`
+from a body, kill the child from inside a test, stop early after a first
+failure, and change the vendored version file; each fails with the first
+violated rule named. Environment and configuration controls refuse an inherited
+`PYTEST_ADDOPTS` or `PYTEST_PLUGINS` before pytest starts, and show that a
+`conftest.py` beside the inner file is never imported and an ini file there
+adds nothing. Constructed receipts establish the judge's reading of every
+rule, including a pytest module path outside the vendored directory, which no
+live run on this interpreter can produce. An inner test is admitted under the
+inherited claim with both descriptors open. The lifetime control kills the
+fixture dispatcher, the case shell and the launcher parent by PID while the
+inner child and its helper wait, observes their exits through kernel exit
+events, finds the child alive and the lock held through a separate open, then
+releases the child and sees the lock free; the same control with descriptor
+forwarding omitted must fail that held-after-kills check. The interruption
+control signals the dispatcher's process group while the inner child holds a
+helper that ignores SIGINT and requires both to exit, the invocation recorded
+as interrupted and the case as unrun. These controls need macOS local sockets
+and process observation, like the cancellation controls.
+
 ## Retention controls
 
 `retention_controls` uses independent fixture checkouts and execution receipts.

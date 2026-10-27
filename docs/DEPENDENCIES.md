@@ -50,6 +50,7 @@ implicit skip ([equipment checks](../tests/README.md#equipment-checks)).
 | A Developer ID identity matching the app's team | Signs external (BYOXPC) runners and the build controls' fixtures; `PW_BYOXPC_IDENTITY` or `IDENTITY` names it, otherwise the keychain is searched for the app's team | `identity`: opt-in cases only |
 | A logged-in GUI session | User-scope launchd registration of external runners; checked with `launchctl print gui/<uid>` | `gui`: opt-in BYOXPC cases |
 | Rosetta 2 | One control runs the build script translated and requires the refusal; `softwareupdate --install-rosetta` installs it | `rosetta`: `preflight/translated_build_refusal_controls`, opt-in |
+| The vendored pytest set: pytest 9.1.1 with pluggy 1.7.0, iniconfig 2.3.1, packaging 26.3 and pygments 2.21.0 under `tests/lib/vendor/` | `tests/lib/pytest_host.py` runs `preflight/build_provenance_controls` under pytest from these copies; nothing is installed, and the helpers under test keep their `-S` start | Nothing extra to install: `source_drift/markdown_reader` compares every vendored file with its wheel's `RECORD` digest, and the host refuses a pytest version other than 9.1.1 or one loaded from outside the vendored directory; the wheels' SHA-256 digests are in [the vendor README](../tests/lib/vendor/README.md) |
 
 Live cases also need a working XPC lookup, which the dispatcher does not
 preflight: a blocked case runs and fails with evidence. The

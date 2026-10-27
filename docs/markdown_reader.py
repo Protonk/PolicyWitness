@@ -379,5 +379,5 @@ def source_files(root=ROOT):
     """This module and the vendored parser, as paths relative to the repository root."""
     vendored = [path for name in ('markdown_it', 'mdurl') for path in (root / 'tests/lib/vendor' / name).rglob('*')
                 if path.is_file() and '__pycache__' not in path.parts]
-    vendored += list((root / 'tests/lib/vendor').glob('*.RECORD'))
+    vendored += [root / 'tests/lib/vendor' / name for name in ('markdown_it_py-3.0.0.RECORD', 'mdurl-0.1.2.RECORD')]
     return ['docs/markdown_reader.py'] + sorted(path.relative_to(root).as_posix() for path in vendored)

@@ -24,28 +24,64 @@ import markdown_reader as reader  # noqa: E402
 
 
 PARSER_MODULES = ('markdown_it', 'mdurl')
-# The RECORD files of the wheels whose digests matched PyPI's when they were vendored.
-RECORDS = {'markdown_it_py-3.0.0.RECORD': 'a1de86362d0f974969ec83963ff307aaa9f5ea30834642f3134e6b239742f95f',
-           'mdurl-0.1.2.RECORD': '72e8c94bf8f6a74a6a9a113a56ae3e9cade7dcb3ce2591fe60eb161f2948167f'}
+# The RECORD files of the wheels whose digests matched PyPI's when they were vendored: the Markdown parser's
+# two, and the pytest host's five (pytest and the packages it imports on this interpreter).
+PARSER_RECORDS = {'markdown_it_py-3.0.0.RECORD': 'a1de86362d0f974969ec83963ff307aaa9f5ea30834642f3134e6b239742f95f',
+                  'mdurl-0.1.2.RECORD': '72e8c94bf8f6a74a6a9a113a56ae3e9cade7dcb3ce2591fe60eb161f2948167f'}
+PYTEST_RECORDS = {'pytest-9.1.1.RECORD': 'ad0d3d038c4359485335c115e714092b66cfa30887dbf8a20b376715befc30bd',
+                  'pluggy-1.7.0.RECORD': 'e845d814db0107943f3c8f8a139407bce04809e575569bbb089b0f1c015e0b77',
+                  'iniconfig-2.3.1.RECORD': 'ab13e40ef0f271bc31f9d6a6655c30cceb2e6e5b079298e7e0a398f5845c38bf',
+                  'packaging-26.3.RECORD': '49910a2cb1de4511589f678097f0fd771a2b4266f944806edb1b846f11af324c',
+                  'pygments-2.21.0.RECORD': '1ca0a14983b717b3728988a152d217ce938b6286e10c8176212e2ff9c5e85f0a'}
+RECORDS = {**PARSER_RECORDS, **PYTEST_RECORDS}
+# The parser's wheels are vendored without their dist-info directories, their licenses copied into each package;
+# every other wheel is vendored with its dist-info complete, so importlib.metadata can read its version.
+PACKAGE_LICENSE_LAYOUT = frozenset(PARSER_RECORDS)
+PYTEST_HOST = 'tests/lib/pytest_host.py'
+# Test files the pytest host runs that import pytest themselves; a migration stage adds its file here.
+PYTEST_TEST_FILES = ()
+# Which files may import a vendored package outside the vendored directory, and the message otherwise.
+IMPORT_RULES = (
+    (PARSER_MODULES, ('docs/markdown_reader.py',), 'imports the Markdown parser; use docs/markdown_reader.py'),
+    (('pytest',), (PYTEST_HOST, *PYTEST_TEST_FILES),
+     'imports pytest; only the pytest host and the test files it is allowed to run may'),
+    (('_pytest', 'py', 'pluggy', 'iniconfig', 'packaging', 'pygments'), (),
+     'imports a package vendored for the pytest host; only the vendored copies may'),
+)
 
 
-def vendor_problems(root=ROOT):
-    """Each vendored parser file must have its wheel's RECORD digest, with nothing added or missing."""
+def vendor_problems(root=ROOT, records=RECORDS):
+    """Each vendored file must have its wheel's RECORD digest, with nothing added or missing.
+
+    A wheel's packages are its top-level directories and its top-level modules.
+    In the package-license layout the dist-info directory is not vendored and
+    its licenses are kept in each package; otherwise the dist-info directory is
+    vendored complete, except RECORD, which is kept beside the packages.
+    """
     vendor = root / 'tests/lib/vendor'
-    records = sorted(vendor.glob('*.RECORD'))
-    problems = [f'{name}: missing' for name in sorted(set(RECORDS) - {r.name for r in records})]
-    for record in records:
-        if hashlib.sha256(record.read_bytes()).hexdigest() != RECORDS.get(record.name):
+    found = sorted(vendor.glob('*.RECORD'))
+    problems = [f'{name}: missing' for name in sorted(set(records) - {r.name for r in found})]
+    for record in found:
+        if hashlib.sha256(record.read_bytes()).hexdigest() != records.get(record.name):
             problems.append(f"{record.name}: not the RECORD of the verified wheel")
         dist = record.name[:-len('.RECORD')] + '.dist-info/'
         rows = list(csv.reader(record.read_text().splitlines()))
-        packages = {path.split('/')[0] for path, _, _ in rows if not path.startswith(dist)}
-        listed = {path: digest for path, digest, _ in rows if not path.startswith(dist)}
-        # A wheel's licenses live in its dist-info; the vendored copy keeps them in the package.
-        listed.update({f'{package}/{path[len(dist):]}': digest for path, digest, _ in rows
-                       if path.startswith(dist + 'LICENSE') for package in packages})
+        if record.name in PACKAGE_LICENSE_LAYOUT:
+            listed = {path: digest for path, digest, _ in rows if not path.startswith(dist)}
+        else:
+            listed = {path: digest for path, digest, _ in rows if path != dist + 'RECORD'}
+        packages = sorted({path.split('/')[0] for path in listed if '/' in path})
+        modules = sorted(path for path in listed if '/' not in path)
+        if record.name in PACKAGE_LICENSE_LAYOUT:
+            for path, digest, _ in rows:
+                name = path[len(dist):] if path.startswith(dist) else None
+                if name and name.startswith('licenses/'):
+                    name = name[len('licenses/'):]
+                if name and name.startswith('LICENSE') and '/' not in name:
+                    listed.update({f'{package}/{name}': digest for package in packages})
         present = {path.relative_to(vendor).as_posix() for package in packages for path in (vendor / package).rglob('*')
                    if path.is_file() and '__pycache__' not in path.parts}
+        present.update(module for module in modules if (vendor / module).is_file())
         for path in sorted(set(listed) - present):
             problems.append(f'{record.name}: missing vendored file {path}')
         for path in sorted(present - set(listed)):
@@ -57,19 +93,31 @@ def vendor_problems(root=ROOT):
     return problems
 
 
-def import_problems(root, paths):
-    """Only the reader may import the parser."""
+def import_problems(root, paths, rules=IMPORT_RULES):
+    """Only the files a rule names may import its vendored packages outside the vendored directory."""
     problems = []
     for name in paths:
-        if name == 'docs/markdown_reader.py' or name.startswith('tests/lib/vendor/'):
+        if name.startswith('tests/lib/vendor/'):
             continue
         tree = ast.parse((root / name).read_text(), name)
         for node in ast.walk(tree):
             modules = ([alias.name for alias in node.names] if isinstance(node, ast.Import)
                        else [node.module or ''] if isinstance(node, ast.ImportFrom) else [])
-            if any(module.split('.')[0] in PARSER_MODULES for module in modules):
-                problems.append(f'{name}:{node.lineno}: imports the Markdown parser; use docs/markdown_reader.py')
+            for vendored, allowed, message in rules:
+                if name not in allowed and any(module.split('.')[0] in vendored for module in modules):
+                    problems.append(f'{name}:{node.lineno}: {message}')
     return problems
+
+
+def pytest_host_files(root=ROOT):
+    """The pytest host's vendored files and RECORDs, as paths relative to the repository root."""
+    vendor = root / 'tests/lib/vendor'
+    files = [path for name in ('pytest', '_pytest', 'pluggy', 'iniconfig', 'packaging', 'pygments')
+             for path in (vendor / name).rglob('*') if path.is_file() and '__pycache__' not in path.parts]
+    files += [path for name in PYTEST_RECORDS for path in (vendor / (name[:-len('.RECORD')] + '.dist-info')).rglob('*')
+              if path.is_file()]
+    files += [vendor / 'py.py'] + [vendor / name for name in PYTEST_RECORDS]
+    return sorted(path.relative_to(root).as_posix() for path in files)
 
 
 def tracked_python(root=ROOT):
@@ -279,7 +327,7 @@ class VendorTests(unittest.TestCase):
         changed.write_text(changed.read_text() + '\n')
         (vendor / 'mdurl/extra.py').write_text('')
         (vendor / 'markdown_it/LICENSE.markdown-it').unlink()
-        self.assertEqual(vendor_problems(root), [
+        self.assertEqual(vendor_problems(root, PARSER_RECORDS), [
             'markdown_it_py-3.0.0.RECORD: missing vendored file markdown_it/LICENSE.markdown-it',
             'markdown_it_py-3.0.0.RECORD: vendored file markdown_it/rules_inline/html_inline.py differs from the wheel',
             'mdurl-0.1.2.RECORD: vendored file mdurl/extra.py is not in the wheel',
@@ -300,7 +348,7 @@ class VendorTests(unittest.TestCase):
         rows = [row if row[0] != 'markdown_it/rules_inline/html_inline.py' else [row[0], digest, str(changed.stat().st_size)]
                 for row in csv.reader(record.read_text().splitlines())]
         record.write_text(''.join(','.join(row) + '\n' for row in rows))
-        self.assertEqual(vendor_problems(root), ['markdown_it_py-3.0.0.RECORD: not the RECORD of the verified wheel'])
+        self.assertEqual(vendor_problems(root, PARSER_RECORDS), ['markdown_it_py-3.0.0.RECORD: not the RECORD of the verified wheel'])
 
     def test_only_the_reader_imports_the_parser(self):
         self.assertEqual(import_problems(ROOT, tracked_python()), [])
@@ -315,6 +363,48 @@ class VendorTests(unittest.TestCase):
         self.assertEqual(import_problems(root, ['a.py', 'b.py', 'c.py']), [
             'a.py:2: imports the Markdown parser; use docs/markdown_reader.py',
             'b.py:1: imports the Markdown parser; use docs/markdown_reader.py',
+        ])
+
+    def test_the_pytest_host_set_is_the_wheels_bytes_including_its_top_level_module(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-pytest-vendor-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for name in pytest_host_files():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, root / name)
+        self.assertEqual(vendor_problems(root, PYTEST_RECORDS), [])
+        vendor = root / 'tests/lib/vendor'
+        changed = vendor / '_pytest/_version.py'
+        changed.write_text(changed.read_text() + '\n')
+        (vendor / 'pluggy/extra.py').write_text('')
+        (vendor / 'pygments-2.21.0.dist-info/licenses/LICENSE').unlink()
+        (vendor / 'packaging-26.3.dist-info/METADATA').write_text('Version: 0')
+        (vendor / 'py.py').unlink()
+        self.assertEqual(vendor_problems(root, PYTEST_RECORDS), [
+            'packaging-26.3.RECORD: vendored file packaging-26.3.dist-info/METADATA differs from the wheel',
+            'pluggy-1.7.0.RECORD: vendored file pluggy/extra.py is not in the wheel',
+            'pygments-2.21.0.RECORD: missing vendored file pygments-2.21.0.dist-info/licenses/LICENSE',
+            'pytest-9.1.1.RECORD: missing vendored file py.py',
+            'pytest-9.1.1.RECORD: vendored file _pytest/_version.py differs from the wheel',
+        ])
+
+    def test_only_the_host_and_its_test_files_import_pytest(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-pytest-importer-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for name in (PYTEST_HOST, 'tests/suites/preflight/allowed.py', 'tests/lib/helper.py', 'tests/suites/other.py'):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / PYTEST_HOST).write_text('import pytest\n')
+        (root / 'tests/suites/preflight/allowed.py').write_text('import pytest\nfrom pytest import fixture\n')
+        (root / 'tests/lib/helper.py').write_text('import pytest\n')
+        (root / 'tests/suites/other.py').write_text('from pluggy import HookspecMarker\nimport pygments.lexers\nimport _pytest.config\n')
+        rules = (IMPORT_RULES[0], (('pytest',), (PYTEST_HOST, 'tests/suites/preflight/allowed.py'), IMPORT_RULES[1][2]), IMPORT_RULES[2])
+        paths = [PYTEST_HOST, 'tests/suites/preflight/allowed.py', 'tests/lib/helper.py', 'tests/suites/other.py']
+        self.assertEqual(import_problems(root, paths, rules), [
+            'tests/lib/helper.py:1: imports pytest; only the pytest host and the test files it is allowed to run may',
+            'tests/suites/other.py:1: imports a package vendored for the pytest host; only the vendored copies may',
+            'tests/suites/other.py:2: imports a package vendored for the pytest host; only the vendored copies may',
+            'tests/suites/other.py:3: imports a package vendored for the pytest host; only the vendored copies may',
         ])
 
 

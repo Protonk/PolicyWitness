@@ -166,7 +166,11 @@ Offline release controls also exercise the release procedure's decision points.
   attributed to the output triple, not the compiler's host; a lower-precedence
   target default is recorded as overridden; records require the output target
   and are compared with the bytes, and a version 1 record is refused by the
-  shape check and the archive reader alike.
+  shape check and the archive reader alike. The checker runs under the
+  vendored pytest through [the pytest host](../../README.md#the-pytest-host),
+  which accepts the case only from a receipt in which every method passed
+  each phase and every `subTest` variant passed; the receipt and pytest's
+  output are retained in `artifacts/`.
 - `build_guard_controls` runs the unchanged build script in a disposable
   checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
   last checked Cargo or native output with a real Mach-O for a different macOS

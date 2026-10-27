@@ -301,7 +301,11 @@ hand-written expectations for fences, indented code, list content, comments,
 links and images, headings and sections, anchors, tables and line ranges. It
 runs the import guard against stand-in packages and a changed version,
 compares every vendored file with its wheel's `RECORD` digest and refuses an
-import of either package anywhere else.
+import of either package anywhere else. The same checks cover the pytest
+host's five wheels, vendored with their `dist-info` directories: pytest may be
+imported only by `tests/lib/pytest_host.py` and the test files it is allowed
+to run, and pluggy, iniconfig, packaging and pygments only inside the vendored
+directory.
 
 ## Success criteria
 

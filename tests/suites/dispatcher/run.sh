@@ -55,6 +55,14 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "test command controls f
 test_pass "public selection, inspection, configuration, and completion match execution receipts"
 fi
 
+if test_selected pytest_host_controls; then
+test_begin dispatcher pytest_host_controls
+test_step host "run synthetic inner suites through the pytest host in fixture repositories and judge the outer evidence"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "pytest host controls failed" \
+  "${ROOT_DIR}/tests/suites/dispatcher/check_pytest_host.py" "${PW_TEST_ARTIFACTS}"
+test_pass "the pytest host refuses inherited pytest settings, judges execution from receipts, keeps the lock in its child and stops under cancellation"
+fi
+
 if test_selected retention_controls; then
 test_begin dispatcher retention_controls
 test_step retention "observe retained inventories, ownership, replacement and checkout serialization"

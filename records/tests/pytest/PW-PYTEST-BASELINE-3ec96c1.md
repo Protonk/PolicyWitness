@@ -25,7 +25,7 @@ this record names no other way to start it.
 | Classes deriving from `unittest.TestCase` | 17 | 16 with test methods and `StampFixture`, a base class with `setUp` only |
 | Test methods | 68 | `def test_` at class indentation; identifiers BP01 to BP68 below |
 | `subTest` sites | 35 | `with self.subTest(` occurrences, in 29 methods |
-| Labeled `subTest` variants | about 350 | loop sizes read from source (per-method counts in the tables); not an execution count |
+| Labeled `subTest` variants | 344 | loop sizes read from source (per-method counts in the tables); the stage 0 receipt counted the same 344 |
 | Methods with unlabeled multi-scenario loops | 15 | loops without `subTest`, listed per row |
 | Methods that retain artifacts in the case directory | 10 | every `ShimContainmentTests` method |
 | Native compiles per execution | 1 in `OutputTargetTests.setUpClass`, 1 per `RecordTests` method (7), 2 single-file compiles elsewhere | source reading |
@@ -289,7 +289,7 @@ probe and metadata reader.
 | BP56 | `test_runnable_code_is_found_by_header_and_dsym_data_is_not_code` | The bundle scan finds code by header (a renamed universal file, a torn file), skips a dSYM companion by file type, reads every slice of the fat dSYM fixtures as `MH_DSYM` from their tables, keeps a mixed debug/code container and a thin x86_64 file hidden under a DWARF path as code, and raises `OSError` on an unreadable directory (`chmod 0`, restored by cleanup). | single sequence |
 | BP57 | `test_malformed_fat_debug_slices_are_not_exempted` | Eleven mutations of the universal dSYM (two truncations, nine patched table or header fields) all stay in the code inventory and each refuses. | unlabeled loop ×11; assertion message names the path |
 | BP58 | `test_the_build_gate_records_each_stage_and_refuses_any_departure` | Under an owned session the declared target is recorded; the cargo stage accepts the thin arm64 fixture; the native stage with the thin fixture plus each departing fixture refuses naming only the departing output and records one problem; an assembled bundle with every required output and two dSYM companions passes; a universal file under a dSYM path refuses at packaging; an absent and an empty bundle refuse with their messages; all four stages are recorded; without ownership the gate refuses (2). | `subTest(output=…)` ×8: thin-x86_64, universal, one-slice-fat, thin-arm64e, catalyst-arm64, truncated, text, missing |
-| BP59 | `test_app_gates_check_required_paths_without_macho_headers_in_both_variants` | For partial (3 paths) and full (7 paths) variants and both app stages, each required path replaced by text, emptied, truncated to two magic bytes or removed refuses with `<path>: <reason>`, with the session recording every output and exactly that problem; the path is restored after each fault. | `subTest(xpc=…, stage=…, path=…, fault=…)` ×80 |
+| BP59 | `test_app_gates_check_required_paths_without_macho_headers_in_both_variants` | For partial (2 paths) and full (7 paths) variants and both app stages, each required path replaced by text, emptied, truncated to two magic bytes or removed refuses with `<path>: <reason>`, with the session recording every output and exactly that problem; the path is restored after each fault. | `subTest(xpc=…, stage=…, path=…, fault=…)` ×72 |
 | BP60 | `test_weakened_predicates_fail_these_controls` | Four textual weakenings of `tests/lib/output_target.py` (container rule removed, predicate reduced to membership, substring name match, platform rule removed), each applied once to a copy loaded from a file: the original refuses the named fixture, the weakened copy accepts it. | `subTest(weakening=…)` ×4 |
 
 ### SignatureDisplayTests and RecordTests
@@ -523,3 +523,90 @@ its flag until the row that corrects it names the commit.
 
 | Baseline ID | Stage | Migrated check or unmigrated code | Label | Evidence |
 | --- | --- | --- | --- | --- |
+| BP01 | 0 | unmigrated `LockTests.test_unrelated_socket_cannot_handoff_a_copied_nonce_and_unheld_descriptor` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP02 | 0 | unmigrated `LockTests.test_admission_send_is_bounded_when_the_channel_queue_is_full` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP03 | 0 | unmigrated `LockTests.test_nested_scope_cannot_admit_after_acquisition_owner_exits` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP04 | 0 | unmigrated `LockTests.test_another_socket_from_the_owner_process_is_not_the_acquisition_channel` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP05 | 0 | unmigrated `LockTests.test_cancellation_bounds_a_command_and_descendant_that_ignore_signals` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP06 | 0 | unmigrated `LockTests.test_claims_are_admitted_only_by_a_live_owners_handoff` under the pytest host; 7 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP07 | 0 | unmigrated `LockTests.test_owner_exit_during_admission_creates_no_hold` under the pytest host; 2 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP08 | 0 | unmigrated `LockTests.test_protected_children_keep_the_hold_after_the_owner_dies` under the pytest host; 2 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP09 | 0 | unmigrated `LockTests.test_witness_preserves_bytes_and_nested_front_end_records_its_own` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP10 | 0 | unmigrated `LockTests.test_witness_refusals_precede_lock_writes` under the pytest host; 15 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP11 | 0 | unmigrated `LockTests.test_direct_python_children_inherit_the_callers_environment` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP12 | 0 | unmigrated `LockTests.test_forwarder_preserves_the_environment_and_a_shim_control_does_not` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP13 | 0 | unmigrated `LockTests.test_helper_wrapper_children_inherit_the_callers_environment` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP14 | 0 | unmigrated `LockTests.test_a_coerced_locale_is_named_as_such` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP15 | 0 | unmigrated `LockTests.test_helpers_import_only_the_interpreter_and_the_tree` under the pytest host; 3 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP16 | 0 | unmigrated `LockTests.test_entrypoints_refuse_an_unexecutable_interpreter_before_any_python` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP17 | 0 | unmigrated `ResolverTests.test_the_pin_resolves_and_probes_here` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP18 | 0 | unmigrated `ResolverTests.test_a_revision_suffixed_keg_is_accepted_with_its_upstream_version` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP19 | 0 | unmigrated `ResolverTests.test_the_path_checks_refuse_by_name_without_starting_anything` under the pytest host; 6 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP20 | 0 | unmigrated `ResolverTests.test_python_environment_is_refused_except_the_three_the_helpers_own` under the pytest host; 8 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP21 | 0 | unmigrated `ResolverTests.test_the_probe_refuses_a_stand_in_that_disagrees_or_fails` under the pytest host; 3 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP22 | 0 | unmigrated `ShimContainmentTests.test_detector_sent_blocked_and_neighbours` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP23 | 0 | unmigrated `ShimContainmentTests.test_constructed_gate_refusals_stop_dispatch_and_prepare` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP24 | 0 | unmigrated `ShimContainmentTests.test_constructed_sysctl_gate_refusals_stop_dispatch_and_prepare` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP25 | 0 | unmigrated `ShimContainmentTests.test_combined_profile_keeps_containment_and_reads_arm64_empty` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP26 | 0 | unmigrated `ShimContainmentTests.test_profiles_apply_and_keep_exec_restrictions` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP27 | 0 | unmigrated `ShimContainmentTests.test_structured_paths_cannot_add_profile_rules` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP28 | 0 | unmigrated `ShimContainmentTests.test_nested_sandbox_refuses_without_dispatch` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP29 | 0 | unmigrated `ShimContainmentTests.test_entrypoints_refuse_sdk_at_admission` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP30 | 0 | unmigrated `ShimContainmentTests.test_valid_sdk_requests_reach_each_entrypoints_next_boundary` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP31 | 0 | unmigrated `ShimContainmentTests.test_make_checks_command_line_and_inherited_sdk_before_recipes` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP32 | 0 | unmigrated `ProbeTests.test_cleanup_has_one_deadline_even_when_the_group_cannot_be_reaped` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP33 | 0 | unmigrated `ProbeTests.test_probes_are_bounded_and_failures_carry_no_output` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP34 | 0 | unmigrated `ProbeTests.test_comparison_inputs_are_complete_within_their_bounds` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP35 | 0 | unmigrated `StampTests.test_stamp_states_are_decided_without_adopting_unknowns` under the pytest host; 4 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP36 | 0 | unmigrated `OutputTargetStampTests.test_stamps_carry_the_output_target_and_refuse_another` under the pytest host; 5 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP37 | 0 | unmigrated `FailedObservationTests.test_failed_required_observations_refuse_compatibility_and_publication` under the pytest host; 3 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP38 | 0 | unmigrated `FreshRemovalTests.test_fresh_removal_admits_only_owned_real_directories` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP39 | 0 | unmigrated `OwnershipAndAdmissionTests.test_refused_start_does_not_create_a_missing_target_directory` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP40 | 0 | unmigrated `OwnershipAndAdmissionTests.test_session_witness_refusals_preserve_the_session_and_missing_target` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP41 | 0 | unmigrated `OwnershipAndAdmissionTests.test_helpers_refuse_without_ownership` under the pytest host; 9 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP42 | 0 | unmigrated `OwnershipAndAdmissionTests.test_cache_paths_are_admitted_before_any_write` under the pytest host; 6 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP43 | 0 | unmigrated `CargoJudgmentTests.test_cargo_judgments_bind_fingerprints_without_guessing` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP44 | 0 | unmigrated `CargoJudgmentTests.test_fresh_judgments_are_literal_booleans_bound_to_the_admitted_executable` under the pytest host; 32 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP45 | 0 | unmigrated `CargoJudgmentTests.test_requested_flags_are_attributed_by_precedence` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP46 | 0 | unmigrated `CargoConfigurationTests.test_failed_launcher_observations_never_fall_back_to_standalone_cargo` under the pytest host; 3 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP47 | 0 | unmigrated `CargoConfigurationTests.test_toml_forms_discovery_and_precedence` under the pytest host; 3 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP48 | 0 | unmigrated `CargoConfigurationTests.test_program_paths_resolve_as_cargo_resolves_them` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP49 | 0 | unmigrated `CargoConfigurationTests.test_includes_follow_cargo_order_and_refuse_what_cannot_be_read` under the pytest host; 6 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP50 | 0 | unmigrated `CargoConfigurationTests.test_env_entries_apply_as_cargo_applies_them` under the pytest host; 6 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP51 | 0 | unmigrated `OutputTripleSelectionTests.test_the_command_line_target_overrides_lower_defaults` under the pytest host; 3 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP52 | 0 | unmigrated `SdkTests.test_sdk_versions_normalize_and_unknowns_never_agree` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP53 | 0 | unmigrated `OutputTargetTests.test_fixtures_are_what_their_bytes_say` under the pytest host; 6 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP54 | 0 | unmigrated `OutputTargetTests.test_observations_are_kept_apart_from_the_decision` under the pytest host; 12 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP55 | 0 | unmigrated `OutputTargetTests.test_failed_and_inconsistent_tool_reports_refuse` under the pytest host; 7 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP56 | 0 | unmigrated `OutputTargetTests.test_runnable_code_is_found_by_header_and_dsym_data_is_not_code` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP57 | 0 | unmigrated `OutputTargetTests.test_malformed_fat_debug_slices_are_not_exempted` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP58 | 0 | unmigrated `OutputTargetTests.test_the_build_gate_records_each_stage_and_refuses_any_departure` under the pytest host; 8 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP59 | 0 | unmigrated `OutputTargetTests.test_app_gates_check_required_paths_without_macho_headers_in_both_variants` under the pytest host; 72 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP60 | 0 | unmigrated `OutputTargetTests.test_weakened_predicates_fail_these_controls` under the pytest host; 4 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP61 | 0 | unmigrated `SignatureDisplayTests.test_signature_displays_establish_class_team_and_timestamp` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP62 | 0 | unmigrated `RecordTests.test_records_are_bounded_redacted_and_complete` under the pytest host; 14 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP63 | 0 | unmigrated `RecordTests.test_records_are_validated_by_shape_in_every_reader` under the pytest host; 72 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP64 | 0 | unmigrated `RecordTests.test_the_archive_reader_validates_the_record_and_binds_its_outputs` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP65 | 0 | unmigrated `RecordTests.test_the_producer_validates_before_sealing` under the pytest host; 7 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP66 | 0 | unmigrated `RecordTests.test_helper_subcommands_are_the_ones_the_script_invokes` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP67 | 0 | unmigrated `RecordTests.test_opt_in_mutation_anchors_match_current_sources` under the pytest host; 16 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+| BP68 | 0 | unmigrated `RecordTests.test_unknown_wrapper_hashes_never_establish_stamp_compatibility` under the pytest host; 0 subtest reports | preserved | `tests/out/runs/pytest-stage0-01` |
+
+### Stage 0 measures
+
+Run `20261027T160122Z_4423b81a` in `tests/out/runs/pytest-stage0-01` (gitignored,
+local) ran the unchanged checker under the pytest host with the whole
+`source_drift` and `dispatcher` suites, 16 cases, all passed, no harness error,
+no system sleep. The receipt holds 68 collected items with one passed setup,
+call and teardown report each and 344 passed subtest reports; the per-method
+subtest counts equal the variant counts in the tables above.
+
+| Measure | Value |
+| --- | --- |
+| Case duration, `report.json` | 73065 ms (reference 74682 ms) |
+| Sum of item durations in the receipt | 72.6 s; the rest is the launcher, collection and pytest |
+| `RecordTests` call durations | bounded, redacted and complete 7.3 s; validated by shape in every reader 16.6 s; archive reader 1.2 s; producer 2.0 s; helper subcommands 0.6 s; opt-in anchors 0.5 s; unknown wrapper hashes 0.5 s |
+| First `OutputTargetTests` item, setup phase | 0.53 s, the class fixture's linking of the target fixtures |
+
+The `RecordTests` figures hold `setUp`, the body and the cleanups together, so
+they bound the fixture-host compile from above; stage 1 isolates it.
