@@ -72,7 +72,9 @@ The registry checks also compare catalog suite names with the suite directories
 suite directory to have a README and every `run.sh` under one to be a case
 command the catalog names, and require Baseline suites to have default catalog
 cases. Planner controls add a suite script no case names, a suite directory
-without a README and one the catalog lacks, and each is named.
+without a README and one the catalog lacks, and each is named; a Baseline
+suite whose only case is nondefault is named, and the same suite with a
+default case passes.
 
 Two rules keep the one test interface the only one. No repository document may
 show a case script as a command (`bash tests/suites/...`, `./tests/suites/...`,
@@ -84,11 +86,37 @@ release helpers may name no `--suite`, `--case` or `--all` and may invoke
 each form to a document copy, a selector and an argument to the Makefile copy
 and a selector to the acceptance copy, and require each to be named while a
 location span and a comment pass.
+Document discovery for the command rule is an explicit-root, pruned walk
+through [repository_tree.py](../../../docs/repository_tree.py). The
+command-document scope excludes `records/`, `dist/archive/`, `dist/evidence/`,
+`tests/out/`, `.tmp/`, `builddir` (a prefix, so `builddir-old/` as well),
+`controller/target/`, `tests/lib/vendor/` and `runner/.build/`, plus every
+hidden path component, and removes those directories before descending; the
+test-shell scope that `direct_python_start` uses covers `tests/**/*.sh` and
+prunes only `tests/out/`. Neither scope follows a directory symlink. A matching
+file symlink, a broken symlink or a directory named with the suffix remains a
+candidate, so its read failure is reported rather than omitted. The prose and
+link scope stays with `scanned_documents` in [generators.py](generators.py),
+and generator-owned documents come from each generator's own declarations.
+Inventory controls in both cases select an independently specified fixture
+that includes nested and untracked files, prefix near misses, a root and a
+nested `builddir`, hidden paths, the scope differences, each symlink kind, an
+unreadable selected input and large excluded subtrees; an independent
+instrument on directory enumeration shows that the excluded subtrees are never
+entered and that the tree's own account agrees with it.
 They also lock the `_test_overrides` key table in `runner/README.md` to the
 stored properties of `PWRunnerTestOverrides`, since that table is the only
 documented key list. Property/table agreement does not verify request admission
 or decoding; integrated override cases exercise those boundaries.
 Public-command controls separately verify selection and actual execution.
+
+Dedicated rule controls remove a normalized-matrix row for an existing
+`runner_outcome_*` suite, add a normalized-matrix row naming no constant, remove
+and add attempt-matrix rows, add an attempt kind on either side, rename a Swift
+case for a shared value, leave a numeric gap in the C enum, malform the C enum
+(a precondition failure, status 2), add a test-seam row naming no property, add
+a document-only prediction-unavailable pair and add an unknown landing path;
+each is named, and every restoration passes.
 
 Two rules read the handwritten text of `docs/ARCHITECTURE.md`: every
 top-level paragraph opening with "Known gap" is indexed, in order, by the
@@ -315,6 +343,9 @@ import of either package anywhere else.
 
 - Source-set checks read live files. Limits controls create disposable checkouts
   containing the actual generator, documents and referenced source files.
+- Inventory controls build their own tree under the planner's output and in a
+  temporary directory for the shell scope; the selected entries, entered
+  directories and timings are retained as `inventory-controls.json`.
 - Planner controls run the actual checker in a disposable checkout with a
   three-pair mirror, an extra fourth pair, inferred literal entries, shadowing,
   and missing/comment-only/string-only membership checks. Formatting and
@@ -336,6 +367,7 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/`
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/inventory-controls.json`
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
 - `<run>/suites/source_drift/contract_versions/artifacts/contract.log`
 - `<run>/suites/source_drift/architecture_documentation/artifacts/architecture.log`
@@ -446,5 +478,6 @@ and the `runner_unit` host-driver control.
 build-control wrappers to start with `#!/usr/bin/env -S ${PW_PYTHON} -B`.
 Disposable copies with each forbidden invocation or a changed wrapper line
 must fail; restored copies and comments pass. Leaf Python scripts are outside
-this check. Runtime preservation and contained resolver refusals belong to
+this check. Its shell inventory is the pruned test-shell scope described under
+the invariants, checked against a fixture of its own. Runtime preservation and contained resolver refusals belong to
 `preflight/build_provenance_controls` and `contract_versions`.

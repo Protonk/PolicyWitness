@@ -2,13 +2,17 @@
 start of the interpreter is ${PW_PYTHON} with -B -S (and -P for an inline or stdin start), no shell script under
 tests/ names the shim or a bare python3, and the wrappers' shebang agrees. Behavior is established elsewhere; this
 is the mechanical agreement over the tree."""
+import os
 import re
 import shlex
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'docs'))
+import repository_tree  # noqa: E402
 ENTRIES = ('build.sh', 'tests/lib/checkout_lock.sh', 'tests/run.sh', 'tests/lib/python.sh', 'tests/accept-release.sh', 'Makefile')
 # Entry points that start helpers: each calls the resolver's two functions, without arguments.
 PROBING = ('build.sh', 'tests/lib/checkout_lock.sh', 'tests/run.sh', 'tests/lib/python.sh', 'tests/accept-release.sh')
@@ -107,7 +111,9 @@ def resolver_problems(name, lines, *, probe):
 
 
 def shell_scripts(root):
-    return sorted(p for p in (root / 'tests').rglob('*.sh') if 'out' not in p.relative_to(root / 'tests').parts[:1])
+    """Every shell script under tests/ except retained output, through the test-shell scope's pruned walk."""
+    tree = repository_tree.Tree(root)
+    return [tree.path(relative) for relative in tree.inventory(repository_tree.TEST_SHELL_SCRIPTS)]
 
 
 def check(root):
@@ -200,6 +206,44 @@ class DirectPythonTests(unittest.TestCase):
                     self.assertTrue(any(name in p for p in check(root)), (name, shebang))
                 path.write_text(original)
             self.assertEqual(check(root), [])
+
+    def test_inventory_is_a_pruned_walk_of_the_shell_scope(self):
+        """Every shell script under tests/ is selected except retained output, in lexical order, and the
+        walk never enters tests/out. Hidden and vendored paths, a nested `out`, file and broken symlinks and a
+        directory named with the suffix stay candidates; a directory symlink is not followed; a near miss
+        such as tests/output is included."""
+        with tempfile.TemporaryDirectory(prefix='pw-shell-inventory-') as temporary:
+            root = Path(temporary)
+            for name in ('build.sh', 'tests/run.sh', 'tests/.hidden/keep.sh', 'tests/nested/out/keep.sh',
+                         'tests/output/keep.sh', 'tests/lib/vendor/keep.sh', 'tests/suites/x/run.sh',
+                         'tests/dir.sh/inner.sh', 'tests/out/drop.sh', 'tests/notes.md'):
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_text('')
+            for index in range(200):
+                case = root / f'tests/out/runs/run-{index:03d}/suites/case'
+                case.mkdir(parents=True)
+                (case / 'run.sh').write_text('')
+            (root / 'tests/linked.sh').symlink_to('run.sh')
+            (root / 'tests/linked-dir').symlink_to('suites', target_is_directory=True)
+            (root / 'tests/broken.sh').symlink_to('missing.sh')
+            entered = []
+            original = os.scandir
+
+            def counted(path='.'):
+                entered.append(Path(os.fspath(path)).relative_to(root).as_posix())
+                return original(path)
+            os.scandir = counted
+            try:
+                selected = [p.relative_to(root).as_posix() for p in shell_scripts(root)]
+            finally:
+                os.scandir = original
+            self.assertEqual(selected, ['tests/.hidden/keep.sh', 'tests/broken.sh', 'tests/dir.sh', 'tests/dir.sh/inner.sh',
+                                        'tests/lib/vendor/keep.sh', 'tests/linked.sh', 'tests/nested/out/keep.sh',
+                                        'tests/output/keep.sh', 'tests/run.sh', 'tests/suites/x/run.sh'])
+            self.assertEqual(sorted(entered), ['tests', 'tests/.hidden', 'tests/dir.sh', 'tests/lib', 'tests/lib/vendor',
+                                               'tests/nested', 'tests/nested/out', 'tests/output', 'tests/suites',
+                                               'tests/suites/x'])
+            self.assertEqual([d for d in entered if d == 'tests/out' or d.startswith('tests/out/')], [])
 
 
 if __name__ == '__main__':

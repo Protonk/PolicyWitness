@@ -222,9 +222,10 @@ review even when linked raw evidence is unavailable, and labels `tests/out`
 links as gitignored, local-checkout evidence.
 
 Follow [records/AGENTS.md](../../../records/AGENTS.md): this plan is the only
-repository document allowed to link into that package. Add its link here when
-the package exists; do not link it from suite READMEs, tests, source, indexes
-or the separate binding plan. Commit these records with the relevant
+repository document allowed to link into that package, which is
+[records/drift-cost-reduction/](../../../records/drift-cost-reduction/README.md);
+do not link it from suite READMEs, tests, source, indexes or the separate
+binding plan. Commit these records with the relevant
 implementation stages so work in progress is recoverable.
 
 Retire the package when implementation review is accepted and the current

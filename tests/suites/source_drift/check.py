@@ -66,6 +66,7 @@ sys.path.insert(0, str(REPO_ROOT / "tests" / "lib"))
 import native_sources  # noqa: E402  (shared with the order-barrier control and build.sh)
 sys.path.insert(0, str(REPO_ROOT / "docs"))
 import markdown_reader  # noqa: E402  (every Markdown structure below is read through it)
+import repository_tree  # noqa: E402  (explicit-root inventories and reads)
 # Runner sources live under SwiftPM-convention target dirs. The source-set
 # checks discover the on-disk set by walking these; the per-symbol contract
 # checks below read specific files out of the core target. Both reference
@@ -168,10 +169,6 @@ def catalog_commands() -> set[str]:
     return out
 
 
-# Documents that are not the repository's own: investigation records, local
-# archives and evidence, scratch, build state and vendored sources.
-COMMAND_DOCS_EXCLUDED = ('records/', 'dist/archive/', 'dist/evidence/', 'tests/out/', '.tmp/', 'builddir',
-                         'controller/target/', 'tests/lib/vendor/', 'runner/.build/')
 # A case script invoked: `bash tests/suites/...`, `./tests/suites/...`, or a bare script
 # path standing as a command line. A bare path in a code span is a location unless
 # the prose in front of it tells the reader to run it.
@@ -185,16 +182,11 @@ TEST_SELECTORS = ('--suite', '--case', '--all')
 RUN_SH_REMAINDER = re.compile(r"^(?:$|[;\"'\]\\]|--prune\b)")
 
 
-def markdown_documents() -> list[Path]:
-    """Every Markdown document the repository maintains, by walking the tree (the
-    planner's disposable checkout is not a git repository)."""
-    out = []
-    for path in REPO_ROOT.rglob('*.md'):
-        relative = path.relative_to(REPO_ROOT).as_posix()
-        if relative.startswith(COMMAND_DOCS_EXCLUDED) or any(part.startswith('.') for part in path.relative_to(REPO_ROOT).parts):
-            continue
-        out.append(path)
-    return sorted(out)
+def markdown_documents(tree: repository_tree.Tree) -> list[str]:
+    """Every Markdown document the repository maintains, as relative paths: the
+    command-document scope's pruned walk of the tree (the planner's disposable
+    checkout is not a git repository, so Git is not consulted)."""
+    return tree.inventory(repository_tree.COMMAND_DOCUMENTS)
 
 
 def check_no_direct_case_commands_in_docs() -> list[str]:
@@ -204,10 +196,10 @@ def check_no_direct_case_commands_in_docs() -> list[str]:
     `./tests/suites/...`, a fenced script line or a sentence telling the reader to
     run a script path is a second route in prose."""
     problems: list[str] = []
-    for path in markdown_documents():
-        relative = path.relative_to(REPO_ROOT).as_posix()
+    tree = repository_tree.Tree(REPO_ROOT)
+    for relative in markdown_documents(tree):
         try:
-            document = markdown_reader.read(path)
+            document = markdown_reader.read(tree.path(relative))
         except markdown_reader.Refused as error:
             problems.append(f"  commands: {error}")
             continue

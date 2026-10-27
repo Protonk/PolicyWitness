@@ -36,6 +36,7 @@ def main(out):
     paths += sorted(set().union(*native_sources.expected(ROOT, xpc=False).values()))
     paths += [str(p.relative_to(ROOT)) for p in (ROOT / 'runner/Sources').rglob('*') if p.is_file()]
     paths += markdown_reader.source_files()
+    paths += ['docs/repository_tree.py']
     paths += [str(p.relative_to(ROOT)) for pattern in ('*/run.sh', '*/README.md')
               for p in (ROOT / 'tests/suites').glob(pattern)]
     for name in paths:
@@ -130,6 +131,7 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
     scenarios += structure_scenarios(repo)
     scenarios += gap_scenarios(repo)
     scenarios += route_scenarios(repo)
+    scenarios += rule_gap_scenarios(repo)
     originals = {path: (repo / path).read_text()
                  for _, changes, _, _ in scenarios for path in changes}
     receipts = []
@@ -158,6 +160,7 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
         if (ROOT / path).read_text() != source:
             raise AssertionError(f'source controls changed the working input: {path}')
     receipts += registry_scenarios(repo, out)
+    receipts += inventory_controls(out)
     receipts += configured_controls(repo, manifest_original, worker_line, out)
     (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
     print(f'{len(receipts)} source and guidance controls passed')
@@ -211,6 +214,31 @@ def registry_scenarios(repo, out):
         nested.parent.mkdir()
         nested.write_text('#!/usr/bin/env bash\nexit 0\n')
 
+    readme = repo / 'tests/README.md'
+    catalog = repo / 'tests/catalog.json'
+    readme_original = readme.read_text()
+    catalog_original = catalog.read_text()
+    control = repo / 'tests/suites/baseline_control'
+
+    def baseline_suite(default):
+        """A Baseline-tier suite present on disk, in the coverage table and in the catalog, with one case."""
+        control.mkdir(exist_ok=True)
+        (control / 'README.md').write_text('# baseline_control\n')
+        lines = readme_original.split('\n')
+        start = lines.index('## Suite coverage')
+        separator = next(i for i in range(start, len(lines)) if lines[i].startswith('| --- |'))
+        lines.insert(separator + 1, '| `baseline_control` | Baseline | Control suite for the default-membership rule. | none | none |')
+        readme.write_text('\n'.join(lines))
+        data = json.loads(catalog_original)
+        data['suites']['baseline_control'] = {'command': ['bash', 'tests/suites/baseline_control/run.sh'], 'requires': [],
+                                              'cases': [{'id': 'control', 'description': 'control', 'default': default}]}
+        catalog.write_text(json.dumps(data, indent=2) + '\n')
+
+    def baseline_removed():
+        shutil.rmtree(control)
+        readme.write_text(readme_original)
+        catalog.write_text(catalog_original)
+
     receipts = []
     for name, setup, expected, diagnostic in [
         ('registry-wrapper-script', write_wrapper, 1, 'tests/suites/smoke/run.sh is not a case command'),
@@ -221,6 +249,10 @@ def registry_scenarios(repo, out):
         ('registry-directory-outside-catalog', lambda: (stray / 'README.md').write_text('# stray_suite\n'),
          1, 'suite directories and catalog disagree'),
         ('registry-restored', lambda: shutil.rmtree(stray), 0, None),
+        ('registry-baseline-suite-nondefault', lambda: baseline_suite(False), 1,
+         "Baseline-tier suite 'baseline_control' is missing from tests/catalog.json's default membership"),
+        ('registry-baseline-suite-default', lambda: baseline_suite(True), 0, None),
+        ('registry-baseline-suite-removed', baseline_removed, 0, None),
     ]:
         setup()
         evidence = out / name
@@ -234,8 +266,93 @@ def registry_scenarios(repo, out):
         if result.returncode != expected or (diagnostic and diagnostic not in result.stderr):
             raise AssertionError(f'{name}: unexpected checker result: {record}\n{result.stdout}\n{result.stderr}')
         receipts.append(record)
-    assert not wrapper.exists() and not stray.exists()
+    assert not wrapper.exists() and not stray.exists() and not control.exists()
     return receipts
+
+
+def rule_gap_scenarios(repo):
+    """Dedicated negative controls for the matrix, attempt-kind, test-seam, pair and landing-path rules,
+    each with its converse where the rule has one, followed by restoration."""
+    coverage = Path('tests/COVERAGE.md')
+    swift = Path('runner/Sources/PWRunnerCore/CWorker.swift')
+    header = Path('controller/tools/pw_probe_runner/pw_probe_runner_abi.h')
+    runner_readme = Path('runner/README.md')
+    guide = Path('docs/PolicyWitness.md')
+    architecture = Path('docs/ARCHITECTURE.md')
+    source = {path: (repo / path).read_text() for path in (coverage, swift, header, runner_readme, guide, architecture)}
+
+    def rows_under(path, heading):
+        lines = source[path].split('\n')
+        start = lines.index(heading)
+        end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith('## ')), len(lines))
+        return [line for line in lines[start:end] if line.startswith('| `')]
+
+    def row_named(rows, name):
+        return next(line for line in rows if line.startswith(f'| `{name}` |'))
+
+    def renamed(row, old, new):
+        return row.replace(f'`{old}`', f'`{new}`', 1)
+
+    def without(path, line):
+        assert source[path].count(line + '\n') == 1, (path, line[:40])
+        return source[path].replace(line + '\n', '', 1)
+
+    def with_after(path, anchor, line):
+        assert source[path].count(anchor + '\n') == 1, (path, anchor[:40])
+        return source[path].replace(anchor + '\n', anchor + '\n' + line + '\n', 1)
+
+    rows = rows_under(coverage, '## Normalized outcome coverage matrix')
+    timeout_row, last = row_named(rows, 'runner_timeout'), rows[-1]
+    attempt_rows = rows_under(coverage, '## Attempt outcome coverage matrix')
+    sysctl_row, attempt_last = row_named(attempt_rows, 'sysctl_failed'), attempt_rows[-1]
+    swift_close = '    case extensionRelease = 11\n}'
+    c_close = '    PW_ATTEMPT_EXTENSION_RELEASE = 11,\n} pw_attempt_kind_t;'
+    assert source[swift].count(swift_close) == 1 and source[header].count(c_close) == 1, 'fixture requires the current attempt kinds'
+    assert source[swift].count('    case sysctlRead     = 7\n') == 1
+    seam_first = rows_under(runner_readme, '## Test seam: `_test_overrides`')[0]
+    pair_line = next(line for line in source[guide].split('\n') if line.startswith('- `(iokit-open-service, iokit_registry_entry_class)`'))
+    prediction_row = next(line for line in source[architecture].split('\n') if line.startswith('| Prediction |'))
+    assert '`steps[].sandbox_check`' in prediction_row
+    return [
+        ('rule-runner-outcome-suite-row-removed', {coverage: without(coverage, timeout_row)}, 1,
+         "suite 'runner_outcome_runner_timeout' has no row for outcome 'runner_timeout'"),
+        ('rule-normalized-matrix-extra-row', {coverage: with_after(coverage, last, renamed(last, 'xpc_no_reply', 'bogus_outcome'))}, 1,
+         "coverage matrix lists 'bogus_outcome' but no NormalizedOutcome constant by that name exists"),
+        ('rule-attempt-matrix-row-removed', {coverage: without(coverage, sysctl_row)}, 1,
+         'AttemptOutcome.sysctl_failed has no row in tests/COVERAGE.md attempt-outcome coverage matrix'),
+        ('rule-attempt-matrix-extra-row',
+         {coverage: with_after(coverage, attempt_last, renamed(attempt_last, 'no_completed_result', 'bogus_attempt'))}, 1,
+         "attempt-outcome matrix lists 'bogus_attempt' but no AttemptOutcome constant by that name exists"),
+        ('rule-matrix-restored', {coverage: source[coverage]}, 0, None),
+        ('rule-attempt-kind-swift-extra',
+         {swift: source[swift].replace(swift_close, '    case extensionRelease = 11\n    case extraKind = 12\n}', 1)}, 1,
+         'Swift PWAttemptKind.EXTRA_KIND=12 has no matching pw_attempt_kind_t value'),
+        ('rule-attempt-kind-c-extra',
+         {header: source[header].replace(c_close, '    PW_ATTEMPT_EXTENSION_RELEASE = 11,\n    PW_ATTEMPT_EXTRA_KIND = 12,\n} pw_attempt_kind_t;', 1)}, 1,
+         'C PW_ATTEMPT_EXTRA_KIND=12 has no matching PWAttemptKind raw value'),
+        ('rule-attempt-kind-name-mismatch',
+         {swift: source[swift].replace('    case sysctlRead     = 7\n', '    case sysctlQuery    = 7\n', 1)}, 1,
+         'value 7 is PW_ATTEMPT_SYSCTL_READ in C but PWAttemptKind.SYSCTL_QUERY in Swift'),
+        ('rule-attempt-kind-c-gap',
+         {swift: source[swift].replace(swift_close, '    case extensionRelease = 11\n    case gapped = 13\n}', 1),
+          header: source[header].replace(c_close, '    PW_ATTEMPT_EXTENSION_RELEASE = 11,\n    PW_ATTEMPT_GAPPED = 13,\n} pw_attempt_kind_t;', 1)}, 1,
+         'pw_attempt_kind_t has a numeric gap at 12'),
+        ('rule-attempt-kind-malformed-c-enum', {header: source[header].replace('} pw_attempt_kind_t;', '};', 1)}, 2,
+         'could not locate pw_attempt_kind_t in pw_probe_runner_abi.h'),
+        ('rule-attempt-kind-restored', {swift: source[swift], header: source[header]}, 0, None),
+        ('rule-test-overrides-extra-row',
+         {runner_readme: with_after(runner_readme, seam_first, renamed(seam_first, 'worker_executable_path', 'bogus_override'))}, 1,
+         "runner/README.md's test-seam table lists 'bogus_override' but PWRunnerTestOverrides has no such property"),
+        ('rule-test-overrides-restored', {runner_readme: source[runner_readme]}, 0, None),
+        ('rule-pair-document-only', {guide: with_after(guide, pair_line, '- `(control-op, control_filter)` control')}, 1,
+         "('control-op', 'control_filter') in docs (docs/PolicyWitness.md) but missing from swift (ProbeRunner.swift)"),
+        ('rule-pair-restored', {guide: source[guide]}, 0, None),
+        ('rule-evidence-unknown-landing',
+         {architecture: source[architecture].replace(
+             prediction_row, prediction_row.replace('`steps[].sandbox_check`', '`steps[].sandbox_check` and `steps[].bogus_landing`', 1), 1)}, 1,
+         '`steps[].bogus_landing` is not a key of the reply shape golden'),
+        ('rule-evidence-restored', {architecture: source[architecture]}, 0, None),
+    ]
 
 
 def guidance_scenarios(repo):
@@ -514,6 +631,155 @@ def configured_controls(repo, manifest_original, worker_line, out):
         raise AssertionError(f'copied checkout: unexpected configured check result: {record}\n{result.stdout}\n{result.stderr}')
     receipts.append(record)
     return receipts
+
+
+def inventory_controls(out):
+    """Discovery is a pruned walk with the documented scope semantics.
+
+    An independently specified fixture holds nested and untracked files, prefix
+    near misses, a root and a nested `builddir`, hidden files and directories,
+    paths the Markdown and shell scopes treat differently, file, directory and
+    broken symlinks, a directory named with the suffix, an unreadable selected
+    input and large excluded subtrees. The rules' own discovery must select
+    exactly the listed entries in lexical order, and an independent instrument
+    on directory enumeration must show the excluded subtrees were never entered."""
+    import os
+    import tempfile
+    import time
+    sys.path.insert(0, str(ROOT / 'tests/suites/source_drift'))
+    import check  # noqa: E402
+    import direct_python  # noqa: E402
+    import repository_tree  # noqa: E402
+    # The fixture is scratch, not evidence: it holds a `runner/.build` directory and large excluded
+    # subtrees that the harness would refuse under artifacts. The receipt lists every created path.
+    scratch = os.environ.get('PW_TEST_SCRATCH')
+    if scratch:
+        Path(scratch).mkdir(parents=True, exist_ok=True)
+    root = Path(tempfile.mkdtemp(prefix='inventory-', dir=scratch))
+    created = ['README.md', 'README.MD', 'notes.markdown', 'builddir.md', 'build.sh',
+               'nested/untracked.md', 'nested/deeper/leaf.md', 'nested/.hidden.md', 'nested/.hidden/b.md',
+               'nested/builddir/a.md', '.hidden/a.md', '.tmp/a.md', 'records/a.md', 'records-old/keep.md',
+               'builddir/a.md', 'builddir-old/a.md', 'dist/PolicyWitness.md', 'dist/archive/a.md',
+               'dist/archive-old/keep.md', 'dist/evidence/a.md', 'controller/target/a.md',
+               'controller/targets/keep.md', 'tests/lib/vendor/a.md', 'tests/lib/vendor/keep.sh',
+               'tests/lib/vendored/keep.md', 'runner/.build/a.md', 'directory.md/inner.md',
+               'tests/out/hidden.md', 'tests/out/drop.sh', 'tests/output/keep.md', 'tests/output/keep.sh',
+               'tests/run.sh', 'tests/.hidden/keep.sh', 'tests/nested/out/keep.sh', 'tests/suites/x/run.sh',
+               'tests/dir.sh/inner.sh', 'tests/notes.md']
+    for name in created:
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f'{name}\n')
+    large = {}
+    for index in range(300):
+        case = root / f'tests/out/runs/run-{index:03d}/suites/source_drift/case'
+        case.mkdir(parents=True)
+        (case / 'notes.md').write_text('retained output\n')
+        (case / 'run.sh').write_text('retained output\n')
+    for index in range(100):
+        record = root / f'records/investigation-{index:03d}/evidence'
+        record.mkdir(parents=True)
+        (record / 'notes.md').write_text('record\n')
+    for index in range(20):
+        (root / f'builddir/sub-{index:02d}').mkdir()
+        (root / f'builddir/sub-{index:02d}/a.md').write_text('build state\n')
+    large['tests/out'] = sum(1 for _ in (root / 'tests/out').rglob('*'))
+    large['records'] = sum(1 for _ in (root / 'records').rglob('*'))
+    large['builddir'] = sum(1 for _ in (root / 'builddir').rglob('*'))
+    (root / 'linked.md').symlink_to('README.md')
+    (root / 'linked-dir').symlink_to('nested', target_is_directory=True)
+    (root / 'broken.md').symlink_to('missing.md')
+    (root / 'tests/linked.sh').symlink_to('run.sh')
+    (root / 'tests/linked-dir').symlink_to('suites', target_is_directory=True)
+    (root / 'tests/broken.sh').symlink_to('missing.sh')
+    unreadable = root / 'unreadable.md'
+    unreadable.write_text('secret\n')
+    unreadable.chmod(0)
+    expected_markdown = ['README.md', 'broken.md', 'controller/targets/keep.md', 'directory.md', 'directory.md/inner.md',
+                         'dist/PolicyWitness.md', 'dist/archive-old/keep.md', 'linked.md', 'nested/builddir/a.md',
+                         'nested/deeper/leaf.md', 'nested/untracked.md', 'records-old/keep.md', 'tests/lib/vendored/keep.md',
+                         'tests/notes.md', 'tests/output/keep.md', 'unreadable.md']
+    expected_markdown_listed = ['.', 'controller', 'controller/targets', 'directory.md', 'dist', 'dist/archive-old', 'nested',
+                                'nested/builddir', 'nested/deeper', 'records-old', 'runner', 'tests', 'tests/dir.sh',
+                                'tests/lib', 'tests/lib/vendored', 'tests/nested', 'tests/nested/out', 'tests/output',
+                                'tests/suites', 'tests/suites/x']
+    expected_shell = ['tests/.hidden/keep.sh', 'tests/broken.sh', 'tests/dir.sh', 'tests/dir.sh/inner.sh',
+                      'tests/lib/vendor/keep.sh', 'tests/linked.sh', 'tests/nested/out/keep.sh', 'tests/output/keep.sh',
+                      'tests/run.sh', 'tests/suites/x/run.sh']
+    expected_shell_listed = ['tests', 'tests/.hidden', 'tests/dir.sh', 'tests/lib', 'tests/lib/vendor', 'tests/lib/vendored',
+                             'tests/nested', 'tests/nested/out', 'tests/output', 'tests/suites', 'tests/suites/x']
+    excluded_roots = {'markdown': ('tests/out', 'records', 'builddir', 'builddir-old', '.hidden', '.tmp', 'dist/archive',
+                                   'dist/evidence', 'controller/target', 'tests/lib/vendor', 'runner/.build', 'nested/.hidden',
+                                   'linked-dir', 'tests/linked-dir'),
+                      'shell': ('tests/out', 'tests/linked-dir')}
+
+    def observed(call):
+        """Directories enumerated during the call, recorded independently of the walker's own account."""
+        entered = []
+        original = os.scandir
+
+        def counted(path='.'):
+            entered.append(Path(os.fspath(path)))
+            return original(path)
+        os.scandir = counted
+        start = time.perf_counter()
+        try:
+            result = call()
+        finally:
+            os.scandir = original
+        relative = [p.relative_to(root).as_posix() if p != root else '.' for p in entered]
+        return result, relative, time.perf_counter() - start
+
+    markdown_tree = repository_tree.Tree(root)
+    markdown, markdown_entered, markdown_seconds = observed(lambda: check.markdown_documents(markdown_tree))
+    shell, shell_entered, shell_seconds = observed(lambda: direct_python.shell_scripts(root))
+    shell = [p.relative_to(root).as_posix() for p in shell]
+    problems = []
+    if markdown != expected_markdown:
+        problems.append(f'markdown inventory {markdown} != {expected_markdown}')
+    if shell != expected_shell:
+        problems.append(f'shell inventory {shell} != {expected_shell}')
+    for label, entered, expected in (('markdown', markdown_entered, expected_markdown_listed),
+                                     ('shell', shell_entered, expected_shell_listed)):
+        if sorted(entered) != expected:
+            problems.append(f'{label} walk entered {sorted(entered)} != {expected}')
+        roots = excluded_roots[label]
+        descended = [d for d in entered if d in roots or d.startswith(tuple(r + '/' for r in roots))]
+        if descended:
+            problems.append(f'{label} walk entered excluded directories: {descended}')
+    if sorted(markdown_tree.listed) != sorted(markdown_entered):
+        problems.append(f"the tree's own account {sorted(markdown_tree.listed)} != observed {sorted(markdown_entered)}")
+    for relative in ('directory.md', 'broken.md', 'unreadable.md'):
+        try:
+            markdown_tree.read_text(relative)
+            problems.append(f'{relative}: read succeeded')
+        except repository_tree.MissingInput as error:
+            if relative != 'broken.md':
+                problems.append(f'{relative}: {error}')
+        except repository_tree.UnreadableInput as error:
+            if relative == 'broken.md':
+                problems.append(f'{relative}: {error}')
+    try:
+        markdown_tree.expand([repository_tree.required('absent.md')])
+        problems.append('expand accepted a missing required input')
+    except repository_tree.MissingInput:
+        pass
+    expanded = markdown_tree.expand([repository_tree.required('README.md'), repository_tree.optional('absent.md'),
+                                     repository_tree.directory('nested', ('.md',), recursive=False),
+                                     repository_tree.inventory(repository_tree.TEST_SHELL_SCRIPTS)])
+    if expanded != sorted({'README.md', 'nested/.hidden.md', 'nested/untracked.md', *expected_shell}):
+        problems.append(f'expand selected {expanded}')
+    unreadable.chmod(0o644)
+    shutil.rmtree(root)
+    record = dict(scenario='inventory-scopes', root=str(root), created=created, large_excluded_entries=large,
+                  markdown=dict(selected=markdown, entered=markdown_entered, seconds=markdown_seconds),
+                  shell=dict(selected=shell, entered=shell_entered, seconds=shell_seconds),
+                  expanded=expanded, problems=problems)
+    (out / 'inventory-controls.json').write_text(json.dumps(record, indent=2) + '\n')
+    if problems:
+        raise AssertionError('inventory controls: ' + '\n'.join(problems))
+    return [dict(scenario='inventory-scopes', expected_returncode=None, returncode=None,
+                 expected_diagnostic=None, markdown_entered=len(markdown_entered), shell_entered=len(shell_entered))]
 
 
 if __name__ == '__main__':

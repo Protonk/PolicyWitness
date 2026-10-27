@@ -1,0 +1,111 @@
+{
+  "schema": "drift-cost-reduction control map, version 1",
+  "baseline_revision": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
+  "candidate_revision": null,
+  "rows": [
+    {
+      "old": "source_drift/runner_source_manifests_agree:check.py::markdown_documents",
+      "obligation": "The command-document rule scans every Markdown document the repository maintains, excluding records, archives, evidence, retained output, scratch, build state, vendored sources and hidden paths.",
+      "disposition": "retained",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "docs/repository_tree.py::COMMAND_DOCUMENTS; tests/suites/source_drift/check.py::markdown_documents; tests/suites/source_drift/check_planner.py::inventory_controls (scenario inventory-scopes)",
+      "reason": "The selected set is unchanged for the real checkout (compared with the baseline run's retained inventory) and the fixture control states the prefix, hidden, symlink and non-file semantics literally; pruning before descent is shown by an independent enumeration instrument.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": "source_drift/direct_python_start:direct_python.py::shell_scripts",
+      "obligation": "Every shell script under tests/ except retained output is checked for interpreter starts.",
+      "disposition": "retained",
+      "destination": "source_drift/direct_python_start",
+      "where": "docs/repository_tree.py::TEST_SHELL_SCRIPTS; tests/suites/source_drift/direct_python.py::shell_scripts; DirectPythonTests.test_inventory_is_a_pruned_walk_of_the_shell_scope",
+      "reason": "The selected set is unchanged for the real checkout (compared with the baseline run's retained inventory); hidden and vendored paths and a nested out directory stay included, and the walk never enters tests/out.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "A Baseline-tier suite with no default case is named; the same suite with a default case passes.",
+      "disposition": "added",
+      "rule": "baseline_in_catalog_defaults",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::registry_scenarios (registry-baseline-suite-nondefault, registry-baseline-suite-default, registry-baseline-suite-removed)",
+      "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "An existing runner_outcome_* suite whose normalized-matrix row is removed is named.",
+      "disposition": "added",
+      "rule": "runner_outcome_suites_have_matrix_rows",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-runner-outcome-suite-row-removed)",
+      "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "A normalized-matrix row naming no NormalizedOutcome constant is named (converse of the commented-row control).",
+      "disposition": "added",
+      "rule": "normalized_outcomes_have_matrix_rows",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-normalized-matrix-extra-row)",
+      "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "A missing and an extra attempt-matrix row are named; restoration passes.",
+      "disposition": "added",
+      "rule": "attempt_outcomes_have_matrix_rows",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-attempt-matrix-row-removed, rule-attempt-matrix-extra-row, rule-matrix-restored)",
+      "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "A value on either side only, different names for a shared value and a C numeric gap are named; a malformed C enum is a precondition failure (status 2); restoration passes.",
+      "disposition": "added",
+      "rule": "attempt_kind_enum_agreement",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-attempt-kind-swift-extra, rule-attempt-kind-c-extra, rule-attempt-kind-name-mismatch, rule-attempt-kind-c-gap, rule-attempt-kind-malformed-c-enum, rule-attempt-kind-restored)",
+      "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "A documented key that is not a stored property is named (converse of the commented-row control).",
+      "disposition": "added",
+      "rule": "test_overrides_table_agreement",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-test-overrides-extra-row, rule-test-overrides-restored)",
+      "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "A document-only pair is named (converse of the commented-pair control).",
+      "disposition": "added",
+      "rule": "prediction_unavailable_agreement",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-pair-document-only, rule-pair-restored)",
+      "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
+      "receipt": "stage 1 run, see implementation.md"
+    },
+    {
+      "old": null,
+      "obligation": "A landing path that is not a key of its shape golden is named.",
+      "disposition": "added",
+      "rule": "evidence_channel_paths",
+      "destination": "source_drift/runner_source_manifests_agree",
+      "where": "tests/suites/source_drift/check_planner.py::rule_gap_scenarios (rule-evidence-unknown-landing, rule-evidence-restored)",
+      "reason": "The plan's stage 2 table names this as a required missing-rule control; each scenario runs the real checker over the planner's disposable checkout and asserts the exact status and diagnostic.",
+      "receipt": "stage 1 run, see implementation.md"
+    }
+  ],
+  "dispositions": {
+    "retained": "same owner and mechanism",
+    "moved": "same mechanism, new owner",
+    "consolidated": "repetition transferred to a reader assertion plus one retained representative",
+    "added": "a control the plan found missing; `old` is null"
+  }
+}
