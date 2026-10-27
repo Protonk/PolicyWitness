@@ -9,6 +9,11 @@ Completed investigations and dated surveys retained for reference:
   with their historical equipment and committed derived evidence.
 - `PATH-QUERY-RESOLUTION-INVESTIGATION.md`: the completed native path-query study.
 - `tests/OPT-IN-REPORT.md`: the test-selection survey at revision `2f23cad`.
+- `tests/PW-PYTEST-BASELINE-3ec96c1.md`: the subordinate-pytest trial's baseline
+  of `preflight/build_provenance_controls` at revision `3ec96c1`, with the
+  stage rows, measures, the rejection and the corrections; the investigation's
+  brief and external-pattern report sit beside it as
+  `tests/PW-PYTEST-INVESTIGATION-BRIEF.md` and `tests/PW-PYTEST-PATTERNS-REPORT.md`.
 - `distribution/PROJECT-WEIGHT.md`: the code census at revision `23c3e63`.
 
 Executable scripts, configurations, patches and captured evidence retain their

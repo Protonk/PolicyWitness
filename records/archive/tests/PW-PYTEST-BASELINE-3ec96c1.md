@@ -7,10 +7,9 @@ read on 2026-10-26), with the execution reference a later trial compares
 against. Every later trial or migration stage appends comparison rows at the
 end, using only the labels preserved, isolation-improved, blocked and revised.
 The source findings below stay as written; corrections to flagged expectations
-land as separate changes and are then named in the row that flagged them.
-Repository links to this record belong only in
-[the investigation plan](../../../tests/suites/preflight/PW-PYTEST-INTEGRATION-INVESTIGATION-PLAN.md)
-and [the trial plan](../../../tests/suites/preflight/PW-PYTEST-TRIAL-PLAN.md).
+landed as separate changes and are named in the rows that flagged them. The
+investigation plan and the trial plan that owned this record closed with the
+trial's rejection and were removed; the record is retained here, archived.
 
 Everything in the source baseline is source-derived. Measured behavior appears
 only in the execution reference and is labeled there. The case is reached only
@@ -421,22 +420,23 @@ The mutation column is the source expression applied to a copy `r` of the accept
 Flags stay here until a correction lands; the row then names the commit.
 None has been reproduced as a failure.
 
-- **F1 (BP34).** `self.assertIsNotNone(stamped)` follows
+- **F1 (BP34), corrected in `ee8f620`.** `self.assertIsNotNone(stamped)` follows
   `stamped = dict(observation=seen[0])` and cannot fail. The surrounding
   assertions still establish the oversized reading; the line asserts nothing.
-- **F2 (BP62).** The fault loop rewrites the bundle's record, asserts, then
+- **F2 (BP62), corrected in `ee8f620`.** The fault loop rewrites the bundle's record, asserts, then
   regenerates the record inside the `subTest` block. A failed assertion leaves
   the mutated record in place and the next variant mutates a mutated record,
   so one failure can change the variants after it. The plan names this as an
   inspected risk. Regenerating in a `finally` or mutating a fresh copy per
   variant would be an isolation improvement.
-- **F3 (BP20).** The accepted-variable loop uses `PYTHONOPTIMIZE` twice as a
+- **F3 (BP20), corrected in `ee8f620`.** The accepted-variable loop uses `PYTHONOPTIMIZE` twice as a
   `subTest` label (values `0` and empty), so two variants share one identity in
   any report.
-- **F4 (BP62 and the suite README).** The "another bundle" refusal accepts
-  either `provenance_hash` or `provenance_metadata`; the suite README says the
-  record "is refused by hash and load-command metadata". Either the assertion
-  or the account should say which.
+- **F4 (BP62), corrected in `ee8f620`.** The "another bundle" refusal accepts
+  either `provenance_hash` or `provenance_metadata`, while the checker's own
+  comment says the record is refused by hash and load-command metadata. The
+  phrase was misattributed to the suite README when this flag was written; the
+  README needed no change. A direct observation found only `provenance_hash`.
 - **F5 (BP02, BP32, BP33).** Elapsed-time bounds (2 s, 0.32 s, 5 s, and
   `1 + TERM_GRACE + CLEANUP_TIMEOUT + 2` s) and the stdout overflow byte
   bound depend on host load and pipe buffering. The dispatcher records system
@@ -887,3 +887,15 @@ tests`, `OK` in 71.2 s, the case took 71425 ms, and the 68 logged names equal
 the inventory. The tree outside `records/` is byte for byte the pre-trial
 state. The flagged expectations are corrected next, in `unittest` form, as a
 separate change.
+
+| BP34 | correction | F1: the unused dictionary and the assertion that could not fail are gone; the oversized readings remain asserted | revised | commit `ee8f620`, run `tests/out/runs/pytest-corrections-01` |
+| BP62 | correction | F2: the record is regenerated in a `finally` block after each variant, so a failed variant leaves the next one the accepted record | revised | commit `ee8f620`, run `tests/out/runs/pytest-corrections-01` |
+| BP20 | correction | F3: the accepted variables carry name and value as their `subTest` identity | revised | commit `ee8f620`, run `tests/out/runs/pytest-corrections-01` |
+| BP62 | correction | F4: the refusal of another bundle's record is asserted to be exactly `provenance_hash`; a direct observation showed only that code, because appended bytes leave the UUID unchanged | revised | commit `ee8f620`, run `tests/out/runs/pytest-corrections-01` |
+
+### Corrections
+
+Commit `ee8f620` corrected F1 to F4 in `unittest` form; run
+`20261027T162934Z_decec1db` in `tests/out/runs/pytest-corrections-01` (gitignored, local) passed the case
+with the corrections, `Ran 68 tests`, `OK`. F5 to F9 are limits of observation
+or environment couplings, not defects, and stay as recorded.
