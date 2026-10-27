@@ -122,6 +122,9 @@ When running the current case, use the repository root and `tests/run.sh --case 
 
 Write the baseline from step 2 as a separate record at `records/tests/pytest/`, titled with its revision, and add its link to this plan. Repository links to the record belong only in this plan. It is a snapshot; current-behavior corrections it reveals go to the suite README as separate changes. It names no direct invocation of the checker.
 
+The baseline record for revision `3ec96c1` is [the pytest migration baseline at revision 3ec96c1](../../../records/tests/pytest/PW-PYTEST-BASELINE-3ec96c1.md).
+The assessment returned for this plan is kept as [the pytest investigation recommendation](../../../records/tests/pytest/PW-RECCOMENDATION.md).
+
 Each later trial or migration stage appends its comparison row by row, identifying the corresponding migrated checks or unmigrated code and supporting evidence, using only the labels preserved, isolation-improved, blocked and revised. A flagged expectation stays in the record until its correction lands, when the row is updated and the commit named. Retain the original source findings alongside these updates. Archive the record under `records/archive/tests/` when this plan closes.
 
 Return a short assessment in the task response unless a separate destination is requested. Recommend proceeding to a trial, deferring, or rejecting the refactor, and explain the choice against retaining the current arrangement. Cite the record by path with its summary counts and flagged expectations. Include:
