@@ -18,9 +18,11 @@ and its `clang` requirement are unchanged. The case keeps one report path; no
 inner parameter becomes a catalog case. The checker's interpreter and its
 `-B -S` start are unchanged, and the tested helpers and their children keep
 seeing only the interpreter and the tree. Other test migrations are outside
-this plan. Every baseline expectation is preserved through the trial; a flagged
-expectation is corrected only in a separate labeled change after the stage
-that touched it.
+this plan. Every baseline expectation, the nine flagged ones included, is
+preserved unchanged through the trial, as the investigation plan requires;
+corrections follow the trial's closing decision as separate changes whose rows
+carry the `revised` label. During the stages a row carries only `preserved`,
+`isolation-improved` or `blocked`.
 
 Decision criteria, judged at the end of each stage from the comparison rows and
 run evidence:
@@ -35,18 +37,21 @@ run evidence:
    stage 0 added outside those controls; otherwise reject and revert.
 2. **Identity and preservation.** Every variant in the baseline tables gets a
    stable identity in the receipt; every row is labeled preserved or
-   isolation-improved; a blocked row ends the stage.
+   isolation-improved; a blocked row ends the stage, and no row is revised
+   before the trial closes.
 3. **Maintenance surface.** The launcher's rules and the vendored set need no
    change when the checker changes; updating the set follows the
    [vendoring procedure](../../lib/vendor/README.md).
 4. **Cost.** Stage 0 may not lengthen the case materially against the
-   reference duration of 74.7 s; stage 1 should shorten it by sharing the
-   fixture-host compile; both measured from per-test durations in the receipt.
+   reference, and stage 1 should shorten it by sharing the fixture-host
+   compile. The measure is the case's whole duration in its `report.json`,
+   the same quantity as the reference's 74.7 s; per-test durations from the
+   receipt attribute the time, they do not replace that measure.
 
 Deferring is the outcome when stage 0 passes but stage 1 cannot start within
 the planned effort; the launcher then stays behind the unchanged checker or is
-removed. Rejecting reverts the one-line switch and deletes the launcher and the
-vendored set; the flagged expectations are then corrected in `unittest` form.
+removed. Rejecting reverts the stages in reverse order, as the stages section
+sets out, and only then corrects the flagged expectations in `unittest` form.
 
 ## Grounding
 
@@ -133,7 +138,17 @@ any inherited variable whose name starts with `PYTEST`, as `pw_python_start`
 refuses `PYTHON*`; refusal, not filtering, because the dispatcher passes the
 inherited environment through. It then starts the child: the same file in
 child mode under `sys.executable -B -S -P`, with
-`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` set explicitly. The child inserts the
+`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` set explicitly, every other variable passed
+through unchanged, the checkout-lock claim's descriptors passed on with
+`pass_fds=checkout_lock.inherited_fds()`, and no new session or process
+group. Today the checker process holds those descriptors because the case's
+shell execs it; Python closes them in children by default, and the
+[locking contract](../../README.md#retention-ownership-and-execution-locking)
+requires a Python wrapper to pass them on, so the child holds the lock like
+the checker does now and dispatcher cancellation reaches it through the
+case's process group. The parent forwards nothing and swallows nothing: a
+signal ends the child directly, and the parent then fails on the incomplete
+receipt. The child inserts the
 vendored directory at the front of `sys.path`, imports pytest, and calls
 `pytest.main` with the receipt plugin and exactly these arguments: a
 non-file config path and an explicit `--rootdir`; `--noconftest`;
@@ -144,22 +159,34 @@ test file. No ini file, environment variable or conftest can add arguments.
 The receipt plugin writes one JSON line per event to the path the case names
 under `PW_TEST_ARTIFACTS`, flushing after each: session start with the pytest
 version, its module path, the arguments and the root; the collected node ids;
-the deselected count; every report with node id, phase, outcome, duration and
-the subtest context when present; and session finish with the exit status.
+the deselected count; every report with node id, phase, outcome and duration,
+marked as a subtest report with its message and parameters when it is one
+(the `SubtestReport` class, serialized with `_report_type` `SubTestReport`),
+and as an item report otherwise; and session finish with the exit status.
+A method with `subTest` blocks produces one item report per phase plus one
+subtest report per block, all under the method's node id, so the two kinds
+must be told apart.
 
 The parent accepts only when all of the following hold, computed from the
 receipt and the child's exit status, never from terminal text: the child
 exited 0 and the finish line reports status 0; the recorded version equals the
 pin and the module path lies under the vendored directory; at least one item
 was collected, and the count equals the number the case passes as a
-cross-check; the deselected count is 0; every collected node id has exactly one
-call-phase report with outcome passed, no setup or teardown report failed or
-skipped, and no subtest report failed or skipped. Collect-only or setup-only
-runs, an early stop, a body calling `os._exit`, a killed child, or a hook that
-suppresses reports all leave items without call reports and fail. The parent
+cross-check; the deselected count is 0; every collected node id has exactly
+three item reports, one each for the setup, call and teardown phases, every
+one with outcome passed, and no item report for any other node id; and every
+subtest report has outcome passed. pytest emits the setup report for every
+item, the call report only when setup passed, and the teardown report always,
+so a missing phase report means the item did not complete its protocol.
+Collect-only or setup-only runs, an early stop, a body calling `os._exit`, a
+killed child, or a hook that suppresses reports all leave items short of
+three passed reports and fail. A failed subtest fails the run whatever the
+parent item's own report says, so the rule does not depend on the order in
+which the subtests plugin and the receipt see the parent report. The parent
 exits 1 naming the first violated rule. The rules do not depend on the test
-file's contents. The collected-count cross-check is updated with each stage;
-it is not proof of preservation.
+file's contents. The collected-count cross-check, and the subtest-report
+count the case may also pass, are updated with each stage; neither is proof
+of preservation.
 
 **Case script change.** The one `test_check_python` line for this case starts
 the launcher with the receipt path, the expected count and the checker path
@@ -167,8 +194,12 @@ instead of the checker. Nothing else in the script, the catalog or the
 dispatcher changes.
 
 **Drift checks and documentation.** Extend the vendored-package checks to the
-new wheels: every file against its `RECORD`, nothing added or missing, and an
-import of any of the five packages refused outside the launcher. Add a row to
+new wheels: every file against its `RECORD`, nothing added or missing. The
+import rule has two parts: pluggy, iniconfig, packaging and pygments may be
+imported only from inside the vendored directory, and pytest only by the
+launcher's child mode and by the test files an explicit allowlist names, which
+is the checker from stage 1 onward. The production helpers under `tests/lib`,
+which the checker imports in-process, stay off that list. Add a row to
 the tests table of `docs/DEPENDENCIES.md` naming the vendored set, its role,
 its enforcement (the digest check and the launcher's pin check) and the
 versions known to work; add the packages to the vendor README table with
@@ -182,13 +213,20 @@ note the changed invocation in [the suite README](README.md).
 and receipt, add the documentation, switch the one line in the case script, and
 run the case into a fresh output directory. Append 68 rows to the baseline's
 comparison table, one per method, labeled preserved, each naming the run path.
-Record the per-method durations the receipt gives for `RecordTests` and
-`OutputTargetTests` as the answer to the baseline's first unresolved question.
-Accepted only when every criterion below holds:
+Record the case's whole duration from its `report.json` beside the reference's,
+and the receipt's per-method call durations for `RecordTests` and the
+setup-phase duration of the first `OutputTargetTests` item. Under `unittest`
+the call phase holds `setUp`, the body and the cleanups together, so the
+`RecordTests` figures only bound the fixture-host compile from above; stage 1
+isolates it, because a module-scoped fixture's cost appears in the setup-phase
+report of the first item that uses it. The difference between the case
+duration and the sum of item durations is the launcher's, collection's and
+pytest's own overhead. Accepted only when every criterion below holds:
 
 - the five packages are vendored at exact versions with their `RECORD` files;
-  the digest and import checks pass; the launcher refuses another version or a
-  module path outside the vendored directory;
+  the digest check and the two-part import rule pass with the allowlist
+  holding only the launcher; the launcher refuses another version or a module
+  path outside the vendored directory;
 - `docs/DEPENDENCIES.md`, the vendor README and the two test documents above
   are updated;
 - the environment and configuration controls pass: an inherited
@@ -212,9 +250,16 @@ Accepted only when every criterion below holds:
   [the cancellation controls](../dispatcher/check_cancellation.py): signal the
   dispatcher while an inner test holds a sleeping child and observe descendant
   exit through kernel exit events, never through pytest's interrupt handling;
-- the unchanged checker passes under the launcher with 68 collected, 68 call
-  reports passed and no skips, the receipt and `assertions.log` retained, and
-  the duration compared with the reference.
+- the lock-lifetime controls pass: an inner test finds the claim's descriptors
+  open in the child and is admitted under the inherited claim, and when the
+  launcher's parent is killed while an inner test sleeps, a separate open
+  observes the lock held until the child exits, as `lock_free` observes it in
+  the checker's own lifetime controls;
+- the unchanged checker passes under the launcher with 68 collected, three
+  passed item reports each, every subtest report passed, the subtest-report
+  count per method compared with the baseline's variant tables as a
+  cross-check, the receipt and `assertions.log` retained, and the case
+  duration compared with the reference.
 
 **Stage 1, record controls.** Compile the fixture host once as a module-scoped
 fixture (the bundle builder copies the host's bytes into each app, so the
@@ -226,8 +271,12 @@ Replace the ownership and temporary-directory boilerplate with a work-directory
 fixture and an owned-checkout fixture that yields the scope and the claimed
 environment while publication, mutation and observation stay in the test.
 Keep the stamp, fresh-removal, admission and judgment sequences as single
-tests with no autouse environment fixtures and no shared mutable state.
-Append a row per method and variant; judge criteria 1 to 4.
+tests with no autouse environment fixtures and no shared mutable state. From
+this stage the checker imports pytest and runs only under the launcher: add it
+to the import allowlist, and treat the case script's switch and the checker as
+one unit. Land the stage as its own commit, separate from stage 0, so it can
+be reverted on its own. Append a row per method and variant; judge criteria 1
+to 4.
 
 **Stage 2, remaining variants.** Parametrize `BP10`, `BP44`, `BP59` and the
 unlabeled loops in `BP23`, `BP24`, `BP29`, `BP30`, `BP40`, `BP57` and `BP61`
@@ -241,6 +290,16 @@ Expected across the stages: the process and lock controls persist as sequences
 with local helpers, the ownership and temporary-directory boilerplate
 disappears, and scenario identity moves from assertion messages into parameter
 ids.
+
+**Reverting.** A revert undoes the stages in reverse order, each by reverting
+its own commit: stage 2, then stage 1, which restores the `unittest` checker
+that needs no launcher, and last stage 0, which restores the one line in the
+case script and removes the launcher, the vendored set, their checks, the
+allowlist and the documentation rows. Reverting stage 0 alone after stage 1
+has landed is not a valid state: the checker would import pytest with no
+runner. After the last revert, run the case once more into a fresh output
+directory and confirm 68 methods pass under `unittest`, then append rows
+naming that run as the trial's closing evidence.
 
 ## Verification and completion
 
