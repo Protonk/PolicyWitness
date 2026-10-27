@@ -53,7 +53,7 @@ cost in place. The contracts for this work are:
 | --- | --- |
 | Tree access | An explicit root and named scope determine discovery; reads observe bytes from that root. Parse reuse is keyed by content and diagnostic identity. Inventory lifetime ends with the scenario. No writes or subprocesses are hidden in a read. |
 | Rule | An explicit tree and declared inputs produce problem records. The rule does not exit, print or mutate files; an external-tool rule declares that boundary. The dispatcher alone orders records and selects exit status. |
-| Fixture | Expand declared inputs into a separate mutable tree, preserving specified path/symlink semantics. Include infrastructure dependencies separately from the rule's subject files. No fallback reads from the original checkout. |
+| Fixture | Expand declared inputs into a separate mutable tree, preserving specified path/symlink semantics. Include infrastructure dependencies separately from the rule's subject files. Evaluators use the supplied root; structural controls establish the tested root/import behavior, not an audit of all filesystem reads. |
 | Validated generator invocation | Load and validate inputs for one check/write operation, pass those values explicitly to rendering, then discard them. Validation completes before publication. A later invocation validates again. |
 | Control receipt | Record the inputs, observation, expectation and measured work for one named control. State the counting boundary; never equate a receipt count with all descendant processes. |
 
@@ -196,9 +196,44 @@ candidate measurements to assess the implementation.
 
 Keep the following stages independently reviewable. Establish the baseline
 before changing executable code; after stage 1, measure discovery again so its
-savings are not assigned to later work. Keep a machine-readable old-to-new
-control map alongside the suite, finalized with the implementation, and retain
-the inputs and receipts for its credited runs in managed output.
+savings are not assigned to later work. Keep the old-to-new control map and
+implementation account as handoff records for this plan, as specified below,
+and retain the inputs and receipts for credited runs in managed output.
+
+### Records used during this plan
+
+During implementation, create `records/drift-cost-reduction/` containing
+`README.md`, `control-map.json` and `implementation.md`. Its consumer is the
+reviewer accepting the implementation of this plan. The map records how the
+old obligations were preserved; it is not a registry that tests consume or
+maintain after the transition. The implementation account carries the
+before/after measurements, evidence credits and remaining limitations.
+
+The package README states that purpose and consumer, the baseline and candidate
+source revisions, the map's field meanings and the retirement condition below.
+Map rows identify the old case/scenario or test/subtest, its obligation,
+disposition (retained, moved or consolidated), destination case and
+file/symbol/scenario, reason, and supporting receipt. Consolidated rows name
+both the reader assertion and the retained rule-integration representative.
+The implementing agent checks destination existence and receipt applicability
+at the recorded candidate revision for acceptance; no permanent test depends
+on this historical map. The account includes the useful results needed for
+review even when linked raw evidence is unavailable, and labels `tests/out`
+links as gitignored, local-checkout evidence.
+
+Follow [records/AGENTS.md](../../../records/AGENTS.md): this plan is the only
+repository document allowed to link into that package. Add its link here when
+the package exists; do not link it from suite READMEs, tests, source, indexes
+or the separate binding plan. Commit these records with the relevant
+implementation stages so work in progress is recoverable.
+
+Retire the package when implementation review is accepted and the current
+contracts, control ownership and receipt formats are documented and checked
+in their permanent code/test/README locations. Remove the package and this
+plan together in the same retirement change; Git retains the transition
+record. The later binding inventory consumes the live declarations and
+receipts, not this package. Nothing whose operation must outlive this plan
+belongs in the package.
 
 ### 1. Shared tree access and pruned discovery
 
@@ -254,7 +289,12 @@ function names to minimize citation churn.
 
 Declare an ordered `RULES` table in `check.py`. Each row names a stable rule
 ID, callable and inputs. Use a small, statically recognizable declaration form
-also usable by `build_rules.py`; do not implement plugin discovery. A result
+also usable by `build_rules.py`; do not implement plugin discovery. This is a
+flat table: rows declare no prerequisites or dependencies on other rule
+results. Input declarations describe what a rule reads, not scheduling edges.
+The checker attempts every selected rule once in table order. Each rule
+obtains its own parsed inputs through tree access and content-keyed parse
+reuse; it does not require an earlier rule to have populated state. A result
 record contains `rule_id`, stable `diagnostic_key`, repository-relative path
 when known, one-based line when known, severity and human-readable message.
 Diagnostics may evolve in wording while tests assert identity and location.
@@ -292,13 +332,50 @@ auditable dependency account, not a claim of complete program reachability.
 Replace the thirteen terminating branches with a typed expected-input failure
 carrying location and diagnostic key. Handle known JSON/enum/section/read and
 Meson-introspection failures at the owning rule boundary. Preserve reader
-refusal as status-1 drift for compatibility. After all independent rules run,
+refusal as status-1 drift for compatibility. In `check.py`, after all rules run,
 choose status 2 if any precondition failed, otherwise 1 for drift, otherwise
 0. Do not catch arbitrary programming exceptions and turn them into passing
-or missing results. A shared invalid prerequisite prevents dependent
-comparisons; record that dependency failure instead of inventing missing-row
-diagnostics. Print a deterministic summary of evaluated and blocked rules on
-failure as well as success. Do not reparse unsafe inputs to print the summary.
+or missing results. If several rules encounter the same invalid input, each
+produces its own precondition record carrying its rule ID and the same input
+location/key. Stop that rule's comparison without inventing missing-row
+diagnostics; continue the remaining rules. Do not deduplicate these records
+into one prerequisite-level failure or suppress a rule based on another
+rule's result.
+
+The deterministic summary counts and names rules by outcome: `evaluated`
+means the call completed without an input-precondition failure, including a
+drift or reader-refusal result; `input_blocked` means the call could not make
+its comparison. Each selected rule appears in exactly one category. Do not
+reparse inputs to print the summary. A combined control removes the suite
+coverage heading and adds a forbidden host binding: exactly
+`index_vs_disk` and `baseline_in_catalog_defaults` are input-blocked, each with
+its own missing-section record; all other 17 rules run, including the host
+diagnostic, and status is 2. Restore the heading and require both rules to
+evaluate again. This establishes the flat table's behavior with a shared bad
+input, not just with one isolated parser failure.
+
+`build_rules.py` is an explicit exception to the flat execution policy, not
+a general dependency scheduler. Keep its existing two-stage entry point:
+run `check_banner_order` first, and call the remaining nine rows in table order
+only if that result is clean. Preserve the gate for all remaining rules, including the
+rows that do not themselves use banner mapping; narrowing it is outside this
+repair. When the gate fails, name those nine rows as `gate_blocked` with
+`blocked_by: check_banner_order`; do not call them or invent comparison
+diagnostics for them. A banner input-precondition failure also closes the
+gate. If the gate passes, subsequent rules independently report their own
+input failures and do not block later rows. Preserve the build-rule CLI's
+existing 0/1 status contract (1 for any reported failure); gate-blocked rows
+add no new exit severity. Keep the standalone build generator's existing
+banner gate and exit behavior as well.
+
+Control this exception with a banner mismatch plus a knob mismatch: the
+banner problem appears, the nine suffix rows are gate-blocked and no knob
+comparison runs. Repair just the banner and require the knob problem and all
+nine suffix calls to appear; repair the knob and require success. Also cover
+an unparseable banner input and a later rule's input failure, distinguishing
+gate blocking from independent failure after the gate opens. Document the
+exception beside the build registry and in the checked rule-form convention;
+there is no implicit prerequisite field for a later refactor to discover.
 
 Move `host_invariance_controls` out of production `main` into the planner.
 Run its independent accepted/rejected constructed Swift/C cases once per
@@ -309,8 +386,9 @@ statically read the narrow `RULES` declaration, verify each named function is
 defined, and recognize the entry point's use of that table. It must not import
 and execute arbitrary cited suite code. Reject malformed/duplicate IDs,
 undefined functions and an unused table. Migrate `build_rules.py` to the same
-convention, preserving its banner-to-step prerequisite. Update `FORM_RULES`,
-its checked README table and `test_document_graph_cites_every_drift_rule` to
+declaration convention with its explicitly described two-stage execution.
+Update `FORM_RULES`, its checked README table and
+`test_document_graph_cites_every_drift_rule` to
 consume this declaration. Keep the graph's rule citations complete. Add
 controls for a defined-but-unregistered function, an orphan registry, a
 removed/duplicated row and a dispatcher that omits a registered rule. The last
@@ -405,14 +483,43 @@ entitlements, augment inventory, version/provenance helpers and all generators
 reached before the tested gate. Do not assume that manifest citations enumerate
 Python imports, link destinations or subprocess dependencies.
 
-Test declarations with an independent required-path inventory, relocated
-fixtures without Git, new native helpers, a new generator citation/target and
-an omitted helper causing a clear refusal. For link checks, include local
-destination closure, not only source Markdown. Audit reads under a fixture in
-a control to detect undeclared repository dependencies, accounting separately
-for system/interpreter files. Do not let a fixture silently read the real
-checkout through a default `ROOT`, import-time global or already-imported
-module. Use separate mutable copies per scenario; copy reduction never
+Use structural fixture controls; this plan adds no filesystem read audit,
+deny-read sandbox profile or OS tracing. Test declarations with an independent
+required-path inventory, relocated fixtures without Git, new native helpers,
+a new generator citation/target and an omitted helper causing a clear refusal.
+For link checks, include local destination closure, not only source Markdown.
+
+Run copied command entry points in fresh interpreters with the fixture as
+their working directory and their script path inside the fixture. In fresh
+import controls, assert that the named repository helper modules' resolved
+`__file__` paths lie in the fixture. The in-process rule implementation may
+load from the real checkout, but receives the fixture tree for subject data;
+it must not obtain that data through an import-time/default `ROOT`. Use two
+fixtures with the same relative input path and different contents, then
+remove the required input from one while it still exists in the real checkout.
+Require the different expected observations and then a missing-input refusal.
+A deliberately weakened evaluator that ignores the supplied tree and uses
+the original root must fail this control's expectations.
+
+Put the copied-generator root/import controls in `generator_contract` and
+the in-process root controls in `runner_source_manifests_agree`. Add one fresh
+import probe per generator (five Python starts per `generator_contract` run),
+reuse existing CLI relocation checks for command execution, and use focused
+rule calls for the two-root/missing-input controls. Their cost is those starts
+and calls plus fixture construction, recorded in the normal receipts; no
+read-observation process runs per fixture. They require no new
+equipment or sandbox escalation beyond each case's existing execution
+boundaries; do not add a sandbox-sensitive audit to every fixture creation.
+
+These observations establish the tested roots, imports and missing-input
+behavior. Declarations remain a reviewed input account: they do not prove
+that every file read is declared, detect arbitrary absolute-path reads or
+observe all subprocess descendants. Review newly introduced reads and imports
+against the declarations. A need for exhaustive read observation would require
+a separately specified mechanism, equipment and failure controls; it is not
+an acceptance claim of this repair.
+
+Use separate mutable copies per scenario; copy reduction never
 licenses mutation leakage or a reduced refusal snapshot. Snapshot the entire
 constructed fixture, including unrelated sentinel files and directories, not
 only the generator's declared outputs. Preserve detection of unexpected new
@@ -542,8 +649,8 @@ Verification by stage:
 | Stage | Canonical checks and required observation |
 | --- | --- |
 | Pruning | `source_drift/runner_source_manifests_agree`, `source_drift/direct_python_start`: exact included set and zero excluded-subtree descent. |
-| Tree/rules/planner/citations | Those two plus `source_drift/markdown_reader` and `source_drift/generator_contract`; current architecture/build generator cases; independent expected records, combined faults, status 2, dispatch omission and cache/root isolation controls. |
-| Fixtures/reuse | All eight source_drift cases: relocated fixtures, changed dependency invalidation, ownership/refusal snapshots, unchanged generated bytes and idempotence. |
+| Tree/rules/planner/citations | Those two plus `source_drift/markdown_reader` and `source_drift/generator_contract`; current architecture/build generator cases; per-rule shared-input failures, the build banner-gate exception, combined faults, status 2 for the main checker, dispatch omission and cache/root isolation controls. |
+| Fixtures/reuse | All eight source_drift cases: structural root/import and missing-input controls (not a read audit), relocated fixtures, changed dependency invalidation, ownership/refusal snapshots, unchanged generated bytes and idempotence. |
 | Rehoming | New preflight cases and all source_drift cases together; dispatcher catalog/selection controls, default `--list` and `--all --list`; every old obligation mapped to a still-default owner with actual equipment. |
 
 The final selected run after rehoming is:
@@ -565,7 +672,9 @@ regeneration. No signed app build or live witness battery is warranted by
 these test/documentation-only changes unless implementation expands into their
 dependencies; if that happens, reconsider scope and apply their working rules.
 
-Finish with a committed implementation account containing:
+Finish `records/drift-cost-reduction/control-map.json` and
+`records/drift-cost-reduction/implementation.md` for this plan's acceptance
+review, with the consumer and retirement specified above. They contain:
 
 - The complete 204-scenario old-to-new map, constructed host/direct-Python and
   generator obligations, added missing-rule controls and each remaining CLI
@@ -577,9 +686,11 @@ Finish with a committed implementation account containing:
 - Credited run IDs/paths and source snapshots, failures/replacements and any
   explicitly reviewed evidence-reuse exceptions. Raw evidence stays under
   the managed output/retention contract.
-- The final registry and declared inputs for the later binding inventory,
-  remaining justified costs and unresolved limitations. Input declarations
-  and citation membership do not establish that a check supports a claim.
+- The candidate revision and locations of the live registry, declarations
+  and receipt contracts, remaining justified costs and unresolved limitations.
+  The later binding inventory reads those live interfaces; it has no dependency
+  on this record package. Input declarations and citation membership do
+  not establish that a check supports a claim.
 
 Completion means unchanged included discovery with proven early pruning,
 fewer unrelated rule evaluations and whole-checker starts, preserved and
