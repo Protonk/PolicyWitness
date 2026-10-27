@@ -9,7 +9,8 @@ end, using only the labels preserved, isolation-improved, blocked and revised.
 The source findings below stay as written; corrections to flagged expectations
 land as separate changes and are then named in the row that flagged them.
 Repository links to this record belong only in
-[the investigation plan](../../../tests/suites/preflight/PW-PYTEST-INTEGRATION-INVESTIGATION-PLAN.md).
+[the investigation plan](../../../tests/suites/preflight/PW-PYTEST-INTEGRATION-INVESTIGATION-PLAN.md)
+and [the trial plan](../../../tests/suites/preflight/PW-PYTEST-TRIAL-PLAN.md).
 
 Everything in the source baseline is source-derived. Measured behavior appears
 only in the execution reference and is labeled there. The case is reached only
