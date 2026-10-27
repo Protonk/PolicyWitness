@@ -6,7 +6,7 @@ Investigate the effort required to introduce pytest beneath PolicyWitness’s ex
 
 Read this alongside [the investigation brief](PW-PYTEST-INVESTIGATION-BRIEF.md), which supplies external examples and the rationale for freezing a baseline, adopting common patterns, and examining the variants that remain. This plan defines the scope of the investigation.
 
-The [external-pattern report](PW-PYTEST-PATTERNS-REPORT.md) records the three-project source investigation for item 3 and limited PW comparisons. The remaining investigation and implementation decisions are still open.
+The [external-pattern report](PW-PYTEST-PATTERNS-REPORT.md) records the four-project source investigation for item 3 and limited PW comparisons. The remaining investigation and implementation decisions are still open.
 
 This is an investigation, not an implementation. Do not modify tracked files or undertake the refactor.
 
@@ -16,7 +16,7 @@ This is an investigation, not an implementation. Do not modify tracked files or 
 
 2. **Inventory the file and identify a comparison baseline.** Examine its `unittest` classes, fixtures, setup and cleanup behavior, assertions, subprocess controls, and shared helpers. Distinguish organizational machinery from meaningful test-specific behavior. Propose what should be held stable during an initial migration so its effects can be assessed: the selected checks, inputs and expectations, relevant state transitions, and outcome reporting. Flag questionable expectations separately rather than treating their current existence as a permanent requirement.
 
-3. **Investigate transferable patterns.** Use the related projects in the brief as starting points. Examine both test bodies and their supporting fixtures or invocation paths. Consider Zephyr’s division of responsibility, meson-python’s visible build and mutation sequences, and PyPA build’s independent malformed-input cases. Identify a few patterns worth borrowing, the conditions that make them work, and important differences from PW. Follow relevant leads without turning this into a general survey of testing frameworks.
+3. **Investigate transferable patterns.** Use the related projects in the brief as starting points. Examine both test bodies and their supporting fixtures or invocation paths. Consider Zephyr’s division of responsibility, meson-python’s visible build and mutation sequences, PyPA build’s independent malformed-input cases, and pytest’s checks of its own execution and reporting. Identify a few patterns worth borrowing, the conditions that make them work, and important differences from PW. Keep the external comparison bounded to these four projects.
 
 4. **Evaluate subordinate integration.** Determine how pytest could execute within the existing catalog and dispatcher without replacing their authority. Compare running the current tests largely unchanged with gradually adopting pytest fixtures, parametrization, and assertions. Distinguish a useful transitional step from an organizational improvement. Consider temporary-directory and cache ownership, execution ordering, diagnostics, cleanup, interruption, and retained evidence.
 

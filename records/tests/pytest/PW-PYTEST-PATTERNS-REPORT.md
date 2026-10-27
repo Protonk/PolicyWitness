@@ -1,8 +1,9 @@
-# Report: pytest patterns from three projects
+# Report: pytest patterns from four projects
 
 The most useful patterns are explicit outer-runner result handling, fixtures
-that prepare resources while leaving the tested action visible, and independent
-malformed-input cases with authored expectations. None requires converting
+that prepare resources while leaving the tested action visible, independent
+malformed-input cases with authored expectations, and small synthetic suites
+that check execution and reporting. None requires converting
 every test to the same shape. The examples also retain substantial local
 machinery where their subject requires it.
 
@@ -14,7 +15,7 @@ outside this report.
 
 ## Sources and method
 
-Inspected on 2026-10-26. Research stopped at these three projects; supporting
+Inspected on 2026-10-26. Research stopped at these four projects; supporting
 fixtures, configuration, and invocation code belong to the same sources.
 Links below pin the inspected revisions rather than moving branches.
 
@@ -23,6 +24,7 @@ Links below pin the inspected revisions rather than moving branches.
 | [Zephyr](https://github.com/zephyrproject-rtos/zephyr/tree/d1d74eba22d6565eaead5840d2352b74fb4039ff) | `d1d74eba22d6565eaead5840d2352b74fb4039ff` | How does pytest operate beneath another test runner? |
 | [meson-python](https://github.com/mesonbuild/meson-python/tree/70d921dcb4cc28e80e2b1620e5eb7b0886e48b51) | `70d921dcb4cc28e80e2b1620e5eb7b0886e48b51` | What stays visible in build and mutation sequences? |
 | [PyPA build](https://github.com/pypa/build/tree/4d37ed7edbf629c30500950e1164d21628eb697c) | `4d37ed7edbf629c30500950e1164d21628eb697c` | How are independent malformed inputs arranged and judged? |
+| [pytest](https://github.com/pytest-dev/pytest/tree/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c) | `41d12cdbb4a35a7877768d93d8dc50a9117a8d8c` | How is the test runner itself checked against known outcomes? |
 
 PW comparisons use commit `23db75321a548aa1beef15becccc9980e1adcdf2`.
 Each example was followed from its test body into the relevant fixtures and
@@ -146,6 +148,79 @@ Those policies serve that project. PW's dispatcher already owns selection,
 equipment, and execution locking, and temporary-directory removal cannot
 substitute for its evidence-retention rules.
 
+## pytest: synthetic suites that check execution and reporting
+
+Pytest's own tests provide a useful fourth example for integration verification.
+Tox invokes pytest, project configuration loads the `pytester` plugin, and the
+test suite's fixture disables third-party plugin autoloading for its nested
+runs. The examples therefore come with explicit supporting configuration.
+[Tox invocation](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/tox.ini#L65-L78),
+[plugin loading](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/pyproject.toml#L422-L429),
+[fixture override](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/testing/conftest.py#L160-L163).
+
+The runner tests construct small programs whose outcomes are authored alongside
+their source:
+
+| Scenario | What the upstream control checks |
+| --- | --- |
+| Setup or teardown raises | The failing phase is identified; setup failure yields two reports and teardown failure three. A separate control checks a failing return code after a passing body and failing teardown. |
+| Nothing selected, then a passing test, then that test deselected | Empty selection and deselection return `NO_TESTS_COLLECTED`; the positive neighbour returns `OK`. |
+| Test failure plus module-fixture teardown failure under `--maxfail=1` | Both the test failure and teardown error remain in the outcome counts. |
+
+[Phase and return-code controls](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/testing/test_runner.py#L251-L324),
+[selection control](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/testing/test_runner.py#L766-L785),
+[combined-failure control](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/testing/test_runner.py#L1232-L1254).
+
+The execution boundary matters. `runitem` delegates to an internal protocol
+runner, and `inline_runsource` stays in-process. `runpytest` defaults to
+in-process execution but supports a subprocess mode; the explicit subprocess
+helper invokes the current interpreter with `-m pytest`.
+[Execution helpers](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/src/_pytest/pytester.py#L1061-L1089),
+[mode default](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/src/_pytest/pytester.py#L93-L102),
+[subprocess command](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/src/_pytest/pytester.py#L1493-L1533).
+
+Supporting self-tests independently check that subprocess mode changes PID.
+Another supplies an invalid CLI argument and expects outcome parsing to raise
+rather than report zero outcomes. These checks support the helpers' specific
+contracts; they do not establish execution through PW's launcher.
+[Process-boundary control](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/testing/test_pytester.py#L419-L441),
+[missing-summary control](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/testing/test_pytester.py#L298-L307).
+
+**Transfer:** construct a small set of known pytest scenarios and exercise the
+eventual PW invocation path, including its outer case result and retained logs.
+A passing body with failing teardown must not become a successful case;
+combined failures should remain distinguishable in diagnostics. Setup failure
+can include a body-execution receipt to establish that the body did not run.
+Empty selection and supported skips need expectations derived from PW's chosen
+integration contract. Inner outcome counts need not become separate catalog
+cases or replace the existing outer accounting.
+
+This extends a pattern PW already uses.
+[Dispatcher controls](../../../tests/suites/dispatcher/check.py) run the public
+command in fixture repositories, retain stdout/stderr and exit records, inspect
+the summary and journal, and check that ordinary failures do not suppress a
+later passing case. They already cover passing reports followed by crashes and
+failed reports with zero exits. The fourth example contributes pytest-specific
+stimuli at the new boundary, not a reason to migrate those controls.
+
+**Transfer limits:** `pytester` changes the working directory and home variables;
+its subprocess launcher injects `PYTHONPATH`. Outcome counts are parsed from
+terminal summaries. Repeated subprocess runs overwrite the same `stdout` and
+`stderr` files. Timeout handling kills and waits for the direct child, without
+a process-group cleanup operation in that helper.
+[Environment setup](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/src/_pytest/pytester.py#L680-L725),
+[summary parsing](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/src/_pytest/pytester.py#L556-L623),
+[subprocess environment, capture, and timeout](https://github.com/pytest-dev/pytest/blob/41d12cdbb4a35a7877768d93d8dc50a9117a8d8c/src/_pytest/pytester.py#L1361-L1483).
+
+Those policies need separate evaluation against PW's controlled helper
+environment, per-run evidence, and cancellation ownership. In-process protocol
+checks and a raised `KeyboardInterrupt` also cannot establish OS signal delivery
+or descendant exit. PW's
+[cancellation controls](../../../tests/suites/dispatcher/check_cancellation.py)
+remain the relevant local model for those observations. The fourth source is
+worth retaining for its test construction and failure-accounting patterns,
+without adopting its helper package as the integration design.
+
 ## Comparisons with PW
 
 The following are candidate applications, not an implementation prescription.
@@ -191,7 +266,8 @@ structure should remain. Further integration work needs to settle:
    keep their intended interpreter, import path, and environment.
 2. What inner outcomes the outer case must account for, including collection
    failure, no tests, skips, setup/teardown errors, and interruption; which
-   details belong in retained logs or a structured report.
+   details belong in retained logs or a structured report. Synthetic-suite
+   controls can then check that mapping through the actual invocation path.
 3. Which preparation can be shared without sharing mutable state, and how
    scratch files, mutation inputs, and diagnostic evidence retain clear owners.
 
