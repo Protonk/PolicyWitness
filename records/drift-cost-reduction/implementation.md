@@ -74,7 +74,25 @@ missing-rule controls were added to the planner as real-checker scenarios
 `control-map.json` rows with disposition `added` list them. The planner now
 runs 225 receipts per case (204 before).
 
-STAGE1_CREDIT
+Credited run: `tests/out/runs/drift-cost-stage1-03` (ID `20261027T201614Z_dc800ffe`), both cases
+passed with zero recorded sleep, on commit `a9f67e0` with a clean working
+tree apart from this records package. The planner wrote 225 receipts.
+Case durations are shown beside the baseline as context only; they are single
+runs, and the planner's whole-checker starts dominate the first case.
+
+| Case | Baseline ms | Stage 1 ms | Recorded sleep ms |
+| --- | ---: | ---: | ---: |
+| `runner_source_manifests_agree` | 188679 | 186063 | 0 |
+| `direct_python_start` | 25151 | 11326 | 0 |
+
+Preserved uncredited runs: `drift-cost-stage1-01` (ID
+`20261027T200543Z_79b9b4e5`; both cases passed, but the harness refused the
+run because the inventory fixture placed a `runner/.build` directory under
+artifacts) and `drift-cost-stage1-02` (ID `20261027T201214Z_bf335fca`; the
+relocated fixture failed because `PW_TEST_SCRATCH` is exported but not
+created; every scenario before the inventory control had passed). The
+post-stage discovery measurement was taken after the first of those runs and
+is unaffected by either defect, which concern only where the fixture lives.
 
 Limitations: the listing counts are the walker's `os.scandir` calls as seen by
 an instrument installed in the same process; they are not an OS-wide count.
