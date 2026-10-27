@@ -119,8 +119,8 @@ this sample. The instrumented total is not interchangeable with the
 32.508-second uninstrumented baseline case. Do not add inclusive test time
 to its helper subtotals or infer a speedup from differences between runs.
 
-The earlier assessment's retained `pytest-trial-closing-01` run reported these
-case durations, with no recorded sleep:
+The earlier assessment's `pytest-trial-closing-01` run (since removed; its
+numbers are recorded here) reported these case durations, with no recorded sleep:
 
 | Case under `source_drift/` | Historical seconds | Fresh baseline seconds |
 | --- | ---: | ---: |

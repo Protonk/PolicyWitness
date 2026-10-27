@@ -2,88 +2,32 @@
   "schema_version": 1,
   "runs": [
     {
-      "path": "runs/validator-selection-receipts-20261018",
-      "run_id": "20261018T220505Z_efebca1e",
-      "reason": "Validator default refactor acceptance; dirty source identified by implementation-source.json and pre-receipt-fix-source.json. Initial runs retain buffered receipt diagnostic; final credits in acceptance-credits.json. Supporting investigation and acceptance records are preserved in commit 69c7dfecfdc688ea56cdc4febd9a9a8a41414b6f.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
+      "path": "runs/drift-plan-investigation-20261027-02",
+      "run_id": "20261027T175448Z_a3635ceb",
+      "reason": "Drift cost reduction baseline: all eight source_drift cases passed with zero recorded sleep; investigation/ holds the read-only discovery, parse, build-rule, architecture and fixture measurements the implementation plan cites. Retire with records/drift-cost-reduction.",
+      "source": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
+      "app_inventory": null
     },
     {
-      "path": "runs/worker-doc-launch-20261018",
-      "run_id": "20261018T223601Z_85d8418b",
-      "reason": "Identified worker launch observation L after the accepted refactors; complete original artifacts support docs/worker-launch-observation.json.",
-      "source": "f85c7b094d75bf72931cd4856cb4ad086da20cbe",
-      "app_inventory": "artifact-integrity/before.json"
+      "path": "runs/drift-plan-investigation-20261027-01",
+      "run_id": "20261027T174605Z_08a98a78",
+      "reason": "Drift cost reduction: the restricted automation-sandbox run that failed limits, contract build and Swift policy controls (sysctl, nested sandbox and module-cache writes refused); preserved as the evidence behind the plan's sandbox-refusal account, not a performance baseline. Retire with records/drift-cost-reduction.",
+      "source": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
+      "app_inventory": null
     },
     {
-      "path": "runs/apple-silicon-repair-default-1",
-      "run_id": "20261019T041951Z_8a85f355",
-      "reason": "Apple Silicon review repairs: the fresh signed d98193e candidate passed all 194 default cases. build/ preserves the build transcript, session, provenance, candidate hashes and subsequent test-only source delta.",
-      "source": "d98193e5ea32d93f6acdb70bb65e881d942fcb15",
-      "app_inventory": "artifact-integrity/before.json"
+      "path": "runs/drift-plan-generator-profile-20261027-01",
+      "run_id": "20261027T180108Z_d44f791d",
+      "reason": "Drift cost reduction generator attribution: generator_contract passed with temporary timing wrappers whose diff and per-call helper-costs.json are retained under its artifacts; the source was restored byte-for-byte afterwards. Stage 4 compares against it. Retire with records/drift-cost-reduction.",
+      "source": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
+      "app_inventory": null
     },
     {
-      "path": "runs/apple-silicon-repair-optin-1",
-      "run_id": "20261019T043503Z_54502e91",
-      "reason": "Apple Silicon review repairs: 29 signed-artifact scenarios and 21 build guard builds passed. The refusal case failed because the new missing-file injection ran before chmod; preserve this failure beside the corrected rerun at apple-silicon-repair-optin-2.",
-      "source": "d98193e5ea32d93f6acdb70bb65e881d942fcb15",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/apple-silicon-repair-optin-2",
-      "run_id": "20261019T044306Z_4f12cdb6",
-      "reason": "Apple Silicon review repairs: corrected refusal controls passed all 83 controls and 13 mutation demonstrations; all 45 provenance helper tests and build documentation checks passed. Test source is 9f762a0; the unchanged signed app is from d98193e.",
-      "source": "9f762a09de7fdf9f59f4e7254e7897c5c68a8311",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/gate-p3-checkpoint",
-      "run_id": "20261020T033420Z_8c4e3de3",
-      "reason": "Checkpoint for the validator start gate (ValidatorStartGate, introduced with this pin): the over-budget case at its original 150 ms window. Ungated cold copy lost its record; gated cold copy kept it with 185 ms from spawn return to the start receipt; gated warm and gated 1,000 ms delay kept it; ungated 1,000 ms delay lost it; no system sleep. The tested source was f237590 plus uncommitted checkpoint cases, preserved with unified-log excerpts in checkpoint-source/. Retire this pin when the start gate is replaced or a later retained checkpoint supersedes this one.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/observer-retirement-fixtures-01",
-      "run_id": "20261024T002154Z_27c7b5d3",
-      "reason": "Live envelope-8 fixture captures after retiring unified-log collection; all five owner cases passed against the signed candidate. implementation-source.patch and new-source/ identify the dirty source; build/ preserves the build transcript and session.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/observer-retirement-final-01",
-      "run_id": "20261024T003913Z_bcbf6b3f",
-      "reason": "Live envelope-8 fixture captures after retiring unified-log collection; all final regression cases and five capture owners passed against the final signed candidate. implementation-source.patch and new-source/ identify the dirty source; build/ preserves the build transcript and session.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/observer-retirement-default-01",
-      "run_id": "20261024T002236Z_57366913",
-      "reason": "Observer retirement default battery: 194 cases passed; one stale log-timeout dossier assertion failed. The corrected assertion and final candidate passed the 22-case observer-retirement-final-01 run. That run preserves acceptance-review.json and source snapshots explaining evidence reuse.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/observer-retirement-build-controls-01",
-      "run_id": "20261024T004246Z_22248f9e",
-      "reason": "Observer retirement: signed-artifact controls, all 21 build-order controls and refreshed-fixture readers passed. Refusal controls stopped at a one-item tuple error in their helper inventory, corrected before observer-retirement-refusals-02/03.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/observer-retirement-refusals-02",
-      "run_id": "20261024T004655Z_15d8ce55",
-      "reason": "Observer retirement refusal controls: retained environmental failure. Inherited LC_ALL=C.UTF-8 defeated the intended LANG=C coercion; a direct probe established this and observer-retirement-refusals-03 reran without that override.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/observer-retirement-refusals-03",
-      "run_id": "20261024T004922Z_dcdbfd3c",
-      "reason": "Observer retirement: complete build refusal, state-sequence and guard-mutation controls passed with LC_ALL unset so the intentional LANG=C coercion control can operate. Final candidate unchanged.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
+      "path": "runs/drift-cost-stage1-04",
+      "run_id": "20261027T203111Z_728f49ca",
+      "reason": "Drift cost reduction stage 1 credit: runner_source_manifests_agree and direct_python_start passed with zero recorded sleep on the pruned-discovery walker, 225 planner receipts; investigation/ holds the post-stage discovery remeasurement. Retire with records/drift-cost-reduction.",
+      "source": "e2462f9167ca55a2de50fd7e75f2322eb8f8aea6",
+      "app_inventory": null
     },
     {
       "path": "release-acceptance/run-54d51e0ad1cc46e1bbeeba9182358569",

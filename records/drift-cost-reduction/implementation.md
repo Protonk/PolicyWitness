@@ -67,8 +67,8 @@ inventories and `report.json` are retained in
 `tests/out` held 413,844 entries at measurement time; the stage-1
 walker never lists it, so its population no longer affects discovery time.
 These remain helper samples, not case durations or thresholds. An earlier
-measurement of the uncommitted stage-1 working tree is retained under
-`tests/out/runs/drift-cost-stage1-01/investigation/` and is superseded by this one.
+measurement of the uncommitted stage-1 working tree was superseded by this
+one and removed with its run.
 
 Also in this stage, ahead of the stage-2 rule table: the plan's required
 missing-rule controls were added to the planner as real-checker scenarios
@@ -87,18 +87,19 @@ whole-checker starts dominate the first case.
 | `runner_source_manifests_agree` | 188679 | 186350 | 0 |
 | `direct_python_start` | 25151 | 11356 | 0 |
 
-Superseded credited run: `tests/out/runs/drift-cost-stage1-03` (ID
+Superseded and uncredited runs, removed from `tests/out` on 2026-10-27 after
+review, with their run IDs kept here: `drift-cost-stage1-03` (ID
 `20261027T201614Z_dc800ffe`, commit `a9f67e0`) passed, but review found two
 walker defects in that commit (an unguarded metadata call that aborted
 discovery, and suffix-less directory declarations selecting nothing); commit
-`e2462f9` fixes both with controls, and the run above credits that commit.
-
-Preserved uncredited runs: `drift-cost-stage1-01` (ID
-`20261027T200543Z_79b9b4e5`; both cases passed, but the harness refused the
-run because the inventory fixture placed a `runner/.build` directory under
-artifacts) and `drift-cost-stage1-02` (ID `20261027T201214Z_bf335fca`; the
-relocated fixture failed because `PW_TEST_SCRATCH` is exported but not
-created; every scenario before the inventory control had passed).
+`e2462f9` fixes both with controls, and the credited run above is on that
+commit. `drift-cost-stage1-01` (ID `20261027T200543Z_79b9b4e5`) passed both
+cases but the harness refused the run because the inventory fixture placed a
+`runner/.build` directory under artifacts; its early discovery measurement of
+the uncommitted working tree is superseded by the one above.
+`drift-cost-stage1-02` (ID `20261027T201214Z_bf335fca`) failed because
+`PW_TEST_SCRATCH` is exported but not created; every scenario before the
+inventory control had passed.
 
 Limitations: the listing counts are the walker's `os.scandir` calls as seen by
 an instrument installed in the same process; they are not an OS-wide count.
