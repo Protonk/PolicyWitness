@@ -148,7 +148,19 @@ Behavior that changed on purpose, for review:
   message text of every existing diagnostic is unchanged, and the summary
   lines `rules: ...`, `evaluated: ...`, `input_blocked: ...` precede them.
 
-STAGE2_CREDIT
+Credited run: `tests/out/runs/drift-cost-stage2-01` (ID `20261027T220954Z_7adc46fb`), on commit
+`386564e`, all six selected cases passed with zero recorded sleep; the
+planner wrote 231 receipts. Durations are single runs beside the
+baseline, for context only.
+
+| Case | Baseline ms | Stage 2 ms | Recorded sleep ms |
+| --- | ---: | ---: | ---: |
+| `runner_source_manifests_agree` | 188679 | 213612 | 0 |
+| `architecture_documentation` | 13820 | 11538 | 0 |
+| `build_documentation` | 36867 | 35136 | 0 |
+| `generator_contract` | 32508 | 35811 | 0 |
+| `markdown_reader` | 945 | 1096 | 0 |
+| `direct_python_start` | 25151 | 13277 | 0 |
 
 Cost: the planner still starts the whole checker per scenario (now with
 `--json`), so the manifests case is not expected to be faster in this stage;

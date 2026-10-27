@@ -1,7 +1,7 @@
 {
   "schema": "drift-cost-reduction control map, version 1",
   "baseline_revision": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
-  "candidate_revision": "e2462f9167ca55a2de50fd7e75f2322eb8f8aea6",
+  "candidate_revision": "386564e83fcda4b7d63b3d3bc8260a3f78d59aee",
   "rows": [
     {
       "old": "source_drift/runner_source_manifests_agree:check.py::markdown_documents",
@@ -108,7 +108,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::host_invariance_controls (scenario host-invariance-controls, receipt host-invariance-controls.json)",
       "reason": "The snippets test the rule, not the tree; running them once per case in the planner preserves every accepted and rejected snippet and removes them from the production rule table.",
-      "receipt": "stage 2 run, see implementation.md"
+      "receipt": "20261027T220954Z_7adc46fb (tests/out/runs/drift-cost-stage2-01)"
     },
     {
       "old": "source_drift/runner_source_manifests_agree:check.py::guarded (reader refusal)",
@@ -117,7 +117,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/lib/drift_rules.py::attempt (refused outcome); scenario guidance-route-unrecognized-comment",
       "reason": "The dispatcher catches the reader's refusal per rule and records it with severity refused; the rule counts as evaluated and the status stays 1.",
-      "receipt": "stage 2 run, see implementation.md"
+      "receipt": "20261027T220954Z_7adc46fb (tests/out/runs/drift-cost-stage2-01)"
     },
     {
       "old": "source_drift/runner_source_manifests_agree:check.py thirteen sys.exit(2) branches",
@@ -128,7 +128,7 @@
       "reader_assertion": null,
       "representative": "precondition-combined",
       "reason": "Status 2 keeps its meaning, but the failure is now one precondition record per affected rule and every other rule still runs; the combined scenario shows two rules blocked by one shared bad input beside a host finding from a later rule.",
-      "receipt": "stage 2 run, see implementation.md"
+      "receipt": "20261027T220954Z_7adc46fb (tests/out/runs/drift-cost-stage2-01)"
     },
     {
       "old": "source_drift/generator_contract:generator_common.citation (rule form: function with a call from main)",
@@ -137,7 +137,7 @@
       "destination": "source_drift/generator_contract",
       "where": "docs/generator_common.py::rule_declarations; GeneratorContractTests.test_rule_citations_read_the_rules_table, test_document_graph_cites_every_drift_rule, test_readme_form_table_is_a_copy_of_the_shared_rules",
       "reason": "Recognition reads the static RULES table instead of call syntax in main(); a defined-but-unregistered function, an orphan table, a removed or duplicated row and an undefined function are refused, and the graph test consumes the same declaration.",
-      "receipt": "stage 2 run, see implementation.md"
+      "receipt": "20261027T220954Z_7adc46fb (tests/out/runs/drift-cost-stage2-01)"
     },
     {
       "old": "source_drift/build_documentation:build_rules.py::main (banner rule first, nine rows only when clean)",
@@ -146,7 +146,7 @@
       "destination": "source_drift/build_documentation",
       "where": "tests/suites/source_drift/build_rules.py::RULES, GATE; tests/lib/drift_rules.py::run_gated; BuildDocumentationTests.test_rule_table_gates_on_the_banner_rule",
       "reason": "The gate is explicit (gate_blocked rows name blocked_by) and controlled: a banner mismatch beside a knob mismatch, each repair in turn, an unparseable script, a removed banner (a manifest precondition) and a corrupt baseline after the gate opens.",
-      "receipt": "stage 2 run, see implementation.md"
+      "receipt": "20261027T220954Z_7adc46fb (tests/out/runs/drift-cost-stage2-01)"
     },
     {
       "old": null,
@@ -156,7 +156,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::precondition_scenarios (precondition-combined, precondition-restored)",
       "reason": "The plan's stage 2 combined control.",
-      "receipt": "stage 2 run, see implementation.md"
+      "receipt": "20261027T220954Z_7adc46fb (tests/out/runs/drift-cost-stage2-01)"
     },
     {
       "old": null,
@@ -166,7 +166,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::integrity_problems, dispatch_omission_scenario (dispatch-omission, dispatch-restored)",
       "reason": "Static citation recognition cannot establish execution; the mutated checker passes an unexamined host binding and lacks the row in its records.",
-      "receipt": "stage 2 run, see implementation.md"
+      "receipt": "20261027T220954Z_7adc46fb (tests/out/runs/drift-cost-stage2-01)"
     },
     {
       "old": null,
@@ -176,7 +176,7 @@
       "destination": "source_drift/runner_source_manifests_agree",
       "where": "tests/suites/source_drift/check_planner.py::isolation_controls (isolation-fresh-trees, receipt isolation-controls.json)",
       "reason": "The plan's cache and root isolation controls, in process.",
-      "receipt": "stage 2 run, see implementation.md"
+      "receipt": "20261027T220954Z_7adc46fb (tests/out/runs/drift-cost-stage2-01)"
     }
   ],
   "dispositions": {
