@@ -311,6 +311,110 @@ file in place; `partial()` derives the partial build's record.
 | BP67 | `RecordTests.test_opt_in_mutation_anchors_match_current_sources` | `opt_in/build_refusals.py` is loaded as a module; each of its 16 `MUTATIONS` changes its named source in memory; `build.sh` contains `REQUIRE_REBUILT` once and `_without_self_checks` changes it. | `subTest(refusal=…, mutation=…)` ×16 |
 | BP68 | `RecordTests.test_unknown_wrapper_hashes_never_establish_stamp_compatibility` | A missing wrapper or a wrapper without a digest compares as `unavailable`; a hashed wrapper compares equal to itself. | single |
 
+### Variant tables for the first refactor targets
+
+The mutation column is the source expression applied to a copy `r` of the accepted record (BP62, BP63) or to the valid message `m` (BP44); `put(value, *keys)` assigns at the nested key path and `drop(*keys)` removes the last key. These tables are the identities a migration must preserve one for one.
+
+**BP62 record faults.** Each variant rewrites the bundle's record file, requires the expected code among the inspector's findings, and regenerates the record afterwards (F2).
+
+| Variant | Mutation of the record file | Expected code present |
+| --- | --- | --- |
+| BP62/missing entry | `r['outputs'].pop()` | `provenance_output` |
+| BP62/duplicate entry | `r['outputs'].append(dict(r['outputs'][1]))` | `provenance_output` |
+| BP62/invalid path | `r['outputs'][1].__setitem__('rel_path', '../escape')` | `provenance_output` |
+| BP62/absolute path | `r['outputs'][1].__setitem__('rel_path', '/Contents/MacOS/x')` | `provenance_output` |
+| BP62/unshipped executable | `r['outputs'].append(dict(r['outputs'][1], rel_path='Contents/MacOS/extra'))` | `provenance_output` |
+| BP62/controller hash inside the seal | `r['outputs'][0].__setitem__('sha256', 'a' * 64)` | `provenance_hash` |
+| BP62/wrong hash | `r['outputs'][1].__setitem__('sha256', 'b' * 64)` | `provenance_hash` |
+| BP62/wrong uuid | `r['outputs'][1].__setitem__('uuid', 'FFFFFFFF-0000-0000-0000-000000000000')` | `provenance_metadata` |
+| BP62/wrong sdk | `r['outputs'][1].__setitem__('sdk', '1.0')` | `provenance_metadata` |
+| BP62/missing section | `r.pop('toolchain')` | `provenance` |
+| BP62/other schema | `r.__setitem__('schema_version', prov.SCHEMA_VERSION + 1)` | `provenance` |
+| BP62/an earlier build's schema | `r.__setitem__('schema_version', 1)` | `provenance` |
+| BP62/wrong architectures | `r['outputs'][1].__setitem__('architectures', ['x86_64'])` | `provenance_metadata` |
+| BP62/wrong container | `r['outputs'][1].__setitem__('container', 'fat')` | `provenance_metadata` |
+
+**BP63 accepted neighbours.** Each is applied to a fresh copy and must leave the shape check with no problems. The partial build's record is the seventh accepted input.
+
+| Variant | Mutation |
+| --- | --- |
+| BP63/xcode unknown | `r['toolchain'].__setitem__('xcode', dict(status='unknown', reason='nonzero_exit', returncode=1))` |
+| BP63/meson options unknown | `r['configuration'].__setitem__('meson_options', dict(status='unknown'))` |
+| BP63/stamp projection unavailable | `r['configuration']['toolchain_stamp'].__setitem__('projection', dict(status='unavailable', reason='x'))` |
+| BP63/fingerprint ambiguous | `r['outputs'][0]['cargo'].__setitem__('fingerprint', dict(status='ambiguous', binding=None, limitation='x'))` |
+| BP63/wrapper without a hash | `r['toolchain']['rustc'].__setitem__('wrappers', dict(wrapper=dict(source='RUSTC_WRAPPER', command='/w')))` |
+| BP63/explicitly empty SDK request | `r['configuration']['requests'].__setitem__('SDKROOT', dict(state='set', value=''))` |
+
+**BP63 section faults.** For each of the seven sections `generated_at`, `source`, `toolchain`, `configuration`, `outputs`, `signing` and `limits`, three variants: `<section> missing` (`drop(section)`), `<section> null` (`put(None, section)`) and `<section> wrong type` (`put(7, section)`). That is 21 variants with the same expectation as the named faults below.
+
+**BP63 named faults.** Every variant is applied to a fresh copy; the shape check must report a problem, and once the copy is written to the bundle the inspector must report `provenance`.
+
+| Variant | Mutation |
+| --- | --- |
+| BP63/dirty is a string | `put('no', 'source', 'dirty')` |
+| BP63/an input hash missing | `drop('source', 'input_hashes', 'meson.build')` |
+| BP63/worker identity not hex | `put('z' * 64, 'source', 'worker_identity')` |
+| BP63/SDK version null | `put(None, 'toolchain', 'sdk', 'version')` |
+| BP63/C compiler observation failed | `put(dict(status='failed', kind='timeout'), 'toolchain', 'compilers', 'c', 'observed')` |
+| BP63/Swift compiler missing in a full build | `put(dict(status='not applicable', reason='partial build: the XPC pieces were not compiled'), 'toolchain', 'compilers', 'swift')` |
+| BP63/rustc selection missing | `drop('toolchain', 'rustc', 'selection')` |
+| BP63/rustc source unknown | `put('guess', 'toolchain', 'rustc', 'source')` |
+| BP63/xcode status unknown kind | `put(dict(status='maybe'), 'toolchain', 'xcode')` |
+| BP63/knob is an integer | `put(1, 'configuration', 'knobs', 'BUILD_XPC')` |
+| BP63/deployment target null | `put(None, 'configuration', 'deployment_target')` |
+| BP63/deployment target disagrees with the outputs | `put('1.0', 'configuration', 'deployment_target')` |
+| BP63/sdkroot disagrees with the SDK | `put('/other/SDK', 'configuration', 'sdkroot')` |
+| BP63/request state unknown | `put(dict(state='maybe'), 'configuration', 'requests', 'SDKROOT')` |
+| BP63/request missing | `drop('configuration', 'requests', 'CPATH')` |
+| BP63/set SDK request without value | `put(dict(state='set'), 'configuration', 'requests', 'SDKROOT')` |
+| BP63/private request leaks its value | `put(dict(state='set', value='/private/includes'), 'configuration', 'requests', 'CPATH')` |
+| BP63/SDK source contradicts request | `put('SDKROOT named by the caller', 'toolchain', 'sdk', 'source')` |
+| BP63/empty stamp projection | `put({}, 'configuration', 'toolchain_stamp', 'projection')` |
+| BP63/wrong replacement type | `put('garbage', 'configuration', 'build_directories', 'fresh_mode', 'replacement')` |
+| BP63/absent replacement observation | `put(None, 'configuration', 'build_directories', 'fresh_mode', 'replacement')` |
+| BP63/fresh mode knob disagrees | `put('0', 'configuration', 'knobs', 'PW_FRESH_BUILD')` |
+| BP63/fresh mode reused a target | `r['outputs'][0]['cargo'].__setitem__('fresh', True)` |
+| BP63/Meson xpc is a string | `put(dict(status='ok', values=dict(xpc='not-a-boolean')), 'configuration', 'meson_options')` |
+| BP63/empty Cargo profile | `r['outputs'][0]['cargo'].__setitem__('profile', {})` |
+| BP63/an output field null | `r['outputs'][1].__setitem__('uuid', None)` |
+| BP63/an output tools list of strings | `r['outputs'][1].__setitem__('tools', ['ld'])` |
+| BP63/a Cargo judgment null | `next((o for o in r['outputs'] if 'cargo' in o))['cargo'].__setitem__('fresh', None)` |
+| BP63/a signature timestamp string | `r['outputs'][1]['signature'].__setitem__('timestamp', 'true')` |
+| BP63/signing nested disagrees | `r['signing']['nested'][0].__setitem__('timestamp', True)` |
+| BP63/an unknown top-level field | `put('x', 'extra')` |
+| BP63/a partial knob with full outputs | `put('0', 'configuration', 'knobs', 'BUILD_XPC')` |
+| BP63/a string beyond its bound | `put('x' * (prov.LINE_LIMIT + 1), 'toolchain', 'rustc', 'identity')` |
+| BP63/output target missing | `drop('configuration', 'output_target')` |
+| BP63/output target of another architecture | `put('x86_64', 'configuration', 'output_target', 'architecture')` |
+| BP63/output target of another triple | `put('x86_64-apple-darwin', 'configuration', 'output_target', 'cargo_triple')` |
+| BP63/Meson machines missing | `drop('configuration', 'meson_machines')` |
+| BP63/Meson host of another architecture | `put(dict(system='darwin', cpu_family='x86_64'), 'configuration', 'meson_machines', 'host')` |
+| BP63/Cargo target selection missing | `drop('toolchain', 'rustc', 'selection', 'target')` |
+| BP63/Cargo target of another triple | `put('x86_64-apple-darwin', 'toolchain', 'rustc', 'selection', 'target', 'triple')` |
+| BP63/the triple's release area missing | `drop('configuration', 'build_directories', 'cargo_target_release')` |
+| BP63/an output architecture missing | `r['outputs'][1].pop('architectures')` |
+| BP63/an output of another architecture | `r['outputs'][1].__setitem__('architectures', ['x86_64'])` |
+| BP63/a universal output | `r['outputs'][1].update(architectures=['arm64', 'x86_64'], container='fat')` |
+| BP63/an output of another platform | `r['outputs'][1].__setitem__('platform', '6')` |
+
+**BP44 judgment faults.** Each mutation is applied to the `sbpl-check` message only, for fresh modes `0` and `1`; expected: status 2, `establishes no literal boolean fresh judgment` and `sbpl-check (` in stderr, and that judgment's status `unknown`. Three further variants per mode replace the message list: `absent` (the message omitted), `contradictory` (a duplicate with `fresh=True`) and `duplicated` (an identical duplicate); each expects status 2 and `sbpl-check (`.
+
+| Variant | Mutation of the message |
+| --- | --- |
+| BP44/missing | `without(m, 'fresh')` |
+| BP44/null | `dict(m, fresh=None)` |
+| BP44/numeric zero | `dict(m, fresh=0)` |
+| BP44/numeric one | `dict(m, fresh=1)` |
+| BP44/string false | `dict(m, fresh='false')` |
+| BP44/string true | `dict(m, fresh='true')` |
+| BP44/another executable | `dict(m, executable=str(self.release / 'elsewhere'))` |
+| BP44/the host release area's executable | `dict(m, executable=str(self.target / 'release' / m['target']['name']))` |
+| BP44/no profile | `without(m, 'profile')` |
+| BP44/empty profile | `dict(m, profile={})` |
+| BP44/test profile | `dict(m, profile=dict(m['profile'], test=True))` |
+| BP44/profile flag string | `dict(m, profile=dict(m['profile'], debug_assertions='false'))` |
+| BP44/not a binary | `dict(m, target=dict(m['target'], kind=['lib']))` |
+
 ## Flagged expectations
 
 Flags stay here until a correction lands; the row then names the commit.
@@ -349,8 +453,9 @@ None has been reproduced as a failure.
   catalog declares only `clang`; the interpreter is implied by the dispatcher.
   These are environment couplings to record, not defects.
 - **F9 (BP67).** The expectation depends on a module outside this suite's
-  files (`opt_in/build_refusals.py`), which is why the execution reference
-  below needed a reviewed exception.
+  files (`opt_in/build_refusals.py`). That dependency is why the earlier
+  battery run below could be credited only through a reviewed exception before
+  the fresh reference replaced it.
 
 ## Unresolved questions for a later trial
 
@@ -363,60 +468,49 @@ None has been reproduced as a failure.
 
 ## Execution reference
 
-Recorded separately from the source baseline. Facts marked measured come
-from retained run files; applicability is a judgment stated as such.
+Two runs are recorded. The first is the reference a trial compares against:
+it ran at a clean committed source whose traced dependencies are byte-identical
+to `3ec96c1`, with the equipment recorded beside it. The second is the earlier
+battery run first considered; its executed source cannot be established from
+its receipts, so it stays as illustrative evidence only. Facts marked measured
+come from retained run files; applicability is a judgment stated as such.
+
+### Reference run at c700b87
 
 | Item | Value |
 | --- | --- |
-| Run (measured) | `tests/out/runs/unify-review-final-20261024`, run ID `20261024T225719Z_707ed1fc`, gitignored and available only in this checkout |
-| Command (measured) | the default battery (`plan.json` selection mode `default`, 196 cases); this case ran as invocation 1 under the preflight suite's catalog command with `PW_TEST_CASES=build_provenance_controls` |
-| Started and finished (measured) | 2026-10-24T22:57:20Z to 2026-10-24T22:58:22Z for the case; the whole run finished 2026-10-24T23:11:36Z |
-| Interpreter (measured) | `/opt/homebrew/opt/python@3.14/bin/python3.14`, real path `/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14`, version `3.14.9`; the same keg and version resolve at `3ec96c1` |
-| Case result (measured) | `pass`, duration 61544 ms, invocation return code 0, no harness errors, `system_sleep_ms` 0 |
-| Checker summary (measured) | `Ran 68 tests in 61.360s`, `OK` |
+| Run (measured) | `tests/out/runs/pytest-baseline-reference-20261027`, run ID `20261027T134544Z_9ea781a5`, gitignored and available only in this checkout |
+| Source (measured) | `c700b8741f69e1062f9f78f05f41b7b4bc2d922a` with a clean working tree at launch, recorded in the run's `console.log` header by the same shell immediately before the command; the two commits after `3ec96c1` touch only `records/` and the plan, and `git diff --stat 3ec96c1 c700b87` over every traced dependency path is empty |
+| Command (measured) | `tests/run.sh --case preflight/build_provenance_controls --case source_drift/runner_source_manifests_agree`, `PW_TEST_OUT_DIR=tests/out/runs/pytest-baseline-reference-20261027`, `PYTHONOPTIMIZE` unset; the drift case was selected to check the plan edit in the same run |
+| Started and finished (measured) | 2026-10-27T13:45:44Z to 2026-10-27T13:46:59Z for the case; the run finished 2026-10-27T13:50:24Z |
+| Interpreter (measured) | the pinned path, real path `/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14`, version `3.14.9`, identical in the dispatcher's configuration and the case report |
+| Equipment (measured, transcript header) | macOS 26.7.1 build 25G241 on arm64, not translated; Xcode 27.1 build 27A9275 at `/Applications/Xcode.app/Contents/Developer`; Apple clang 21.0.0 (clang-2100.3.34.2); macOS SDK 27.0; dsymutil Apple LLVM 21.0.0; GNU Make 3.81 at both paths the controls use; Meson 1.12.1; Ninja 1.13.2 |
+| Case result (measured) | `pass`, duration 74682 ms, invocation return code 0, no harness errors, `system_sleep_ms` 0, idle-sleep assertion held |
+| Checker summary (measured) | `Ran 68 tests in 74.461s`, `OK` |
 | Method count against the inventory (measured) | 68 logged `Class.method` names, identical to the 68 methods in the source inventory |
-| Retained evidence (measured) | `report.json`, `events.jsonl` (start, step, end), `artifacts/assertions.log` (77 lines; 66 one-line `ok` entries, one entry split by a child's stderr, one by `Terminated: 15`), and ten `artifacts/<method>/` directories from `ShimContainmentTests` |
-| Source revision (judgment) | the run receipts record no revision; `8442fca` is the last commit before the run started and `87d5fb2` the first after it finished, so the tree was `8442fca` plus any uncommitted change, which the receipts cannot exclude |
+| Retained evidence (measured) | `report.json`, `events.jsonl` (start, step, end), `artifacts/assertions.log` (77 lines; 66 one-line `ok` entries, one split by a child's stderr, one by `Terminated: 15`), ten `artifacts/<method>/` directories from `ShimContainmentTests`, and `console.log` at the run root, attached under the checkout lock after the run ID in `owner.json` and `run.json` was verified |
 
-### Applicability at 3ec96c1
+Applicability at `3ec96c1` (judgment): the executed source is established by
+the commit hash and the clean-tree observation, the traced dependency paths
+are unchanged between the two commits, and the equipment is recorded. What
+this run does not establish: per-method timing, the behavior of any pytest
+host, or anything about variants beyond the method names, because the log
+names methods only.
 
-Traced dependencies of the executed path: the catalog entry; `tests/run.sh`,
-`test_cli.py`, `suite_run.py`, `retention.py`, `artifact.py`,
-`python_start.sh`, `sdk_guard.sh`, `testlib.sh`, `case.sh`; the case script;
-the checker; its imports (`build_provenance`, which imports `cargo_config`,
-`checkout_lock` and `output_target`; `signer_check`; `shim_probe`;
-`fixture_bundle`, which imports `seal_tool`; the vendored `tomli`); the files
-it reads, copies or executes (`build.sh`, `Makefile`, `tests/accept-release.sh`,
-`tests/suites/unit/run.sh`, `tests/lib/python.sh`, `checkout_lock.sh`,
-`Info.plist`, `PolicyWitness.entitlements`, the runner `Info.plist` and
-`Entitlements.plist`, `tests/fixtures/build_refusals/forward.py`,
-`docs/generate_build.py`, `tests/fixtures/dispatcher/build.sh` with its C
-sources, `tests/suites/preflight/opt_in/build_refusals.py`); and the
-equipment (`xcrun clang`, `lipo`, `dsymutil`, `otool`, `codesign`,
-`sandbox-exec`, `make`, `xcode-select`, `chflags`, `pgrep`, `ps`).
+### Earlier battery run, illustrative only
 
-Mechanically checked:
-
-- `git diff --stat 8442fca HEAD` over every traced repository path reports
-  changes only in `tests/catalog.json` and
-  `tests/suites/preflight/opt_in/build_refusals.py`.
-- The case entry in the run's `plan.json` equals the entry the current
-  `--list` prints, field for field; the catalog change touched two other
-  cases' descriptions.
-- The 68 test names in the retained log equal the current inventory.
-
-Reviewed exception: the `build_refusals.py` delta adds one function definition
-and one entry to `SEQUENCES`. `MUTATIONS` (16 entries), `REQUIRE_REBUILT` and
-`_without_self_checks`, the only names BP67 reads, are unchanged, and the
-module's only top-level statement besides definitions is its `__main__` guard,
-so loading the changed module executes one additional `def`. The result for
-BP67 is retained on that reading.
-
-Judgments the reader should weigh: the working tree at run time is assumed to
-match `8442fca`; equipment versions at run time are not recorded apart from
-the interpreter; the artifact-integrity records concern the app, which this
-case does not use. No fresh run was made for this record because no named
-question needed an observation the case can supply.
+Run `tests/out/runs/unify-review-final-20261024`, run ID
+`20261024T225719Z_707ed1fc`: the case passed in 61544 ms on the same keg and
+version, its log lists the same 68 names, and its evidence has the same shape.
+Its receipts record no source revision. `8442fca` is the last commit before it
+started and `87d5fb2` the first after it finished, which brackets but does not
+establish the executed tree, and its equipment versions were not recorded.
+Among the traced paths, only `tests/catalog.json` (two other cases'
+descriptions; this case's entry is field for field identical to the current
+plan) and `tests/suites/preflight/opt_in/build_refusals.py` (one added function
+and one `SEQUENCES` entry; `MUTATIONS`, `REQUIRE_REBUILT` and
+`_without_self_checks` unchanged) changed between `8442fca` and `3ec96c1`. It
+is kept as a second observation of the same outcome, not as the reference.
 
 ## Comparison rows
 
