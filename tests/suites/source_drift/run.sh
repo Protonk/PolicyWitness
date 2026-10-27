@@ -15,7 +15,7 @@ if test_selected "${PW_TEST_ID}"; then
   RUN_LOG="${PW_TEST_ARTIFACTS}/check.log"
 
   set +e
-  "${PW_PYTHON}" -B -S "${CHECK_PY}" >"${RUN_LOG}" 2>&1
+  "${PW_PYTHON}" -B -S "${CHECK_PY}" --json "${PW_TEST_ARTIFACTS}/check-results.json" >"${RUN_LOG}" 2>&1
   RC=$?
   set -e
 
@@ -71,7 +71,7 @@ if test_selected "${PW_TEST_ID}"; then
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
   test_step rules "compare the build manifest with build.sh, meson.build, the Makefile, the inventories and the baseline"
   RUN_LOG="${PW_TEST_ARTIFACTS}/build-rules.log"
-  if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/source_drift/build_rules.py" >"${RUN_LOG}" 2>&1; then
+  if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/source_drift/build_rules.py" --json "${PW_TEST_ARTIFACTS}/build-rules-results.json" >"${RUN_LOG}" 2>&1; then
     test_fail "build documentation rules disagree" "{\"log\":\"${RUN_LOG}\"}"
   fi
   test_step build "check the build manifest against its dot, SVG stamp and document copies; citation, stale-copy, parser and mutation controls"

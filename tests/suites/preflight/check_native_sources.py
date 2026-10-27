@@ -15,15 +15,14 @@ import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import sys
 import tempfile
-import time
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'docs'))
 import fixture_inputs  # noqa: E402
+import receipts  # noqa: E402
 from repository_tree import directory, required  # noqa: E402
 
 # What Meson evaluates and the configured check reads: the manifest and options, every C source and header of
@@ -35,13 +34,10 @@ CONFIGURED_INPUTS = (required('meson.build'), required('meson.options'),
 
 
 def launch(argv, cwd, timeout, launches, step):
-    start = time.perf_counter()
-    result = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, timeout=timeout)
-    launches.append(dict(step=step, argv=argv, returncode=result.returncode, elapsed_seconds=time.perf_counter() - start))
-    return result
+    return receipts.launch(argv, launches, step, cwd=cwd, capture_output=True, text=True, timeout=timeout)
 
 
-def configured_controls(repo, scratch, out):
+def configured_controls(repo, scratch, out, file=None):
     manifest_original = (repo / 'meson.build').read_text()
     worker_line = "  files('controller/tools/pw_probe_runner/pw_probe_runner.c'),"
     assert manifest_original.count(worker_line) == 1, 'fixture requires the current worker declaration'
@@ -64,7 +60,7 @@ def configured_controls(repo, scratch, out):
     link = repo / 'controller/tools/pw_probe_runner/audit-link'
     include_line = '#include "pw_probe_runner_abi.h"\n'
     assert worker_original.count(include_line) == 1
-    receipts = []
+    found = []
     for name, manifest, source, symlink, expected, diagnostic in [
         ('configured-unmodified', manifest_original, worker_original, False, 0, None),
         ('configured-worker-substituted',
@@ -110,9 +106,12 @@ def configured_controls(repo, scratch, out):
                       expected_diagnostic=diagnostic, launches=launches,
                       elapsed_seconds=sum(entry['elapsed_seconds'] for entry in launches))
         (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
+        record.update(stdout=str(evidence / 'stdout'), stderr=str(evidence / 'stderr'))
+        if file is not None:
+            file.add(**record)
         if result.returncode != expected or (diagnostic and diagnostic not in result.stderr):
             raise AssertionError(f'{name}: unexpected configured check result: {record}\n{result.stdout}\n{result.stderr}')
-        receipts.append(record)
+        found.append(record)
     (repo / 'meson.build').write_text(manifest_original)
     worker.write_text(worker_original)
     copy = scratch / 'copied-checkout'
@@ -129,10 +128,13 @@ def configured_controls(repo, scratch, out):
                   expected_returncode=1, expected_diagnostic=diagnostic, launches=launches,
                   elapsed_seconds=launches[0]['elapsed_seconds'])
     (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
+    record.update(stdout=str(evidence / 'stdout'), stderr=str(evidence / 'stderr'))
+    if file is not None:
+        file.add(**record)
     if result.returncode != 1 or diagnostic not in result.stderr:
         raise AssertionError(f'copied checkout: unexpected configured check result: {record}\n{result.stdout}\n{result.stderr}')
-    receipts.append(record)
-    return receipts
+    found.append(record)
+    return found
 
 
 def main(argv):
@@ -143,16 +145,20 @@ def main(argv):
         Path(base).mkdir(parents=True, exist_ok=True)
     scratch = Path(tempfile.mkdtemp(prefix='native-sources-', dir=base))
     repo = scratch / 'repo'
+    file = receipts.Receipts(out / 'receipts.json', 'preflight/native_source_controls', 'meson')
     copied = fixture_inputs.copy_declared(ROOT, repo, fixture_inputs.expand(ROOT, CONFIGURED_INPUTS))
     print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
-    receipts = configured_controls(repo, scratch, out)
-    (out / 'receipts.json').write_text(json.dumps(dict(
-        schema_version=1, case='preflight/native_source_controls', mode='meson', ok=True,
-        fixture=dict(files=copied.files, directories=copied.directories, bytes=copied.bytes, seconds=copied.seconds),
-        controls=receipts), indent=2) + '\n')
+    file.add(scenario='fixture', mode='fixture', files=copied.files, directories=copied.directories, bytes=copied.bytes,
+             seconds=copied.seconds)
+    try:
+        found = configured_controls(repo, scratch, out, file)
+    except BaseException:
+        file.finish(ok=False)
+        raise
+    file.finish(ok=True)
     shutil.rmtree(scratch, ignore_errors=True)
-    print(f'{len(receipts)} configured native source controls passed; '
-          f'{sum(len(r["launches"]) for r in receipts)} launches counted')
+    print(f'{len(found)} configured native source controls passed; '
+          f'{sum(len(r["launches"]) for r in found)} launches counted')
     return 0
 
 

@@ -26,6 +26,7 @@ import markdown_reader  # noqa: E402  (its file list and refusal; the fixtures b
 import generator_common  # noqa: E402  (static reading of the checker's RULES table)
 import drift_rules  # noqa: E402
 import fixture_inputs  # noqa: E402
+import receipts as receipt_files  # noqa: E402
 import repository_tree  # noqa: E402
 from repository_tree import directory, required  # noqa: E402
 sys.path.insert(0, str(ROOT / 'tests/suites/source_drift'))
@@ -92,21 +93,27 @@ def fixture(out):
 
 def main(out):
     out.mkdir()
+    file = receipt_files.Receipts(out / 'controls.json', 'source_drift/runner_source_manifests_agree', 'planner')
     repo = fixture(out)
+    file.add(scenario='fixture', mode='fixture', **json.loads((out / 'fixture.json').read_text()) | {'paths': None})
     scenarios = (planner_scenarios(repo) + host_scenarios(repo) + meson_scenarios(repo) + guidance_scenarios(repo)
                  + structure_scenarios(repo) + gap_scenarios(repo) + route_scenarios(repo) + rule_gap_scenarios(repo))
     names = [scenario.name for scenario in scenarios]
     assert len(names) == len(set(names)), 'scenario names must be unique'
-    receipts = run_scenarios(repo, out, scenarios)
-    receipts += reversed_order_control(repo, out, scenarios, receipts)
-    receipts += registry_scenarios(repo, out)
-    receipts += entry_point_scenarios(repo, out)
-    receipts += precondition_scenarios(repo, out)
-    receipts += dispatch_omission_scenario(repo, out)
-    receipts += inventory_controls(out)
-    receipts += isolation_controls(out)
-    receipts += host_invariance_controls(out)
-    (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
+    receipts = []
+    try:
+        for group in (lambda: run_scenarios(repo, out, scenarios, file),
+                      lambda: reversed_order_control(repo, out, scenarios, receipts),
+                      lambda: registry_scenarios(repo, out), lambda: entry_point_scenarios(repo, out),
+                      lambda: precondition_scenarios(repo, out), lambda: dispatch_omission_scenario(repo, out),
+                      lambda: inventory_controls(out), lambda: isolation_controls(out), lambda: host_invariance_controls(out)):
+            produced = group()
+            receipts += produced
+            file.extend(record for record in produced if record.get('scenario') not in {c.get('scenario') for c in file.controls})
+    except BaseException:
+        file.finish(ok=False)
+        raise
+    file.finish(ok=True)
     print(f'{len(receipts)} source and guidance controls passed')
 
 
@@ -144,7 +151,7 @@ def compare(scenario, actual):
     return problems
 
 
-def run_scenarios(repo, out, scenarios):
+def run_scenarios(repo, out, scenarios, file=None):
     originals = {path: (repo / path).read_text() for scenario in scenarios for path in scenario.changes}
     receipts = []
     for scenario in scenarios:
@@ -166,6 +173,8 @@ def run_scenarios(repo, out, scenarios):
                       exact=scenario.exact or None, diagnostic=scenario.diagnostic, actual=actual,
                       elapsed_seconds=elapsed, problems=problems)
         (evidence / 'records.json').write_text(json.dumps(record, indent=2) + '\n')
+        if file is not None:
+            file.add(**record)
         if problems:
             raise AssertionError(f'{scenario.name}: ' + '\n'.join(problems) + '\n' + json.dumps(actual, indent=2))
         receipts.append(record)
@@ -846,6 +855,8 @@ def entry_point_scenarios(repo, out):
         record = dict(scenario=name, mode='entry-point', argv=argv, returncode=result.returncode,
                       changed=[path.as_posix() for path in changes], declared=len(declared),
                       outcomes={r['rule_id']: r['outcome'] for r in reported['results']} if reported else None,
+                      stdout=str(evidence / 'stdout'), stderr=str(evidence / 'stderr'), results=str(evidence / 'results.json'),
+                      launches=[dict(step='check', argv=argv, returncode=result.returncode, elapsed_seconds=elapsed)],
                       elapsed_seconds=elapsed, problems=problems)
         (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
         if problems:
@@ -883,6 +894,8 @@ def precondition_scenarios(repo, out):
         record = dict(scenario=name, mode='entry-point', argv=argv, returncode=result.returncode, integrity=integrity,
                       outcomes={rule_id: r['outcome'] for rule_id, r in outcomes.items()},
                       records={rule_id: r['problems'] for rule_id, r in outcomes.items() if r['problems']},
+                      stdout=str(evidence / 'stdout'), stderr=str(evidence / 'stderr'), results=str(evidence / 'results.json'),
+                      launches=[dict(step='check', argv=argv, returncode=result.returncode, elapsed_seconds=elapsed)],
                       elapsed_seconds=elapsed)
         (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
         problems = expect(result, outcomes) + integrity
@@ -962,7 +975,10 @@ def dispatch_omission_scenario(repo, out):
         argv, result, reported, integrity, elapsed = run_checker(repo, evidence)
         reported_ids = [r['rule_id'] for r in reported['results']] if reported else []
         record = dict(scenario=name, mode='entry-point', argv=argv, returncode=result.returncode, reported=reported_ids,
-                      integrity=integrity, elapsed_seconds=elapsed)
+                      integrity=integrity, stdout=str(evidence / 'stdout'), stderr=str(evidence / 'stderr'),
+                      results=str(evidence / 'results.json'),
+                      launches=[dict(step='check', argv=argv, returncode=result.returncode, elapsed_seconds=elapsed)],
+                      elapsed_seconds=elapsed)
         (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
         problems = []
         if result.returncode != expect_status:

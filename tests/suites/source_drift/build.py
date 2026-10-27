@@ -6,12 +6,14 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+import receipts  # noqa: E402
 import fixture_inputs  # noqa: E402
 import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_build', ROOT / 'docs/generate_build.py')
@@ -43,8 +45,11 @@ class BuildDocumentationTests(unittest.TestCase):
         return root
 
     def command(self, root, *args):
-        return subprocess.run([sys.executable, '-B', '-S', str(root / generator.GENERATOR_NAME), *args],
-                              cwd=root, capture_output=True, text=True, timeout=120)
+        start = time.perf_counter()
+        result = subprocess.run([sys.executable, '-B', '-S', str(root / generator.GENERATOR_NAME), *args],
+                                cwd=root, capture_output=True, text=True, timeout=120)
+        print(f'command: {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
+        return result
 
     def load(self, data, root=ROOT):
         with tempfile.TemporaryDirectory(prefix='pw-build-manifest-') as directory:
@@ -487,4 +492,4 @@ class BuildDocumentationTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    sys.exit(receipts.timed_main(sys.modules[__name__], 'source_drift/build_documentation', 'build'))

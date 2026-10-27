@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -13,6 +14,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+import receipts  # noqa: E402
 import fixture_inputs  # noqa: E402
 import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_limits', ROOT / 'docs/generate_limits.py')
@@ -37,8 +39,11 @@ class LimitsDocumentationTests(unittest.TestCase):
         return root
 
     def command(self, root, *args):
-        return subprocess.run([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
-                              cwd=root, capture_output=True, text=True, timeout=10)
+        start = time.perf_counter()
+        result = subprocess.run([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
+                                cwd=root, capture_output=True, text=True, timeout=10)
+        print(f'command: {" ".join(args)} rc={result.returncode} {time.perf_counter() - start:.3f} s')
+        return result
 
     def load(self, data):
         with tempfile.TemporaryDirectory(prefix='pw-limits-') as directory:
@@ -490,4 +495,4 @@ class LimitsDocumentationTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    sys.exit(receipts.timed_main(sys.modules[__name__], 'source_drift/limits_documentation', 'limits'))

@@ -21,6 +21,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+import receipts  # noqa: E402
 import fixture_inputs  # noqa: E402
 import markdown_reader as reader  # noqa: E402
 
@@ -424,4 +425,4 @@ class ImportGuardTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    sys.exit(receipts.timed_main(sys.modules[__name__], 'source_drift/markdown_reader', 'markdown'))

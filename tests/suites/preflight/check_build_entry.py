@@ -16,13 +16,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'docs'))
 import fixture_inputs  # noqa: E402
+import receipts  # noqa: E402
 import markdown_reader  # noqa: E402
 import shim_probe  # noqa: E402
 
@@ -42,16 +42,12 @@ BUILD_ENV_EXCLUDED = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'PW_CHECKO
                       'PW_CHECKOUT_LOCK_NONCE', 'PW_CHECKOUT_LOCK_CHANNEL')
 ENTRY_FILES = set(fixture_inputs.build_entry_inputs(ROOT))
 LIMITS_FILES = ENTRY_FILES | set(fixture_inputs.generator_inputs(ROOT, 'limits'))
-RECEIPTS = []
 
 
 class BuildEntryTests(unittest.TestCase):
     def setUp(self):
         self.versions = generator.load_versions(ROOT / 'docs/contract.json')
-        self.started = time.perf_counter()
 
-    def tearDown(self):
-        RECEIPTS.append(dict(test=self.id().split('.')[-1], elapsed_seconds=time.perf_counter() - self.started))
 
     def checkout(self, extra=()):
         directory = tempfile.TemporaryDirectory(prefix='pw-build-entry-')
@@ -397,14 +393,10 @@ class BuildEntryTests(unittest.TestCase):
 
 
 def main(argv):
-    artifacts = Path(argv[1]) if len(argv) > 1 else None
-    result = unittest.main(argv=argv[:1], exit=False, verbosity=2).result
-    if artifacts is not None:
-        artifacts.mkdir(parents=True, exist_ok=True)
-        (artifacts / 'receipts.json').write_text(json.dumps(dict(schema_version=1, case='preflight/build_entry_controls',
-                                                                 mode='build-script', ok=result.wasSuccessful(), controls=RECEIPTS),
-                                                            indent=2) + '\n')
-    return 0 if result.wasSuccessful() else 1
+    """Run the controls; with an artifacts directory, write a receipt per control (partial on failure)."""
+    if len(argv) > 1:
+        os.environ['PW_TEST_ARTIFACTS'] = argv[1]
+    return receipts.timed_main(sys.modules[__name__], 'preflight/build_entry_controls', 'check_build_entry', mode='build-script')
 
 
 if __name__ == '__main__':

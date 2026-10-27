@@ -11,16 +11,15 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import subprocess
 import sys
 import tempfile
-import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'docs'))
 import fixture_inputs  # noqa: E402
+import receipts  # noqa: E402
 from repository_tree import directory, required  # noqa: E402
 
 spec = importlib.util.spec_from_file_location('generate_build', ROOT / 'docs/generate_build.py')
@@ -30,7 +29,6 @@ spec.loader.exec_module(generator)
 # sources, the service and the client.
 NATIVE_INPUTS = (required('meson.build'), required('meson.options'), directory('controller/tools'),
                  directory('runner/Sources'), directory('runner/Services'), directory('runner/Clients'))
-RECEIPTS = []
 
 
 def scratch(prefix):
@@ -43,18 +41,11 @@ def scratch(prefix):
 class NativePolicyTests(unittest.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / generator.MANIFEST_NAME).read_text())
-        self.started = time.perf_counter()
         self.launches = []
-
-    def tearDown(self):
-        RECEIPTS.append(dict(test=self.id().split('.')[-1], elapsed_seconds=time.perf_counter() - self.started,
-                             launches=self.launches))
+        self.addCleanup(lambda: print(f'launches: {self.id().split(".")[-1]} {json.dumps(self.launches)}'))
 
     def run_meson(self, argv, timeout=300):
-        start = time.perf_counter()
-        result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
-        self.launches.append(dict(argv=argv[:3], returncode=result.returncode, elapsed_seconds=time.perf_counter() - start))
-        return result
+        return receipts.launch(argv, self.launches, argv[1], capture_output=True, text=True, timeout=timeout)
 
     def native_copy(self):
         """A copy of the native sources under scratch, from declarations rather than Git."""
@@ -166,14 +157,10 @@ class NativePolicyTests(unittest.TestCase):
 
 
 def main(argv):
-    artifacts = Path(argv[1]) if len(argv) > 1 else None
-    result = unittest.main(argv=argv[:1], exit=False, verbosity=2).result
-    if artifacts is not None:
-        artifacts.mkdir(parents=True, exist_ok=True)
-        (artifacts / 'receipts.json').write_text(json.dumps(dict(schema_version=1, case='preflight/native_policy_controls',
-                                                                 mode='meson', ok=result.wasSuccessful(), controls=RECEIPTS),
-                                                            indent=2) + '\n')
-    return 0 if result.wasSuccessful() else 1
+    """Run the controls; with an artifacts directory, write a receipt per control (partial on failure)."""
+    if len(argv) > 1:
+        os.environ['PW_TEST_ARTIFACTS'] = argv[1]
+    return receipts.timed_main(sys.modules[__name__], 'preflight/native_policy_controls', 'check_native_policy', mode='meson')
 
 
 if __name__ == '__main__':

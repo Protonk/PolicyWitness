@@ -439,7 +439,7 @@ import of either package anywhere else.
 `<run>` is the selected output directory: `tests/out/runs/default` for the
 public command, or the explicit `PW_TEST_OUT_DIR`.
 
-- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/check.log` and `check-results.json`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/inventory-controls.json`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/<scenario>/records.json` (in-process scenarios) or `results.json`, `stdout`, `stderr` and `command.json` (entry-point and Meson scenarios)
@@ -449,9 +449,31 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
 - `<run>/suites/source_drift/contract_versions/artifacts/contract.log`
 - `<run>/suites/source_drift/architecture_documentation/artifacts/architecture.log`
-- `<run>/suites/source_drift/build_documentation/artifacts/build-rules.log` and `build.log`
+- `<run>/suites/source_drift/build_documentation/artifacts/build-rules.log`, `build-rules-results.json` and `build.log`
+- `<run>/suites/source_drift/<case>/artifacts/<module>-receipts.json` for each unittest module
 - `<run>/suites/source_drift/generator_contract/artifacts/generators.log`
 - `<run>/suites/source_drift/markdown_reader/artifacts/markdown.log`
+
+### Receipts
+
+Every case writes receipts through [receipts.py](../../lib/receipts.py),
+schema version 2. A receipt file is one object: `schema_version`, `case`, the
+file's `mode`, `ok`, `complete` (false while controls are still running or
+after an exception, so a partial file is never mistaken for a finished one)
+and `controls`. A control names its `scenario` or `test`; its `mode`
+(`in-process`, `entry-point`, `meson`, `build-script`, `unittest` or
+`fixture`); the owner `rules` and the `changed` inputs when it has them; its
+`expected` and `actual` records or status; the `stdout`, `stderr` and
+`results` paths when output was captured; its monotonic `elapsed_seconds`;
+and `launches`, the direct child processes it started with their argv, return
+code and elapsed time. A launch count is the control's own children, never an
+OS-wide count of what Meson, a compiler or the build script started in turn.
+The planner's `controls.json` begins with the fixture's file, directory, byte
+and second counts; the unittest suites write `<module>-receipts.json` with one
+control per test and print each test's elapsed time, each generator command's
+elapsed time and return code, and each fixture copy and snapshot with its file
+and byte counts; `check-results.json` and `build-rules-results.json` are the
+checker's and the build rules' result records for the live tree.
 
 ## Run
 
