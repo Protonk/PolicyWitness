@@ -16,6 +16,8 @@ A plan should be usable by someone who knows the repository but not the history 
 
 How much investigation is needed depends on the uncertainty. Source inspection, reproducing failures, small experiments, and comparison of approaches are useful when they affect the proposal; they are not steps to perform for their own sake. Questions that can be settled beforehand should not become implementation chores. Where a consequential question genuinely depends on work not yet done, the plan should make clear what would answer it and what depends on the answer. Routine implementation choices can remain with the executor.
 
+`records/` is a place for materials committed before and during the planning, implementation, and acceptance of changes. Planning materials there are generally consumed by acceptance review and retired with the plan.
+
 Verification belongs in the proposal. The checks should establish the intended behavior, not just the absence of an error; where a misleading pass is plausible, the plan should account for it. Include tests and documentation when they are needed to preserve or explain the change. A plan is ready when its reader can proceed without reconstructing its rationale, while recognizing evidence that would require reconsideration.
 
 ## Working guidance
