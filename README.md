@@ -17,8 +17,7 @@ PolicyWitness operates on specimens: an SBPL policy and a plan of probes. Each s
 
 The result is one JSON envelope containing the available predictions, attempts and their observed outcomes, together with evidence of their provenance and ordering. Comparison records relate those observations without declaring whether prediction and enforcement agree. Missing or incomplete observations remain visible rather than being turned into conclusions.
 
-> How one run unfolds in time, the boundaries it crosses and the checks that pin each of them: the [architecture tour](docs/ARCHITECTURE.md). The [user guide](docs/PolicyWitness.md) has the specimen format, the output
-> envelope and the operating guidance.
+> For how one run unfolds in time, the boundaries it crosses and the checks that pin each of them, see the [architecture tour](docs/ARCHITECTURE.md). The [user guide](docs/PolicyWitness.md) has the specimen format, output envelope and operating guidance.
 
 ## Entitlements + SBPL
 
