@@ -241,7 +241,7 @@ def expected_fixture_controls(out):
     from consumer import validate
     out.mkdir(parents=True, exist_ok=True)
     fixtures = ROOT / 'tests/fixtures/disposition'
-    expected = json.loads((fixtures / 'response23/a1_expected.json').read_text())
+    expected = json.loads((fixtures / 'response24/a1_expected.json').read_text())
     unsupported = {'schema_version': contract.CONTROLLER_ENVELOPE - 1,
                    'kind': 'run', 'data': {}}
     records = []

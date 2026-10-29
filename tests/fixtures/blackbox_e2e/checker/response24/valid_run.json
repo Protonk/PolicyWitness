@@ -1,0 +1,642 @@
+{
+  "build": {
+    "commit": "7426fc0920381d233eef90a1de06035af2a6d3c8",
+    "describe": "v0.3.3-124-g7426fc0",
+    "number": "977",
+    "version": "0.3.3"
+  },
+  "data": {
+    "policy_check": null,
+    "runner_acquisition": [],
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "240000",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "capture_limit_bytes": 159383552,
+      "ended_at_unix_ms": 1793310926221,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 1857,
+        "error": null
+      },
+      "started_at_unix_ms": 1793310926179,
+      "stderr": "",
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "stderr_truncated": false,
+      "stdout_bytes_received": 9576,
+      "stdout_bytes_retained": 9576,
+      "stdout_capture_error": null,
+      "stdout_parse_error": null,
+      "stdout_raw": null,
+      "stdout_truncated": false
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "normalized_outcome": "ok",
+      "phases": [
+        {
+          "action_ids": [
+            "fs_write_allowed",
+            "fs_write_denied",
+            "mach_lookup_denied"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "main",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "fs_write_allowed",
+              "fs_write_denied",
+              "mach_lookup_denied"
+            ],
+            "ordinal": 1,
+            "phase_id": "main",
+            "pid": 66038,
+            "probe_bytes_expected": 444,
+            "probe_bytes_written": 444,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+                "operation": "file-write-data",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_allowed\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "fs_write_allowed"
+              },
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+                "operation": "file-write-data",
+                "outcome": "deny",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_denied\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "rc": 1,
+                "step_id": "fs_write_denied"
+              },
+              {
+                "errno": 0,
+                "filter_type": "GLOBAL_NAME",
+                "filter_type_id": 2,
+                "filter_value": "com.apple.cfprefsd.xpc.daemon",
+                "operation": "mach-lookup",
+                "outcome": "deny",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"mach_lookup_denied\",\"operation\":\"mach-lookup\",\"filter_type\":\"GLOBAL_NAME\",\"filter_type_id\":2,\"filter_value\":\"com.apple.cfprefsd.xpc.daemon\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "rc": 1,
+                "step_id": "mach_lookup_denied"
+              }
+            ],
+            "stdout_bytes_received": 792,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        }
+      ],
+      "pid": 66037,
+      "policy_format": "sbpl",
+      "policy_sha256": "cede8db45e6e2ec342277c02ff7b70064fa3aaab05f7b8f08a032070361810f8",
+      "rc": 0,
+      "runner_subprocess": {
+        "cleanup_trigger": "completion",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "completion",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "exit_code",
+              "basis": [
+                "reaped",
+                "exit_code"
+              ],
+              "state": "supported",
+              "value": 0
+            },
+            "grace_end": {
+              "answer": "reaped_during_grace",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "none",
+              "basis": [
+                "termination_request",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "progress_association": {
+              "answer": "none",
+              "basis": [
+                "progress"
+              ],
+              "state": "supported"
+            },
+            "stop_reason": {
+              "answer": "done",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": [
+            {
+              "attempt_support": "supported",
+              "index": 0,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "fs_write_allowed"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 1,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "fs_write_denied"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 2,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "mach_lookup_denied"
+            }
+          ]
+        },
+        "done_observed": true,
+        "exit_code": 0,
+        "exit_grace_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 0,
+          "stop": "reaped_during_grace"
+        },
+        "exit_requested": true,
+        "grace_end": "reaped_during_grace",
+        "partial_steps": false,
+        "pid": 66037,
+        "poll_stop_reason": "done",
+        "ready_byte_received": true,
+        "ready_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 12,
+          "stop": "received"
+        },
+        "reaped": true,
+        "sentinel_wait": {
+          "budget_ms": 120000,
+          "clock_fault": false,
+          "elapsed_ms": 4,
+          "excluded_ms": 1,
+          "stop": "done"
+        },
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_identity": "944121356b57319eb7442c1d67b4841f96bd41f4be040d1751902a1230831593",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 348,
+            "bytes_received": 348
+          },
+          "progress": {
+            "operation": 10,
+            "raw": 169869312,
+            "stage": 2
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "schema_version": 24,
+      "specimen_id": "BBX-001",
+      "steps": [
+        {
+          "attempt": {
+            "errno": null,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "rc": 0,
+            "requested_action": "open_write",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+            "native_rc": 0,
+            "operation": "file-write-data",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "pid": 66037,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "fs_write_allowed"
+        },
+        {
+          "attempt": {
+            "errno": 1,
+            "error": "open(O_WRONLY|O_TRUNC): Operation not permitted",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "open_failed",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "rc": 1,
+            "requested_action": "open_write",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "permission_errno",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+            "native_rc": 1,
+            "operation": "file-write-data",
+            "outcome": "deny",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "pid": 66037,
+            "rc": 1,
+            "result_source": "validator"
+          },
+          "step_id": "fs_write_denied"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "error": "bootstrap_look_up: kr=1100",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "lookup_failed",
+            "rc": 1,
+            "requested_action": "bootstrap_look_up",
+            "requested_kind": "mach_lookup",
+            "requested_path": "com.apple.cfprefsd.xpc.daemon",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "bootstrap_permission_result",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "global_name",
+            "filter_type_id": 2,
+            "filter_value": "com.apple.cfprefsd.xpc.daemon",
+            "native_rc": 1,
+            "operation": "mach-lookup",
+            "outcome": "deny",
+            "pid": 66037,
+            "rc": 1,
+            "result_source": "validator"
+          },
+          "step_id": "mach_lookup_denied"
+        }
+      ]
+    },
+    "runner_sandbox_diagnostics": {
+      "disposition_integrity": "valid",
+      "disposition_issues": [],
+      "process_disposition": "clean_exit",
+      "stop_reason": "done",
+      "termination_cause": null
+    },
+    "specimen": {
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "issuer": null,
+        "service": null,
+        "validator": null,
+        "worker": null
+      },
+      "host": {
+        "arch": "arm64",
+        "kernel_release": "25.6.0",
+        "macos_build": "25G241",
+        "macos_version": "26.7.1"
+      },
+      "policy": {
+        "augmentation": {
+          "applied": [],
+          "applied_sha256": "cede8db45e6e2ec342277c02ff7b70064fa3aaab05f7b8f08a032070361810f8",
+          "error": null,
+          "original_sha256": "cede8db45e6e2ec342277c02ff7b70064fa3aaab05f7b8f08a032070361810f8",
+          "status": "not_requested"
+        },
+        "imports": {
+          "closure_sha256": "9ad3bbe4dafc0fbcf511d8f2f24f0db73a029e255ded07306f3429badde11391",
+          "cycle": null,
+          "exceeded": null,
+          "failure": null,
+          "records": [],
+          "status": "complete"
+        }
+      },
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-e2-captures-01/suites/blackbox_e2e/BBX-001/artifacts/specimen.rendered.json",
+      "runner_provenance": {
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_issuer_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_issuer_signature": null,
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_signature": null,
+        "runner_validator_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_validator_signature": null,
+        "runner_worker_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_worker_signature": null
+      }
+    },
+    "timeout_ms": 240000
+  },
+  "generated_at_unix_ms": 1793310926222,
+  "kind": "run",
+  "result": {
+    "errno": null,
+    "error": null,
+    "exit_code": 0,
+    "normalized_outcome": "ok",
+    "ok": true,
+    "rc": null,
+    "stderr": null,
+    "stdout": null
+  },
+  "schema_version": 8
+}

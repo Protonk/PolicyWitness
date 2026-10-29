@@ -112,3 +112,18 @@ the response shape containing only the added fresh-write family plus schema24.
 The owning candidates replace the two goldens; constructed path-diagnostic
 fixtures advance to the current schema. The run remains failed and supplies
 harvest observations only, not a passing suite credit.
+
+`workset-e2-captures-01` (run `20261029T215525Z_30681311`) passed all six selected
+cases at test source `3ff8bf2` against the unchanged signed `7426fc0` runtime:
+BBX-001/002, worker-attempt-in-flight, extension_directory, extensions and
+extension_combinations. Directory cases independently established effects and
+preserved missing publication after an actual write; lifecycle and combined
+fault controls retained their separate observations. Ten current-format fixture
+files were copied byte-for-byte from this run, and executable readers now name
+their response24 locations. Historical response23 bytes were not relabeled.
+The capture run is pinned with app inventory and source applicability stated.
+
+Read-only reviewer `review_public_extension` examined candidate `7426fc0` C,
+Swift and Python paths, authority transport, native control reach and live
+apparatus. It reported no consequential defect; this is source review, not
+execution. Broader coordinated verification remains required before the seal.

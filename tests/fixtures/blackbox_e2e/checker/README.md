@@ -1,7 +1,7 @@
 # Evidence checker fixtures
 
 Live captures of complete `run` envelopes for independent controls of the
-evidence checker. The current directory is `response23/`. Each `*_run.json` is
+evidence checker. The current directory is `response24/`. Each `*_run.json` is
 an unmodified capture from the case named below, stamped with the build that
 produced it, and each `*_specimen.json` is the exact submitted request.
 

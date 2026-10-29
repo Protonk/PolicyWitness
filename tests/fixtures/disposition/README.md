@@ -5,7 +5,7 @@ Captured envelopes for the disposition record contract
 independent checker `tests/lib/lifecycle_oracle.py` and the offline controls in
 `tests/suites/blackbox_e2e/disposition_controls.py` consume the current fixture.
 
-- `response23/a1_expected.json`: an unmodified live capture of the `a1` specimen
+- `response24/a1_expected.json`: an unmodified live capture of the `a1` specimen
   from `witness_contract/worker_attempt_in_flight_at_deadline`. Its build stamp,
   binary hashes and worker source identity identify the producer. The controls
   accept it and reject named mutations; Rust unit tests use its runner reply
@@ -16,7 +16,7 @@ independent checker `tests/lib/lifecycle_oracle.py` and the offline controls in
   while that controller reported `termination_cause: unknown`. It is retained
   evidence with no executable consumer and is never an acceptance baseline.
 
-`response23/a1_specimen.json` is the exact submitted request for the current
+`response24/a1_specimen.json` is the exact submitted request for the current
 capture; the two refresh together, as described below.
 Previous-envelope rejection uses constructed controls; superseded acceptance
 captures remain available in Git.
