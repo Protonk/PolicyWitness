@@ -20,7 +20,7 @@ unresolved under the user's explicit repeated instruction.
   Existing stale-copy tests now require the exact canonical command while
   retaining accepted, rejected, unchanged-on-check and restored cases.
 - Only the architecture document graph's owning outputs were regenerated:
-  ARCHITECTURE,architecture-documents.dot and SVG. Other graphs, including
+  ARCHITECTURE, architecture-documents.dot and SVG. Other graphs, including
   worker_capabilities, are unchanged. No runtime, catalog, baseline or worker
   identity change is made.
 
@@ -32,17 +32,17 @@ the selected dispatcher run below.
 ## Candidate verification
 
 Selection inspected through the public dispatcher: runner_source_manifests_agree
-requires Meson; architecture_documentation,build_documentation,generator_contract
+requires Meson; architecture_documentation, build_documentation, generator_contract
 and contract_versions have no listed external equipment. No app, XPC, signing
 or shared service operation is selected.
 
-Planned command, from this isolated worktree:
+Command executed from this isolated worktree at the committed candidate:
 
 ```
 PW_TEST_OUT_DIR=tests/out/runs/workset-d2-docs-01 tests/run.sh --case source_drift/architecture_documentation --case source_drift/build_documentation --case source_drift/generator_contract --case source_drift/runner_source_manifests_agree --case source_drift/contract_versions
 ```
 
-The candidate is committed before execution so the test source identity is
-recoverable. The run and result will be added in the verification record;
-this initial record does not claim they passed. Raw managed output is local
-and gitignored. The primary executor controls retention and workset cleanup.
+The candidate was committed before execution. `verification.md` and
+`verification-facts.json` record the five passing cases at that exact source,
+including the scope of this isolated development credit. Raw managed output is
+local and gitignored. The primary executor controls retention and workset cleanup.

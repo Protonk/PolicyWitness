@@ -14,8 +14,8 @@ Artifacts:
   and original commit identities in intake. No new D1 inbound links are added.
 - `ownership.md`, `ownership-facts.json`, `capture.py`: reciprocal ownership
   and separate document populations at the fixed source.
-- `trace-evidence.json`:16 historical accepted/rejected/restoration controls,
-  receipt identities and15 selected source-file comparisons; not a current
+- `trace-evidence.json`: 16 historical accepted/rejected/restoration controls,
+  receipt identities and 15 selected source-file comparisons; not a current
   whole-checkout passing credit.
 - `traces.md`: six representative edit paths, author repair, checkpoints,
   distribution, cross-generator dependencies and failure/recovery boundaries.
@@ -23,6 +23,8 @@ Artifacts:
   inherited proposal dispositions and pending decisions.
 - `implementation.md`: bounded C1–C3 candidate, preserved boundaries and
   selected verification; no final D2 acceptance is implied.
+- `verification.md`, `verification-facts.json`: isolated development run at the
+  committed candidate, result/receipt identities and limits of that credit.
 
 Ownership, traces, reconciliation and acceptance records are added as those
 phases finish. Current-source accounts always name their examined revision;

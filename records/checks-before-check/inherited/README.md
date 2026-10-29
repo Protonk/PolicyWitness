@@ -1,6 +1,6 @@
 # Absorbed D1 evidence
 
-These are byte-identical selected records from the D1 package at7562d24.
+These are byte-identical selected records from the D1 package at 7562d24.
 manifest.json identifies original paths and hashes. Unqualified artifact
 names inside these archived records refer to their **original D1 package at
 that commit**, not files newly created in D2. Original replay equipment and

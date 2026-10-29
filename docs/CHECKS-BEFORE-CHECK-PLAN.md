@@ -13,7 +13,7 @@ Supported changes may include generators, checks, ownership arrangements and
 tests, with independent accepted/rejected controls. A change to a checker's
 promised guarantee still requires the workset's behavioral-defect discussion.
 F1 from D1 remains unresolved by explicit user decision. Initial investigation
-source is7562d24; initial writes are limited to this plan and its records while
+source is 7562d24; initial writes are limited to this plan and its records while
 E2 changes shared implementation and documentation. Coordinate and refresh
 source before any permanent or executable correction.
 
@@ -30,6 +30,9 @@ The [edit paths](../records/checks-before-check/traces.md) and
 supported corrections, retained complexity and remaining disposition work.
 The [implementation record](../records/checks-before-check/implementation.md)
 tracks the authorized bounded candidate separately from final acceptance.
+The [development verification](../records/checks-before-check/verification.md)
+and [compact result](../records/checks-before-check/verification-facts.json)
+identify the isolated tested source and the separate integration credit needed.
 
 Follow [planning guidance](../CONTRIBUTING.md#planning-a-change),
 [documentation guidance](AGENTS.md) and [test working guidance](../tests/AGENTS.md).

@@ -2,8 +2,8 @@
 
 Source: `7562d24ac2334122499ea349010fd67211058ac3`. These are source traces
 supported by identified historical controls, not fresh executions at this
-revision. `trace-evidence.json` identifies16 controls from run
-20261027T233059Z_1f7c68fa; their15 selected test/generator/helper files match
+revision. `trace-evidence.json` identifies 16 controls from run
+20261027T233059Z_1f7c68fa; their 15 selected test/generator/helper files match
 this source by hash. Catalog, README and other input differences prevent a
 whole-checkout passing credit. Each trace separates identity, pointers,
 actual assertions and the semantic judgment left to the author.
@@ -38,7 +38,7 @@ source/destination bytes, and restores inputs. Historical controls passed;
 none establishes that a newly authored answer is true.
 
 `source_drift/limits_documentation` owns those default controls.
-`source_drift/generator_contract` separately checks G11 links across its21
+`source_drift/generator_contract` separately checks G11 links across its 21
 selected documents; it is not called by limits.py. `build.sh` checks limits
 before compilation and again stages through:
 
@@ -65,7 +65,7 @@ independent semantic compatibility. No signing, upload or publication ran here.
 
 ## T2 — limits are descriptive; implementation values are elsewhere
 
-Editable example: docs/limits.json `policy_source.value` describes262143 UTF-8
+Editable example: docs/limits.json `policy_source.value` describes 262143 UTF-8
 bytes; runtime storage comes from PW_SHM_POLICY_BYTES and admission code.
 Changing just the manifest followed by `generate_limits.py` updates generated
 LIMITS/guide values and registered limit scalar spans. It does not change the
@@ -73,7 +73,7 @@ C/Swift implementation. A generator-current document may therefore disagree
 with compiled behavior.
 
 The accepted/mutated/restored generator control above changes the value and
-requires262144 in the generated sources/copies, then idempotence. The compiled
+requires 262144 in the generated sources/copies, then idempotence. The compiled
 comparison is separately owned by runner_abi_layout/limits.py `compare` and
 Swift LimitsContractTests; its own ABI mapping/subtraction expects the C
 storage minus one for this limit. The C comparison deliberately mutates the
@@ -82,7 +82,7 @@ has the separately cited at/over-limit/multibyte behavior. Those native/CLI
 paths are source-traced here; D2 supplies no new runtime result for them.
 
 For an independent boundary example the same limits.py's `query_boundary`
-constructs fixed65534/65535 payloads and requires accepted/rejected/recovery
+constructs fixed 65534/65535 payloads and requires accepted/rejected/recovery
 frames. It does not derive its expectation from limits.json. This distinction
 prevents a manifest edit from silently changing every oracle.
 
@@ -174,7 +174,7 @@ prevalidates its own input/output set, not the whole sequence.
 
 Editable example: WORKER's dated launch-observation availability sentence,
 outside generated regions. Editing only that prose does not regenerate the
-worker graph or receipt. Its links are checked because WORKER is in the21-file
+worker graph or receipt. Its links are checked because WORKER is in the 21-file
 prose scan; its Known gap index and command forms have their separate checks.
 The sentence can falsely claim a pin while every link resolves. The compact
 receipt likewise contains an authored availability sentence; no checker compares
