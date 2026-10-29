@@ -158,7 +158,7 @@ or proof of correct handling of unsupported versions.
 `contract_versions` checks every generated copy. Its mutation control requires
 the named stale-copy diagnostic, no check writes, then full restoration by
 generation; missing/duplicate/reversed markers refuse before any write.
-Worker-identity controls run in build_documentation and check relocation,
+Worker-identity controls run in contract_versions and check relocation,
 determinism, source discovery, handshake inputs and stale identity restoration.
 Build checks both currency gates before compiling and identity again before
 signing. Version-generated code equality is intentional single-source authority;

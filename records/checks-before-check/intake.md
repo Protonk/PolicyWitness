@@ -46,12 +46,15 @@ Nevertheless catalog and tests README are inputs of these checks, so prior
 receipts are historical control evidence, not a new passing credit for7562d24.
 New D2 ownership extraction describes its actual discovery scopes afresh.
 
-Reciprocal extraction corrects two narrative slips in the D1 inventory while
+Reciprocal extraction corrects three narrative slips in the D1 inventory while
 preserving its accurate machine declarations: architecture has **five** graphs,
 four in ARCHITECTURE and one in WORKER; contract generation has seven targets
 and **does not target the C ABI header**. The ABI header is a worker-identity
-target. D2 uses the explicit declarations and concrete routes, not those two
-incorrect shorthand phrases. These are investigation-account corrections,
+target. Further T4 tracing establishes that WorkerIdentityTests execute in
+`contract_versions`, not `build_documentation`: contract.py's timed_main
+discovers both classes; build.py has no identity tests. The stale README account
+had led to that inherited D1 misattribution. D2 uses explicit declarations and
+concrete routes, not those incorrect shorthand phrases. These are investigation-account corrections,
 not changes to repository behavior.
 
 ## Inherited disposition

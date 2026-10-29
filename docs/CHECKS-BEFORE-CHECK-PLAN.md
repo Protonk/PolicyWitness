@@ -28,6 +28,8 @@ retain the examined source and limits of reuse.
 The [edit paths](../records/checks-before-check/traces.md) and
 [reconciliation](../records/checks-before-check/reconciliation.md) identify
 supported corrections, retained complexity and remaining disposition work.
+The [implementation record](../records/checks-before-check/implementation.md)
+tracks the authorized bounded candidate separately from final acceptance.
 
 Follow [planning guidance](../CONTRIBUTING.md#planning-a-change),
 [documentation guidance](AGENTS.md) and [test working guidance](../tests/AGENTS.md).

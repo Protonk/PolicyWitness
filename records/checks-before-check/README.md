@@ -21,6 +21,8 @@ Artifacts:
   distribution, cross-generator dependencies and failure/recovery boundaries.
 - `reconciliation.md`: localized findings, supported correction scope,
   inherited proposal dispositions and pending decisions.
+- `implementation.md`: bounded C1–C3 candidate, preserved boundaries and
+  selected verification; no final D2 acceptance is implied.
 
 Ownership, traces, reconciliation and acceptance records are added as those
 phases finish. Current-source accounts always name their examined revision;
