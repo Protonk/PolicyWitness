@@ -20,8 +20,27 @@ Current behavior at `cf0136bbb6366d5f787c3547ec69d757772898c0`:
   evidence, writing only this package. It is investigation equipment, not a
   new production check or catalog case.
 
-The design, replay register, supplied annotations, results, freeze and
-acceptance artifacts will be indexed as their phases complete. Inventories
-describe current code; the later design will be explicitly proposed. Raw
-tests/out evidence is local and gitignored. Historical replay facts will be
-read from named git trees, not inferred from local captures.
+Proposed at design version B1:
+
+- `design.md`: explicit relationships, applicability states, checkpoint
+  assignment, review ownership, exclusions and cost predictions.
+- `replays.md`: open register, annotations, predictions and results pointers;
+  `replay/open.py` and `replay/open-results.json`: historical extraction and19
+  open evaluations.
+- `open-review.md`: reason checks, paired negatives and five-event churn account.
+- `freeze.md`: frozen design/annotation policy and curator seal.
+- `replay/heldback-cases.json`: unchanged sealed curator dataset, finder
+  records, exact revisions, facts, supplied annotations and predictions.
+- `heldback-predictions.md`: reveal/exposure account and concrete predictions.
+- `replay/heldback.py`, `replay/heldback-results.json`: corrected extraction
+  and15 reserved revision evaluations; `heldback-review.md`: coverage and limits.
+- `replay/heldback-results-initial.json`, `curator-review.md`: preserved initial
+  output, two verification gaps and their correction under unchanged B1.
+- `acceptance.md`: self-review, acceptance, unresolved F1, D2 transfer and
+  retirement conditions.
+
+Inventories describe current code at the stated fixed source. B1 remains a
+paper proposal, with hypothetical historical adoption explicitly labeled.
+Raw tests/out evidence is local and gitignored; historical replay facts come
+from named git trees, not inferred local captures. Replay scripts write only
+their output directory and are not wired into any production checkpoint.

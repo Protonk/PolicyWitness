@@ -26,7 +26,9 @@ the existing rule, not a dispatcher test or proof that production calls them.
 shipped binary. That companion does not repair the source promise or cover a
 computed runtime lookup. No production host violation has been demonstrated.
 
-Disposition: reported to the primary executor for user discussion. Do not
+Disposition: user chose “Keep this finding unresolved for later discussion”
+on2026-10-29, as relayed by the primary executor. This is not an accepted
+repair or an accepted weakening of the promise. Do not
 silently weaken the documented guarantee, change the symbol set, or adopt the
 checker-derived control oracle. D1 records evidence and leaves that decision
 open; D2 must preserve the explicit decision boundary.

@@ -121,6 +121,12 @@ def host_finding():
 
 
 if __name__ == '__main__':
+    changed = subprocess.check_output(['git', 'diff', '--name-only', STAMP], cwd=ROOT, text=True).splitlines()
+    changed += subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard'], cwd=ROOT, text=True).splitlines()
+    outside = [p for p in changed if not (p.startswith('records/check-support/') or
+               p == 'tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md')]
+    if outside:
+        raise SystemExit(f'fixed-source extraction refused: changed inputs outside D1 ownership: {outside}')
     inventory()
     costs()
     host_finding()

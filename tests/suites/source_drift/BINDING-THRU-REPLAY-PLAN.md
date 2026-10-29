@@ -10,7 +10,16 @@ The fixed investigation source is `cf0136bbb6366d5f787c3547ec69d757772898c0`
 [L trace](../../../records/check-support/l-trace.md). The
 [package account](../../../records/check-support/README.md) indexes owned artifacts,
 including [cost evidence](../../../records/check-support/costs.md) and
-[findings requiring disposition](../../../records/check-support/findings.md). Historical replay examples keep their named revisions; refreshing
+[findings requiring disposition](../../../records/check-support/findings.md).
+The completed D1 package includes the [B1 paper design](../../../records/check-support/design.md),
+[replay register](../../../records/check-support/replays.md),
+[open review](../../../records/check-support/open-review.md),
+[freeze](../../../records/check-support/freeze.md),
+[reserved-case predictions](../../../records/check-support/heldback-predictions.md),
+[held-back and delayed evaluation](../../../records/check-support/heldback-review.md),
+[curator review](../../../records/check-support/curator-review.md),
+and [acceptance/internal transfer](../../../records/check-support/acceptance.md).
+Historical replay examples keep their named revisions; refreshing
 the inventory does not move those examples to a new baseline.
 
 ## Purpose and where this stops
@@ -31,7 +40,7 @@ plan has three phases:
    claim (observation L) through it.
 2. **Design**: a design on paper, refined through open historical replays,
    then frozen before evaluating held-back cases.
-3. **Outflow**: review the findings and hand them to the successor planner.
+3. **Outflow**: accept the investigation and transfer findings internally to D2.
 
 This plan builds nothing. It does not change source_drift, the generators,
 `docs/`, tests, the catalog, the build, `WORKER.md`, L's receipt or
@@ -310,10 +319,10 @@ The register at `records/check-support/replays.md` holds one entry per case:
 ## Working rules
 
 - **Location.** Outputs live in `records/check-support/`, starting with a
-  README that states its purpose, its single handoff consumer (the successor
-  planner for checking changes and CHECK.md) and its retirement condition:
+  README that states its purpose, its single internal consumer (D2, Checks
+  before CHECK) and its retirement condition:
   acceptance, internal absorption and disposition within this workset. This plan and its package retire
-  together; material still needed moves into the successor plan's own records.
+  together; material still needed moves into D2's own records.
 - **Links.** Under `records/AGENTS.md`, only this plan may link into
   `records/check-support/`. Permanent documentation absorbs the useful account
   rather than linking to the package.
@@ -502,10 +511,10 @@ design version and assumptions it evaluates.
    and unresolved questions with what would answer each.
 2. **Acceptance review.** Apply the
    [planning guidance](../../../CONTRIBUTING.md#planning-a-change): can the
-   successor planner understand the recommendation, its evidence and its limits
+   D2 investigator understand the recommendation, its evidence and its limits
    without this conversation or missing local output? Distinguish settled
    decisions from alternatives that still need evidence. Acceptance concerns the quality
-   of the investigation and handoff; it does not implement the proposed design.
+   of the investigation and internal transfer; it does not implement the proposed design.
 3. **Internal transfer.** Record accepted findings, exclusions, name-fit and
    ownership complications for D2. Do not allocate a future CHECK document,
    design its narrative/registration, or prepare a future-writing handoff.
