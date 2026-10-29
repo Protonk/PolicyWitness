@@ -1,10 +1,16 @@
 # Binding through replay
 
 An investigation into how this repository binds documentation claims to code,
-tests and receipts, ending in a design on paper and a package for whoever
-later plans improvements to that machinery and its account in `docs/CHECK.md`.
-The current starting point below is `289dc30074559cfb3dcf065cab5eb8d57fe7aef5`
-(2026-10-27). Historical replay examples keep their named revisions; refreshing
+tests and receipts, ending in a design on paper and an internal transfer to the D2 investigation.
+WORKSET-PLAN.md amends this plan: future CHECK writing, planning and handoff
+deliverables are excluded; acceptance and disposition finish in this workset.
+The fixed investigation source is `cf0136bbb6366d5f787c3547ec69d757772898c0`
+(2026-10-29); the original starting facts below have been refreshed in the
+[bounded inventory](../../../records/check-support/inventory.md) and
+[L trace](../../../records/check-support/l-trace.md). The
+[package account](../../../records/check-support/README.md) indexes owned artifacts,
+including [cost evidence](../../../records/check-support/costs.md) and
+[findings requiring disposition](../../../records/check-support/findings.md). Historical replay examples keep their named revisions; refreshing
 the inventory does not move those examples to a new baseline.
 
 ## Purpose and where this stops
@@ -17,8 +23,8 @@ supports the claim. Recent defects in exactly that gap were found by outside
 readers, not by the batteries or the drift checks.
 
 The intended result is a package under `records/check-support/` that lets a
-future planner distinguish the checking machinery's current behavior from
-proposed changes, and plan both implementation and its documentation. This
+D2 investigator distinguish the checking machinery's current behavior from
+proposed changes and decide which bounded corrections are supported. This
 plan has three phases:
 
 1. **Investigation**: inventory the source_drift machinery, then trace one
@@ -306,7 +312,7 @@ The register at `records/check-support/replays.md` holds one entry per case:
 - **Location.** Outputs live in `records/check-support/`, starting with a
   README that states its purpose, its single handoff consumer (the successor
   planner for checking changes and CHECK.md) and its retirement condition:
-  acceptance and absorption of that handoff. This plan and its package retire
+  acceptance, internal absorption and disposition within this workset. This plan and its package retire
   together; material still needed moves into the successor plan's own records.
 - **Links.** Under `records/AGENTS.md`, only this plan may link into
   `records/check-support/`. Permanent documentation absorbs the useful account
@@ -365,7 +371,7 @@ dependency.
 | Binding class: identity, value agreement, behavioral witness, pointer, or structure | What the check establishes about the related claims |
 | Failure modes caught, and failure modes not caught | Coverage the design must add or label |
 | Controls, equipment and cost, distinguishing measurements from estimates | Whether the apparatus earns its keep |
-| Name fit: does the name or location describe the job? | Split or rename questions for CHECK.md |
+| Name fit: does the name or location describe the job? | Ownership and naming questions for D2 |
 | Known misses, from git history or replay candidates | Entries for the replay register |
 
 A cell may say "unknown" only together with what would settle it. Record
@@ -500,25 +506,20 @@ design version and assumptions it evaluates.
    without this conversation or missing local output? Distinguish settled
    decisions from alternatives that still need evidence. Acceptance concerns the quality
    of the investigation and handoff; it does not implement the proposed design.
-3. **Downstream decisions.** Recommend CHECK.md's scope and ownership from the
-   inventory. The source_drift README's "Generator contracts" section is an
-   existing owner to consider, not a precommitted move. Likewise, use the
-   name-fit findings to inform a possible suite rename or split. Explain how
-   CHECK.md's own claims would enter the chosen checking machinery, including
-   document registration, prose scanning and citation checks where applicable.
-4. **Retirement.** Once the successor planner accepts and absorbs the handoff,
-   transfer still-needed material into that plan's own records and retire this
-   plan and `records/check-support/` together. The successor plan carries the
-   links to its records. Do not keep this package alive until CHECK.md lands;
-   permanent documentation takes the useful account into its own text.
+3. **Internal transfer.** Record accepted findings, exclusions, name-fit and
+   ownership complications for D2. Do not allocate a future CHECK document,
+   design its narrative/registration, or prepare a future-writing handoff.
+4. **Retirement.** After D2 accepts and absorbs the findings and the workset
+   disposes them, transfer still-needed material into D2-owned records and
+   retire this plan and package together. No future CHECK work is a condition.
 
 ## Open questions
 
 | Question | What would answer it | What depends on the answer |
 | --- | --- | --- |
-| Does a claim need checks outside the named source_drift, preflight and build/release entry points? | A traced relationship whose support crosses that boundary | Any scope extension and CHECK.md's scope |
+| Does a claim need checks outside the named source_drift, preflight and build/release entry points? | A traced relationship whose support crosses that boundary | Any bounded scope extension for D2 |
 | What fingerprint grain should observation receipts use? | The churn series, existing identities and file hashes, and the cost and coverage of any proposed alternative | L's review trigger and the work required to resolve it |
-| Can disagreement between two pieces of prose (Example B) be detected without a registry of claim subjects? | A design attempt and its replay | Whether CHECK.md covers comments outside the prose scan |
+| Can disagreement between two pieces of prose (Example B) be detected without a registry of claim subjects? | A design attempt and its replay | Whether the proposed machinery covers comments outside the prose scan |
 | Which unasserted facts in L should become expectations, and at which checkpoint? | The L trace's distinction between existing assertions, dated observations and present-tense reuse | Which capability claims gain additional witnesses and which retain an applicability judgment |
 
 Re-observing L, changing its pins and editing WORKER.md are outside this plan.
