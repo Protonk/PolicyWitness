@@ -20,6 +20,11 @@ source before any permanent or executable correction.
 The [intake](../records/checks-before-check/intake.md) establishes D1 completion,
 absorption and source differences. The [package account](../records/checks-before-check/README.md)
 indexes the owned artifacts. D1 retirement remains coordinated separately.
+The [ownership account](../records/checks-before-check/ownership.md) reconciles
+document populations, source authority and output ownership; its supporting
+[facts](../records/checks-before-check/ownership-facts.json) and
+[historical control evidence](../records/checks-before-check/trace-evidence.json)
+retain the examined source and limits of reuse.
 
 Follow [planning guidance](../CONTRIBUTING.md#planning-a-change),
 [documentation guidance](AGENTS.md) and [test working guidance](../tests/AGENTS.md).
@@ -53,8 +58,9 @@ A replay result never establishes that a mechanism is present in the live tree.
 
 Absorb the material still needed into this plan's records, preserving its
 provenance and the facts needed to assess its conclusions without unavailable
-local output. Accept and retire the predecessor plan and its package together
-under its retirement rule. In that change, replace this plan's prerequisite
+local output. After absorption is reviewed and coordinated with the primary
+executor, retire the predecessor plan and its package together under its
+retirement rule. In that change, replace this plan's prerequisite
 link with the original pathname and completion commit as text, plus a link to
 the incorporated intake record. Keep the completed prerequisite identifiable
 without leaving a link to a removed file. Until absorption, reach the old
