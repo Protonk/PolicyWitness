@@ -57,6 +57,16 @@ API = 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift'
 SHARED_CONTRACT_SOURCES = (
     API,
     'runner/Sources/PWRunnerCore/PWRunnerCoding.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerRequest.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerExtension.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerDisposition.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerReply.swift',
 )
 SERVICE_MAIN = 'runner/Services/PWRunner/main.swift'
 CLIENT_MAIN = 'runner/Clients/PWRunnerClient/main.swift'

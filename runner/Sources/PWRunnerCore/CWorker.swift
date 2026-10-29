@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "6f777628d0b0f233f6e26f99222e8f78cd0920bb94b842b5bf2d0c4b2e29a9a7"
-    static let abiIdentity: [UInt8] = [0x6f, 0x77, 0x76, 0x28, 0xd0, 0xb0, 0xf2, 0x33, 0xf6, 0xe2, 0x6f, 0x99, 0x22, 0x2e, 0x8f, 0x78, 0xcd, 0x09, 0x20, 0xbb, 0x94, 0xb8, 0x42, 0xb5, 0xbf, 0x2d, 0x0c, 0x4b, 0x2e, 0x29, 0xa9, 0xa7]
+    static let abiIdentityHex = "f477a8488d3f96715e987f7014dcd0aa76ba53b70575118e20ef238b600d4094"
+    static let abiIdentity: [UInt8] = [0xf4, 0x77, 0xa8, 0x48, 0x8d, 0x3f, 0x96, 0x71, 0x5e, 0x98, 0x7f, 0x70, 0x14, 0xdc, 0xd0, 0xaa, 0x76, 0xba, 0x53, 0xb7, 0x05, 0x75, 0x11, 0x8e, 0x20, 0xef, 0x23, 0x8b, 0x60, 0x0d, 0x40, 0x94]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -256,7 +256,7 @@ enum PWShmLayout {
 ///
 /// `execSpawn` is the C worker's `posix_spawn` attempt kind, dispatched
 /// from wire requests with `kind="exec", action="spawn"` via
-/// `CWorkerOrchestrator.mapAttemptKindOrNil`. See docs/PolicyWitness.md →
+/// `mapAttemptKindOrNil` in CWorkerRequestPlanning.swift. See docs/PolicyWitness.md →
 /// Attempt kinds for the wire contract.
 enum PWAttemptKind: UInt32 {
     case none           = 0

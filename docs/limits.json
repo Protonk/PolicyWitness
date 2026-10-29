@@ -391,11 +391,11 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "sandboxCheckOperationMaxBytes"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "queryAdmissionFailure"
         }
       ],
@@ -433,11 +433,11 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "sandboxCheckFilterValueMaxBytes"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "queryAdmissionFailure"
         }
       ],
@@ -475,11 +475,11 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "probePlanLabelMaxBytes"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "queryAdmissionFailure"
         }
       ],
@@ -517,11 +517,11 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "specimenIdMaxBytes"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "requestAdmissionFailure"
         }
       ],
@@ -559,11 +559,11 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "requestLabelMaxBytes"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "requestAdmissionFailure"
         }
       ],
@@ -601,11 +601,11 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "testOverridePathMaxBytes"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "requestAdmissionFailure"
         }
       ],
@@ -782,7 +782,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "timeoutMsForCWorker"
         }
       ],
@@ -919,7 +919,7 @@
       "control": "Not enforced; no flag.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "validatorReleaseMarginMs"
         }
       ],
@@ -944,7 +944,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "timeoutMsForValidator"
         }
       ],
@@ -1742,7 +1742,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "admissionFailure"
         }
       ],
@@ -1805,7 +1805,7 @@
       "control": "Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "phaseCollectionBudgetMs"
         }
       ],
@@ -2115,7 +2115,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
           "symbol": "PWExtensionLimits"
         },
         {
@@ -2151,7 +2151,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
           "symbol": "PWExtensionLimits"
         },
         {
@@ -2187,7 +2187,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
           "symbol": "PWExtensionLimits"
         },
         {
@@ -2223,11 +2223,11 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
           "symbol": "PWExtensionLimits"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
           "symbol": "requestAdmissionFailure"
         }
       ],
@@ -2259,7 +2259,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
           "symbol": "PWExtensionLimits"
         },
         {
@@ -2498,7 +2498,7 @@
           "symbol": "PW_SHM_FRESH_READ_BYTES"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
           "symbol": "PWExtensionLimits"
         }
       ],

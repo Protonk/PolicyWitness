@@ -101,6 +101,16 @@ if get_option('xpc')
   pwrunner_contract = files(
     'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
     'runner/Sources/PWRunnerCore/PWRunnerCoding.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerRequest.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerExtension.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerDisposition.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerReply.swift',
   )
 
   # build.sh named this output pw-runner-client, which is not a Swift module
@@ -122,6 +132,9 @@ if get_option('xpc')
     'runner/Sources/PWRunnerCore/MonotonicDeadline.swift',
     'runner/Sources/PWRunnerCore/ValidatorClient.swift',
     'runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift',
+    'runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift',
+    'runner/Sources/PWRunnerCore/CWorkerStepResults.swift',
+    'runner/Sources/PWRunnerCore/CWorkerComparison.swift',
     'runner/Sources/PWRunnerCore/CWorkerDisposition.swift',
     'runner/Sources/PWRunnerCore/PWRunnerService.swift',
     'runner/Sources/PWRunnerCore/PWRunnerListener.swift',

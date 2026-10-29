@@ -216,3 +216,84 @@ a complete usable intermediate stage; it is not Stage 2 or full-workset
 acceptance. Wire versions, response goldens and ABI geometry remain unchanged.
 F1 remains unresolved. Proceed to the named Stage 2 extractions and their final
 combined source/build verification.
+
+## Stage 2 implementation candidate
+
+Implementation starts from clean Stage 1 acceptance
+`2de5b1c72e32ba5c14cc140f3df2d34e37ea2321`. The responsibility table above is now
+implemented: 91 declarations move from API into the ten named shared wire
+families, with each family's existing codecs and local validators. API retains
+the protocol, constants and generated versions. PWRunnerReply owns the existing
+policy-receipt, validator-ownership and extension-evidence cross-family checks,
+called from the run-result codecs. Their existing validation order and the
+encode/decode asymmetry remain intact.
+
+The four extracted host helpers leave both run overloads, bundle path selection
+and private output unwrapping in CWorkerOrchestrator. The complete run bodies
+are unchanged: admission precedes translation/acquisition; extension preparation
+and early erasure, phase-callback query planning, clock samples and budget,
+synchronous collection closure, worker invocation, partial-output recovery,
+failure precedence, phase assembly, delivery projection, erasure and reply
+construction retain their positions. No new acquisition, callback or runtime
+layer is introduced.
+
+All Stage 1 boundaries are adopted without further visibility changes:
+
+| Boundary | Stage 2 callers and ownership |
+| --- | --- |
+| PWRunnerCoding | Request and Extension decoders call the same closed-key helper. Request's phase-action decoder directly uses internal RequestKey. Service/client JSON boundaries still call the same coding helpers. Coding is byte-identical to the accepted Stage 1 source. |
+| Unique slot association | CWorkerStepResults calls the existing CWorkerDisposition helper; resolveDisposition calls it within that owner. Duplicate identifiers still cannot select an arbitrary slot. |
+| makeWorkerSlot and workerParamsFromPolicy | Both run and admission retain their existing calls into CWorkerRequestPlanning. Its workerSlotsFromProbePlan, mapAttemptKind and pathFilterIsUnresolvable remain private with their callers. |
+| Explicit shared source set | Meson and native_sources independently name API, Coding and ten wire families. The client compiles those twelve sources plus its entry; the host compiles all twenty-six core sources plus its entry. No host service/listener/processing source enters the client. |
+
+The visibility audit also follows every private top-level helper and type:
+RetiredProfileKey stays with the run decoder in Reply; dispositionBasisSufficient
+stays with shared disposition validation; sandbox-result/outcome helpers stay
+with StepResults; anySlotNotCompleted stays with the classifier in host
+Disposition; both unwrap helpers stay with run. The private ordinaryPlan
+property remains with the complete RunSpec definition. Complete host and
+client typechecking resolves these boundaries, including the direct RequestKey
+caller missed by the initial Stage 1 syntax-only check.
+
+| Material adaptation | Relocation and preserved refutation |
+| --- | --- |
+| Override source rule | The parser, missing-definition diagnostic and RULES required input now name PWRunnerRequest. A control renames its real override definition and independently expects struct.missing, then restores it. Existing property/table mismatch expectations remain. |
+| Planner source rule | Function/contains lookup now reads CWorkerRequestPlanning. The local-table scan reads all five owners containing the former orchestrator implementation: Planning, Orchestrator, StepResults, Comparison and Disposition. All five are required RULES inputs; unrelated core files are not added to this convention. The lexer and existing rule IDs are unchanged. |
+| Planner rejection controls | Existing planner mutations move to Planning, while host-invariance mutations keep the host path. A second-owner table control independently expects planner.local_table; a renamed planner expects planner.missing_function; an unterminated string in Comparison expects planner.unterminated_string. Restoration remains explicit. String parsing still precedes table/function inspection and returns the malformed-source diagnostic; existing combined local-table/missing-contains and entry-point combined-fault expectations remain unchanged. |
+| Client membership controls | The missing-Coding mutation now supplies an independent literal list of all eleven other shared sources, so it omits only Coding and retains the exact single missing-file diagnostic. The host-only Disposition addition still requires the exact unexpected-file diagnostic. Neither control derives its expectation from Meson or native_sources. |
+| Exec decoder mutation | exec_reader_mutations now changes and captures PWRunnerAttemptEvidence, the actual owner of the unchanged absent-metadata decode anchor. Its publication-bypass mutation remains in CWorker, and its rejection assertions, hashes and restoration are unchanged. Order-barrier discovery continues through native_sources; its driver mutation stays in CWorker. |
+| Current citations and accounts | Seventeen architecture and twenty-four limit source paths follow their actual symbols. The owning generators update ARCHITECTURE, WORKER and LIMITS. Runner/override/request/evidence accounts name the resulting owners. CWorker's action-mapping comment points to Planning. Historical observation paths/hashes and excluded plans remain unchanged. |
+| Identity | The owning generator updates the Swift, C-header and Python copies to f477a8488d3f96715e987f7014dcd0aa76ba53b70575118e20ef238b600d4094. No contract versions, ABI geometry or response goldens change. |
+
+The exact source comparison uses the fixed Stage 1 acceptance commit above.
+It partitions the API body into its 91 top-level declaration chunks, retaining
+attached comments/whitespace, and compares each destination's concatenation
+byte-for-byte after its import prefix. The retained API prefix also matches.
+For the host it compares the original admission, planning, step-builder,
+comparison and subprocess/disposition sections with the five resulting files,
+allowing only import prefixes, the admission extension wrapper, the original
+enum close and trailing-blank-line normalization. Both run overloads and all
+helper bodies are exact. Coding and every other core file match the baseline;
+CWorker differs only in its generated identity block and the source-citation
+comment. The other two identity outputs differ only in their generated blocks.
+The F1 symbol set, host-invariance functions and guarantee paragraph were
+separately compared unchanged; F1 remains unresolved.
+
+Local preparation passed:
+
+- Full `xcrun swiftc -typecheck -target arm64-apple-macosx26.0` over the 27-file
+  host source set and the 13-file client source set, with separate module names
+  and a temporary module cache. Both exit zero. Commands/diagnostics remain in
+  `/private/tmp/pw-r2-stage2-typecheck-oi9ni0dt`; these are local preparation,
+  not durable dispatcher evidence.
+- Static Meson/source-list comparison against native_sources' independent
+  twelve-file contract expectation and the complete on-disk core inventory.
+- Python AST parsing for all four changed helper/control sources.
+- Contract, limits, architecture, build and worker-identity generator checks,
+  plus whitespace checking. Request/response/envelope versions remain 5/24/8.
+
+No signed build, dispatcher case or live test was run by this implementer.
+The commit containing this subsection identifies the candidate. Primary source
+review, the signed build, all default cases and the applicable mutation/BYOXPC
+controls must establish acceptance separately; these local preparation checks
+do not claim behavioral equivalence or final workset completion.

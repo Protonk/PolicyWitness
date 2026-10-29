@@ -105,7 +105,7 @@ step records. Verify withheld and retained evidence independently.
 **Adding a new override.**
 
 1. Update the optional property, initializer, `CodingKeys` and decoding in
-   [`PWRunnerTestOverrides`](Sources/PWRunnerCore/PWRunnerAPI.swift) together,
+   [`PWRunnerTestOverrides`](Sources/PWRunnerCore/PWRunnerRequest.swift) together,
    preserving accepted requests and meanings.
 2. Update [the key table](README.md#test-seam-_test_overrides). Source drift
    verifies property/table agreement, not admission or behavior.

@@ -44,10 +44,16 @@ must agree with the user guide. `planValidatorQueries` uses that set;
 independent runner unit tests pin its exclusion behavior.
 The checker also requires `planValidatorQueries` to branch on the shared set's
 `contains` call and rejects host-local pair collections, literal operation/filter
-entries and shadowing of the shared symbol. Comments, string examples and uses
-outside the planner cannot satisfy the membership check. This is a mechanical
-source convention, not a Swift semantic analysis; a deliberate refactor of the
-condition requires reviewing the guard alongside the runtime unit tests.
+entries and shadowing of the shared symbol. Function lookup reads
+`CWorkerRequestPlanning.swift`; the local-table scan covers it and the
+orchestrator, step-result, comparison and disposition owners. All five are
+declared rule inputs, and a rejection control places a table in a second owner.
+Controls also remove the planner and request-override definitions from their
+owners and leave a malformed string in an extracted host owner. Comments,
+string examples and uses outside the planner cannot satisfy the membership
+check. This is a mechanical source convention, not a Swift semantic analysis;
+a deliberate refactor of the condition requires reviewing the guard alongside
+the runtime unit tests.
 
 The host-source check covers Swift and C sources and headers under
 `runner/Sources/`. It rejects direct calls/declarations and string-named

@@ -33,6 +33,7 @@ sys.path.insert(0, str(ROOT / 'tests/suites/source_drift'))
 import check  # noqa: E402  (the rule implementation; every scenario hands it a fixture tree)
 
 HOST = Path('runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift')
+PLANNER_SOURCE = Path('runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift')
 CALL = 'if predictionUnavailableOpFilters.contains(PredictionUnavailablePair(operation: check.operation, filterKind: kind)) {'
 HOST_BINDING = '@_silgen_name("sandbox_check") func forbidden() -> Int32'
 RULES_BY_ID = {rule.id: rule for rule in check.RULES}
@@ -212,9 +213,10 @@ def reversed_order_control(repo, out, scenarios, forward):
 
 def planner_scenarios(repo):
     """The host planner must consume the shared exclusion set and nothing else."""
-    original = (repo / HOST).read_text()
+    original = (repo / PLANNER_SOURCE).read_text()
     if original.count(CALL) != 1:
         raise AssertionError('fixture requires the current planner membership condition')
+    assert original.count('func planValidatorQueries(') == 1, 'fixture requires the planner definition'
     mirror = '''
 private let hostExclusions: Set<PredictionUnavailablePair> = [
     .init(operation: "iokit-open-service", filterKind: PWRunnerWire.sandboxFilterIokitRegistryEntryClass),
@@ -237,6 +239,8 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
         ('shadow-shared', original.replace(CALL, 'let predictionUnavailableOpFilters = knownFilterKinds\n        ' + CALL),
          local, 'shadow the shared set'),
         ('missing-call', no_call, missing, contains),
+        ('missing-function', original.replace('func planValidatorQueries(', 'func absentPlanner(', 1),
+         ['planner.missing_function'], 'could not locate planValidatorQueries'),
         ('comment-only-call', no_call.replace('if false {', '// ' + CALL + '\n        if false {'), missing, contains),
         ('nested-comment-only-call', no_call.replace('if false {', '/* outer /* nested */ ' + CALL + ' */ if false {'), missing, contains),
         ('string-only-call', no_call.replace('if false {', 'let example = "' + CALL + '"\n        if false {'), missing, contains),
@@ -246,7 +250,16 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
         ('string-table', original + '\nlet example = """\n' + mirror + '\n"""\n', clean, None),
         ('restored', original, clean, None),
     ]
-    return [Scenario(name, {HOST: source}, {PLANNER: keys}, diagnostic) for name, source, keys, diagnostic in rows]
+    scenarios = [Scenario(name, {PLANNER_SOURCE: source}, {PLANNER: keys}, diagnostic) for name, source, keys, diagnostic in rows]
+    comparison = Path('runner/Sources/PWRunnerCore/CWorkerComparison.swift')
+    comparison_source = (repo / comparison).read_text()
+    scenarios += [
+        Scenario('table-in-extracted-owner', {comparison: comparison_source + mirror}, {PLANNER: local}, table),
+        Scenario('malformed-extracted-owner', {comparison: comparison_source + '\nlet malformed = "'},
+                 {PLANNER: ['planner.unterminated_string']}, 'unterminated Swift string in planner guard'),
+        Scenario('extracted-owner-restored', {comparison: comparison_source}, {PLANNER: clean}),
+    ]
+    return scenarios
 
 
 def host_scenarios(repo):
@@ -283,13 +296,22 @@ def meson_scenarios(repo):
     assert original.count(worker_line) == 1
     client_line = "    pwrunner_contract, files('runner/Clients/PWRunnerClient/main.swift'),"
     assert original.count(client_line) == 1, 'fixture requires the explicit client contract boundary'
+    client_without_coding = [
+        'PWRunnerAPI', 'PWRunnerRequest', 'PWRunnerExtension',
+        'PWRunnerPathEvidence', 'PWRunnerAttemptEvidence', 'PWRunnerPredictionEvidence',
+        'PWRunnerStepEvidence', 'PWRunnerLifecycleEvidence', 'PWRunnerDisposition',
+        'PWRunnerProfileCapture', 'PWRunnerReply',
+    ]
+    client_without_coding_line = '    files(' + ', '.join(
+        repr('runner/Sources/PWRunnerCore/' + name + '.swift') for name in client_without_coding
+    ) + ", 'runner/Clients/PWRunnerClient/main.swift'),"
     rows = [
         ('meson-core-file-dropped', original.replace(core_line, ''),
          ["  meson.build: PWRunner lacks 'runner/Sources/PWRunnerCore/PathUtils.swift' which is in the tree"]),
         ('meson-core-file-added', original.replace(core_line, core_line + "    'runner/Sources/PWRunnerCore/Missing.swift',\n"),
          ["  meson.build: PWRunner has 'runner/Sources/PWRunnerCore/Missing.swift' which the tree does not expect"]),
         ('meson-client-shared-file-dropped', original.replace(client_line,
-            "    files('runner/Sources/PWRunnerCore/PWRunnerAPI.swift', 'runner/Clients/PWRunnerClient/main.swift'),"),
+            client_without_coding_line),
          ["  meson.build: pw-runner-client lacks 'runner/Sources/PWRunnerCore/PWRunnerCoding.swift' which is in the tree"]),
         ('meson-client-host-file-added', original.replace(client_line,
             "    pwrunner_contract, files('runner/Sources/PWRunnerCore/CWorkerDisposition.swift', 'runner/Clients/PWRunnerClient/main.swift'),"),
@@ -547,9 +569,11 @@ def rule_gap_scenarios(repo):
     swift = Path('runner/Sources/PWRunnerCore/CWorker.swift')
     header = Path('controller/tools/pw_probe_runner/pw_probe_runner_abi.h')
     runner_readme = Path('runner/README.md')
+    request = Path('runner/Sources/PWRunnerCore/PWRunnerRequest.swift')
     guide = Path('docs/PolicyWitness.md')
     architecture = Path('docs/ARCHITECTURE.md')
-    source = {path: (repo / path).read_text() for path in (coverage, swift, header, runner_readme, guide, architecture)}
+    source = {path: (repo / path).read_text() for path in (coverage, swift, header, runner_readme, request, guide, architecture)}
+    assert source[request].count('struct PWRunnerTestOverrides: Codable {') == 1, 'fixture requires the override definition'
 
     def rows_under(path, heading):
         lines = source[path].split('\n')
@@ -618,7 +642,11 @@ def rule_gap_scenarios(repo):
                  {runner_readme: with_after(runner_readme, seam_first, renamed(seam_first, 'worker_executable_path', 'bogus_override'))},
                  {OVERRIDES: ['test_overrides.unknown_row']},
                  "runner/README.md's test-seam table lists 'bogus_override' but PWRunnerTestOverrides has no such property"),
-        Scenario('rule-test-overrides-restored', {runner_readme: source[runner_readme]}, {OVERRIDES: []}),
+        Scenario('rule-test-overrides-missing-definition',
+                 {request: source[request].replace('struct PWRunnerTestOverrides: Codable {', 'struct AbsentOverrides: Codable {', 1)},
+                 {OVERRIDES: ['struct.missing']},
+                 'could not locate PWRunnerTestOverrides in runner/Sources/PWRunnerCore/PWRunnerRequest.swift'),
+        Scenario('rule-test-overrides-restored', {runner_readme: source[runner_readme], request: source[request]}, {OVERRIDES: []}),
         Scenario('rule-pair-document-only', {guide: with_after(guide, pair_line, '- `(control-op, control_filter)` control')},
                  {PAIRS: ['prediction.docs_only']},
                  "('control-op', 'control_filter') in docs (docs/PolicyWitness.md) but missing from swift (ProbeRunner.swift)"),
@@ -777,11 +805,11 @@ def entry_point_scenarios(repo, out):
     """The command itself: exact exit status, the summary and facts lines, stderr in table order, every rule reported."""
     readme = Path('AGENTS.md')
     manifest = Path('meson.build')
-    originals = {path: (repo / path).read_text() for path in (readme, manifest, HOST)}
+    originals = {path: (repo / path).read_text() for path in (readme, manifest, HOST, PLANNER_SOURCE)}
     declared = declared_rules(repo)
     core_line = "    'runner/Sources/PWRunnerCore/PathUtils.swift',\n"
     route = re.search(r'\[[^\]\n]+\]\(runner/AGENTS\.md#sandboxed-automation-harnesses\)', originals[readme])[0]
-    mirror_three = originals[HOST].replace(CALL, CALL.replace('predictionUnavailableOpFilters', 'hostExclusions')) + \
+    mirror_three = originals[PLANNER_SOURCE].replace(CALL, CALL.replace('predictionUnavailableOpFilters', 'hostExclusions')) + \
         '\nprivate let hostExclusions: Set<PredictionUnavailablePair> = []\n'
 
     def order_of(stderr, markers):
@@ -844,7 +872,7 @@ def entry_point_scenarios(repo, out):
     for name, changes, expect in [
         ('entry-baseline', {}, expect_baseline),
         ('entry-combined-faults', {manifest: originals[manifest].replace(core_line, ''), readme: originals[readme].replace(route, '', 1),
-                                   HOST: mirror_three}, expect_combined),
+                                   PLANNER_SOURCE: mirror_three}, expect_combined),
         ('entry-refusal-with-fault', {readme: originals[readme].replace(route, 'see <!-- a -- b ' + route + ' -->', 1),
                                       HOST: originals[HOST] + '\n' + HOST_BINDING + '\n'}, expect_refusal),
         ('entry-restored', {}, expect_baseline),

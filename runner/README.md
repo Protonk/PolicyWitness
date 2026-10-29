@@ -21,10 +21,16 @@ executable; it does not build the shipped service bundle.
 
 | Area | Sources and responsibility |
 | --- | --- |
-| Wire types and admission | [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift): XPC protocol, Codable request/reply types and evidence validation; [PWRunnerCoding.swift](Sources/PWRunnerCore/PWRunnerCoding.swift): closed-object key checking and JSON encoding/decoding shared by host and client. |
+| Shared wire entry | [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift): XPC protocol, wire constants and versions; [PWRunnerCoding.swift](Sources/PWRunnerCore/PWRunnerCoding.swift): closed-object key checking and JSON encoding/decoding. These and the wire families below compile in host and client. |
+| Requests and extensions | [PWRunnerRequest.swift](Sources/PWRunnerCore/PWRunnerRequest.swift): ordinary requests, phases, overrides and refusal records; [PWRunnerExtension.swift](Sources/PWRunnerCore/PWRunnerExtension.swift): extension declarations, interventions, issuer/delivery/event records and local validity rules. |
+| Attempt and path evidence | [PWRunnerAttemptEvidence.swift](Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift): native attempt records, codecs and local read/write/exec validity; [PWRunnerPathEvidence.swift](Sources/PWRunnerCore/PWRunnerPathEvidence.swift): identities, path forms and their codecs. |
+| Prediction and step evidence | [PWRunnerPredictionEvidence.swift](Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): native query and validator records, codecs and association; [PWRunnerStepEvidence.swift](Sources/PWRunnerCore/PWRunnerStepEvidence.swift): step/comparison/ordering records and ordered-query eligibility. |
+| Lifecycle and disposition evidence | [PWRunnerLifecycleEvidence.swift](Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift): worker publications, host waits and subprocess records; [PWRunnerDisposition.swift](Sources/PWRunnerCore/PWRunnerDisposition.swift): claims, issues, lifecycle projection and integrity validation. |
+| Reply and profile evidence | [PWRunnerReply.swift](Sources/PWRunnerCore/PWRunnerReply.swift): phase/run codecs and checks joining families; [PWRunnerProfileCapture.swift](Sources/PWRunnerCore/PWRunnerProfileCapture.swift): compiled-profile records and local validity. |
 | Service lifecycle | [PWRunnerService.swift](Sources/PWRunnerCore/PWRunnerService.swift): caller authorization, shared single-use admission, request handling, reply degradation and host retirement. |
 | Listener and bundle | [PWRunnerListener.swift](Sources/PWRunnerCore/PWRunnerListener.swift): listener selection; [Services/PWRunner/](Services/PWRunner/): entry point, Info.plist and entitlements. |
-| Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): query planning, driver invocation, disposition, classification and comparisons; [CWorkerDisposition.swift](Sources/PWRunnerCore/CWorkerDisposition.swift): unique slot association shared by step assembly and disposition. |
+| Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): admission, extension preparation/erasure, per-phase collection, driver invocation and final reply sequence; [CWorkerRequestPlanning.swift](Sources/PWRunnerCore/CWorkerRequestPlanning.swift): request translation, capacity checks, refusal assembly and fresh query planning. |
+| Host result construction | [CWorkerStepResults.swift](Sources/PWRunnerCore/CWorkerStepResults.swift): query/attempt step assembly; [CWorkerComparison.swift](Sources/PWRunnerCore/CWorkerComparison.swift): ordering and comparison construction; [CWorkerDisposition.swift](Sources/PWRunnerCore/CWorkerDisposition.swift): unique slot association, disposition, subprocess projection and outcome classification. |
 | Child drivers | [CWorker.swift](Sources/PWRunnerCore/CWorker.swift): worker launch, shared memory, publication polling and the shared child lifecycle observer; [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift): concurrent probe writes/verdict reads and partial-evidence collection. |
 | Extension preparation | [ExtensionIssuer.swift](Sources/PWRunnerCore/ExtensionIssuer.swift): target resolution/metadata, separate issuer lifetime, bounded transient token delivery and host erasure. |
 | Time and native shim | [MonotonicDeadline.swift](Sources/PWRunnerCore/MonotonicDeadline.swift): deadlines and policy-pipe delivery; [PWCWorkerShim/](Sources/PWCWorkerShim/): fixed-argument shared-memory opening and acquire/release helpers. |
@@ -246,8 +252,8 @@ retain the request for that fact.
 | `worker_kill_before_publish_slot` | integer slot index | Disabled when absent or negative. If the slot is reached, requests SIGKILL on the worker after dispatch returns and before its `completed` flag is stored. Dispatch can refuse without making a native attempt. Observed started progress with no published result does not recover an unpublished native return or identify a signal's sender or policy cause. |
 
 Decoding accepts representable integers. The host floors deadline overrides in
-[`timeoutMsForCWorker`](Sources/PWRunnerCore/CWorkerOrchestrator.swift) and
-[`timeoutMsForValidator`](Sources/PWRunnerCore/CWorkerOrchestrator.swift).
+[`timeoutMsForCWorker`](Sources/PWRunnerCore/CWorkerRequestPlanning.swift) and
+[`timeoutMsForValidator`](Sources/PWRunnerCore/CWorkerRequestPlanning.swift).
 It forwards only positive delay/signal values and nonnegative slot indexes; the worker's
 [`parse_args`](../controller/tools/pw_probe_runner/pw_probe_runner.c) enforces
 their upper bounds. A rejected native argument can stop the child before the

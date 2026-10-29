@@ -33,7 +33,7 @@ The check has two halves:
         coverage matrix.
      g. The C and Swift C-worker attempt-kind enums agree by raw value
         and name.
-     h. Every stored property of PWRunnerTestOverrides in PWRunnerAPI.swift
+     h. Every stored property of PWRunnerTestOverrides in PWRunnerRequest.swift
         has a row in the `_test_overrides` table in runner/README.md, and
         every row names a property. That table is the only documented
         key list; runner/AGENTS.md points at it rather than carrying one.
@@ -92,8 +92,16 @@ RUNNER_SOURCES = "runner/Sources"
 CORE_DIR = "runner/Sources/PWRunnerCore"
 SHIM_DIRS = ("runner/Sources/PWCWorkerShim",)
 PWRUNNER_API = "runner/Sources/PWRunnerCore/PWRunnerAPI.swift"
+PWRUNNER_REQUEST = "runner/Sources/PWRunnerCore/PWRunnerRequest.swift"
 PROBE_RUNNER = "runner/Sources/PWRunnerCore/ProbeRunner.swift"
-CWORKER_ORCHESTRATOR = "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift"
+CWORKER_REQUEST_PLANNING = "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift"
+CWORKER_ORCHESTRATION_SOURCES = (
+    CWORKER_REQUEST_PLANNING,
+    "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+    "runner/Sources/PWRunnerCore/CWorkerStepResults.swift",
+    "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
+    "runner/Sources/PWRunnerCore/CWorkerDisposition.swift",
+)
 CWORKER_SWIFT = "runner/Sources/PWRunnerCore/CWorker.swift"
 PW_PROBE_RUNNER_ABI = "controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
 POLICYWITNESS_MD = "docs/PolicyWitness.md"
@@ -616,23 +624,28 @@ def swift_code(text: str) -> str:
 
 def check_prediction_unavailable_planner(tree: repository_tree.Tree) -> list[Problem]:
     prefix = '  prediction_unavailable planner: '
-    try:
-        code = swift_code(tree.read_text(CWORKER_ORCHESTRATOR))
-    except ValueError as exc:
-        return [problem("planner.unterminated_string", prefix + str(exc), CWORKER_ORCHESTRATOR)]
+    sources = {}
+    for path in CWORKER_ORCHESTRATION_SOURCES:
+        try:
+            sources[path] = swift_code(tree.read_text(path))
+        except ValueError as exc:
+            return [problem("planner.unterminated_string", prefix + str(exc), path)]
     problems = []
     # No local pair collection, literal operation/filter entry, or shadow of
     # the shared symbol. Dynamic construction of the current query pair stays
-    # valid. Check the whole host file so a table cannot move out of the function.
-    if (re.search(r'Set\s*<\s*PredictionUnavailablePair\s*>|\[\s*PredictionUnavailablePair\s*\]', code)
-            or re.search(r'(?:\.\s*init|\bPredictionUnavailablePair)\s*\(\s*operation\s*:\s*""\s*,\s*filterKind\s*:', code)
-            or re.search(r'\b(?:let|var)\s+predictionUnavailableOpFilters\b', code)):
-        problems.append(problem("planner.local_table",
-                                prefix + 'CWorkerOrchestrator.swift must not define a local exclusion table or shadow the shared set',
-                                CWORKER_ORCHESTRATOR))
+    # valid. Cover the extracted orchestration owners so moving a table outside
+    # the planner function or into another helper does not hide it.
+    for path, code in sources.items():
+        if (re.search(r'Set\s*<\s*PredictionUnavailablePair\s*>|\[\s*PredictionUnavailablePair\s*\]', code)
+                or re.search(r'(?:\.\s*init|\bPredictionUnavailablePair)\s*\(\s*operation\s*:\s*""\s*,\s*filterKind\s*:', code)
+                or re.search(r'\b(?:let|var)\s+predictionUnavailableOpFilters\b', code)):
+            problems.append(problem("planner.local_table",
+                                    prefix + path.rsplit('/', 1)[-1] + ' must not define a local exclusion table or shadow the shared set',
+                                    path))
+    code = sources[CWORKER_REQUEST_PLANNING]
     match = re.search(r'\bfunc\s+planValidatorQueries\b[^{}]*\{', code)
     if match is None:
-        return problems + [problem("planner.missing_function", prefix + 'could not locate planValidatorQueries', CWORKER_ORCHESTRATOR)]
+        return problems + [problem("planner.missing_function", prefix + 'could not locate planValidatorQueries', CWORKER_REQUEST_PLANNING)]
     start = end = match.end()
     depth = 1
     while end < len(code) and depth:
@@ -641,7 +654,7 @@ def check_prediction_unavailable_planner(tree: repository_tree.Tree) -> list[Pro
     if depth or not re.search(r'\bif\s+predictionUnavailableOpFilters\s*\.\s*contains\s*\(', code[start:end - 1]):
         problems.append(problem("planner.missing_contains",
                                 prefix + 'planValidatorQueries must use if predictionUnavailableOpFilters.contains(...)',
-                                CWORKER_ORCHESTRATOR))
+                                CWORKER_REQUEST_PLANNING))
     return problems
 
 
@@ -911,7 +924,7 @@ def _test_override_fields(text: str, name: str) -> set[str]:
     )
     match = struct_re.search(text)
     if match is None:
-        raise InputFailure("struct.missing", "could not locate PWRunnerTestOverrides in runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        raise InputFailure("struct.missing", "could not locate PWRunnerTestOverrides in runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
                            name)
     field_re = re.compile(r'^\s*(?:public\s+)?var ([a-z_][a-z0-9_]*)\s*:', re.MULTILINE)
     fields = {m.group(1) for m in field_re.finditer(match.group(1))}
@@ -921,7 +934,7 @@ def _test_override_fields(text: str, name: str) -> set[str]:
 
 
 def parse_test_override_fields(tree: repository_tree.Tree) -> set[str]:
-    return tree.parsed(PWRUNNER_API, _test_override_fields)
+    return tree.parsed(PWRUNNER_REQUEST, _test_override_fields)
 
 
 def parse_readme_test_override_rows(tree: repository_tree.Tree) -> set[str]:
@@ -1167,9 +1180,9 @@ RULES = (
     Rule("prediction_unavailable_agreement", check_prediction_unavailable_agreement,
          inputs=(required(PROBE_RUNNER), required(PWRUNNER_API), required(POLICYWITNESS_MD)), helpers=MARKDOWN_HELPERS),
     Rule("prediction_unavailable_planner", check_prediction_unavailable_planner,
-         inputs=(required(CWORKER_ORCHESTRATOR),)),
+         inputs=tuple(required(path) for path in CWORKER_ORCHESTRATION_SOURCES)),
     Rule("test_overrides_table_agreement", check_test_overrides_table_agreement,
-         inputs=(required(PWRUNNER_API), required(RUNNER_README)), helpers=MARKDOWN_HELPERS),
+         inputs=(required(PWRUNNER_REQUEST), required(RUNNER_README)), helpers=MARKDOWN_HELPERS),
     Rule("harness_guidance_routes", check_harness_guidance_routes,
          inputs=tuple(required(path) for path in HARNESS_GUIDANCE_FILES), helpers=MARKDOWN_HELPERS),
     Rule("cli_surface_agreement", check_cli_surface_agreement,

@@ -62,7 +62,7 @@ assert rc == 0, log
 rc, log = run('fixture-warm', [fixture], timeout=30)
 assert rc == 90, (rc, log)
 worker = package / 'Sources/PWRunnerCore/CWorker.swift'
-api = package / 'Sources/PWRunnerCore/PWRunnerAPI.swift'
+api = package / 'Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift'
 fixed_worker, fixed_api = worker.read_text(), api.read_text()
 gate = '        if completed != 1 {\n'
 absence = '        exec_observation = try container.decodeIfPresent(PWExecObservation.self, forKey: .exec_observation)\n'
@@ -80,7 +80,7 @@ try:
         worker.write_text(fixed_worker.replace(gate, '        if false { // deliberate publication bypass\n', 1)
                           if variant == 'decode_unpublished' else fixed_worker)
         api.write_text(fixed_api.replace(absence, invented, 1) if variant == 'invent_absent_metadata' else fixed_api)
-        for name, source in [('CWorker', worker), ('PWRunnerAPI', api)]:
+        for name, source in [('CWorker', worker), ('PWRunnerAttemptEvidence', api)]:
             shutil.copy2(source, OUT / (variant + '-' + name + '.swift'))
         rc, log = run(variant, [*SWIFT, 'run', '--package-path', package, '--scratch-path', scratch, 'PWRunnerCoreTests'], env=environment)
         failures = [line.strip() for line in log.splitlines() if line.strip().startswith('FAIL ')]

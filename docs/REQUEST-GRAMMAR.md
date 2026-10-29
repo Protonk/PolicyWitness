@@ -172,9 +172,11 @@ shadowed aliases are still refused. The selector unit tests pin that rule.
 
 ## What the implementation promises
 
-[PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) owns
-the request types. `CodingKeys` lists the allowed fields; explicit decoding
-rejects unknown names, missing required fields and wrong types. Parameter
+[PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift) owns
+the ordinary request types;
+[PWRunnerExtension.swift](../runner/Sources/PWRunnerCore/PWRunnerExtension.swift)
+owns extension declarations and interventions. `CodingKeys` lists the allowed
+fields; explicit decoding rejects unknown names, missing required fields and wrong types. Parameter
 names remain open. No additional schema language participates in parsing.
 
 [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift) checks
@@ -193,7 +195,7 @@ By contrast, unknown attempt/filter names and non-null fields that cannot be
 consumed refuse the whole specimen. PW does not run the recognized subset of
 a misspelled plan. Internal classifiers retain defensive unsupported-result
 handling for constructed or inconsistent inputs. In
-[`buildStepResults`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift),
+[`buildStepResults`](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift),
 an unsupported attempt uses `attempt.result_source: "synthetic"` with
 `missing_reason: "attempt_not_supported"`, even when handed a completed worker
 slot. This is not a public input acceptance rule; the defensive comparison

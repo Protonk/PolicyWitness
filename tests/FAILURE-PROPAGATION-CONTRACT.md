@@ -111,7 +111,7 @@ there is no specimen override that fabricates them.
 
 Use `runner_subprocess` as the authoritative process object. The following
 additive JSON locations are defined with producer/validity comments in
-[PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) and
+[PWRunnerLifecycleEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift) and
 [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift).
 They are host observations, not a new worker ABI or a fabricated worker failure
 record. Internal `CWorkerOutput` carries the same facts to the assembler.
@@ -948,7 +948,7 @@ oversized source when driven directly; normal CLI oversized source is a host
 source sizes and retain their separate host and child observations.
 
 `ValidatorClient.swift` owns the record acceptance rules, stated beside its
-byte-frame decoder. `PWRunnerAPI.swift` owns the JSON representation. A complete
+byte-frame decoder. `PWRunnerPredictionEvidence.swift` owns the JSON representation. A complete
 allow/deny record requires native integer rc/errno, nonempty step ID/operation/
 filter type, kind, schema and outcome. Diagnostic outcomes require string error,
 but can omit native results; unfamiliar outcomes and extra raw JSON fields are

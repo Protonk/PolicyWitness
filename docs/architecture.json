@@ -1203,11 +1203,11 @@
           },
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
               "symbol": "PWRunnerRunSpec"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
               "symbol": "CodingKeys"
             }
           ],
@@ -1309,7 +1309,7 @@
           },
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
               "symbol": "PWRunnerRunResult"
             },
             {
@@ -1344,7 +1344,7 @@
               "symbol": "pw_capture_profile"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
               "symbol": "CompiledProfileCapture"
             }
           ],
@@ -1604,11 +1604,11 @@
               "symbol": "authorizedCaller"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
               "symbol": "CodingKeys"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
               "symbol": "admissionFailure(for"
             },
             {
@@ -1720,15 +1720,15 @@
               "symbol": "proceedOffset"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
               "symbol": "PWRunnerOrdering"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
               "symbol": "extensionEvidenceProblem"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
               "symbol": "collectionEvidenceConsistent"
             },
             {
@@ -1803,7 +1803,7 @@
           "short": "phase planning; bounded NDJSON",
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
               "symbol": "planValidatorQueries"
             },
             {
@@ -1838,7 +1838,7 @@
           "short": "join, or unavailable",
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
               "symbol": "ComparisonEvidence"
             },
             {
@@ -2030,7 +2030,7 @@
               "symbol": "extensionMeaningFailure"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
               "symbol": "requestAdmissionFailure"
             }
           ],
@@ -2142,7 +2142,7 @@
           "short": "issuer evidence",
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
               "symbol": "PWRunnerExtensionRecord"
             },
             {
@@ -9005,7 +9005,7 @@
           },
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
               "symbol": "planValidatorQueries"
             }
           ],
@@ -9035,7 +9035,7 @@
           },
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
               "symbol": "comparisonEvidence"
             }
           ],
@@ -10169,7 +10169,7 @@
               "symbol": "runCWorker"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
               "symbol": "comparisonEvidence"
             },
             {
@@ -10195,7 +10195,7 @@
           "label": "Host joins prediction records to attempt evidence",
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
               "symbol": "planValidatorQueries"
             }
           ],
