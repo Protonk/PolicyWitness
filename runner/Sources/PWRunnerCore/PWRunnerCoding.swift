@@ -2,7 +2,7 @@ import Foundation
 
 // Request objects are closed; dictionary keys inside policy.params are data.
 // CodingKeys owns both encoding and acceptance, so there is no second schema.
-private struct RequestKey: CodingKey {
+struct RequestKey: CodingKey {
     let stringValue: String
     let intValue: Int? = nil
     init(stringValue: String) { self.stringValue = stringValue }

@@ -12,12 +12,14 @@ authorized, and F1 remains unresolved.
 
 | Change | Existing callers | Named Stage 2 use |
 | --- | --- | --- |
-| Shared `PWRunnerCoding.swift`: move private RequestKey, rejectUnknownRequestKeys, pwRunnerEncodeJSON and pwRunnerDecodeJSON unchanged | Eleven request-object decoders plus host/client JSON boundaries | Common mechanics for separated request, extension and reply families |
+| Shared `PWRunnerCoding.swift`: move RequestKey, rejectUnknownRequestKeys, pwRunnerEncodeJSON and pwRunnerDecodeJSON; RequestKey has internal visibility | Eleven closed request-object decoders, the phase-action decoder's key discrimination, and host/client JSON boundaries | Common mechanics for separated request, extension and reply families |
 | Host-only `CWorkerDisposition.swift`: move uniquelyAssociatedWorkerSlots with internal visibility | buildStepResults and resolveDisposition | Disposition owner, preserving rejection of duplicate-ID association |
 | Make only makeWorkerSlot and workerParamsFromPolicy internal | Current run/admission translation | Calls from run into the separate request-planning owner |
 | Explicit shared-contract source list in Meson and independently declared expected set in native_sources.py | Shipped client and host | Add each wire-family owner without including host service/listener/processing |
 
-There is no unused layer. RequestKey remains private beside its helper.
+There is no unused layer. RequestKey is internal because both the closed-key
+helper and the phase-action decoder use it. This corrects the initial design's
+missed caller after the failed Stage 1 build recorded below.
 workerSlotsFromProbePlan, mapAttemptKind, pathFilterIsUnresolvable and local
 classifier/result helpers remain private beside their eventual callers.
 unwrapWorkerOutput and unwrapValidatorOutput stay private with run. Stage 1
@@ -116,7 +118,8 @@ generated identity. D2's factual account and repair-command corrections are
 already integrated. `swift_design` authored this stage; primary review and
 signed execution remain separate.
 
-The candidate follows all four Stage 1 rows above. PWRunnerCoding owns the
+Initial candidate `721653008e09280ab7ddecbb0088e8a564a5655e` follows the original
+Stage 1 design. PWRunnerCoding owns the
 private RequestKey, closed-object key check and sorted-key JSON helpers;
 existing names and call sites remain. CWorkerDisposition owns unique worker-slot
 association, immediately called by step assembly and disposition resolution.
@@ -150,3 +153,29 @@ dispatcher was run by this implementer. Primary review, signed Stage 1 build,
 required verification and acceptance precede Stage 2. The commit containing
 this subsection identifies the candidate; subsequent acceptance must identify
 its actual build and run sources separately.
+
+## Stage 1 compilation correction
+
+The primary executor's signed build of `72165300` failed before packaging:
+both host and client compilation could not find RequestKey in
+PWRunnerPhaseAction.init(from:). The design and extraction audit had counted
+rejectUnknownRequestKeys callers but missed the phase-action decoder's direct
+use of the key type to select the extension representation. Moving that type
+with private visibility made an existing caller inaccessible across files.
+This is a refactor regression, not a baseline behavioral finding.
+
+The correction changes only RequestKey from private to internal. An explicit
+usage audit across runner finds its declaration, its use in the closed-key
+helper, and the phase-action decoder's two direct references; no new caller or
+operation is added. The current design row above now records that existing
+caller and its Stage 2 Request/Coding boundary. The original failed candidate
+and its earlier private-visibility design remain recoverable in git.
+
+The three generated identity copies now carry
+`6f777628d0b0f233f6e26f99222e8f78cd0920bb94b842b5bf2d0c4b2e29a9a7`.
+The initial inverse body comparison remains accurate but establishes only the
+stated source transformation. Swift frontend parsing checks syntax and did not
+resolve this access-control error; neither check established host/client
+compilation. No test or build was run by the correction implementer. The
+primary executor will rerun the same signed build command against the corrected
+commit and then perform the Stage 1 verification selection.
