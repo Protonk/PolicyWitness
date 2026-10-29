@@ -1,16 +1,14 @@
 # Workset checkpoint
 
-Current phase: R1 accepted; R2 Stage 1 is next. Main is clean at R1 acceptance
-`96d0328e` before this checkpoint-only update. No build, dispatcher or owned
+Current phase: R2 Stage 1 accepted; Stage 2 is next. The corrected Stage 1 source is `9af4d3d1`, with matching signed build 998. No build, dispatcher or owned
 native/external service is active. C0, E1/E2, R1, D1 and the bounded D2
-investigation/corrections have accepted milestones. Swift implementation has
-not begun. Final combined verification and the unresolved F1 decision remain.
+investigation/corrections have accepted milestones. Swift Stage 1 is implemented and verified; Stage 2 has not begun. Final combined verification and the unresolved F1 decision remain.
 
 ## Next work
 
-1. Agent `swift_design` revalidates the recorded R2 design against R1, implements
-   only Stage 1, commits and stops for primary review/build/verification.
-2. After Stage 1 acceptance, implement and verify Stage 2. Preserve shared
+1. Agent `swift_design` implements the named Stage 2 owners against accepted
+   Stage 1, commits and stops for primary review/build/verification.
+2. Verify Stage 2 and the combined final source. Preserve shared
    client/host contract ownership, encode/decode asymmetry, query ordering and
    actual moved-code reach through mutation controls. No CWorker driver refactor.
 3. Reconcile D2 facts and verification against final source, run the matching
@@ -52,7 +50,7 @@ is absent from the API set, and controls derive that family from the same set.
 The recommendation is to preserve the guarantee with the missing names and
 independently specified rejection controls. The user explicitly chose to keep
 it unresolved for later discussion. No repair or expectation change is
- authorized; this is not a final accepted disposition. Evidence and implications
+authorized; this is not a final accepted disposition. Evidence and implications
 remain in the absorbed D2 finding and original D1 commits.
 
 D2 implemented only bounded ownership/citation/table-account corrections,
@@ -80,3 +78,10 @@ were empty afterward. Use exact durable ownership before any later external
 runner cleanup. Builds/tests share the checkout lock; never unlink it or bypass
 retention/resource cleanup helpers. Stop starting work on a user interruption,
 settle active ownership and commit a resumable checkpoint after execution stops.
+
+Swift Stage 1: candidate `72165300` failed host/client compilation because the
+phase-action decoder also uses moved RequestKey. Correction `9af4d3d1` makes
+that key internal and records the missed caller without changing its body.
+Signed build 998 passed all87 selected cases in pinned
+`workset-r2-stage1-01`; no skips/unrun/errors/sleep/app changes. Exact source
+transformation and current callers were reviewed. Stage 2 is now authorized.

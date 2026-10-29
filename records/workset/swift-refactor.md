@@ -179,3 +179,40 @@ resolve this access-control error; neither check established host/client
 compilation. No test or build was run by the correction implementer. The
 primary executor will rerun the same signed build command against the corrected
 commit and then perform the Stage 1 verification selection.
+
+## Stage 1 acceptance
+
+Primary-agent review accepts corrected source
+`9af4d3d14148710a9cb3db33d52c17fdc24f3b93`. The original failed candidate
+`72165300` remains failed, with its missed current caller and correction above.
+Primary independent inverse comparison confirmed exact relocated helper bodies
+and otherwise unchanged API/orchestrator bodies, apart from the named visibility
+changes; the explicit RequestKey caller audit supported its additional correction.
+Every introduced boundary has current callers and the named Stage 2 use. No
+unused preparatory module or new resource acquisition remains.
+
+The same signed build command succeeded on the corrected commit as v0.3.3
+build 998, `v0.3.3-145-g9af4d3d1`, with identity
+`6f777628d0b0f233f6e26f99222e8f78cd0920bb94b842b5bf2d0c4b2e29a9a7`.
+Both shipped host and client compiled the explicit shared source set, source
+and native identity closure passed, and all seven executable signatures/two
+seals verified with the intended Developer ID, runtime and secure timestamps.
+The client contains Coding and API but no host processing file.
+
+Run `workset-r2-stage1-01`, `20261029T225222Z_5ff4f3ef`, passed **87/87** selected preservation
+cases at the clean corrected source and matching app. The selection is the
+eight default-suite populations and nine explicit blackbox/witness IDs described
+in the design above; exact IDs/configuration remain in the run's plan. No skips,
+unrun cases, harness errors, observed sleep or app mutation. Elapsed dispatcher
+time was 265.699 seconds. It includes all 480 Swift tests, native
+controls/layout, actual admission and validator failure boundaries, source
+mutation controls (including both client membership rejections), independent
+readers and live phase/extension/publication observations. The run is pinned;
+raw output remains local/gitignored.
+
+This acceptance is primary-agent self-review of source and execution against
+the Stage 1 criteria, following implementation by `swift_design`. It establishes
+a complete usable intermediate stage; it is not Stage 2 or full-workset
+acceptance. Wire versions, response goldens and ABI geometry remain unchanged.
+F1 remains unresolved. Proceed to the named Stage 2 extractions and their final
+combined source/build verification.
