@@ -1,76 +1,67 @@
 # Workset checkpoint
 
-Current phase: E2, public extension addition and crossed follow-on; C0 and E1 complete.
+Current phase: E2 accepted; R1 design preparation is next. C0, E1, E2 and D1
+are complete. D2 runs in the isolated documentation worktree. Neither required
+core refactor has begun. The E2 seal records acceptance separately from tested
+source `b565c1b` and signed runtime `7426fc0` (v0.3.3 build 977).
 
-The intake baseline is `bf7e97faab75754efe719b0bad20e83b67762c15`.
-E2 production edits are in progress in the main working tree. E1 added independent native
-directory equipment and its tests/documentation at `3ce5d8f`, corrected at
-`b6cac0d735f0384fc50d94a6eba6ab18e9323763` after a failed candidate run.
-The execution companion and intake record are committed as `4b18284`.
-The initial counterfactual C0.2 is frozen at
-`0c22d2565b42f543bd6334a1d09f95781ef09386`; the C0 acceptance record names the
-review and its ownership-order clarification. The original account is `6cd868b`.
+## Recoverable states
 
-Next work:
+- Intake `bf7e97faab75754efe719b0bad20e83b67762c15`; execution companion `4b18284`.
+- Initial counterfactual `0c22d2565b42f543bd6334a1d09f95781ef09386`, sealed `cf0136b`.
+  It remains frozen; no retrospective evaluation or pytest trial is authorized.
+- E1 native directory candidate `b6cac0d`, acceptance `d2f3bbf`.
+- E2 native matched/crossed source `8aa7402`, integration design `ad1c1ca`,
+  implementation `7426fc0`, harvest `3ff8bf2`, genuine captures `a7c1408`,
+  terminal-enum mutation adaptation `b565c1b`. E2 seal names all retained runs,
+  source/build applicability, reviewers, acceptance and limits.
+- D1 original chain `def5de0` through `cd6adaa` was merged intact; accepted
+  `7562d24`. D2 agent `binding_investigation` works from that accepted checkpoint
+  in `/private/tmp/pw-workset-binding`.
 
-1. Design and implement the smallest supported public directory read-write
-   addition, preserving legacy public file-operation meanings; complete the
-   matched/crossed follow-on and integrated verification before the E2 seal.
-2. Conduct D2 after accepted D1, refreshing facts against E2 before applying
-   supported corrections or final acceptance. Keep shared machinery edits
-   serialized with production and refactor adaptations.
-3. Seal the experimental stage before either core refactor begins.
+## Next work
 
-E1 is accepted by primary-agent self-review with `review_directory_native`
-source review. Signed native run `workset-native-directory-02` passed both
-native cases at `b6cac0d`, with all five directory scenarios and eighteen read
-scenarios complete. `workset-native-structure-01` passed the source/catalog and
-generator/link cases. Their pins are committed with the E1 findings; the
-directory-native record states provenance and the structural prose-delta limit.
+1. Read the C modularization plan, complete its ownership/lifetime/order design,
+   then execute R1 with relocated controls retaining production reach.
+2. Execute the bounded two-stage Swift plan, preserving client/host separation.
+   C and Swift execution remain sequential unless a reviewed boundary permits
+   independent work. No CWorker driver refactor is included.
+3. Integrate D2's supported, bounded factual ownership/citation and generator
+   repair-hint changes separately from refactor adaptations. Refresh its account
+   against intervening E2 and refactor source before acceptance.
+4. Verify the combined final source/build, reconcile retention and findings,
+   then retire only accepted plans/records. F1 remains unresolved, so do not
+   treat final workset retirement as authorized by this intermediate seal.
 
-The matched/crossed follow-on passed both native cases at `8aa7402` in pinned
-`workset-native-crossed-01`: eight directory scenarios, eighteen original read
-scenarios. Its compact finding is accepted; the full E2 stage remains open.
-Integration design `ad1c1ca` names authority admission and fresh-write evidence.
-Agent `design_extension_integration` owns Swift source/tests and Rust disposition;
-agent `extension_consumers_tests` owns independent Python readers and integrated
-test apparatus. Main owns C, ABI checking, registration, generators, docs and
-final verification. No agent may start core refactoring. Builds/live runs await
-a coherent committed candidate; the native fresh-write substitution case passed
-one developmental working-tree run, not credited as stage verification.
+D2 is authorized to correct documents-graph/README ownership and table-count
+facts (including actual WorkerIdentityTests citations) plus canonical Python
+repair hints and independent controls. It may not change F1 or a checker's
+promised guarantee. It is not writing or preparing a handoff for CHECK.
 
-The read-only C0 reviewer is complete. D1 completed in the isolated worktree
-`/private/tmp/pw-workset-binding`, examined source `cf0136b`, and was integrated
-by merge through `cd6adaa`, preserving its prediction/design/evaluation commits.
-Primary review accepted the investigation while retaining F1 unresolved.
-Agent `binding_investigation` may now conduct the D2 investigation in that
-isolated worktree after updating to this accepted checkpoint. Initial D2 writes
-are limited to its associated plan and owned records; proposed executable or
-permanent-document changes require coordination before touching shared paths.
-The worktree creation required the same command outside the automation sandbox
-after sandbox refusal of `.git/worktrees` creation.
+F1 remains unresolved by explicit user instruction, repeated at this checkpoint:
+existing documented host-source rejection of extension issue/consume/release
+calls is absent from the API set, and controls derive that family from the same
+set. The recommendation is to preserve the guarantee with missing names and
+independently specified rejection controls. No repair or expectation change is
+authorized; unresolved for later discussion is not a final accepted disposition.
 
-Temporary D1 evidence pins protect `runs/drift-plan-investigation-20261027-02`
-(source `1612eb5e0bd503f0185dda9cda0331be0d9a764f`),
-`runs/drift-cost-candidate-01` (source
-`22f688d7d4c1aefe890c41db03a897141796f0e9`), and
-`runs/drift-acceptance-fixes-03` (source not yet established). Run IDs are in
-`tests/RETAINED.json`; these are historical cost inputs, not current behavioral
-verification. Their completed ownership was verified and pins written through
-the retention helper while holding the checkout lock. Revisit after D1.
+## Evidence and resources
 
-No running build/test, workset-owned native child or external runner.
-D1 finding F1 remains unresolved by explicit user instruction: the documented host-source rejection of
-extension issue/consume/release calls is absent from its API set, and controls
-derive that family from the same set. The recommendation is to preserve the
-guarantee with the missing names and independently specified rejection controls.
-The user chose to keep it unresolved for later discussion. No repair or
-expectation change is authorized, and this is not an accepted final disposition.
+No main-checkout build/test is running. The BYOXPC witness completed and verified
+cleanup of its owned user service; default registry/reconcile inspections are
+empty. No workset-owned native child or external runner remains. D2 may run
+isolated offline source cases; coordinate before shared live services or signing.
 
-Supported `make prune` preview/apply removed thirteen eligible unpinned runs
-after D1 confirmed that only its three pinned inputs were needed. They were
-the eleven old drift/planning runs plus the E1 baseline and failed first
-directory candidate. Their compact findings remain committed; no future claim
-may imply their raw output remains available. All five workset pins and release
-pins survived. The separate pytest-trial worktree, release material and
-`.release-rotation` remain untouched; cleanup reported no failures.
+Pins in `tests/RETAINED.json` retain E1 native/structure, crossed follow-on, E2
+captures/coordinated/final, and three historical D1 inputs. The coordinated E2 run
+has 81 passes and one failed obsolete fixture anchor; the explicit rerun passes.
+Do not rewrite that failure. The shape-harvest run supplies observations only.
+The D1 third pin has null manifest source: its dirty source is established by
+its attached source snapshot/delta, not by a clean commit claim.
+
+Supported pruning previously removed thirteen eligible unpinned runs after D1
+confirmed its three protected inputs. Compact failure findings remain in git;
+pruned raw evidence is not available. Revisit unpinned output after new evidence
+is secured. Release pins, `.release-rotation`, and the unrelated pytest-evidence
+worktree remain untouched. Never unlink the checkout lock or bypass cleanup
+ownership helpers.
