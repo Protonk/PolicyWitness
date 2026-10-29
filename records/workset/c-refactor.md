@@ -243,3 +243,49 @@ Primary verification and structural review remain pending. In particular, the
 204-case selection (201 defaults plus the three planned opt-in controls), signed
 compiler closure, native ledger equality and rejected mutations have not yet
 run against this candidate. F1 remains unresolved and untouched.
+
+## R1 acceptance
+
+Tested source is `341f9441bc96d147a1bc68b4c1df47e1f5464cb7`; this later
+acceptance account is not that source. Primary review independently expanded
+both private includes and reconstructed the original worker exactly after
+removing the four relocated system includes. Read-only reviewer
+`review_public_extension` independently confirmed that comparison, required
+owners, lifecycle/state mutation boundaries, unchanged goldens/oracles and
+actual fixture interception. It found no substantive defect or acceptance gap.
+
+`make build IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)'`
+built and signed version 0.3.3 build 994, `v0.3.3-141-g341f9441`, from the clean
+candidate. Worker identity is the candidate digest above. Compiler dependency
+output contains both new headers; the configured source/identity closure check
+passed. All seven executables and two seals verified with the intended Developer
+ID/team, hardened runtime and secure timestamps. This was not a public release.
+
+Run `workset-r1-01`, `20261029T223004Z_941f9f72`, passed **204/204** cases at
+the unchanged clean candidate and matching app, with no skips, unrun cases,
+harness errors, observed sleep or app mutation. The dispatcher selection was
+constructed from all 201 current default IDs reported by `tests/run.sh --all
+--list`, plus native_clock, inheritance mutation_controls and
+order_barrier_mutations; the completed ID set was checked against that catalog.
+Elapsed dispatcher time was 756.539 seconds. The run and app inventory are pinned;
+raw output remains local/gitignored.
+
+The production exec control matched all 58 historical native-call rows, rejected
+all six evidence mutations at their designated unchanged assertions, and refused
+both missing-owner variants at the exact include boundary. Inheritance accepted
+the baseline and rejected environment/descriptor leaks. The order control
+accepted the baseline and rejected both worker/host bypasses through component
+gates and independent CLI effects. Native clock recorded 36 million usable
+continuous samples at timebase 125/3; its old-clock comparator remained a separate
+observation (six failures among nine runs), not a new guarantee or repair.
+Clock arithmetic, proceed precedence, fresh-write substitutions, C/Swift layout,
+all 480 Swift tests and integrated partial/failure/extension cases passed.
+
+The three structural improvements are accepted: exec bookkeeping is local to
+its component; timing rules/state origins and mutations are explicit; the
+lifecycle sequence can be followed without exec collection/cleanup internals.
+No behavior, wire version, ABI geometry or native oracle was changed to obtain
+these results. Adaptations belong to candidate `341f9441`, distinct from the
+prior D2 apparatus corrections. Final combined-source verification remains
+required after R2; the full refactor-stage seal awaits Swift completion. F1
+remains unresolved and was not altered or established by this passing run.

@@ -1,9 +1,9 @@
 # Workset checkpoint
 
-Current phase: E2 accepted; R1 design preparation is next. C0, E1, E2 and D1
+Current phase: R1 accepted; R2 Stage 1 is next. C0, E1, E2 and D1
 are complete. D2 findings and bounded corrections are accepted against combined
-source `bb92c21`; final source applicability and F1 remain open. R1 design preparation has begun; neither required core refactor has changed
-implementation. The E2 seal records acceptance separately from tested
+source `bb92c21`; final source applicability and F1 remain open. R1 implementation `341f9441` passed all 204 selected cases; Swift
+implementation has not begun. The E2 seal records acceptance separately from tested
 source `b565c1b` and signed runtime `7426fc0` (v0.3.3 build 977).
 
 ## Recoverable states
@@ -81,3 +81,17 @@ source. Retirement source/link checks passed in `workset-d1-retirement-01`;
 that run is pinned. D1 history remains at `cd6adaa`/`7562d24`; unresolved F1
 and historical cost pins remain. R1 design is accepted at `6e40887`. Swift
 read-only preparation is recorded, but implementation waits for R1 acceptance.
+
+R1 accepted source `341f9441`, signed build 994, worker identity
+`b307fc295883bbcdf4bdd2b2855ce8d6fe969eb93d104e54c7e775075bad6b0f`.
+Pinned `workset-r1-01` run `20261029T223004Z_941f9f72` passed all 201 defaults
+plus three required controls (204 total), with no sleep or app mutation. Both
+primary and independent source reviews confirmed exact body preservation and
+required owners. No main build/test is active. Next: agent `swift_design`
+revalidates the recorded design and implements only Stage 1, then root signs
+and verifies that checkpoint before authorizing Stage 2.
+
+D2 isolated development raw output was pruned by the supported helper after
+main acceptance; compact development facts and commits remain, raw bytes do
+not. The clean temporary D2 worktree was removed through `git worktree remove`;
+its commits remain integrated. The unrelated pytest worktree is untouched.
