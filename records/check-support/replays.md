@@ -32,5 +32,10 @@ only cb8a110 removes a non-arm64 spin branch. Build changes still need review
 even when launch-file source lines are unchanged. Cost disposition follows
 evaluation and will distinguish review from fresh observation.
 
-Held-back register entries are pending the B1 freeze/reveal. Curator count and
-seal are recorded in design.md; none is credited as executed yet.
+Open results and their self-review are in `replay/open-results.json` and
+`open-review.md`, frozen with B1 at `db75edf`. The sealed concrete held-back
+register is `replay/heldback-cases.json`, committed before evaluation at
+`152f984`; `heldback-predictions.md` records post-reveal exposure and B1-specific
+predictions. Results and coverage are in `replay/heldback-results.json` and
+`heldback-review.md`. H06 is explicitly delayed; no excluded semantic class
+is counted as a clean evidence pass.
