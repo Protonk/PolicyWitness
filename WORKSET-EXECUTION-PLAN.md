@@ -13,6 +13,8 @@ temporary workset material and retire together after final acceptance.
   outstanding resources, completed checkpoints and next work.
 - [Initial counterfactual](records/workset/pytest-first.md): C0 arrangement,
   responsibility map, scenarios and expectations; freeze at the C0 seal.
+- [C0 seal](records/workset/c0-seal.md): frozen account identity, readiness
+  review, correction and acceptance limits.
 
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.
