@@ -72,3 +72,30 @@ retention reconciliation; retirement does not release them.
 Final D2/workset retirement remains separate, after final source applicability
 and findings are accounted for. Review is primary-agent self-review plus the
 independent D2 execution/source work by `binding_investigation`.
+
+## Final refactor applicability review and remaining citation correction
+
+Read-only review by `binding_investigation` at `fd90eee66538cc02dc5d21b7a3fe8eca81a17403`
+confirmed C1–C5 remain applicable after the C/Swift extractions: the five
+owning generators, canonical repair diagnostics, selected-prose discovery and
+both release gates remain unchanged. Native and shared Swift sources remain
+inside identity discovery. The existing compiled C/Swift/Python identity
+comparison supplies broader coverage than geometry alone. L's inherited receipt
+is byte-identical; its original raw directories remain absent and unpinned.
+Fixed ownership facts and historical datasets retain their original stamps.
+F1's paragraph, symbol omission and dependent control expectations are unchanged.
+
+The review found an incomplete C1b correction already present at accepted D2:
+documents edge D35 cited ContractVersionTests for the separate worker-identity
+controls. This commit names WorkerIdentityTests there, adds that owner beside
+ContractVersionTests in drift_contract, and gives contract_py both its
+WORKER_IDENTITY source and actual identity-regeneration check. Existing version
+citations remain. These are citation corrections only, separately attributable
+from the refactor's new request node and moved-code citations. The original
+investigation and acceptance observations are not rewritten.
+
+Current verification is pending the nine-case source/build-entry selection.
+R2's required BYOXPC case failed twice with an unassigned XPC transport error;
+that is separate from D2 and supplies no current runtime acceptance. F1 remains
+explicitly unresolved for later discussion, so final D2/workset retirement is
+still pending its disposition.

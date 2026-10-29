@@ -2826,12 +2826,21 @@
             {
               "path": "tests/lib/contract.py",
               "symbol": "CONTROLLER_ENVELOPE"
+            },
+            {
+              "path": "tests/lib/contract.py",
+              "symbol": "WORKER_IDENTITY"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/contract.py",
               "symbol": "test_every_generated_copy_is_current",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract.py",
+              "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
               "form": "test"
             }
           ]
@@ -3120,6 +3129,10 @@
             {
               "path": "tests/suites/source_drift/contract.py",
               "symbol": "ContractVersionTests"
+            },
+            {
+              "path": "tests/suites/source_drift/contract.py",
+              "symbol": "WorkerIdentityTests"
             }
           ],
           "checks": [
@@ -4230,7 +4243,7 @@
           "sources": [
             {
               "path": "tests/suites/source_drift/contract.py",
-              "symbol": "ContractVersionTests"
+              "symbol": "WorkerIdentityTests"
             }
           ],
           "checks": [
