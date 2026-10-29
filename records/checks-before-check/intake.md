@@ -72,3 +72,9 @@ not changes to repository behavior.
 There is no remaining prerequisite gap. D2 may proceed with ownership and
 trace work under the initial write boundary. No C0 evaluation, future CHECK
 writing/integration planning, excluded project or core refactor is undertaken.
+
+Primary acceptance of absorption is recorded after the integrated five-case
+pass at `bb92c21`. The predecessor plan and `records/check-support/` retire
+together in the following commit; all twelve inherited files were verified
+against their manifest and committed originals. This retirement leaves F1 and
+the protected historical cost evidence intact.

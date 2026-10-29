@@ -19,7 +19,8 @@ source before any permanent or executable correction.
 
 The [intake](../records/checks-before-check/intake.md) establishes D1 completion,
 absorption and source differences. The [package account](../records/checks-before-check/README.md)
-indexes the owned artifacts. D1 retirement remains coordinated separately.
+indexes the owned artifacts. D1 was absorbed and accepted; its original package is recoverable at `cd6adaa`
+with primary acceptance `7562d24`.
 The [ownership account](../records/checks-before-check/ownership.md) reconciles
 document populations, source authority and output ownership; its supporting
 [facts](../records/checks-before-check/ownership-facts.json) and
@@ -48,14 +49,14 @@ findings rather than commissioning another general audit of tests or bindings.
 
 ## Prerequisite and intake
 
-Execution requires the
-[Binding through replay plan](../tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md)
-to be complete through its investigation, design/replay evaluation, package and
-acceptance review. Its handoff must contain the inventory and L trace, versioned
-design, replay predictions and results, assumptions, exclusions, cost account
-and unresolved questions required by that plan. An inventory alone, or the
-existence of a design file, does not satisfy this prerequisite. If completion
-cannot be established, record what is missing and leave this plan unexecuted.
+The completed prerequisite was
+`tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md`, accepted at `cd6adaa`
+with primary review `7562d24`. Its investigation, design/replay evaluation,
+package and acceptance were absorbed through the
+[intake](../records/checks-before-check/intake.md). The owned predecessor plan
+and `records/check-support/` package retire together after the D2 acceptance
+record; the original phase commits preserve their inventory, L trace, versioned
+design, predictions/results, assumptions, exclusions, costs and unresolved F1.
 
 This plan is the immediate successor consuming that handoff. Completion of the
 prerequisite means its investigation and review are finished; it does not mean
