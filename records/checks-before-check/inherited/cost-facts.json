@@ -1,0 +1,713 @@
+{
+  "boundary": "Historical costs, not a fresh execution or performance forecast",
+  "inventory_source": "cf0136bbb6366d5f787c3547ec69d757772898c0",
+  "runs": [
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "source_drift/runner_source_manifests_agree",
+          "reason": "all drift checks pass: 11 swift, 1 c, 42 suites, 16 normalized outcomes, 10 attempt outcomes, 4 prediction_unavailable pairs, 10 test override keys.",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/limits_documentation",
+          "reason": "limits, matrix table, questions and reading-rule copies agree; standalone guide, staging and rejection controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/contract_versions",
+          "reason": "contract manifest and every generated copy agree; generator and build controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/architecture_documentation",
+          "reason": "architecture manifest, dot files, SVG stamps and document regions agree; citation and stale-copy controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/build_documentation",
+          "reason": "build manifest, dot file, SVG stamp and document regions agree with the script; grounding rules, parser refusals and mutation controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/generator_contract",
+          "reason": "generator contracts and mutation controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/markdown_reader",
+          "reason": "the reader reports CommonMark structure from the vendored wheels' bytes and is the parser's only importer",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/direct_python_start",
+          "reason": "entrypoints use direct Python and wrapper shebangs agree; weakening controls fail",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "duration_ms": 349757,
+      "historical_profile": {
+        "measurements": {
+          "architecture_check": {
+            "limits_loads_seconds": [
+              0.04947349999565631,
+              0.011888499953784049
+            ],
+            "problems": [],
+            "seconds": 0.49842329195234925
+          },
+          "build_rules": {
+            "calls": {
+              "load_manifest": {
+                "calls": 10,
+                "seconds": 0.7617873311974108
+              },
+              "parse_script": {
+                "calls": 7,
+                "seconds": 0.015508749173022807
+              }
+            },
+            "returncode": 0,
+            "seconds": 0.7834230000153184,
+            "stdout": "ok: 10 build documentation rules agree with build.sh, meson.build, the Makefile, the inventories and the baseline\n"
+          },
+          "generator_fixture": {
+            "bytes": 19206995,
+            "copy_seconds": 0.22722320805769414,
+            "files": 1282,
+            "snapshot_seconds": 0.040091500035487115
+          },
+          "markdown_discovery": {
+            "bytes": 1711255,
+            "files": 101,
+            "scans": {
+              "all": 222124,
+              "tests_out": 214664
+            },
+            "seconds": 7.1164602499920875
+          },
+          "markdown_read_parse": {
+            "seconds": 0.32846108300145715
+          },
+          "shell_discovery": {
+            "bytes": 374888,
+            "files": 149,
+            "scans": {
+              "all": 214946,
+              "tests_out": 214664
+            },
+            "seconds": 6.801850542076863
+          }
+        },
+        "sha256": "c24c38f3c966b9d1f413d98bfbfef5b1a4c200e3877222f15b24c8cd003c7163",
+        "source": "1612eb5e0bd503f0185dda9cda0331be0d9a764f"
+      },
+      "ok": true,
+      "path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/drift-plan-investigation-20261027-02",
+      "python": {
+        "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "version": "3.14.9"
+      },
+      "receipts": [],
+      "run_id": "20261027T175448Z_a3635ceb"
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "preflight/build_entry_controls",
+          "reason": "every early refusal fires before the step it protects; no output, build directory or lock is created",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "preflight/native_policy_controls",
+          "reason": "every asserted option and the output target are refused by name before anything compiles; a removed assertion fails its control and is named",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "preflight/native_source_controls",
+          "reason": "the configured directory evaluates the tree; substituted, escaping and copied inputs are refused by name",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/runner_source_manifests_agree",
+          "reason": "all drift checks pass: 11 swift, 1 c, 42 suites, 16 normalized outcomes, 10 attempt outcomes, 4 prediction_unavailable pairs, 10 test override keys.",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/limits_documentation",
+          "reason": "limits, matrix table, questions and reading-rule copies agree; standalone guide, staging and rejection controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/contract_versions",
+          "reason": "contract manifest and every generated copy agree; generator and build controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/architecture_documentation",
+          "reason": "architecture manifest, dot files, SVG stamps and document regions agree; citation and stale-copy controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/build_documentation",
+          "reason": "build manifest, dot file, SVG stamp and document regions agree with the script; grounding rules, parser refusals and mutation controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/generator_contract",
+          "reason": "generator contracts and mutation controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/markdown_reader",
+          "reason": "the reader reports CommonMark structure from the vendored wheels' bytes and is the parser's only importer",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/direct_python_start",
+          "reason": "entrypoints use direct Python and wrapper shebangs agree; weakening controls fail",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "duration_ms": 199987,
+      "ok": true,
+      "path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/drift-cost-candidate-01",
+      "python": {
+        "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "version": "3.14.9"
+      },
+      "receipts": [
+        {
+          "case": "preflight/build_entry_controls",
+          "complete": true,
+          "controls": 15,
+          "direct_launches": 0,
+          "elapsed_seconds": 27.073152416967787,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "build-script",
+          "ok": true,
+          "path": "suites/preflight/build_entry_controls/artifacts/check_build_entry-receipts.json",
+          "sha256": "38a5334795a0b412bfa36fcc30caa9325f88cf98674eb49cbd15fd8261c2fee2",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "preflight/native_policy_controls",
+          "complete": true,
+          "controls": 3,
+          "direct_launches": 0,
+          "elapsed_seconds": 39.82015137397684,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "meson",
+          "ok": true,
+          "path": "suites/preflight/native_policy_controls/artifacts/check_native_policy-receipts.json",
+          "sha256": "91ee2516fee1d2fe1882bb685175a7e7581ef9d1c8c4876a4c3c0cc054526305",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "preflight/native_source_controls",
+          "complete": true,
+          "controls": 8,
+          "direct_launches": 19,
+          "elapsed_seconds": 12.968589335097931,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": true,
+          "mode": "meson",
+          "ok": true,
+          "path": "suites/preflight/native_source_controls/artifacts/receipts.json",
+          "sha256": "0959ef92d88c64876869cfbf86fa15bf194672150c88fc13201a0809223e49be",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/architecture_documentation",
+          "complete": true,
+          "controls": 10,
+          "direct_launches": 0,
+          "elapsed_seconds": 13.564104792079888,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/architecture_documentation/artifacts/architecture-receipts.json",
+          "sha256": "3a81bf9b86f75e3e6d1e20093d6c4f1968cf42669790b719872f1ca22fcd408f",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/build_documentation",
+          "complete": true,
+          "controls": 14,
+          "direct_launches": 0,
+          "elapsed_seconds": 7.265997667098418,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/build_documentation/artifacts/build-receipts.json",
+          "sha256": "e6dcab74357ad2b810f37dd05622ecacf70d54fa2a84400f4aa9725b4a6e15b7",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/contract_versions",
+          "complete": true,
+          "controls": 16,
+          "direct_launches": 0,
+          "elapsed_seconds": 3.5174712917068973,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/contract_versions/artifacts/contract-receipts.json",
+          "sha256": "b55253223e399a8258fb1169a8089f2a39c88cb5240e7d6177afbf29fbd45159",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/direct_python_start",
+          "complete": true,
+          "controls": 6,
+          "direct_launches": 0,
+          "elapsed_seconds": 0.6451747098471969,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/direct_python_start/artifacts/direct_python-receipts.json",
+          "sha256": "f2c4a4c5642080bffd9330bf0d159b5c52aadd6f9b0af84ad5221d95efa1c582",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/generator_contract",
+          "complete": true,
+          "controls": 24,
+          "direct_launches": 0,
+          "elapsed_seconds": 30.964139291550964,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/generator_contract/artifacts/generators-receipts.json",
+          "sha256": "b2256a8000f7791a5a4b23d28d6b7fb1a028fdb696432db897ad03f182578332",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/limits_documentation",
+          "complete": true,
+          "controls": 20,
+          "direct_launches": 0,
+          "elapsed_seconds": 26.642861290834844,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/limits_documentation/artifacts/limits-receipts.json",
+          "sha256": "d09cd7f2e924111803227d3023ae3db4833ff4e26d3a25c179d3c8a418bd9130",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/markdown_reader",
+          "complete": true,
+          "controls": 36,
+          "direct_launches": 0,
+          "elapsed_seconds": 1.126023045857437,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": false,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/markdown_reader/artifacts/markdown-receipts.json",
+          "sha256": "4cf7f5c2148d39f8bdfc5720edeeb123e44585c5f4648572bdfef83fd11e4aa0",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/runner_source_manifests_agree",
+          "complete": true,
+          "controls": 188,
+          "direct_launches": 8,
+          "elapsed_seconds": 21.131360996630974,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": true,
+          "mode": "planner",
+          "ok": true,
+          "path": "suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/controls.json",
+          "sha256": "9c686ea7c8ab67f4c4153ad73c5b8a6e7d50d6f2c186e0786e74f38aafa07d44",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        }
+      ],
+      "run_id": "20261027T230701Z_a7cce91f"
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "preflight/build_entry_controls",
+          "reason": "every early refusal fires before the step it protects; no output, build directory or lock is created",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "preflight/native_policy_controls",
+          "reason": "every asserted option and the output target are refused by name before anything compiles; a removed assertion fails its control and is named",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "preflight/native_source_controls",
+          "reason": "the configured directory evaluates the tree; substituted, escaping and copied inputs are refused by name",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/runner_source_manifests_agree",
+          "reason": "all drift checks pass: 11 swift, 1 c, 42 suites, 16 normalized outcomes, 10 attempt outcomes, 4 prediction_unavailable pairs, 10 test override keys.",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/limits_documentation",
+          "reason": "limits, matrix table, questions and reading-rule copies agree; standalone guide, staging and rejection controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/contract_versions",
+          "reason": "contract manifest and every generated copy agree; generator and build controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/architecture_documentation",
+          "reason": "architecture manifest, dot files, SVG stamps and document regions agree; citation and stale-copy controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/build_documentation",
+          "reason": "build manifest, dot file, SVG stamp and document regions agree with the script; grounding rules, parser refusals and mutation controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/generator_contract",
+          "reason": "generator contracts and mutation controls pass",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/markdown_reader",
+          "reason": "the reader reports CommonMark structure from the vendored wheels' bytes and is the parser's only importer",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "source_drift/direct_python_start",
+          "reason": "entrypoints use direct Python and wrapper shebangs agree; weakening controls fail",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "duration_ms": 203017,
+      "ok": true,
+      "path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/drift-acceptance-fixes-03",
+      "python": {
+        "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+        "version": "3.14.9"
+      },
+      "receipts": [
+        {
+          "case": "preflight/build_entry_controls",
+          "complete": true,
+          "controls": 15,
+          "direct_launches": 42,
+          "elapsed_seconds": 26.971921875840053,
+          "input_instrumentation_present": true,
+          "input_snapshots": 127,
+          "launch_instrumentation_present": true,
+          "mode": "build-script",
+          "ok": true,
+          "path": "suites/preflight/build_entry_controls/artifacts/check_build_entry-receipts.json",
+          "sha256": "8dadcd7592bca5119351038633b1d2f71dc3252cb2e4c572b70157aa9eff25eb",
+          "snapshot_observed_bytes": 251732716,
+          "snapshot_selected_entries": 15018
+        },
+        {
+          "case": "preflight/native_policy_controls",
+          "complete": true,
+          "controls": 3,
+          "direct_launches": 69,
+          "elapsed_seconds": 32.44860779098235,
+          "input_instrumentation_present": true,
+          "input_snapshots": 138,
+          "launch_instrumentation_present": true,
+          "mode": "meson",
+          "ok": true,
+          "path": "suites/preflight/native_policy_controls/artifacts/check_native_policy-receipts.json",
+          "sha256": "a8db80866155b1b5fd59b1c2b06c7cb8ee03cf83b61d7459ad76474589b7edd6",
+          "snapshot_observed_bytes": 97489367,
+          "snapshot_selected_entries": 3870
+        },
+        {
+          "case": "preflight/native_source_controls",
+          "complete": true,
+          "controls": 8,
+          "direct_launches": 19,
+          "elapsed_seconds": 10.189748208969831,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": true,
+          "mode": "meson",
+          "ok": true,
+          "path": "suites/preflight/native_source_controls/artifacts/receipts.json",
+          "sha256": "8ca093f1b1598b8ba3dc347d2776a25cd9bd007e91febbcdeb37ea868b8c2deb",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        },
+        {
+          "case": "source_drift/architecture_documentation",
+          "complete": true,
+          "controls": 10,
+          "direct_launches": 19,
+          "elapsed_seconds": 13.3320153336972,
+          "input_instrumentation_present": true,
+          "input_snapshots": 76,
+          "launch_instrumentation_present": true,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/architecture_documentation/artifacts/architecture-receipts.json",
+          "sha256": "a2441dc4fda88308a6b6da8e56d2d18f18d07a2539e8be2123ceaeea845c6761",
+          "snapshot_observed_bytes": 147296217,
+          "snapshot_selected_entries": 8405
+        },
+        {
+          "case": "source_drift/build_documentation",
+          "complete": true,
+          "controls": 16,
+          "direct_launches": 53,
+          "elapsed_seconds": 10.228199459146708,
+          "input_instrumentation_present": true,
+          "input_snapshots": 237,
+          "launch_instrumentation_present": true,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/build_documentation/artifacts/build-receipts.json",
+          "sha256": "818c2d255271722bbb5d3492f942914578021a0e87bdcdf2959126eb5788a7c3",
+          "snapshot_observed_bytes": 132397140,
+          "snapshot_selected_entries": 8841
+        },
+        {
+          "case": "source_drift/contract_versions",
+          "complete": true,
+          "controls": 16,
+          "direct_launches": 87,
+          "elapsed_seconds": 5.4054273357614875,
+          "input_instrumentation_present": true,
+          "input_snapshots": 1406,
+          "launch_instrumentation_present": true,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/contract_versions/artifacts/contract-receipts.json",
+          "sha256": "6163f30cfce414c159694909728dd21b5dc4bc8e4884d298deba824d4ef1bc0c",
+          "snapshot_observed_bytes": 539275644,
+          "snapshot_selected_entries": 25241
+        },
+        {
+          "case": "source_drift/direct_python_start",
+          "complete": true,
+          "controls": 6,
+          "direct_launches": 0,
+          "elapsed_seconds": 0.7113961228169501,
+          "input_instrumentation_present": true,
+          "input_snapshots": 7,
+          "launch_instrumentation_present": true,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/direct_python_start/artifacts/direct_python-receipts.json",
+          "sha256": "a1ee94ae25c7849f597741ad5c4abb42f1ece2730627ec037a262b93910cc48a",
+          "snapshot_observed_bytes": 546391,
+          "snapshot_selected_entries": 221
+        },
+        {
+          "case": "source_drift/generator_contract",
+          "complete": true,
+          "controls": 26,
+          "direct_launches": 118,
+          "elapsed_seconds": 38.677723915083334,
+          "input_instrumentation_present": true,
+          "input_snapshots": 607,
+          "launch_instrumentation_present": true,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/generator_contract/artifacts/generators-receipts.json",
+          "sha256": "7943d81979a2a3326670222982b67e70c16a7e17eae6726d2b1055587087cf23",
+          "snapshot_observed_bytes": 1942571142,
+          "snapshot_selected_entries": 111149
+        },
+        {
+          "case": "source_drift/limits_documentation",
+          "complete": true,
+          "controls": 20,
+          "direct_launches": 74,
+          "elapsed_seconds": 34.269558835425414,
+          "input_instrumentation_present": true,
+          "input_snapshots": 907,
+          "launch_instrumentation_present": true,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/limits_documentation/artifacts/limits-receipts.json",
+          "sha256": "b28fda2e9be24e9d0203ef3c2dbe883e1945180af4a6971d4306c1e51747bbae",
+          "snapshot_observed_bytes": 2241482978,
+          "snapshot_selected_entries": 153654
+        },
+        {
+          "case": "source_drift/markdown_reader",
+          "complete": true,
+          "controls": 36,
+          "direct_launches": 7,
+          "elapsed_seconds": 1.2705076230922714,
+          "input_instrumentation_present": true,
+          "input_snapshots": 76,
+          "launch_instrumentation_present": true,
+          "mode": "unittest",
+          "ok": true,
+          "path": "suites/source_drift/markdown_reader/artifacts/markdown-receipts.json",
+          "sha256": "c3652529c7006e7f2b9535160ecabac97fc609006b0d76bee39234b90544d327",
+          "snapshot_observed_bytes": 5824848,
+          "snapshot_selected_entries": 1863
+        },
+        {
+          "case": "source_drift/runner_source_manifests_agree",
+          "complete": true,
+          "controls": 188,
+          "direct_launches": 8,
+          "elapsed_seconds": 17.072642875951715,
+          "input_instrumentation_present": false,
+          "input_snapshots": 0,
+          "launch_instrumentation_present": true,
+          "mode": "planner",
+          "ok": true,
+          "path": "suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/controls.json",
+          "sha256": "f3731c93894e4881acc996b5a51e1a26608b0d9cc778da24a88bd33516279a09",
+          "snapshot_observed_bytes": 0,
+          "snapshot_selected_entries": 0
+        }
+      ],
+      "run_id": "20261027T233059Z_1f7c68fa",
+      "source_snapshot": {
+        "changed_from_inventory": [
+          "README.md",
+          "records/drift-cost-reduction/README.md",
+          "records/drift-cost-reduction/control-map.json",
+          "records/drift-cost-reduction/implementation.md",
+          "tests/RETAINED.json",
+          "tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md",
+          "tests/suites/source_drift/DOCUMENT-DRIFT-IMPLEMENTATION-PLAN.md"
+        ],
+        "head": "d3ded472b3e98eb32e05973c1078191ab2057dee",
+        "observation": "Attached after the completed run, before the account edit; no source edits occurred during execution.",
+        "path": "investigation/source.json",
+        "sha256": "e8635caefd10b4357251ba2fa2ae3772e336ec074462ebf48bbc40bf11881024"
+      }
+    }
+  ]
+}

@@ -1,22 +1,25 @@
-# Preparation for planning CHECK.md
+# Checks before CHECK — amended D2 investigation
 
 ## Purpose and boundary
 
-Establish a dependable account of how this repository's documentation is
-authored, generated, copied and checked, so that a successor can plan
-`docs/CHECK.md`. The intended document is a tour of the documentation apparatus,
-with a role comparable to [WORKER.md](WORKER.md): explain the instrument, its
-boundaries, what its checks establish and which changes alter those guarantees.
-Writing that explanation should help locate complexity in the apparatus or its
-account. Preparation must distinguish understood complexity from unresolved
-facts without requiring every awkward arrangement to be simplified first.
+Establish how this repository's documentation is authored, generated, copied
+and checked, localize established complications, and make bounded corrections
+supported by the investigation. WORKSET-PLAN.md supersedes the original
+future-CHECK preparation boundary: this work does not write or outline CHECK,
+allocate its ownership, register hypothetical content or prepare a special
+handoff for its future writer. Acceptance and disposition finish in this workset.
 
-This plan ends with a reviewed handoff for planning CHECK.md. It does not write
-CHECK.md, prescribe its final outline, or produce its implementation plan. It
-does not implement the binding investigation's proposed mechanisms, rename or
-split suites, reorganize documentation ownership, or add a checking framework.
-Narrow corrections to established factual errors in existing accounts are in
-scope; changes to executable behavior and disputed contracts need separate work.
+Supported changes may include generators, checks, ownership arrangements and
+tests, with independent accepted/rejected controls. A change to a checker's
+promised guarantee still requires the workset's behavioral-defect discussion.
+F1 from D1 remains unresolved by explicit user decision. Initial investigation
+source is7562d24; initial writes are limited to this plan and its records while
+E2 changes shared implementation and documentation. Coordinate and refresh
+source before any permanent or executable correction.
+
+The [intake](../records/checks-before-check/intake.md) establishes D1 completion,
+absorption and source differences. The [package account](../records/checks-before-check/README.md)
+indexes the owned artifacts. D1 retirement remains coordinated separately.
 
 Follow [planning guidance](../CONTRIBUTING.md#planning-a-change),
 [documentation guidance](AGENTS.md) and [test working guidance](../tests/AGENTS.md).
@@ -60,7 +63,7 @@ package through its owning plan; do not add another inbound link to it.
 ## Records, scope and evidence
 
 Create `records/checks-before-check/` when execution begins. Its README states
-the purpose, the single consumer (the successor planner for CHECK.md), the
+the purpose, the consumer (this workset's correction and acceptance process), the
 examined revision and the retirement condition below. Use these artifacts:
 
 | Artifact | Contents |
@@ -69,7 +72,7 @@ examined revision and the retirement condition below. Use these artifacts:
 | `ownership.md` | Document and region ownership, transformations, checking scopes and evidence responsibilities. |
 | `traces.md` | Complete representative edit paths, checkpoint behavior, supporting source and credited observations. |
 | `reconciliation.md` | Conflicting accounts, unresolved facts, established complexity, corrections and remaining work. |
-| `handoff.md` | Recommended scope and ownership for CHECK.md, integration requirements, readiness review and open decisions. |
+| `acceptance.md` | Disposition of findings/corrections, credited verification, review and remaining decision boundaries. |
 
 The README indexes the artifacts. Follow [records guidance](../records/AGENTS.md):
 this plan carries the repository links into its package once those files exist.
@@ -149,7 +152,7 @@ path when an uncovered mechanism could change the explanation.
 | A limit value or generated scalar | How do input, rendered prose and implementation comparison differ, and where are independent expectations maintained? |
 | A graph, its table and a supporting citation | How are destinations and references admitted, how are figures published, and which meanings remain unverified? |
 | A contract value propagated into code and prose | Which outputs define implementation inputs, and which checks establish their agreement? |
-| An independently authored claim and a prospective new tour | What is discovered automatically, what needs registration, and which edits can pass every applicable mechanical check? |
+| An independently authored claim and a new ordinary document | What is discovered automatically, what needs registration, and which edits can pass every applicable mechanical check? |
 
 Each trace starts with the exact editable input and ends at its relevant
 checked-in or distributed outputs. Record the commands, readers, generators,
@@ -195,41 +198,23 @@ Distinguish these outcomes:
 - **Unresolved fact:** identify what inspection or observation would settle it
   and which planning decision depends on the answer. Resolve it here when it
   prevents identifying an edit owner, an output path, a checkpoint's guarantee
-  or CHECK.md's scope. Otherwise give the successor a bounded question.
+  or the supported correction scope. Otherwise retain a bounded question with its settling action.
 
-Generated corrections go through the owning inputs and generators. Do not
-change a checker, loosen a baseline, or restamp evidence to make the account
-agree. If a required resolution needs executable changes or a policy decision,
-describe that separate work and leave the affected readiness question open.
-The handoff can recommend improvements while recording the current arrangement
-faithfully. Refresh the map and traces after corrections, preserving the prior
-finding and its disposition in the record rather than in permanent prose.
+Generated corrections go through owning inputs and generators. Do not loosen
+baselines, restamp evidence or weaken a promised guarantee to make prose agree.
+Supported executable corrections require a concrete scope, source coordination,
+and independent accepted/rejected controls. Record decisions and evidence;
+refresh the map and traces after corrections, keeping change history in this
+record rather than permanent prose. A reasoned no-change disposition is valid.
 
-### Settle CHECK.md's place and its integration requirements
+### Dispose findings and supported corrections
 
-Recommend the questions CHECK.md should own, the reader's entry route and the
-boundaries with existing accounts. Address the document graph in ARCHITECTURE,
-the generator-contract section in the suite README, build/release checkpoints,
-and contributor instructions. For each overlap, recommend retaining the detail
-with its current owner, moving it, or replacing a duplicate with a link, and
-explain why. Leave actual moves to the successor's plan. The prerequisite's
-ownership recommendations are inputs to this decision, not evidence that a move
-has already occurred.
-
-Identify the concrete integration sites for a future CHECK.md: document
-discovery, graph destinations, span ownership if used, symbol/anchor validation,
-Known gap indexing, navigation and the controls affected by any registration.
-Record which inclusion is automatic and which is explicit at the examined
-revision. Describe how claims about the checking machinery itself would be
-supported, including shared dependencies or circular support that limit a claim.
-Do not create an empty CHECK.md or register hypothetical content during this work.
-
-Hand the next planner a coherent current account and decisions still belonging
-to document design: narrative organization, useful diagrams, amount of generated
-detail, exact ownership moves and any separately proposed machinery changes.
-For a proposed dependency, state whether writing can describe the current limit
-or whether a specific implementation decision must precede the affected section.
-Do not make every accepted binding proposal a prerequisite to writing.
+For each localized complication, record retaining the arrangement, correcting
+its account, implementing a bounded simplification, or leaving an explicit
+unresolved decision. Explain the consequence and verification. No future CHECK
+scope, narrative, outline, navigation, ownership or integration handoff is a
+deliverable. The inherited proposal is evidence for a decision, not proof that
+machinery has been implemented or that implementing it is necessary.
 
 ## Verification and readiness review
 
@@ -243,19 +228,18 @@ outputs change. Follow docs guidance for the limits freshness check. Full builds
 live witnesses and a full battery need a specific unresolved claim or changed
 dependency; they are not default requirements of this investigation.
 
-Mechanical success establishes only the checks' contracts. Review the handoff
-using the following proxies for readiness to plan CHECK.md:
+Mechanical success establishes only the checks' contracts. Review the package
+using these acceptance criteria:
 
 | Proxy | Inspectable evidence |
 | --- | --- |
 | The account has a bounded, reconciled population | Document and region inventory agrees with declared outputs and actual discovery scopes; exclusions and unmatched items have dispositions. |
 | An author can locate edits and follow their effects | Each selected trace identifies its editable source, transformations, outputs, checkpoints, repair and limits without an unexplained transition. |
 | Guarantees have support at the claimed strength | Assertions and applicable evidence support claimed refusals; source-only conclusions and semantic blind spots remain labeled. |
-| Material disagreements have been settled | Factual corrections are verified; no open fact prevents identifying ownership, central paths, checkpoint guarantees or the recommended scope. |
-| CHECK.md can join the existing document group | Ownership recommendations, navigation and explicit/automatic registrations name concrete sites and their required verification. |
-| The next planner can make bounded choices | Remaining questions name what would answer them, affected decisions and whether current behavior can be described while they remain open. |
+| Material disagreements have been settled | Factual corrections are verified; no open fact prevents identifying ownership, central paths, checkpoint guarantees or the supported correction scope. |
+| Findings and proposals have dispositions | Remaining questions name what would answer them, affected decisions and whether current behavior can be described while they remain open. |
 
-Conduct a read-through from the successor's position using the committed package
+Conduct a read-through from another executor's position using the committed package
 and its cited sources, without relying on this conversation. Starting with a
 representative document edit and then an input change, use the package to locate
 the authoritative edit, affected outputs, relevant checkpoint and the strongest
@@ -265,20 +249,18 @@ must not conceal an unresolved path elsewhere. State who reviewed the package
 and whether the review was by its author; do not describe self-review as
 independent acceptance.
 
-The handoff ends with a reasoned readiness judgment, the examined revision,
+The package ends with a reasoned acceptance judgment, the examined revision,
 credited verification and limitations. These proxies support that judgment;
-they cannot mechanically prove that a good explanatory document can be written.
+they do not mechanically establish semantic adequacy or complete dependency coverage.
 If a central question remains unresolved, state the settling work and do not
-declare this preparation complete. An understood limitation or an optional
-improvement can remain without preventing planning.
+declare the affected work complete. An understood limitation or an optional
+improvement can remain with an explicit disposition.
 
-## Handoff and retirement
+## Acceptance and retirement
 
-Completion makes the package ready for a successor to plan the writing of
-CHECK.md; producing that writing plan is outside this task. Keep this plan and
-its records until that successor accepts and absorbs the handoff. Transfer
-still-needed material into the successor plan's records, preserve provenance,
-update links and retire this plan and its package together. Retirement depends
-on handoff acceptance, not on CHECK.md being published. Permanent documentation
-retains the useful current account in its own text rather than linking to the
-retired investigation.
+Completion requires accepted findings, their dispositions and any implemented
+corrections with applicable verification. No future writing/planning handoff is
+required. Coordinate retirement with workset reconciliation; transfer still-needed
+material to its remaining owned records, preserve provenance, update links and
+retire this plan and package together. Permanent documentation retains useful
+current behavior in its own text, without linking to retired investigation records.

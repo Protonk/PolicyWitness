@@ -1,0 +1,386 @@
+{
+  "artifact_count": 59,
+  "capabilities": [
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        },
+        {
+          "form": "test",
+          "path": "tests/suites/runner_c_worker_harness/run.sh",
+          "scope": "Applied worker publishes done and exits cleanly without a host exit request.",
+          "symbol": "terminal_exit_without_request"
+        }
+      ],
+      "facts": {
+        "Acquired by": "H: posix_spawn, nil attributes/envp",
+        "Authority": "Executes specimen with inherited context and signed identity",
+        "Held across": "Until exit; unconfirmed cleanup may outlive driver",
+        "Inventory ID": "S7",
+        "Reaches exec children": "It parents exec children; not itself inherited",
+        "Release / teardown action": "Terminal publication: erase accepted token, release done, _exit; early return, cancellation, fatal signal or H termination; H waitpid observes reap",
+        "Role": "none (ambient execution substrate)",
+        "When": "Before compilation"
+      },
+      "id": "s7",
+      "kind": "mixed",
+      "label": "Fresh worker process",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "publish_done_and_exit"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        }
+      ],
+      "facts": {
+        "Acquired by": "H adddup2(policyPipe[0], 0); W default policy fd",
+        "Authority": "Read remaining policy stream; normally EOF after source receipt",
+        "Held across": "Later attempts and phases, until exit",
+        "Inventory ID": "S13a",
+        "Reaches exec children": "No: child addopen replaces stdin",
+        "Release / teardown action": "No W close; exit",
+        "Role": "P, retained after use",
+        "When": "Before compilation"
+      },
+      "id": "s13a",
+      "kind": "reporting",
+      "label": "Worker policy fd 0",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        },
+        {
+          "form": "test",
+          "path": "tests/suites/runner_unit/host_setup_controls.py",
+          "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata.",
+          "symbol": "check"
+        }
+      ],
+      "facts": {
+        "Acquired by": "H requests adddup2(shmFD, 3); low-fd collision can substitute policy pipe",
+        "Authority": "Map backing object separately from existing mapping",
+        "Held across": "Later attempts and phases, until exit",
+        "Inventory ID": "S13b",
+        "Reaches exec children": "No: child CLOEXEC_DEFAULT",
+        "Release / teardown action": "No W close; exit",
+        "Role": "P",
+        "When": "Before compilation"
+      },
+      "id": "s13b",
+      "kind": "reporting",
+      "label": "Worker evidence fd 3",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        },
+        {
+          "form": "test",
+          "path": "tests/suites/runner_unit/host_setup_controls.py",
+          "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata.",
+          "symbol": "check"
+        }
+      ],
+      "facts": {
+        "Acquired by": "H requests adddup2(readyPipe[1], 4); self-dup control leaves fd absent",
+        "Authority": "Write readiness pipe; host later closes reader",
+        "Held across": "Later attempts and phases, until exit",
+        "Inventory ID": "S13c",
+        "Reaches exec children": "No: child CLOEXEC_DEFAULT",
+        "Release / teardown action": "No W close; exit",
+        "Role": "P",
+        "When": "Before compilation"
+      },
+      "id": "s13c",
+      "kind": "reporting",
+      "label": "Worker ready fd 4",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        }
+      ],
+      "facts": {
+        "Acquired by": "H spawn, without replacement file actions",
+        "Authority": "Whatever underlying endpoints allow; L saw read/write /dev/null",
+        "Held across": "Until exit",
+        "Inventory ID": "S14a",
+        "Reaches exec children": "No: exec-child capture pipes replace 1/2",
+        "Release / teardown action": "Exit; no explicit W close",
+        "Role": "none",
+        "When": "Before compilation"
+      },
+      "id": "s14a",
+      "kind": "mixed",
+      "label": "Worker inherited\nstdout/stderr",
+      "note": "L observed read/write null-device stdout and stderr.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        }
+      ],
+      "facts": {
+        "Acquired by": "H posix_spawn(..., nil)",
+        "Authority": "No entries observed; potential environment-dependent behavior is source-scoped",
+        "Held across": "Until exit",
+        "Inventory ID": "S15",
+        "Reaches exec children": "No: explicit {NULL} child env; IC/CLI test this boundary",
+        "Release / teardown action": "Process teardown",
+        "Role": "none",
+        "When": "Before compilation"
+      },
+      "id": "s15",
+      "kind": "mixed",
+      "label": "Worker environment vector",
+      "note": "L produced identical plain and environment-displaying ps output; this is scoped to those two launches.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        }
+      ],
+      "facts": {
+        "Acquired by": "Received at H spawn; no PW reset",
+        "Authority": "Relative file-target resolution",
+        "Held across": "Later attempts/phases, until exit",
+        "Inventory ID": "S16g",
+        "Reaches exec children": "Yes, no chdir action",
+        "Release / teardown action": "Exit",
+        "Role": "none",
+        "When": "Before compilation"
+      },
+      "id": "s16g",
+      "kind": "mixed",
+      "label": "Working directory",
+      "note": "L observed cwd / in both launches.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        }
+      ],
+      "facts": {
+        "Acquired by": "Kernel/runtime initialization at spawn",
+        "Authority": "Task/IPC authority, bootstrap namespace access",
+        "Held across": "Until exit or library changes",
+        "Inventory ID": "S16e",
+        "Reaches exec children": "Special-port inheritance/native exec rules; exact set unknown",
+        "Release / teardown action": "No PW general release; full live right census unavailable",
+        "Role": "none",
+        "When": "Before compilation"
+      },
+      "id": "s16e",
+      "kind": "mixed",
+      "label": "Task-self, bootstrap and\nother initial Mach rights",
+      "note": "L port inspection was refused; the exact live right set remains unknown.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.",
+          "symbol": "launch_inventory"
+        }
+      ],
+      "facts": {
+        "Acquired by": "Loader/runtime creates new image at H spawn; later library calls",
+        "Authority": "Executable code, storage and runtime service access",
+        "Held across": "Until exit or library release",
+        "Inventory ID": "S16f",
+        "Reaches exec children": "Not the same mappings/threads: exec loads a new image",
+        "Release / teardown action": "Native runtime; no PW census/teardown",
+        "Role": "none",
+        "When": "Before compilation initially; later internal changes unknown"
+      },
+      "id": "s16f",
+      "kind": "mixed",
+      "label": "Executable/library mappings,\nruntime heaps and threads",
+      "note": "L retained vmmap output; per-allocation origin and policy gating remain unknown.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "form": "test",
+          "path": "tests/suites/runner_exec_inheritance/run.sh",
+          "scope": "Pre-ready hold requires readiness errno EPIPE followed by clean worker completion and confirmed reap.",
+          "symbol": "launch_inventory"
+        }
+      ],
+      "facts": {
+        "Acquired by": "W: signal(SIGPIPE, SIG_IGN)",
+        "Authority": "Survive broken ready-pipe write; also changes exec-child behavior",
+        "Held across": "All attempts/phases, until exit",
+        "Inventory ID": "S17",
+        "Reaches exec children": "Yes: no SETSIGDEF; no dedicated live signal control",
+        "Release / teardown action": "No reset",
+        "Role": "P + effect on O",
+        "When": "Before compilation"
+      },
+      "id": "s17",
+      "kind": "mixed",
+      "label": "Worker ignored SIGPIPE\ndisposition",
+      "note": "L pre-ready launch retained readiness errno EPIPE and later clean completion.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "main"
+        }
+      ]
+    }
+  ],
+  "files": {
+    "controller/tools/pw_probe_runner/pw_probe_runner.c": {
+      "current": "a39307828da95d5f028c25a9e01a332087f0d82ff04e4c2cde383ca5aa3ac784",
+      "equal": false,
+      "receipt": "53b4d8031ee688c0b1b497517dca4ddfd329b867c8d2ff86f233bd71803925e4"
+    },
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": {
+      "current": "a2658380610aa6742b2a62e14c7d17abd57d5f9c618ecf7d9685c0486814532d",
+      "equal": false,
+      "receipt": "05dfa09522c37d9514a2f262d6e6308e377f5af8074a036a0008b431d99357ba"
+    },
+    "runner/Sources/PWRunnerCore/CWorker.swift": {
+      "current": "77c230ce7ae6e75fff91efda2588f3f906beb0c0f227468fde111c04a2ba4502",
+      "equal": false,
+      "receipt": "13aad86ba0e3cf0fd33fed5eb31b87e3a95d4ef90069db2ebf876c64852fe2f9"
+    },
+    "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift": {
+      "current": "074ffede77a7b828bd42749c292c71aa5f5804b917bb977d1c7d849fab174cfc",
+      "equal": true,
+      "receipt": "074ffede77a7b828bd42749c292c71aa5f5804b917bb977d1c7d849fab174cfc"
+    },
+    "tests/lib/run_capture.py": {
+      "current": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76",
+      "equal": true,
+      "receipt": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76"
+    },
+    "tests/suites/runner_exec_inheritance/launch_inventory.py": {
+      "current": "76bd106b8bbd54a0d158d4fc46876c017104321447e88961a8ce27abb8985336",
+      "equal": false,
+      "receipt": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4"
+    },
+    "tests/suites/runner_exec_inheritance/run.sh": {
+      "current": "28768ee411e92fe58563fdbf1943430d62c08353659f3d70c034be556374fe49",
+      "equal": false,
+      "receipt": "2c83a8474ffd8f414e8c3fa18f1a09bd11992850eb95fc38009a0bb98aa4ee89"
+    }
+  },
+  "observation": "L",
+  "receipt_source": "f85c7b094d75bf72931cd4856cb4ad086da20cbe",
+  "receipt_worker_identity": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
+  "retained": {
+    "runs": [
+      {
+        "app_inventory": "before.json",
+        "path": "release-acceptance/run-54d51e0ad1cc46e1bbeeba9182358569",
+        "reason": "PolicyWitness 0.3.3 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.3.3.",
+        "release": "v0.3.3",
+        "run_id": "accept-4bbfb70ce2a245499ccc63834699f283",
+        "source": "1bf0341cd06c48122af1635e8aa8cac77517d9e1"
+      },
+      {
+        "app_inventory": "artifact-integrity/before.json",
+        "path": "runs/release-0.3.3-default",
+        "reason": "PolicyWitness 0.3.3 release validation: the default battery passed against the final stapled app with no skips, unrun cases or harness errors and an unchanged app; archived as v0.3.3.",
+        "release": "v0.3.3",
+        "run_id": "20261024T022603Z_daf88977",
+        "source": "1bf0341cd06c48122af1635e8aa8cac77517d9e1"
+      }
+    ],
+    "schema_version": 1
+  },
+  "run_id": "20261018T223601Z_85d8418b",
+  "source": "cf0136bbb6366d5f787c3547ec69d757772898c0"
+}
