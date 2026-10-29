@@ -21,10 +21,10 @@ executable; it does not build the shipped service bundle.
 
 | Area | Sources and responsibility |
 | --- | --- |
-| Wire types and admission | [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift): XPC protocol, Codable request/reply types, closed request objects and evidence validation. |
+| Wire types and admission | [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift): XPC protocol, Codable request/reply types and evidence validation; [PWRunnerCoding.swift](Sources/PWRunnerCore/PWRunnerCoding.swift): closed-object key checking and JSON encoding/decoding shared by host and client. |
 | Service lifecycle | [PWRunnerService.swift](Sources/PWRunnerCore/PWRunnerService.swift): caller authorization, shared single-use admission, request handling, reply degradation and host retirement. |
 | Listener and bundle | [PWRunnerListener.swift](Sources/PWRunnerCore/PWRunnerListener.swift): listener selection; [Services/PWRunner/](Services/PWRunner/): entry point, Info.plist and entitlements. |
-| Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): query planning, driver invocation, evidence association, disposition, classification and comparisons. |
+| Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): query planning, driver invocation, disposition, classification and comparisons; [CWorkerDisposition.swift](Sources/PWRunnerCore/CWorkerDisposition.swift): unique slot association shared by step assembly and disposition. |
 | Child drivers | [CWorker.swift](Sources/PWRunnerCore/CWorker.swift): worker launch, shared memory, publication polling and the shared child lifecycle observer; [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift): concurrent probe writes/verdict reads and partial-evidence collection. |
 | Extension preparation | [ExtensionIssuer.swift](Sources/PWRunnerCore/ExtensionIssuer.swift): target resolution/metadata, separate issuer lifetime, bounded transient token delivery and host erasure. |
 | Time and native shim | [MonotonicDeadline.swift](Sources/PWRunnerCore/MonotonicDeadline.swift): deadlines and policy-pipe delivery; [PWCWorkerShim/](Sources/PWCWorkerShim/): fixed-argument shared-memory opening and acquire/release helpers. |

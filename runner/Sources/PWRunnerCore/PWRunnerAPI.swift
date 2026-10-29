@@ -164,15 +164,6 @@ enum PWContract {
 }
 // END GENERATED CONTRACT VERSIONS
 
-// Request objects are closed; dictionary keys inside policy.params are data.
-// CodingKeys owns both encoding and acceptance, so there is no second schema.
-private struct RequestKey: CodingKey {
-    let stringValue: String
-    let intValue: Int? = nil
-    init(stringValue: String) { self.stringValue = stringValue }
-    init?(intValue: Int) { return nil }
-}
-
 enum RequestContractError: Error {
     case unsupportedSchema(Int)
     case unknownField([CodingKey])
@@ -221,15 +212,6 @@ struct PWRunnerRequestFailure: Codable, Error, CustomStringConvertible {
         let detail = expected_schema.map { " (expected \($0))" }
             ?? explanations[code].map { ": \($0)" } ?? ""
         return "request refused: \(code) at \(location)\(detail)"
-    }
-}
-
-func rejectUnknownRequestKeys<K: CodingKey & CaseIterable>(_ type: K.Type, from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: RequestKey.self)
-    let accepted = Set(K.allCases.map { $0.stringValue })
-    if let key = container.allKeys.sorted(by: { $0.stringValue < $1.stringValue })
-        .first(where: { !accepted.contains($0.stringValue) }) {
-        throw RequestContractError.unknownField(decoder.codingPath + [key])
     }
 }
 
@@ -2796,17 +2778,6 @@ struct PWRunnerRunResult: Codable {
         try c.encodeIfPresent(reporting_failure, forKey: .reporting_failure)
     }
 
-}
-
-func pwRunnerEncodeJSON<T: Encodable>(_ value: T) throws -> Data {
-    let enc = JSONEncoder()
-    enc.outputFormatting = [.sortedKeys]
-    return try enc.encode(value)
-}
-
-func pwRunnerDecodeJSON<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-    let dec = JSONDecoder()
-    return try dec.decode(type, from: data)
 }
 
 extension PWRunnerRunResult {

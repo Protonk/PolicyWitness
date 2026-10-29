@@ -13,8 +13,9 @@ stand in for the live one.
 
 The expectation pins every target: the host carries every Swift file under
 the core directory plus the service entry point, the shim every C file under
-its directory, and the client, worker and validator their single known
-files. This is a membership check. What the compiler does to those files is
+its directory, the client its explicitly listed shared contract sources and
+entry point, and each native helper its known entry source. This is a membership
+check. What the compiler does to those files is
 the manifest's business, reviewed through its identity and the receipts.
 
 The build-directory reading also checks the compile's closure for the
@@ -51,6 +52,12 @@ IDENTITY_TARGETS = ('pw-probe-runner', 'pw-extension-issuer', 'PWCWorkerShim')
 CORE_DIR = 'runner/Sources/PWRunnerCore'
 SHIM_DIR = 'runner/Sources/PWCWorkerShim'
 API = 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift'
+# Independent of Meson's declaration: adding host processing to the client or
+# omitting a shared contract source must change the observed membership.
+SHARED_CONTRACT_SOURCES = (
+    API,
+    'runner/Sources/PWRunnerCore/PWRunnerCoding.swift',
+)
 SERVICE_MAIN = 'runner/Services/PWRunner/main.swift'
 CLIENT_MAIN = 'runner/Clients/PWRunnerClient/main.swift'
 WORKER = 'controller/tools/pw_probe_runner/pw_probe_runner.c'
@@ -190,7 +197,7 @@ def expected(root, xpc=True):
     targets = {'sb_api_validator': {VALIDATOR}, 'pw-probe-runner': {WORKER}, 'pw-extension-issuer': {ISSUER}}
     if xpc:
         targets['PWCWorkerShim'] = {p.relative_to(root).as_posix() for p in (root / SHIM_DIR).rglob('*.c')}
-        targets['pw-runner-client'] = {API, CLIENT_MAIN}
+        targets['pw-runner-client'] = set(SHARED_CONTRACT_SOURCES) | {CLIENT_MAIN}
         targets['PWRunner'] = {p.relative_to(root).as_posix() for p in (root / CORE_DIR).rglob('*.swift')} | {SERVICE_MAIN}
     return targets
 

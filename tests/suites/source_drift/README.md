@@ -13,8 +13,10 @@ with `meson introspect meson.build --targets`, which needs no build directory
 and lists every declaration regardless of the `xpc` option, refuses a target
 name declared more than once (a dead declaration could otherwise stand in for
 the live one), and pins every target: the host's core files plus the service
-entry point, the shim's C files, and the client's, worker's, validator's and issuer's
-single files. `build.sh` applies the same expectation to the configured
+entry point, the shim's C files, the client's explicit shared contract sources
+and entry point, and each native helper's known entry source. The client list
+is declared independently of Meson; controls reject a missing shared source
+and host-only processing added to the client. `build.sh` applies the same expectation to the configured
 build directory after compiling, which reads what Meson actually evaluated.
 Both check membership only; what the compiler does to those files is the
 manifest's business, reviewed through its identity and the receipts. Failed
@@ -25,9 +27,9 @@ introspection is a script error, never a pass.
 - The tree and meson.build's targets must agree on every compiled file set,
   compared as repository-relative paths: the `PWRunner` target carries the
   core files plus the service entry point, `PWCWorkerShim` the shim's C
-  files, and `pw-runner-client`, `pw-probe-runner`, `sb_api_validator` and
-  `pw-extension-issuer`
-  their single known files. A missing, duplicated or unexpected target is
+  files, `pw-runner-client` the shared contract sources and its entry point,
+  and `pw-probe-runner`, `sb_api_validator` and `pw-extension-issuer` their
+  known entry sources. A missing, duplicated or unexpected target is
   named.
 - Discovery is recursive under the target dirs
   (`Sources/PWRunnerCore`, `Sources/PWCWorkerShim`), so moving a file

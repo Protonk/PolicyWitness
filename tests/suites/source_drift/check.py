@@ -6,7 +6,8 @@ The check has two halves:
 1. Source-set drift between meson.build's explicit source lists and the
    tree. Every native target is pinned: the PWRunner target enumerates the
    Swift files that ship in PWRunner.xpc, the PWCWorkerShim target the C
-   shim, and the client, worker and validator their single files. The
+   shim, the client's explicit shared contract sources and entry point, and
+   each native helper's entry source. The
    test-only SwiftPM package (runner/Package.swift) compiles the host set
    but discovers it automatically by SwiftPM convention, so the SwiftPM
    side == on-disk by construction, and the drift that can actually ship a
@@ -164,7 +165,8 @@ def check_meson_source_lists(tree: repository_tree.Tree) -> list[Problem]:
     The shared reader lists the manifest's declarations in file mode, refuses
     a target name declared more than once, and compares every target with the
     tree: the host's core files plus the service entry point, the shim's C
-    files, and the client's, worker's and validator's known files. build.sh
+    files, the client's shared contract sources and entry point, and each native
+    helper's known entry source. build.sh
     applies the same expectation to the configured build directory after
     compiling. Both check membership only."""
     try:

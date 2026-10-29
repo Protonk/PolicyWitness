@@ -96,19 +96,24 @@ if get_option('xpc')
   cworker_shim = static_library('PWCWorkerShim',
     files('runner/Sources/PWCWorkerShim/PWCWorkerShim.c'), c_args: c_arch + [macos_version_min])
 
+  # Contract sources compile in both the host and the client. Host processing
+  # stays in pwrunner_core below; native_sources.py checks this boundary.
+  pwrunner_contract = files(
+    'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerCoding.swift',
+  )
+
   # build.sh named this output pw-runner-client, which is not a Swift module
   # identifier, so swiftc fell back to the module name `main`; keep it.
   pw_runner_client = executable('pw-runner-client',
-    files('runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
-          'runner/Clients/PWRunnerClient/main.swift'),
+    pwrunner_contract, files('runner/Clients/PWRunnerClient/main.swift'),
     swift_module_name: 'main',
     swift_args: swift_flags,
     override_options: executable_options)
 
   # The XPC host: the core sources in build.sh's order, then the service
   # entry point. The source_drift suite compares this list with the tree.
-  pwrunner_core = files(
-    'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
+  pwrunner_core = pwrunner_contract + files(
     'runner/Sources/PWRunnerCore/SandboxApply.swift',
     'runner/Sources/PWRunnerCore/ProbeRunner.swift',
     'runner/Sources/PWRunnerCore/PathUtils.swift',
@@ -117,6 +122,7 @@ if get_option('xpc')
     'runner/Sources/PWRunnerCore/MonotonicDeadline.swift',
     'runner/Sources/PWRunnerCore/ValidatorClient.swift',
     'runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift',
+    'runner/Sources/PWRunnerCore/CWorkerDisposition.swift',
     'runner/Sources/PWRunnerCore/PWRunnerService.swift',
     'runner/Sources/PWRunnerCore/PWRunnerListener.swift',
   )

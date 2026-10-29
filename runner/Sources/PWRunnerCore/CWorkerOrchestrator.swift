@@ -360,7 +360,7 @@ private func workerSlotsFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [CWorkerSl
     return slots
 }
 
-private func makeWorkerSlot(stepID: String, attempt: PWRunnerAttempt) -> CWorkerSlotInput {
+func makeWorkerSlot(stepID: String, attempt: PWRunnerAttempt) -> CWorkerSlotInput {
     // Exec attempts pass argv[1..N] via attempt.args; other kinds
     // ignore the field. Defensive: only thread the args when the
     // resolved attempt kind is .execSpawn so a caller that
@@ -419,7 +419,7 @@ private func mapAttemptKind(_ attempt: PWRunnerAttempt) -> PWAttemptKind {
     return mapAttemptKindOrNil(attempt) ?? .none
 }
 
-private func workerParamsFromPolicy(_ policy: PWRunnerPolicySpec) -> [CWorkerParam] {
+func workerParamsFromPolicy(_ policy: PWRunnerPolicySpec) -> [CWorkerParam] {
     guard let dict = policy.params, !dict.isEmpty else { return [] }
     // Sort by key for a stable order — easier to debug, and the
     // C worker iterates the array in order so deterministic param
@@ -1146,10 +1146,6 @@ private func anySlotNotCompleted(_ slots: [CWorkerSlotResult]) -> Bool {
 // One canonical lifecycle account, resolved once from the driver's output and
 // the submitted plan (tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker
 // disposition record"). Every lifecycle conclusion below projects from it.
-
-private func uniquelyAssociatedWorkerSlots(_ slots: [CWorkerSlotResult]) -> [String: CWorkerSlotResult] {
-    Dictionary(grouping: slots, by: { $0.stepId }).compactMapValues { $0.count == 1 ? $0[0] : nil }
-}
 
 /// Resolve the account. Without a plan (constructed inputs) the steps come from
 /// the slots and every attempt counts as supported; production passes the plan.

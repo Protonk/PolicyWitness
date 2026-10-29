@@ -1302,7 +1302,7 @@
           "symbol": "maximalReplyEncodedSize"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift",
           "symbol": "pwRunnerEncodeJSON"
         }
       ],

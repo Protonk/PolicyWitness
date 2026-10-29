@@ -270,7 +270,8 @@ def host_scenarios(repo):
 
 def meson_scenarios(repo):
     """The Meson reader on real file-mode introspection: a core file dropped from or added to the PWRunner
-    target is named by the diff; a missing host or shim target is named as such."""
+    target is named by the diff; the client requires shared contract sources and excludes host processing;
+    a missing host or shim target is named as such."""
     manifest = Path('meson.build')
     original = (repo / manifest).read_text()
     core_line = "    'runner/Sources/PWRunnerCore/PathUtils.swift',\n"
@@ -280,11 +281,19 @@ def meson_scenarios(repo):
     decoy = ('\nif false\n' + host_declaration.replace('pwrunner = ', 'pwrunner_decoy = ').rstrip() + '\nendif\n')
     worker_line = "  files('controller/tools/pw_probe_runner/pw_probe_runner.c'),"
     assert original.count(worker_line) == 1
+    client_line = "    pwrunner_contract, files('runner/Clients/PWRunnerClient/main.swift'),"
+    assert original.count(client_line) == 1, 'fixture requires the explicit client contract boundary'
     rows = [
         ('meson-core-file-dropped', original.replace(core_line, ''),
          ["  meson.build: PWRunner lacks 'runner/Sources/PWRunnerCore/PathUtils.swift' which is in the tree"]),
         ('meson-core-file-added', original.replace(core_line, core_line + "    'runner/Sources/PWRunnerCore/Missing.swift',\n"),
          ["  meson.build: PWRunner has 'runner/Sources/PWRunnerCore/Missing.swift' which the tree does not expect"]),
+        ('meson-client-shared-file-dropped', original.replace(client_line,
+            "    files('runner/Sources/PWRunnerCore/PWRunnerAPI.swift', 'runner/Clients/PWRunnerClient/main.swift'),"),
+         ["  meson.build: pw-runner-client lacks 'runner/Sources/PWRunnerCore/PWRunnerCoding.swift' which is in the tree"]),
+        ('meson-client-host-file-added', original.replace(client_line,
+            "    pwrunner_contract, files('runner/Sources/PWRunnerCore/CWorkerDisposition.swift', 'runner/Clients/PWRunnerClient/main.swift'),"),
+         ["  meson.build: pw-runner-client has 'runner/Sources/PWRunnerCore/CWorkerDisposition.swift' which the tree does not expect"]),
         ('meson-host-target-missing', original.replace("executable('PWRunner',", "executable('PWRunnerRenamed',"),
          ["  meson.build: unexpected target 'PWRunnerRenamed'", "  meson.build: no 'PWRunner' target"]),
         ('meson-shim-target-missing', original.replace("static_library('PWCWorkerShim',", "static_library('PWCWorkerShimRenamed',"),

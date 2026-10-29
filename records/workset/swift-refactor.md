@@ -106,3 +106,47 @@ Record each material test adaptation with old/new owners, causal extraction,
 preserved refutation and actual implementing/verification commits. Review the
 adopted or revised Stage 1 boundaries and effectful sequence before acceptance.
 This design is not an implementation or passing-test claim.
+
+## Stage 1 implementation candidate
+
+Implementation starts from clean `46d2c2f392ef552f503693e84796cfb50524c712`,
+after R1 acceptance `96d0328e`. Revalidation against the original design source
+found no changes in PWRunnerAPI or CWorkerOrchestrator; R1's Swift change is its
+generated identity. D2's factual account and repair-command corrections are
+already integrated. `swift_design` authored this stage; primary review and
+signed execution remain separate.
+
+The candidate follows all four Stage 1 rows above. PWRunnerCoding owns the
+private RequestKey, closed-object key check and sorted-key JSON helpers;
+existing names and call sites remain. CWorkerDisposition owns unique worker-slot
+association, immediately called by step assembly and disposition resolution.
+Only makeWorkerSlot and workerParamsFromPolicy gain internal visibility; both
+already serve run/admission and enable the named request-planning extraction.
+No Stage 2 family extraction, new callback, runtime state or resource acquisition
+is introduced. Run-result codecs and their asymmetric validation bodies remain
+in PWRunnerAPI unchanged.
+
+| Adaptation | Old arrangement | New arrangement and preserved obligation |
+| --- | --- | --- |
+| Shared source membership | Client named API plus its entry; host listed API with its other files | Meson's explicit pwrunner_contract contains API and Coding and feeds both targets. native_sources independently names the same required shared sources; the host still independently discovers every core Swift file. CWorkerDisposition is host-only. |
+| Source-membership rejection controls | Meson controls covered host/shim membership, duplicate targets and worker substitution | Two independent client controls replace its shared source argument with API alone, or add CWorkerDisposition. Literal expected diagnostics require the missing Coding file and unexpected host file respectively. Existing controls and restoration remain. |
+| Current source accounts | Runner/source-drift references described the monolithic coding/association owners and client source set | README and checker/helper accounts name the actual shared and host boundaries. The unresolved F1 paragraph is byte-identical. |
+| Encoding citation | runner_reply_maximum cited pwRunnerEncodeJSON in API | limits.json cites Coding; generate_limits regenerated LIMITS. The numeric limit, production encoder and maximum-reply assertions are unchanged. |
+| Worker identity | Identity for the completed R1 source arrangement | The owning generator regenerated all three copies after Swift/Meson changes. Candidate identity is a1916bc910c37e2d6393650bac2d06f157f2642505eeca2372b590be2bbee5cb. No wire-version or ABI-geometry edit. |
+
+Local preparation checks passed: Swift frontend syntax parsing of the four
+changed/new Swift files, Python AST parsing of the three changed checker/helper
+files, limits/build/worker-identity generator checks, and git diff whitespace
+checking. An inverse source comparison against the fixed parent establishes
+that API differs only by removing the exact three relocated blocks, and the
+orchestrator only by removing the exact association helper and the two specified
+visibility modifiers. The new files retain those blocks byte-for-byte apart
+from the association function's required visibility and its owner comment.
+The existing host-source guarantee paragraph was separately compared unchanged.
+
+These are syntax, generator and source-preservation observations, not passing
+dispatcher cases or compilation of the linked client/host. No signed build or
+dispatcher was run by this implementer. Primary review, signed Stage 1 build,
+required verification and acceptance precede Stage 2. The commit containing
+this subsection identifies the candidate; subsequent acceptance must identify
+its actual build and run sources separately.
