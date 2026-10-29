@@ -1,4 +1,4 @@
-# PolicyWitness workset oversight — first draft
+# PolicyWitness workset oversight
 
 Take responsibility for planning, carrying out, verifying, and bringing the following bounded workset to completion in the current PolicyWitness repository. Proceed with sustained judgment and minimal routine input from me. Use the repository's planning and working guidance to make this assignment executable, then continue through the work; producing a plan is the beginning of the engagement.
 
