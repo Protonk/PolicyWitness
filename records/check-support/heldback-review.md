@@ -4,7 +4,11 @@ Frozen design/open results: `db75edf`. Concrete predictions and unchanged
 curator dataset: `152f984`. Evaluation: `replay/heldback.py`, through the
 repository Python wrapper. It reads historical trees and writes only its
 result directory. Six cases,15 revision states and33 recorded file hashes
-were checked. `replay/heldback-results.json` retains actual facts and commands.
+were checked. `replay/heldback-results.json` retains actual facts and commands
+from corrected equipment revision2; the original result is preserved as
+`replay/heldback-results-initial.json`. `curator-review.md` records two initial
+equipment gaps and their correction under unchanged B1. The repeated cases
+are exposed equipment-development cases, not another independent trial.
 No historical test/build was run; none was needed for these input/claim facts.
 
 | Case | Evaluation | Assessment against frozen prediction |
@@ -16,7 +20,9 @@ No historical test/build was run; none was needed for these input/claim facts.
 | H05 | Both test definitions exist. Old adjacent comment promises hash AND metadata while assertion accepts either; corrected tree narrows both to exact hash | Excluded assertion-adequacy class. The historical finder location was imprecise; package uses the verified checker comment. |
 | H06 | Worker account adds privacy-consent limitation; no supplied completeness registration exists in either tree | Unregistered, not a clean negative. Partial prior exposure makes this delayed evaluation. No native consent behavior inferred. |
 
-No B1 prediction failed; none was revised after execution. The result supports
+No B1 prediction failed; none was revised after execution. The initial H03
+selector and H04 removal verification were incomplete, so only the corrected
+equipment establishes those particular parts. The result supports
 the stated limited contract, not an assertion that a complete implementation
 would discover these relationships automatically or that the exclusions are
 unimportant. Adoption reviews for H02 and A remain hypothetical. H03 exposes

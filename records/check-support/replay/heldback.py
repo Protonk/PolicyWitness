@@ -34,7 +34,8 @@ def main():
     dataset = (OUT / 'heldback-cases.json').read_bytes()
     assert digest(dataset) == '6c68e4618806d0d47000a10c0ea5be39ac564d1159c4497190153425a78c2cb4'
     cases = json.loads(dataset)['cases']
-    result = dict(design='B1', freeze_commit='db75edf', prediction_commit='152f984',
+    result = dict(design='B1', equipment_revision=2, initial_equipment_commit='3e08737',
+                  freeze_commit='db75edf', prediction_commit='152f984',
                   dataset_sha256=digest(dataset), live_execution=False, file_hashes_verified=0, cases=[])
     for case in cases:
         ident = case['id']
@@ -82,19 +83,27 @@ def main():
                 start=text.index('Known gap. The observer receiver,')
                 prose=text[start:text.index('\n\n',start)]
                 assert digest(prose.encode()) == snap['prose_sha256']
-                changed=digest(prose.encode()) != case['snapshots'][0]['prose_sha256']
-                record.update(prose_sha256=digest(prose.encode()),code_inputs_changed=hashes != records[0]['verified_hashes'] if records else False,
+                # The paragraph verifies the curator's evidence excerpt. B1's
+                # actual selected claim input is the whole file, not this parser.
+                baseline=read(case['snapshots'][0]['revision'],'docs/ARCHITECTURE.md')
+                changed=digest(text.encode()) != digest(baseline)
+                record.update(prose_sha256=digest(prose.encode()),claim_selector='whole file docs/ARCHITECTURE.md',
+                              claim_sha256=digest(text.encode()),baseline_claim_sha256=digest(baseline),
+                              code_inputs_changed=hashes != records[0]['verified_hashes'] if records else False,
                               result='review-required' if changed else 'unreviewed', support='unresolved in both trees',
                               reason='registered prose changed; no support approval' if changed else 'baseline unchanged; no support approval')
             elif ident == 'H04':
                 rows={e['id']:e for e in worker_graph(rev)['edges']}
+                contrast_ids=sorted(set(rows) & {'W50','W53'})
+                assert contrast_ids == sorted(e['id'] for e in snap['edges'])
                 observed=[]
                 for e in snap['edges']:
                     assert rows[e['id']] == e
                     present=all(r['symbol'] in read(rev,r['path']).decode() for r in e['sources']+e['checks'])
                     assert present
                     observed.append(dict(id=e['id'],label=e['label'],pointer_presence=True))
-                record.update(edges=observed,result='semantic-support-excluded',reason='same existing places do not establish object relation')
+                record.update(edges=observed,contrast_ids=contrast_ids,w50_present='W50' in rows,
+                              result='semantic-support-excluded',reason='same existing places do not establish object relation')
             elif ident == 'H05':
                 text=read(rev,snap['file']['path']).decode()
                 assert 'test_records_are_bounded_redacted_and_complete' in definitions(text)

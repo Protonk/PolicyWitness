@@ -108,6 +108,9 @@
       "id": "H03",
       "observations": [
         {
+          "baseline_claim_sha256": "c737c0d6dfe06708dfd443d6d37d6ddae039447c778ce165c2e0386143ac01c2",
+          "claim_selector": "whole file docs/ARCHITECTURE.md",
+          "claim_sha256": "c737c0d6dfe06708dfd443d6d37d6ddae039447c778ce165c2e0386143ac01c2",
           "code_inputs_changed": false,
           "prose_sha256": "c71583d46f4ea6f5b8ffd30901048955bebac0e22a492691f874760065875837",
           "reason": "baseline unchanged; no support approval",
@@ -120,6 +123,9 @@
           }
         },
         {
+          "baseline_claim_sha256": "c737c0d6dfe06708dfd443d6d37d6ddae039447c778ce165c2e0386143ac01c2",
+          "claim_selector": "whole file docs/ARCHITECTURE.md",
+          "claim_sha256": "1a1fe94cfe0c89d5b98c35560b4d4bbf41cc3898be2e8d42f9d32e72ea6d057d",
           "code_inputs_changed": false,
           "prose_sha256": "086ff7f611c9f686ad4da6b1f1349ccb3d91ec1b9a4a135693ed8b8d6a5ef437",
           "reason": "registered prose changed; no support approval",
@@ -137,6 +143,10 @@
       "id": "H04",
       "observations": [
         {
+          "contrast_ids": [
+            "W50",
+            "W53"
+          ],
           "edges": [
             {
               "id": "W50",
@@ -154,9 +164,13 @@
           "revision": "b1f56973190b9123fce3076b92677a966c0171c8",
           "verified_hashes": {
             "runner/Sources/PWRunnerCore/PWRunnerService.swift": "bf8e356a596053ac78af14de34f5b6da667bf34bdd5eceefd673662c1349348d"
-          }
+          },
+          "w50_present": true
         },
         {
+          "contrast_ids": [
+            "W53"
+          ],
           "edges": [
             {
               "id": "W53",
@@ -169,7 +183,8 @@
           "revision": "143c8a42088298a9c7283a60df585e0236bbcfef",
           "verified_hashes": {
             "runner/Sources/PWRunnerCore/PWRunnerService.swift": "bf8e356a596053ac78af14de34f5b6da667bf34bdd5eceefd673662c1349348d"
-          }
+          },
+          "w50_present": false
         }
       ]
     },
@@ -408,6 +423,11 @@
     [
       "git",
       "show",
+      "29e3ead0909d0840b835d640cedbe48a91668d6e:docs/ARCHITECTURE.md"
+    ],
+    [
+      "git",
+      "show",
       "ce08ec19ddd0d02e405f22ee0ad012032201247a:controller/src/sandbox_log.rs"
     ],
     [
@@ -419,6 +439,11 @@
       "git",
       "show",
       "ce08ec19ddd0d02e405f22ee0ad012032201247a:docs/ARCHITECTURE.md"
+    ],
+    [
+      "git",
+      "show",
+      "29e3ead0909d0840b835d640cedbe48a91668d6e:docs/ARCHITECTURE.md"
     ],
     [
       "git",
@@ -513,8 +538,10 @@
   ],
   "dataset_sha256": "6c68e4618806d0d47000a10c0ea5be39ac564d1159c4497190153425a78c2cb4",
   "design": "B1",
+  "equipment_revision": 2,
   "file_hashes_verified": 33,
   "freeze_commit": "db75edf",
+  "initial_equipment_commit": "3e08737",
   "live_execution": false,
   "prediction_commit": "152f984"
 }
