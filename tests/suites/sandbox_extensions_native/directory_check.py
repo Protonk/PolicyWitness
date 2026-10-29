@@ -13,7 +13,9 @@ from check import (CONTENTS, expect_denied, expect_read, file_identity, prepare,
                    run_experiment, save)
 
 SCENARIOS = ('directory', 'directory_no_consume', 'directory_no_predicate',
-             'directory_different', 'directory_read_only')
+             'directory_different', 'directory_read_only',
+             'directory_read_only_no_consume', 'directory_read_only_no_predicate',
+             'directory_read_only_different')
 PAYLOAD = b'PW directory effect\n'
 POLICY = ('(version 1) (allow default) (deny file-read-data) (deny file-write*) '
           '(allow file-read-data (extension "com.apple.app-sandbox.read") '
@@ -113,10 +115,10 @@ def observed_write(w, create, initial):
 def validate(r, target_identity, issue_identity, initial):
     case = r['scenario']
     assert case in SCENARIOS
-    assert r['issue_class'] == ('com.apple.app-sandbox.read' if case == 'directory_read_only'
+    assert r['issue_class'] == ('com.apple.app-sandbox.read' if case.startswith('directory_read_only')
                                 else 'com.apple.app-sandbox.read-write')
     assert r['issue_flags'] == 0 and r['native_issue_path'] == r['resolved_issue']
-    assert r['policy'] == (NO_PREDICATE if case == 'directory_no_predicate' else POLICY)
+    assert r['policy'] == (NO_PREDICATE if case.endswith('_no_predicate') else POLICY)
     assert r['failure'] == 0 and r['worker_done'] == 1
     assert r['worker_reaped'] == r['issuer_reaped'] == 1, 'unconfirmed cleanup'
     assert r['worker_wait_status'] == r['issuer_wait_status'] == 0
@@ -130,7 +132,7 @@ def validate(r, target_identity, issue_identity, initial):
     assert r['consume_return_bits'] == 64 and r['release_return_bits'] == 32
     assert r['worker_erased_channel'] and r['token_guard_passed']
     assert r['issue']['attempted'] and r['issue']['nonnull'] and 0 < r['token_length'] < 16384
-    consume = case != 'directory_no_consume'
+    consume = not case.endswith('_no_consume')
     assert bool(r['consume']['attempted']) == bool(r['release']['attempted']) == consume
     if consume:
         assert type(r['consume']['native_rc']) is int and r['consume']['native_rc'] != -1
@@ -292,7 +294,7 @@ def main():
                 p = target / f'existing-{i}'; p.write_bytes(CONTENTS); p.chmod(0o600)
             initial = [file_identity(target / f'existing-{i}') for i in range(4)]
             target_id, other_id = file_identity(target), file_identity(other)
-            issue = other if case == 'directory_different' else target
+            issue = other if case.endswith('_different') else target
             folder = out / case
             folder.mkdir()
             save(folder / 'preparation.json', dict(target_identity=target_id, issue_identity=other_id if issue == other else target_id,

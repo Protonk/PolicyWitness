@@ -78,3 +78,11 @@ identity, operation and persistence evidence. It accepts unavailable or unchange
 queries and failed release results without translating them into access claims.
 The case retains exact source, signing, native and external observations under
 the same evidence ownership as `feasibility`.
+
+The matched/crossed follow-on repeats the no-consume, no-predicate and
+different-directory controls with read-only issuance as well. Both native
+classes use the same fixed policy and target preparation. Each worker reads
+known initial bytes before its write attempt using separate fresh descriptors.
+The comparison pairs read-only authority with reads and writes, and read-write
+authority with writes and reads. `com.apple.app-sandbox.read-write` is named
+literally; this experiment does not treat it as write-only or assume symmetry.

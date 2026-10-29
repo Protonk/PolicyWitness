@@ -471,7 +471,8 @@ int main(int argc, char **argv) {
     if (argc == 2 && (!strcmp(argv[1], "--worker") || !strcmp(argv[1], "--issuer"))) return child_main(argv[1]);
     if (argc != 5) { fputs("usage: native CASE TARGET ISSUANCE_TARGET instrument|plain\n", stderr); return 2; }
     const char *cases[] = {"lifecycle", "issuer_exit", "no_consume", "no_release", "no_predicate", "different_target", "issue_failure", "rejected_token", "retained_fd",
-        "directory", "directory_no_consume", "directory_no_predicate", "directory_different", "directory_read_only"};
+        "directory", "directory_no_consume", "directory_no_predicate", "directory_different", "directory_read_only",
+        "directory_read_only_no_consume", "directory_read_only_no_predicate", "directory_read_only_different"};
     bool known = false;
     for (size_t i = 0; i < sizeof(cases)/sizeof(cases[0]); i++) if (!strcmp(argv[1], cases[i])) known = true;
     if (!known || (strcmp(argv[4], "instrument") && strcmp(argv[4], "plain"))) return 2;
@@ -483,9 +484,11 @@ int main(int argc, char **argv) {
     if (strlen(argv[1]) >= sizeof(e->scenario) || strlen(argv[2]) >= PATH_MAX || strlen(argv[3]) >= PATH_MAX) return 2;
     strcpy(e->scenario, argv[1]); strcpy(e->target, argv[2]); strcpy(e->submitted_issue, argv[3]);
     e->instrument = !strcmp(argv[4], "instrument");
-    e->no_consume = !strcmp(argv[1], "no_consume") || !strcmp(argv[1], "directory_no_consume");
+    e->no_consume = !strcmp(argv[1], "no_consume") || !strcmp(argv[1], "directory_no_consume") ||
+        !strcmp(argv[1], "directory_read_only_no_consume");
     e->no_release = !strcmp(argv[1], "no_release");
-    e->no_predicate = !strcmp(argv[1], "no_predicate") || !strcmp(argv[1], "directory_no_predicate");
+    e->no_predicate = !strcmp(argv[1], "no_predicate") || !strcmp(argv[1], "directory_no_predicate") ||
+        !strcmp(argv[1], "directory_read_only_no_predicate");
     e->retain_fd = !strcmp(argv[1], "retained_fd");
     e->issuer_exits = !strcmp(argv[1], "issuer_exit"); e->rejected_token = !strcmp(argv[1], "rejected_token");
     e->bad_issue_path = !strcmp(argv[1], "issue_failure"); e->issue_flags = 0;
@@ -499,7 +502,7 @@ int main(int argc, char **argv) {
     }
     identity_from_stat(&e->issue_identity, &st);
     e->directory.enabled = !strncmp(argv[1], "directory", 9);
-    e->directory.read_only = !strcmp(argv[1], "directory_read_only");
+    e->directory.read_only = !strncmp(argv[1], "directory_read_only", 19);
     if (e->directory.enabled) {
         if (!S_ISDIR(e->target_identity.mode) || !S_ISDIR(e->issue_identity.mode)) return 3;
         for (unsigned i = 0; i < BOUNDARIES; i++) {

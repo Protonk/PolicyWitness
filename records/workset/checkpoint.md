@@ -44,10 +44,17 @@ verification. Their completed ownership was verified and pins written through
 the retention helper while holding the checkout lock. Revisit after D1.
 
 No running build/test, workset-owned native child or external runner.
-D1 finding F1 awaits a user decision: the documented host-source rejection of
+D1 finding F1 remains unresolved by explicit user instruction: the documented host-source rejection of
 extension issue/consume/release calls is absent from its API set, and controls
 derive that family from the same set. The recommendation is to preserve the
 guarantee with the missing names and independently specified rejection controls.
-No repair or expectation change is authorized until that answer arrives.
-Existing drift runs have not been pruned; the separate
-pytest-trial worktree and release material remain untouched.
+The user chose to keep it unresolved for later discussion. No repair or
+expectation change is authorized, and this is not an accepted final disposition.
+
+Supported `make prune` preview/apply removed thirteen eligible unpinned runs
+after D1 confirmed that only its three pinned inputs were needed. They were
+the eleven old drift/planning runs plus the E1 baseline and failed first
+directory candidate. Their compact findings remain committed; no future claim
+may imply their raw output remains available. All five workset pins and release
+pins survived. The separate pytest-trial worktree, release material and
+`.release-rotation` remain untouched; cleanup reported no failures.
