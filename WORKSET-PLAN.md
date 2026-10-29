@@ -12,6 +12,8 @@ Do this intake yourself. I do not want to collect plans, tidy the repository, or
 
 This prompt supplies amendments to the existing plans. Retain their useful substance and verification requirements, adjusting their scope and completion conditions where specified below. Do not make a preliminary cleanup or wholesale rewrite of those plans a prerequisite to useful work. Choose the execution-plan structure, local paths, and working arrangements using project guidance.
 
+The [execution checkpoints](WORKSET-EXECUTION-PLAN.md) record the working sequence, verification choices and owned records for this engagement.
+
 ## The workset and its boundaries
 
 The included work is:
