@@ -215,8 +215,10 @@ runtime implementation `a458b28`. The app's own build stamp remains
 identity is
 `4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8`.
 The receipt retains the command, specimens, source hashes, selected raw captures,
-final worker evidence and hashes of the original artifacts. Complete raw output
-is local, gitignored evidence in the pinned run named by the receipt.
+final worker evidence and hashes of the original artifacts. The original complete
+raw output and app-inventory comparison record are unavailable in this checkout
+and are not pinned in `tests/RETAINED.json`. The copied observations and hashes
+describe the dated run; they do not establish current-source applicability.
 
 Reuse for another implementation or environment requires an applicability
 review or a new observation; matching source hashes establish source identity,

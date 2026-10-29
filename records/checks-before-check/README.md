@@ -25,6 +25,8 @@ Artifacts:
   selected verification; no final D2 acceptance is implied.
 - `verification.md`, `verification-facts.json`: isolated development run at the
   committed candidate, result/receipt identities and limits of that credit.
+- `e2-reconciliation.md`, `e2-reconciliation-facts.json`: source inspection of
+  the E2 checkpoint and the separately approved C4/C5 factual corrections.
 
 Ownership, traces, reconciliation and acceptance records are added as those
 phases finish. Current-source accounts always name their examined revision;

@@ -2,8 +2,8 @@
 
 Base investigation source: `7562d24ac2334122499ea349010fd67211058ac3`.
 This record accompanies the candidate implementing the primary executor's
-authorized C1–C3 corrections. It is not final D2 acceptance; E2 reconciliation
-and the recorded C4/C5 dispositions remain outstanding. F1 is unchanged and
+authorized C1–C3 corrections. It is not final D2 acceptance; the subsequent
+e2-reconciliation record owns C4/C5 and the integration boundary. F1 is unchanged and
 unresolved under the user's explicit repeated instruction.
 
 ## Changes and scope

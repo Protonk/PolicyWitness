@@ -12,8 +12,8 @@ permanent changes and verification follow in a separate implementation record.
 | C1b | T4 traced contract.py's WorkerIdentityTests and timed_main to contract_versions; README wrongly puts them in build_documentation. Identity graph rows cite the version-copy test, which does not check worker identities. | Primary executor authorized this additional factual routing/citation correction within C1. Move the account under contract_versions and cite actual identity currency/input/output controls. Include contract_versions verification. |
 | C2 | documents node gen_build owns “five build tables”; generate_build.REGIONS has FIGURE plus STEPS, REFUSALS, SIGNING, INVOCATIONS, KNOBS, DIRECTORIES. | Supported wording correction, authorized. Say generated build tables without a brittle handwritten count; reciprocal map retains all 6 actual tables. |
 | C3 | generate_architecture.main and generate_build.main print `run: python3 …` after stale-copy failure; root/docs guidance and other generators use tests/lib/python.sh. | Supported diagnostic correction, authorized. Prescribe the canonical wrapper; extend existing independent accepted/stale/restored controls to require its exact repair command. Do not change status, validation, ownership or write boundaries. |
-| C4 | L receipt/WORKER still call old raw runs pinned; fixed RETAINED does not contain them. D1 already separated historical facts from availability. | Established stale availability account. Deferred from this candidate: WORKER/public descriptions overlap E2 and current retention must be reconciled. Proposed correction would qualify current availability without changing dated observations, re-stamping or reobserving. Needs disposition before final D2 acceptance. |
-| C5 | SIGNING release procedure names prose baseline growth; release_preflight.inspect also enforces build baseline. Existing BUILD/suite accounts describe that second gate. | Bounded account omission, not a claim that build baseline is unchecked. Deferred from this candidate for primary reconciliation. Proposed addition names both existing gates and their exact-site/subset nature; no new release policy. |
+| C4 | L receipt/WORKER still call old raw runs pinned; fixed RETAINED does not contain them. D1 already separated historical facts from availability. | Initially deferred for E2/retention reconciliation. The later e2-reconciliation record establishes both raw directories absent and unpinned at 29d1c79. Primary-approved follow-up corrects availability only; dated observations, hashes and reuse boundaries remain exact. |
+| C5 | SIGNING release procedure names prose baseline growth; release_preflight.inspect also enforces build baseline. Existing BUILD/suite accounts describe that second gate. | Initially deferred for primary reconciliation. The later e2-reconciliation record traces both unchanged gates at 29d1c79. Primary-approved follow-up names both existing gates; no new release policy. |
 | F1 | Documented host-source rejection includes extension APIs absent from its symbol set; controls derive names from that same set. | User explicitly chose unresolved later discussion. No repair or weakened statement; preserve the entire F1 paragraph while correcting unrelated suite text. |
 | I1 | D1 shorthand said four architecture figures, included ABI header among contract-version outputs and repeated the README's worker-identity case misattribution. | Corrected in D2 intake from declarations and dispatch: 5 graphs; no ABI-header contract target; WorkerIdentityTests run in contract_versions. Frozen D1 predictions/results unchanged. |
 
@@ -76,7 +76,7 @@ that control checks all generators occur before the first signing call. Source
 inspection establishes the more specific compile/second-identity locations;
 the citation is not credited as a behavioral witness for every placement.
 
-At this phase, C4/C5 retain explicit pending dispositions and F1 retains the
-user's unresolved decision. Therefore this record is a concrete reviewed
-correction scope, **not final D2 acceptance**. Absorbed D1 retirement remains
+The follow-up e2-reconciliation record resolves C4/C5 as bounded factual
+corrections; F1 retains the user's unresolved decision. This is a concrete
+reviewed correction scope, **not final D2 acceptance**. Absorbed D1 retirement remains
 coordinated and unperformed.

@@ -5,7 +5,7 @@
   "source_revision": "f85c7b094d75bf72931cd4856cb4ad086da20cbe",
   "runtime_implementation_commit": "a458b2876da794dd159848ae1bc02e0c65d15c62",
   "command": "PW_TEST_OUT_DIR=tests/out/runs/worker-doc-launch-20261018 tests/run.sh --case runner_exec_inheritance/launch_inventory",
-  "raw_evidence_availability": "Gitignored local checkout; run is pinned in tests/RETAINED.json. Hashes below identify original files. Selected raw observations are copied here.",
+  "raw_evidence_availability": "The original complete raw output and app-inventory comparison record are unavailable in this checkout and are not pinned in tests/RETAINED.json. Selected raw observations are copied here; hashes identify the original files, not currently available bytes.",
   "worker_source_identity": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
   "app_inventory_equal_to": {
     "path": "tests/out/runs/validator-selection-receipts-20261018/artifact-integrity/before.json",

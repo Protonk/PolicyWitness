@@ -33,6 +33,9 @@ tracks the authorized bounded candidate separately from final acceptance.
 The [development verification](../records/checks-before-check/verification.md)
 and [compact result](../records/checks-before-check/verification-facts.json)
 identify the isolated tested source and the separate integration credit needed.
+The [E2 reconciliation](../records/checks-before-check/e2-reconciliation.md) and
+[comparison facts](../records/checks-before-check/e2-reconciliation-facts.json)
+record source inspection and the factual availability/release-account follow-up.
 
 Follow [planning guidance](../CONTRIBUTING.md#planning-a-change),
 [documentation guidance](AGENTS.md) and [test working guidance](../tests/AGENTS.md).
