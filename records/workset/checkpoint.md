@@ -3,7 +3,7 @@
 Current phase: E2, public extension addition and crossed follow-on; C0 and E1 complete.
 
 The intake baseline is `bf7e97faab75754efe719b0bad20e83b67762c15`.
-Production implementation has not changed. E1 added independent native
+E2 production edits are in progress in the main working tree. E1 added independent native
 directory equipment and its tests/documentation at `3ce5d8f`, corrected at
 `b6cac0d735f0384fc50d94a6eba6ab18e9323763` after a failed candidate run.
 The execution companion and intake record are committed as `4b18284`.
@@ -26,6 +26,17 @@ native cases at `b6cac0d`, with all five directory scenarios and eighteen read
 scenarios complete. `workset-native-structure-01` passed the source/catalog and
 generator/link cases. Their pins are committed with the E1 findings; the
 directory-native record states provenance and the structural prose-delta limit.
+
+The matched/crossed follow-on passed both native cases at `8aa7402` in pinned
+`workset-native-crossed-01`: eight directory scenarios, eighteen original read
+scenarios. Its compact finding is accepted; the full E2 stage remains open.
+Integration design `ad1c1ca` names authority admission and fresh-write evidence.
+Agent `design_extension_integration` owns Swift source/tests and Rust disposition;
+agent `extension_consumers_tests` owns independent Python readers and integrated
+test apparatus. Main owns C, ABI checking, registration, generators, docs and
+final verification. No agent may start core refactoring. Builds/live runs await
+a coherent committed candidate; the native fresh-write substitution case passed
+one developmental working-tree run, not credited as stage verification.
 
 The read-only C0 reviewer is complete. Agent `binding_investigation` owns D1 in
 the isolated worktree `/private/tmp/pw-workset-binding`, detached at `cf0136b`.

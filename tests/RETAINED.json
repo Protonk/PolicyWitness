@@ -51,6 +51,13 @@
       "reason": "E1 source/catalog and generator/link controls. Tested implementation b6cac0d; only the E1 findings record prose evolved during execution, as recorded in its acceptance account.",
       "source": "b6cac0d735f0384fc50d94a6eba6ab18e9323763",
       "app_inventory": null
+    },
+    {
+      "path": "runs/workset-native-crossed-01",
+      "run_id": "20261029T213556Z_990dc5c9",
+      "reason": "E2 matched/crossed native comparison: both classes with no-consume, no-predicate and different-directory controls; eight directory and eighteen original read scenarios. No production app.",
+      "source": "8aa74027e78f0b7ab4c859c1ffa85f2b41a8a288",
+      "app_inventory": null
     }
   ]
 }
