@@ -19,6 +19,8 @@ temporary workset material and retire together after final acceptance.
   apparatus, acceptance criteria and observations before public integration.
 - [Matched/crossed follow-on](records/workset/extension-follow-on.md): E2's
   bounded native authority/operation comparison and independent controls.
+- [Public extension integration](records/workset/extension-integration.md): E2
+  request/evidence design, coordinated surfaces and verification.
 
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.
