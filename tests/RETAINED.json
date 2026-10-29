@@ -128,6 +128,13 @@
       "reason": "Nine affected source/build-entry checks pass after final refactor and D2 citation corrections. Replaces prior source-check credit, including the failed qualified-symbol citation; does not close the repeated BYOXPC failure.",
       "source": "590c5e42f010814b09cfe30b48973e972aa1609b",
       "app_inventory": null
+    },
+    {
+      "path": "runs/workset-r1-retirement-01",
+      "run_id": "20261029T233533Z_3cf679ab",
+      "reason": "Source structure and generator/prose-link controls pass after retiring the accepted C plan. Workset-owned C record remains live; this does not accept the blocked Swift stage.",
+      "source": "aa3069f31b28c1d781e340f14d734d06be5c2078",
+      "app_inventory": null
     }
   ]
 }

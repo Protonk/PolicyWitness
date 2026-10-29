@@ -90,3 +90,9 @@ untouched. No cleanup may bypass the checkout lock or retention helpers.
 - R2 design `f8f3c24f`; Stage 1 candidate `72165300` failed compilation,
   corrected `9af4d3d1`, accepted `2de5b1c7` with build 998 and 87/87.
   Stage 2 and its failed verification are identified above.
+
+C plan retirement `aa3069f3` passed both source/structure and generator/prose-link
+checks in pinned `workset-r1-retirement-01`, run `20261029T233533Z_3cf679ab`.
+All retained paths and run IDs were reconciled; no credited result or owned
+cleanup record was released. The C plan is recoverable at `6dab4430` under
+records/distribution/C-RUNNER-MODULARIZATION-PLAN.md.
