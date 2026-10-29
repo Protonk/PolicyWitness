@@ -1,8 +1,8 @@
 # Workset checkpoint
 
 Current phase: E2 accepted; R1 design preparation is next. C0, E1, E2 and D1
-are complete. D2 runs in the isolated documentation worktree. Neither required
-core refactor has begun. The E2 seal records acceptance separately from tested
+are complete. D2 runs in the isolated documentation worktree. R1 design preparation has begun; neither required core refactor has changed
+implementation. The E2 seal records acceptance separately from tested
 source `b565c1b` and signed runtime `7426fc0` (v0.3.3 build 977).
 
 ## Recoverable states
@@ -21,7 +21,8 @@ source `b565c1b` and signed runtime `7426fc0` (v0.3.3 build 977).
 
 ## Next work
 
-1. Read the C modularization plan, complete its ownership/lifetime/order design,
+1. Agent `c_refactor` is preparing R1 at `29d1c79`, with writes limited to its
+   design record and associated plan link. Review that design before implementation,
    then execute R1 with relocated controls retaining production reach.
 2. Execute the bounded two-stage Swift plan, preserving client/host separation.
    C and Swift execution remain sequential unless a reviewed boundary permits
@@ -65,3 +66,8 @@ pruned raw evidence is not available. Revisit unpinned output after new evidence
 is secured. Release pins, `.release-rotation`, and the unrelated pytest-evidence
 worktree remain untouched. Never unlink the checkout lock or bypass cleanup
 ownership helpers.
+
+After the E2 seal, supported prune preview/apply removed only
+`workset-e2-shape-01` and `workset-write-controls-dev-01`. The harvested goldens,
+compact failure account and replacement passing credits remain committed/pinned;
+the two raw runs are now absent. All retained runs and release material stayed.
