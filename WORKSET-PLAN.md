@@ -20,7 +20,7 @@ The included work is:
 
 - An initial pytest-first architectural counterfactual, committed and frozen before substantive implementation changes in this workset.
 - A directory-scoped read-write sandbox-extension experiment, followed by one bounded experiment comparing extension authority with attempted operations.
-- The bounded refactors described in `records/distribution/C-RUNNER-MODULARIZATION-PLAN.md` and `records/distribution/SWIFT-MODULARIZATION-PLAN.md`, including their necessary design preparation.
+- The bounded refactors described in `records/distribution/C-RUNNER-MODULARIZATION-PLAN.md` (accepted and retired; recover at `6dab4430`) and the live `records/distribution/SWIFT-MODULARIZATION-PLAN.md`, including their necessary design preparation.
 - `tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md`, followed by `docs/CHECKS-BEFORE-CHECK-PLAN.md`, with the amendments below.
 - Verification of the promised stages, disposition of findings, and retirement of the workset's plans and records.
 

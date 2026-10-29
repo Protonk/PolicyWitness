@@ -62,7 +62,7 @@ identify the one unwitnessed worker execution. Preserve it until that worker's
 absence/exit is established; service removal is not a worker-exit receipt.
 
 All credited native, E2, R1, R2, D2 and retirement runs remain pinned in
- tests/RETAINED.json, as do both failed R2 runs and three historical D1 cost
+tests/RETAINED.json, as do both failed R2 runs and three historical D1 cost
 inputs. Their source IDs and purposes are reconciled there. The dirty historical
 D1 run keeps null source and its attached source.json/working.diff; never
 relabel it as a clean commit. Existing release pins are unchanged. Earlier
@@ -85,7 +85,7 @@ untouched. No cleanup may bypass the checkout lock or retention helpers.
   final bounded citation correction `590c5e42`. F1 prevents final disposition.
 - R1 design `6e40887`, candidate `341f9441`, acceptance `96d0328e` with
   build 994 and 204/204. Final candidate also passes its native/ABI/mutation
-  controls. Its accepted plan can retire; workset-owned c-refactor.md stays
+  controls. Its accepted plan retires after record commit `6dab4430`; workset-owned c-refactor.md stays
   with this ongoing package.
 - R2 design `f8f3c24f`; Stage 1 candidate `72165300` failed compilation,
   corrected `9af4d3d1`, accepted `2de5b1c7` with build 998 and 87/87.
