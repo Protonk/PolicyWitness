@@ -1,0 +1,520 @@
+{
+  "cases": [
+    {
+      "id": "H01",
+      "observations": [
+        {
+          "definition_present": true,
+          "reason": "Python definition for existing manifest check citation",
+          "result": "referent-present",
+          "revision": "a33b645e30bdbe6e288442544a2f9a8e8038d8fc",
+          "verified_hashes": {
+            "tests/suites/preflight/check_build_provenance.py": "7ea07edf998520cd704742a7b8d2c7c14e8b97063bd21228c22e827ca0e2f8f0"
+          }
+        },
+        {
+          "definition_present": false,
+          "reason": "Python definition for existing manifest check citation",
+          "result": "referent-missing",
+          "revision": "e1db41af6444273b7d8def6763029db5e43b304e",
+          "verified_hashes": {
+            "tests/suites/preflight/check_build_provenance.py": "ba19c35efcd1dd0f3dd2493b7612d9f816095da4675f9d41e0e4883b37287dc0"
+          }
+        },
+        {
+          "definition_present": true,
+          "reason": "Python definition for existing manifest check citation",
+          "result": "referent-present",
+          "revision": "6304fef56e8707e1eb79503f57ca831f200b482a",
+          "verified_hashes": {
+            "tests/suites/preflight/check_build_provenance.py": "7ea07edf998520cd704742a7b8d2c7c14e8b97063bd21228c22e827ca0e2f8f0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "H02",
+      "observations": [
+        {
+          "changed": [],
+          "historical_only_disposition_supplied": false,
+          "reason": "equal represented inputs; hypothetical baseline review",
+          "result": "represented-inputs-current",
+          "revision": "bfae9d44dfef5596fa5f29d3f2a591afb2bcc580",
+          "same_named_referent": true,
+          "verified_hashes": {
+            "controller/tools/pw_probe_runner/pw_probe_runner.c": "e8b57611e4c4826eca03d4a250fd09197ad6b3f20d19bca8fabfa362f1f31a79",
+            "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "51ab313fbb3d5770947a8c2a4f8b20c8d5da0cafa2d420cd294cf025a6d524c0",
+            "records/SAFE-WAIT-TIME-INVESTIGATION.md": "59b17ccee2e8286580e79f497186e8b9cba1b7fee668155f8154aacbcbd956e5",
+            "records/safe-wait-time/order_probe.c": "5ae52b9cee6b04462eec36603568597d69b1ae5f706daf913aaad326d9d3233b",
+            "records/safe-wait-time/run_probes.py": "85acf964e74af65aa490d40be74001a62d70b28dec43fb884dcd64324aaa50fe"
+          }
+        },
+        {
+          "changed": [],
+          "historical_only_disposition_supplied": false,
+          "reason": "equal represented inputs; hypothetical baseline review",
+          "result": "represented-inputs-current",
+          "revision": "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a",
+          "same_named_referent": true,
+          "verified_hashes": {
+            "controller/tools/pw_probe_runner/pw_probe_runner.c": "e8b57611e4c4826eca03d4a250fd09197ad6b3f20d19bca8fabfa362f1f31a79",
+            "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "51ab313fbb3d5770947a8c2a4f8b20c8d5da0cafa2d420cd294cf025a6d524c0",
+            "records/SAFE-WAIT-TIME-INVESTIGATION.md": "59b17ccee2e8286580e79f497186e8b9cba1b7fee668155f8154aacbcbd956e5",
+            "records/safe-wait-time/order_probe.c": "5ae52b9cee6b04462eec36603568597d69b1ae5f706daf913aaad326d9d3233b",
+            "records/safe-wait-time/run_probes.py": "85acf964e74af65aa490d40be74001a62d70b28dec43fb884dcd64324aaa50fe"
+          }
+        },
+        {
+          "changed": [
+            "controller/tools/pw_probe_runner/pw_probe_runner.c",
+            "controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+          ],
+          "historical_only_disposition_supplied": false,
+          "reason": "changed represented input",
+          "result": "review-required",
+          "revision": "085e23e6d0c0a76aa80c90fd8471a6f9025a34a4",
+          "same_named_referent": true,
+          "verified_hashes": {
+            "controller/tools/pw_probe_runner/pw_probe_runner.c": "56ce7e9c250cca5f99deeabb3c9ce2fe21d096a7ae0b7b5fe67190416129e418",
+            "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "783de86c162e7b63e8bdaaef85006309c91e00a505d4a96bfe99ff0556469838",
+            "records/SAFE-WAIT-TIME-INVESTIGATION.md": "59b17ccee2e8286580e79f497186e8b9cba1b7fee668155f8154aacbcbd956e5",
+            "records/safe-wait-time/order_probe.c": "5ae52b9cee6b04462eec36603568597d69b1ae5f706daf913aaad326d9d3233b",
+            "records/safe-wait-time/run_probes.py": "85acf964e74af65aa490d40be74001a62d70b28dec43fb884dcd64324aaa50fe"
+          }
+        },
+        {
+          "changed": [
+            "records/SAFE-WAIT-TIME-INVESTIGATION.md",
+            "controller/tools/pw_probe_runner/pw_probe_runner.c",
+            "controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+          ],
+          "historical_only_disposition_supplied": false,
+          "reason": "changed represented input",
+          "result": "review-required",
+          "revision": "972c54bd22b1dbafcc4b5fd3b71fe56f6ea59f03",
+          "same_named_referent": true,
+          "verified_hashes": {
+            "controller/tools/pw_probe_runner/pw_probe_runner.c": "56ce7e9c250cca5f99deeabb3c9ce2fe21d096a7ae0b7b5fe67190416129e418",
+            "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "783de86c162e7b63e8bdaaef85006309c91e00a505d4a96bfe99ff0556469838",
+            "records/SAFE-WAIT-TIME-INVESTIGATION.md": "bc8cd3cc29978dcf1bef6106d9458aed9211b2aa2b972eb211ddf240ac8215e5",
+            "records/safe-wait-time/order_probe.c": "5ae52b9cee6b04462eec36603568597d69b1ae5f706daf913aaad326d9d3233b",
+            "records/safe-wait-time/run_probes.py": "85acf964e74af65aa490d40be74001a62d70b28dec43fb884dcd64324aaa50fe"
+          }
+        }
+      ]
+    },
+    {
+      "id": "H03",
+      "observations": [
+        {
+          "code_inputs_changed": false,
+          "prose_sha256": "c71583d46f4ea6f5b8ffd30901048955bebac0e22a492691f874760065875837",
+          "reason": "baseline unchanged; no support approval",
+          "result": "unreviewed",
+          "revision": "29e3ead0909d0840b835d640cedbe48a91668d6e",
+          "support": "unresolved in both trees",
+          "verified_hashes": {
+            "controller/src/run_flow.rs": "dc816d4f178bee91a301702c0e4b7e22d8651328d1a7f02fe74e85bf8b65620c",
+            "controller/src/sandbox_log.rs": "2926ba4c12a090231bd4fd7ecb572a35cfc419cd2da0c74cc9bcd98d60124b94"
+          }
+        },
+        {
+          "code_inputs_changed": false,
+          "prose_sha256": "086ff7f611c9f686ad4da6b1f1349ccb3d91ec1b9a4a135693ed8b8d6a5ef437",
+          "reason": "registered prose changed; no support approval",
+          "result": "review-required",
+          "revision": "ce08ec19ddd0d02e405f22ee0ad012032201247a",
+          "support": "unresolved in both trees",
+          "verified_hashes": {
+            "controller/src/run_flow.rs": "dc816d4f178bee91a301702c0e4b7e22d8651328d1a7f02fe74e85bf8b65620c",
+            "controller/src/sandbox_log.rs": "2926ba4c12a090231bd4fd7ecb572a35cfc419cd2da0c74cc9bcd98d60124b94"
+          }
+        }
+      ]
+    },
+    {
+      "id": "H04",
+      "observations": [
+        {
+          "edges": [
+            {
+              "id": "W50",
+              "label": "Later host path inspection may observe file effect",
+              "pointer_presence": true
+            },
+            {
+              "id": "W53",
+              "label": "Host attaches later path observations",
+              "pointer_presence": true
+            }
+          ],
+          "reason": "same existing places do not establish object relation",
+          "result": "semantic-support-excluded",
+          "revision": "b1f56973190b9123fce3076b92677a966c0171c8",
+          "verified_hashes": {
+            "runner/Sources/PWRunnerCore/PWRunnerService.swift": "bf8e356a596053ac78af14de34f5b6da667bf34bdd5eceefd673662c1349348d"
+          }
+        },
+        {
+          "edges": [
+            {
+              "id": "W53",
+              "label": "Host attaches later path-resolution results",
+              "pointer_presence": true
+            }
+          ],
+          "reason": "same existing places do not establish object relation",
+          "result": "semantic-support-excluded",
+          "revision": "143c8a42088298a9c7283a60df585e0236bbcfef",
+          "verified_hashes": {
+            "runner/Sources/PWRunnerCore/PWRunnerService.swift": "bf8e356a596053ac78af14de34f5b6da667bf34bdd5eceefd673662c1349348d"
+          }
+        }
+      ]
+    },
+    {
+      "id": "H05",
+      "observations": [
+        {
+          "definition_present": true,
+          "excerpt": "        # A record for another bundle with the same inventory but other bytes is refused by hash and load-command metadata.\n        with (other / 'Contents/MacOS/pw-runner-client').open('ab') as stream:\n            stream.write(b'\\0other bytes')\n        fixture_bundle.record(other)\n        shutil.copy2(other / prov.RECORD_PATH, valid / prov.RECORD_PATH)\n        self.assertTrue(any(code in ('provenance_hash', 'provenance_metadata') for code, _ in self.problems(valid)))\n        fixture_bundle.record(valid)\n        self.assertEqual(self.problems(valid), [])\n",
+          "reason": "assertion adequacy requires review; definition presence is insufficient",
+          "result": "semantic-support-excluded",
+          "revision": "6304fef56e8707e1eb79503f57ca831f200b482a",
+          "verified_hashes": {
+            "tests/suites/preflight/check_build_provenance.py": "7ea07edf998520cd704742a7b8d2c7c14e8b97063bd21228c22e827ca0e2f8f0"
+          }
+        },
+        {
+          "definition_present": true,
+          "excerpt": "        # A record for another bundle with the same inventory but other bytes is refused by hash. Appended bytes leave the\n        # load-command UUID unchanged, so the metadata agrees and only the hash finding is expected here.\n        with (other / 'Contents/MacOS/pw-runner-client').open('ab') as stream:\n            stream.write(b'\\0other bytes')\n        fixture_bundle.record(other)\n        shutil.copy2(other / prov.RECORD_PATH, valid / prov.RECORD_PATH)\n        self.assertEqual({code for code, _ in self.problems(valid)}, {'provenance_hash'})\n        fixture_bundle.record(valid)\n        self.assertEqual(self.problems(valid), [])\n",
+          "reason": "assertion adequacy requires review; definition presence is insufficient",
+          "result": "semantic-support-excluded",
+          "revision": "ee8f6207b3dc4ff9e5126c667fd9778b6f71dc58",
+          "verified_hashes": {
+            "tests/suites/preflight/check_build_provenance.py": "3778670ec3d4fe27c06c376784b8d9726d37dd3530104341a74a431f8b26deab"
+          }
+        }
+      ]
+    },
+    {
+      "id": "H06",
+      "observations": [
+        {
+          "privacy_lines": [],
+          "reason": "no registered completeness relationship",
+          "result": "unregistered",
+          "revision": "51487f74da15de196d44c4ac571c7b322a2fe83b",
+          "verified_hashes": {
+            "docs/WORKER.md": "ac3b74f149b1a3f213b21ba0a7cff27254da61bca0c9a85f053444c48a45c15e"
+          }
+        },
+        {
+          "privacy_lines": [
+            "PW does not determine whether privacy consent mediation affected a worker"
+          ],
+          "reason": "no registered completeness relationship",
+          "result": "unregistered",
+          "revision": "f85c7b094d75bf72931cd4856cb4ad086da20cbe",
+          "verified_hashes": {
+            "docs/WORKER.md": "e14f8e703d5963d8663ed1b8c608a6e44c4eca69c1cf2e4baecac2d4bfa64baf"
+          }
+        }
+      ]
+    }
+  ],
+  "commands": [
+    [
+      "git",
+      "show",
+      "a33b645e30bdbe6e288442544a2f9a8e8038d8fc:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "a33b645e30bdbe6e288442544a2f9a8e8038d8fc:docs/build.json"
+    ],
+    [
+      "git",
+      "show",
+      "a33b645e30bdbe6e288442544a2f9a8e8038d8fc:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "e1db41af6444273b7d8def6763029db5e43b304e:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "e1db41af6444273b7d8def6763029db5e43b304e:docs/build.json"
+    ],
+    [
+      "git",
+      "show",
+      "e1db41af6444273b7d8def6763029db5e43b304e:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "6304fef56e8707e1eb79503f57ca831f200b482a:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "6304fef56e8707e1eb79503f57ca831f200b482a:docs/build.json"
+    ],
+    [
+      "git",
+      "show",
+      "6304fef56e8707e1eb79503f57ca831f200b482a:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "bfae9d44dfef5596fa5f29d3f2a591afb2bcc580:records/SAFE-WAIT-TIME-INVESTIGATION.md"
+    ],
+    [
+      "git",
+      "show",
+      "bfae9d44dfef5596fa5f29d3f2a591afb2bcc580:records/safe-wait-time/order_probe.c"
+    ],
+    [
+      "git",
+      "show",
+      "bfae9d44dfef5596fa5f29d3f2a591afb2bcc580:records/safe-wait-time/run_probes.py"
+    ],
+    [
+      "git",
+      "show",
+      "bfae9d44dfef5596fa5f29d3f2a591afb2bcc580:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "bfae9d44dfef5596fa5f29d3f2a591afb2bcc580:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "bfae9d44dfef5596fa5f29d3f2a591afb2bcc580:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a:records/SAFE-WAIT-TIME-INVESTIGATION.md"
+    ],
+    [
+      "git",
+      "show",
+      "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a:records/safe-wait-time/order_probe.c"
+    ],
+    [
+      "git",
+      "show",
+      "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a:records/safe-wait-time/run_probes.py"
+    ],
+    [
+      "git",
+      "show",
+      "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "085e23e6d0c0a76aa80c90fd8471a6f9025a34a4:records/SAFE-WAIT-TIME-INVESTIGATION.md"
+    ],
+    [
+      "git",
+      "show",
+      "085e23e6d0c0a76aa80c90fd8471a6f9025a34a4:records/safe-wait-time/order_probe.c"
+    ],
+    [
+      "git",
+      "show",
+      "085e23e6d0c0a76aa80c90fd8471a6f9025a34a4:records/safe-wait-time/run_probes.py"
+    ],
+    [
+      "git",
+      "show",
+      "085e23e6d0c0a76aa80c90fd8471a6f9025a34a4:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "085e23e6d0c0a76aa80c90fd8471a6f9025a34a4:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "085e23e6d0c0a76aa80c90fd8471a6f9025a34a4:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "972c54bd22b1dbafcc4b5fd3b71fe56f6ea59f03:records/SAFE-WAIT-TIME-INVESTIGATION.md"
+    ],
+    [
+      "git",
+      "show",
+      "972c54bd22b1dbafcc4b5fd3b71fe56f6ea59f03:records/safe-wait-time/order_probe.c"
+    ],
+    [
+      "git",
+      "show",
+      "972c54bd22b1dbafcc4b5fd3b71fe56f6ea59f03:records/safe-wait-time/run_probes.py"
+    ],
+    [
+      "git",
+      "show",
+      "972c54bd22b1dbafcc4b5fd3b71fe56f6ea59f03:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "972c54bd22b1dbafcc4b5fd3b71fe56f6ea59f03:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "972c54bd22b1dbafcc4b5fd3b71fe56f6ea59f03:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "29e3ead0909d0840b835d640cedbe48a91668d6e:controller/src/sandbox_log.rs"
+    ],
+    [
+      "git",
+      "show",
+      "29e3ead0909d0840b835d640cedbe48a91668d6e:controller/src/run_flow.rs"
+    ],
+    [
+      "git",
+      "show",
+      "29e3ead0909d0840b835d640cedbe48a91668d6e:docs/ARCHITECTURE.md"
+    ],
+    [
+      "git",
+      "show",
+      "ce08ec19ddd0d02e405f22ee0ad012032201247a:controller/src/sandbox_log.rs"
+    ],
+    [
+      "git",
+      "show",
+      "ce08ec19ddd0d02e405f22ee0ad012032201247a:controller/src/run_flow.rs"
+    ],
+    [
+      "git",
+      "show",
+      "ce08ec19ddd0d02e405f22ee0ad012032201247a:docs/ARCHITECTURE.md"
+    ],
+    [
+      "git",
+      "show",
+      "b1f56973190b9123fce3076b92677a966c0171c8:runner/Sources/PWRunnerCore/PWRunnerService.swift"
+    ],
+    [
+      "git",
+      "show",
+      "b1f56973190b9123fce3076b92677a966c0171c8:docs/architecture.json"
+    ],
+    [
+      "git",
+      "show",
+      "b1f56973190b9123fce3076b92677a966c0171c8:runner/Sources/PWRunnerCore/PWRunnerService.swift"
+    ],
+    [
+      "git",
+      "show",
+      "b1f56973190b9123fce3076b92677a966c0171c8:tests/suites/witness_contract/opt_in/path_query_integrated.sh"
+    ],
+    [
+      "git",
+      "show",
+      "b1f56973190b9123fce3076b92677a966c0171c8:runner/Sources/PWRunnerCore/PWRunnerService.swift"
+    ],
+    [
+      "git",
+      "show",
+      "b1f56973190b9123fce3076b92677a966c0171c8:tests/suites/witness_contract/opt_in/path_query_integrated.sh"
+    ],
+    [
+      "git",
+      "show",
+      "143c8a42088298a9c7283a60df585e0236bbcfef:runner/Sources/PWRunnerCore/PWRunnerService.swift"
+    ],
+    [
+      "git",
+      "show",
+      "143c8a42088298a9c7283a60df585e0236bbcfef:docs/architecture.json"
+    ],
+    [
+      "git",
+      "show",
+      "143c8a42088298a9c7283a60df585e0236bbcfef:runner/Sources/PWRunnerCore/PWRunnerService.swift"
+    ],
+    [
+      "git",
+      "show",
+      "143c8a42088298a9c7283a60df585e0236bbcfef:tests/suites/witness_contract/opt_in/path_query_integrated.sh"
+    ],
+    [
+      "git",
+      "show",
+      "6304fef56e8707e1eb79503f57ca831f200b482a:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "6304fef56e8707e1eb79503f57ca831f200b482a:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "ee8f6207b3dc4ff9e5126c667fd9778b6f71dc58:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "ee8f6207b3dc4ff9e5126c667fd9778b6f71dc58:tests/suites/preflight/check_build_provenance.py"
+    ],
+    [
+      "git",
+      "show",
+      "51487f74da15de196d44c4ac571c7b322a2fe83b:docs/WORKER.md"
+    ],
+    [
+      "git",
+      "show",
+      "51487f74da15de196d44c4ac571c7b322a2fe83b:docs/WORKER.md"
+    ],
+    [
+      "git",
+      "show",
+      "f85c7b094d75bf72931cd4856cb4ad086da20cbe:docs/WORKER.md"
+    ],
+    [
+      "git",
+      "show",
+      "f85c7b094d75bf72931cd4856cb4ad086da20cbe:docs/WORKER.md"
+    ]
+  ],
+  "dataset_sha256": "6c68e4618806d0d47000a10c0ea5be39ac564d1159c4497190153425a78c2cb4",
+  "design": "B1",
+  "file_hashes_verified": 33,
+  "freeze_commit": "db75edf",
+  "live_execution": false,
+  "prediction_commit": "152f984"
+}
