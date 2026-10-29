@@ -37,7 +37,7 @@ The main sequence is:
 
 The documentation work has its own required order: Binding through replay, then Checks before CHECK. Its investigations and supported changes may overlap other work where dependencies and resources permit, after the initial counterfactual is sealed. You own that scheduling. Keep documentation-machinery changes distinguishable from adaptations caused by refactoring, and record which source state each investigation or verification actually describes.
 
-A stage seal consists of a fixed, recoverable source identity; a concise committed account of what was established, what remains uncertain, and the applicable acceptance criteria; and the supporting evidence or its appropriately qualified references. Seal a prerequisite before beginning dependent work. Public releases are not required merely to create these boundaries.
+A stage seal consists of a fixed, recoverable source identity; a concise committed account of what was established, what remains uncertain, and the applicable acceptance criteria; and the supporting evidence or its appropriately qualified references. Identify the source actually examined or tested and its matching build and verification evidence separately from the later commit containing the acceptance account. Prefer a committed candidate for stage verification; when credited evidence comes from a working tree, preserve the relevant source snapshot or exact delta needed to establish what ran. A later commit does not retroactively identify unrecorded working bytes. Seal a prerequisite before beginning dependent work. Public releases are not required merely to create these boundaries.
 
 Preserve the original counterfactual and earlier observations. Later corrections are attributable additions, not silent edits to historical predictions. Organize commits so a later reader can reconstruct the states and correlate discoveries with changes without relying on this conversation. Do not turn that requirement into a new provenance framework.
 
@@ -53,13 +53,13 @@ The documentation lane retains its own permitted overlap and required order. Del
 
 ## Establish the pytest-first counterfactual
 
-Inspect the earlier subordinate pytest trial and its recorded rejection, including the archived baseline and patterns research. Do not restart that rejected migration. Use its findings as evidence about that attempt.
+Inspect the earlier subordinate pytest trial and its recorded rejection, including the archived baseline and patterns research. Do not restart that rejected migration. Use its findings as evidence about that attempt; its added machinery does not settle the pytest-first architectural question. Also use `records/tests/TEST-WORK-SURVEY-REPORT.md` and `records/tests/TEST-EXPECTATION-AUTHORITY-REPORT.md` as dated inputs, checking applicable claims against current source rather than repeating their inventories.
 
 Describe a plausible arrangement in which pytest owns collection, fixtures, execution, and reporting from the outset. Start from the testing obligations PW actually has and identify which responsibilities require adapters, external supervision, or other project-specific machinery. Distinguish an obligation from the present implementation chosen to meet it.
 
 Make the comparison concrete enough to expose consequential differences: process and cleanup ownership, interruption, equipment and signing, evidence retention, stateful experiments, outcome accounting, and the relationship between test execution and the behavior being examined. Select difficult scenarios that clarify the architecture. Reuse the existing research where applicable; further external survey needs a specific unresolved question.
 
-Record the arrangement, its expected advantages and liabilities, its assumptions, and the questions that subsequent work might illuminate. Stop when the alternatives and their obligations are sufficiently concrete to be examined later. This stage does not require a prototype or a migration.
+Record a responsibility map showing what pytest supplies, what PW-specific machinery remains, and what existing machinery disappears or changes. Work through a few difficult execution scenarios using that arrangement, including how failures and cleanup reach the reported result. Record its expected advantages and liabilities, its assumptions, and the questions that subsequent work might illuminate. Stop when the map and scenarios make the alternatives and their obligations concrete enough to examine later. This stage does not require a prototype or a migration.
 
 Commit and seal this initial account before the workset changes implementation. At the end of the engagement, another agent will choose how to investigate it by walking backward through the commits. Do not perform that retrospective evaluation or prescribe its experimental program here.
 
@@ -71,15 +71,19 @@ Establish whether an extension issued for an investigator-owned directory can en
 
 Begin with a bounded native feasibility experiment under ordinary issuer authority. Establish the actual extension class, policy predicate, signing conditions, and native behavior on the host. Keep issuance separate from worker consumption and release. Use one fixed, once-applied worker policy and ordered observations before consumption, after consumption, and after release.
 
-Distinguish issuance, delivery, consumption, and release results from the attempted file operations and their externally inspected effects. Separate opening, writing, closing, and the content observations needed for the claims. Use fresh descriptors for post-release attempts; identify any retained-descriptor control separately.
+Distinguish issuance, delivery, consumption, and release results from the attempted file operations and their externally inspected effects. Separate opening, truncation, transferred bytes, closing, and the content observations needed for the claims. Use fresh descriptors for post-release attempts; identify any retained-descriptor control separately. Persistence here means externally observed contents and directory entries surviving release and worker exit; crash durability is outside this experiment.
 
 Include controls for no consumption, omission of the relevant extension predicate, a different directory, and read-only authority. Compare existing-file modification with creation at an absent child name. Do not require a predetermined query or revocation pattern as the condition for recording a valid experiment. A successful native lifecycle call does not itself establish access or revocation.
+
+For each attempt credited as creating a new child, establish that the child was absent both at token issuance and immediately before that attempt. Use distinct unused names or fresh specimens as needed so an earlier creation cannot turn a later creation comparison into opening an existing file.
 
 Respect the existing unresolved-path limitation. An absent child may have no ordinary query prediction at planning time. Keep that absence visible and use resolvable controls where informative; do not manufacture a deny prediction from a denial-shaped native result.
 
 Preserve exact source, host, signing, policy, target, native-call, and effect provenance under project rules. Authority-bearing tokens remain confined to transient channels and excluded from retained evidence.
 
 If feasibility supports integration, plan and make the smallest coherent public addition, with its affected admission, transport, readers, tests, and existing documentation updated together. If a premise fails, retain the finding and dispose of the proposed addition accordingly. Do not compensate by adding privileged issuance, a general broker, or a broader workflow language.
+
+Preserve the existing file-operation meanings. `open_write` reports the truncating open's success while discarding write and close returns; `create` permits opening an existing file without truncation. Neither status alone establishes the new experiment's write or creation claim. Adding the observations needed for the supported capability is authorized here; changing those existing meanings is not part of that addition.
 
 ### Crossed authority and operation
 
@@ -103,17 +107,17 @@ You may reject an approach that does not meet the intended improvement. If inves
 
 ## Investigate and improve the documentation apparatus
 
-Execute Binding through replay first, retaining its investigation, claim tracing, paper design, historical replay, cost accounting, and acceptance requirements. It remains an investigation; its proposed mechanisms are not automatically implemented.
+Execute Binding through replay first, retaining its investigation, claim tracing, paper design, historical replay, cost accounting, and acceptance requirements. It remains an investigation and paper design, with replay equipment under its records package; it does not implement its proposed mechanisms. Its accepted findings feed the second investigation.
 
 Then execute Checks before CHECK, consuming the accepted findings and tracing actual document edits through authorship, generation, copying, checking, and publication. Preserve the distinction between what mechanical agreement establishes and what requires behavioral evidence or a judgment about applicability.
 
-The following amendments govern both plans:
+The following amendments supersede the conflicting scope, deliverable, completion and retirement requirements in those plans:
 
-- Remove work specifically preparing the writing, outline, ownership allocation, registration, or handoff for a future `CHECK.md`. Preserve the internal transfer between the two investigations.
-- The latter plan may make changes supported by the investigations. Its authority extends beyond factual prose corrections to the generators, checks, ownership arrangements, and supporting tests responsible for established needless tangles.
+- Remove work specifically preparing the writing, outline, ownership allocation, registration, or handoff for a future `CHECK.md`, including the prescribed future-writing handoff artifact and its readiness criteria. Preserve the internal transfer between the two investigations.
+- Checks before CHECK may make changes supported by the investigations. This replaces its prohibitions on executable changes and documentation ownership reorganization: its authority extends beyond factual prose corrections to the generators, checks, ownership arrangements, and supporting tests responsible for established needless tangles. A proposed change to a checker's promised guarantee remains subject to the behavioral-defect discussion boundary below.
 - Select and verify bounded changes under project guidance. Accepting an investigation does not require implementing every mechanism it proposes.
 - The latter plan may conclude that no changes are supported. Record the grounds for that result. The future writer of CHECK will make an independent determination.
-- Replace completion and retirement conditions tied to a future CHECK planner with acceptance of this work's findings, their disposition, and any implemented and verified corrections.
+- Both investigations finish within this engagement through acceptance of their findings, their disposition, and any implemented and verified corrections. Replace completion and retirement conditions tied to a future CHECK planner accordingly; no future writing or planning handoff is required.
 
 The purpose is to leave the apparatus sufficiently understood and repaired for a fresh explanatory writing process: develop prose, ground selected statements in exact sources, maintain generated representations where useful, and examine how the prose, system, and bindings fit together. Use the investigations to localize complications before changing them. The amount of new checking machinery is not a measure of success.
 
@@ -131,11 +135,11 @@ Routine citation relocation and documentation of authorized experimental additio
 
 ## Manage retained test runs
 
-The repository saves test-run output in gitignored storage. Explicitly pinned runs are retained; the rest may be destroyed. You are responsible for selecting and archiving runs through the repository's existing tools and for updating and committing its retained-run manifest. Raw run output remains in the designated gitignored storage.
+The repository saves test-run output in gitignored storage. Select and explicitly pin needed investigation runs in `tests/RETAINED.json`, following the repository's retention contract, and commit the manifest updates. Ordinary evidence pins are separate from release archives; this work does not require a release archive. Raw run output remains in the designated gitignored storage.
 
-Expect to perform many dozens of test runs while needing to archive only a small selection, perhaps three to six for this plan. That is an expected scale, not a quota. Choose runs for the evidence needed to support the work's findings, stage seals, and verification claims; you do not need to preserve every run merely because it occurred during the plan.
+Let the evidence needed to support the work's findings, stage seals, and verification claims determine both the runs performed and those retained. You do not need to preserve every run merely because it occurred during the plan.
 
-Semi-regularly prune unneeded, unpinned run output through the repository's tools during the work, rather than postponing all cleanup until retirement. You own these routine retention and pruning decisions. Before pruning, protect evidence still needed by an active investigation or sub-agent assignment. At completion, reconcile the selected retained runs with the committed manifest and identify their source states and purpose in the work's records. Retiring the plan and its records does not itself release those archival pins.
+Semi-regularly prune unneeded, unpinned run output through the repository's tools when eligible under its ownership and cleanup rules, rather than postponing all cleanup until retirement. Being unpinned does not make interrupted, ambiguous, unmanaged, or cleanup-bearing output automatically disposable. You own routine retention and pruning decisions within those rules. Before pruning, pin evidence still needed by an active investigation or sub-agent assignment; review those temporary pins when the work no longer needs them. At completion, reconcile the selected retained runs with the committed manifest and identify their source states and purpose in the work's records. Retiring the plan and its records does not itself release those pins.
 
 ## Persist work through records and git
 
@@ -160,6 +164,8 @@ On resumption, establish the actual state and continue from the durable record. 
 ## Complete this engagement at the agreed boundary
 
 Verify that the included stages satisfy their promises and that every included item has an explicit disposition. Perform the checks needed for those claims under project guidance; do not equate successful compilation, a partial selection, or a recorded status with broader verification.
+
+After the refactor and documentation work have both landed, reconcile verification against their combined final source state and matching build. Earlier stage evidence remains historical evidence; establish its applicability under the repository's evidence-reuse rules and rerun affected checks where dependencies changed or applicability is uncertain. Record the final source and verification identities separately from the commits recording acceptance. Check affected links and structure as plans and records retire; those retirement edits alone do not require repeating unrelated live tests.
 
 Completion requires a recoverable initial counterfactual, sealed experimental and refactor stages or their explicit dispositions, completion of the two documentation investigations in order, records of the required test adaptations, and accounted-for findings and verification limits. An unresolved issue requiring my decision must remain visible as a blocker or an explicitly agreed disposition.
 
