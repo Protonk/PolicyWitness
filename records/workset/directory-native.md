@@ -65,3 +65,76 @@ read-back was placed after assertions and was lost on failure. Reviewer
 preparation capture before launch and final filesystem capture into an
 unconditional path before validation and cleanup; retain assertion tracebacks.
 Rerun the full native selection from the corrected committed candidate.
+
+## Accepted E1 result
+
+Tested source: `b6cac0d735f0384fc50d94a6eba6ab18e9323763`, with empty recorded
+Git status. Run `workset-native-directory-02`, ID
+`20261029T213006Z_421d1954`, completed both canonical native cases, two passes,
+no skips, unrun cases, harness errors or observed system sleep. Invocation:
+
+```sh
+IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)' PW_TEST_OUT_DIR=tests/out/runs/workset-native-directory-02 tests/run.sh --suite sandbox_extensions_native
+```
+
+The directory binary SHA-256 is
+`5baec48fd76cdb9b4981ecb9c916b6f8a63f36b9dcf4152a6c327d2f037ef651`.
+Its signature read-back has TeamIdentifier `42D369QV8E`, hardened runtime,
+secure timestamp, no entitlements and strict verification success. All three
+roles exec that signed binary. Host macOS is 26.7.1 (`25G241`), arm64, SDK 27.0;
+issuer and worker UID/EUID 501, GID/EGID 20. These are ordinary caller credentials.
+No production app participates. Exact compiler, native paths, policy, metadata,
+commands and sources remain in the pinned local run's artifacts; hashes do not
+make those gitignored bytes portable.
+
+| Arrangement | Before consume: existing / child | During: existing / child | Fresh after release: existing / child |
+| --- | --- | --- | --- |
+| Directory read-write | open failed / open failed | modified / created | open failed / open failed |
+| No consumption | open failed / open failed | open failed / open failed | open failed / open failed |
+| No extension predicates | open failed / open failed | open failed / open failed | open failed / open failed |
+| Other directory | open failed / open failed | open failed / open failed | open failed / open failed |
+| Native read-only | open failed / open failed | open failed / open failed | open failed / open failed |
+
+Every pre-policy baseline modified and created successfully. Every credited
+creation had ENOENT observations before issuance and immediately before its own
+exclusive open, and distinct names prevent reuse. The positive treatment's
+existing-file open preserved initial size and identity, explicit truncation
+returned zero with size zero, write transferred all 20 bytes of
+`PW directory effect\n`, and close returned zero. Its new child was empty at
+exclusive open, received the same 20 bytes and closed successfully. The host
+read these exact bytes after release and after worker exit; Python independently
+confirmed the final identities, bytes and directory entries. Failed attempts
+left initial existing contents or an absent child, separately observed.
+
+Issued tokens were nonnull, successful consume handles were 1, release results
+were 0; no-consume omitted both calls. Both children were reaped with zero exit
+status, one policy application was recorded, inherited target descriptors were
+absent, and token erasure/publication checks passed. Native lifecycle success
+alone is not the access evidence. Observed existing-file write queries were
+`[0,1,0,1]` for the positive treatment and `[0,1,1,1]` for controls. These are
+retained query observations, not prediction/enforcement agreement or a required
+future pattern. Absent-child predictions stayed unavailable. Data reads were
+also recorded; their matched/crossed interpretation belongs to E2's bounded
+follow-on.
+
+All 18 original plain/instrumented read scenarios still passed. The new checker
+rejected 18 independently perturbed evidence omissions/contradictions and
+accepted eight reference/variation controls, including successful fresh access,
+partial write, failed truncation/read, unavailable queries and failed release.
+Source review by `review_directory_native` found the failed-run retention gap
+and missing variation controls; both were corrected before the accepted run.
+Final acceptance is the primary agent's self-review against E1's requirements.
+
+`workset-native-structure-01` passed
+`source_drift/runner_source_manifests_agree` and
+`source_drift/generator_contract`. It started at `b6cac0d`; only this findings
+record's prose evolved during execution. Review of that delta found no changed
+links, production, fixture, checker or catalog inputs. This is an explicit
+applicability judgment, not a claim that Git status stayed empty in that run.
+Both the native and structure runs are pinned in `tests/RETAINED.json`.
+
+**Disposition:** directory-scoped read-write feasibility is supported under the
+recorded conditions. Proceed to the smallest coherent public addition and the
+bounded crossed follow-on. This does not establish privileged issuance, general
+revocation guarantees, crash durability, XPC/BYOXPC integration or portable
+behavior across hosts. The full experimental stage is not sealed until E2.

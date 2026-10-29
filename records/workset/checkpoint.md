@@ -1,9 +1,11 @@
 # Workset checkpoint
 
-Current phase: E1, native extension feasibility; C0 complete.
+Current phase: E2, public extension addition and crossed follow-on; C0 and E1 complete.
 
 The intake baseline is `bf7e97faab75754efe719b0bad20e83b67762c15`.
-No implementation, test machinery or permanent documentation has changed.
+Production implementation has not changed. E1 added independent native
+directory equipment and its tests/documentation at `3ce5d8f`, corrected at
+`b6cac0d735f0384fc50d94a6eba6ab18e9323763` after a failed candidate run.
 The execution companion and intake record are committed as `4b18284`.
 The initial counterfactual C0.2 is frozen at
 `0c22d2565b42f543bd6334a1d09f95781ef09386`; the C0 acceptance record names the
@@ -11,12 +13,19 @@ review and its ownership-order clarification. The original account is `6cd868b`.
 
 Next work:
 
-1. Conduct E1 using the independent native extension equipment and fresh
-   managed evidence, preserving legacy public file-operation meanings.
+1. Design and implement the smallest supported public directory read-write
+   addition, preserving legacy public file-operation meanings; complete the
+   matched/crossed follow-on and integrated verification before the E2 seal.
 2. Reconcile D1's isolated investigation against its fixed source. D2 cannot
    begin before D1 acceptance.
-3. Use E1 findings to settle public integration and the crossed follow-on,
-   then seal the experimental stage before either core refactor begins.
+3. Seal the experimental stage before either core refactor begins.
+
+E1 is accepted by primary-agent self-review with `review_directory_native`
+source review. Signed native run `workset-native-directory-02` passed both
+native cases at `b6cac0d`, with all five directory scenarios and eighteen read
+scenarios complete. `workset-native-structure-01` passed the source/catalog and
+generator/link cases. Their pins are committed with the E1 findings; the
+directory-native record states provenance and the structural prose-delta limit.
 
 The read-only C0 reviewer is complete. Agent `binding_investigation` owns D1 in
 the isolated worktree `/private/tmp/pw-workset-binding`, detached at `cf0136b`.
@@ -34,6 +43,11 @@ Temporary D1 evidence pins protect `runs/drift-plan-investigation-20261027-02`
 verification. Their completed ownership was verified and pins written through
 the retention helper while holding the checkout lock. Revisit after D1.
 
-No running build/test, workset-owned native child or external runner. No user
-decision is pending. Existing drift runs have not been pruned; the separate
+No running build/test, workset-owned native child or external runner.
+D1 finding F1 awaits a user decision: the documented host-source rejection of
+extension issue/consume/release calls is absent from its API set, and controls
+derive that family from the same set. The recommendation is to preserve the
+guarantee with the missing names and independently specified rejection controls.
+No repair or expectation change is authorized until that answer arrives.
+Existing drift runs have not been pruned; the separate
 pytest-trial worktree and release material remain untouched.

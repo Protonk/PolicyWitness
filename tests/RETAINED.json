@@ -37,6 +37,20 @@
       "reason": "Temporary workset D1 pin for the final corrected drift receipts. Tested source has not yet been established by this intake; do not credit as current verification without reviewing source snapshots.",
       "source": null,
       "app_inventory": null
+    },
+    {
+      "path": "runs/workset-native-directory-02",
+      "run_id": "20261029T213006Z_421d1954",
+      "reason": "E1 accepted native directory modification, exclusive creation, external persistence and controls; also reruns the existing read native matrix. No production app.",
+      "source": "b6cac0d735f0384fc50d94a6eba6ab18e9323763",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/workset-native-structure-01",
+      "run_id": "20261029T213046Z_b198d227",
+      "reason": "E1 source/catalog and generator/link controls. Tested implementation b6cac0d; only the E1 findings record prose evolved during execution, as recorded in its acceptance account.",
+      "source": "b6cac0d735f0384fc50d94a6eba6ab18e9323763",
+      "app_inventory": null
     }
   ]
 }
