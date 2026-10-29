@@ -1,97 +1,82 @@
 # Workset checkpoint
 
-Current phase: R1 accepted; R2 Stage 1 is next. C0, E1, E2 and D1
-are complete. D2 findings and bounded corrections are accepted against combined
-source `bb92c21`; final source applicability and F1 remain open. R1 implementation `341f9441` passed all 204 selected cases; Swift
-implementation has not begun. The E2 seal records acceptance separately from tested
-source `b565c1b` and signed runtime `7426fc0` (v0.3.3 build 977).
+Current phase: R1 accepted; R2 Stage 1 is next. Main is clean at R1 acceptance
+`96d0328e` before this checkpoint-only update. No build, dispatcher or owned
+native/external service is active. C0, E1/E2, R1, D1 and the bounded D2
+investigation/corrections have accepted milestones. Swift implementation has
+not begun. Final combined verification and the unresolved F1 decision remain.
+
+## Next work
+
+1. Agent `swift_design` revalidates the recorded R2 design against R1, implements
+   only Stage 1, commits and stops for primary review/build/verification.
+2. After Stage 1 acceptance, implement and verify Stage 2. Preserve shared
+   client/host contract ownership, encode/decode asymmetry, query ordering and
+   actual moved-code reach through mutation controls. No CWorker driver refactor.
+3. Reconcile D2 facts and verification against final source, run the matching
+   signed default battery plus applicable C/Swift/BYOXPC controls, and reconcile
+   retention/findings. Never credit earlier source without dependency review.
+4. Final workset retirement remains pending F1's explicit disposition. Keep the
+   finding visible; do not treat its deferral as a repaired or accepted guarantee.
 
 ## Recoverable states
 
 - Intake `bf7e97faab75754efe719b0bad20e83b67762c15`; execution companion `4b18284`.
-- Initial counterfactual `0c22d2565b42f543bd6334a1d09f95781ef09386`, sealed `cf0136b`.
-  It remains frozen; no retrospective evaluation or pytest trial is authorized.
-- E1 native directory candidate `b6cac0d`, acceptance `d2f3bbf`.
-- E2 native matched/crossed source `8aa7402`, integration design `ad1c1ca`,
-  implementation `7426fc0`, harvest `3ff8bf2`, genuine captures `a7c1408`,
-  terminal-enum mutation adaptation `b565c1b`. E2 seal names all retained runs,
-  source/build applicability, reviewers, acceptance and limits.
-- D1 original chain `def5de0` through `cd6adaa` was merged intact; accepted
-  `7562d24`. D2 agent `binding_investigation` works from that accepted checkpoint
-  in `/private/tmp/pw-workset-binding`.
+- Initial counterfactual `0c22d2565b42f543bd6334a1d09f95781ef09386`, sealed
+  `cf0136b`. It remains frozen; no retrospective evaluation or pytest trial.
+- E1 native candidate `b6cac0d`, acceptance `d2f3bbf`; crossed follow-on `8aa7402`.
+- E2 public design `ad1c1ca`, implementation/signed build 977 `7426fc0`, harvested
+  goldens `3ff8bf2`, genuine response24 captures `a7c1408`, enum-fixture adaptation
+  `b565c1b`, full experimental seal `29d1c79`.
+- D1 original chain `def5de0` through `cd6adaa`, primary acceptance `7562d24`.
+  D2 absorbed twelve exact copies. D1 plan/package retired `950c604f`; pinned
+  `workset-d1-retirement-01` passed both source/link cases.
+- D2 original chain `7e9d677` through `f996212`, merged `bb92c21`, primary
+  acceptance `96dffd56`. Pinned `workset-d2-main-01` passed five source cases at
+  `bb92c21`. Its fixed ownership/trace account describes `7562d24`; the E2
+  comparison and later correction/acceptance records qualify newer applicability.
+- R1 design `6e40887`, implementation `341f9441`, acceptance `96d0328e`.
+  Signed v0.3.3 build 994 has worker identity
+  `b307fc295883bbcdf4bdd2b2855ce8d6fe969eb93d104e54c7e775075bad6b0f`.
+  Pinned run `workset-r1-01`, `20261029T223004Z_941f9f72`, passed all 201 default
+  cases plus native-clock, inheritance-mutation and order-barrier controls:
+  204/204, no skips/unrun/errors/sleep/app changes. Exact native bodies and old
+  ledger remain unchanged; primary and independent reviews accepted the owners.
+- R2 read-only preparation is committed in `records/workset/swift-refactor.md`
+  at `f8f3c24f`; implementation requires revalidation against the R1 baseline.
 
-## Next work
+## Finding F1
 
-1. Agent `c_refactor` is preparing R1 at `29d1c79`, with writes limited to its
-   design record and associated plan link. Review that design before implementation,
-   then execute R1 with relocated controls retaining production reach.
-2. Execute the bounded two-stage Swift plan, preserving client/host separation.
-   C and Swift execution remain sequential unless a reviewed boundary permits
-   independent work. No CWorker driver refactor is included.
-3. Integrate D2's supported, bounded factual ownership/citation and generator
-   repair-hint changes separately from refactor adaptations. Refresh its account
-   against intervening E2 and refactor source before acceptance.
-4. Verify the combined final source/build, reconcile retention and findings,
-   then retire only accepted plans/records. F1 remains unresolved, so do not
-   treat final workset retirement as authorized by this intermediate seal.
+The documented host-source rejection of extension issue/consume/release calls
+is absent from the API set, and controls derive that family from the same set.
+The recommendation is to preserve the guarantee with the missing names and
+independently specified rejection controls. The user explicitly chose to keep
+it unresolved for later discussion. No repair or expectation change is
+ authorized; this is not a final accepted disposition. Evidence and implications
+remain in the absorbed D2 finding and original D1 commits.
 
-D2 implemented documents-graph/README ownership and table-count corrections
-(including actual WorkerIdentityTests citations), canonical Python repair hints
-and controls, plus dated raw-evidence availability and both release-baseline
-accounts. Its original chain ends at `f996212`, merged as `bb92c21`; all five
-main source cases passed in pinned `workset-d2-main-01` at that source. It may not change F1 or a checker's
-promised guarantee. It is not writing or preparing a handoff for CHECK.
-
-F1 remains unresolved by explicit user instruction, repeated at this checkpoint:
-existing documented host-source rejection of extension issue/consume/release
-calls is absent from the API set, and controls derive that family from the same
-set. The recommendation is to preserve the guarantee with missing names and
-independently specified rejection controls. No repair or expectation change is
-authorized; unresolved for later discussion is not a final accepted disposition.
+D2 implemented only bounded ownership/citation/table-account corrections,
+canonical Python repair hints with controls, dated raw-evidence availability,
+and the account of both existing release-baseline gates. The B1 registry
+proposal was declined for implementation. No future CHECK handoff was prepared.
 
 ## Evidence and resources
 
-No main-checkout build/test is running. The BYOXPC witness completed and verified
-cleanup of its owned user service; default registry/reconcile inspections are
-empty. No workset-owned native child or external runner remains. D2 may run
-isolated offline source cases; coordinate before shared live services or signing.
+`tests/RETAINED.json` pins the accepted native/E2/R1/D2 and retirement runs plus
+three historical D1 cost inputs. The third D1 pin keeps null source because its
+actual dirty bytes require the attached source snapshot and working delta;
+never call that a clean commit run. E2 coordinated evidence remains 81 passes
+plus one failed obsolete enum anchor; its corrected rerun is separate.
 
-Pins in `tests/RETAINED.json` retain E1 native/structure, crossed follow-on, E2
-captures/coordinated/final, and three historical D1 inputs. The coordinated E2 run
-has 81 passes and one failed obsolete fixture anchor; the explicit rerun passes.
-Do not rewrite that failure. The shape-harvest run supplies observations only.
-The D1 third pin has null manifest source: its dirty source is established by
-its attached source snapshot/delta, not by a clean commit claim.
+Supported pruning removed thirteen earlier eligible runs and later the shape
+harvest/development-write runs. Their compact accounts/harvests remain in git;
+raw bytes do not. D2's isolated development output was pruned after the main
+five-case pass, and its clean worktree was removed through Git. All D2 commits
+remain integrated. The unrelated pytest-evidence worktree, release pins and
+`.release-rotation` remain untouched.
 
-Supported pruning previously removed thirteen eligible unpinned runs after D1
-confirmed its three protected inputs. Compact failure findings remain in git;
-pruned raw evidence is not available. Revisit unpinned output after new evidence
-is secured. Release pins, `.release-rotation`, and the unrelated pytest-evidence
-worktree remain untouched. Never unlink the checkout lock or bypass cleanup
-ownership helpers.
-
-After the E2 seal, supported prune preview/apply removed only
-`workset-e2-shape-01` and `workset-write-controls-dev-01`. The harvested goldens,
-compact failure account and replacement passing credits remain committed/pinned;
-the two raw runs are now absent. All retained runs and release material stayed.
-
-D2 primary acceptance is `96dffd56`. D1 plan/package retired at `950c604f`
-after twelve absorbed copies matched their manifest and original committed
-source. Retirement source/link checks passed in `workset-d1-retirement-01`;
-that run is pinned. D1 history remains at `cd6adaa`/`7562d24`; unresolved F1
-and historical cost pins remain. R1 design is accepted at `6e40887`. Swift
-read-only preparation is recorded, but implementation waits for R1 acceptance.
-
-R1 accepted source `341f9441`, signed build 994, worker identity
-`b307fc295883bbcdf4bdd2b2855ce8d6fe969eb93d104e54c7e775075bad6b0f`.
-Pinned `workset-r1-01` run `20261029T223004Z_941f9f72` passed all 201 defaults
-plus three required controls (204 total), with no sleep or app mutation. Both
-primary and independent source reviews confirmed exact body preservation and
-required owners. No main build/test is active. Next: agent `swift_design`
-revalidates the recorded design and implements only Stage 1, then root signs
-and verifies that checkpoint before authorizing Stage 2.
-
-D2 isolated development raw output was pruned by the supported helper after
-main acceptance; compact development facts and commits remain, raw bytes do
-not. The clean temporary D2 worktree was removed through `git worktree remove`;
-its commits remain integrated. The unrelated pytest worktree is untouched.
+The E2 BYOXPC service was removed with verified cleanup; registry/reconcile
+were empty afterward. Use exact durable ownership before any later external
+runner cleanup. Builds/tests share the checkout lock; never unlink it or bypass
+retention/resource cleanup helpers. Stop starting work on a user interruption,
+settle active ownership and commit a resumable checkpoint after execution stops.
