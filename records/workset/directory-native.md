@@ -48,4 +48,20 @@ broader issuer. E2 and the crossed-operation interpretation follow E1 findings.
 
 ## Findings
 
-Pending the committed candidate and signed directory run.
+Candidate `3ce5d8f` ran in `workset-native-directory-01`. The original read
+feasibility case passed. The directory case failed in the new checker: it
+incorrectly required the child file's group to equal the worker's primary group.
+The fixture recorded the ordinary UID/GID for both processes, owner-only file
+mode, and matching file identity across observations; equating file GID with
+process GID is unnecessary for this claim. Preserve the actual file GID and
+compare it across observations instead. This is an E1 apparatus correction,
+not a change to an existing product promise.
+
+All five raw native rows completed, with the read-write treatment opening both
+write targets after consumption and the four controls refusing those opens.
+Do not credit this failed run as the completed experiment: Python's final
+read-back was placed after assertions and was lost on failure. Reviewer
+`review_directory_native` independently identified this retention gap. Move
+preparation capture before launch and final filesystem capture into an
+unconditional path before validation and cleanup; retain assertion tracebacks.
+Rerun the full native selection from the corrected committed candidate.

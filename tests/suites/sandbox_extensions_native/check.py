@@ -165,7 +165,7 @@ def checker_controls(reference, identity):
 
 
 def run_experiment(binary, folder, case, target, issue, instrument):
-    folder.mkdir()
+    folder.mkdir(exist_ok=True)
     argv = [str(binary), case, str(target), str(issue), 'instrument' if instrument else 'plain']
     start = time.monotonic()
     with (folder / 'native.json').open('xb') as stdout, (folder / 'native.stderr').open('xb') as stderr:

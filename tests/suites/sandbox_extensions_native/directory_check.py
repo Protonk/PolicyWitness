@@ -6,6 +6,7 @@ from pathlib import Path
 import stat
 import sys
 import tempfile
+import traceback
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check import (CONTENTS, expect_denied, expect_read, file_identity, prepare,
@@ -28,6 +29,27 @@ def absent(p):
 def same_file(left, right):
     assert {k: v for k, v in left.items() if k != 'size'} == {
         k: v for k, v in right.items() if k != 'size'}, 'file identity changed'
+
+
+def postrelease_read(a, identity):
+    assert a['open_attempted'] == 1
+    if a['open_rc'] == -1:
+        assert a['open_errno'] != 0
+        assert a['stat_attempted'] == a['read_attempted'] == a['close_attempted'] == 0
+        assert a['content_hex'] == ''
+        return
+    assert a['open_rc'] >= 0 and a['stat_attempted'] == 1
+    if a['stat_rc'] == 0:
+        assert a['identity'] == identity
+    else:
+        assert a['stat_rc'] == -1 and a['stat_errno'] != 0
+    assert a['read_attempted'] == 1 and -1 <= a['read_rc'] <= len(CONTENTS)
+    assert a['content_hex'] == CONTENTS[:max(0, a['read_rc'])].hex()
+    if a['read_rc'] == -1:
+        assert a['read_errno'] != 0
+    assert a['close_attempted'] == 1 and a['close_rc'] in (0, -1)
+    if a['close_rc'] == -1:
+        assert a['close_errno'] != 0
 
 
 def snapshot(a, content, identity):
@@ -62,7 +84,7 @@ def observed_write(w, create, initial):
     identity = w['opened']['identity']
     if create:
         assert stat.S_ISREG(identity['mode']) and stat.S_IMODE(identity['mode']) == 0o600
-        assert identity['uid'] == os.getuid() and identity['gid'] == os.getgid()
+        assert identity['uid'] == os.getuid(), 'new child owner differs'
         assert identity['size'] == 0, 'new child not empty at open'
         assert not w['truncate']['attempted'] and not w['truncated']['attempted']
         content = b''
@@ -131,8 +153,8 @@ def validate(r, target_identity, issue_identity, initial):
         assert d['child_prediction'] == dict(attempted=False, reason='unresolved_absent_child')
         read_allowed = i == 0 or (i == 2 and case in ('directory', 'directory_read_only'))
         if i == 3 and case in ('directory', 'directory_read_only'):
-            read_allowed = b['access']['open_rc'] >= 0
-        if read_allowed:
+            postrelease_read(b['access'], initial[i])
+        elif read_allowed:
             expect_read(b['access'], initial[i])
         else:
             expect_denied(b['access'])
@@ -198,7 +220,62 @@ def checker_controls(reference, target, initial):
     value = copy.deepcopy(reference)
     value['release'].update(native_rc=-1, errno_after_zeroing=22)
     validate(value, target, target, initial)
-    return dict(rejected=list(changes), accepted=['reference', 'unavailable_queries', 'unchanged_queries', 'failed_release_result'])
+    # Fresh post-release access is observed, not required to be revoked. Build
+    # an independent successful outcome, then vary the individual write calls.
+    value = copy.deepcopy(reference)
+    end = value['directory']['boundaries'][3]
+    value['boundaries'][3]['access'] = copy.deepcopy(reference['boundaries'][0]['access'])
+    value['boundaries'][3]['access']['identity'] = initial[3].copy()
+    for k in range(2):
+        end['operations'][k] = copy.deepcopy(reference['directory']['boundaries'][0]['operations'][k])
+        op = end['operations'][k]
+        op['after_release'] = copy.deepcopy(reference['directory']['boundaries'][3]['operations'][k]['after_release'])
+        if k == 0:
+            for key in ('before', 'opened', 'truncated', 'written'):
+                size = op['write'][key]['identity']['size']
+                op['write'][key]['identity'] = dict(initial[3], size=size)
+            for key in ('completed', 'after_exit'):
+                op[key]['identity'] = dict(initial[3], size=len(PAYLOAD))
+    validate(value, target, target, initial)
+    read_failure = copy.deepcopy(value)
+    read_failure['boundaries'][3]['access'].update(read_rc=-1, read_errno=1, content_hex='')
+    validate(read_failure, target, target, initial)
+    partial = copy.deepcopy(value)
+    op = partial['directory']['boundaries'][3]['operations'][0]
+    op['write']['write']['native_rc'] = 2
+    op['write']['written']['identity']['size'] = 2
+    for key in ('completed', 'after_exit'):
+        op[key].update(read_rc=2, content_hex=PAYLOAD[:2].hex())
+        op[key]['identity']['size'] = 2
+    validate(partial, target, target, initial)
+    failed_truncation = copy.deepcopy(value)
+    op = failed_truncation['directory']['boundaries'][3]['operations'][0]
+    op['write']['truncate'].update(native_rc=-1, errno_after_zeroing=1)
+    op['write']['truncated']['identity'] = initial[3].copy()
+    op['write']['write'].update(attempted=False, native_rc=None)
+    op['write']['written']['attempted'] = 0
+    for key in ('completed', 'after_exit'):
+        op[key] = copy.deepcopy(reference['directory']['boundaries'][3]['operations'][0]['after_release'])
+    validate(failed_truncation, target, target, initial)
+    return dict(rejected=list(changes), accepted=['reference', 'unavailable_queries', 'unchanged_queries',
+        'failed_release_result', 'fresh_access_after_release', 'partial_postrelease_write',
+        'failed_postrelease_truncation', 'failed_postrelease_read'])
+
+
+def external_snapshot(target):
+    observations = []
+    for i in range(4):
+        for name in (f'existing-{i}', f'child-{i}'):
+            p = target / name
+            actual = dict(path=str(p))
+            try:
+                actual['exists'] = p.exists()
+                if actual['exists']:
+                    actual.update(identity=file_identity(p), content_hex=p.read_bytes().hex())
+            except OSError as error:
+                actual['error'] = repr(error)
+            observations.append(actual)
+    return observations
 
 
 def main():
@@ -216,32 +293,38 @@ def main():
             initial = [file_identity(target / f'existing-{i}') for i in range(4)]
             target_id, other_id = file_identity(target), file_identity(other)
             issue = other if case == 'directory_different' else target
+            folder = out / case
+            folder.mkdir()
+            save(folder / 'preparation.json', dict(target_identity=target_id, issue_identity=other_id if issue == other else target_id,
+                 existing=initial, initial_contents_hex=CONTENTS.hex(), write_payload_hex=PAYLOAD.hex()))
             try:
-                r = run_experiment(binary, out / case, case, target, issue, False)
-                save(out / case / 'preparation.json', dict(target_identity=target_id, issue_identity=other_id if issue == other else target_id,
-                     existing=initial, initial_contents_hex=CONTENTS.hex(), write_payload_hex=PAYLOAD.hex()))
+                try:
+                    r = run_experiment(binary, folder, case, target, issue, False)
+                finally:
+                    # Preserve independent final observations even if native
+                    # execution or a checker assertion fails. Temporary targets
+                    # disappear only after this durable capture.
+                    external = external_snapshot(target)
+                    save(folder / 'external-after-exit.json', external)
                 assert r['resolved_issue'] == str(issue.resolve())
                 validate(r, target_id, other_id if issue == other else target_id, initial)
-                external = []
+                by_path = {v['path']: v for v in external}
                 for d in r['directory']['boundaries']:
                     for path, op in zip((d['existing'], d['child']), d['operations']):
-                        p = Path(path)
-                        actual = dict(path=path, exists=p.exists())
-                        if p.exists():
-                            actual.update(identity=file_identity(p), content_hex=p.read_bytes().hex())
+                        actual = by_path[path]
+                        assert 'error' not in actual, 'external inspection failed'
+                        if actual['exists']:
                             assert actual['content_hex'] == op['after_exit']['content_hex']
                             assert actual['identity'] == op['after_exit']['identity']
                         else:
                             assert op['after_exit']['open_rc'] == -1 and op['after_exit']['open_errno'] == 2
-                        external.append(actual)
-                save(out / case / 'external-after-exit.json', external)
                 assert list(other.iterdir()) == [], 'other directory changed'
                 if case == 'directory':
                     save(out / 'checker-controls.json', checker_controls(r, target_id, initial))
                 results.append(r)
                 print(case + ': passed', flush=True)
             except (AssertionError, ValueError) as error:
-                failures.append(dict(case=case, error=str(error)))
+                failures.append(dict(case=case, error=str(error), traceback=traceback.format_exc()))
                 print(case + ': failed: ' + str(error), flush=True)
     save(out / 'summary.json', dict(passed=len(results), expected=len(SCENARIOS), failures=failures,
         observations=[dict(scenario=r['scenario'], issue_class=r['issue_class'], consume=r['consume'], release=r['release'],
