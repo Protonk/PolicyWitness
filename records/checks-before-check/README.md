@@ -17,6 +17,10 @@ Artifacts:
 - `trace-evidence.json`:16 historical accepted/rejected/restoration controls,
   receipt identities and15 selected source-file comparisons; not a current
   whole-checkout passing credit.
+- `traces.md`: six representative edit paths, author repair, checkpoints,
+  distribution, cross-generator dependencies and failure/recovery boundaries.
+- `reconciliation.md`: localized findings, supported correction scope,
+  inherited proposal dispositions and pending decisions.
 
 Ownership, traces, reconciliation and acceptance records are added as those
 phases finish. Current-source accounts always name their examined revision;

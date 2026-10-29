@@ -25,6 +25,9 @@ document populations, source authority and output ownership; its supporting
 [facts](../records/checks-before-check/ownership-facts.json) and
 [historical control evidence](../records/checks-before-check/trace-evidence.json)
 retain the examined source and limits of reuse.
+The [edit paths](../records/checks-before-check/traces.md) and
+[reconciliation](../records/checks-before-check/reconciliation.md) identify
+supported corrections, retained complexity and remaining disposition work.
 
 Follow [planning guidance](../CONTRIBUTING.md#planning-a-change),
 [documentation guidance](AGENTS.md) and [test working guidance](../tests/AGENTS.md).
