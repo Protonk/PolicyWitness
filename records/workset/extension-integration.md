@@ -127,3 +127,17 @@ Read-only reviewer `review_public_extension` examined candidate `7426fc0` C,
 Swift and Python paths, authority transport, native control reach and live
 apparatus. It reported no consequential defect; this is source review, not
 execution. Broader coordinated verification remains required before the seal.
+
+`workset-e2-coordinated-01` ran 82 default cases at `a7c1408`, using the
+unchanged signed `7426fc0` runtime. Eighty-one passed, including all 480 Swift
+tests, native fresh-write substitutions, ABI values, independent readers,
+admission/failure boundaries and live extension boundaries/maximum replies.
+No case overlapped system sleep. The sole failure was the planner mutation
+fixture's terminal-enum anchor: it still expected extensionRelease11, before
+the new file actions12/13. Its insertion point now names fileCreateFresh13;
+extra-kind controls use14 and the gap control15, preserving their distinct
+diagnostics and restoration. This adapts experiment equipment, not the checker
+guarantee. The original failed run is pinned; the corrected case awaits rerun.
+
+The default external-runner registry and reconcile inspection were empty
+before the BYOXPC witness: no runners, pending cleanup, candidates or errors.
