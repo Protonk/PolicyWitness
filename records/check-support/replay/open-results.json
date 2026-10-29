@@ -1,0 +1,2422 @@
+{
+  "cases": [
+    {
+      "current_worker_identity": "e1c88f81524813757e06ffe16ad512708557faad0b46e45b44b89b6815d2d145",
+      "id": "A",
+      "reason": "registered observation receipt absent",
+      "result": "evidence-missing",
+      "revision": "51487f7"
+    },
+    {
+      "changed": [],
+      "current_worker_identity": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
+      "id": "A",
+      "reason": "equal represented inputs; supplied adoption review",
+      "receipt_sha256": "823966c09f42db95bc54dc489d44197e2876a0422f1838fa5ea3c5700a94c2cf",
+      "receipt_worker_identity": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
+      "result": "represented-inputs-current",
+      "revision": "69c7dfe",
+      "source_files": {
+        "controller/tools/pw_probe_runner/pw_probe_runner.c": {
+          "current": "53b4d8031ee688c0b1b497517dca4ddfd329b867c8d2ff86f233bd71803925e4",
+          "receipt": "53b4d8031ee688c0b1b497517dca4ddfd329b867c8d2ff86f233bd71803925e4"
+        },
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": {
+          "current": "05dfa09522c37d9514a2f262d6e6308e377f5af8074a036a0008b431d99357ba",
+          "receipt": "05dfa09522c37d9514a2f262d6e6308e377f5af8074a036a0008b431d99357ba"
+        },
+        "runner/Sources/PWRunnerCore/CWorker.swift": {
+          "current": "13aad86ba0e3cf0fd33fed5eb31b87e3a95d4ef90069db2ebf876c64852fe2f9",
+          "receipt": "13aad86ba0e3cf0fd33fed5eb31b87e3a95d4ef90069db2ebf876c64852fe2f9"
+        },
+        "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift": {
+          "current": "074ffede77a7b828bd42749c292c71aa5f5804b917bb977d1c7d849fab174cfc",
+          "receipt": "074ffede77a7b828bd42749c292c71aa5f5804b917bb977d1c7d849fab174cfc"
+        },
+        "tests/lib/run_capture.py": {
+          "current": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76",
+          "receipt": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76"
+        },
+        "tests/suites/runner_exec_inheritance/launch_inventory.py": {
+          "current": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4",
+          "receipt": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4"
+        },
+        "tests/suites/runner_exec_inheritance/run.sh": {
+          "current": "2c83a8474ffd8f414e8c3fa18f1a09bd11992850eb95fc38009a0bb98aa4ee89",
+          "receipt": "2c83a8474ffd8f414e8c3fa18f1a09bd11992850eb95fc38009a0bb98aa4ee89"
+        }
+      },
+      "worker_identity_changed": false
+    },
+    {
+      "changed": [
+        "controller/tools/pw_probe_runner/pw_probe_runner.c",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "runner/Sources/PWRunnerCore/CWorker.swift"
+      ],
+      "current_worker_identity": "0da3a70ace265bd082e7a51e03ddc4cc2f84c366781d2d1b17a4d749fb891093",
+      "id": "A",
+      "reason": "changed represented inputs",
+      "receipt_sha256": "823966c09f42db95bc54dc489d44197e2876a0422f1838fa5ea3c5700a94c2cf",
+      "receipt_worker_identity": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
+      "result": "review-required",
+      "revision": "f468200",
+      "source_files": {
+        "controller/tools/pw_probe_runner/pw_probe_runner.c": {
+          "current": "a39307828da95d5f028c25a9e01a332087f0d82ff04e4c2cde383ca5aa3ac784",
+          "receipt": "53b4d8031ee688c0b1b497517dca4ddfd329b867c8d2ff86f233bd71803925e4"
+        },
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": {
+          "current": "851156b931cb65feb5754c43ae6c543ce57c0695ba89fd99e2670a90a3e27239",
+          "receipt": "05dfa09522c37d9514a2f262d6e6308e377f5af8074a036a0008b431d99357ba"
+        },
+        "runner/Sources/PWRunnerCore/CWorker.swift": {
+          "current": "12355240ee1eb0652a14dfa085bb300a18146d07d3f32807228d0895b94d7e36",
+          "receipt": "13aad86ba0e3cf0fd33fed5eb31b87e3a95d4ef90069db2ebf876c64852fe2f9"
+        },
+        "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift": {
+          "current": "074ffede77a7b828bd42749c292c71aa5f5804b917bb977d1c7d849fab174cfc",
+          "receipt": "074ffede77a7b828bd42749c292c71aa5f5804b917bb977d1c7d849fab174cfc"
+        },
+        "tests/lib/run_capture.py": {
+          "current": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76",
+          "receipt": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76"
+        },
+        "tests/suites/runner_exec_inheritance/launch_inventory.py": {
+          "current": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4",
+          "receipt": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4"
+        },
+        "tests/suites/runner_exec_inheritance/run.sh": {
+          "current": "2c83a8474ffd8f414e8c3fa18f1a09bd11992850eb95fc38009a0bb98aa4ee89",
+          "receipt": "2c83a8474ffd8f414e8c3fa18f1a09bd11992850eb95fc38009a0bb98aa4ee89"
+        }
+      },
+      "worker_identity_changed": true
+    },
+    {
+      "baseline_claim_hash": "fbce578a49f49a7a46f983bb76ca010357805606c8f370c5bd46ff116a8d4236",
+      "claim_hash": "fbce578a49f49a7a46f983bb76ca010357805606c8f370c5bd46ff116a8d4236",
+      "id": "P-change",
+      "reason": "registered whole claim-document bytes unchanged",
+      "result": "represented-inputs-current",
+      "revision": "69c7dfe"
+    },
+    {
+      "baseline_claim_hash": "fbce578a49f49a7a46f983bb76ca010357805606c8f370c5bd46ff116a8d4236",
+      "claim_hash": "a59f05545d0c45854b2b5eea80292083212ce3b8ed9851c7063dbf2a8568fd58",
+      "id": "P-change",
+      "reason": "registered whole claim-document bytes changed",
+      "result": "review-required",
+      "revision": "11fddc4"
+    },
+    {
+      "excerpts": {
+        "Makefile": [
+          {
+            "line": 28,
+            "text": "#   Every target is phony; make tracks no outputs here."
+          },
+          {
+            "line": 29,
+            "text": "#   /usr/bin/python3 -B is deliberate: the system interpreter, writing no bytecode."
+          },
+          {
+            "line": 30,
+            "text": "#   Multi-line recipes run under one `set -eu` shell so $$release_evidence, $$version"
+          },
+          {
+            "line": 98,
+            "text": "\t@echo \"==> [notarize] preflight report for $(DIST_DIR)\""
+          },
+          {
+            "line": 99,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_preflight.py --report --dist \"$(DIST_DIR)\""
+          },
+          {
+            "line": 100,
+            "text": "\t@$(MAKE) build"
+          },
+          {
+            "line": 102,
+            "text": "\t@set -eu; \\"
+          },
+          {
+            "line": 103,
+            "text": "\t  release_evidence=\"$$(/usr/bin/python3 -B tests/lib/release_evidence.py \"$(DIST_DIR)/PolicyWitness.zip\")\"; \\"
+          },
+          {
+            "line": 104,
+            "text": "\t  echo \"==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip and wait once -> $$release_evidence\"; \\"
+          },
+          {
+            "line": 104,
+            "text": "\t  echo \"==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip and wait once -> $$release_evidence\"; \\"
+          },
+          {
+            "line": 105,
+            "text": "\t  /usr/bin/python3 -B notarize.py \"$(DIST_DIR)/PolicyWitness.zip\" \"$(NOTARY_KEYCHAIN_PROFILE)\" --evidence-dir \"$$release_evidence\"; \\"
+          },
+          {
+            "line": 106,
+            "text": "\t  echo \"==> [notarize] staple, validate and assess $(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 106,
+            "text": "\t  echo \"==> [notarize] staple, validate and assess $(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 107,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple \"$$release_evidence\" 60 /usr/bin/xcrun stapler staple \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 108,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 107,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple \"$$release_evidence\" 60 /usr/bin/xcrun stapler staple \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 108,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 109,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper \"$$release_evidence\" 60 /usr/sbin/spctl -a -vv --type execute \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 108,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 109,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper \"$$release_evidence\" 60 /usr/sbin/spctl -a -vv --type execute \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 110,
+            "text": "\t  echo \"==> [notarize] re-zip the stapled app and accept the final ZIP\"; \\"
+          },
+          {
+            "line": 111,
+            "text": "\t  rm -f \"$(DIST_DIR)/PolicyWitness.zip\"; \\"
+          },
+          {
+            "line": 112,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step re-zip \"$$release_evidence\" 60 /usr/bin/ditto -c -k --sequesterRsrc --keepParent \"$(DIST_DIR)/PolicyWitness.app\" \"$(DIST_DIR)/PolicyWitness.zip\"; \\"
+          },
+          {
+            "line": 113,
+            "text": "\t  bash tests/accept-release.sh \"$(DIST_DIR)/PolicyWitness.zip\" --evidence-dir \"$$release_evidence\""
+          },
+          {
+            "line": 132,
+            "text": "\t@echo \"==> [release] strict preflight for $(DIST_DIR)\""
+          },
+          {
+            "line": 133,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_preflight.py --dist \"$(DIST_DIR)\" >/dev/null"
+          },
+          {
+            "line": 134,
+            "text": "\t@$(MAKE) notarize"
+          },
+          {
+            "line": 136,
+            "text": "\t@set -eu; \\"
+          },
+          {
+            "line": 137,
+            "text": "\t  version=\"$$(/usr/bin/python3 -B tests/lib/release_preflight.py --dist \"$(DIST_DIR)\" --format version)\"; \\"
+          },
+          {
+            "line": 138,
+            "text": "\t  battery=\"tests/out/runs/release-$$version-default\"; \\"
+          },
+          {
+            "line": 141,
+            "text": "\t  echo \"==> [release] archive $(DIST_DIR)/archive/v$$version\"; \\"
+          },
+          {
+            "line": 142,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_archive.py --latest --dist \"$(DIST_DIR)\" --battery \"$$battery\" \\"
+          },
+          {
+            "line": 143,
+            "text": "\t    $(if $(RELEASE_NOTES),--notes \"$(RELEASE_NOTES)\",); \\"
+          },
+          {
+            "line": 144,
+            "text": "\t  echo \"==> [release] clean up older working test output\"; \\"
+          },
+          {
+            "line": 145,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_rotate.py \"$(DIST_DIR)/archive/v$$version\" --apply"
+          },
+          {
+            "line": 146,
+            "text": ""
+          },
+          {
+            "line": 158,
+            "text": "\t@echo \"==> [publish] verify and publish $(DIST_DIR)/archive/v$(VERSION)\""
+          },
+          {
+            "line": 159,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_publish.py \"$(DIST_DIR)/archive/v$(VERSION)\" \\"
+          },
+          {
+            "line": 160,
+            "text": "\t  $(if $(RELEASE_NOTES),--notes \"$(RELEASE_NOTES)\",)"
+          }
+        ]
+      },
+      "id": "B",
+      "reason": "no registered subject relationship; unconnected prose semantics",
+      "result": "excluded",
+      "revision": "46fe43e"
+    },
+    {
+      "excerpts": {
+        "Makefile": [
+          {
+            "line": 41,
+            "text": "#   Every target is phony; make tracks no outputs here."
+          },
+          {
+            "line": 42,
+            "text": "#   /usr/bin/python3 -B is deliberate: the system interpreter, writing no bytecode."
+          },
+          {
+            "line": 43,
+            "text": "#   Multi-line recipes run under one `set -eu` shell so $$release_evidence, $$version"
+          },
+          {
+            "line": 135,
+            "text": "\t@echo \"==> [notarize] preflight report for $(DIST_DIR)\""
+          },
+          {
+            "line": 136,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_preflight.py --report --dist \"$(DIST_DIR)\""
+          },
+          {
+            "line": 137,
+            "text": "# The release build is fresh: a caller's conflicting knob refuses here instead of being overridden silently."
+          },
+          {
+            "line": 144,
+            "text": "\t@set -eu; \\"
+          },
+          {
+            "line": 145,
+            "text": "\t  release_evidence=\"$$(/usr/bin/python3 -B tests/lib/release_evidence.py \"$(DIST_DIR)/PolicyWitness.zip\")\"; \\"
+          },
+          {
+            "line": 146,
+            "text": "\t  echo \"==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip and wait once -> $$release_evidence\"; \\"
+          },
+          {
+            "line": 146,
+            "text": "\t  echo \"==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip and wait once -> $$release_evidence\"; \\"
+          },
+          {
+            "line": 147,
+            "text": "\t  /usr/bin/python3 -B notarize.py \"$(DIST_DIR)/PolicyWitness.zip\" \"$(NOTARY_KEYCHAIN_PROFILE)\" --evidence-dir \"$$release_evidence\"; \\"
+          },
+          {
+            "line": 148,
+            "text": "\t  echo \"==> [notarize] staple, validate and assess $(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 148,
+            "text": "\t  echo \"==> [notarize] staple, validate and assess $(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 149,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple \"$$release_evidence\" 60 /usr/bin/xcrun stapler staple \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 150,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 149,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple \"$$release_evidence\" 60 /usr/bin/xcrun stapler staple \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 150,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 151,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper \"$$release_evidence\" 60 /usr/sbin/spctl -a -vv --type execute \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 150,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 151,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper \"$$release_evidence\" 60 /usr/sbin/spctl -a -vv --type execute \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 152,
+            "text": "\t  echo \"==> [notarize] re-zip the stapled app and accept the final ZIP\"; \\"
+          },
+          {
+            "line": 153,
+            "text": "\t  rm -f \"$(DIST_DIR)/PolicyWitness.zip\"; \\"
+          },
+          {
+            "line": 154,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step re-zip \"$$release_evidence\" 60 /usr/bin/ditto -c -k --sequesterRsrc --keepParent \"$(DIST_DIR)/PolicyWitness.app\" \"$(DIST_DIR)/PolicyWitness.zip\"; \\"
+          },
+          {
+            "line": 155,
+            "text": "\t  bash tests/accept-release.sh \"$(DIST_DIR)/PolicyWitness.zip\" --evidence-dir \"$$release_evidence\""
+          },
+          {
+            "line": 174,
+            "text": "\t@echo \"==> [release] strict preflight for $(DIST_DIR)\""
+          },
+          {
+            "line": 175,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_preflight.py --dist \"$(DIST_DIR)\" >/dev/null"
+          },
+          {
+            "line": 176,
+            "text": "\t@$(MAKE) notarize"
+          },
+          {
+            "line": 178,
+            "text": "\t@set -eu; \\"
+          },
+          {
+            "line": 179,
+            "text": "\t  version=\"$$(/usr/bin/python3 -B tests/lib/release_preflight.py --dist \"$(DIST_DIR)\" --format version)\"; \\"
+          },
+          {
+            "line": 180,
+            "text": "\t  battery=\"tests/out/runs/release-$$version-default\"; \\"
+          },
+          {
+            "line": 183,
+            "text": "\t  echo \"==> [release] archive $(DIST_DIR)/archive/v$$version\"; \\"
+          },
+          {
+            "line": 184,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_archive.py --latest --dist \"$(DIST_DIR)\" --battery \"$$battery\" \\"
+          },
+          {
+            "line": 185,
+            "text": "\t    $(if $(RELEASE_NOTES),--notes \"$(RELEASE_NOTES)\",); \\"
+          },
+          {
+            "line": 186,
+            "text": "\t  echo \"==> [release] clean up older working test output\"; \\"
+          },
+          {
+            "line": 187,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_rotate.py \"$(DIST_DIR)/archive/v$$version\" --apply"
+          },
+          {
+            "line": 188,
+            "text": ""
+          },
+          {
+            "line": 200,
+            "text": "\t@echo \"==> [publish] verify and publish $(DIST_DIR)/archive/v$(VERSION)\""
+          },
+          {
+            "line": 201,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_publish.py \"$(DIST_DIR)/archive/v$(VERSION)\" \\"
+          },
+          {
+            "line": 202,
+            "text": "\t  $(if $(RELEASE_NOTES),--notes \"$(RELEASE_NOTES)\",)"
+          }
+        ],
+        "docs/BUILD.md": [
+          {
+            "line": 207,
+            "text": "  `SDKROOT` is the one the front end recorded, restored at the lock step: the"
+          },
+          {
+            "line": 208,
+            "text": "  system Python shim inserts an `SDKROOT` of its own into everything it"
+          },
+          {
+            "line": 209,
+            "text": "  starts, which must not pass for a caller's choice. The script exports"
+          },
+          {
+            "line": 354,
+            "text": "`LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`, each set with its exact value or"
+          },
+          {
+            "line": 355,
+            "text": "unset, with shell builtins, because the system `/usr/bin/python3` is a shim"
+          },
+          {
+            "line": 356,
+            "text": "that inserts values of its own into everything it starts. The owner it"
+          },
+          {
+            "line": 407,
+            "text": "environment holds: a caller that is itself a process started through the"
+          },
+          {
+            "line": 408,
+            "text": "Python shim passes the shim's values unless it removes them first."
+          },
+          {
+            "line": 409,
+            "text": ""
+          }
+        ],
+        "tests/lib/checkout_lock.py": [
+          {
+            "line": 43,
+            "text": ""
+          },
+          {
+            "line": 44,
+            "text": "Requests. The system /usr/bin/python3 is a launcher shim that inserts"
+          },
+          {
+            "line": 45,
+            "text": "SDKROOT, CPATH, LIBRARY_PATH and MANPATH into the environment of everything"
+          }
+        ],
+        "tests/lib/checkout_lock.sh": [
+          {
+            "line": 5,
+            "text": "#"
+          },
+          {
+            "line": 6,
+            "text": "# The system /usr/bin/python3 is a launcher shim that inserts SDKROOT, CPATH,"
+          },
+          {
+            "line": 7,
+            "text": "# LIBRARY_PATH and MANPATH into the environment of everything it starts, and"
+          },
+          {
+            "line": 27,
+            "text": "done"
+          },
+          {
+            "line": 28,
+            "text": "exec /usr/bin/python3 -B \"${LOCK_LIBRARY}/checkout_lock.py\" \"${LOCK_REQUESTS[@]}\" \"$@\""
+          }
+        ]
+      },
+      "id": "B",
+      "reason": "no registered subject relationship; unconnected prose semantics",
+      "result": "excluded",
+      "revision": "b410ac3"
+    },
+    {
+      "excerpts": {
+        "Makefile": [
+          {
+            "line": 46,
+            "text": "#   Every target is phony; make tracks no outputs here."
+          },
+          {
+            "line": 47,
+            "text": "#   /usr/bin/python3 -B is deliberate: the system interpreter, writing no bytecode."
+          },
+          {
+            "line": 48,
+            "text": "#   Multi-line recipes run under one `set -eu` shell so $$release_evidence, $$version"
+          },
+          {
+            "line": 149,
+            "text": "\t@echo \"==> [notarize] preflight report for $(DIST_DIR)\""
+          },
+          {
+            "line": 150,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_preflight.py --report --dist \"$(DIST_DIR)\""
+          },
+          {
+            "line": 151,
+            "text": "# The release build is fresh: a caller's conflicting knob refuses here instead of being overridden silently."
+          },
+          {
+            "line": 158,
+            "text": "\t@set -eu; \\"
+          },
+          {
+            "line": 159,
+            "text": "\t  release_evidence=\"$$(/usr/bin/python3 -B tests/lib/release_evidence.py \"$(DIST_DIR)/PolicyWitness.zip\")\"; \\"
+          },
+          {
+            "line": 160,
+            "text": "\t  echo \"==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip and wait once -> $$release_evidence\"; \\"
+          },
+          {
+            "line": 160,
+            "text": "\t  echo \"==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip and wait once -> $$release_evidence\"; \\"
+          },
+          {
+            "line": 161,
+            "text": "\t  /usr/bin/python3 -B notarize.py \"$(DIST_DIR)/PolicyWitness.zip\" \"$(NOTARY_KEYCHAIN_PROFILE)\" --evidence-dir \"$$release_evidence\"; \\"
+          },
+          {
+            "line": 162,
+            "text": "\t  echo \"==> [notarize] staple, validate and assess $(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 162,
+            "text": "\t  echo \"==> [notarize] staple, validate and assess $(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 163,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple \"$$release_evidence\" 60 /usr/bin/xcrun stapler staple \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 164,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 163,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple \"$$release_evidence\" 60 /usr/bin/xcrun stapler staple \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 164,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 165,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper \"$$release_evidence\" 60 /usr/sbin/spctl -a -vv --type execute \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 164,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation \"$$release_evidence\" 60 /usr/bin/xcrun stapler validate -v \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 165,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper \"$$release_evidence\" 60 /usr/sbin/spctl -a -vv --type execute \"$(DIST_DIR)/PolicyWitness.app\"; \\"
+          },
+          {
+            "line": 166,
+            "text": "\t  echo \"==> [notarize] re-zip the stapled app and accept the final ZIP\"; \\"
+          },
+          {
+            "line": 167,
+            "text": "\t  rm -f \"$(DIST_DIR)/PolicyWitness.zip\"; \\"
+          },
+          {
+            "line": 168,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_commands.py --step re-zip \"$$release_evidence\" 60 /usr/bin/ditto -c -k --sequesterRsrc --keepParent \"$(DIST_DIR)/PolicyWitness.app\" \"$(DIST_DIR)/PolicyWitness.zip\"; \\"
+          },
+          {
+            "line": 169,
+            "text": "\t  bash tests/accept-release.sh \"$(DIST_DIR)/PolicyWitness.zip\" --evidence-dir \"$$release_evidence\""
+          },
+          {
+            "line": 188,
+            "text": "\t@echo \"==> [release] strict preflight for $(DIST_DIR)\""
+          },
+          {
+            "line": 189,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_preflight.py --dist \"$(DIST_DIR)\" >/dev/null"
+          },
+          {
+            "line": 190,
+            "text": "\t@$(MAKE) notarize"
+          },
+          {
+            "line": 192,
+            "text": "\t@set -eu; \\"
+          },
+          {
+            "line": 193,
+            "text": "\t  version=\"$$(/usr/bin/python3 -B tests/lib/release_preflight.py --dist \"$(DIST_DIR)\" --format version)\"; \\"
+          },
+          {
+            "line": 194,
+            "text": "\t  battery=\"tests/out/runs/release-$$version-default\"; \\"
+          },
+          {
+            "line": 197,
+            "text": "\t  echo \"==> [release] archive $(DIST_DIR)/archive/v$$version\"; \\"
+          },
+          {
+            "line": 198,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_archive.py --latest --dist \"$(DIST_DIR)\" --battery \"$$battery\" \\"
+          },
+          {
+            "line": 199,
+            "text": "\t    $(if $(RELEASE_NOTES),--notes \"$(RELEASE_NOTES)\",); \\"
+          },
+          {
+            "line": 200,
+            "text": "\t  echo \"==> [release] clean up older working test output\"; \\"
+          },
+          {
+            "line": 201,
+            "text": "\t  /usr/bin/python3 -B tests/lib/release_rotate.py \"$(DIST_DIR)/archive/v$$version\" --apply"
+          },
+          {
+            "line": 202,
+            "text": ""
+          },
+          {
+            "line": 214,
+            "text": "\t@echo \"==> [publish] verify and publish $(DIST_DIR)/archive/v$(VERSION)\""
+          },
+          {
+            "line": 215,
+            "text": "\t@/usr/bin/python3 -B tests/lib/release_publish.py \"$(DIST_DIR)/archive/v$(VERSION)\" \\"
+          },
+          {
+            "line": 216,
+            "text": "\t  $(if $(RELEASE_NOTES),--notes \"$(RELEASE_NOTES)\",)"
+          }
+        ],
+        "docs/BUILD.md": [],
+        "tests/lib/checkout_lock.py": [],
+        "tests/lib/checkout_lock.sh": []
+      },
+      "id": "B",
+      "reason": "no registered subject relationship; unconnected prose semantics",
+      "result": "excluded",
+      "revision": "d46ccd6"
+    },
+    {
+      "excerpts": {
+        "Makefile": [
+          {
+            "line": 46,
+            "text": "#   Every target is phony; make tracks no outputs here."
+          },
+          {
+            "line": 47,
+            "text": "#   Python helpers run through tests/lib/python.sh, never the /usr/bin/python3 shim."
+          },
+          {
+            "line": 48,
+            "text": "#   Multi-line recipes run under one `set -eu` shell so $$release_evidence, $$version"
+          }
+        ],
+        "docs/BUILD.md": [],
+        "tests/lib/checkout_lock.py": [],
+        "tests/lib/checkout_lock.sh": []
+      },
+      "id": "B",
+      "reason": "no registered subject relationship; unconnected prose semantics",
+      "result": "excluded",
+      "revision": "99cf137"
+    },
+    {
+      "id": "S9-W24",
+      "reason": "wrong versus repaired attribution is semantic; existing pointer does not adjudicate it",
+      "result": "excluded",
+      "revision": "51487f7",
+      "row": {
+        "checks": [
+          {
+            "form": "test",
+            "path": "tests/suites/witness_contract/run.sh",
+            "symbol": "extension_boundaries"
+          }
+        ],
+        "from": "s8b",
+        "id": "W24",
+        "kind": "supplies_authority",
+        "label": "Host duplicates channel for worker delivery",
+        "sources": [
+          {
+            "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+            "symbol": "ExtensionSession"
+          }
+        ],
+        "to": "s5"
+      },
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+          "symbol": "ExtensionSession",
+          "symbol_present": true
+        }
+      ]
+    },
+    {
+      "id": "S9-W30",
+      "reason": "wrong versus repaired attribution is semantic; existing pointer does not adjudicate it",
+      "result": "excluded",
+      "revision": "51487f7",
+      "row": {
+        "checks": [
+          {
+            "form": "test",
+            "path": "tests/suites/witness_contract/run.sh",
+            "symbol": "extension_boundaries"
+          }
+        ],
+        "from": "s12b",
+        "id": "W30",
+        "kind": "supplies_authority",
+        "label": "Worker borrows same bytes through its mapping",
+        "sources": [
+          {
+            "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+            "symbol": "main"
+          }
+        ],
+        "to": "s22"
+      },
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+          "symbol": "main",
+          "symbol_present": true
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "reason": "a located definition does not establish assertion support; classification needs review",
+      "result": "unreviewed",
+      "revision": "51487f7",
+      "row": {
+        "checks": [
+          {
+            "form": "test",
+            "path": "tests/suites/runner_c_worker_harness/run.sh",
+            "symbol": "bare_deny_default"
+          }
+        ],
+        "facts": {
+          "Acquired by": "H: mmap, zero/populate/page-touch",
+          "Authority": "Read worker publications; write input/release/exit request",
+          "Held across": "Through collection, even if worker cleanup unconfirmed",
+          "Inventory ID": "S2",
+          "Reaches exec children": "No: exec replaces address space",
+          "Release / teardown action": "H defer munmap",
+          "Role": "P",
+          "Sandbox-gated": "Source-only, host before apply",
+          "When": "Before compilation"
+        },
+        "id": "s2",
+        "kind": "reporting",
+        "label": "Host evidence base mapping",
+        "sources": [
+          {
+            "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+            "symbol": "runCWorker"
+          }
+        ]
+      }
+    },
+    {
+      "id": "S6",
+      "reason": "truth of generated source data is outside identity checking",
+      "result": "excluded",
+      "revision": "51487f7",
+      "rows": [
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries"
+            }
+          ],
+          "facts": {
+            "Acquired by": "E: posix_spawn with CLOEXEC_DEFAULT, nil envp",
+            "Authority": "Ordinary signed issuer authority for file token issuance",
+            "Held across": "Until issuer exit; delivery requires confirmed clean reap",
+            "Inventory ID": "S9",
+            "Reaches exec children": "No: sibling, reaped before worker delivery",
+            "Release / teardown action": "I return; E wait/terminate",
+            "Role": "A",
+            "Sandbox-gated": "Source-only; no live issuer case rerun in pass 1",
+            "When": "Before compilation"
+          },
+          "id": "s9",
+          "kind": "authority",
+          "label": "Fresh issuer process",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default"
+            }
+          ],
+          "facts": {
+            "Acquired by": "attempt_file_open_read: open(O_RDONLY)",
+            "Authority": "Read opened object",
+            "Held across": "Attempt only on ordinary cleanup path",
+            "Inventory ID": "S29",
+            "Reaches exec children": "No: closed before later exec, which also excludes it",
+            "Release / teardown action": "close after best-effort one-byte read; return ignored",
+            "Role": "O",
+            "Sandbox-gated": "Source-only; no file probe rerun in pass 1",
+            "When": "After apply within an attempt"
+          },
+          "id": "s29",
+          "kind": "operation",
+          "label": "open_read target fd",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_open_read"
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "create_existing_file_preserves_contents"
+            }
+          ],
+          "facts": {
+            "Acquired by": "attempt_file_create: open(O_WRONLY | O_CREAT, 0600)",
+            "Authority": "Write existing object or create missing object",
+            "Held across": "Attempt only on ordinary cleanup path",
+            "Inventory ID": "S31a",
+            "Reaches exec children": "No: later exec excludes it",
+            "Release / teardown action": "close, return ignored",
+            "Role": "O",
+            "Sandbox-gated": "Source-only; existing-file checker inspected, not rerun",
+            "When": "After apply within an attempt"
+          },
+          "id": "s31a",
+          "kind": "operation",
+          "label": "create target fd",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_create"
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extensions"
+            }
+          ],
+          "facts": {
+            "Acquired by": "attempt_file_read_fresh: open(O_RDONLY | O_CLOEXEC), fstat, read",
+            "Authority": "Read and identify fresh opened object",
+            "Held across": "Attempt only on successful close; close failure retained",
+            "Inventory ID": "S32",
+            "Reaches exec children": "No: close-on-exec and child exclusion",
+            "Release / teardown action": "One close, result published; no retry",
+            "Role": "O",
+            "Sandbox-gated": "Source-only; extension checker inspected, not rerun",
+            "When": "After apply within an attempt"
+          },
+          "id": "s32",
+          "kind": "operation",
+          "label": "Fresh target fd and read\nobservation",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_read_fresh"
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt"
+            },
+            {
+              "form": "test",
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker"
+            }
+          ],
+          "facts": {
+            "Acquired by": "Exec spawn attributes SETPGROUP, pgroup 0",
+            "Authority": "Cleanup addressing for members that remain",
+            "Held across": "As long as members remain, possibly beyond attempt/worker",
+            "Inventory ID": "S36b",
+            "Reaches exec children": "Yes to descendants unless they leave group",
+            "Release / teardown action": "Conditional process-group kill request",
+            "Role": "P",
+            "Sandbox-gated": "Source-only; lifecycle cases inspected, not rerun",
+            "When": "After apply within an attempt"
+          },
+          "id": "s36b",
+          "kind": "reporting",
+          "label": "Child process group",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "S9-W24",
+      "reason": "wrong versus repaired attribution is semantic; existing pointer does not adjudicate it",
+      "result": "excluded",
+      "revision": "69c7dfe",
+      "row": {
+        "checks": [
+          {
+            "form": "test",
+            "path": "tests/suites/runner_unit/host_setup_controls.py",
+            "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata.",
+            "symbol": "check"
+          }
+        ],
+        "from": "s8b",
+        "id": "W24",
+        "kind": "supplies_authority",
+        "label": "Host duplicates channel for worker delivery",
+        "sources": [
+          {
+            "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+            "symbol": "runCWorker"
+          }
+        ],
+        "to": "s5"
+      },
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker",
+          "symbol_present": true
+        }
+      ]
+    },
+    {
+      "id": "S9-W30",
+      "reason": "wrong versus repaired attribution is semantic; existing pointer does not adjudicate it",
+      "result": "excluded",
+      "revision": "69c7dfe",
+      "row": {
+        "checks": [],
+        "from": "s12b",
+        "id": "W30",
+        "kind": "supplies_authority",
+        "label": "Worker borrows same bytes through its mapping",
+        "sources": [
+          {
+            "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+            "symbol": "prepare_extension"
+          },
+          {
+            "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+            "symbol": "attempt_extension"
+          }
+        ],
+        "to": "s22"
+      },
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "prepare_extension",
+          "symbol_present": true
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "attempt_extension",
+          "symbol_present": true
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "reason": "a located definition does not establish assertion support; classification needs review",
+      "result": "unreviewed",
+      "revision": "69c7dfe",
+      "row": {
+        "checks": [
+          {
+            "form": "test",
+            "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+            "scope": "Controlled worker publications, ownership, acknowledgement reconciliation and confirmed reap; includes acknowledgement recovered after abnormal exit.",
+            "symbol": "runCWorkerLifecycleTests"
+          },
+          {
+            "form": "test",
+            "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+            "scope": "Independent object, descriptor-number reuse and complete-mapping teardown controls; successful worker reporting and reap remain intact.",
+            "symbol": "check"
+          }
+        ],
+        "facts": {
+          "Acquired by": "H: mmap, zero/populate/page-touch",
+          "Authority": "Read worker publications; write input/release/exit request",
+          "Held across": "Beyond host descriptor close, through collection including after worker exit or unconfirmed cleanup",
+          "Inventory ID": "S2",
+          "Reaches exec children": "No: exec replaces address space",
+          "Release / teardown action": "H defer munmap",
+          "Role": "P",
+          "When": "Before compilation"
+        },
+        "id": "s2",
+        "kind": "reporting",
+        "label": "Host evidence base mapping",
+        "sources": [
+          {
+            "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+            "symbol": "runCWorker"
+          }
+        ]
+      }
+    },
+    {
+      "id": "S6",
+      "reason": "truth of generated source data is outside identity checking",
+      "result": "excluded",
+      "revision": "69c7dfe",
+      "rows": [
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/witness_contract/run.sh",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only.",
+              "symbol": "extension_boundaries"
+            }
+          ],
+          "facts": {
+            "Acquired by": "E: posix_spawn with CLOEXEC_DEFAULT, nil envp",
+            "Authority": "Ordinary signed issuer authority for file token issuance",
+            "Held across": "Until issuer exit; delivery requires confirmed clean reap",
+            "Inventory ID": "S9",
+            "Reaches exec children": "No: sibling, reaped before worker delivery",
+            "Release / teardown action": "I return; E wait/terminate",
+            "Role": "A",
+            "When": "Before compilation"
+          },
+          "id": "s9",
+          "kind": "authority",
+          "label": "Fresh issuer process",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "scope": "The direct C harness observes applied policy, terminal publication and a denied file-open attempt under bare deny-default; host Swift handling is outside this control.",
+              "symbol": "bare_deny_default"
+            }
+          ],
+          "facts": {
+            "Acquired by": "attempt_file_open_read: open(O_RDONLY)",
+            "Authority": "Read opened object",
+            "Held across": "Attempt only on ordinary cleanup path",
+            "Inventory ID": "S29",
+            "Reaches exec children": "No: closed before later exec, which also excludes it",
+            "Release / teardown action": "close after best-effort one-byte read; return ignored",
+            "Role": "O",
+            "When": "After apply within an attempt"
+          },
+          "id": "s29",
+          "kind": "operation",
+          "label": "open_read target fd",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_open_read"
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/witness_contract/run.sh",
+              "scope": "Pre-existing targets retain their bytes after create-open; this does not exercise absent-target creation.",
+              "symbol": "create_existing_file_preserves_contents"
+            }
+          ],
+          "facts": {
+            "Acquired by": "attempt_file_create: open(O_WRONLY | O_CREAT, 0600)",
+            "Authority": "Write existing object or create missing object",
+            "Held across": "Attempt only on ordinary cleanup path",
+            "Inventory ID": "S31a",
+            "Reaches exec children": "No: later exec excludes it",
+            "Release / teardown action": "close, return ignored",
+            "Role": "O",
+            "When": "After apply within an attempt"
+          },
+          "id": "s31a",
+          "kind": "operation",
+          "label": "create target fd",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_create"
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/witness_contract/run.sh",
+              "scope": "Fresh-read and extension action evidence is compared with independent file bytes and native-call controls; native release is not a revocation assertion.",
+              "symbol": "extensions"
+            }
+          ],
+          "facts": {
+            "Acquired by": "attempt_file_read_fresh: open(O_RDONLY | O_CLOEXEC), fstat, read",
+            "Authority": "Read and identify fresh opened object",
+            "Held across": "Attempt only on successful close; close failure retained",
+            "Inventory ID": "S32",
+            "Reaches exec children": "No: close-on-exec and child exclusion",
+            "Release / teardown action": "One close, result published; no retry",
+            "Role": "O",
+            "When": "After apply within an attempt"
+          },
+          "id": "s32",
+          "kind": "operation",
+          "label": "Fresh target fd and read\nobservation",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_read_fresh"
+            }
+          ]
+        },
+        {
+          "checks": [
+            {
+              "form": "test",
+              "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
+              "scope": "Independent peer identity/group observations establish same-group survival after ordinary completion, then fixture cleanup.",
+              "symbol": "closed_streams_leader_exit"
+            },
+            {
+              "form": "test",
+              "path": "tests/suites/runner_exec_lifecycle/run.sh",
+              "scope": "Independent child observations establish survival after worker death and retain fixture-owned cleanup.",
+              "symbol": "worker_dies_during_exec"
+            },
+            {
+              "form": "test",
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "scope": "Production exec code with controlled native returns checks collection, termination-request and leader-reap separation and native call order.",
+              "symbol": "exec_control_states"
+            }
+          ],
+          "facts": {
+            "Acquired by": "Exec spawn attributes SETPGROUP, pgroup 0",
+            "Authority": "Cleanup addressing for members that remain",
+            "Held across": "As long as members remain, possibly beyond attempt/worker",
+            "Inventory ID": "S36b",
+            "Reaches exec children": "Yes to descendants unless they leave group",
+            "Release / teardown action": "No request on ordinary completion; exceptional group kill while leader ownership is known; no group-absence claim",
+            "Role": "P",
+            "When": "After apply within an attempt"
+          },
+          "id": "s36b",
+          "kind": "reporting",
+          "label": "Child process group",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_exec_spawn"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "excerpts": {
+        "controller/tools/pw_probe_runner/pw_probe_runner.c": [
+          {
+            "line": 65,
+            "text": "#include <sys/stat.h>"
+          },
+          {
+            "line": 66,
+            "text": "#include <sys/sysctl.h>"
+          },
+          {
+            "line": 67,
+            "text": "#include <sys/types.h>"
+          },
+          {
+            "line": 68,
+            "text": "#include <sys/wait.h>"
+          },
+          {
+            "line": 749,
+            "text": ""
+          },
+          {
+            "line": 750,
+            "text": "static void attempt_sysctl_read(pw_shm_slot_t *slot) {"
+          },
+          {
+            "line": 751,
+            "text": "    char buf[4096];"
+          },
+          {
+            "line": 752,
+            "text": "    size_t len = sizeof(buf);"
+          },
+          {
+            "line": 750,
+            "text": "static void attempt_sysctl_read(pw_shm_slot_t *slot) {"
+          },
+          {
+            "line": 751,
+            "text": "    char buf[4096];"
+          },
+          {
+            "line": 752,
+            "text": "    size_t len = sizeof(buf);"
+          },
+          {
+            "line": 753,
+            "text": "    if (sysctlbyname(slot->target, buf, &len, NULL, 0) != 0) {"
+          },
+          {
+            "line": 752,
+            "text": "    size_t len = sizeof(buf);"
+          },
+          {
+            "line": 753,
+            "text": "    if (sysctlbyname(slot->target, buf, &len, NULL, 0) != 0) {"
+          },
+          {
+            "line": 754,
+            "text": "        fail_from_errno(slot, \"sysctlbyname\");"
+          },
+          {
+            "line": 755,
+            "text": "        return;"
+          },
+          {
+            "line": 753,
+            "text": "    if (sysctlbyname(slot->target, buf, &len, NULL, 0) != 0) {"
+          },
+          {
+            "line": 754,
+            "text": "        fail_from_errno(slot, \"sysctlbyname\");"
+          },
+          {
+            "line": 755,
+            "text": "        return;"
+          },
+          {
+            "line": 756,
+            "text": "    }"
+          },
+          {
+            "line": 1430,
+            "text": "    case PW_ATTEMPT_MACH_LOOKUP:      attempt_mach_lookup(slot);          break;"
+          },
+          {
+            "line": 1431,
+            "text": "    case PW_ATTEMPT_SYSCTL_READ:      attempt_sysctl_read(slot);          break;"
+          },
+          {
+            "line": 1432,
+            "text": "    case PW_ATTEMPT_EXEC_SPAWN:"
+          },
+          {
+            "line": 1433,
+            "text": "        attempt_exec_spawn(slot, timing, phase, index);"
+          }
+        ],
+        "docs/WORKER.md": [
+          {
+            "line": 144,
+            "text": "| n9b | Capture hash/view/digest/sorting call frames | reporting | N9b | pw_capture_profile, pw_consumed_params_digest, pw_read_memory | Between compilation and apply | Call only | Return or process exit | Read own memory with existing task right | Source-only; qsort/CommonCrypto internals unobserved | No: exec replaces stack | P | [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |"
+          },
+          {
+            "line": 145,
+            "text": "| n10 | Attempt-local stack buffers, argv pointers, polls, wait status and metadata | mixed | N10 | run_attempt and each attempt_*, capture_observed_path, drain_one, exec_resources_acquire; attempt_sysctl_read holds its sysctl result buffer on the stack | After apply within an attempt | Call/attempt only; output copied into S18 | Return or process exit | Use already inventoried target/child handles; no separate authority | Source-only; compiler stack/page behavior unobserved | argv_local strings copied; stack not inherited | O + P (working/observation storage) | [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`attempt_sysctl_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |"
+          },
+          {
+            "line": 146,
+            "text": "| n11 | Post-apply outside-attempt automatic diagnostics and seam timespec | reporting | N11 | wait_for_proceed, proceed_refused, W post-phase seam | After apply outside an attempt | Call, or nonreturning refusal frame until exit | Return/exit; not dynamically allocated by PW | None; diagnostic/control working storage | Source-only | No child spawned on these paths | P | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |"
+          },
+          {
+            "line": 147,
+            "text": "| n12 | Exec child stdin /dev/null fd 0 | reporting | N12 | exec_resources_acquire registers addopen; native spawn executes it | After apply within an attempt | Child lifetime | Child closes it or exits | Read EOF without exposing policy pipe | IC/CLI observed EOF; no independent gating probe here | Yes, explicit child fd 0 | P | [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`exec_pipes_per_attempt`](../tests/suites/runner_c_worker_harness/run.sh); [`contaminated_worker`](../tests/suites/runner_exec_inheritance/run.sh) |  |"
+          },
+          {
+            "line": 401,
+            "text": "attempts. This lifetime is source-established; a live right-count measurement"
+          },
+          {
+            "line": 402,
+            "text": "is absent. [`attempt_sysctl_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c)"
+          },
+          {
+            "line": 403,
+            "text": "uses an attempt-local stack buffer and publishes call status, discarding the"
+          },
+          {
+            "line": 404,
+            "text": "returned sysctl value. The inventory includes that buffer among local working"
+          },
+          {
+            "line": 403,
+            "text": "uses an attempt-local stack buffer and publishes call status, discarding the"
+          },
+          {
+            "line": 404,
+            "text": "returned sysctl value. The inventory includes that buffer among local working"
+          },
+          {
+            "line": 405,
+            "text": "storage. Unlink and access calls acquire no PW-owned target handle at their"
+          },
+          {
+            "line": 406,
+            "text": "call sites."
+          }
+        ],
+        "docs/limits.json": [
+          {
+            "line": 178,
+            "text": "      \"refusal_field\": \"`target`, with `step_id` and `step_index`\","
+          },
+          {
+            "line": 179,
+            "text": "      \"counting\": \"Each attempt target (path, service or sysctl name). For exec, this is also argument zero.\","
+          },
+          {
+            "line": 180,
+            "text": "      \"effect\": \"Excess returns `bad_request` with `admission_failure`.\","
+          },
+          {
+            "line": 181,
+            "text": "      \"control\": \"Fixed.\","
+          },
+          {
+            "line": 1670,
+            "text": "      \"title\": \"Candidate associations\","
+          },
+          {
+            "line": 1671,
+            "text": "      \"value\": 4096,"
+          },
+          {
+            "line": 1672,
+            "text": "      \"unit\": \"items\","
+          },
+          {
+            "line": 1673,
+            "text": "      \"counting\": \"Total event-to-step candidates, including ambiguous matches.\","
+          },
+          {
+            "line": 1794,
+            "text": "      \"title\": \"Observer echoed metadata\","
+          },
+          {
+            "line": 1795,
+            "text": "      \"value\": 4096,"
+          },
+          {
+            "line": 1796,
+            "text": "      \"unit\": \"UTF-8 bytes\","
+          },
+          {
+            "line": 1797,
+            "text": "      \"counting\": \"Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID.\","
+          }
+        ]
+      },
+      "id": "S11",
+      "reason": "omitted or newly described fact has no supplied registration",
+      "result": "excluded",
+      "revision": "51487f7"
+    },
+    {
+      "excerpts": {
+        "controller/tools/pw_probe_runner/pw_probe_runner.c": [
+          {
+            "line": 63,
+            "text": "#include <sys/stat.h>"
+          },
+          {
+            "line": 64,
+            "text": "#include <sys/sysctl.h>"
+          },
+          {
+            "line": 65,
+            "text": "#include <sys/types.h>"
+          },
+          {
+            "line": 66,
+            "text": "#include <sys/wait.h>"
+          },
+          {
+            "line": 748,
+            "text": "/* One bounded value read; value bytes and post-call length are discarded. */"
+          },
+          {
+            "line": 749,
+            "text": "#define PW_SYSCTL_READ_BYTES 4096"
+          },
+          {
+            "line": 750,
+            "text": ""
+          },
+          {
+            "line": 751,
+            "text": "static void attempt_sysctl_read(pw_shm_slot_t *slot) {"
+          },
+          {
+            "line": 750,
+            "text": ""
+          },
+          {
+            "line": 751,
+            "text": "static void attempt_sysctl_read(pw_shm_slot_t *slot) {"
+          },
+          {
+            "line": 752,
+            "text": "    char buf[PW_SYSCTL_READ_BYTES];"
+          },
+          {
+            "line": 753,
+            "text": "    size_t len = sizeof(buf);"
+          },
+          {
+            "line": 753,
+            "text": "    size_t len = sizeof(buf);"
+          },
+          {
+            "line": 754,
+            "text": "    if (sysctlbyname(slot->target, buf, &len, NULL, 0) != 0) {"
+          },
+          {
+            "line": 755,
+            "text": "        fail_from_errno(slot, \"sysctlbyname\");"
+          },
+          {
+            "line": 756,
+            "text": "        return;"
+          },
+          {
+            "line": 754,
+            "text": "    if (sysctlbyname(slot->target, buf, &len, NULL, 0) != 0) {"
+          },
+          {
+            "line": 755,
+            "text": "        fail_from_errno(slot, \"sysctlbyname\");"
+          },
+          {
+            "line": 756,
+            "text": "        return;"
+          },
+          {
+            "line": 757,
+            "text": "    }"
+          },
+          {
+            "line": 1511,
+            "text": "    case PW_ATTEMPT_MACH_LOOKUP:      attempt_mach_lookup(slot);          break;"
+          },
+          {
+            "line": 1512,
+            "text": "    case PW_ATTEMPT_SYSCTL_READ:      attempt_sysctl_read(slot);          break;"
+          },
+          {
+            "line": 1513,
+            "text": "    case PW_ATTEMPT_EXEC_SPAWN:"
+          },
+          {
+            "line": 1514,
+            "text": "        attempt_exec_spawn(slot, timing, phase, index);"
+          }
+        ],
+        "docs/WORKER.md": [
+          {
+            "line": 144,
+            "text": "| n9b | Capture hash/view/digest/sorting call frames | reporting | N9b | pw_capture_profile, pw_consumed_params_digest, pw_read_memory | Between compilation and apply | Call only | Return or process exit | Read own memory with existing task right | Source-only; qsort/CommonCrypto internals unobserved | No: exec replaces stack | P | [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |"
+          },
+          {
+            "line": 145,
+            "text": "| n10 | Attempt-local stack buffers, argv pointers, polls, wait status and metadata | mixed | N10 | run_attempt and each attempt_*, capture_observed_path, drain_one, exec_resources_acquire; attempt_sysctl_read holds a sysctl value-read buffer of 4,096 bytes on the stack | After apply within an attempt | Call/attempt only; selected observations copied into S18; sysctl value bytes and post-call length discarded | Return or process exit | Use already inventoried target/child handles; no separate authority | Source-only; compiler stack/page behavior unobserved | argv_local strings copied; stack not inherited | O + P (working/observation storage) | [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`attempt_sysctl_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh); [`check_capacity`](../tests/suites/runner_c_worker_harness/check_sysctl.py); [`check_call_and_result`](../tests/suites/runner_c_worker_harness/check_sysctl.py) | [`sysctl_read_bytes`](LIMITS.md#execution-budgets) |"
+          },
+          {
+            "line": 146,
+            "text": "| n11 | Post-apply outside-attempt automatic diagnostics and seam timespec | reporting | N11 | wait_for_proceed, proceed_refused, W post-phase seam | After apply outside an attempt | Call, or nonreturning refusal frame until exit | Return/exit; not dynamically allocated by PW | None; diagnostic/control working storage | Source-only | No child spawned on these paths | P | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |"
+          },
+          {
+            "line": 147,
+            "text": "| n12 | Exec child stdin /dev/null fd 0 | reporting | N12 | exec_resources_acquire registers addopen; native spawn executes it | After apply within an attempt | Child lifetime | Child closes it or exits | Read EOF without exposing policy pipe | IC/CLI observed EOF; no independent gating probe here | Yes, explicit child fd 0 | P | [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`exec_pipes_per_attempt`](../tests/suites/runner_c_worker_harness/run.sh); [`contaminated_worker`](../tests/suites/runner_exec_inheritance/run.sh) |  |"
+          },
+          {
+            "line": 407,
+            "text": "attempts. This lifetime is source-established; a live right-count measurement"
+          },
+          {
+            "line": 408,
+            "text": "is absent. [`attempt_sysctl_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c)"
+          },
+          {
+            "line": 409,
+            "text": "uses an attempt-local stack buffer and publishes call status, discarding the"
+          },
+          {
+            "line": 410,
+            "text": "returned sysctl value. The inventory includes that buffer among local working"
+          },
+          {
+            "line": 409,
+            "text": "uses an attempt-local stack buffer and publishes call status, discarding the"
+          },
+          {
+            "line": 410,
+            "text": "returned sysctl value. The inventory includes that buffer among local working"
+          },
+          {
+            "line": 411,
+            "text": "storage. Unlink and access calls acquire no PW-owned target handle at their"
+          },
+          {
+            "line": 412,
+            "text": "call sites."
+          }
+        ],
+        "docs/limits.json": [
+          {
+            "line": 178,
+            "text": "      \"refusal_field\": \"`target`, with `step_id` and `step_index`\","
+          },
+          {
+            "line": 179,
+            "text": "      \"counting\": \"Each attempt target (path, service or sysctl name). For exec, this is also argument zero.\","
+          },
+          {
+            "line": 180,
+            "text": "      \"effect\": \"Excess returns `bad_request` with `admission_failure`.\","
+          },
+          {
+            "line": 181,
+            "text": "      \"control\": \"Fixed.\","
+          },
+          {
+            "line": 1686,
+            "text": "      \"title\": \"Candidate associations\","
+          },
+          {
+            "line": 1687,
+            "text": "      \"value\": 4096,"
+          },
+          {
+            "line": 1688,
+            "text": "      \"unit\": \"items\","
+          },
+          {
+            "line": 1689,
+            "text": "      \"counting\": \"Total event-to-step candidates, including ambiguous matches.\","
+          },
+          {
+            "line": 1810,
+            "text": "      \"title\": \"Observer echoed metadata\","
+          },
+          {
+            "line": 1811,
+            "text": "      \"value\": 4096,"
+          },
+          {
+            "line": 1812,
+            "text": "      \"unit\": \"UTF-8 bytes\","
+          },
+          {
+            "line": 1813,
+            "text": "      \"counting\": \"Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID.\","
+          },
+          {
+            "line": 2940,
+            "text": "    {"
+          },
+          {
+            "line": 2941,
+            "text": "      \"id\": \"sysctl_read_bytes\","
+          },
+          {
+            "line": 2942,
+            "text": "      \"section\": \"execution\","
+          },
+          {
+            "line": 2943,
+            "text": "      \"title\": \"Sysctl value-read destination\","
+          },
+          {
+            "line": 2943,
+            "text": "      \"title\": \"Sysctl value-read destination\","
+          },
+          {
+            "line": 2944,
+            "text": "      \"value\": 4096,"
+          },
+          {
+            "line": 2945,
+            "text": "      \"unit\": \"bytes\","
+          },
+          {
+            "line": 2946,
+            "text": "      \"counting\": \"Destination for one post-apply sysctlbyname value read with a non-null buffer; no sizing call or retry.\","
+          },
+          {
+            "line": 2945,
+            "text": "      \"unit\": \"bytes\","
+          },
+          {
+            "line": 2946,
+            "text": "      \"counting\": \"Destination for one post-apply sysctlbyname value read with a non-null buffer; no sizing call or retry.\","
+          },
+          {
+            "line": 2947,
+            "text": "      \"effect\": \"Larger values can fail within this bound. Returned value bytes and post-call length are discarded; a failed call does not diagnose whether capacity was insufficient.\","
+          },
+          {
+            "line": 2948,
+            "text": "      \"control\": \"Fixed.\","
+          },
+          {
+            "line": 2955,
+            "text": "          \"path\": \"controller/tools/pw_probe_runner/pw_probe_runner.c\","
+          },
+          {
+            "line": 2956,
+            "text": "          \"symbol\": \"attempt_sysctl_read\""
+          },
+          {
+            "line": 2957,
+            "text": "        }"
+          },
+          {
+            "line": 2958,
+            "text": "      ],"
+          },
+          {
+            "line": 2960,
+            "text": "        {"
+          },
+          {
+            "line": 2961,
+            "text": "          \"path\": \"tests/suites/runner_c_worker_harness/check_sysctl.py\","
+          },
+          {
+            "line": 2962,
+            "text": "          \"symbol\": \"check_manifest\","
+          },
+          {
+            "line": 2963,
+            "text": "          \"kind\": \"value\","
+          },
+          {
+            "line": 2966,
+            "text": "        {"
+          },
+          {
+            "line": 2967,
+            "text": "          \"path\": \"tests/suites/runner_c_worker_harness/check_sysctl.py\","
+          },
+          {
+            "line": 2968,
+            "text": "          \"symbol\": \"check_capacity\","
+          },
+          {
+            "line": 2969,
+            "text": "          \"kind\": \"boundary\","
+          },
+          {
+            "line": 2972,
+            "text": "        {"
+          },
+          {
+            "line": 2973,
+            "text": "          \"path\": \"tests/suites/runner_c_worker_harness/check_sysctl.py\","
+          },
+          {
+            "line": 2974,
+            "text": "          \"symbol\": \"check_call_and_result\","
+          },
+          {
+            "line": 2975,
+            "text": "          \"kind\": \"path\","
+          },
+          {
+            "line": 2978,
+            "text": "      ],"
+          },
+          {
+            "line": 2979,
+            "text": "      \"behavior\": \"Compiled production-call substitution checks the actual incoming capacity and call shape independently, preserves success/failure status and errno, and rejects a shortened supplied-capacity mutation. The live sysctl filter case separately establishes public compatibility for its specimen.\""
+          },
+          {
+            "line": 2980,
+            "text": "    },"
+          },
+          {
+            "line": 2981,
+            "text": "    {"
+          }
+        ]
+      },
+      "id": "S11",
+      "reason": "omitted or newly described fact has no supplied registration",
+      "result": "excluded",
+      "revision": "f699758"
+    }
+  ],
+  "churn": [
+    {
+      "after": "92ac66e53859d0133fd30ee0203b094d355188b334ac0192f05f75a78f7787a2",
+      "before": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
+      "changed_paths": [
+        "build.sh",
+        "controller/build.rs",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "docs/BUILD.md",
+        "docs/build-steps.dot",
+        "docs/build-steps.svg",
+        "docs/build.json",
+        "docs/generate_build.py",
+        "meson.build",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "tests/build-evidence.py",
+        "tests/fixtures/build_refusals/tools.py",
+        "tests/fixtures/dispatcher/build.sh",
+        "tests/fixtures/dispatcher/fixture_bundle.py",
+        "tests/fixtures/dispatcher/repository.py",
+        "tests/lib/artifact.py",
+        "tests/lib/build_provenance.py",
+        "tests/lib/cargo_config.py",
+        "tests/lib/contract.py",
+        "tests/lib/output_target.py",
+        "tests/lib/release_runs.py",
+        "tests/suites/dispatcher/check_artifacts.py",
+        "tests/suites/preflight/check_build_provenance.py",
+        "tests/suites/preflight/check_signed_artifacts.py",
+        "tests/suites/preflight/opt_in/build_refusals.py",
+        "tests/suites/source_drift/build.py",
+        "tests/suites/source_drift/contract.py"
+      ],
+      "review_required": true,
+      "revision": "e04ec96"
+    },
+    {
+      "after": "bf9b04aefccf51568969e6914149c389d6c271da5033f65f39dc73cddaa3372e",
+      "before": "92ac66e53859d0133fd30ee0203b094d355188b334ac0192f05f75a78f7787a2",
+      "changed_paths": [
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "records/DOC-REWORK-VERIFICATION.md",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "tests/lib/contract.py"
+      ],
+      "review_required": true,
+      "revision": "2b0be8e"
+    },
+    {
+      "after": "415f9092643e8d4aed3cd963f963add208826d0905d3b0b6f87b0a5f8572e112",
+      "before": "bf9b04aefccf51568969e6914149c389d6c271da5033f65f39dc73cddaa3372e",
+      "changed_paths": [
+        "SHIM-ENVIRONMENT-GUARD-PLAN.md",
+        "build.sh",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "docs/BUILD.md",
+        "docs/build-steps.dot",
+        "docs/build-steps.svg",
+        "docs/build.json",
+        "docs/generate_build.py",
+        "records/DIRECT-PYTHON-ACCEPTANCE.md",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "tests/OPT_IN_TESTS.md",
+        "tests/README.md",
+        "tests/catalog.json",
+        "tests/fixtures/build_guards/tools.py",
+        "tests/fixtures/build_refusals/forward.py",
+        "tests/fixtures/build_refusals/tools.py",
+        "tests/fixtures/dispatcher/repository.py",
+        "tests/lib/build_provenance.py",
+        "tests/lib/checkout_lock.py",
+        "tests/lib/checkout_lock.sh",
+        "tests/lib/contract.py",
+        "tests/lib/python_start.sh",
+        "tests/run.sh",
+        "tests/suites/preflight/README.md",
+        "tests/suites/preflight/check_build_provenance.py",
+        "tests/suites/preflight/opt_in/build_guards.py",
+        "tests/suites/preflight/opt_in/build_refusals.py",
+        "tests/suites/source_drift/README.md",
+        "tests/suites/source_drift/build.py",
+        "tests/suites/source_drift/contract.py",
+        "tests/suites/source_drift/direct_python.py",
+        "tests/suites/source_drift/limits.py",
+        "tests/suites/source_drift/run.sh"
+      ],
+      "review_required": true,
+      "revision": "16e2f83"
+    },
+    {
+      "after": "b2d02e1998b4c770498336356d18a0def7f85d8d225e959747baa5e20acc4e6f",
+      "before": "415f9092643e8d4aed3cd963f963add208826d0905d3b0b6f87b0a5f8572e112",
+      "changed_paths": [
+        "build.sh",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "docs/BUILD.md",
+        "docs/SIGNING.md",
+        "docs/build-steps.dot",
+        "docs/build-steps.svg",
+        "docs/build.json",
+        "docs/generate_build.py",
+        "records/DIRECT-PYTHON-ACCEPTANCE.md",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "tests/README.md",
+        "tests/lib/contract.py",
+        "tests/suites/preflight/README.md",
+        "tests/suites/preflight/check_build_provenance.py",
+        "tests/suites/preflight/opt_in/build_refusals.py"
+      ],
+      "review_required": true,
+      "revision": "146e7d2"
+    },
+    {
+      "after": "0da3a70ace265bd082e7a51e03ddc4cc2f84c366781d2d1b17a4d749fb891093",
+      "before": "b2d02e1998b4c770498336356d18a0def7f85d8d225e959747baa5e20acc4e6f",
+      "changed_paths": [
+        "README.md",
+        "build.sh",
+        "controller/tools/pw_probe_runner/pw_probe_runner.c",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "dist/AGENTS.md",
+        "dist/README.md",
+        "docs/BUILD.md",
+        "docs/SIGNING.md",
+        "docs/build-steps.dot",
+        "docs/build-steps.svg",
+        "docs/build.json",
+        "docs/generate_build.py",
+        "meson.build",
+        "records/NATIVE-BUILD-ACCEPTANCE.md",
+        "records/SLEEP-TIMESTAMP-SIGNING-FAILURE.md",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "tests/OPT_IN_TESTS.md",
+        "tests/README.md",
+        "tests/catalog.json",
+        "tests/fixtures/blackbox_e2e/checker/response15/missing_path_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response15/missing_path_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response15/valid_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response15/valid_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response16/missing_path_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response16/missing_path_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response16/valid_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response16/valid_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response21/extension_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response21/extension_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response21/missing_path_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response21/missing_path_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response21/valid_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response21/valid_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response22/extension_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response22/extension_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response22/missing_path_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response22/missing_path_specimen.json",
+        "tests/fixtures/blackbox_e2e/checker/response22/valid_run.json",
+        "tests/fixtures/blackbox_e2e/checker/response22/valid_specimen.json",
+        "tests/fixtures/disposition/response15/a1_expected.json",
+        "tests/fixtures/disposition/response15/a1_specimen.json",
+        "tests/fixtures/disposition/response16/a1_expected.json",
+        "tests/fixtures/disposition/response16/a1_specimen.json",
+        "tests/fixtures/disposition/response21/a1_expected.json",
+        "tests/fixtures/disposition/response21/a1_specimen.json",
+        "tests/fixtures/disposition/response22/a1_expected.json",
+        "tests/fixtures/disposition/response22/a1_specimen.json",
+        "tests/lib/build_provenance.py",
+        "tests/lib/contract.py",
+        "tests/lib/release_cleanup.py",
+        "tests/lib/release_publish.py",
+        "tests/lib/release_runs.py",
+        "tests/lib/shim_probe.py",
+        "tests/lib/suite_run.py",
+        "tests/lib/test_cli.py",
+        "tests/suites/dispatcher/README.md",
+        "tests/suites/dispatcher/check_selection.py",
+        "tests/suites/preflight/README.md",
+        "tests/suites/preflight/check_build_provenance.py",
+        "tests/suites/preflight/check_release_publish.py",
+        "tests/suites/preflight/check_release_rotation.py",
+        "tests/suites/preflight/opt_in/build_refusals.py",
+        "tests/suites/preflight/opt_in/translated_build_refusals.py",
+        "tests/suites/preflight/run.sh",
+        "tests/suites/source_drift/README.md",
+        "tests/suites/source_drift/build.py",
+        "tests/suites/source_drift/contract.py"
+      ],
+      "review_required": true,
+      "revision": "cb8a110"
+    }
+  ],
+  "commands": [
+    [
+      "git",
+      "show",
+      "51487f7:docs/worker-launch-observation.json"
+    ],
+    [
+      "git",
+      "show",
+      "51487f7:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:docs/worker-launch-observation.json"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:runner/Sources/PWRunnerCore/CWorker.swift"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:tests/suites/runner_exec_inheritance/launch_inventory.py"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:tests/suites/runner_exec_inheritance/run.sh"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:tests/lib/run_capture.py"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:docs/worker-launch-observation.json"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:runner/Sources/PWRunnerCore/CWorker.swift"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:tests/suites/runner_exec_inheritance/launch_inventory.py"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:tests/suites/runner_exec_inheritance/run.sh"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:tests/lib/run_capture.py"
+    ],
+    [
+      "git",
+      "show",
+      "f468200:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:docs/WORKER.md"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:docs/WORKER.md"
+    ],
+    [
+      "git",
+      "show",
+      "11fddc4:docs/WORKER.md"
+    ],
+    [
+      "git",
+      "show",
+      "46fe43e:Makefile"
+    ],
+    [
+      "git",
+      "show",
+      "46fe43e:docs/BUILD.md"
+    ],
+    [
+      "git",
+      "show",
+      "46fe43e:tests/lib/checkout_lock.py"
+    ],
+    [
+      "git",
+      "show",
+      "46fe43e:tests/lib/checkout_lock.sh"
+    ],
+    [
+      "git",
+      "show",
+      "b410ac3:Makefile"
+    ],
+    [
+      "git",
+      "show",
+      "b410ac3:docs/BUILD.md"
+    ],
+    [
+      "git",
+      "show",
+      "b410ac3:tests/lib/checkout_lock.py"
+    ],
+    [
+      "git",
+      "show",
+      "b410ac3:tests/lib/checkout_lock.sh"
+    ],
+    [
+      "git",
+      "show",
+      "d46ccd6:Makefile"
+    ],
+    [
+      "git",
+      "show",
+      "d46ccd6:docs/BUILD.md"
+    ],
+    [
+      "git",
+      "show",
+      "d46ccd6:tests/lib/checkout_lock.py"
+    ],
+    [
+      "git",
+      "show",
+      "d46ccd6:tests/lib/checkout_lock.sh"
+    ],
+    [
+      "git",
+      "show",
+      "99cf137:Makefile"
+    ],
+    [
+      "git",
+      "show",
+      "99cf137:docs/BUILD.md"
+    ],
+    [
+      "git",
+      "show",
+      "99cf137:tests/lib/checkout_lock.py"
+    ],
+    [
+      "git",
+      "show",
+      "99cf137:tests/lib/checkout_lock.sh"
+    ],
+    [
+      "git",
+      "show",
+      "51487f7:docs/architecture.json"
+    ],
+    [
+      "git",
+      "show",
+      "51487f7:runner/Sources/PWRunnerCore/ExtensionIssuer.swift"
+    ],
+    [
+      "git",
+      "show",
+      "51487f7:controller/tools/pw_probe_runner/pw_extension_issuer.c"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:docs/architecture.json"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:runner/Sources/PWRunnerCore/CWorker.swift"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "69c7dfe:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "51487f7:docs/WORKER.md"
+    ],
+    [
+      "git",
+      "show",
+      "51487f7:docs/limits.json"
+    ],
+    [
+      "git",
+      "show",
+      "51487f7:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "f699758:docs/WORKER.md"
+    ],
+    [
+      "git",
+      "show",
+      "f699758:docs/limits.json"
+    ],
+    [
+      "git",
+      "show",
+      "f699758:controller/tools/pw_probe_runner/pw_probe_runner.c"
+    ],
+    [
+      "git",
+      "show",
+      "e04ec96^:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "e04ec96:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "diff",
+      "--name-only",
+      "e04ec96^",
+      "e04ec96"
+    ],
+    [
+      "git",
+      "show",
+      "2b0be8e^:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "2b0be8e:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "diff",
+      "--name-only",
+      "2b0be8e^",
+      "2b0be8e"
+    ],
+    [
+      "git",
+      "show",
+      "16e2f83^:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "16e2f83:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "diff",
+      "--name-only",
+      "16e2f83^",
+      "16e2f83"
+    ],
+    [
+      "git",
+      "show",
+      "146e7d2^:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "146e7d2:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "diff",
+      "--name-only",
+      "146e7d2^",
+      "146e7d2"
+    ],
+    [
+      "git",
+      "show",
+      "cb8a110^:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "show",
+      "cb8a110:controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
+    ],
+    [
+      "git",
+      "diff",
+      "--name-only",
+      "cb8a110^",
+      "cb8a110"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "11fddc4"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "146e7d2"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "16e2f83"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "2b0be8e"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "46fe43e"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "51487f7"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "69c7dfe"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "99cf137"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "b410ac3"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "cb8a110"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "d46ccd6"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "e04ec96"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "f468200"
+    ],
+    [
+      "git",
+      "rev-parse",
+      "f699758"
+    ]
+  ],
+  "design": "B1",
+  "historical_facts_only": true,
+  "prediction_commit": "689cb49",
+  "revision_objects": {
+    "11fddc4": "11fddc4e723e7ff1502b445c9452d1ee260d0ef8",
+    "146e7d2": "146e7d27c4057f361a1a677914726f0cbbcab001",
+    "16e2f83": "16e2f8315896dc2615f46e9187510be0b807476f",
+    "2b0be8e": "2b0be8e1632850aaaa12c657e52882c6b0233d7d",
+    "46fe43e": "46fe43e0503884c8ebdd5b1c37b3b219bebfa220",
+    "51487f7": "51487f74da15de196d44c4ac571c7b322a2fe83b",
+    "69c7dfe": "69c7dfecfdc688ea56cdc4febd9a9a8a41414b6f",
+    "99cf137": "99cf137734f6d07d6cb5b150980826dced768e49",
+    "b410ac3": "b410ac3ba1ba89d0db80750fd48f9cf470ba399e",
+    "cb8a110": "cb8a1106705f7687aac4772a5244e4c3c6386a43",
+    "d46ccd6": "d46ccd6a97786260b9aaf70b46dbbd4a11109ec3",
+    "e04ec96": "e04ec9614648f670333554c970f904a42eafbcab",
+    "f468200": "f46820025fb242541fcd0a02507ef66f49263623",
+    "f699758": "f6997588555f32d1b648abd082a0ae86e18b9976"
+  },
+  "supplied_annotations": "replays.md; explicit hypothetical adoption review at69c7dfe"
+}
