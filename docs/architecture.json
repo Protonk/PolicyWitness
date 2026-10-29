@@ -2774,6 +2774,27 @@
           ]
         },
         {
+          "id": "request_swift",
+          "label": "PWRunnerRequest.swift",
+          "kind": "source",
+          "facts": {
+            "Carries": "the Swift request types and test overrides"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+              "symbol": "PWRunnerTestOverrides"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_test_overrides_table_agreement",
+              "form": "rule"
+            }
+          ]
+        },
+        {
           "id": "json_contract_rs",
           "label": "json_contract.rs",
           "kind": "source",
@@ -4012,7 +4033,7 @@
         },
         {
           "id": "D26",
-          "from": "api_swift",
+          "from": "request_swift",
           "to": "runner_readme",
           "kind": "copies",
           "label": "test-seam table from PWRunnerTestOverrides",

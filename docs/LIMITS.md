@@ -316,7 +316,7 @@ implements it, so that a premise can be reopened when the platform changes.
   applying the controller capture budget; that budget is not a memory limit.
   The validator driver independently caps retained bytes while reading; its
   bounded decoded records and per-phase evidence are included in the maximum.
-- Admission order and echo. `CWorkerOrchestrator`'s [`admissionFailure`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
+- Admission order and echo. `CWorkerOrchestrator`'s [`admissionFailure`](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift)
   checks decoded requests before semantic validation or child process work.
   Its `requestAdmissionFailure` checks metadata, extension declarations and
   lifecycle-action strings, then executable overrides before plan/parameter
@@ -341,11 +341,11 @@ implements it, so that a premise can be reopened when the platform changes.
   probe line while preserving the next physical line; admitted specimens cannot
   produce such lines. Decoder failures report a bounded category and path, not
   input-derived prose.
-- Exec budget and observation. [`PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+- Exec budget and observation. [`PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT`](../controller/tools/pw_probe_runner/pw_worker_timing.h)
   sits `PW_EXEC_ATTEMPT_BUDGET_MARGIN_MS` below the host polling window; the
   margin is a configuration allowance, not an enforced timer. The worker keeps
-  one continuous-time domain in relative ticks: [`pw_clock_start`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-  records the origin before worker setup, [`pw_timing_setup`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+  one continuous-time domain in relative ticks: [`pw_clock_start`](../controller/tools/pw_probe_runner/pw_worker_timing.h)
+  records the origin before worker setup, [`pw_timing_setup`](../controller/tools/pw_probe_runner/pw_worker_timing.h)
   queries the Mach timebase once before the policy read and converts every
   allowance to a ceiling tick count with 128-bit products, and
   [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c) adds
@@ -368,7 +368,7 @@ implements it, so that a premise can be reopened when the platform changes.
   prepares the target and spawns the issuer before starting its monotonic wait;
   it observes or attempts issuer cleanup before worker creation. Neither target
   preparation nor blocking spawn/reap is bounded by that issuer wait.
-  [`timeoutMsForCWorker`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) is
+  [`timeoutMsForCWorker`](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift) is
   the worker polling window; [`ValidatorClientInput`](../runner/Sources/PWRunnerCore/ValidatorClient.swift)
   the validator deadline; `PW_PROCEED_WAIT_MS_DEFAULT` the release wait, with
   `validatorReleaseMarginMs` as the nominal margin

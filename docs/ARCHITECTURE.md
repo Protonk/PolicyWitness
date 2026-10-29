@@ -363,8 +363,8 @@ controller does the same with the host's.
 The host adds path diagnostics through
 [`enrichPathDiagnostics`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) in
 PWRunnerService.swift
-and the planner's synthesized observations in
-[CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift).
+and synthesizes excluded-query results from planner decisions in
+[CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift).
 The [failure evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
 defines the reply's normative semantics and the comparison record's reading rules.
 
@@ -520,7 +520,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 *Figure: the document graph. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-documents.dot](architecture-documents.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>The document graph: 47 nodes and 70 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>The document graph: 48 nodes and 70 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### The document graph nodes
 
@@ -549,6 +549,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | tests_agents | tests/AGENTS.md | document |  | test working rules and local sandbox diagnostics |  | [`Sandboxed automation harnesses`](../tests/AGENTS.md) | [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py) |  |
 | coverage_md | tests/COVERAGE.md | document |  | the outcome coverage matrices |  | [`Normalized outcome coverage matrix`](../tests/COVERAGE.md) | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) |  |
 | api_swift | PWRunnerAPI.swift | source |  | the Swift contract versions and the outcome vocabularies |  | [`PWContract`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`NormalizedOutcome`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) |  |
+| request_swift | PWRunnerRequest.swift | source |  | the Swift request types and test overrides |  | [`PWRunnerTestOverrides`](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift) | [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) |  |
 | json_contract_rs | json_contract.rs | source |  | the Rust contract versions; the envelope frame |  | [`SCHEMA_VERSION`](../controller/src/json_contract.rs) | [`test_every_generated_copy_is_current`](../tests/suites/source_drift/contract.py) |  |
 | contract_py | tests/lib/contract.py | source |  | the Python contract versions and the worker identity |  | [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) | [`test_every_generated_copy_is_current`](../tests/suites/source_drift/contract.py) |  |
 | abi_header | pw_probe_runner_abi.h | source |  | the C identity region and the shared-region layout |  | [`PW_WORKER_ABI_IDENTITY_HEX`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh) |  |
@@ -603,7 +604,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D23 | agents_md | tests_agents | links | links to workflow-local sandbox diagnostics; destination section and root route are checked | [`HARNESS_GUIDANCE_ROUTES`](../tests/suites/source_drift/check.py) | [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py) |  |
 | D24 | cli_rs | controller_readme | copies | usage text | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) |  |
 | D25 | api_swift | coverage_md | copies | one matrix row per outcome constant | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) |  |
-| D26 | api_swift | runner_readme | copies | test-seam table from PWRunnerTestOverrides | [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) | [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) |  |
+| D26 | request_swift | runner_readme | copies | test-seam table from PWRunnerTestOverrides | [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) | [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) |  |
 | D27 | suites | tests_readme | copies | one suite-table row per suite | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
 | D28 | suites | catalog_json | copies | suite directories equal catalog suites | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
 | D29 | drift_check | agents_md | checks | nonempty sandbox guidance sections at workflow entry points and root links to their diagnostics | [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |

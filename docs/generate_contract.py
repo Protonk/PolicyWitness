@@ -30,10 +30,10 @@ TABLE_END = "<!-- END GENERATED CONTRACT TABLE -->"
 # Where each number lives besides the manifest. Paths are repository-relative;
 # the CONTRACT.md table is rendered from this list, so it cannot go stale.
 COPIES = {
-    "request_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "PWContract.requestSchema"),
+    "request_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "requestSchema"),
                        ("controller/src/json_contract.rs", "REQUEST_SCHEMA_VERSION"),
                        ("tests/lib/contract.py", "REQUEST_SCHEMA")],
-    "response_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "PWContract.responseSchema"),
+    "response_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "responseSchema"),
                         ("controller/src/json_contract.rs", "RESPONSE_SCHEMA_VERSION"),
                         ("tests/lib/contract.py", "RESPONSE_SCHEMA")],
     "controller_envelope": [("controller/src/json_contract.rs", "SCHEMA_VERSION"),

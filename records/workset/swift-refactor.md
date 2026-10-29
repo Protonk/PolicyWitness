@@ -297,3 +297,48 @@ The commit containing this subsection identifies the candidate. Primary source
 review, the signed build, all default cases and the applicable mutation/BYOXPC
 controls must establish acceptance separately; these local preparation checks
 do not claim behavioral equivalence or final workset completion.
+
+## Stage 2 verification and citation correction
+
+Signed build 1000 at `fd90eee66538cc02dc5d21b7a3fe8eca81a17403` passed
+compilation, source/identity closure and all seven executable/two seal checks.
+Independent read-only review by `review_public_extension` found no implementation
+defect; both run overloads, complete reply codecs and their asymmetry were
+compared unchanged. Primary review agreed. The review did identify current
+citation omissions, corrected in this commit:
+
+- A separate request source node now owns documents edge D26's override table.
+  API retains its actual version/vocabulary ownership.
+- Authored admission/timeout links follow RequestPlanning; synthesis follows
+  StepResults. Three R1 timing links follow the private timing owner.
+- The contract generator's two Swift citation labels now name requestSchema and
+  responseSchema, the actual member declarations. Their formerly qualified uses
+  moved out of API. No scanner, rejection expectation or version-value check
+  changes; the generated contract table follows its owner.
+
+The complete 207-case selection (all 201 defaults plus native_clock,
+inheritance mutation_controls, order_barrier_mutations, exec_reader_mutations,
+reaped_ack_mutation and extensions_byoxpc) ran at clean `fd90eee` against that
+app in `workset-r2-final-01`, run `20261029T231443Z_9c34b030`. It completed
+205 passes and two failures in 803.162 seconds, with no skipped/unrun cases,
+observed sleep or app changes. The two suite-exit harness errors reflect those
+two failed cases. All 480 Swift unit tests and five other opt-in controls passed.
+
+The generator_contract failure was the two qualified citation strings above;
+its original failure remains retained, and corrected checks are still required.
+The other failure was extensions_byoxpc: consume_only received an XPC error
+4097 and no worker reply. An unchanged rerun in `workset-r2-byoxpc-02` passed
+that subcase but failed with the same transport error at no_predicate-baseline.
+This is not attributed to the refactor, the automation sandbox or launchd
+without further evidence. No retry behavior or expectations were changed.
+Required BYOXPC verification remains unmet; Stage 2 and the combined refactor
+stage are not yet accepted. The separate failure account/checkpoint records
+ownership and the discussion boundary.
+
+For the citation-only correction, `swift_design` traced executed dependencies
+and recommended all eight source_drift cases plus preflight/build_entry_controls.
+The latter imports/copies the contract generator and runs its build gates.
+Other preflight, runtime, reader and selected mutation paths do not execute the
+changed documentation inputs. Any reuse still requires final diff and app-byte
+comparison and retains each original source/result; the BYOXPC failure supplies
+no passing credit. No excluded toolchain-switch control is credited here.
