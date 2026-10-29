@@ -74,3 +74,15 @@ All D1 investigation obligations are complete with these limits visible.
 Retirement waits for internal D2 absorption/disposition and workset reconciliation,
 not a future writer. Still-needed compact facts should move into D2's owned
 records before retiring this package and its associated plan together.
+
+## Primary workset acceptance
+
+The primary executor reviewed the acceptance package, paper design, L trace,
+cost account, findings and corrected held-back evaluation, and integrated the
+original commit chain through `cd6adaa` with a merge preserving its identities.
+This is primary-agent review, not independent repetition of the historical
+extractors. The package satisfies D1 as an investigation: represented-input
+change detection remains distinct from semantic adequacy, corrected equipment
+does not gain a new held-back label, and F1 remains unresolved under the user's
+explicit instruction. D2 may begin its independent investigation; any executable
+correction must be separately scoped and coordinated with concurrent E2 work.

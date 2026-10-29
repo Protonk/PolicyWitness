@@ -16,8 +16,9 @@ Next work:
 1. Design and implement the smallest supported public directory read-write
    addition, preserving legacy public file-operation meanings; complete the
    matched/crossed follow-on and integrated verification before the E2 seal.
-2. Reconcile D1's isolated investigation against its fixed source. D2 cannot
-   begin before D1 acceptance.
+2. Conduct D2 after accepted D1, refreshing facts against E2 before applying
+   supported corrections or final acceptance. Keep shared machinery edits
+   serialized with production and refactor adaptations.
 3. Seal the experimental stage before either core refactor begins.
 
 E1 is accepted by primary-agent self-review with `review_directory_native`
@@ -38,10 +39,14 @@ final verification. No agent may start core refactoring. Builds/live runs await
 a coherent committed candidate; the native fresh-write substitution case passed
 one developmental working-tree run, not credited as stage verification.
 
-The read-only C0 reviewer is complete. Agent `binding_investigation` owns D1 in
-the isolated worktree `/private/tmp/pw-workset-binding`, detached at `cf0136b`.
-Its writes are limited to the associated plan and `records/check-support/`;
-it stops after a reviewable D1 acceptance package. No D2 work is dispatched.
+The read-only C0 reviewer is complete. D1 completed in the isolated worktree
+`/private/tmp/pw-workset-binding`, examined source `cf0136b`, and was integrated
+by merge through `cd6adaa`, preserving its prediction/design/evaluation commits.
+Primary review accepted the investigation while retaining F1 unresolved.
+Agent `binding_investigation` may now conduct the D2 investigation in that
+isolated worktree after updating to this accepted checkpoint. Initial D2 writes
+are limited to its associated plan and owned records; proposed executable or
+permanent-document changes require coordination before touching shared paths.
 The worktree creation required the same command outside the automation sandbox
 after sandbox refusal of `.git/worktrees` creation.
 
