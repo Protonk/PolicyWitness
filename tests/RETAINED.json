@@ -20,21 +20,21 @@
     {
       "path": "runs/drift-plan-investigation-20261027-02",
       "run_id": "20261027T175448Z_a3635ceb",
-      "reason": "Temporary workset D1 evidence pin for source-drift cost/input review. Historical source identity comes from the earlier committed retention entry; applicability to the new investigation must be reviewed.",
+      "reason": "Retained historical D1 cost/input evidence used in the accepted investigation. Source comes from its established earlier retention entry; preserved as historical observations, not current verification. D1 plan retirement does not release this pin.",
       "source": "1612eb5e0bd503f0185dda9cda0331be0d9a764f",
       "app_inventory": null
     },
     {
       "path": "runs/drift-cost-candidate-01",
       "run_id": "20261027T230701Z_a7cce91f",
-      "reason": "Temporary workset D1 evidence pin for source-drift cost/input review. Historical source identity comes from the earlier committed retention entry; applicability to the new investigation must be reviewed.",
+      "reason": "Retained historical D1 cost/input evidence used in the accepted investigation. Source comes from its established earlier retention entry; preserved as historical observations, not current verification. D1 plan retirement does not release this pin.",
       "source": "22f688d7d4c1aefe890c41db03a897141796f0e9",
       "app_inventory": null
     },
     {
       "path": "runs/drift-acceptance-fixes-03",
       "run_id": "20261027T233059Z_1f7c68fa",
-      "reason": "Temporary workset D1 pin for the final corrected drift receipts. Tested source has not yet been established by this intake; do not credit as current verification without reviewing source snapshots.",
+      "reason": "Retained historical D1 corrected drift receipts and cost/input evidence. Actual dirty source is described by investigation/source.json at base d3ded472b3e98eb32e05973c1078191ab2057dee plus investigation/working.diff; source remains null because this was not a clean commit run. Not current verification.",
       "source": null,
       "app_inventory": null
     },
@@ -121,6 +121,13 @@
       "reason": "R2 Stage 2 verification at fd90eee / signed build 1000. Preserve original failed results and external-runner cleanup evidence; no full-stage acceptance. The second run repeats BYOXPC unchanged and retains directory staging after unknown worker cleanup.",
       "source": "fd90eee66538cc02dc5d21b7a3fe8eca81a17403",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/workset-r2-docs-01",
+      "run_id": "20261029T233058Z_6ae6b3f4",
+      "reason": "Nine affected source/build-entry checks pass after final refactor and D2 citation corrections. Replaces prior source-check credit, including the failed qualified-symbol citation; does not close the repeated BYOXPC failure.",
+      "source": "590c5e42f010814b09cfe30b48973e972aa1609b",
+      "app_inventory": null
     }
   ]
 }

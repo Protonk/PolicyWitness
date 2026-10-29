@@ -28,6 +28,9 @@ temporary workset material and retire together after final acceptance.
 - [Swift refactor design and adaptations](records/workset/swift-refactor.md): R2
   staged boundaries, family owners, source membership and preservation controls.
 
+- [BYOXPC verification failure](records/workset/byoxpc-failure.md): F2 observations,
+  required verification still unmet, exact cleanup ownership and decision boundary.
+
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.
 The documentation investigations retain their own associated plans and record

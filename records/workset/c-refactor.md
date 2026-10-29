@@ -289,3 +289,14 @@ these results. Adaptations belong to candidate `341f9441`, distinct from the
 prior D2 apparatus corrections. Final combined-source verification remains
 required after R2; the full refactor-stage seal awaits Swift completion. F1
 remains unresolved and was not altered or established by this passing run.
+
+## Continued applicability and plan retirement
+
+The final combined implementation `fd90eee` / signed build 1000 passed the
+R1 native-call, timing, proceed, ABI, inheritance mutation, identity/source
+membership and order-barrier controls in workset-r2-final-01. Its two failures
+were the separately corrected Swift contract citation and unresolved BYOXPC
+transport failure. These do not reverse the independently established R1
+acceptance at 96d0328e. The C modularization plan may retire now; the associated
+workset still owns this design/adaptation/acceptance record, which remains until
+that workset can close. The combined refactor seal remains withheld for F2.

@@ -99,3 +99,11 @@ R2's required BYOXPC case failed twice with an unassigned XPC transport error;
 that is separate from D2 and supplies no current runtime acceptance. F1 remains
 explicitly unresolved for later discussion, so final D2/workset retirement is
 still pending its disposition.
+
+The nine-case follow-up at clean `590c5e42f010814b09cfe30b48973e972aa1609b`
+passed 9/9 in `workset-r2-docs-01`, run `20261029T233058Z_6ae6b3f4`.
+It includes all eight source_drift cases and preflight/build_entry_controls,
+with independent rejected/restoration controls, no sleep/skips/unrun/errors.
+Primary review accepts the bounded final citation corrections and their current
+applicability. F1 and the separate required BYOXPC failure remain unresolved;
+this does not grant final D2/workset retirement or runtime acceptance.

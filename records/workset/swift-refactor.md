@@ -342,3 +342,22 @@ Other preflight, runtime, reader and selected mutation paths do not execute the
 changed documentation inputs. Any reuse still requires final diff and app-byte
 comparison and retains each original source/result; the BYOXPC failure supplies
 no passing credit. No excluded toolchain-switch control is credited here.
+
+## Corrected source checks and current acceptance limit
+
+The nine-case follow-up at `590c5e42f010814b09cfe30b48973e972aa1609b`, run
+`workset-r2-docs-01` / `20261029T233058Z_6ae6b3f4`, passed 9/9 in 124.931
+seconds with no skips, unrun cases, harness errors or observed sleep. Command:
+`tests/run.sh --suite source_drift --case preflight/build_entry_controls` with
+that fresh PW_TEST_OUT_DIR. It includes the previously failing generator case.
+
+Primary diff review confirms only the named generator-label/document/citation
+corrections, workset/D2 records and retention changed after fd90eee. Production,
+tests, contract/limits/build manifests, build inputs, generated constants and
+identity remain identical. The final-run before and BYOXPC-rerun after app
+inventories are identical. Thus 197 unaffected passing cases from the full run
+retain their original credit, while these nine current results replace their
+older credits: 206 distinct selected cases have passing evidence. The remaining
+BYOXPC case failed twice and has no acceptance credit. This is an explicit
+reviewed applicability exception, not a claim that a single 207-case run passed.
+The F2 record supplies the observed failure and exact retained-resource state.
