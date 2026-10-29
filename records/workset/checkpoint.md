@@ -1,7 +1,8 @@
 # Workset checkpoint
 
 Current phase: E2 accepted; R1 design preparation is next. C0, E1, E2 and D1
-are complete. D2 runs in the isolated documentation worktree. R1 design preparation has begun; neither required core refactor has changed
+are complete. D2 findings and bounded corrections are accepted against combined
+source `bb92c21`; final source applicability and F1 remain open. R1 design preparation has begun; neither required core refactor has changed
 implementation. The E2 seal records acceptance separately from tested
 source `b565c1b` and signed runtime `7426fc0` (v0.3.3 build 977).
 
@@ -34,9 +35,11 @@ source `b565c1b` and signed runtime `7426fc0` (v0.3.3 build 977).
    then retire only accepted plans/records. F1 remains unresolved, so do not
    treat final workset retirement as authorized by this intermediate seal.
 
-D2 is authorized to correct documents-graph/README ownership and table-count
-facts (including actual WorkerIdentityTests citations) plus canonical Python
-repair hints and independent controls. It may not change F1 or a checker's
+D2 implemented documents-graph/README ownership and table-count corrections
+(including actual WorkerIdentityTests citations), canonical Python repair hints
+and controls, plus dated raw-evidence availability and both release-baseline
+accounts. Its original chain ends at `f996212`, merged as `bb92c21`; all five
+main source cases passed in pinned `workset-d2-main-01` at that source. It may not change F1 or a checker's
 promised guarantee. It is not writing or preparing a handoff for CHECK.
 
 F1 remains unresolved by explicit user instruction, repeated at this checkpoint:

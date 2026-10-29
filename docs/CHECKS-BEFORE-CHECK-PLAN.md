@@ -37,6 +37,9 @@ The [E2 reconciliation](../records/checks-before-check/e2-reconciliation.md) and
 [comparison facts](../records/checks-before-check/e2-reconciliation-facts.json)
 record source inspection and the factual availability/release-account follow-up.
 
+The [primary acceptance](../records/checks-before-check/acceptance.md) records
+findings, main verification, the unresolved F1 boundary and D1 absorption.
+
 Follow [planning guidance](../CONTRIBUTING.md#planning-a-change),
 [documentation guidance](AGENTS.md) and [test working guidance](../tests/AGENTS.md).
 The principal addition to the prerequisite is a view starting from documents

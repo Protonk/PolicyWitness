@@ -1,0 +1,74 @@
+# D2 findings and corrections acceptance
+
+Primary-agent review accepts the D2 investigation and C1–C5 at tested source
+`bb92c2133737fdd1a870797a2704297db1df8e50`. This later acceptance record is not
+the tested source. The original D2 commits `7e9d677`, `439c079`, `4a62aaf`,
+`53b8e88`, `80b3317`, `f996212` remain ancestors through the integration merge.
+The fixed investigation describes `7562d24`; the separately recorded E2 source
+comparison describes `29d1c79`. Neither is silently relabeled current behavior.
+
+## Findings and review
+
+The document population, declared owners and transformations reconcile in the
+machine facts and authored account. Six edit-path traces cover shared prose,
+descriptive limits, architecture generation, authoritative version inputs,
+ordinary prose discovery and build/release checkpoints. They distinguish
+identity, implementation-value comparisons, native observations, pointer
+existence and human applicability/semantic review. Fixed historical control
+receipts retain their original source and scope; they are not present-run credit.
+
+C1/C1b correct the actual link-scan and worker-identity control owners and
+citations. C2 corrects the build-table account without adding a handwritten
+count to generated prose. C3 gives the canonical Python wrapper in two repair
+diagnostics, with independently written stale-copy expectations. C4 preserves
+L's dated observations/hashes and corrects only current raw availability; C5
+names both already-enforced release baseline gates. Primary source/diff review
+confirmed these boundaries, the actual control dispatch and unchanged receipt
+payload. D2 structural comparison keeps the four graphs other than documents unchanged; E2's separate worker-capability additions remain intact in the merge.
+
+The inherited B1 registry/reverse-index/census proposal is declined for
+implementation in this workset: localized factual repairs do not justify its
+new state or maintenance machinery. Distinct discovery scopes and generator
+owners remain intentional. No general semantic guarantee, new testing framework,
+CHECK writing/handoff or counterfactual evaluation was introduced.
+
+F1 remains unresolved by explicit user instruction, with its reproducer and
+promise/test implications in the absorbed finding. Its guarantee and code are
+unchanged. This is an accepted investigation and bounded-correction milestone,
+not a repair or final disposition of F1. Workset completion remains subject to
+that decision and the remaining implementation/verification obligations.
+
+## Main verification
+
+Run `workset-d2-main-01`, `20261029T221717Z_1e078094`, passed all five selected cases at clean
+`bb92c21`: source manifests/planner controls, contract versions/worker identity,
+architecture, build account and generator contract. No skipped/unrun cases,
+harness errors or observed sleep. Command:
+
+```sh
+PW_TEST_OUT_DIR=tests/out/runs/workset-d2-main-01 tests/run.sh --case source_drift/architecture_documentation --case source_drift/build_documentation --case source_drift/generator_contract --case source_drift/runner_source_manifests_agree --case source_drift/contract_versions
+```
+
+This selection exercises accepted/current, stale, malformed, mutation/refusal
+and restoration paths, including the exact canonical repair messages and
+current links/ownership. It does not establish runtime behavior. The run is
+pinned in main; raw output remains local/gitignored. The isolated five-case run
+at `53b8e88` remains development evidence and is not needed for current credit.
+Later refactor adaptations and final combined checks must be reconciled with
+this milestone rather than simply adding passing counts.
+
+## D1 absorption and retirement
+
+Primary review verified all twelve inherited files byte-for-byte against the
+absorption manifest and original committed `7562d24` copies. D1's original
+inventory/design/prediction/results/correction/acceptance chain remains intact,
+and D2 preserves the reasoning, source identities and unresolved F1 needed here.
+D1 is accepted at `cd6adaa` with primary acceptance `7562d24`; its associated
+plan and owned `records/check-support/` package may now retire together in a
+separate ordinary commit. D2 replaces its live prerequisite link with this
+history and intake. Historical D1 cost pins remain retained pending final
+retention reconciliation; retirement does not release them.
+
+Final D2/workset retirement remains separate, after final source applicability
+and findings are accounted for. Review is primary-agent self-review plus the
+independent D2 execution/source work by `binding_investigation`.
