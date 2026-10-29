@@ -1121,7 +1121,7 @@ def main():
                 print("build documentation is stale:", file=sys.stderr)
                 for problem in problems:
                     print(f"  {problem}", file=sys.stderr)
-                print(f"run: python3 {GENERATOR_NAME}", file=sys.stderr)
+                print(f"run: tests/lib/python.sh {GENERATOR_NAME}", file=sys.stderr)
                 return 1
             print(f"ok: {summary}")
             return 0

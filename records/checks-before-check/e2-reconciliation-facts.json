@@ -1,0 +1,161 @@
+{
+  "comparison_source": "29d1c797f7e057dae507abf0a8b47ee6473d7b55",
+  "investigation_base": "7562d24ac2334122499ea349010fd67211058ac3",
+  "inspected_on": "2026-10-29",
+  "kind": "Source/retention inspection only; no E2 behavioral or combined candidate test credit.",
+  "retention_manifest_sha256": "5873e83807a62f0bcec9b1c0414ff023f205606700e6889cac8589f643c8767d",
+  "raw_directories": [
+    {
+      "path": "tests/out/runs/worker-doc-launch-20261018",
+      "pinned_at_e2": false,
+      "present_in_examined_main_checkout": false
+    },
+    {
+      "path": "tests/out/runs/validator-selection-receipts-20261018",
+      "pinned_at_e2": false,
+      "present_in_examined_main_checkout": false
+    }
+  ],
+  "l_receipt_source_comparisons": [
+    {
+      "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+      "receipt_sha256": "53b4d8031ee688c0b1b497517dca4ddfd329b867c8d2ff86f233bd71803925e4",
+      "e2_sha256": "bcb0657a02b0c754e5918221ca84da72ae9389a367d2cb2af979d179bd1c996a",
+      "equal": false
+    },
+    {
+      "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+      "receipt_sha256": "05dfa09522c37d9514a2f262d6e6308e377f5af8074a036a0008b431d99357ba",
+      "e2_sha256": "9a44f7ab4a32f3637b6935f2304bab5f094aabe9c94f77f12d5d6bee35d077d2",
+      "equal": false
+    },
+    {
+      "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+      "receipt_sha256": "13aad86ba0e3cf0fd33fed5eb31b87e3a95d4ef90069db2ebf876c64852fe2f9",
+      "e2_sha256": "3d40dd06a5739199561d2930cb3366670b25998ec7800402adfeea61bb45ab5e",
+      "equal": false
+    },
+    {
+      "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+      "receipt_sha256": "074ffede77a7b828bd42749c292c71aa5f5804b917bb977d1c7d849fab174cfc",
+      "e2_sha256": "a122b023d0ade690ef8013843f3e9f1a9a3a677d43919a795515dd72959f6c07",
+      "equal": false
+    },
+    {
+      "path": "tests/suites/runner_exec_inheritance/launch_inventory.py",
+      "receipt_sha256": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4",
+      "e2_sha256": "76bd106b8bbd54a0d158d4fc46876c017104321447e88961a8ce27abb8985336",
+      "equal": false
+    },
+    {
+      "path": "tests/suites/runner_exec_inheritance/run.sh",
+      "receipt_sha256": "2c83a8474ffd8f414e8c3fa18f1a09bd11992850eb95fc38009a0bb98aa4ee89",
+      "e2_sha256": "28768ee411e92fe58563fdbf1943430d62c08353659f3d70c034be556374fe49",
+      "equal": false
+    },
+    {
+      "path": "tests/lib/run_capture.py",
+      "receipt_sha256": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76",
+      "e2_sha256": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76",
+      "equal": true
+    }
+  ],
+  "relevant_source_comparisons": [
+    {
+      "path": "docs/worker-launch-observation.json",
+      "base_sha256": "823966c09f42db95bc54dc489d44197e2876a0422f1838fa5ea3c5700a94c2cf",
+      "e2_sha256": "823966c09f42db95bc54dc489d44197e2876a0422f1838fa5ea3c5700a94c2cf",
+      "equal": true
+    },
+    {
+      "path": "tests/RETAINED.json",
+      "base_sha256": "53479045bcdc9a53548ca7f8f8ba381a7a0588dcef42eacebfe1194758307d0f",
+      "e2_sha256": "5873e83807a62f0bcec9b1c0414ff023f205606700e6889cac8589f643c8767d",
+      "equal": false
+    },
+    {
+      "path": "docs/WORKER.md",
+      "base_sha256": "5e599b6ebc689fbfd8f5c14deb1cc293a8b165f4b994415357c01704ba89fbbc",
+      "e2_sha256": "b30499b774ecce1bd4e7d66b6c4dc0897057598651516fe3189a34a822328b96",
+      "equal": false
+    },
+    {
+      "path": "docs/SIGNING.md",
+      "base_sha256": "97c9b1576c0d1adce003f0974ada2fa9d60bc45999007897e0a3786fd26c280a",
+      "e2_sha256": "97c9b1576c0d1adce003f0974ada2fa9d60bc45999007897e0a3786fd26c280a",
+      "equal": true
+    },
+    {
+      "path": "tests/lib/release_preflight.py",
+      "base_sha256": "e12574b15021a7e3bec10c3719bc5631a61cf0778af2a542a92b8c0fd659f432",
+      "e2_sha256": "e12574b15021a7e3bec10c3719bc5631a61cf0778af2a542a92b8c0fd659f432",
+      "equal": true
+    },
+    {
+      "path": "docs/generate_architecture.py",
+      "base_sha256": "355cf59156bb75f44c106d43648030a054eb7b8f3686be824cb2e158747e86ff",
+      "e2_sha256": "355cf59156bb75f44c106d43648030a054eb7b8f3686be824cb2e158747e86ff",
+      "equal": true
+    },
+    {
+      "path": "docs/generate_build.py",
+      "base_sha256": "06dfb24072467819b25659c9593bed10b3d04b73093f218fdca4df5abf117f9c",
+      "e2_sha256": "06dfb24072467819b25659c9593bed10b3d04b73093f218fdca4df5abf117f9c",
+      "equal": true
+    },
+    {
+      "path": "docs/generate_contract.py",
+      "base_sha256": "91eb5189546206b45636c7f778e622272183e993385d00f2b6afea1885decb45",
+      "e2_sha256": "91eb5189546206b45636c7f778e622272183e993385d00f2b6afea1885decb45",
+      "equal": true
+    },
+    {
+      "path": "docs/generate_limits.py",
+      "base_sha256": "6c9942ed2f17884c02ff803eb8d70c5c6fc281cca3a8e6bffa8c63cbf6d69d47",
+      "e2_sha256": "6c9942ed2f17884c02ff803eb8d70c5c6fc281cca3a8e6bffa8c63cbf6d69d47",
+      "equal": true
+    },
+    {
+      "path": "docs/generate_worker_identity.py",
+      "base_sha256": "0767e94be96f50566a1498e158b6431ab5c5709014333f8e80c6f6714f0ec05b",
+      "e2_sha256": "0767e94be96f50566a1498e158b6431ab5c5709014333f8e80c6f6714f0ec05b",
+      "equal": true
+    },
+    {
+      "path": "tests/suites/source_drift/architecture.py",
+      "base_sha256": "5554b2dd93db20e62aca6ad05257406dcd0a6a7ffa5cace1323e3c656336706b",
+      "e2_sha256": "5554b2dd93db20e62aca6ad05257406dcd0a6a7ffa5cace1323e3c656336706b",
+      "equal": true
+    },
+    {
+      "path": "tests/suites/source_drift/build.py",
+      "base_sha256": "63da059b304bd7ae2e8f3fe22bb9131c722648aaf9637b0f73f732aab3dfa877",
+      "e2_sha256": "63da059b304bd7ae2e8f3fe22bb9131c722648aaf9637b0f73f732aab3dfa877",
+      "equal": true
+    },
+    {
+      "path": "tests/suites/source_drift/contract.py",
+      "base_sha256": "39101108f7b4c989b87ce0a7d2ad63c25919223abceebf8d5a9ad5631a1048c0",
+      "e2_sha256": "39101108f7b4c989b87ce0a7d2ad63c25919223abceebf8d5a9ad5631a1048c0",
+      "equal": true
+    },
+    {
+      "path": "tests/suites/source_drift/generators.py",
+      "base_sha256": "90e695c98e98826ad5e4fe7b47e52e02a69df95d6ae36670210b660a6c402038",
+      "e2_sha256": "90e695c98e98826ad5e4fe7b47e52e02a69df95d6ae36670210b660a6c402038",
+      "equal": true
+    },
+    {
+      "path": "tests/suites/source_drift/check.py",
+      "base_sha256": "5b63961742c6f4d9f119c74e9a9b70ae6b43e6e87f53fdef4b40e5a714c39b27",
+      "e2_sha256": "5b63961742c6f4d9f119c74e9a9b70ae6b43e6e87f53fdef4b40e5a714c39b27",
+      "equal": true
+    }
+  ],
+  "worker_l_paragraph_equal_to_base": true,
+  "release_gate_routes": [
+    "release_preflight.inspect -> inspect_baseline",
+    "release_preflight.inspect -> inspect_build_baseline"
+  ],
+  "release_comparison": "Each gate compares committed baseline multisets with the nearest preceding annotated release; added or rewritten entries refuse, and a missing prior baseline is recorded explicitly."
+}

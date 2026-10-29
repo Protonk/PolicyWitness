@@ -2419,7 +2419,12 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract.py",
+              "symbol": "test_layout_and_both_handshake_implementations_change_identity",
               "form": "test"
             }
           ]
@@ -2889,7 +2894,12 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "symbol": "test_new_protocol_helpers_are_discovered_but_tests_are_not_identity_inputs",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract.py",
+              "symbol": "test_native_manifest_inputs_change_identity",
               "form": "test"
             }
           ]
@@ -3062,12 +3072,12 @@
           "label": "source_drift limits.py",
           "kind": "check",
           "facts": {
-            "Guards": "the limits generator's copies and every local documentation link"
+            "Guards": "the limits generator's copies and the standalone guide's structure and internal links"
           },
           "sources": [
             {
-              "path": "tests/suites/source_drift/generators.py",
-              "symbol": "broken_links"
+              "path": "tests/suites/source_drift/limits.py",
+              "symbol": "LimitsDocumentationTests"
             }
           ],
           "checks": [
@@ -3176,12 +3186,16 @@
           "label": "source_drift generators.py",
           "kind": "check",
           "facts": {
-            "Guards": "the uniform generator invariants, the baseline's consistency, the drift node's rule list and the form table's copy"
+            "Guards": "the uniform generator invariants, selected prose links, the baseline's consistency, the drift node's rule list and the form table's copy"
           },
           "sources": [
             {
               "path": "tests/suites/source_drift/generators.py",
               "symbol": "GeneratorContractTests"
+            },
+            {
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "broken_links"
             }
           ],
           "checks": [
@@ -3289,7 +3303,7 @@
           "label": "generate_build.py",
           "kind": "generator",
           "facts": {
-            "Owns": "the build figure, its dot and SVG files, the five build tables and the build spans; refuses a manifest that disagrees with build.sh"
+            "Owns": "the build figure, its dot and SVG files, the generated build tables and the build spans; refuses a manifest that disagrees with build.sh"
           },
           "sources": [
             {
@@ -3774,7 +3788,12 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "symbol": "test_new_protocol_helpers_are_discovered_but_tests_are_not_identity_inputs",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract.py",
+              "symbol": "test_native_manifest_inputs_change_identity",
               "form": "test"
             }
           ]
@@ -3795,7 +3814,12 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract.py",
+              "symbol": "test_layout_and_both_handshake_implementations_change_identity",
               "form": "test"
             }
           ]
@@ -3816,7 +3840,12 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract.py",
+              "symbol": "test_layout_and_both_handshake_implementations_change_identity",
               "form": "test"
             }
           ]
@@ -3837,7 +3866,12 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "symbol": "test_identity_is_current_relocatable_and_regeneration_is_idempotent",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/contract.py",
+              "symbol": "test_layout_and_both_handshake_implementations_change_identity",
               "form": "test"
             }
           ]
@@ -4128,12 +4162,12 @@
           "from": "drift_limits",
           "to": "gen_limits",
           "kind": "checks",
-          "label": "--check, stale-copy and staging controls; every local link in docs/*.md",
-          "short": "--check; links",
+          "label": "--check, stale-copy and standalone-guide staging controls",
+          "short": "--check; staging",
           "sources": [
             {
-              "path": "tests/suites/source_drift/generators.py",
-              "symbol": "broken_links"
+              "path": "tests/suites/source_drift/limits.py",
+              "symbol": "test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing"
             }
           ],
           "checks": [
@@ -4243,8 +4277,8 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "test_build_checks_every_generator_before_signing",
               "form": "test"
             }
           ]
@@ -4264,8 +4298,8 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/contract.py",
-              "symbol": "test_every_generated_copy_is_current",
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "test_build_checks_every_generator_before_signing",
               "form": "test"
             }
           ]

@@ -179,6 +179,7 @@ class ArchitectureDocumentationTests(receipts.TestCase):
             result = self.command(root, '--check')
             self.assertEqual(result.returncode, 1, (path.name, result.stdout))
             self.assertIn(expected, result.stderr, path.name)
+            self.assertIn('run: tests/lib/python.sh docs/generate_architecture.py', result.stderr)
             self.assertEqual(path.read_text(errors='replace'), mutate(originals[path]), 'check wrote')
         # Regeneration restores the dot text and the document without Graphviz; the
         # SVG stays stale until rendered, and the check says so.

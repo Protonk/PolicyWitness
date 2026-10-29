@@ -1,0 +1,2831 @@
+{
+  "architecture_graphs": [
+    {
+      "document": "docs/ARCHITECTURE.md",
+      "id": "topology"
+    },
+    {
+      "document": "docs/ARCHITECTURE.md",
+      "id": "boundaries"
+    },
+    {
+      "document": "docs/ARCHITECTURE.md",
+      "id": "documents"
+    },
+    {
+      "document": "docs/ARCHITECTURE.md",
+      "id": "byoxpc"
+    },
+    {
+      "document": "docs/WORKER.md",
+      "id": "worker_capabilities"
+    }
+  ],
+  "command_documents": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "README.md",
+    "WORKSET-EXECUTION-PLAN.md",
+    "WORKSET-PLAN.md",
+    "controller/AGENTS.md",
+    "controller/CLAUDE.md",
+    "controller/README.md",
+    "dist/AGENTS.md",
+    "dist/README.md",
+    "docs/AGENTS.md",
+    "docs/ARCHITECTURE.md",
+    "docs/BUILD.md",
+    "docs/CHECKS-BEFORE-CHECK-PLAN.md",
+    "docs/CONTRACT.md",
+    "docs/DEPENDENCIES.md",
+    "docs/LIMITS.md",
+    "docs/PolicyWitness.md",
+    "docs/QUESTIONS.md",
+    "docs/REQUEST-GRAMMAR.md",
+    "docs/SIGNING.md",
+    "docs/WORKER.md",
+    "runner/AGENTS.md",
+    "runner/CLAUDE.md",
+    "runner/README.md",
+    "runner/augments/README.md",
+    "tests/AGENTS.md",
+    "tests/CHANGE-VERIFICATION.md",
+    "tests/CLAUDE.md",
+    "tests/COVERAGE.md",
+    "tests/FAILURE-PROPAGATION-CONTRACT.md",
+    "tests/README.md",
+    "tests/atlas/ATLAS-BUILD-PLAN.md",
+    "tests/fixtures/README.md",
+    "tests/fixtures/blackbox_e2e/checker/README.md",
+    "tests/fixtures/byoxpc/README.md",
+    "tests/fixtures/caller_auth/README.md",
+    "tests/fixtures/comparison/README.md",
+    "tests/fixtures/comparison/baseline_response12/README.md",
+    "tests/fixtures/diagnostic_transport/README.md",
+    "tests/fixtures/disposition/README.md",
+    "tests/fixtures/exec/README.md",
+    "tests/fixtures/extension_controls/README.md",
+    "tests/fixtures/host_setup/README.md",
+    "tests/fixtures/launch_descriptor/README.md",
+    "tests/fixtures/path_query/README.md",
+    "tests/fixtures/release/README.md",
+    "tests/fixtures/sandbox_extensions/README.md",
+    "tests/fixtures/validator/README.md",
+    "tests/fixtures/worker_harness/README.md",
+    "tests/fixtures/worker_lifecycle/README.md",
+    "tests/lib/SWITCH-CONTROL-CHANGE-PLAN.md",
+    "tests/suites/blackbox_e2e/README.md",
+    "tests/suites/blackbox_menagerie/README.md",
+    "tests/suites/dispatcher/README.md",
+    "tests/suites/exec_fixture/README.md",
+    "tests/suites/failure_boundaries/README.md",
+    "tests/suites/integration/README.md",
+    "tests/suites/opt_in/README.md",
+    "tests/suites/preflight/README.md",
+    "tests/suites/run_capture/README.md",
+    "tests/suites/run_effects/README.md",
+    "tests/suites/runner_abi_layout/README.md",
+    "tests/suites/runner_apply_isolation_v2/README.md",
+    "tests/suites/runner_apply_isolation_v3/README.md",
+    "tests/suites/runner_byoxpc/README.md",
+    "tests/suites/runner_c_worker_harness/README.md",
+    "tests/suites/runner_exec_dac/README.md",
+    "tests/suites/runner_exec_inheritance/README.md",
+    "tests/suites/runner_exec_lifecycle/README.md",
+    "tests/suites/runner_filter_iokit_registry_entry_class/README.md",
+    "tests/suites/runner_filter_iokit_user_client_class/README.md",
+    "tests/suites/runner_filter_local_name/README.md",
+    "tests/suites/runner_filter_sysctl_name/README.md",
+    "tests/suites/runner_live_worker_identity/README.md",
+    "tests/suites/runner_mach_service_liveness/README.md",
+    "tests/suites/runner_outcome_bad_request/README.md",
+    "tests/suites/runner_outcome_runner_timeout/README.md",
+    "tests/suites/runner_outcome_validator_no_reply/README.md",
+    "tests/suites/runner_outcome_worker_spawn_failed/README.md",
+    "tests/suites/runner_ready_byte_resilience/README.md",
+    "tests/suites/runner_specimen_isolation/README.md",
+    "tests/suites/runner_unit/HOST-SETUP-ORACLE-PLAN.md",
+    "tests/suites/runner_unit/README.md",
+    "tests/suites/runner_use_c_worker/README.md",
+    "tests/suites/runner_validator_failure/README.md",
+    "tests/suites/sandbox_extensions_native/README.md",
+    "tests/suites/sbpl_allowdeny_consistency/README.md",
+    "tests/suites/shell_helpers/README.md",
+    "tests/suites/smoke/README.md",
+    "tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md",
+    "tests/suites/source_drift/README.md",
+    "tests/suites/unit/README.md",
+    "tests/suites/validator_batch_mode/README.md",
+    "tests/suites/validator_bridge/README.md",
+    "tests/suites/witness_contract/README.md",
+    "tests/suites/witness_contract/harness/VERIFICATIONS.md"
+  ],
+  "documents": [
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "AGENTS.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "98f6553d4af68366037aef0b30871ce2d95b0a984be99c666878c9d6adbf3eda"
+    },
+    {
+      "alias": "AGENTS.md",
+      "command_scan": true,
+      "owned": [],
+      "path": "CLAUDE.md",
+      "prose_scan": false,
+      "role": "guidance alias",
+      "source_sha256": "a54ff182c7e8acf56acfd6e4b9c3ff41e2c41a31c9b211b2deb9df75d9a478f9"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "CONTRIBUTING.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "b1b068be10436d39bf34c3ea863c611a7f9a918c2057b86dce1fd424c0f713bb"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "README.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "23caccebc2223982cfddb09fdba5f4ab10fae3bfe278e1cd23065b968e185763"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "WORKSET-EXECUTION-PLAN.md",
+      "prose_scan": false,
+      "role": "transient plan",
+      "source_sha256": "34d0b141a7893b13c8b7ecbacb55ac01fae119876148bb802287e0cba3da2365"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "WORKSET-PLAN.md",
+      "prose_scan": false,
+      "role": "transient plan",
+      "source_sha256": "0543f7aecf4efd5282b1b621babafc11307eba4a5b018abfec9ea124ee5c888e"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "controller/AGENTS.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "1124a3cea5523db2bb511bc60639e54c11e789fc8c1aaf2f9601e70eaf9c8ff5"
+    },
+    {
+      "alias": "AGENTS.md",
+      "command_scan": true,
+      "owned": [],
+      "path": "controller/CLAUDE.md",
+      "prose_scan": false,
+      "role": "guidance alias",
+      "source_sha256": "a54ff182c7e8acf56acfd6e4b9c3ff41e2c41a31c9b211b2deb9df75d9a478f9"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "contract",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+              "<!-- END GENERATED CONTRACT VERSIONS -->"
+            ]
+          ]
+        },
+        {
+          "generator": "limits",
+          "kind": "spans",
+          "names": [
+            "limits.controller_output.binary",
+            "limits.byoxpc_throttle_interval.value_unit",
+            "limits.runner_verify_wait.value_unit",
+            "limits.runner_remove_teardown_wait.value_unit"
+          ]
+        }
+      ],
+      "path": "controller/README.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "148851f5ce4ddfc2be2a59450e4e01aed1749f1125210401d7dd68e31d7c5563"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "dist/AGENTS.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "34f62bf5e96a11a947975ce651e96c58fa3cd4236038aabff6823c02e2f119ce"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "dist/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "ab716abc7a3dba7819d4c08ffc2e00d5f4c3392a8f90d4b2250c99448e9feee1"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "docs/AGENTS.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "67661fe83bcddfd748833ba8a141799dc9cd0e232e98e40484fb942e56b5300a"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "limits",
+          "kind": "spans",
+          "names": [
+            "limits.byoxpc_throttle_interval.value_unit"
+          ]
+        },
+        {
+          "generator": "architecture",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED ARCHITECTURE GRAPH topology -->",
+              "<!-- END GENERATED ARCHITECTURE GRAPH topology -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED ARCHITECTURE GRAPH boundaries -->",
+              "<!-- END GENERATED ARCHITECTURE GRAPH boundaries -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED ARCHITECTURE GRAPH documents -->",
+              "<!-- END GENERATED ARCHITECTURE GRAPH documents -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED ARCHITECTURE GRAPH byoxpc -->",
+              "<!-- END GENERATED ARCHITECTURE GRAPH byoxpc -->"
+            ]
+          ]
+        },
+        {
+          "generator": "architecture",
+          "kind": "spans",
+          "names": [
+            "architecture.documents.architecture.graphs",
+            "architecture.documents.kinds.manifest",
+            "architecture.documents.kinds.generator"
+          ]
+        }
+      ],
+      "path": "docs/ARCHITECTURE.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "ebf94006db3548cc9bea73dcde2e52303ed99464b49d550a404d14778e018a91"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "build",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED BUILD FIGURE -->",
+              "<!-- END GENERATED BUILD FIGURE -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED BUILD STEPS -->",
+              "<!-- END GENERATED BUILD STEPS -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED BUILD REFUSALS -->",
+              "<!-- END GENERATED BUILD REFUSALS -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED BUILD SIGNING -->",
+              "<!-- END GENERATED BUILD SIGNING -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED BUILD INVOCATIONS -->",
+              "<!-- END GENERATED BUILD INVOCATIONS -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED BUILD KNOBS -->",
+              "<!-- END GENERATED BUILD KNOBS -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED BUILD DIRECTORIES -->",
+              "<!-- END GENERATED BUILD DIRECTORIES -->"
+            ]
+          ]
+        },
+        {
+          "generator": "build",
+          "kind": "spans",
+          "names": [
+            "build.steps",
+            "build.conditional_steps",
+            "build.refusals",
+            "build.covered",
+            "build.meson_options",
+            "build.signing",
+            "build.knobs"
+          ]
+        }
+      ],
+      "path": "docs/BUILD.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "50236e1fb771306ca0693cb6356afef83012e05cb80d81a064b5827ae0f9731f"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "docs/CHECKS-BEFORE-CHECK-PLAN.md",
+      "prose_scan": true,
+      "role": "transient plan",
+      "source_sha256": "0521aa559167a6c289f0aa26ebcde36992c8dc0bdc6de11902c3ae1fc25c2d79"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "contract",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+              "<!-- END GENERATED CONTRACT VERSIONS -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED CONTRACT TABLE -->",
+              "<!-- END GENERATED CONTRACT TABLE -->"
+            ]
+          ]
+        }
+      ],
+      "path": "docs/CONTRACT.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "de102873769354e0a0d100c990b0c5dbb593185d54b63e0b83e48004f684677d"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "docs/DEPENDENCIES.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "108a8de5c30d28588880e56ca152373659d5d4e3fc9f150d4fae729ad6bbe278"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "limits",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED LIMITS -->",
+              "<!-- END GENERATED LIMITS -->"
+            ],
+            [
+              "<!-- BEGIN GENERATED LIMIT COVERAGE -->",
+              "<!-- END GENERATED LIMIT COVERAGE -->"
+            ]
+          ]
+        },
+        {
+          "generator": "limits",
+          "kind": "spans",
+          "names": [
+            "limits.step_id.value",
+            "limits.extension_issuer_wait.value_unit",
+            "limits.phase_collection_wait.value_unit",
+            "limits.worker_proceed_wait.value_unit",
+            "limits.probe_steps.value",
+            "limits.worker_proceed_wait.value",
+            "limits.validator_io_wait.value",
+            "limits.validator_exit_grace.value",
+            "limits.validator_release_margin.value"
+          ]
+        }
+      ],
+      "path": "docs/LIMITS.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "05586f20d92af229133c229f084576362bd3e949e7b3a95fd7a250540179920b"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "contract",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+              "<!-- END GENERATED CONTRACT VERSIONS -->"
+            ]
+          ]
+        },
+        {
+          "generator": "limits",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN COPIED LIMITS -->",
+              "<!-- END COPIED LIMITS -->"
+            ],
+            [
+              "<!-- BEGIN COPIED QUESTIONS -->",
+              "<!-- END COPIED QUESTIONS -->"
+            ],
+            [
+              "<!-- BEGIN COPIED READING RULES -->",
+              "<!-- END COPIED READING RULES -->"
+            ],
+            [
+              "<!-- BEGIN COPIED EXTENSION STATUSES -->",
+              "<!-- END COPIED EXTENSION STATUSES -->"
+            ]
+          ]
+        },
+        {
+          "generator": "limits",
+          "kind": "spans",
+          "names": [
+            "limits.phase_count.value",
+            "limits.probe_steps.value",
+            "limits.extension_declarations.value",
+            "limits.extension_consumes.value",
+            "limits.extension_releases.value",
+            "limits.extension_reference.value",
+            "limits.extension_target.value",
+            "limits.fresh_read_bytes.value",
+            "limits.worker_policy_transfer.value_unit",
+            "limits.sysctl_read_bytes.value",
+            "limits.runner_verify_wait.value_unit",
+            "limits.byoxpc_throttle_interval.value_unit",
+            "limits.byoxpc_throttle_interval.value_unit"
+          ]
+        }
+      ],
+      "path": "docs/PolicyWitness.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "89dec9d6713a2123bdf4c72b54ac05733e06e41546c870d480714cba1d49cba9"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "docs/QUESTIONS.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "b3da1cd2b086abb7c3331d2f0659d5b33d7f9824a03c45f4a2c88b22d884e505"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "limits",
+          "kind": "spans",
+          "names": [
+            "limits.probe_steps.value"
+          ]
+        }
+      ],
+      "path": "docs/REQUEST-GRAMMAR.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "a518a7beb04cfa2f93e1e918a642a877aa989aa9ecf138054f5fb59ec83daadd"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "docs/SIGNING.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "97c9b1576c0d1adce003f0974ada2fa9d60bc45999007897e0a3786fd26c280a"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "architecture",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED ARCHITECTURE GRAPH worker_capabilities -->",
+              "<!-- END GENERATED ARCHITECTURE GRAPH worker_capabilities -->"
+            ]
+          ]
+        }
+      ],
+      "path": "docs/WORKER.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "5e599b6ebc689fbfd8f5c14deb1cc293a8b165f4b994415357c01704ba89fbbc"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "runner/AGENTS.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "9d5ac8d546ce2d0900f5f19ca9968e0d1360e5c0fa9049f13256a247c5a9b6d1"
+    },
+    {
+      "alias": "AGENTS.md",
+      "command_scan": true,
+      "owned": [],
+      "path": "runner/CLAUDE.md",
+      "prose_scan": false,
+      "role": "guidance alias",
+      "source_sha256": "a54ff182c7e8acf56acfd6e4b9c3ff41e2c41a31c9b211b2deb9df75d9a478f9"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "contract",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+              "<!-- END GENERATED CONTRACT VERSIONS -->"
+            ]
+          ]
+        },
+        {
+          "generator": "limits",
+          "kind": "spans",
+          "names": [
+            "limits.worker_sentinel_wait.value_unit",
+            "limits.validator_io_wait.value_unit",
+            "limits.phase_collection_wait.value_unit"
+          ]
+        }
+      ],
+      "path": "runner/README.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "5eefe93b17b746bc087555bacab86d12b8cdd9fb6a7a49d21896a28ad03d9d42"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "runner/augments/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "1d64d0029ea9c3bfdc45d29d6deefbb6293d5ae41a50195ea9109deb22811718"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/AGENTS.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "43dc24089ece9b6ad97ed0d23d8c56d8697c7abf40ae7a7e297b3c84ef8869a2"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/CHANGE-VERIFICATION.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "851d3a314c40a03875c91168408a7323d76eebc48f674cfbaad3123150aa6223"
+    },
+    {
+      "alias": "AGENTS.md",
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/CLAUDE.md",
+      "prose_scan": false,
+      "role": "guidance alias",
+      "source_sha256": "a54ff182c7e8acf56acfd6e4b9c3ff41e2c41a31c9b211b2deb9df75d9a478f9"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/COVERAGE.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "c5e33e90115a5aad439a42063ce5c7726831505c65390599302f84f3247422c7"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [
+        {
+          "generator": "limits",
+          "kind": "regions",
+          "markers": [
+            [
+              "<!-- BEGIN GENERATED SCENARIO MATRIX -->",
+              "<!-- END GENERATED SCENARIO MATRIX -->"
+            ]
+          ]
+        },
+        {
+          "generator": "limits",
+          "kind": "spans",
+          "names": [
+            "limits.worker_policy_transfer.value_unit",
+            "limits.policy_source.value_unit",
+            "limits.probe_steps.value",
+            "limits.policy_parameters.value",
+            "limits.step_id.value_unit",
+            "limits.attempt_target.value",
+            "limits.parameter_key.value",
+            "limits.parameter_value.value",
+            "limits.exec_arguments.value",
+            "limits.exec_argument.value_unit",
+            "limits.controller_output.binary",
+            "limits.policy_helper_output.binary",
+            "limits.controller_output.value",
+            "limits.policy_helper_output.value",
+            "limits.compiled_profile.binary",
+            "limits.exec_stream.value_unit",
+            "limits.controller_output.binary",
+            "limits.policy_helper_output.binary"
+          ]
+        }
+      ],
+      "path": "tests/FAILURE-PROPAGATION-CONTRACT.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "e3256a68bf7035fa4d68e788c89f6bab63604a5d84a0c61d3edae77a07a7f30b"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/README.md",
+      "prose_scan": true,
+      "role": "account or guidance",
+      "source_sha256": "83e4e2caefe7de6a0d8e9c2aaea29fa980922c2b30377a3bf519f24b4a963c36"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/atlas/ATLAS-BUILD-PLAN.md",
+      "prose_scan": false,
+      "role": "transient plan",
+      "source_sha256": "c81bfaf200b68dfd90c60c170309f677735265c169d49e4d9966a90595e04e81"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "eb39ac450955219df1c121d8d60a09195966b2683e51222dcf1e646faa041b66"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/blackbox_e2e/checker/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "8c9d481ad8402d5c601349191c857179ceb5fe0dac3f3f1267617b506836978d"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/byoxpc/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "faf4b10796c4276f1130f7c284368c3abb29b75d9586202835ff7dc20e2bacb5"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/caller_auth/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "09c90d5cc90c31a7d7057e91329dfb5d3328c8b733685cd413f09d5cf757e0cd"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/comparison/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "92335a2adc0b4beb6091d9fb6b1913b9bc00fedf437d3acd191ee282089e062d"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/comparison/baseline_response12/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "82137a2af9983bd826dd94683e605ac91223ca6bacc1f1a9b90aae2691d94f61"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/diagnostic_transport/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "5c62fd6d60c27c33c48c0a09a059f3afa616b9eda9ded5bbe4b7c8b6b4abddca"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/disposition/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "cc401779c7e7ce55b54b46b9c90609d764766f6c1c5d6f74c90a820eeb4a78ba"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/exec/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "d1728ff9410d7c05402825556f86fa19c58d78d9475cd820f44bbc46b9a2d7c1"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/extension_controls/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "65bec051182cb993b55dc760f46c12260a523f5c76a0d612251e85af88dbe1e4"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/host_setup/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "23fcdace866ef74d10ca33f7d0d4695bacfe4727e87bef9f7b8b0c83c1b1c2e9"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/launch_descriptor/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "675f5871fc2e7b4803ca704c18da313dd581c906b892cc03fed9f23d338c263c"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/path_query/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "5716234b2763fbf883eba638c0852423478ea6251cd303686cf5799776843fc1"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/release/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "12e32d1681d09d066417bbbd3a61cc9a3c6e86bf77aa317606d5dd7238a61ce6"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/sandbox_extensions/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "ae8ee6a5f7401a3a8cfad44c6971405e2501828611059aca667e0f4810d3ed3c"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/validator/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "2d20739eb9a1d10ef159b6d9392bfd8e35eb364c45ac7c40cd1ec0ed63558fe7"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/worker_harness/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "6bc004caa652e2686f278e59717004f92277de0fa170d25e1c31a0357824214f"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/fixtures/worker_lifecycle/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "0aa471010dfb310a35957577b34c4c74c04ac48ecf49c952aeee9e6ef5369c29"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/lib/SWITCH-CONTROL-CHANGE-PLAN.md",
+      "prose_scan": false,
+      "role": "transient plan",
+      "source_sha256": "70479b281115c95e2126fd51511df82d3ac0ce202d2caf7a03a906e447d1b660"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/blackbox_e2e/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "c1b68d5ab5bdccf8ef65b5c0d60bb34aea80e763ecc2dd267d97181d0c84a924"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/blackbox_menagerie/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "6db0213429674e7627f75e81c6386dca12278a51bf144a5c4220581ff7cfb0df"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/dispatcher/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "996fe48be4b48230069fccb17fa0793b012177e7a8e3fe980107f7399f14a019"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/exec_fixture/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "22f0c003dfb2ba7dfd9439ac743b2f7c33043cf72da847350991ca3e04c2d76d"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/failure_boundaries/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "16fa7bb9f986d7c3bec9420041ade325d93d728bfb2f5917b99e3d53e28c28c4"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/integration/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "da5d2806cbadcfd880222c287f29656cc96219157132fe49cb5d0bc9f56d399a"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/opt_in/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "9d3472cd7aa3bcfb42eb9e047681c0203dadb87a77ad8b2a7edc4d1c7a2c52ca"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/preflight/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "decbe0de484035d3a01685b0d916b90da4316142b1b7249ae2cb43fef6477b61"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/run_capture/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "ac3fe61cd506ebbdd6f315d69f414cbc634235c1a31b60c7b92b1d3f2e7281ab"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/run_effects/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "57bf5bbac737c06258440afd9f200df938a3aa420d1309753b40f8a7a1ac0ad2"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_abi_layout/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "e0f0e3789550d6bc012b4a4b603c605c03524a36fc93c3cce85451dc0dafaef7"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_apply_isolation_v2/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "62b09b5bc5e6b6092ebc9198bc5e289f1d26386f8f47a3d52332b59fdda54fc6"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_apply_isolation_v3/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "d8ec6c32478ee76847597c5a8975dc24030e25f3f3f436d0b07c63c4464451da"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_byoxpc/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "17cff5ebe6a073b8b5ffb52eae15b50bc20e436ef8b60464d8dee7ab4871d849"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_c_worker_harness/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "7720ae69681c2a8a62a33852ab8dd2104979738d98504abf26ec037e8964355c"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_exec_dac/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "9b6ac178f4b60c13a53b7db5c4c85a809cce6251d33b775e5adbdde88b1bd38f"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_exec_inheritance/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "31b9bb345be2080b72946ac2e0fe99e93452c3b5696c0e50fc35d03c7c763348"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_exec_lifecycle/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "1dc11b2932e8a411088577bbfcf43455ecae9217050635f7455a5e6c9342544a"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_filter_iokit_registry_entry_class/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "34a221238cbf8329df8f8bd2d987b49094d1ce0566f395a48949bfc8f3458d74"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_filter_iokit_user_client_class/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "cd0bdc155ae7548e99106924911210cf9d718febf406ab7abc1f18aa2297af31"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_filter_local_name/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "17e8853cae99fd8819e711db2248fac6d85e6b9be1604aefce4d592554d9b24c"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_filter_sysctl_name/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "a2afc0e6129bc69fbffb958f0fc4783abd60cc167fc8667630af26e19aae781a"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_live_worker_identity/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "e9c6fca6071697b8824c46eed0d5db1d6325083dd714bab7b669c7f503bec83f"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_mach_service_liveness/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "6d9d5e176ba3c1a1f4d13713fd45648cbb6859caf7b5035bf0c5cbdd6474c589"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_outcome_bad_request/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "ab940deb53b57bcb650b06d74473821473fd2371cfb162f89c82a8997ef928dd"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_outcome_runner_timeout/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "764ca89747db60f2254c89a9fbb5d8d2fcaaf172f498da024f4273a28fe63a3d"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_outcome_validator_no_reply/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "148886499cda7ee4bc83c1c19fbdd39c43917ec0496ae0802c94f2d7d7c39dea"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_outcome_worker_spawn_failed/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "8bc91bf779364e59f747e26c82685ab2eb664f3256978458d042706a3375a0af"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_ready_byte_resilience/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "172f61bcace85f11f8ef73ad275ac0fbbf912f6481662283ef33c67cd3904265"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_specimen_isolation/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "f8c160744fc08fc3ef3c51a84105e4a2da2837f8e1ee67df63dfcc602fd5f962"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_unit/HOST-SETUP-ORACLE-PLAN.md",
+      "prose_scan": false,
+      "role": "transient plan",
+      "source_sha256": "e0a3e70cf761a67efa3396aa8b9d4ce5ead62e4e895e8e310900647353d7081d"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_unit/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "f80922bed3b5859434d177fd9acbeebbce1a8fefb2166892dbd8fa9765e3a9a1"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_use_c_worker/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "c15fe046756e978369f309f0ca47973a634a40a8c96982f589e619acbc495aa2"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/runner_validator_failure/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "8874f5529cdd9a60dd125494033ee6e2320b7ca90917a4c1d200f28d0315505f"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/sandbox_extensions_native/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "1fabeda5d1dc05bc5c6e7d9eed56fca51cfcb4eae21369b9b4f78de13a5b4f6a"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/sbpl_allowdeny_consistency/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "d5f204490898d7633934a30815c544aac4bb4aea207d6142db25870966a31d9d"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/shell_helpers/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "399ccab8f40771ebe8f07431cb15a601a5acb92f4f6919f6ae11a5faa07b93fc"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/smoke/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "747aed4dda7eae57c85f931368fd88eab28fa3a1f057efd76c1a4791593f837a"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md",
+      "prose_scan": false,
+      "role": "transient plan",
+      "source_sha256": "4c35dfe17927e69fe5b5de1d501791acedbe90d4a2719952b4b07f41fc7f148a"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/source_drift/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "fdc2902f0b822c074ea47a5dd53d70d11c9064777ee1fb88bceff97a4c7e7665"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/unit/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "2dcb2c1e33335648dc5d18e5109f54b57cc4b19f4974716b002d3e9a84d9afa1"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/validator_batch_mode/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "64e3c78d077426a3d37366dd1a5a4eefa771ef3b1ce67f5007957e0b4e8d79bf"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/validator_bridge/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "72eb44530fdabcc24982aca37cd7ae8a09e8d1a7c4297277a681dbe9aa654d00"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/witness_contract/README.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "c1034094ebee39e33eea5fcc460427e56f50c1aa11f2d95c48c43d25ef9d8d6d"
+    },
+    {
+      "alias": null,
+      "command_scan": true,
+      "owned": [],
+      "path": "tests/suites/witness_contract/harness/VERIFICATIONS.md",
+      "prose_scan": false,
+      "role": "account or guidance",
+      "source_sha256": "e6f69019d9fc619ae0887dbee192b71e60fcf5a6e547a519f5b0afc902ea8532"
+    }
+  ],
+  "generated_guide": {
+    "destination": "${DIST_DIR}/PolicyWitness.md",
+    "operation": "generate_limits.py --stage-guide; validate current then copy checked bytes",
+    "source": "docs/PolicyWitness.md"
+  },
+  "generators": [
+    {
+      "inputs": [
+        "controller/README.md",
+        "controller/src/json_contract.rs",
+        "docs/CONTRACT.md",
+        "docs/PolicyWitness.md",
+        "docs/contract.json",
+        "docs/generate_contract.py",
+        "runner/README.md",
+        "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "tests/lib/contract.py"
+      ],
+      "name": "contract",
+      "regions": {
+        "controller/README.md": [
+          [
+            "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+            "<!-- END GENERATED CONTRACT VERSIONS -->"
+          ]
+        ],
+        "controller/src/json_contract.rs": [
+          [
+            "// BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)",
+            "// END GENERATED CONTRACT VERSIONS"
+          ]
+        ],
+        "docs/CONTRACT.md": [
+          [
+            "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+            "<!-- END GENERATED CONTRACT VERSIONS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED CONTRACT TABLE -->",
+            "<!-- END GENERATED CONTRACT TABLE -->"
+          ]
+        ],
+        "docs/PolicyWitness.md": [
+          [
+            "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+            "<!-- END GENERATED CONTRACT VERSIONS -->"
+          ]
+        ],
+        "runner/README.md": [
+          [
+            "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+            "<!-- END GENERATED CONTRACT VERSIONS -->"
+          ]
+        ],
+        "runner/Sources/PWRunnerCore/PWRunnerAPI.swift": [
+          [
+            "// BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)",
+            "// END GENERATED CONTRACT VERSIONS"
+          ]
+        ],
+        "tests/lib/contract.py": [
+          [
+            "# BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)",
+            "# END GENERATED CONTRACT VERSIONS"
+          ]
+        ]
+      },
+      "span_documents": [],
+      "whole": []
+    },
+    {
+      "inputs": [
+        "build.sh",
+        "controller/tools/pw_probe_runner/pw_extension_channel.h",
+        "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+        "controller/tools/pw_probe_runner/pw_probe_runner.c",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "controller/tools/pw_probe_runner/pw_profile_capture.h",
+        "controller/tools/pw_probe_runner/pw_worker_evidence.h",
+        "docs/generate_worker_identity.py",
+        "meson.build",
+        "meson.options",
+        "runner/Package.swift",
+        "runner/Sources/PWCWorkerShim/PWCWorkerShim.c",
+        "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+        "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+        "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerListener.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+        "runner/Sources/PWRunnerCore/PathUtils.swift",
+        "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+        "runner/Sources/PWRunnerCore/SandboxApply.swift",
+        "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+        "tests/lib/contract.py"
+      ],
+      "name": "worker_identity",
+      "regions": {
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": [
+          [
+            "/* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */",
+            "/* END GENERATED WORKER IDENTITY */"
+          ]
+        ],
+        "runner/Sources/PWRunnerCore/CWorker.swift": [
+          [
+            "    // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)",
+            "    // END GENERATED WORKER IDENTITY"
+          ]
+        ],
+        "tests/lib/contract.py": [
+          [
+            "# BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)",
+            "# END GENERATED WORKER IDENTITY"
+          ]
+        ]
+      },
+      "span_documents": [],
+      "whole": []
+    },
+    {
+      "inputs": [
+        "controller/README.md",
+        "controller/src/bin/sbpl-check.rs",
+        "controller/src/run_flow.rs",
+        "controller/src/runner_acquisition.rs",
+        "controller/src/runner_client.rs",
+        "controller/src/runner_commands.rs",
+        "controller/src/runner_manager.rs",
+        "controller/src/sbpl_imports.rs",
+        "controller/src/utils.rs",
+        "controller/tools/pw_probe_runner/pw_extension_channel.h",
+        "controller/tools/pw_probe_runner/pw_probe_runner.c",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "controller/tools/sb_api_validator/sb_api_validator.c",
+        "docs/ARCHITECTURE.md",
+        "docs/LIMITS.md",
+        "docs/PolicyWitness.md",
+        "docs/QUESTIONS.md",
+        "docs/REQUEST-GRAMMAR.md",
+        "docs/generate_limits.py",
+        "docs/generator_common.py",
+        "docs/limits.json",
+        "docs/markdown_reader.py",
+        "runner/Clients/PWRunnerClient/main.swift",
+        "runner/README.md",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+        "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+        "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+        "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+        "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+        "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+        "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+        "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
+        "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+        "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
+        "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+        "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+        "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
+        "runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift",
+        "tests/FAILURE-PROPAGATION-CONTRACT.md",
+        "tests/catalog.json",
+        "tests/fixtures/comparison/matrix.json",
+        "tests/fixtures/worker_lifecycle/exec_control.c",
+        "tests/fixtures/worker_lifecycle/proceed_control.c",
+        "tests/lib/vendor/markdown_it/LICENSE",
+        "tests/lib/vendor/markdown_it/LICENSE.markdown-it",
+        "tests/lib/vendor/markdown_it/__init__.py",
+        "tests/lib/vendor/markdown_it/_compat.py",
+        "tests/lib/vendor/markdown_it/_punycode.py",
+        "tests/lib/vendor/markdown_it/cli/__init__.py",
+        "tests/lib/vendor/markdown_it/cli/parse.py",
+        "tests/lib/vendor/markdown_it/common/__init__.py",
+        "tests/lib/vendor/markdown_it/common/entities.py",
+        "tests/lib/vendor/markdown_it/common/html_blocks.py",
+        "tests/lib/vendor/markdown_it/common/html_re.py",
+        "tests/lib/vendor/markdown_it/common/normalize_url.py",
+        "tests/lib/vendor/markdown_it/common/utils.py",
+        "tests/lib/vendor/markdown_it/helpers/__init__.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_destination.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_label.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_title.py",
+        "tests/lib/vendor/markdown_it/main.py",
+        "tests/lib/vendor/markdown_it/parser_block.py",
+        "tests/lib/vendor/markdown_it/parser_core.py",
+        "tests/lib/vendor/markdown_it/parser_inline.py",
+        "tests/lib/vendor/markdown_it/port.yaml",
+        "tests/lib/vendor/markdown_it/presets/__init__.py",
+        "tests/lib/vendor/markdown_it/presets/commonmark.py",
+        "tests/lib/vendor/markdown_it/presets/default.py",
+        "tests/lib/vendor/markdown_it/presets/zero.py",
+        "tests/lib/vendor/markdown_it/py.typed",
+        "tests/lib/vendor/markdown_it/renderer.py",
+        "tests/lib/vendor/markdown_it/ruler.py",
+        "tests/lib/vendor/markdown_it/rules_block/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_block/blockquote.py",
+        "tests/lib/vendor/markdown_it/rules_block/code.py",
+        "tests/lib/vendor/markdown_it/rules_block/fence.py",
+        "tests/lib/vendor/markdown_it/rules_block/heading.py",
+        "tests/lib/vendor/markdown_it/rules_block/hr.py",
+        "tests/lib/vendor/markdown_it/rules_block/html_block.py",
+        "tests/lib/vendor/markdown_it/rules_block/lheading.py",
+        "tests/lib/vendor/markdown_it/rules_block/list.py",
+        "tests/lib/vendor/markdown_it/rules_block/paragraph.py",
+        "tests/lib/vendor/markdown_it/rules_block/reference.py",
+        "tests/lib/vendor/markdown_it/rules_block/state_block.py",
+        "tests/lib/vendor/markdown_it/rules_block/table.py",
+        "tests/lib/vendor/markdown_it/rules_core/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_core/block.py",
+        "tests/lib/vendor/markdown_it/rules_core/inline.py",
+        "tests/lib/vendor/markdown_it/rules_core/linkify.py",
+        "tests/lib/vendor/markdown_it/rules_core/normalize.py",
+        "tests/lib/vendor/markdown_it/rules_core/replacements.py",
+        "tests/lib/vendor/markdown_it/rules_core/smartquotes.py",
+        "tests/lib/vendor/markdown_it/rules_core/state_core.py",
+        "tests/lib/vendor/markdown_it/rules_core/text_join.py",
+        "tests/lib/vendor/markdown_it/rules_inline/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_inline/autolink.py",
+        "tests/lib/vendor/markdown_it/rules_inline/backticks.py",
+        "tests/lib/vendor/markdown_it/rules_inline/balance_pairs.py",
+        "tests/lib/vendor/markdown_it/rules_inline/emphasis.py",
+        "tests/lib/vendor/markdown_it/rules_inline/entity.py",
+        "tests/lib/vendor/markdown_it/rules_inline/escape.py",
+        "tests/lib/vendor/markdown_it/rules_inline/fragments_join.py",
+        "tests/lib/vendor/markdown_it/rules_inline/html_inline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/image.py",
+        "tests/lib/vendor/markdown_it/rules_inline/link.py",
+        "tests/lib/vendor/markdown_it/rules_inline/linkify.py",
+        "tests/lib/vendor/markdown_it/rules_inline/newline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/state_inline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/strikethrough.py",
+        "tests/lib/vendor/markdown_it/rules_inline/text.py",
+        "tests/lib/vendor/markdown_it/token.py",
+        "tests/lib/vendor/markdown_it/tree.py",
+        "tests/lib/vendor/markdown_it/utils.py",
+        "tests/lib/vendor/markdown_it_py-3.0.0.RECORD",
+        "tests/lib/vendor/mdurl-0.1.2.RECORD",
+        "tests/lib/vendor/mdurl/LICENSE",
+        "tests/lib/vendor/mdurl/__init__.py",
+        "tests/lib/vendor/mdurl/_decode.py",
+        "tests/lib/vendor/mdurl/_encode.py",
+        "tests/lib/vendor/mdurl/_format.py",
+        "tests/lib/vendor/mdurl/_parse.py",
+        "tests/lib/vendor/mdurl/_url.py",
+        "tests/lib/vendor/mdurl/py.typed",
+        "tests/suites/failure_boundaries/check.py",
+        "tests/suites/runner_abi_layout/capture.c",
+        "tests/suites/runner_abi_layout/limits.py",
+        "tests/suites/runner_byoxpc/opt_in/single_use.sh",
+        "tests/suites/runner_c_worker_harness/check_sysctl.py",
+        "tests/suites/runner_c_worker_harness/harness.c",
+        "tests/suites/runner_c_worker_harness/run.sh",
+        "tests/suites/runner_outcome_bad_request/contract.py",
+        "tests/suites/witness_contract/check_extension_boundaries.py",
+        "tests/suites/witness_contract/check_extensions.py",
+        "tests/suites/witness_contract/check_max_target_reply.py"
+      ],
+      "name": "limits",
+      "regions": {
+        "docs/LIMITS.md": [
+          [
+            "<!-- BEGIN GENERATED LIMITS -->",
+            "<!-- END GENERATED LIMITS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED LIMIT COVERAGE -->",
+            "<!-- END GENERATED LIMIT COVERAGE -->"
+          ]
+        ],
+        "docs/PolicyWitness.md": [
+          [
+            "<!-- BEGIN COPIED LIMITS -->",
+            "<!-- END COPIED LIMITS -->"
+          ],
+          [
+            "<!-- BEGIN COPIED QUESTIONS -->",
+            "<!-- END COPIED QUESTIONS -->"
+          ],
+          [
+            "<!-- BEGIN COPIED READING RULES -->",
+            "<!-- END COPIED READING RULES -->"
+          ],
+          [
+            "<!-- BEGIN COPIED EXTENSION STATUSES -->",
+            "<!-- END COPIED EXTENSION STATUSES -->"
+          ]
+        ],
+        "tests/FAILURE-PROPAGATION-CONTRACT.md": [
+          [
+            "<!-- BEGIN GENERATED SCENARIO MATRIX -->",
+            "<!-- END GENERATED SCENARIO MATRIX -->"
+          ]
+        ]
+      },
+      "span_documents": [
+        "docs/LIMITS.md",
+        "docs/ARCHITECTURE.md",
+        "docs/PolicyWitness.md",
+        "docs/REQUEST-GRAMMAR.md",
+        "tests/FAILURE-PROPAGATION-CONTRACT.md",
+        "controller/README.md",
+        "runner/README.md"
+      ],
+      "whole": []
+    },
+    {
+      "inputs": [
+        "AGENTS.md",
+        "build.sh",
+        "controller/README.md",
+        "controller/src/augments.rs",
+        "controller/src/bin/sbpl-check.rs",
+        "controller/src/cli.rs",
+        "controller/src/disposition.rs",
+        "controller/src/dossier.rs",
+        "controller/src/evidence.rs",
+        "controller/src/json_contract.rs",
+        "controller/src/main.rs",
+        "controller/src/policy_check.rs",
+        "controller/src/request_patch.rs",
+        "controller/src/run_flow.rs",
+        "controller/src/runner_acquisition.rs",
+        "controller/src/runner_client.rs",
+        "controller/src/runner_commands.rs",
+        "controller/src/runner_manager.rs",
+        "controller/src/runner_select.rs",
+        "controller/src/sbpl_imports.rs",
+        "controller/src/utils.rs",
+        "controller/tools/pw_probe_runner/pw_extension_channel.h",
+        "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+        "controller/tools/pw_probe_runner/pw_probe_runner.c",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "controller/tools/pw_probe_runner/pw_profile_capture.h",
+        "controller/tools/sb_api_validator/sb_api_validator.c",
+        "docs/ARCHITECTURE.md",
+        "docs/CONTRACT.md",
+        "docs/LIMITS.md",
+        "docs/PolicyWitness.md",
+        "docs/QUESTIONS.md",
+        "docs/WORKER.md",
+        "docs/architecture-boundaries.dot",
+        "docs/architecture-boundaries.svg",
+        "docs/architecture-byoxpc.dot",
+        "docs/architecture-byoxpc.svg",
+        "docs/architecture-documents.dot",
+        "docs/architecture-documents.svg",
+        "docs/architecture-topology.dot",
+        "docs/architecture-topology.svg",
+        "docs/architecture.json",
+        "docs/contract.json",
+        "docs/generate_architecture.py",
+        "docs/generate_build.py",
+        "docs/generate_contract.py",
+        "docs/generate_limits.py",
+        "docs/generate_worker_identity.py",
+        "docs/generator_common.py",
+        "docs/limits.json",
+        "docs/markdown_reader.py",
+        "docs/worker-capabilities.dot",
+        "docs/worker-capabilities.svg",
+        "meson.build",
+        "runner/AGENTS.md",
+        "runner/Clients/PWRunnerClient/main.swift",
+        "runner/README.md",
+        "runner/Services/PWRunner/main.swift",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+        "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+        "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+        "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+        "runner/Sources/PWRunnerCore/SandboxApply.swift",
+        "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+        "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+        "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+        "runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift",
+        "runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift",
+        "runner/Tests/PWRunnerCoreTests/EnvelopeInvariantTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+        "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+        "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
+        "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+        "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
+        "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+        "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+        "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
+        "runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift",
+        "tests/AGENTS.md",
+        "tests/COVERAGE.md",
+        "tests/FAILURE-PROPAGATION-CONTRACT.md",
+        "tests/README.md",
+        "tests/build-evidence.py",
+        "tests/catalog.json",
+        "tests/fixtures/byoxpc/session.py",
+        "tests/fixtures/comparison/matrix.json",
+        "tests/fixtures/contract/abi_layout.txt",
+        "tests/fixtures/contract/response_shape.json",
+        "tests/fixtures/worker_lifecycle/exec_control.c",
+        "tests/fixtures/worker_lifecycle/proceed_control.c",
+        "tests/lib/artifact.py",
+        "tests/lib/consumer.py",
+        "tests/lib/contract.py",
+        "tests/lib/native_sources.py",
+        "tests/lib/release_preflight.py",
+        "tests/lib/vendor/markdown_it/LICENSE",
+        "tests/lib/vendor/markdown_it/LICENSE.markdown-it",
+        "tests/lib/vendor/markdown_it/__init__.py",
+        "tests/lib/vendor/markdown_it/_compat.py",
+        "tests/lib/vendor/markdown_it/_punycode.py",
+        "tests/lib/vendor/markdown_it/cli/__init__.py",
+        "tests/lib/vendor/markdown_it/cli/parse.py",
+        "tests/lib/vendor/markdown_it/common/__init__.py",
+        "tests/lib/vendor/markdown_it/common/entities.py",
+        "tests/lib/vendor/markdown_it/common/html_blocks.py",
+        "tests/lib/vendor/markdown_it/common/html_re.py",
+        "tests/lib/vendor/markdown_it/common/normalize_url.py",
+        "tests/lib/vendor/markdown_it/common/utils.py",
+        "tests/lib/vendor/markdown_it/helpers/__init__.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_destination.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_label.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_title.py",
+        "tests/lib/vendor/markdown_it/main.py",
+        "tests/lib/vendor/markdown_it/parser_block.py",
+        "tests/lib/vendor/markdown_it/parser_core.py",
+        "tests/lib/vendor/markdown_it/parser_inline.py",
+        "tests/lib/vendor/markdown_it/port.yaml",
+        "tests/lib/vendor/markdown_it/presets/__init__.py",
+        "tests/lib/vendor/markdown_it/presets/commonmark.py",
+        "tests/lib/vendor/markdown_it/presets/default.py",
+        "tests/lib/vendor/markdown_it/presets/zero.py",
+        "tests/lib/vendor/markdown_it/py.typed",
+        "tests/lib/vendor/markdown_it/renderer.py",
+        "tests/lib/vendor/markdown_it/ruler.py",
+        "tests/lib/vendor/markdown_it/rules_block/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_block/blockquote.py",
+        "tests/lib/vendor/markdown_it/rules_block/code.py",
+        "tests/lib/vendor/markdown_it/rules_block/fence.py",
+        "tests/lib/vendor/markdown_it/rules_block/heading.py",
+        "tests/lib/vendor/markdown_it/rules_block/hr.py",
+        "tests/lib/vendor/markdown_it/rules_block/html_block.py",
+        "tests/lib/vendor/markdown_it/rules_block/lheading.py",
+        "tests/lib/vendor/markdown_it/rules_block/list.py",
+        "tests/lib/vendor/markdown_it/rules_block/paragraph.py",
+        "tests/lib/vendor/markdown_it/rules_block/reference.py",
+        "tests/lib/vendor/markdown_it/rules_block/state_block.py",
+        "tests/lib/vendor/markdown_it/rules_block/table.py",
+        "tests/lib/vendor/markdown_it/rules_core/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_core/block.py",
+        "tests/lib/vendor/markdown_it/rules_core/inline.py",
+        "tests/lib/vendor/markdown_it/rules_core/linkify.py",
+        "tests/lib/vendor/markdown_it/rules_core/normalize.py",
+        "tests/lib/vendor/markdown_it/rules_core/replacements.py",
+        "tests/lib/vendor/markdown_it/rules_core/smartquotes.py",
+        "tests/lib/vendor/markdown_it/rules_core/state_core.py",
+        "tests/lib/vendor/markdown_it/rules_core/text_join.py",
+        "tests/lib/vendor/markdown_it/rules_inline/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_inline/autolink.py",
+        "tests/lib/vendor/markdown_it/rules_inline/backticks.py",
+        "tests/lib/vendor/markdown_it/rules_inline/balance_pairs.py",
+        "tests/lib/vendor/markdown_it/rules_inline/emphasis.py",
+        "tests/lib/vendor/markdown_it/rules_inline/entity.py",
+        "tests/lib/vendor/markdown_it/rules_inline/escape.py",
+        "tests/lib/vendor/markdown_it/rules_inline/fragments_join.py",
+        "tests/lib/vendor/markdown_it/rules_inline/html_inline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/image.py",
+        "tests/lib/vendor/markdown_it/rules_inline/link.py",
+        "tests/lib/vendor/markdown_it/rules_inline/linkify.py",
+        "tests/lib/vendor/markdown_it/rules_inline/newline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/state_inline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/strikethrough.py",
+        "tests/lib/vendor/markdown_it/rules_inline/text.py",
+        "tests/lib/vendor/markdown_it/token.py",
+        "tests/lib/vendor/markdown_it/tree.py",
+        "tests/lib/vendor/markdown_it/utils.py",
+        "tests/lib/vendor/markdown_it_py-3.0.0.RECORD",
+        "tests/lib/vendor/mdurl-0.1.2.RECORD",
+        "tests/lib/vendor/mdurl/LICENSE",
+        "tests/lib/vendor/mdurl/__init__.py",
+        "tests/lib/vendor/mdurl/_decode.py",
+        "tests/lib/vendor/mdurl/_encode.py",
+        "tests/lib/vendor/mdurl/_format.py",
+        "tests/lib/vendor/mdurl/_parse.py",
+        "tests/lib/vendor/mdurl/_url.py",
+        "tests/lib/vendor/mdurl/py.typed",
+        "tests/suites/blackbox_e2e/checker_controls.py",
+        "tests/suites/blackbox_e2e/disposition_controls.py",
+        "tests/suites/blackbox_e2e/extension_controls.py",
+        "tests/suites/failure_boundaries/check.py",
+        "tests/suites/preflight/run.sh",
+        "tests/suites/run_effects/file_actions_have_exact_effects.sh",
+        "tests/suites/runner_abi_layout/capture.c",
+        "tests/suites/runner_abi_layout/limits.py",
+        "tests/suites/runner_abi_layout/run.sh",
+        "tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh",
+        "tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh",
+        "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
+        "tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh",
+        "tests/suites/runner_byoxpc/opt_in/single_use.sh",
+        "tests/suites/runner_byoxpc/run.sh",
+        "tests/suites/runner_c_worker_harness/check_sysctl.py",
+        "tests/suites/runner_c_worker_harness/harness.c",
+        "tests/suites/runner_c_worker_harness/run.sh",
+        "tests/suites/runner_exec_inheritance/run.sh",
+        "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
+        "tests/suites/runner_exec_lifecycle/run.sh",
+        "tests/suites/runner_filter_local_name/run.sh",
+        "tests/suites/runner_live_worker_identity/run.sh",
+        "tests/suites/runner_mach_service_liveness/run.sh",
+        "tests/suites/runner_outcome_bad_request/contract.py",
+        "tests/suites/runner_outcome_bad_request/run.sh",
+        "tests/suites/runner_unit/host_setup_controls.py",
+        "tests/suites/runner_unit/launch_descriptor_controls.py",
+        "tests/suites/runner_use_c_worker/run.sh",
+        "tests/suites/runner_validator_failure/run.sh",
+        "tests/suites/shell_helpers/run.sh",
+        "tests/suites/source_drift/architecture.py",
+        "tests/suites/source_drift/build.py",
+        "tests/suites/source_drift/build_rules.py",
+        "tests/suites/source_drift/check.py",
+        "tests/suites/source_drift/contract.py",
+        "tests/suites/source_drift/generators.py",
+        "tests/suites/source_drift/limits.py",
+        "tests/suites/source_drift/markdown.py",
+        "tests/suites/source_drift/run.sh",
+        "tests/suites/validator_batch_mode/run.sh",
+        "tests/suites/witness_contract/check_dossier.py",
+        "tests/suites/witness_contract/check_extension_boundaries.py",
+        "tests/suites/witness_contract/check_extension_combinations.py",
+        "tests/suites/witness_contract/check_extensions.py",
+        "tests/suites/witness_contract/check_max_target_reply.py",
+        "tests/suites/witness_contract/comparison_matrix.sh",
+        "tests/suites/witness_contract/create_existing_file_preserves_contents.sh",
+        "tests/suites/witness_contract/dossier_witness.sh",
+        "tests/suites/witness_contract/extension_boundaries.sh",
+        "tests/suites/witness_contract/extensions.sh",
+        "tests/suites/witness_contract/max_targets_reply_survives.sh",
+        "tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh",
+        "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
+        "tests/suites/witness_contract/opt_in/mutations.sh",
+        "tests/suites/witness_contract/opt_in/path_query_integrated.sh"
+      ],
+      "name": "architecture",
+      "regions": {
+        "docs/ARCHITECTURE.md": [
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH topology -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH topology -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH boundaries -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH boundaries -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH documents -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH documents -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH byoxpc -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH byoxpc -->"
+          ]
+        ],
+        "docs/WORKER.md": [
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH worker_capabilities -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH worker_capabilities -->"
+          ]
+        ]
+      },
+      "span_documents": [
+        "docs/ARCHITECTURE.md",
+        "docs/WORKER.md"
+      ],
+      "whole": [
+        "docs/architecture-boundaries.dot",
+        "docs/architecture-boundaries.svg",
+        "docs/architecture-byoxpc.dot",
+        "docs/architecture-byoxpc.svg",
+        "docs/architecture-documents.dot",
+        "docs/architecture-documents.svg",
+        "docs/architecture-topology.dot",
+        "docs/architecture-topology.svg",
+        "docs/worker-capabilities.dot",
+        "docs/worker-capabilities.svg"
+      ]
+    },
+    {
+      "inputs": [
+        "Info.plist",
+        "Makefile",
+        "README.md",
+        "build.sh",
+        "controller/src/bin/sbpl-check.rs",
+        "controller/src/run_flow.rs",
+        "controller/src/runner_acquisition.rs",
+        "controller/src/runner_client.rs",
+        "controller/src/runner_commands.rs",
+        "controller/src/runner_manager.rs",
+        "controller/src/sbpl_imports.rs",
+        "controller/src/utils.rs",
+        "controller/tools/pw_probe_runner/pw_extension_channel.h",
+        "controller/tools/pw_probe_runner/pw_probe_runner.c",
+        "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "controller/tools/sb_api_validator/sb_api_validator.c",
+        "docs/BUILD.md",
+        "docs/build-steps.dot",
+        "docs/build-steps.svg",
+        "docs/build.json",
+        "docs/generate_architecture.py",
+        "docs/generate_build.py",
+        "docs/generate_contract.py",
+        "docs/generate_limits.py",
+        "docs/generate_worker_identity.py",
+        "docs/generator_common.py",
+        "docs/limits.json",
+        "docs/markdown_reader.py",
+        "meson.build",
+        "meson.options",
+        "runner/Clients/PWRunnerClient/main.swift",
+        "runner/Services/PWRunner/Info.plist",
+        "runner/Sources/PWRunnerCore/CWorker.swift",
+        "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+        "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+        "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+        "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+        "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+        "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+        "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+        "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
+        "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+        "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
+        "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+        "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+        "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+        "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
+        "runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift",
+        "tests/build-evidence.py",
+        "tests/catalog.json",
+        "tests/fixtures/docs/build_baseline.json",
+        "tests/fixtures/worker_lifecycle/exec_control.c",
+        "tests/fixtures/worker_lifecycle/proceed_control.c",
+        "tests/lib/artifact.py",
+        "tests/lib/build_provenance.py",
+        "tests/lib/checkout_lock.py",
+        "tests/lib/native_sources.py",
+        "tests/lib/output_target.py",
+        "tests/lib/python_start.sh",
+        "tests/lib/sdk_guard.sh",
+        "tests/lib/signer_check.py",
+        "tests/lib/vendor/markdown_it/LICENSE",
+        "tests/lib/vendor/markdown_it/LICENSE.markdown-it",
+        "tests/lib/vendor/markdown_it/__init__.py",
+        "tests/lib/vendor/markdown_it/_compat.py",
+        "tests/lib/vendor/markdown_it/_punycode.py",
+        "tests/lib/vendor/markdown_it/cli/__init__.py",
+        "tests/lib/vendor/markdown_it/cli/parse.py",
+        "tests/lib/vendor/markdown_it/common/__init__.py",
+        "tests/lib/vendor/markdown_it/common/entities.py",
+        "tests/lib/vendor/markdown_it/common/html_blocks.py",
+        "tests/lib/vendor/markdown_it/common/html_re.py",
+        "tests/lib/vendor/markdown_it/common/normalize_url.py",
+        "tests/lib/vendor/markdown_it/common/utils.py",
+        "tests/lib/vendor/markdown_it/helpers/__init__.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_destination.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_label.py",
+        "tests/lib/vendor/markdown_it/helpers/parse_link_title.py",
+        "tests/lib/vendor/markdown_it/main.py",
+        "tests/lib/vendor/markdown_it/parser_block.py",
+        "tests/lib/vendor/markdown_it/parser_core.py",
+        "tests/lib/vendor/markdown_it/parser_inline.py",
+        "tests/lib/vendor/markdown_it/port.yaml",
+        "tests/lib/vendor/markdown_it/presets/__init__.py",
+        "tests/lib/vendor/markdown_it/presets/commonmark.py",
+        "tests/lib/vendor/markdown_it/presets/default.py",
+        "tests/lib/vendor/markdown_it/presets/zero.py",
+        "tests/lib/vendor/markdown_it/py.typed",
+        "tests/lib/vendor/markdown_it/renderer.py",
+        "tests/lib/vendor/markdown_it/ruler.py",
+        "tests/lib/vendor/markdown_it/rules_block/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_block/blockquote.py",
+        "tests/lib/vendor/markdown_it/rules_block/code.py",
+        "tests/lib/vendor/markdown_it/rules_block/fence.py",
+        "tests/lib/vendor/markdown_it/rules_block/heading.py",
+        "tests/lib/vendor/markdown_it/rules_block/hr.py",
+        "tests/lib/vendor/markdown_it/rules_block/html_block.py",
+        "tests/lib/vendor/markdown_it/rules_block/lheading.py",
+        "tests/lib/vendor/markdown_it/rules_block/list.py",
+        "tests/lib/vendor/markdown_it/rules_block/paragraph.py",
+        "tests/lib/vendor/markdown_it/rules_block/reference.py",
+        "tests/lib/vendor/markdown_it/rules_block/state_block.py",
+        "tests/lib/vendor/markdown_it/rules_block/table.py",
+        "tests/lib/vendor/markdown_it/rules_core/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_core/block.py",
+        "tests/lib/vendor/markdown_it/rules_core/inline.py",
+        "tests/lib/vendor/markdown_it/rules_core/linkify.py",
+        "tests/lib/vendor/markdown_it/rules_core/normalize.py",
+        "tests/lib/vendor/markdown_it/rules_core/replacements.py",
+        "tests/lib/vendor/markdown_it/rules_core/smartquotes.py",
+        "tests/lib/vendor/markdown_it/rules_core/state_core.py",
+        "tests/lib/vendor/markdown_it/rules_core/text_join.py",
+        "tests/lib/vendor/markdown_it/rules_inline/__init__.py",
+        "tests/lib/vendor/markdown_it/rules_inline/autolink.py",
+        "tests/lib/vendor/markdown_it/rules_inline/backticks.py",
+        "tests/lib/vendor/markdown_it/rules_inline/balance_pairs.py",
+        "tests/lib/vendor/markdown_it/rules_inline/emphasis.py",
+        "tests/lib/vendor/markdown_it/rules_inline/entity.py",
+        "tests/lib/vendor/markdown_it/rules_inline/escape.py",
+        "tests/lib/vendor/markdown_it/rules_inline/fragments_join.py",
+        "tests/lib/vendor/markdown_it/rules_inline/html_inline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/image.py",
+        "tests/lib/vendor/markdown_it/rules_inline/link.py",
+        "tests/lib/vendor/markdown_it/rules_inline/linkify.py",
+        "tests/lib/vendor/markdown_it/rules_inline/newline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/state_inline.py",
+        "tests/lib/vendor/markdown_it/rules_inline/strikethrough.py",
+        "tests/lib/vendor/markdown_it/rules_inline/text.py",
+        "tests/lib/vendor/markdown_it/token.py",
+        "tests/lib/vendor/markdown_it/tree.py",
+        "tests/lib/vendor/markdown_it/utils.py",
+        "tests/lib/vendor/markdown_it_py-3.0.0.RECORD",
+        "tests/lib/vendor/mdurl-0.1.2.RECORD",
+        "tests/lib/vendor/mdurl/LICENSE",
+        "tests/lib/vendor/mdurl/__init__.py",
+        "tests/lib/vendor/mdurl/_decode.py",
+        "tests/lib/vendor/mdurl/_encode.py",
+        "tests/lib/vendor/mdurl/_format.py",
+        "tests/lib/vendor/mdurl/_parse.py",
+        "tests/lib/vendor/mdurl/_url.py",
+        "tests/lib/vendor/mdurl/py.typed",
+        "tests/suites/failure_boundaries/check.py",
+        "tests/suites/preflight/check_build_entry.py",
+        "tests/suites/preflight/check_build_provenance.py",
+        "tests/suites/preflight/check_native_policy.py",
+        "tests/suites/preflight/check_native_sources.py",
+        "tests/suites/preflight/opt_in/build_guards.py",
+        "tests/suites/preflight/opt_in/build_refusals.py",
+        "tests/suites/preflight/opt_in/translated_build_refusals.py",
+        "tests/suites/preflight/run.sh",
+        "tests/suites/runner_abi_layout/capture.c",
+        "tests/suites/runner_abi_layout/limits.py",
+        "tests/suites/runner_byoxpc/opt_in/single_use.sh",
+        "tests/suites/runner_c_worker_harness/check_sysctl.py",
+        "tests/suites/runner_c_worker_harness/harness.c",
+        "tests/suites/runner_c_worker_harness/run.sh",
+        "tests/suites/runner_outcome_bad_request/contract.py",
+        "tests/suites/source_drift/build_rules.py",
+        "tests/suites/source_drift/generators.py",
+        "tests/suites/source_drift/limits.py",
+        "tests/suites/witness_contract/check_extension_boundaries.py",
+        "tests/suites/witness_contract/check_extensions.py",
+        "tests/suites/witness_contract/check_max_target_reply.py"
+      ],
+      "name": "build",
+      "regions": {
+        "docs/BUILD.md": [
+          [
+            "<!-- BEGIN GENERATED BUILD FIGURE -->",
+            "<!-- END GENERATED BUILD FIGURE -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD STEPS -->",
+            "<!-- END GENERATED BUILD STEPS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD REFUSALS -->",
+            "<!-- END GENERATED BUILD REFUSALS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD SIGNING -->",
+            "<!-- END GENERATED BUILD SIGNING -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD INVOCATIONS -->",
+            "<!-- END GENERATED BUILD INVOCATIONS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD KNOBS -->",
+            "<!-- END GENERATED BUILD KNOBS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD DIRECTORIES -->",
+            "<!-- END GENERATED BUILD DIRECTORIES -->"
+          ]
+        ]
+      },
+      "span_documents": [
+        "docs/BUILD.md"
+      ],
+      "whole": [
+        "docs/build-steps.dot",
+        "docs/build-steps.svg"
+      ]
+    }
+  ],
+  "outputs": {
+    "controller/README.md": [
+      {
+        "generator": "contract",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+            "<!-- END GENERATED CONTRACT VERSIONS -->"
+          ]
+        ]
+      },
+      {
+        "generator": "limits",
+        "kind": "spans",
+        "names": [
+          "limits.controller_output.binary",
+          "limits.byoxpc_throttle_interval.value_unit",
+          "limits.runner_verify_wait.value_unit",
+          "limits.runner_remove_teardown_wait.value_unit"
+        ]
+      }
+    ],
+    "controller/src/json_contract.rs": [
+      {
+        "generator": "contract",
+        "kind": "regions",
+        "markers": [
+          [
+            "// BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)",
+            "// END GENERATED CONTRACT VERSIONS"
+          ]
+        ]
+      }
+    ],
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": [
+      {
+        "generator": "worker_identity",
+        "kind": "regions",
+        "markers": [
+          [
+            "/* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */",
+            "/* END GENERATED WORKER IDENTITY */"
+          ]
+        ]
+      }
+    ],
+    "docs/ARCHITECTURE.md": [
+      {
+        "generator": "limits",
+        "kind": "spans",
+        "names": [
+          "limits.byoxpc_throttle_interval.value_unit"
+        ]
+      },
+      {
+        "generator": "architecture",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH topology -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH topology -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH boundaries -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH boundaries -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH documents -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH documents -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH byoxpc -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH byoxpc -->"
+          ]
+        ]
+      },
+      {
+        "generator": "architecture",
+        "kind": "spans",
+        "names": [
+          "architecture.documents.architecture.graphs",
+          "architecture.documents.kinds.manifest",
+          "architecture.documents.kinds.generator"
+        ]
+      }
+    ],
+    "docs/BUILD.md": [
+      {
+        "generator": "build",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED BUILD FIGURE -->",
+            "<!-- END GENERATED BUILD FIGURE -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD STEPS -->",
+            "<!-- END GENERATED BUILD STEPS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD REFUSALS -->",
+            "<!-- END GENERATED BUILD REFUSALS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD SIGNING -->",
+            "<!-- END GENERATED BUILD SIGNING -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD INVOCATIONS -->",
+            "<!-- END GENERATED BUILD INVOCATIONS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD KNOBS -->",
+            "<!-- END GENERATED BUILD KNOBS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED BUILD DIRECTORIES -->",
+            "<!-- END GENERATED BUILD DIRECTORIES -->"
+          ]
+        ]
+      },
+      {
+        "generator": "build",
+        "kind": "spans",
+        "names": [
+          "build.steps",
+          "build.conditional_steps",
+          "build.refusals",
+          "build.covered",
+          "build.meson_options",
+          "build.signing",
+          "build.knobs"
+        ]
+      }
+    ],
+    "docs/CONTRACT.md": [
+      {
+        "generator": "contract",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+            "<!-- END GENERATED CONTRACT VERSIONS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED CONTRACT TABLE -->",
+            "<!-- END GENERATED CONTRACT TABLE -->"
+          ]
+        ]
+      }
+    ],
+    "docs/LIMITS.md": [
+      {
+        "generator": "limits",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED LIMITS -->",
+            "<!-- END GENERATED LIMITS -->"
+          ],
+          [
+            "<!-- BEGIN GENERATED LIMIT COVERAGE -->",
+            "<!-- END GENERATED LIMIT COVERAGE -->"
+          ]
+        ]
+      },
+      {
+        "generator": "limits",
+        "kind": "spans",
+        "names": [
+          "limits.step_id.value",
+          "limits.extension_issuer_wait.value_unit",
+          "limits.phase_collection_wait.value_unit",
+          "limits.worker_proceed_wait.value_unit",
+          "limits.probe_steps.value",
+          "limits.worker_proceed_wait.value",
+          "limits.validator_io_wait.value",
+          "limits.validator_exit_grace.value",
+          "limits.validator_release_margin.value"
+        ]
+      }
+    ],
+    "docs/PolicyWitness.md": [
+      {
+        "generator": "contract",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+            "<!-- END GENERATED CONTRACT VERSIONS -->"
+          ]
+        ]
+      },
+      {
+        "generator": "limits",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN COPIED LIMITS -->",
+            "<!-- END COPIED LIMITS -->"
+          ],
+          [
+            "<!-- BEGIN COPIED QUESTIONS -->",
+            "<!-- END COPIED QUESTIONS -->"
+          ],
+          [
+            "<!-- BEGIN COPIED READING RULES -->",
+            "<!-- END COPIED READING RULES -->"
+          ],
+          [
+            "<!-- BEGIN COPIED EXTENSION STATUSES -->",
+            "<!-- END COPIED EXTENSION STATUSES -->"
+          ]
+        ]
+      },
+      {
+        "generator": "limits",
+        "kind": "spans",
+        "names": [
+          "limits.phase_count.value",
+          "limits.probe_steps.value",
+          "limits.extension_declarations.value",
+          "limits.extension_consumes.value",
+          "limits.extension_releases.value",
+          "limits.extension_reference.value",
+          "limits.extension_target.value",
+          "limits.fresh_read_bytes.value",
+          "limits.worker_policy_transfer.value_unit",
+          "limits.sysctl_read_bytes.value",
+          "limits.runner_verify_wait.value_unit",
+          "limits.byoxpc_throttle_interval.value_unit",
+          "limits.byoxpc_throttle_interval.value_unit"
+        ]
+      }
+    ],
+    "docs/REQUEST-GRAMMAR.md": [
+      {
+        "generator": "limits",
+        "kind": "spans",
+        "names": [
+          "limits.probe_steps.value"
+        ]
+      }
+    ],
+    "docs/WORKER.md": [
+      {
+        "generator": "architecture",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED ARCHITECTURE GRAPH worker_capabilities -->",
+            "<!-- END GENERATED ARCHITECTURE GRAPH worker_capabilities -->"
+          ]
+        ]
+      }
+    ],
+    "docs/architecture-boundaries.dot": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/architecture-boundaries.svg": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/architecture-byoxpc.dot": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/architecture-byoxpc.svg": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/architecture-documents.dot": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/architecture-documents.svg": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/architecture-topology.dot": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/architecture-topology.svg": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/build-steps.dot": [
+      {
+        "generator": "build",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/build-steps.svg": [
+      {
+        "generator": "build",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/worker-capabilities.dot": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "docs/worker-capabilities.svg": [
+      {
+        "generator": "architecture",
+        "kind": "whole-file"
+      }
+    ],
+    "runner/README.md": [
+      {
+        "generator": "contract",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->",
+            "<!-- END GENERATED CONTRACT VERSIONS -->"
+          ]
+        ]
+      },
+      {
+        "generator": "limits",
+        "kind": "spans",
+        "names": [
+          "limits.worker_sentinel_wait.value_unit",
+          "limits.validator_io_wait.value_unit",
+          "limits.phase_collection_wait.value_unit"
+        ]
+      }
+    ],
+    "runner/Sources/PWRunnerCore/CWorker.swift": [
+      {
+        "generator": "worker_identity",
+        "kind": "regions",
+        "markers": [
+          [
+            "    // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)",
+            "    // END GENERATED WORKER IDENTITY"
+          ]
+        ]
+      }
+    ],
+    "runner/Sources/PWRunnerCore/PWRunnerAPI.swift": [
+      {
+        "generator": "contract",
+        "kind": "regions",
+        "markers": [
+          [
+            "// BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)",
+            "// END GENERATED CONTRACT VERSIONS"
+          ]
+        ]
+      }
+    ],
+    "tests/FAILURE-PROPAGATION-CONTRACT.md": [
+      {
+        "generator": "limits",
+        "kind": "regions",
+        "markers": [
+          [
+            "<!-- BEGIN GENERATED SCENARIO MATRIX -->",
+            "<!-- END GENERATED SCENARIO MATRIX -->"
+          ]
+        ]
+      },
+      {
+        "generator": "limits",
+        "kind": "spans",
+        "names": [
+          "limits.worker_policy_transfer.value_unit",
+          "limits.policy_source.value_unit",
+          "limits.probe_steps.value",
+          "limits.policy_parameters.value",
+          "limits.step_id.value_unit",
+          "limits.attempt_target.value",
+          "limits.parameter_key.value",
+          "limits.parameter_value.value",
+          "limits.exec_arguments.value",
+          "limits.exec_argument.value_unit",
+          "limits.controller_output.binary",
+          "limits.policy_helper_output.binary",
+          "limits.controller_output.value",
+          "limits.policy_helper_output.value",
+          "limits.compiled_profile.binary",
+          "limits.exec_stream.value_unit",
+          "limits.controller_output.binary",
+          "limits.policy_helper_output.binary"
+        ]
+      }
+    ],
+    "tests/lib/contract.py": [
+      {
+        "generator": "contract",
+        "kind": "regions",
+        "markers": [
+          [
+            "# BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)",
+            "# END GENERATED CONTRACT VERSIONS"
+          ]
+        ]
+      },
+      {
+        "generator": "worker_identity",
+        "kind": "regions",
+        "markers": [
+          [
+            "# BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)",
+            "# END GENERATED WORKER IDENTITY"
+          ]
+        ]
+      }
+    ]
+  },
+  "prose_documents": [
+    "AGENTS.md",
+    "README.md",
+    "controller/AGENTS.md",
+    "controller/README.md",
+    "docs/AGENTS.md",
+    "docs/ARCHITECTURE.md",
+    "docs/BUILD.md",
+    "docs/CHECKS-BEFORE-CHECK-PLAN.md",
+    "docs/CONTRACT.md",
+    "docs/DEPENDENCIES.md",
+    "docs/LIMITS.md",
+    "docs/PolicyWitness.md",
+    "docs/QUESTIONS.md",
+    "docs/REQUEST-GRAMMAR.md",
+    "docs/SIGNING.md",
+    "docs/WORKER.md",
+    "runner/AGENTS.md",
+    "runner/README.md",
+    "tests/AGENTS.md",
+    "tests/FAILURE-PROPAGATION-CONTRACT.md",
+    "tests/README.md"
+  ],
+  "prose_link_inputs": [
+    ".tmp/AGENTS.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "Info.plist",
+    "Makefile",
+    "README.md",
+    "build.sh",
+    "controller/AGENTS.md",
+    "controller/Cargo.toml",
+    "controller/README.md",
+    "controller/build.rs",
+    "controller/integration",
+    "controller/src/app_layout.rs",
+    "controller/src/augments.rs",
+    "controller/src/bin/sbpl-check.rs",
+    "controller/src/bundle.rs",
+    "controller/src/cli.rs",
+    "controller/src/digest.rs",
+    "controller/src/disposition.rs",
+    "controller/src/dossier.rs",
+    "controller/src/evidence.rs",
+    "controller/src/host_facts.rs",
+    "controller/src/json_contract.rs",
+    "controller/src/main.rs",
+    "controller/src/plist.rs",
+    "controller/src/policy_check.rs",
+    "controller/src/reply_fixtures.rs",
+    "controller/src/request_patch.rs",
+    "controller/src/run_flow.rs",
+    "controller/src/runner_acquisition.rs",
+    "controller/src/runner_client.rs",
+    "controller/src/runner_commands.rs",
+    "controller/src/runner_manager.rs",
+    "controller/src/runner_select.rs",
+    "controller/src/sbpl_imports.rs",
+    "controller/src/sbpl_lex.rs",
+    "controller/src/shape.rs",
+    "controller/src/utils.rs",
+    "controller/tools/pw_probe_runner/pw_extension_channel.h",
+    "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+    "controller/tools/pw_probe_runner/pw_probe_runner.c",
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+    "controller/tools/pw_probe_runner/pw_profile_capture.h",
+    "controller/tools/pw_probe_runner/pw_worker_evidence.h",
+    "controller/tools/sb_api_validator/sb_api_validator.c",
+    "dist/AGENTS.md",
+    "dist/README.md",
+    "docs/AGENTS.md",
+    "docs/ARCHITECTURE.md",
+    "docs/BUILD.md",
+    "docs/CHECKS-BEFORE-CHECK-PLAN.md",
+    "docs/CONTRACT.md",
+    "docs/DEPENDENCIES.md",
+    "docs/LIMITS.md",
+    "docs/PolicyWitness.md",
+    "docs/QUESTIONS.md",
+    "docs/REQUEST-GRAMMAR.md",
+    "docs/SIGNING.md",
+    "docs/WORKER.md",
+    "docs/architecture-boundaries.dot",
+    "docs/architecture-boundaries.svg",
+    "docs/architecture-byoxpc.dot",
+    "docs/architecture-byoxpc.svg",
+    "docs/architecture-documents.dot",
+    "docs/architecture-documents.svg",
+    "docs/architecture-topology.dot",
+    "docs/architecture-topology.svg",
+    "docs/architecture.json",
+    "docs/build-steps.dot",
+    "docs/build-steps.svg",
+    "docs/build.json",
+    "docs/contract.json",
+    "docs/generate_architecture.py",
+    "docs/generate_build.py",
+    "docs/generate_contract.py",
+    "docs/generate_limits.py",
+    "docs/generate_worker_identity.py",
+    "docs/generator_common.py",
+    "docs/limits.json",
+    "docs/markdown_reader.py",
+    "docs/worker-capabilities.dot",
+    "docs/worker-capabilities.svg",
+    "docs/worker-launch-observation.json",
+    "meson.build",
+    "meson.options",
+    "records/AGENTS.md",
+    "runner/AGENTS.md",
+    "runner/Clients/PWRunnerClient/main.swift",
+    "runner/Package.swift",
+    "runner/README.md",
+    "runner/Services/PWRunner",
+    "runner/Services/PWRunner/main.swift",
+    "runner/Sources/PWCWorkerShim",
+    "runner/Sources/PWRunnerCore/CWorker.swift",
+    "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+    "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+    "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+    "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+    "runner/Sources/PWRunnerCore/PWRunnerListener.swift",
+    "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+    "runner/Sources/PWRunnerCore/PathUtils.swift",
+    "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+    "runner/Sources/PWRunnerCore/SandboxApply.swift",
+    "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+    "runner/Tests/PWRunnerCoreTests",
+    "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+    "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+    "runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift",
+    "runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift",
+    "runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift",
+    "runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift",
+    "runner/Tests/PWRunnerCoreTests/EnvelopeInvariantTests.swift",
+    "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+    "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+    "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
+    "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+    "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
+    "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+    "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+    "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+    "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+    "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+    "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
+    "runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift",
+    "runner/Tests/PWRunnerCoreTests/main.swift",
+    "runner/augments/README.md",
+    "tests/AGENTS.md",
+    "tests/CHANGE-VERIFICATION.md",
+    "tests/COVERAGE.md",
+    "tests/FAILURE-PROPAGATION-CONTRACT.md",
+    "tests/README.md",
+    "tests/RETAINED.json",
+    "tests/build-evidence.py",
+    "tests/catalog.json",
+    "tests/fixtures/README.md",
+    "tests/fixtures/byoxpc/session.py",
+    "tests/fixtures/comparison/matrix.json",
+    "tests/fixtures/contract/abi_layout.txt",
+    "tests/fixtures/contract/phase_collection.json",
+    "tests/fixtures/contract/response_shape.json",
+    "tests/fixtures/diagnostic_transport/README.md",
+    "tests/fixtures/docs/build_baseline.json",
+    "tests/fixtures/docs/prose_baseline.json",
+    "tests/fixtures/extension_controls/README.md",
+    "tests/fixtures/request_contract/examples.json",
+    "tests/fixtures/worker_lifecycle/exec_control.c",
+    "tests/fixtures/worker_lifecycle/proceed_control.c",
+    "tests/lib",
+    "tests/lib/artifact.py",
+    "tests/lib/build_provenance.py",
+    "tests/lib/cargo_config.py",
+    "tests/lib/checkout_lock.py",
+    "tests/lib/checkout_lock.sh",
+    "tests/lib/consumer.py",
+    "tests/lib/contract.py",
+    "tests/lib/lifecycle_oracle.py",
+    "tests/lib/native_sources.py",
+    "tests/lib/output_target.py",
+    "tests/lib/python_start.sh",
+    "tests/lib/release_preflight.py",
+    "tests/lib/retention.py",
+    "tests/lib/sdk_guard.sh",
+    "tests/lib/shim_probe.py",
+    "tests/lib/signer_check.py",
+    "tests/lib/vendor/markdown_it/__init__.py",
+    "tests/run.sh",
+    "tests/suites",
+    "tests/suites/blackbox_e2e/README.md",
+    "tests/suites/blackbox_e2e/checker_controls.py",
+    "tests/suites/blackbox_e2e/disposition_controls.py",
+    "tests/suites/blackbox_e2e/extension_controls.py",
+    "tests/suites/blackbox_menagerie/README.md",
+    "tests/suites/dispatcher/README.md",
+    "tests/suites/exec_fixture/README.md",
+    "tests/suites/failure_boundaries/README.md",
+    "tests/suites/failure_boundaries/check.py",
+    "tests/suites/integration/README.md",
+    "tests/suites/preflight/README.md",
+    "tests/suites/preflight/check_build_entry.py",
+    "tests/suites/preflight/check_build_provenance.py",
+    "tests/suites/preflight/check_native_policy.py",
+    "tests/suites/preflight/check_native_sources.py",
+    "tests/suites/preflight/opt_in/build_guards.py",
+    "tests/suites/preflight/opt_in/build_refusals.py",
+    "tests/suites/preflight/opt_in/build_toolchain_switch.py",
+    "tests/suites/preflight/opt_in/translated_build_refusals.py",
+    "tests/suites/preflight/run.sh",
+    "tests/suites/run_capture/README.md",
+    "tests/suites/run_effects/README.md",
+    "tests/suites/run_effects/file_actions_have_exact_effects.sh",
+    "tests/suites/runner_abi_layout/README.md",
+    "tests/suites/runner_abi_layout/capture.c",
+    "tests/suites/runner_abi_layout/limits.py",
+    "tests/suites/runner_abi_layout/run.sh",
+    "tests/suites/runner_apply_isolation_v2/README.md",
+    "tests/suites/runner_apply_isolation_v3/README.md",
+    "tests/suites/runner_byoxpc/README.md",
+    "tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh",
+    "tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh",
+    "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
+    "tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh",
+    "tests/suites/runner_byoxpc/opt_in/single_use.sh",
+    "tests/suites/runner_byoxpc/run.sh",
+    "tests/suites/runner_c_worker_harness/README.md",
+    "tests/suites/runner_c_worker_harness/check_sysctl.py",
+    "tests/suites/runner_c_worker_harness/harness.c",
+    "tests/suites/runner_c_worker_harness/run.sh",
+    "tests/suites/runner_exec_dac/README.md",
+    "tests/suites/runner_exec_inheritance/README.md",
+    "tests/suites/runner_exec_inheritance/run.sh",
+    "tests/suites/runner_exec_lifecycle/README.md",
+    "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
+    "tests/suites/runner_exec_lifecycle/run.sh",
+    "tests/suites/runner_filter_iokit_registry_entry_class/README.md",
+    "tests/suites/runner_filter_iokit_user_client_class/README.md",
+    "tests/suites/runner_filter_local_name/README.md",
+    "tests/suites/runner_filter_local_name/run.sh",
+    "tests/suites/runner_filter_sysctl_name/README.md",
+    "tests/suites/runner_live_worker_identity/README.md",
+    "tests/suites/runner_live_worker_identity/run.sh",
+    "tests/suites/runner_mach_service_liveness/README.md",
+    "tests/suites/runner_mach_service_liveness/run.sh",
+    "tests/suites/runner_outcome_bad_request/README.md",
+    "tests/suites/runner_outcome_bad_request/contract.py",
+    "tests/suites/runner_outcome_bad_request/run.sh",
+    "tests/suites/runner_outcome_runner_timeout/README.md",
+    "tests/suites/runner_outcome_validator_no_reply/README.md",
+    "tests/suites/runner_outcome_worker_spawn_failed/README.md",
+    "tests/suites/runner_ready_byte_resilience/README.md",
+    "tests/suites/runner_specimen_isolation/README.md",
+    "tests/suites/runner_unit/README.md",
+    "tests/suites/runner_unit/host_setup_controls.py",
+    "tests/suites/runner_unit/launch_descriptor_controls.py",
+    "tests/suites/runner_use_c_worker/README.md",
+    "tests/suites/runner_use_c_worker/run.sh",
+    "tests/suites/runner_validator_failure/README.md",
+    "tests/suites/runner_validator_failure/run.sh",
+    "tests/suites/sandbox_extensions_native/README.md",
+    "tests/suites/sbpl_allowdeny_consistency/README.md",
+    "tests/suites/shell_helpers/README.md",
+    "tests/suites/shell_helpers/run.sh",
+    "tests/suites/smoke/README.md",
+    "tests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md",
+    "tests/suites/source_drift/README.md",
+    "tests/suites/source_drift/architecture.py",
+    "tests/suites/source_drift/build.py",
+    "tests/suites/source_drift/build_rules.py",
+    "tests/suites/source_drift/check.py",
+    "tests/suites/source_drift/contract.py",
+    "tests/suites/source_drift/generators.py",
+    "tests/suites/source_drift/limits.py",
+    "tests/suites/source_drift/markdown.py",
+    "tests/suites/source_drift/run.sh",
+    "tests/suites/unit/README.md",
+    "tests/suites/validator_batch_mode/README.md",
+    "tests/suites/validator_batch_mode/run.sh",
+    "tests/suites/validator_bridge/README.md",
+    "tests/suites/witness_contract/README.md",
+    "tests/suites/witness_contract/check_dossier.py",
+    "tests/suites/witness_contract/check_extension_boundaries.py",
+    "tests/suites/witness_contract/check_extension_combinations.py",
+    "tests/suites/witness_contract/check_extensions.py",
+    "tests/suites/witness_contract/check_max_target_reply.py",
+    "tests/suites/witness_contract/comparison_matrix.sh",
+    "tests/suites/witness_contract/create_existing_file_preserves_contents.sh",
+    "tests/suites/witness_contract/dossier_witness.sh",
+    "tests/suites/witness_contract/extension_boundaries.sh",
+    "tests/suites/witness_contract/extensions.sh",
+    "tests/suites/witness_contract/harness/verify_filter_id.sh",
+    "tests/suites/witness_contract/max_targets_reply_survives.sh",
+    "tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh",
+    "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
+    "tests/suites/witness_contract/opt_in/mutations.sh",
+    "tests/suites/witness_contract/opt_in/path_query_integrated.sh"
+  ],
+  "source": "7562d24ac2334122499ea349010fd67211058ac3",
+  "working_plan_delta": "D2 plan edits excluded from historical link input extraction"
+}

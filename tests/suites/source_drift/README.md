@@ -517,7 +517,9 @@ No build required; the manifest reader needs Meson on `PATH` for
 [docs/limits.json](../../../docs/limits.json), generated tables (the limits
 tables and the failure contract's scenario matrix rendered from
 `tests/fixtures/comparison/matrix.json`), the user guide's copied limits,
-questions, comparison reading rules and extension status tables, and local documentation links. Controls exercise the real
+questions, comparison reading rules and extension status tables, and the guide's
+internal links. The `generator_contract` case checks local links in its selected
+prose documents. Controls exercise the real
 generator command with stale, missing and altered content; preserve both source
 files and an existing staged guide on rejection; and validate a staged guide
 after removing its source checkout. Internal-anchor and companion-file checks
@@ -537,6 +539,13 @@ The controls that drive the unchanged build script to its early refusals,
 including the stale contract copy, the native builder check and the make
 entry, are `preflight/build_entry_controls`. Compiled values are compared elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
 See [docs/CONTRACT.md](../../../docs/CONTRACT.md).
+
+The `contract_versions` case also checks the generated host/worker source
+identity and exercises relocation, deterministic regeneration, stale generated values, malformed
+markers, automatic helper discovery, layout edits and both handshake edits.
+The identity changes on protocol implementation edits even when geometry does
+not change. Runtime mismatch refusal is covered by `runner_c_worker_harness`
+and the `runner_unit` host-driver control.
 
 The `architecture_documentation` case checks
 [docs/architecture.json](../../../docs/architecture.json) against the dot
@@ -585,13 +594,6 @@ show the policy and output-target assertions refusing are
 or precedes the operation it protects; the manifest's behavioral and helper
 citations and the baseline carry that distinction, and release preflight
 refuses a grown baseline.
-
-The same case checks the generated host/worker source identity and exercises
-relocation, deterministic regeneration, stale generated values, malformed
-markers, automatic helper discovery, layout edits and both handshake edits.
-The identity changes on protocol implementation edits even when geometry does
-not change. Runtime mismatch refusal is covered by `runner_c_worker_harness`
-and the `runner_unit` host-driver control.
 
 ### Direct Python ancestry
 

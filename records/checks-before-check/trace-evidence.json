@@ -1,0 +1,2580 @@
+{
+  "claim": "Historical executions of identified controls; no current whole-checkout passing credit",
+  "control_source_identity": [
+    {
+      "equal": true,
+      "examined_source_sha256": "dfdfe146090003d61e9054eb618c995e89091e5b7c3e5c97c0693b7613088d8d",
+      "path": "tests/suites/source_drift/limits.py",
+      "receipt_source_sha256": "dfdfe146090003d61e9054eb618c995e89091e5b7c3e5c97c0693b7613088d8d"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "39101108f7b4c989b87ce0a7d2ad63c25919223abceebf8d5a9ad5631a1048c0",
+      "path": "tests/suites/source_drift/contract.py",
+      "receipt_source_sha256": "39101108f7b4c989b87ce0a7d2ad63c25919223abceebf8d5a9ad5631a1048c0"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "5554b2dd93db20e62aca6ad05257406dcd0a6a7ffa5cace1323e3c656336706b",
+      "path": "tests/suites/source_drift/architecture.py",
+      "receipt_source_sha256": "5554b2dd93db20e62aca6ad05257406dcd0a6a7ffa5cace1323e3c656336706b"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "63da059b304bd7ae2e8f3fe22bb9131c722648aaf9637b0f73f732aab3dfa877",
+      "path": "tests/suites/source_drift/build.py",
+      "receipt_source_sha256": "63da059b304bd7ae2e8f3fe22bb9131c722648aaf9637b0f73f732aab3dfa877"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "90e695c98e98826ad5e4fe7b47e52e02a69df95d6ae36670210b660a6c402038",
+      "path": "tests/suites/source_drift/generators.py",
+      "receipt_source_sha256": "90e695c98e98826ad5e4fe7b47e52e02a69df95d6ae36670210b660a6c402038"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "6c9942ed2f17884c02ff803eb8d70c5c6fc281cca3a8e6bffa8c63cbf6d69d47",
+      "path": "docs/generate_limits.py",
+      "receipt_source_sha256": "6c9942ed2f17884c02ff803eb8d70c5c6fc281cca3a8e6bffa8c63cbf6d69d47"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "91eb5189546206b45636c7f778e622272183e993385d00f2b6afea1885decb45",
+      "path": "docs/generate_contract.py",
+      "receipt_source_sha256": "91eb5189546206b45636c7f778e622272183e993385d00f2b6afea1885decb45"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "355cf59156bb75f44c106d43648030a054eb7b8f3686be824cb2e158747e86ff",
+      "path": "docs/generate_architecture.py",
+      "receipt_source_sha256": "355cf59156bb75f44c106d43648030a054eb7b8f3686be824cb2e158747e86ff"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "06dfb24072467819b25659c9593bed10b3d04b73093f218fdca4df5abf117f9c",
+      "path": "docs/generate_build.py",
+      "receipt_source_sha256": "06dfb24072467819b25659c9593bed10b3d04b73093f218fdca4df5abf117f9c"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "0767e94be96f50566a1498e158b6431ab5c5709014333f8e80c6f6714f0ec05b",
+      "path": "docs/generate_worker_identity.py",
+      "receipt_source_sha256": "0767e94be96f50566a1498e158b6431ab5c5709014333f8e80c6f6714f0ec05b"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "a4f9b1d6d61e430e3671883c2b3d8e210a2cbbf66cbf41209a0d29177d046c7f",
+      "path": "docs/generator_common.py",
+      "receipt_source_sha256": "a4f9b1d6d61e430e3671883c2b3d8e210a2cbbf66cbf41209a0d29177d046c7f"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "05f371443bcd9408d9bf0d998764015763c17af3fd4c5bedfb54c700517230a0",
+      "path": "docs/markdown_reader.py",
+      "receipt_source_sha256": "05f371443bcd9408d9bf0d998764015763c17af3fd4c5bedfb54c700517230a0"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "f22925b816a21ced979a736ff8b6c62f65ecbaaf18281a5d4259c0d8248b0e34",
+      "path": "docs/repository_tree.py",
+      "receipt_source_sha256": "f22925b816a21ced979a736ff8b6c62f65ecbaaf18281a5d4259c0d8248b0e34"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "c63d88b527bfb894e935cfaf6284fe128882887108f17d2ab32a9cf4d87f1c9c",
+      "path": "tests/lib/fixture_inputs.py",
+      "receipt_source_sha256": "c63d88b527bfb894e935cfaf6284fe128882887108f17d2ab32a9cf4d87f1c9c"
+    },
+    {
+      "equal": true,
+      "examined_source_sha256": "acf4af6f3091f86ecb4d4a7e1411c9afd30ca9dd5bf8f1d5d229a06d23e9e47e",
+      "path": "tests/lib/receipts.py",
+      "receipt_source_sha256": "acf4af6f3091f86ecb4d4a7e1411c9afd30ca9dd5bf8f1d5d229a06d23e9e47e"
+    }
+  ],
+  "controls": [
+    {
+      "case": "source_drift/limits_documentation",
+      "elapsed_seconds": 0.4313980839215219,
+      "input_snapshots": 5,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/Users/raccoon/Desktop/Security/PolicyWitness/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/limits_documentation/artifacts/limits-receipts.json",
+      "receipt_sha256": "b28fda2e9be24e9d0203ef3c2dbe883e1945180af4a6971d4306c1e51747bbae",
+      "status": "pass",
+      "test": "__main__.LimitsDocumentationTests.test_document_is_current"
+    },
+    {
+      "case": "source_drift/limits_documentation",
+      "elapsed_seconds": 1.1272014579735696,
+      "input_snapshots": 6,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-gczp12g6/docs/generate_limits.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-gczp12g6/docs/generate_limits.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-gczp12g6/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/limits_documentation/artifacts/limits-receipts.json",
+      "receipt_sha256": "b28fda2e9be24e9d0203ef3c2dbe883e1945180af4a6971d4306c1e51747bbae",
+      "status": "pass",
+      "test": "__main__.LimitsDocumentationTests.test_generation_updates_values_and_shared_prose_then_is_idempotent"
+    },
+    {
+      "case": "source_drift/limits_documentation",
+      "elapsed_seconds": 12.909675000002608,
+      "input_snapshots": 456,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-idwt9_56/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-idwt9_56/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-idwt9_56/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-kzy3h4c3/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-kzy3h4c3/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-kzy3h4c3/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-xrirklvh/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-xrirklvh/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-xrirklvh/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-vimvb_5a/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-vimvb_5a/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-vimvb_5a/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-l6xfm_ze/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-l6xfm_ze/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-l6xfm_ze/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-jdpyobxm/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-jdpyobxm/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-jdpyobxm/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-jida4d4_/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-jida4d4_/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-jida4d4_/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-2sv69gwo/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-2sv69gwo/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-2sv69gwo/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-j5lflg1a/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-j5lflg1a/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-j5lflg1a/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-zs3dlwl0/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-zs3dlwl0/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-zs3dlwl0/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-kz7r9djl/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-kz7r9djl/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-kz7r9djl/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-p56oj13u/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-p56oj13u/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-p56oj13u/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-easozulg/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-easozulg/docs/generate_limits.py",
+            "--stage-guide",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-easozulg/release-guide.md"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/limits_documentation/artifacts/limits-receipts.json",
+      "receipt_sha256": "b28fda2e9be24e9d0203ef3c2dbe883e1945180af4a6971d4306c1e51747bbae",
+      "status": "pass",
+      "test": "__main__.LimitsDocumentationTests.test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing"
+    },
+    {
+      "case": "source_drift/limits_documentation",
+      "elapsed_seconds": 3.696690124925226,
+      "input_snapshots": 104,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-9_ds0999/docs/generate_limits.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-_fehaauz/docs/generate_limits.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-y1yn2w91/docs/generate_limits.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-0qvzh96q/docs/generate_limits.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-i1clxfmj/docs/generate_limits.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-il8kxyue/docs/generate_limits.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-guide-5i13cirf/docs/generate_limits.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/limits_documentation/artifacts/limits-receipts.json",
+      "receipt_sha256": "b28fda2e9be24e9d0203ef3c2dbe883e1945180af4a6971d4306c1e51747bbae",
+      "status": "pass",
+      "test": "__main__.LimitsDocumentationTests.test_question_links_must_target_the_guide_and_resolve"
+    },
+    {
+      "case": "source_drift/contract_versions",
+      "elapsed_seconds": 0.043705582967959344,
+      "input_snapshots": 4,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/Users/raccoon/Desktop/Security/PolicyWitness/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/contract_versions/artifacts/contract-receipts.json",
+      "receipt_sha256": "6163f30cfce414c159694909728dd21b5dc4bc8e4884d298deba824d4ef1bc0c",
+      "status": "pass",
+      "test": "__main__.ContractVersionTests.test_every_generated_copy_is_current"
+    },
+    {
+      "case": "source_drift/contract_versions",
+      "elapsed_seconds": 0.7558710840530694,
+      "input_snapshots": 141,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-o0ubgbfv/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-o0ubgbfv/docs/generate_contract.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-qrg29d71/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-qrg29d71/docs/generate_contract.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-t5e7_2mn/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-t5e7_2mn/docs/generate_contract.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-7_a43uue/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-7_a43uue/docs/generate_contract.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-236k4z3y/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-236k4z3y/docs/generate_contract.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-2o8c5_m_/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-2o8c5_m_/docs/generate_contract.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-3hq4p63j/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-3hq4p63j/docs/generate_contract.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/contract_versions/artifacts/contract-receipts.json",
+      "receipt_sha256": "6163f30cfce414c159694909728dd21b5dc4bc8e4884d298deba824d4ef1bc0c",
+      "status": "pass",
+      "test": "__main__.ContractVersionTests.test_check_refuses_each_stale_copy_without_writing_and_generation_repairs_it"
+    },
+    {
+      "case": "source_drift/contract_versions",
+      "elapsed_seconds": 3.0649750840384513,
+      "input_snapshots": 1156,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-21ljhpwk/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-21ljhpwk/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-_x1swufz/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-_x1swufz/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-brczrlwi/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-brczrlwi/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-rcl1smja/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-rcl1smja/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-68ff92f7/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-68ff92f7/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-rnlpyqrp/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-rnlpyqrp/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-ru89zn5y/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-ru89zn5y/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-_167k06v/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-_167k06v/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-puuvtvqg/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-puuvtvqg/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-y7uekg6q/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-y7uekg6q/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-db41oech/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-db41oech/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-ya747w5i/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-ya747w5i/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-fse1p2_s/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-fse1p2_s/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-cjpbkg79/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-cjpbkg79/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-dxp38ffd/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-dxp38ffd/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-9paon1fz/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-9paon1fz/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-b1yypvco/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-b1yypvco/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-0z_befmj/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-0z_befmj/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-l1n6ew1n/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-l1n6ew1n/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-uhrac9c3/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-uhrac9c3/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-mz5w5fy2/docs/generate_contract.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-contract-mz5w5fy2/docs/generate_contract.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/contract_versions/artifacts/contract-receipts.json",
+      "receipt_sha256": "6163f30cfce414c159694909728dd21b5dc4bc8e4884d298deba824d4ef1bc0c",
+      "status": "pass",
+      "test": "__main__.ContractVersionTests.test_broken_markers_stop_generation_before_any_write"
+    },
+    {
+      "case": "source_drift/architecture_documentation",
+      "elapsed_seconds": 0.6407831669785082,
+      "input_snapshots": 4,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/Users/raccoon/Desktop/Security/PolicyWitness/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/architecture_documentation/artifacts/architecture-receipts.json",
+      "receipt_sha256": "a2441dc4fda88308a6b6da8e56d2d18f18d07a2539e8be2123ceaeea845c6761",
+      "status": "pass",
+      "test": "__main__.ArchitectureDocumentationTests.test_document_and_figures_are_current"
+    },
+    {
+      "case": "source_drift/architecture_documentation",
+      "elapsed_seconds": 4.665941791958176,
+      "input_snapshots": 11,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-dkkwz9ke/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-dkkwz9ke/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-dkkwz9ke/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-dkkwz9ke/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-dkkwz9ke/docs/generate_architecture.py",
+            "--skip-svg"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-dkkwz9ke/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-dkkwz9ke/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-dkkwz9ke/docs/generate_architecture.py",
+            "--skip-svg"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/architecture_documentation/artifacts/architecture-receipts.json",
+      "receipt_sha256": "a2441dc4fda88308a6b6da8e56d2d18f18d07a2539e8be2123ceaeea845c6761",
+      "status": "pass",
+      "test": "__main__.ArchitectureDocumentationTests.test_stale_copies_are_refused_then_regenerated_idempotently"
+    },
+    {
+      "case": "source_drift/architecture_documentation",
+      "elapsed_seconds": 0.8419120839098468,
+      "input_snapshots": 5,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-5umw6lzs/docs/generate_architecture.py",
+            "--skip-svg"
+          ],
+          "returncode": 2,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-architecture-5umw6lzs/docs/generate_architecture.py",
+            "--skip-svg"
+          ],
+          "returncode": 2,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/architecture_documentation/artifacts/architecture-receipts.json",
+      "receipt_sha256": "a2441dc4fda88308a6b6da8e56d2d18f18d07a2539e8be2123ceaeea845c6761",
+      "status": "pass",
+      "test": "__main__.ArchitectureDocumentationTests.test_broken_marker_or_citation_stops_before_any_write"
+    },
+    {
+      "case": "source_drift/build_documentation",
+      "elapsed_seconds": 0.3698197080520913,
+      "input_snapshots": 4,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/Users/raccoon/Desktop/Security/PolicyWitness/docs/generate_build.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/build_documentation/artifacts/build-receipts.json",
+      "receipt_sha256": "818c2d255271722bbb5d3492f942914578021a0e87bdcdf2959126eb5788a7c3",
+      "status": "pass",
+      "test": "__main__.BuildDocumentationTests.test_document_and_figure_are_current_and_the_rules_agree"
+    },
+    {
+      "case": "source_drift/build_documentation",
+      "elapsed_seconds": 3.01207516703289,
+      "input_snapshots": 12,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--skip-svg"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--check"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-build-doc-n7x4370v/docs/generate_build.py",
+            "--skip-svg"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/build_documentation/artifacts/build-receipts.json",
+      "receipt_sha256": "818c2d255271722bbb5d3492f942914578021a0e87bdcdf2959126eb5788a7c3",
+      "status": "pass",
+      "test": "__main__.BuildDocumentationTests.test_stale_copies_are_refused_then_regenerated_idempotently"
+    },
+    {
+      "case": "source_drift/generator_contract",
+      "elapsed_seconds": 0.6522476250538602,
+      "input_snapshots": 3,
+      "launches": [],
+      "receipt": "suites/source_drift/generator_contract/artifacts/generators-receipts.json",
+      "receipt_sha256": "7943d81979a2a3326670222982b67e70c16a7e17eae6726d2b1055587087cf23",
+      "status": "pass",
+      "test": "__main__.GeneratorContractTests.test_prose_links_resolve_anchors_and_symbol_links"
+    },
+    {
+      "case": "source_drift/generator_contract",
+      "elapsed_seconds": 8.094165333081037,
+      "input_snapshots": 37,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-tvsj8qno/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-tvsj8qno/docs/generate_architecture.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-tvsj8qno/docs/generate_architecture.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-tvsj8qno/docs/generate_architecture.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-tvsj8qno/docs/generate_architecture.py"
+          ],
+          "returncode": 2,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-xkacfd1p/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-xkacfd1p/docs/generate_limits.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-xkacfd1p/docs/generate_limits.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-xkacfd1p/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-xkacfd1p/docs/generate_limits.py"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-qpnkqud3/docs/generate_limits.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-qpnkqud3/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-qpnkqud3/docs/generate_limits.py",
+            "--check"
+          ],
+          "returncode": 1,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-qpnkqud3/docs/generate_limits.py"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/generator_contract/artifacts/generators-receipts.json",
+      "receipt_sha256": "7943d81979a2a3326670222982b67e70c16a7e17eae6726d2b1055587087cf23",
+      "status": "pass",
+      "test": "__main__.GeneratorContractTests.test_spans_are_authored_outside_regions_and_copied_as_bytes"
+    },
+    {
+      "case": "source_drift/generator_contract",
+      "elapsed_seconds": 0.7579384159762412,
+      "input_snapshots": 4,
+      "launches": [
+        {
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+            "-B",
+            "-S",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-generators-te1ssjt6/docs/generate_architecture.py"
+          ],
+          "returncode": 2,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/generator_contract/artifacts/generators-receipts.json",
+      "receipt_sha256": "7943d81979a2a3326670222982b67e70c16a7e17eae6726d2b1055587087cf23",
+      "status": "pass",
+      "test": "__main__.GeneratorContractTests.test_architecture_render_failure_leaves_every_copy_untouched"
+    },
+    {
+      "case": "source_drift/generator_contract",
+      "elapsed_seconds": 3.282508875010535,
+      "input_snapshots": 229,
+      "launches": [
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-d7fwbsbt",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "init",
+            "-q"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-d7fwbsbt",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-d7fwbsbt",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-d7fwbsbt",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.0.0",
+            "-m",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-d7fwbsbt",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-d7fwbsbt",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-d7fwbsbt",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.1.0",
+            "-m",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-3xjqvd8o",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "init",
+            "-q"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-3xjqvd8o",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-3xjqvd8o",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-3xjqvd8o",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.0.0",
+            "-m",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-3xjqvd8o",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-3xjqvd8o",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-3xjqvd8o",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.1.0",
+            "-m",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-s_40h05v",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "init",
+            "-q"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-s_40h05v",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-s_40h05v",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-s_40h05v",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.0.0",
+            "-m",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-s_40h05v",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-s_40h05v",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-s_40h05v",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.1.0",
+            "-m",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-ybqcbrbq",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "init",
+            "-q"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-ybqcbrbq",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-ybqcbrbq",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-ybqcbrbq",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.0.0",
+            "-m",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-ybqcbrbq",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-ybqcbrbq",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-ybqcbrbq",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.1.0",
+            "-m",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-rkihrylc",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "init",
+            "-q"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-rkihrylc",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-rkihrylc",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-rkihrylc",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.0.0",
+            "-m",
+            "v1.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-rkihrylc",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-rkihrylc",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-rkihrylc",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v1.1.0",
+            "-m",
+            "v1.1.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "init",
+            "-q"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v9.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v9.0.0",
+            "-m",
+            "v9.0.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v2.3.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v2.3.0",
+            "-m",
+            "v2.3.0"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "add",
+            "."
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "commit",
+            "-qm",
+            "v0.2.3"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        },
+        {
+          "argv": [
+            "git",
+            "-C",
+            "/var/folders/bk/t91rwh4x29d94lvll_3qdtc00000gn/T/pw-baseline-release-c1gg_z3s",
+            "-c",
+            "user.name=Generator Control",
+            "-c",
+            "user.email=generator@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
+            "tag",
+            "-a",
+            "v0.2.3",
+            "-m",
+            "v0.2.3"
+          ],
+          "returncode": 0,
+          "status": "completed"
+        }
+      ],
+      "receipt": "suites/source_drift/generator_contract/artifacts/generators-receipts.json",
+      "receipt_sha256": "7943d81979a2a3326670222982b67e70c16a7e17eae6726d2b1055587087cf23",
+      "status": "pass",
+      "test": "__main__.GeneratorContractTests.test_release_preflight_refuses_a_grown_baseline"
+    }
+  ],
+  "historical_run_id": "20261027T233059Z_1f7c68fa",
+  "provenance": "Attached source snapshot HEAD d3ded472 plus recorded working diff; not a clean revision",
+  "raw_local_gitignored": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/drift-acceptance-fixes-03",
+  "source": "7562d24ac2334122499ea349010fd67211058ac3"
+}

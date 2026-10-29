@@ -194,6 +194,7 @@ class BuildDocumentationTests(receipts.TestCase):
             result = self.command(root, '--check')
             self.assertEqual(result.returncode, 1, (path.name, result.stdout))
             self.assertIn(expected, result.stderr, path.name)
+            self.assertIn('run: tests/lib/python.sh docs/generate_build.py', result.stderr)
             self.assertEqual(path.read_text(errors='replace'), mutate(originals[path]), 'check wrote')
         result = self.command(root, '--skip-svg')
         self.assertEqual(result.returncode, 0, result.stderr)

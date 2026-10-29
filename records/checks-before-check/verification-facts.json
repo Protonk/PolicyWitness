@@ -1,0 +1,219 @@
+{
+  "tested_source": "53b8e88e616f85b67cdecdd7d4cf9a1a4a487790",
+  "source_basis": "Executor checked clean git status before and after run; no tracked edits occurred during execution. Run summary has no automatic whole-source snapshot. Per-control receipts retain their actual fixture/input snapshots.",
+  "worktree": "/private/tmp/pw-workset-binding",
+  "run_path": "tests/out/runs/workset-d2-docs-01",
+  "run_id": "20261029T221143Z_bc9fa172",
+  "run_summary_sha256": "63f2fc20dc360eeb156a76b5dc865d8475dbdeb4de1d9ab89222b51b6689800d",
+  "configuration": {
+    "app_dir": "/private/tmp/pw-workset-binding/dist/PolicyWitness.app",
+    "out_dir": "/private/tmp/pw-workset-binding/tests/out/runs/workset-d2-docs-01",
+    "pw_bin": "/private/tmp/pw-workset-binding/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "python": {
+      "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+      "version": "3.14.9"
+    },
+    "quiet": false
+  },
+  "selection": [
+    "source_drift/architecture_documentation",
+    "source_drift/build_documentation",
+    "source_drift/generator_contract",
+    "source_drift/runner_source_manifests_agree",
+    "source_drift/contract_versions"
+  ],
+  "counts": {
+    "fail": 0,
+    "pass": 5,
+    "skip": 0,
+    "total": 5
+  },
+  "completion": {
+    "completed": 5,
+    "selected": 5,
+    "skipped": 0,
+    "unrun": 0
+  },
+  "harness_errors": [],
+  "duration_ms": 69717,
+  "cases": [
+    {
+      "context": "standard",
+      "id": "source_drift/runner_source_manifests_agree",
+      "reason": "all drift checks pass: 11 swift, 1 c, 42 suites, 16 normalized outcomes, 10 attempt outcomes, 4 prediction_unavailable pairs, 10 test override keys.",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "source_drift/contract_versions",
+      "reason": "contract manifest and every generated copy agree; generator and build controls pass",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "source_drift/architecture_documentation",
+      "reason": "architecture manifest, dot files, SVG stamps and document regions agree; citation and stale-copy controls pass",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "source_drift/build_documentation",
+      "reason": "build manifest, dot file, SVG stamp and document regions agree with the script; grounding rules, parser refusals and mutation controls pass",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "source_drift/generator_contract",
+      "reason": "generator contracts and mutation controls pass",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    }
+  ],
+  "receipts": [
+    {
+      "path": "suites/source_drift/architecture_documentation/artifacts/architecture-receipts.json",
+      "sha256": "adb7e16b59649f57fa47b3b5eb4b46d4c5a9c6aaa23ebb8b3dea82894543a990",
+      "case": "source_drift/architecture_documentation",
+      "complete": true,
+      "ok": true,
+      "control_count": 10,
+      "selected_controls": [
+        {
+          "test": "__main__.ArchitectureDocumentationTests.test_stale_copies_are_refused_then_regenerated_idempotently",
+          "status": "pass",
+          "direct_launch_returncodes": [
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "path": "suites/source_drift/build_documentation/artifacts/build-receipts.json",
+      "sha256": "59c8c6c0e75c674a9e8152e3345f07ee7c3227ebe58f34799517d03bb2e1f5a2",
+      "case": "source_drift/build_documentation",
+      "complete": true,
+      "ok": true,
+      "control_count": 16,
+      "selected_controls": [
+        {
+          "test": "__main__.BuildDocumentationTests.test_stale_copies_are_refused_then_regenerated_idempotently",
+          "status": "pass",
+          "direct_launch_returncodes": [
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "path": "suites/source_drift/contract_versions/artifacts/contract-receipts.json",
+      "sha256": "374cbc992a99001b3f655956611d16f0b9eec9c860765465f626f5a10312128b",
+      "case": "source_drift/contract_versions",
+      "complete": true,
+      "ok": true,
+      "control_count": 16,
+      "selected_controls": [
+        {
+          "test": "__main__.WorkerIdentityTests.test_identity_is_current_relocatable_and_regeneration_is_idempotent",
+          "status": "pass",
+          "direct_launch_returncodes": [
+            0,
+            0
+          ]
+        },
+        {
+          "test": "__main__.WorkerIdentityTests.test_layout_and_both_handshake_implementations_change_identity",
+          "status": "pass",
+          "direct_launch_returncodes": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "test": "__main__.WorkerIdentityTests.test_missing_marker_refuses_without_partial_writes",
+          "status": "pass",
+          "direct_launch_returncodes": [
+            1
+          ]
+        },
+        {
+          "test": "__main__.WorkerIdentityTests.test_native_manifest_inputs_change_identity",
+          "status": "pass",
+          "direct_launch_returncodes": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "test": "__main__.WorkerIdentityTests.test_new_protocol_helpers_are_discovered_but_tests_are_not_identity_inputs",
+          "status": "pass",
+          "direct_launch_returncodes": []
+        },
+        {
+          "test": "__main__.WorkerIdentityTests.test_stale_generated_value_is_detected_and_repaired_without_changing_identity",
+          "status": "pass",
+          "direct_launch_returncodes": [
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "test": "__main__.WorkerIdentityTests.test_symlinks_under_identity_sources_are_refused",
+          "status": "pass",
+          "direct_launch_returncodes": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "path": "suites/source_drift/generator_contract/artifacts/generators-receipts.json",
+      "sha256": "1ee2040ab33fef94832f2ef5c74f94ef325b8d300b6301beb3869a62e14ab6a0",
+      "case": "source_drift/generator_contract",
+      "complete": true,
+      "ok": true,
+      "control_count": 26,
+      "selected_controls": []
+    }
+  ],
+  "credit": "Isolated development verification for C1\u2013C3. No E2 applicability or final workset acceptance credit; main integration will receive a fresh selected run. Raw output is gitignored and left untouched in this isolated worktree; no retention manifest entry added."
+}
