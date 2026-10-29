@@ -1,6 +1,6 @@
 # Initial pytest-first counterfactual
 
-Version C0.1, written before this workset changes implementation. The examined
+Version C0.2, written before this workset changes implementation. The examined
 repository is `bf7e97faab75754efe719b0bad20e83b67762c15`; the intake and
 execution companion were committed as `4b18284`. This is an architectural
 proposal and a set of expectations, not an implemented harness, benchmark,
@@ -81,13 +81,15 @@ A normal execution would proceed as follows:
    Read-only selection does not acquire test resources. Test modules must keep
    collection free of native launches, signing and target acquisition.
 2. Pytest collects and selects stable logical case IDs. It expands declared
-   resource/dependency relationships through the PW integration. Publish the
-   resulting selection before any case runs. A collection failure leaves a
-   failed, incomplete session; it cannot be represented as zero passing cases.
-3. The supervisor takes the checkout lock and establishes durable run ownership
-   before execution. The execution admission rechecks output eligibility and
-   selection identity. An implementation may collect again in the execution
-   process, but must detect changed selection before running it.
+   resource/dependency relationships through the PW integration. Form the
+   selection in memory, or emit it as a read-only preview; do not yet publish
+   run output. A collection failure reports incomplete collection; it cannot
+   be represented as zero passing cases.
+3. The supervisor takes the checkout lock, rechecks output eligibility and
+   selection identity, and publishes durable ownership before the selected plan
+   or other run output. Both precede execution. An implementation may collect
+   again in the execution process, but must detect changed selection before
+   running it.
 4. Fixtures prepare immutable equipment where sharing is appropriate and fresh
    mutable inputs per independent scenario. A fixture requiring the signed app
    performs the applicable gate; unrelated offline tests remain runnable if
