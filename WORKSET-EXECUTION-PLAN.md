@@ -11,6 +11,8 @@ temporary workset material and retire together after final acceptance.
   evidence availability established before implementation.
 - [Checkpoint](records/workset/checkpoint.md): resumable current state,
   outstanding resources, completed checkpoints and next work.
+- [Initial counterfactual](records/workset/pytest-first.md): C0 arrangement,
+  responsibility map, scenarios and expectations; freeze at the C0 seal.
 
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.
