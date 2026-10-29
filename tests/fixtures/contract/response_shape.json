@@ -1,5 +1,5 @@
 {
-  "response_schema" : 23,
+  "response_schema" : 24,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -480,6 +480,7 @@
       "error" : "string",
       "exec_observation" : "object",
       "fresh_read" : "object",
+      "fresh_write" : "object",
       "lifecycle" : "object",
       "missing_reason" : "string",
       "observed_path" : "string",
@@ -558,6 +559,72 @@
       "stat_rc" : "number"
     },
     "reply.steps[].attempt.fresh_read.identity" : {
+      "device" : "number",
+      "gid" : "number",
+      "inode" : "number",
+      "mode" : "number",
+      "uid" : "number"
+    },
+    "reply.steps[].attempt.fresh_write" : {
+      "close_errno" : "number",
+      "close_rc" : "number",
+      "open_errno" : "number",
+      "open_rc" : "number",
+      "opened_stat" : "object",
+      "preopen_stat" : "object",
+      "truncate_errno" : "number",
+      "truncate_rc" : "number",
+      "truncated_stat" : "object",
+      "write_errno" : "number",
+      "write_rc" : "number",
+      "written_stat" : "object"
+    },
+    "reply.steps[].attempt.fresh_write.opened_stat" : {
+      "errno" : "number",
+      "identity" : "object",
+      "rc" : "number",
+      "size" : "number"
+    },
+    "reply.steps[].attempt.fresh_write.opened_stat.identity" : {
+      "device" : "number",
+      "gid" : "number",
+      "inode" : "number",
+      "mode" : "number",
+      "uid" : "number"
+    },
+    "reply.steps[].attempt.fresh_write.preopen_stat" : {
+      "errno" : "number",
+      "identity" : "object",
+      "rc" : "number",
+      "size" : "number"
+    },
+    "reply.steps[].attempt.fresh_write.preopen_stat.identity" : {
+      "device" : "number",
+      "gid" : "number",
+      "inode" : "number",
+      "mode" : "number",
+      "uid" : "number"
+    },
+    "reply.steps[].attempt.fresh_write.truncated_stat" : {
+      "errno" : "number",
+      "identity" : "object",
+      "rc" : "number",
+      "size" : "number"
+    },
+    "reply.steps[].attempt.fresh_write.truncated_stat.identity" : {
+      "device" : "number",
+      "gid" : "number",
+      "inode" : "number",
+      "mode" : "number",
+      "uid" : "number"
+    },
+    "reply.steps[].attempt.fresh_write.written_stat" : {
+      "errno" : "number",
+      "identity" : "object",
+      "rc" : "number",
+      "size" : "number"
+    },
+    "reply.steps[].attempt.fresh_write.written_stat.identity" : {
       "device" : "number",
       "gid" : "number",
       "inode" : "number",

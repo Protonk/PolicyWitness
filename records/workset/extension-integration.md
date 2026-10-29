@@ -94,3 +94,21 @@ first test selection is expected to expose these stale acceptance fixtures;
 do not edit historical response23 captures or call the initial candidate fully
 verified. The predicted maximum reply is 52,843,694 bytes, to be confirmed by
 the production encoder; the rounded controller output budget is unchanged.
+
+Candidate `7426fc0` built and signed successfully as version 0.3.3 build977,
+worker identity `944121356b57319eb7442c1d67b4841f96bd41f4be040d1751902a1230831593`.
+The build verified all seven executables and both seals with the intended
+Developer ID, hardened runtime and secure timestamps. No notarization/release
+was performed.
+
+`workset-e2-shape-01` exercised the owning Swift and ABI harvests. Swift reported
+475/480 passing; four failures were current readers rejecting historical
+response23 captures, and one requested the new response-shape golden. The
+production encoder confirmed 52,843,694 bytes and the unchanged output budget.
+ABI C/Swift values agreed; its deliberate golden refusal yielded 25 added
+geometry entries and zero changed prior entries. Review accepted the harvested
+48-byte metadata, 232-byte write record at slot6248, unchanged slot budget and
+the response shape containing only the added fresh-write family plus schema24.
+The owning candidates replace the two goldens; constructed path-diagnostic
+fixtures advance to the current schema. The run remains failed and supplies
+harvest observations only, not a passing suite credit.
