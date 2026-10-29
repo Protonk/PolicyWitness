@@ -25,6 +25,8 @@ temporary workset material and retire together after final acceptance.
   public results, source/build applicability and remaining limits before R1/R2.
 - [C refactor design and adaptations](records/workset/c-refactor.md): R1
   ownership, lifecycle order, extraction boundaries and control preservation.
+- [Swift refactor design and adaptations](records/workset/swift-refactor.md): R2
+  staged boundaries, family owners, source membership and preservation controls.
 
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.

@@ -74,3 +74,10 @@ After the E2 seal, supported prune preview/apply removed only
 `workset-e2-shape-01` and `workset-write-controls-dev-01`. The harvested goldens,
 compact failure account and replacement passing credits remain committed/pinned;
 the two raw runs are now absent. All retained runs and release material stayed.
+
+D2 primary acceptance is `96dffd56`. D1 plan/package retired at `950c604f`
+after twelve absorbed copies matched their manifest and original committed
+source. Retirement source/link checks passed in `workset-d1-retirement-01`;
+that run is pinned. D1 history remains at `cd6adaa`/`7562d24`; unresolved F1
+and historical cost pins remain. R1 design is accepted at `6e40887`. Swift
+read-only preparation is recorded, but implementation waits for R1 acceptance.
