@@ -23,6 +23,8 @@ temporary workset material and retire together after final acceptance.
   request/evidence design, coordinated surfaces and verification.
 - [Experimental stage seal](records/workset/e2-seal.md): accepted native and
   public results, source/build applicability and remaining limits before R1/R2.
+- [C refactor design and adaptations](records/workset/c-refactor.md): R1
+  ownership, lifecycle order, extraction boundaries and control preservation.
 
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.
