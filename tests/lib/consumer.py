@@ -27,7 +27,7 @@ import contract
 import lifecycle_contract
 from lifecycle_adapter import read_lifecycle, summaries
 from document_versions import is_envelope, version_errors, require_supported as _gate
-from extension_evidence import validate_extensions, validate_fresh_read
+from extension_evidence import validate_extensions, validate_fresh_read, validate_fresh_write
 from phase_evidence import collection_problem, ownership_problem
 
 
@@ -66,13 +66,15 @@ IMPORT_STATUSES = ('complete', 'incomplete', 'failed', 'not_applicable')
 ATTEMPT_OPERATIONS = {
     ('file', 'open_read'): ('file-read-data', 'path'), ('file', 'access'): ('file-read-data', 'path'),
     ('file', 'read_fresh'): ('file-read-data', 'path'),
+    ('file', 'write_fresh'): ('file-write-data', 'path'),
     ('file', 'open_write'): ('file-write-data', 'path'), ('file', 'unlink'): ('file-write-unlink', 'path'),
     ('mach_lookup', 'bootstrap_look_up'): ('mach-lookup', 'global_name'),
     ('sysctl', 'read'): ('sysctl-read', 'sysctl_name'), ('exec', 'spawn'): ('process-exec*', 'path'),
     ('file', 'create'): (None, 'path'),
+    ('file', 'create_fresh'): (None, 'path'),
 }
 PERMISSION_ERRNOS = (1, 13)
-PERMISSION_OUTCOMES = ('open_failed', 'read_failed', 'unlink_failed', 'access_failed', 'sysctl_failed', 'exec_failed')
+PERMISSION_OUTCOMES = ('open_failed', 'read_failed', 'write_failed', 'unlink_failed', 'access_failed', 'sysctl_failed', 'exec_failed')
 
 PATH_FORMS = ('realpath_resolved', 'firmlink_resolved')
 ATTEMPT_PATH_FORMS = ('realpath_resolved', 'parent_realpath_resolved')
@@ -420,6 +422,7 @@ def _validate_step(runner, step, failed_reporting):
     if attempt.get('errno') is not None and type(attempt.get('errno')) is not int:
         errors.append(f'{sid}: invalid attempt.errno')
     errors.extend(f'{sid}: {error}' for error in validate_fresh_read(attempt))
+    errors.extend(f'{sid}: {error}' for error in validate_fresh_write(attempt))
     if not failed_reporting:
         errors.extend(f'{sid}: {error}' for error in validate_exec_observation(attempt))
     if not isinstance(query.get('operation'), str) or not isinstance(query.get('filter_kind'), str):

@@ -294,6 +294,26 @@ preserves the first failure in syscall order as `read_failed`; missing slot
 publication supplies no fresh-read payload. This establishes the recorded bytes,
 not EOF or a whole-file read. `open_read` keeps its existing open-only meaning.
 
+`file/write_fresh` and `file/create_fresh` publish `attempt.fresh_write` only
+through completed worker slots. Both use a fresh write-only descriptor and
+attempt one fixed `x` byte. Existing-file writing explicitly truncates to zero;
+creation uses `O_CREAT|O_EXCL` and mode 0600. Their native open, truncate, write
+and close return/errno pairs are separate. `preopen_stat` (create-only lstat),
+`opened_stat`, `truncated_stat` (existing-write only), and `written_stat` each
+retain native rc, failure errno and successful identity/size. The pre-open
+observation is diagnostic, including ENOENT, and does not suppress the open.
+After failed truncation, write/written metadata are absent but close still
+runs. Failed opens have no descriptor operations. Successful native calls have
+no failure errno; unattempted calls have no result. The aggregate preserves the
+first relevant failure in call order as `write_failed`, excluding pre-open
+metadata; short transfer is a failure without an invented errno. Later failures
+remain visible. These fields do not themselves prove persistent contents.
+
+Extension records identify the internally selected native read or read-write
+class from admitted authority. Default and explicit `read` preserve the native
+read class. Native issuance, consumption and release never substitute for
+independent read/write effects or post-release observations.
+
 `witness_contract/extensions` establishes native calls and independent file
 observations through the public CLI. `blackbox_e2e/checker_controls` mutates its
 retained capture to reject fabricated native completion, bad references and
@@ -1129,7 +1149,7 @@ field in a reply does.
 | --- | --- | --- |
 | `observation` | string | the attempt channel classified: `succeeded`, `permission_failure`, `other_failure` or `unavailable` |
 | `observation_basis` | string | the fields the classification rests on: `completed_worker_status` (completed result, `attempt.outcome` and PW status `rc`), `permission_errno` (worker-reported EPERM/EACCES on a file, access, unlink, sysctl or failed-spawn result), `bootstrap_permission_result` (the exact `bootstrap_look_up: kr=1100` report), `spawned_child` (positive `child_pid` in a completed result, independently of the child's later exit) or `no_completed_worker_result`. None identifies the enforcing mechanism. |
-| `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access`/`read_fresh` → `file-read-data`, `open_write` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for a compound `file`/`create` attempt or an unsupported attempt |
+| `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access`/`read_fresh` → `file-read-data`, `open_write`/`write_fresh` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for compound `file`/`create` or `file`/`create_fresh`, or an unsupported attempt |
 | `target_relation` | string | `same_submitted` or `different_submitted` by comparing the submitted `filter_value` with the submitted attempt target under the attempt's mapped filter kind (`path` for file and exec, `global_name` for mach lookup, `sysctl_name` for sysctl); `unresolved` when the query's `filter_kind` differs from that kind or either side is absent. Different strings establish different submitted targets, not distinct runtime objects. |
 | `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release after successful application, worker ownership was retained through acknowledgement, and a unique native allow/deny record matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. It names an interval before that phase’s entire action batch, not a state snapshot or per-step interleaving. |
 | `limitations` | array of string | may be empty. Vocabulary: `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair`, `query_plan:unrecognized_filter_kind` (the planner's exclusion, one at most) and `attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`, `attempt:unsupported`, `attempt:not_reached`, `attempt:started_without_result` (the lifecycle summary when it is not `completed`, one at most). Missing channels, scope differences and failures carry no limitation of their own: their fields already say so. |

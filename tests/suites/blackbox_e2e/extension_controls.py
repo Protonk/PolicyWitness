@@ -241,3 +241,14 @@ def run_extension_controls(run):
     document = deepcopy(baseline)
     runner(document)['steps'][1]['attempt'].pop('fresh_read')
     run('extension_read_missing_observation', document, rejected_by='lacks syscall observations')
+
+    read_write = deepcopy(baseline)
+    runner(read_write)['extensions'][0]['extension_class'] = 'com.apple.app-sandbox.read-write'
+    run('extension_read_write_class', read_write)
+    assert check_record(read_write) == []
+    wrong_class = deepcopy(baseline)
+    runner(wrong_class)['extensions'][0]['extension_class'] = 'com.apple.app-sandbox.write'
+    run('extension_unknown_class', wrong_class, rejected_by='invalid extension declaration reference/class')
+    assert check_record(wrong_class)
+    from fresh_write_controls import run_fresh_write_controls
+    run_fresh_write_controls(run, baseline)

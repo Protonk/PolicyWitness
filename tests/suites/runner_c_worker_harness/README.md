@@ -73,6 +73,14 @@ The CLI case `witness_contract/create_existing_file_preserves_contents`
 separately checks create on existing files, preserving their bytes and identities
 while enforcing write permission.
 
+The separate `fresh_write` case compiles the production `write_fresh` and
+`create_fresh` paths with scripted native calls. Fifteen controls establish
+the exact open/stat/truncate/write/close sequence, failed and short transfers,
+metadata failures, first-failure aggregation with later failures preserved,
+existing-child refusal and diagnostic pre-open metadata. It needs only clang
+and neither applies a sandbox nor claims actual file effects. Live public
+directory witnesses supply those independent effects.
+
 7. **unlink_allow** — `PW_ATTEMPT_FILE_UNLINK` under `(allow default)`:
    `rc=0` and the harness-created target is gone afterward.
 8. **unlink_deny** — same under `(deny default)`: `rc=1`, `errno` ∈

@@ -29,10 +29,13 @@ test_check_python "${PW_TEST_ARTIFACTS}/readback.log" "extension issuer read-bac
 test_step lifecycle "repeat native lifecycle, placement, omission and target preparation through BYOXPC"
 test_check_python "${PW_TEST_ARTIFACTS}/extensions.log" "BYOXPC extension workload failed" \
   "${ROOT_DIR}/tests/suites/witness_contract/check_extensions.py" "$PW_BIN" "${PW_TEST_ARTIFACTS}/extensions" "${PW_TEST_ARTIFACTS}/session.json"
+test_step directory "repeat directory modification, exclusive creation and independent persistence through BYOXPC"
+test_check_python "${PW_TEST_ARTIFACTS}/directory.log" "BYOXPC directory extension workload failed" \
+  "${ROOT_DIR}/tests/suites/witness_contract/check_extension_directory.py" "$PW_BIN" "${PW_TEST_ARTIFACTS}/directory" "${PW_TEST_ARTIFACTS}/session.json"
 test_step phases "repeat independent unlink, fresh unavailable planning and later native query through BYOXPC"
 test_check_python "${PW_TEST_ARTIFACTS}/phases.log" "BYOXPC ordinary phases failed" \
   "${ROOT_DIR}/tests/suites/witness_contract/check_phases.py" "$PW_BIN" "${PW_TEST_ARTIFACTS}/phases" "${PW_TEST_ARTIFACTS}/session.json"
-test_step maximum "exercise maximum ordinary, phased, fresh-read, lifecycle and escaped-output replies through BYOXPC"
+test_step maximum "exercise maximum ordinary, phased, fresh-read/write, lifecycle and escaped-output replies through BYOXPC"
 test_check_python "${PW_TEST_ARTIFACTS}/maximum.log" "BYOXPC maximum replies failed" \
   "${ROOT_DIR}/tests/suites/witness_contract/check_max_target_reply.py" "$PW_BIN" "${PW_TEST_ARTIFACTS}/maximum" "${PW_TEST_ARTIFACTS}/session.json"
 test_check_python "${PW_TEST_ARTIFACTS}/provenance.log" "BYOXPC extension provenance failed" \

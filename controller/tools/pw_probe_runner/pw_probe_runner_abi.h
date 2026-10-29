@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "1df328dcb8820120e778caa9041c0b9c381d3d6e04f1b5174b43a97a549f929c"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x1d, 0xf3, 0x28, 0xdc, 0xb8, 0x82, 0x01, 0x20, 0xe7, 0x78, 0xca, 0xa9, 0x04, 0x1c, 0x0b, 0x9c, 0x38, 0x1d, 0x3d, 0x6e, 0x04, 0xf1, 0xb5, 0x17, 0x4b, 0x43, 0xa9, 0x7a, 0x54, 0x9f, 0x92, 0x9c};
+#define PW_WORKER_ABI_IDENTITY_HEX "944121356b57319eb7442c1d67b4841f96bd41f4be040d1751902a1230831593"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x94, 0x41, 0x21, 0x35, 0x6b, 0x57, 0x31, 0x9e, 0xb7, 0x44, 0x2c, 0x1d, 0x67, 0xb4, 0x84, 0x1f, 0x96, 0xbd, 0x41, 0xf4, 0xbe, 0x04, 0x0d, 0x17, 0x51, 0x90, 0x2a, 0x12, 0x30, 0x83, 0x15, 0x93};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -135,6 +135,8 @@ typedef enum {
     PW_ATTEMPT_FILE_READ_FRESH  = 9,
     PW_ATTEMPT_EXTENSION_CONSUME = 10,
     PW_ATTEMPT_EXTENSION_RELEASE = 11,
+    PW_ATTEMPT_FILE_WRITE_FRESH = 12,
+    PW_ATTEMPT_FILE_CREATE_FRESH = 13,
 } pw_attempt_kind_t;
 
 /* Host inputs partition the slots in order. Each worker publication is written
@@ -339,6 +341,27 @@ typedef struct {
 _Static_assert(sizeof(pw_shm_evidence_t) == PW_SHM_EVIDENCE_HEADER_BYTES,
                "evidence header budget");
 
+/* Fresh write observations are valid only after the containing slot completes.
+ * rc == -2 is unattempted; failed calls retain errno, successful stat calls
+ * retain descriptor/path identity and size. Preopen lstat is diagnostic only. */
+#define PW_SHM_FILE_STAT_BYTES 48u
+#define PW_SHM_FRESH_WRITE_BYTES 232u
+typedef struct {
+    int32_t rc, errno_val;
+    uint32_t mode, uid, gid, reserved;
+    uint64_t device, inode;
+    int64_t size;
+} pw_file_stat_t;
+typedef struct {
+    int32_t open_rc, open_errno, truncate_rc, truncate_errno;
+    int64_t write_rc;
+    int32_t write_errno, close_rc, close_errno;
+    uint32_t reserved;
+    pw_file_stat_t preopen_stat, opened_stat, truncated_stat, written_stat;
+} pw_fresh_write_t;
+_Static_assert(sizeof(pw_file_stat_t) == PW_SHM_FILE_STAT_BYTES, "file stat observation size");
+_Static_assert(sizeof(pw_fresh_write_t) == PW_SHM_FRESH_WRITE_BYTES, "fresh write observation size");
+
 /*
  * Per-step slot. Inputs are written by the host pre-spawn; outputs
  * are written by the worker post-apply. `completed` is written LAST
@@ -416,6 +439,8 @@ typedef struct {
     int32_t exec_reap_wait_rc, exec_reap_wait_errno, exec_reap_status;
     uint32_t exec_reap_clock_fault;
 
+    pw_fresh_write_t fresh_write;
+
     /* Reserved padding so the slot stays exactly PW_SHM_SLOT_BYTES.
      * A future field that pushes past this budget breaks the
      * _Static_assert below at compile time. */
@@ -435,13 +460,15 @@ typedef struct {
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stdout */
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stderr */
                       - sizeof(_Atomic uint32_t)
-                      - 156u - PW_SHM_EXEC_EVIDENCE_BYTES];
+                      - 156u - PW_SHM_EXEC_EVIDENCE_BYTES - PW_SHM_FRESH_WRITE_BYTES];
 } pw_shm_slot_t;
 
 _Static_assert(offsetof(pw_shm_slot_t, exec_valid) == 6136,
                "exec evidence must consume only the prior slot reserve");
-_Static_assert(offsetof(pw_shm_slot_t, reserved) - offsetof(pw_shm_slot_t, exec_valid)
+_Static_assert(offsetof(pw_shm_slot_t, fresh_write) - offsetof(pw_shm_slot_t, exec_valid)
                == PW_SHM_EXEC_EVIDENCE_BYTES, "exec evidence field budget");
+_Static_assert(offsetof(pw_shm_slot_t, fresh_write) == 6248,
+               "fresh write must consume only the prior slot reserve");
 
 /*
  * SBPL params delivered to the worker. Host populates [0..param_count)

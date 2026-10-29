@@ -48,6 +48,8 @@ int main(void) {
     printf("PW_SHM_CAPTURE_HEADER_BYTES=%u\n", PW_SHM_CAPTURE_HEADER_BYTES);
     printf("PW_SHM_CAPTURE_BYTES=%u\n", PW_SHM_CAPTURE_BYTES);
     printf("PW_SHM_CAPTURE_NONCE_BYTES=%u\n", PW_SHM_CAPTURE_NONCE_BYTES);
+    printf("PW_SHM_FILE_STAT_BYTES=%u\n", PW_SHM_FILE_STAT_BYTES);
+    printf("PW_SHM_FRESH_WRITE_BYTES=%u\n", PW_SHM_FRESH_WRITE_BYTES);
 
     /* sizeof cross-check: each per-struct budget macro must equal
      * the actual sizeof of the struct it bounds. The header carries
@@ -57,6 +59,8 @@ int main(void) {
     printf("sizeof.pw_shm_slot_t=%zu\n",       sizeof(pw_shm_slot_t));
     printf("sizeof.pw_shm_param_t=%zu\n",      sizeof(pw_shm_param_t));
     printf("sizeof.pw_shm_capture_t=%zu\n", sizeof(pw_shm_capture_t));
+    printf("sizeof.pw_file_stat_t=%zu\n", sizeof(pw_file_stat_t));
+    printf("sizeof.pw_fresh_write_t=%zu\n", sizeof(pw_fresh_write_t));
 
     printf("PW_SHM_MAX_PHASES=%u\n", PW_SHM_MAX_PHASES);
     printf("PW_SHM_PHASE_BYTES=%u\n", PW_SHM_PHASE_BYTES);
@@ -177,6 +181,27 @@ int main(void) {
     printf("offsetof.pw_shm_slot_t.exec_reap_wait_errno=%zu\n", offsetof(pw_shm_slot_t, exec_reap_wait_errno));
     printf("offsetof.pw_shm_slot_t.exec_reap_status=%zu\n", offsetof(pw_shm_slot_t, exec_reap_status));
     printf("offsetof.pw_shm_slot_t.exec_reap_clock_fault=%zu\n", offsetof(pw_shm_slot_t, exec_reap_clock_fault));
+    printf("offsetof.pw_shm_slot_t.fresh_write=%zu\n", offsetof(pw_shm_slot_t, fresh_write));
+    printf("offsetof.pw_file_stat_t.rc=%zu\n", offsetof(pw_file_stat_t, rc));
+    printf("offsetof.pw_file_stat_t.errno_val=%zu\n", offsetof(pw_file_stat_t, errno_val));
+    printf("offsetof.pw_file_stat_t.mode=%zu\n", offsetof(pw_file_stat_t, mode));
+    printf("offsetof.pw_file_stat_t.uid=%zu\n", offsetof(pw_file_stat_t, uid));
+    printf("offsetof.pw_file_stat_t.gid=%zu\n", offsetof(pw_file_stat_t, gid));
+    printf("offsetof.pw_file_stat_t.device=%zu\n", offsetof(pw_file_stat_t, device));
+    printf("offsetof.pw_file_stat_t.inode=%zu\n", offsetof(pw_file_stat_t, inode));
+    printf("offsetof.pw_file_stat_t.size=%zu\n", offsetof(pw_file_stat_t, size));
+    printf("offsetof.pw_fresh_write_t.open_rc=%zu\n", offsetof(pw_fresh_write_t, open_rc));
+    printf("offsetof.pw_fresh_write_t.open_errno=%zu\n", offsetof(pw_fresh_write_t, open_errno));
+    printf("offsetof.pw_fresh_write_t.truncate_rc=%zu\n", offsetof(pw_fresh_write_t, truncate_rc));
+    printf("offsetof.pw_fresh_write_t.truncate_errno=%zu\n", offsetof(pw_fresh_write_t, truncate_errno));
+    printf("offsetof.pw_fresh_write_t.write_rc=%zu\n", offsetof(pw_fresh_write_t, write_rc));
+    printf("offsetof.pw_fresh_write_t.write_errno=%zu\n", offsetof(pw_fresh_write_t, write_errno));
+    printf("offsetof.pw_fresh_write_t.close_rc=%zu\n", offsetof(pw_fresh_write_t, close_rc));
+    printf("offsetof.pw_fresh_write_t.close_errno=%zu\n", offsetof(pw_fresh_write_t, close_errno));
+    printf("offsetof.pw_fresh_write_t.preopen_stat=%zu\n", offsetof(pw_fresh_write_t, preopen_stat));
+    printf("offsetof.pw_fresh_write_t.opened_stat=%zu\n", offsetof(pw_fresh_write_t, opened_stat));
+    printf("offsetof.pw_fresh_write_t.truncated_stat=%zu\n", offsetof(pw_fresh_write_t, truncated_stat));
+    printf("offsetof.pw_fresh_write_t.written_stat=%zu\n", offsetof(pw_fresh_write_t, written_stat));
 
     /* Param field offsets. */
     printf("offsetof.pw_shm_param_t.key=%zu\n",   offsetof(pw_shm_param_t, key));

@@ -978,7 +978,10 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
             .is_some_and(|s| !s.is_empty() && s.len() <= 63 && !s.contains('\0'))
     };
     if !reference(&declaration["token_ref"])
-        || declaration["extension_class"] != "com.apple.app-sandbox.read"
+        || !matches!(
+            declaration["extension_class"].as_str(),
+            Some("com.apple.app-sandbox.read" | "com.apple.app-sandbox.read-write")
+        )
     {
         reject("invalid extension declaration reference or class");
     }
@@ -2080,7 +2083,21 @@ mod tests {
         .unwrap();
         let runner = &envelope["data"]["runner_result"];
         assert_eq!(diagnostics(runner).disposition_integrity, Some("valid"));
+        for class in [
+            "com.apple.app-sandbox.read",
+            "com.apple.app-sandbox.read-write",
+        ] {
+            let mut supported = runner.clone();
+            supported["extensions"][0]["extension_class"] = json!(class);
+            assert_eq!(diagnostics(&supported).disposition_integrity, Some("valid"));
+        }
         let faults = [
+            ("/extensions/0/extension_class", json!("write")),
+            (
+                "/extensions/0/extension_class",
+                json!("com.apple.app-sandbox.future"),
+            ),
+            ("/extensions/0/extension_class", json!(null)),
             ("/extension_events/0/native_result", json!(-1)),
             ("/extension_events/0/native_result", json!(true)),
             ("/extension_events/0/native_result", json!(1.0)),

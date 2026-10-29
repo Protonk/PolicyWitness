@@ -7,7 +7,7 @@ import Foundation
 // per byte), the largest worker diagnostic, and the largest slash-heavy
 // compiled-profile receipt. The runner client's retention budget is derived from
 // this number, and the live max-target workload must stay under it. Separately
-// encoded spawn-failure, extension, fresh-read and exec-observation components are added without subtracting
+// encoded spawn-failure, extension, fresh-read, fresh-write and exec-observation components are added without subtracting
 // ordinary fields they replace. This union is deliberately not a reachable reply.
 //
 // Every string key the fixture carries must be classified below as fixed
@@ -196,7 +196,7 @@ private func extensionReplyAllowance() throws -> Int {
     issuer.termination_request = PWRunnerTerminationRequest(signal: Int32.max, rc: -1, errno: Int32.max)
     issuer.spawn_failure = PWRunnerSpawnFailure(executable_path: maximal(testOverridePathMaxBytes),
         return_code: Int32.max, diagnostic: maximal(1023))
-    let declaration = PWRunnerExtensionRecord(token_ref: maximal(PWExtensionLimits.referenceBytes),
+    let declaration = PWRunnerExtensionRecord(token_ref: maximal(PWExtensionLimits.referenceBytes), extension_class: "com.apple.app-sandbox.read-write",
         submitted_target: maximal(PWExtensionLimits.targetBytes), resolved_target: maximal(PWExtensionLimits.targetBytes),
         preparation_status: "resolution_failed", preparation_errno: Int32.max, identity: identity,
         issuance_status: "native_api_unavailable", issuer: issuer, delivery_status: "token_unavailable",
@@ -228,6 +228,19 @@ private func extensionReplyAllowance() throws -> Int {
     let freshMember = try pwRunnerEncodeJSON(["fresh_read": fresh])
     let overrideMember = try pwRunnerEncodeJSON(["issuer_executable_path": maximal(testOverridePathMaxBytes)])
     return native.count + PWShmLayout.maxSteps * freshMember.count + overrideMember.count
+}
+
+private func freshWriteReplyAllowance() throws -> Int {
+    let identity = PWFileIdentity(device: UInt64.max, inode: UInt64.max,
+        mode: UInt32.max, uid: UInt32.max, gid: UInt32.max)
+    // Optional success and failure members coexist only in this conservative
+    // size account. Int64.min is the widest signed decimal metadata size.
+    let metadata = PWRunnerFileStat(rc: -1, errno: Int32.max, identity: identity, size: Int64.min)
+    let write = PWRunnerFreshWrite(open_rc: Int32.max, open_errno: Int32.max,
+        truncate_rc: -1, truncate_errno: Int32.max, write_rc: -1, write_errno: Int32.max,
+        close_rc: -1, close_errno: Int32.max, preopen_stat: metadata,
+        opened_stat: metadata, truncated_stat: metadata, written_stat: metadata)
+    return PWShmLayout.maxSteps * (try pwRunnerEncodeJSON(["fresh_write": write])).count
 }
 
 /// Every optional exec member and widest native scalars, with the longest
@@ -277,6 +290,28 @@ private func encodeAllExecReply(_ original: PWRunnerRunResult) throws -> Data {
     let encoded = try pwRunnerEncodeJSON(reply)
     let roundTrip = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
     try expectEqual(roundTrip.steps.filter { $0.attempt.exec_observation != nil }.count, PWShmLayout.maxSteps)
+    return encoded
+}
+
+private func encodeAllFreshWriteReply(_ original: PWRunnerRunResult) throws -> Data {
+    var reply = original
+    for index in reply.steps.indices {
+        var attempt = reply.steps[index].attempt
+        let creating = index % 2 == 0
+        attempt.requested_kind = "file"; attempt.requested_action = creating ? "create_fresh" : "write_fresh"
+        attempt.rc = 0; attempt.errno = nil; attempt.outcome = "ok"
+        attempt.child_pid = nil; attempt.child_exit_code = nil; attempt.child_term_signal = nil
+        attempt.stdout = nil; attempt.stderr = nil; attempt.exec_observation = nil
+        attempt.fresh_read = nil; attempt.fresh_write = freshWriteFixture(creating: creating)
+        try expectNil(attempt.freshWriteEvidenceProblem())
+        reply.steps[index].attempt = attempt
+        reply.steps[index].comparison?.observation = "succeeded"
+        reply.steps[index].comparison?.observation_basis = "completed_worker_status"
+        reply.steps[index].comparison?.operation_relation = creating ? "unresolved" : "different"
+    }
+    let encoded = try pwRunnerEncodeJSON(reply)
+    let roundTrip = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
+    try expectEqual(roundTrip.steps.filter { $0.attempt.fresh_write != nil }.count, PWShmLayout.maxSteps)
     return encoded
 }
 
@@ -349,9 +384,11 @@ func maximalReplyEncodedSize() throws -> Int {
     // Remove one of the member object's two braces: inserting the member in
     // a nonempty phase adds one comma instead. All key/value bytes stay counted.
     let spawnAllowance = PWRunnerPhase.maximumCount * (try pwRunnerEncodeJSON(spawn).count - 1)
-    let bound = try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance() + spawnAllowance + execReplyAllowance()
+    let bound = try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance() + freshWriteReplyAllowance() + spawnAllowance + execReplyAllowance()
     let execBytes = try encodeAllExecReply(decoded)
     try expectTrue(execBytes.count <= bound, "every-slot valid exec reply exceeds conservative representation bound")
+    let writeBytes = try encodeAllFreshWriteReply(decoded)
+    try expectTrue(writeBytes.count <= bound, "every-slot valid fresh-write reply exceeds conservative representation bound")
     return bound
 }
 

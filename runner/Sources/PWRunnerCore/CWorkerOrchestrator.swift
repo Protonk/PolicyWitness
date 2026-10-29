@@ -387,6 +387,10 @@ func mapAttemptKindOrNil(_ attempt: PWRunnerAttempt) -> PWAttemptKind? {
     switch (attempt.kind, attempt.action) {
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionReadFresh):
         return .fileReadFresh
+    case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionWriteFresh):
+        return .fileWriteFresh
+    case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionCreateFresh):
+        return .fileCreateFresh
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionOpenRead):
         return .fileOpenRead
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionOpenWrite):
@@ -855,6 +859,8 @@ func buildAttemptResult(
             return AttemptOutcome.openFailed
         case PWRunnerWire.attemptActionReadFresh:
             return AttemptOutcome.readFailed
+        case PWRunnerWire.attemptActionWriteFresh, PWRunnerWire.attemptActionCreateFresh:
+            return AttemptOutcome.writeFailed
         case PWRunnerWire.attemptActionUnlink:
             return AttemptOutcome.unlinkFailed
         case PWRunnerWire.attemptActionAccess:
@@ -884,6 +890,7 @@ func buildAttemptResult(
         stderr: s.childStderr
     )
     result.fresh_read = s.freshRead
+    result.fresh_write = s.freshWrite
     result.exec_observation = s.execObservation
     result.execObservationDecodeProblem = s.execObservationProblem
     return result
@@ -981,7 +988,7 @@ func comparisonEvidence(
         } else if attempt.rc != 0 {
             observation = "other_failure"
             basis = "completed_worker_status"
-            if [AttemptOutcome.openFailed, AttemptOutcome.readFailed, AttemptOutcome.unlinkFailed,
+            if [AttemptOutcome.openFailed, AttemptOutcome.readFailed, AttemptOutcome.writeFailed, AttemptOutcome.unlinkFailed,
                 AttemptOutcome.accessFailed, AttemptOutcome.sysctlFailed,
                 AttemptOutcome.execFailed].contains(attempt.outcome),
                [Int(EPERM), Int(EACCES)].contains(attempt.errno ?? -1) {
@@ -1002,7 +1009,7 @@ func comparisonEvidence(
     switch (attempt.requested_kind, attempt.requested_action) {
     case ("file", "open_read"), ("file", "access"), ("file", "read_fresh"):
         operation = "file-read-data"; filter = "path"
-    case ("file", "open_write"):
+    case ("file", "open_write"), ("file", "write_fresh"):
         operation = "file-write-data"; filter = "path"
     case ("file", "unlink"):
         operation = "file-write-unlink"; filter = "path"
@@ -1014,7 +1021,7 @@ func comparisonEvidence(
         // The native query accepts this spelling, not bare process-exec. It
         // predicts target admission only, not every spawn prerequisite.
         operation = "process-exec*"; filter = "path"
-    case ("file", "create"):
+    case ("file", "create"), ("file", "create_fresh"):
         operation = nil; filter = "path"
     default:
         operation = nil; filter = nil

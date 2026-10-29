@@ -25,6 +25,8 @@ enum PWRunnerWire {
 
     static let attemptActionOpenRead = "open_read"
     static let attemptActionReadFresh = "read_fresh"
+    static let attemptActionWriteFresh = "write_fresh"
+    static let attemptActionCreateFresh = "create_fresh"
     static let attemptActionOpenWrite = "open_write"
     static let attemptActionCreate = "create"
     static let attemptActionUnlink = "unlink"
@@ -112,6 +114,7 @@ enum AttemptOutcome {
     static let ok = "ok"
     static let openFailed = "open_failed"
     static let readFailed = "read_failed"
+    static let writeFailed = "write_failed"
     static let unlinkFailed = "unlink_failed"
     static let accessFailed = "access_failed"
     static let lookupFailed = "lookup_failed"
@@ -157,7 +160,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 5
-    static let responseSchema: Int = 23
+    static let responseSchema: Int = 24
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -207,6 +210,7 @@ struct PWRunnerRequestFailure: Codable, Error, CustomStringConvertible {
             "missing_filter_value": "filter.value required for this kind",
             "empty_operation": "sandbox_check.operation is empty",
             "unsupported_attempt": "unsupported attempt kind/action",
+            "unsupported_extension_authority": "extension authority must be read or read_write",
             "unknown_filter_kind": "unknown filter kind",
             "inapplicable_field": "field has no effect in this request",
             "unsupported_policy_format": "policy.format must be sbpl",
@@ -359,13 +363,19 @@ enum PWExtensionLimits {
 struct PWRunnerExtensionDeclaration: Codable {
     var token_ref: String
     var target: String
-    init(token_ref: String, target: String) { self.token_ref = token_ref; self.target = target }
-    enum CodingKeys: String, CodingKey, CaseIterable { case token_ref, target }
+    var authority: String?
+    var effectiveAuthority: String { authority ?? "read" }
+    var nativeClass: String { effectiveAuthority == "read_write" ? "com.apple.app-sandbox.read-write" : "com.apple.app-sandbox.read" }
+    init(token_ref: String, target: String, authority: String? = nil) {
+        self.token_ref = token_ref; self.target = target; self.authority = authority
+    }
+    enum CodingKeys: String, CodingKey, CaseIterable { case token_ref, target, authority }
     init(from decoder: Decoder) throws {
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
         token_ref = try c.decode(String.self, forKey: .token_ref)
         target = try c.decode(String.self, forKey: .target)
+        authority = try c.decodeIfPresent(String.self, forKey: .authority)
     }
 }
 struct PWRunnerExtensionOperation: Codable {
@@ -431,6 +441,34 @@ struct PWRunnerFreshRead: Codable {
     var close_rc: Int32?
     var close_errno: Int32?
     var content_hex: String?
+}
+struct PWRunnerFileStat: Codable {
+    var rc: Int32
+    var errno: Int32?
+    var identity: PWFileIdentity?
+    var size: Int64?
+
+    func evidenceProblem() -> String? {
+        guard [-1, 0].contains(rc), rc == -1 ? errno != nil && errno! >= 0 : errno == nil,
+              rc == 0 ? identity != nil && size != nil : identity == nil && size == nil else {
+            return "file metadata lacks its native result or successful payload"
+        }
+        return nil
+    }
+}
+struct PWRunnerFreshWrite: Codable {
+    var open_rc: Int32
+    var open_errno: Int32?
+    var truncate_rc: Int32?
+    var truncate_errno: Int32?
+    var write_rc: Int64?
+    var write_errno: Int32?
+    var close_rc: Int32?
+    var close_errno: Int32?
+    var preopen_stat: PWRunnerFileStat?
+    var opened_stat: PWRunnerFileStat?
+    var truncated_stat: PWRunnerFileStat?
+    var written_stat: PWRunnerFileStat?
 }
 struct PWRunnerIssuer: Codable {
     var executable_path: String
@@ -821,7 +859,7 @@ struct PWRunnerAttempt: Codable {
     // "file" | "mach_lookup" | "sysctl" | "exec"
     var kind: String
     // For kind=file:
-    //   action: open_read | open_write | create | unlink | access
+    //   action: open_read | read_fresh | open_write | write_fresh | create | create_fresh | unlink | access
     //   target: path
     // For kind=mach_lookup:
     //   action: bootstrap_look_up
@@ -1309,6 +1347,7 @@ struct PWRunnerAttemptResult: Codable {
     var lifecycle: PWAttemptLifecycle? = nil
     /// PW's attempt status, not a raw syscall return.
     var fresh_read: PWRunnerFreshRead? = nil
+    var fresh_write: PWRunnerFreshWrite? = nil
     var exec_observation: PWExecObservation? = nil
     // Host-local corruption diagnostic, checked by ordinary-reply encoding.
     var execObservationDecodeProblem: String? = nil
@@ -1375,7 +1414,7 @@ struct PWRunnerAttemptResult: Codable {
     enum CodingKeys: String, CodingKey {
         case requested_kind, requested_action
         case result_source, missing_reason, lifecycle
-        case rc, fresh_read, exec_observation
+        case rc, fresh_read, fresh_write, exec_observation
         case errno
         case outcome
         case error
@@ -1397,6 +1436,7 @@ struct PWRunnerAttemptResult: Codable {
         try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
         try container.encodeIfPresent(lifecycle, forKey: .lifecycle)
         try container.encodeIfPresent(fresh_read, forKey: .fresh_read)
+        try container.encodeIfPresent(fresh_write, forKey: .fresh_write)
         try container.encodeIfPresent(exec_observation, forKey: .exec_observation)
         try container.encode(rc, forKey: .rc)
         if let errno {
@@ -1437,6 +1477,7 @@ struct PWRunnerAttemptResult: Codable {
         missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
         lifecycle = try container.decodeIfPresent(PWAttemptLifecycle.self, forKey: .lifecycle)
         fresh_read = try container.decodeIfPresent(PWRunnerFreshRead.self, forKey: .fresh_read)
+        fresh_write = try container.decodeIfPresent(PWRunnerFreshWrite.self, forKey: .fresh_write)
         exec_observation = try container.decodeIfPresent(PWExecObservation.self, forKey: .exec_observation)
         rc = try container.decode(Int.self, forKey: .rc)
         errno = try container.decodeIfPresent(Int.self, forKey: .errno)
@@ -2609,6 +2650,9 @@ struct PWRunnerRunResult: Codable {
                 if let problem = step.attempt.execObservationEvidenceProblem() {
                     throw DecodingError.dataCorruptedError(forKey: .steps, in: c, debugDescription: problem)
                 }
+                if let problem = step.attempt.freshWriteEvidenceProblem() {
+                    throw DecodingError.dataCorruptedError(forKey: .steps, in: c, debugDescription: problem)
+                }
             }
         }
         if reporting_failure == nil, let problem = policyReadProblem(self) {
@@ -2699,6 +2743,9 @@ struct PWRunnerRunResult: Codable {
                     throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath, debugDescription: issue))
                 }
                 if let issue = step.attempt.freshReadEvidenceProblem() {
+                    throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath, debugDescription: issue))
+                }
+                if let issue = step.attempt.freshWriteEvidenceProblem() {
                     throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath, debugDescription: issue))
                 }
                 guard let phase = phases.first(where: { $0.phase_id == step.phase_id }), phase.action_ids.contains(step.step_id) else {
@@ -2802,6 +2849,9 @@ extension PWRunnerRunResult {
             if (event.result_published || event.call_boundary_observed) && (phase.ordering?.proceed_observed != true || sandboxed_after_apply != true) { return "extension publication lacks application and phase acknowledgement" }
         }
         for declaration in declarations {
+            guard ["com.apple.app-sandbox.read", "com.apple.app-sandbox.read-write"].contains(declaration.extension_class) else {
+                return "invalid extension declaration class"
+            }
             if declaration.issuance_status == "issuer_result_missing" {
                 guard let issuer = declaration.issuer, !issuer.result_published,
                       issuer.native_nonnull == nil, issuer.errno == nil, issuer.token_length == nil,
@@ -2846,6 +2896,64 @@ extension PWRunnerRunResult {
 }
 
 extension PWRunnerAttemptResult {
+    func freshWriteEvidenceProblem() -> String? {
+        let expected = requested_kind == "file" && ["write_fresh", "create_fresh"].contains(requested_action ?? "") && result_source == "worker"
+        guard let write = fresh_write else { return expected ? "completed fresh write lacks syscall observations" : nil }
+        guard expected, write.open_rc >= -1 else { return "fresh write requires a completed fresh-write attempt" }
+        let creating = requested_action == "create_fresh"
+        guard creating == (write.preopen_stat != nil) else { return "fresh creation requires its pre-open metadata observation" }
+        for metadata in [write.preopen_stat, write.opened_stat, write.truncated_stat, write.written_stat].compactMap({ $0 }) {
+            if let problem = metadata.evidenceProblem() { return problem }
+        }
+        func validErrno(_ result: Int64, _ error: Int32?) -> Bool {
+            result == -1 ? error != nil && error! >= 0 : error == nil
+        }
+        guard validErrno(Int64(write.open_rc), write.open_errno) else { return "fresh write open errno disagrees with native result" }
+        var firstFailure: Int32?
+        var failed = false
+        func observe(_ result: Int64, _ error: Int32?, short: Bool = false) {
+            if !failed && (result < 0 || short) { failed = true; firstFailure = result < 0 ? error : nil }
+        }
+        observe(Int64(write.open_rc), write.open_errno)
+        if write.open_rc == -1 {
+            guard write.opened_stat == nil, write.truncate_rc == nil, write.truncate_errno == nil,
+                  write.truncated_stat == nil, write.write_rc == nil, write.write_errno == nil,
+                  write.written_stat == nil, write.close_rc == nil, write.close_errno == nil else {
+                return "failed fresh write open cannot supply later syscall evidence"
+            }
+        } else {
+            guard let opened = write.opened_stat, let close = write.close_rc, [-1, 0].contains(close),
+                  validErrno(Int64(close), write.close_errno) else { return "fresh write lacks opened metadata or close result" }
+            observe(Int64(opened.rc), opened.errno)
+            if creating {
+                guard write.truncate_rc == nil, write.truncate_errno == nil, write.truncated_stat == nil else {
+                    return "exclusive creation must not fabricate truncation"
+                }
+            } else {
+                guard let truncated = write.truncate_rc, [-1, 0].contains(truncated),
+                      validErrno(Int64(truncated), write.truncate_errno), let metadata = write.truncated_stat else {
+                    return "fresh write lacks truncation observations"
+                }
+                observe(Int64(truncated), write.truncate_errno)
+                observe(Int64(metadata.rc), metadata.errno)
+            }
+            if creating || write.truncate_rc == 0 {
+                guard let count = write.write_rc, (-1...1).contains(count), validErrno(count, write.write_errno),
+                      let metadata = write.written_stat else { return "fresh write lacks bounded transfer observations" }
+                observe(count, write.write_errno, short: count == 0)
+                observe(Int64(metadata.rc), metadata.errno)
+            } else if write.write_rc != nil || write.write_errno != nil || write.written_stat != nil {
+                return "failed truncation cannot supply a later write"
+            }
+            observe(Int64(close), write.close_errno)
+        }
+        guard rc == (failed ? -1 : 0), errno == firstFailure.flatMap({ $0 == 0 ? nil : Int($0) }),
+              outcome == (failed ? AttemptOutcome.writeFailed : AttemptOutcome.ok) else {
+            return "fresh write syscalls disagree with attempt status"
+        }
+        return nil
+    }
+
     func freshReadEvidenceProblem() -> String? {
         let expected = requested_kind == "file" && requested_action == "read_fresh" && result_source == "worker"
         guard let read = fresh_read else { return expected ? "completed fresh read lacks syscall observations" : nil }

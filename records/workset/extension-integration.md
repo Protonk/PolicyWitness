@@ -74,3 +74,23 @@ applicable BYOXPC extension witness, source drift and integrated behavior.
 Record any actual ordering-observer change and rerun its mutation control if
 triggered. Final whole-workset verification remains separate. Core refactoring
 cannot begin before the experimental stage is sealed.
+
+## Candidate preparation
+
+The first candidate implements this design across C, Swift and the Rust/Python
+readers. `design_extension_integration` authored the Swift/Rust portion and
+registered independent Swift evidence/admission/maximum-reply controls;
+`extension_consumers_tests` authored Python readers, rejected controls, public
+directory witnesses, BYOXPC reuse and maximum-reply workloads. The primary
+agent authored native operations, native-call controls, ABI geometry checks,
+registration and permanent documentation/generator inputs. Source review is
+separate from execution. Local syntax checks passed; a developmental working-tree
+dispatcher run of `runner_c_worker_harness/fresh_write` passed fifteen native
+substitution controls but is not stage verification.
+
+Response24 live captures, response-shape and ABI-layout goldens deliberately
+await a matching signed candidate and their owning capture/harvest tools. The
+first test selection is expected to expose these stale acceptance fixtures;
+do not edit historical response23 captures or call the initial candidate fully
+verified. The predicted maximum reply is 52,843,694 bytes, to be confirmed by
+the production encoder; the rounded controller output budget is unchanged.

@@ -142,6 +142,19 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
                 try expectEqual(errno, EBADF)
             }
         }
+        tk.run("read-write authority reaches the issuer channel and its separate evidence record") {
+            try withIssuer { executable, original in
+                var declaration = original
+                declaration.authority = "read_write"
+                let session = ExtensionSession(declaration: declaration, executable: executable)
+                try expectEqual(session.record.extension_class, "com.apple.app-sandbox.read-write")
+                try expectEqual(session.record.issuance_status, "issued")
+                let base = mmap(nil, ExtensionSession.channelBytes, PROT_READ, MAP_SHARED, session.descriptor, 0)!
+                try expectTrue(base != MAP_FAILED)
+                defer { munmap(base, ExtensionSession.channelBytes) }
+                try expectEqual(base.load(fromByteOffset: PWExtensionLayout.authorityOffset, as: UInt32.self), 1)
+            }
+        }
         tk.run("published issuance cannot deliver after an unconfirmed host reap") {
             try withIssuer { executable, declaration in
                 var independentlyReaped = false

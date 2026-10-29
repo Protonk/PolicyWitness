@@ -18,6 +18,7 @@ int main(void) {
     OFFSET(euidOffset, euid);
     OFFSET(gidOffset, gid);
     OFFSET(egidOffset, egid);
+    OFFSET(authorityOffset, authority);
     OFFSET(targetOffset, target);
     OFFSET(tokenOffset, token);
     return 0;

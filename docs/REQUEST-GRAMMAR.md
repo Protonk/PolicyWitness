@@ -116,11 +116,16 @@ and how fresh planning can leave a later query unavailable after an unlink.
 ## Declare authority separately from lifecycle placement
 
 The [sandbox-extension example](PolicyWitness.md#sandbox-extensions) uses one
-local declaration under `extensions`, with `token_ref` and `target`, plus explicit
+local declaration under `extensions`, with `token_ref`, `target` and optional
+`authority` (`read` or `read_write`; absent/null means `read`), plus explicit
 phases. An action is either a complete ordinary pair or `step_id` and an
 `extension` object. `consume` names `token_ref` and a distinct `handle_ref`;
 `release` names only that earlier handle. Native events do not have queries.
 Unknown fields remain closed at the declaration, action and operation objects.
+The bounded authority maps internally to native read or read-write classes;
+raw class names and token bytes remain unknown request fields. `write_fresh`
+and `create_fresh` are ordinary file action spellings with fixed one-byte writes,
+separate from the preserved `open_write` and `create` operations.
 
 The corpus's `extension_paired_create` combines an ordinary create with consume
 and release. Its issuance target is absent during preparation; accepting the

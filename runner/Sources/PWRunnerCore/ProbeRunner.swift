@@ -168,6 +168,11 @@ func extensionMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure?
     if let declaration = declarations.first, declaration.token_ref.isEmpty {
         return fail("empty_reference", ["extensions", "0", "token_ref"])
     }
+    for (index, declaration) in declarations.enumerated() {
+        if !["read", "read_write"].contains(declaration.effectiveAuthority) {
+            return fail("unsupported_extension_authority", ["extensions", String(index), "authority"])
+        }
+    }
     if !declarations.isEmpty && spec.probe_plan.contains(where: { $0.attempt.kind == "exec" }) {
         return fail("extension_exec_unsupported", ["phases"])
     }

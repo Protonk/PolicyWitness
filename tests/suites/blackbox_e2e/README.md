@@ -75,6 +75,14 @@ version, worker producer and before-apply stage. Missing or contradictory
 context is refused; unavailable receipts cannot claim capture context.
 Swift and Rust controls read the same independently authored cases.
 
+Fresh-write controls construct accepted and rejected native observations beside
+the retained extension capture. They require operation-specific metadata,
+unattempted-field absence, native errno association and the first actual failure
+in call order. Short writes fail without an invented errno; pre-open metadata
+remains diagnostic. Combined omissions stay visible. These controls establish
+reader interpretation, while `witness_contract/extension_directory` supplies
+independent live filesystem effects.
+
 `checker_controls` runs without the app, before the live cases. Its checked-in
 live envelope passes BBX-001's expectations. Controlled changes must fail:
 an incorrect later attempt, a prediction mismatch, both together, both on the

@@ -108,6 +108,14 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
                 assert read['read_rc'] == min(64, len(independent))
                 assert bytes.fromhex(read['content_hex']) == independent[:64]
                 assert (read['identity']['device'], read['identity']['inode']) == (metadata.st_dev, metadata.st_ino)
+            elif planned['attempt']['action'] == 'write_fresh':
+                write = attempt['fresh_write']
+                independent = Path(target).read_bytes()
+                metadata = Path(target).stat()
+                assert write['open_rc'] >= 0 and write['truncate_rc'] == 0 and write['write_rc'] == 1 and write['close_rc'] == 0
+                assert write['truncated_stat']['size'] == 0 and write['written_stat']['size'] == 1
+                assert independent == b'x'
+                assert (write['written_stat']['identity']['device'], write['written_stat']['identity']['inode']) == (metadata.st_dev, metadata.st_ino)
             elif planned['attempt']['kind'] != 'exec':
                 # Independent native observation: these are existing canonical files.
                 assert attempt['observed_path'] == str(Path(target).resolve()), attempt
@@ -281,6 +289,20 @@ def main():
             operation='release', handle_ref='handle'))
         observations.append(run_case(pw, out, 'extension_action_maximum', mixed))
         assert all(Path(target).read_bytes() == payload for target in plain)
+
+        writes = copy.deepcopy(phased)
+        for action in request_steps(writes):
+            action['attempt']['action'] = 'write_fresh'
+            action['sandbox_check']['operation'] = 'file-write-data'
+        observations.append(run_case(pw, out, 'fresh_write_maximum', writes))
+        write_mixed = copy.deepcopy(writes)
+        write_mixed['extensions'] = [dict(token_ref='token', target=str(Path(plain[0]).parent), authority='read_write')]
+        write_mixed['phases'][0]['actions'][0] = dict(step_id='consume', extension=dict(
+            operation='consume', token_ref='token', handle_ref='handle'))
+        write_mixed['phases'][-1]['actions'][-1] = dict(step_id='release', extension=dict(
+            operation='release', handle_ref='handle'))
+        observations.append(run_case(pw, out, 'write_extension_action_maximum', write_mixed))
+        assert all(Path(target).read_bytes() == b'x' for target in plain)
 
         # The existing fixture has direct output/exit controls in exec_fixture.
         repo = Path(__file__).resolve().parents[3]

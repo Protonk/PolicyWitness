@@ -2,7 +2,7 @@
   "schema_version": 1,
   "versions": {
     "request_schema": 5,
-    "response_schema": 23,
+    "response_schema": 24,
     "controller_envelope": 8
   }
 }

@@ -116,7 +116,7 @@ PolicyWitness supports imports the same way `sandbox-exec` does — `(import "na
 
 ### Can PolicyWitness test sandbox-extension behavior?
 
-Yes, for a bounded file-read experiment. A fresh issuer outside the specimen sandbox prepares one `com.apple.app-sandbox.read` token under its ordinary authority. Explicit phases can consume it once and release the returned handle once in the same worker under one fixed policy. Issuance, delivery, native lifecycle results, predictions and fresh-descriptor reads remain separate observations. A successful consume or release does not establish effective permission or revocation. Raw tokens never enter the request or reply. See [sandbox extensions](#sandbox-extensions).
+Yes, for bounded file-read and directory read-write experiments. A fresh issuer outside the specimen sandbox prepares one token under ordinary authority: `read` selects `com.apple.app-sandbox.read`, and `read_write` selects `com.apple.app-sandbox.read-write`. Explicit phases can consume it once and release the returned handle once in the same worker under one fixed policy. Issuance, delivery, native lifecycle results, predictions and fresh-descriptor file observations remain separate. A successful consume or release does not establish effective permission or revocation. Raw tokens never enter the request or reply. See [sandbox extensions](#sandbox-extensions).
 
 ### Which happens first, the prediction or the attempt?
 
@@ -226,16 +226,19 @@ At most <!-- span limits.phase_count.value -->8<!-- /span --> phases and <!-- sp
 
 ### Sandbox extensions
 
-An extension specimen declares a local token reference and a target path, then
+An extension specimen declares a local token reference, target path and optional authority, then
 places native consume/release actions in explicit phases. The issuer prepares
-one `com.apple.app-sandbox.read` token outside the specimen sandbox under ordinary
-authority. The worker applies the submitted policy once and keeps that policy
+one token outside the specimen sandbox under ordinary authority. `read` selects
+`com.apple.app-sandbox.read`; `read_write` selects
+`com.apple.app-sandbox.read-write`. Absent or null authority means `read`.
+The worker applies the submitted policy once and keeps that policy
 through every phase. Record native issuance, consumption and release alongside
-fresh-descriptor reads to observe access at each stage.
+fresh-descriptor file operations to observe access at each stage.
 
 | Input | Meaning |
 | --- | --- |
 | `extensions: [{"token_ref": "token", "target": "/absolute/path"}]` | A local reference and issuance target; raw token bytes and caller-selected classes are not accepted. |
+| `authority: "read_write"` in that declaration | Select native read-write authority for the resolved target, including a directory. Only `read` and `read_write` are admitted. |
 | `{"step_id": "consume", "extension": {"operation": "consume", "token_ref": "token", "handle_ref": "handle"}}` | Consume the declared token and associate an observed native handle with a distinct local reference. |
 | `{"step_id": "release", "extension": {"operation": "release", "handle_ref": "handle"}}` | Release the earlier consume result if it supplied a handle. No token reference belongs on release. |
 
@@ -313,6 +316,26 @@ reach another object. Ordinary query and attempt targets stay as submitted.
 `read_fresh` opens in the worker after application, records descriptor metadata,
 reads at most <!-- span limits.fresh_read_bytes.value -->64<!-- /span --> bytes
 once, and closes it. The returned bytes are a bounded prefix.
+
+For a directory write experiment, use the directory as the issuance target and
+`authority: "read_write"`. The policy must admit the selected extension class;
+for example, these rules restrict ordinary writes and permit the read-write
+extension's authority:
+
+```scheme
+(deny file-write*)
+(allow file-write* (extension "com.apple.app-sandbox.read-write"))
+```
+
+`write_fresh` opens an existing target without implicit truncation, explicitly
+truncates it to zero, writes the fixed byte `x`, and closes it. `create_fresh`
+attempts exclusive creation with mode argument 0600, then writes `x` and closes.
+It records `lstat` immediately before opening; this observation does not suppress
+the exclusive open. Use distinct unused child names across phases and record
+absence before issuance when testing creation. A child's absent path can leave
+its planned prediction unavailable. Inspect independent contents and directory
+entries to establish effects and persistence after release or worker exit;
+native release alone does not establish revocation or undo completed writes.
 
 A current runner bundle without the issuer returns `bad_request` with
 `extension_issuer_unavailable`; an issuer without the native issuance API returns
@@ -848,7 +871,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 52,595,368 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Informative reply size bound (`runner_reply_maximum`) | 52,843,694 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
@@ -964,7 +987,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 23, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 24, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -1112,7 +1135,7 @@ Reply fields beyond `pid` / `runner_subprocess`:
   `no_completed_worker_result`). `operation_relation` (`matched`, `different`
   or `unresolved`) says whether the submitted query operation is the attempt's
   mapped operation: file `open_read`/`read_fresh`/`access` map to `file-read-data`,
-  `open_write` to `file-write-data`, `unlink` to `file-write-unlink`, exec
+  `open_write`/`write_fresh` to `file-write-data`, `unlink` to `file-write-unlink`, exec
   `spawn` to `process-exec*`, mach lookup to `mach-lookup` and sysctl read to
   `sysctl-read`. `target_relation` (`same_submitted`, `different_submitted` or
   `unresolved`) compares the submitted filter value with the submitted attempt
@@ -1340,6 +1363,7 @@ The lifecycle [example](#sandbox-extensions) returns these records under
 | `extensions[].issuer` | Selected executable, PID and UID/EUID/GID/EGID, call marker and result publication, pointer nonnullness, errno and token length, plus independent spawn, termination, wait and reap observations. No token or pointer value is exposed. |
 | `extension_events[]` | `phase_id`, `step_id`, operation and references, `call_boundary_observed`, `result_published`, status, optional `native_result`, errno, unavailability reason and lifecycle claims. |
 | `steps[].attempt.fresh_read` | `open_rc` / `open_errno`, `stat_rc` / `stat_errno`, optional descriptor identity, `read_rc` / `read_errno`, `close_rc` / `close_errno` and `content_hex`. Each errno belongs to its failed syscall; successful read count determines the hex length. |
+| `steps[].attempt.fresh_write` | Separate `open_rc` / `open_errno`, optional `truncate_rc` / `truncate_errno`, `write_rc` / `write_errno`, `close_rc` / `close_errno`, and metadata observations described below. Unattempted calls are absent. |
 
 `issuance_status: issued` requires published bounded token evidence and a clean,
 confirmed issuer exit. `issuer_abnormal_exit` retains that publication alongside
@@ -1410,12 +1434,28 @@ bounded prefix. Issuer and worker identities describe their observed authority
 separately. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)
 defines producer and reader validation.
 
+For `write_fresh` and `create_fresh`, `fresh_write` retains each actual syscall
+result. Its metadata objects `preopen_stat`, `opened_stat`, `truncated_stat` and
+`written_stat` contain `rc`, failure `errno`, and successful `identity` plus
+signed `size`. The pre-open path observation belongs only to exclusive creation;
+the other observations use the opened descriptor. Truncation and its metadata
+belong only to `write_fresh`. A failed truncation omits the write, but its later
+metadata and close observations remain. A failed open has no descriptor
+metadata, truncation, write or close evidence.
+
+The aggregate outcome is `write_failed` for the first failed open, descriptor stat,
+truncation, write or close in call order, or for a short transfer. A short write
+has no invented errno. Pre-open metadata is diagnostic and does not determine
+the aggregate outcome. Missing publication supplies no `fresh_write` object.
+The returned byte count and metadata do not substitute for independently read
+contents or establish crash durability.
+
 ### Per-step shape
 
 The runner echoes step results with additional context:
 
 - `steps[].sandbox_check`: `{ rc, outcome, pid, operation, filter_kind, filter_value, filter_type_id, errno, error, result_source, native_rc, missing_reason?, path_diagnostics? }`
-- `steps[].attempt`: `{ rc, errno, outcome, error, result_source, missing_reason?, requested_kind, requested_action, requested_path, observed_path, lifecycle, fresh_read?, path_diagnostics?, child_pid?, child_exit_code?, child_term_signal?, stdout?, stderr?, exec_observation? }`
+- `steps[].attempt`: `{ rc, errno, outcome, error, result_source, missing_reason?, requested_kind, requested_action, requested_path, observed_path, lifecycle, fresh_read?, fresh_write?, path_diagnostics?, child_pid?, child_exit_code?, child_term_signal?, stdout?, stderr?, exec_observation? }`
 - `steps[].comparison`: `{ observation, observation_basis, operation_relation, target_relation, order, limitations }` — see [Top-level fields](#top-level-fields) and [Reading a comparison record](#reading-a-comparison-record).
 
 Notes:
@@ -1489,6 +1529,7 @@ have source `"synthetic"` with `missing_reason: "slot_absent"` or
 
 - `ok` — the attempt's syscall returned success (allow).
 - `read_failed` — a fresh-descriptor open, stat, read or close failed; inspect `fresh_read` for the separate syscall observations.
+- `write_failed` — a fresh write or exclusive creation encountered a failed open, descriptor stat, truncation, write or close, or a short transfer; inspect `fresh_write` for separate observations.
 - `open_failed` — file `open()` (for `open_read` / `open_write` /
   `create`) returned non-zero; errno in `attempt.errno`. EPERM /
   EACCES are ambiguous between sandbox and DAC (see
@@ -1830,7 +1871,7 @@ Currently in this category:
 The C worker implements these `(attempt.kind, attempt.action)`
 combinations:
 
-- `("file", "open_read" | "read_fresh" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
+- `("file", "open_read" | "read_fresh" | "open_write" | "write_fresh" | "create" | "create_fresh" | "unlink" | "access")` — exercise file ops on `target`.
   `open_read` opens read-only, attempts a one-byte read and close, and discards
   those latter returns; its status reports the open result. `open_write` opens
   with `O_WRONLY | O_TRUNC`, then attempts to write `x` and close, discarding
@@ -1840,6 +1881,10 @@ combinations:
   can be created. `read_fresh` instead retains separate native open, stat, read
   and close observations and bounded content, as described in
   [fresh-read output](#extension-and-fresh-read-output).
+  `write_fresh` explicitly truncates an existing file then writes `x`;
+  `create_fresh` uses an exclusive create then writes `x`. Both retain the
+  separate native results and metadata in `fresh_write`, described alongside
+  that output. The exclusive create fails if the target already exists.
 - `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
 - `("sysctl", "read")` — one post-apply `sysctlbyname` value read of
   `target`, such as `kern.osrelease`, into a

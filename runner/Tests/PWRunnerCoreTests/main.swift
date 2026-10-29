@@ -28,6 +28,8 @@ runOrderingTests(tk)
 runPhaseProtocolTests(tk)
 // Native lifecycle publications, local references, fresh reads and shape coverage.
 runExtensionEvidenceTests(tk)
+// Fresh write/creation syscall observations and their publication rules.
+runFreshWriteEvidenceTests(tk)
 // Exec collection, signal and reap facts; optional readers and slot publication.
 runExecObservationTests(tk)
 // Service reply degradation preserves observations, withholds claims and covers every wire field.

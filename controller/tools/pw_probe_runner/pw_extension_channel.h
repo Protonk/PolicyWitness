@@ -9,7 +9,9 @@
 #define PW_EXTENSION_PATH_BYTES 1024u
 #define PW_EXTENSION_CHANNEL_BYTES 17472u
 #define PW_EXTENSION_ISSUER_WAIT_MS 5000u
-/* Host initializes magic/path. Issuer writes result, publishes completed last,
+#define PW_EXTENSION_AUTHORITY_READ 0u
+#define PW_EXTENSION_AUTHORITY_READ_WRITE 1u
+/* Host initializes magic/path/authority. Issuer writes result, publishes completed last,
  * and exits. The host must reap the issuer before admitting token delivery.
  * Worker reads only a complete, bounded token and erases it after its consume
  * decision and every ordinary departure. The host separately erases its channel
@@ -23,11 +25,13 @@ typedef struct {
     int32_t saved_errno;
     uint32_t token_length; /* excludes NUL; not a token identifier */
     uint32_t pid, uid, euid, gid, egid;
-    uint8_t reserved[20];
+    uint32_t authority; /* PW_EXTENSION_AUTHORITY_*; immutable host input */
+    uint8_t reserved[16];
     char target[PW_EXTENSION_PATH_BYTES];
     char token[PW_EXTENSION_TOKEN_BYTES];
 } pw_extension_channel_t;
 _Static_assert(sizeof(pw_extension_channel_t) == PW_EXTENSION_CHANNEL_BYTES, "extension channel size");
+_Static_assert(offsetof(pw_extension_channel_t, authority) == 44, "extension authority offset");
 _Static_assert(offsetof(pw_extension_channel_t, target) == 64, "extension path offset");
 _Static_assert(offsetof(pw_extension_channel_t, token) == 1088, "extension token offset");
 static inline void pw_extension_erase(void *bytes, size_t length) {

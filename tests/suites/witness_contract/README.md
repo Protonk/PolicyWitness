@@ -70,7 +70,22 @@ held, non-inherited descriptor keeps the removed identity observable while the
 worker creates a replacement. Later reads report their actual identity and bytes;
 the test does not require release success to revoke access.
 
-The opt-in `extensions_byoxpc` case runs this workload and the ordinary `phases`
+`extension_directory` compares directory read-write authority with omitted
+consumption, missing predicates, another directory, explicit read authority and
+default read authority. Each row first establishes ordinary permissions through
+the public fresh-write actions, then restores existing contents and removes the
+baseline children before issuance. Separate names serve before-consumption,
+during-consumption and post-release attempts. Before-launch absence plus
+`create_fresh`'s immediate lstat and exclusive open keep new creation distinct
+from opening an earlier child. External final reads happen before reply
+interpretation and survive failed assertions; they establish persistence after
+release and worker exit. Fresh post-release results have no required pattern.
+The absent child keeps its unavailable prediction. A killed-before-publication
+write leaves an independently observed effect while withholding its native
+result payload. Unknown worker cleanup retains owned staging and a durable
+ownership record outside prunable run output.
+
+The opt-in `extensions_byoxpc` case runs both extension workloads and the ordinary `phases`
 controls through an owned installed runner. Independent signing and entitlement
 read-backs establish that the issuer receives the selected identity without the
 worker's supplied entitlements. Envelope provenance must match the registry's
@@ -79,7 +94,8 @@ installed bytes and the shipped baseline. A missing issuer path must produce
 the named capability refusal before worker launch. The owned installed-copy
 control removes the actual issuer, retains a restoration receipt, checks public
 validation, then restores and verifies the exact bytes. The same BYOXPC session
-runs the maximum-reply workloads. Between those size-limit workloads, a successful
+runs the maximum-reply workloads, including fresh-write evidence and the
+read-write class. Between those size-limit workloads, a successful
 `launchctl print` supplies the host PID and kernel generation observations establish
 retirement; unknown observations fail the test. This avoids connecting during a
 host's exit without a refusal reply. The BYOXPC coexistence controls independently

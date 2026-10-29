@@ -23,6 +23,7 @@ int main(int argc, char **argv) {
     if (channel == MAP_FAILED) return 93;
     if (channel->magic != PW_EXTENSION_MAGIC ||
         memchr(channel->target, 0, sizeof(channel->target)) == NULL ||
+        channel->authority > PW_EXTENSION_AUTHORITY_READ_WRITE ||
         atomic_load_explicit(&channel->completed, memory_order_acquire)) return 94;
     channel->pid = getpid(); channel->uid = getuid(); channel->euid = geteuid();
     channel->gid = getgid(); channel->egid = getegid();
@@ -33,7 +34,9 @@ int main(int argc, char **argv) {
     } else {
         atomic_store_explicit(&channel->call_boundary, 1, memory_order_release);
         errno = 0;
-        char *token = issue("com.apple.app-sandbox.read", channel->target, 0);
+        const char *extension_class = channel->authority == PW_EXTENSION_AUTHORITY_READ_WRITE
+            ? "com.apple.app-sandbox.read-write" : "com.apple.app-sandbox.read";
+        char *token = issue(extension_class, channel->target, 0);
         channel->saved_errno = errno;
         if (!token) channel->status = 2;
         else {

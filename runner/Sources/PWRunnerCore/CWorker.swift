@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "1df328dcb8820120e778caa9041c0b9c381d3d6e04f1b5174b43a97a549f929c"
-    static let abiIdentity: [UInt8] = [0x1d, 0xf3, 0x28, 0xdc, 0xb8, 0x82, 0x01, 0x20, 0xe7, 0x78, 0xca, 0xa9, 0x04, 0x1c, 0x0b, 0x9c, 0x38, 0x1d, 0x3d, 0x6e, 0x04, 0xf1, 0xb5, 0x17, 0x4b, 0x43, 0xa9, 0x7a, 0x54, 0x9f, 0x92, 0x9c]
+    static let abiIdentityHex = "944121356b57319eb7442c1d67b4841f96bd41f4be040d1751902a1230831593"
+    static let abiIdentity: [UInt8] = [0x94, 0x41, 0x21, 0x35, 0x6b, 0x57, 0x31, 0x9e, 0xb7, 0x44, 0x2c, 0x1d, 0x67, 0xb4, 0x84, 0x1f, 0x96, 0xbd, 0x41, 0xf4, 0xbe, 0x04, 0x0d, 0x17, 0x51, 0x90, 0x2a, 0x12, 0x30, 0x83, 0x15, 0x93]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -221,6 +221,29 @@ enum PWShmLayout {
     static let slotExecReapWaitErrnoOffset: Int = 6236
     static let slotExecReapStatusOffset: Int = 6240
     static let slotExecReapClockFaultOffset: Int = 6244
+    static let slotFreshWriteOffset: Int = 6248
+    static let fileStatBytes: Int = 48
+    static let fileStatRcOffset: Int = 0
+    static let fileStatErrnoOffset: Int = 4
+    static let fileStatModeOffset: Int = 8
+    static let fileStatUidOffset: Int = 12
+    static let fileStatGidOffset: Int = 16
+    static let fileStatDeviceOffset: Int = 24
+    static let fileStatInodeOffset: Int = 32
+    static let fileStatSizeOffset: Int = 40
+    static let freshWriteBytes: Int = 232
+    static let freshWriteOpenRcOffset: Int = 0
+    static let freshWriteOpenErrnoOffset: Int = 4
+    static let freshWriteTruncateRcOffset: Int = 8
+    static let freshWriteTruncateErrnoOffset: Int = 12
+    static let freshWriteWriteRcOffset: Int = 16
+    static let freshWriteWriteErrnoOffset: Int = 24
+    static let freshWriteCloseRcOffset: Int = 28
+    static let freshWriteCloseErrnoOffset: Int = 32
+    static let freshWritePreopenStatOffset: Int = 40
+    static let freshWriteOpenedStatOffset: Int = 88
+    static let freshWriteTruncatedStatOffset: Int = 136
+    static let freshWriteWrittenStatOffset: Int = 184
 
     // Param field offsets (from the param's base).
     static let paramKeyMax: Int    = 128
@@ -248,6 +271,8 @@ enum PWAttemptKind: UInt32 {
     case fileReadFresh = 9
     case extensionConsume = 10
     case extensionRelease = 11
+    case fileWriteFresh = 12
+    case fileCreateFresh = 13
 }
 
 // MARK: - C atomic shim binding
@@ -407,6 +432,7 @@ struct CWorkerSlotResult {
     var nativeErrno: Int32? = nil
     var unavailableCode: UInt32? = nil
     var freshRead: PWRunnerFreshRead? = nil
+    var freshWrite: PWRunnerFreshWrite? = nil
     var execObservation: PWExecObservation? = nil
     var execObservationProblem: String? = nil
     var stepId: String
@@ -1480,6 +1506,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             nativeErrno: readI32(slotBase, offset: PWShmLayout.slotNativeResultValidOffset) == 1 ? readI32(slotBase, offset: PWShmLayout.slotNativeErrnoOffset) : nil,
             unavailableCode: [.extensionConsume, .extensionRelease].contains(input.slots[i].attemptKind) ? UInt32(bitPattern: readI32(slotBase, offset: PWShmLayout.slotUnavailableCodeOffset)) : nil,
             freshRead: input.slots[i].attemptKind == .fileReadFresh ? decodeFreshRead(slotBase) : nil,
+            freshWrite: [.fileWriteFresh, .fileCreateFresh].contains(input.slots[i].attemptKind) ? decodeFreshWrite(slotBase) : nil,
             execObservation: execAccount.0, execObservationProblem: execAccount.1,
             stepId: stepId,
             rc: rc,
@@ -1710,4 +1737,38 @@ func decodeFreshRead(_ base: UnsafePointer<UInt8>) -> PWRunnerFreshRead {
     return PWRunnerFreshRead(open_rc: opened, read_rc: readRC, read_errno: readRC < 0 ? i(PWShmLayout.slotAccessReadErrnoOffset) : nil,
         stat_rc: statRC, stat_errno: statRC != 0 ? i(PWShmLayout.slotAccessStatErrnoOffset) : nil, identity: identity,
         close_rc: closeRC, close_errno: closeRC != 0 ? i(PWShmLayout.slotAccessCloseErrnoOffset) : nil, content_hex: content)
+}
+
+func decodeFreshWrite(_ slot: UnsafePointer<UInt8>) -> PWRunnerFreshWrite {
+    let base = slot.advanced(by: PWShmLayout.slotFreshWriteOffset)
+    func i(_ offset: Int) -> Int32 { readI32(base, offset: offset) }
+    func optional(_ value: Int32) -> Int32? { value == -2 ? nil : value }
+    func error(_ rc: Int32, _ offset: Int) -> Int32? { rc == -1 ? i(offset) : nil }
+    func metadata(_ offset: Int) -> PWRunnerFileStat? {
+        let p = base.advanced(by: offset)
+        let rc = readI32(p, offset: PWShmLayout.fileStatRcOffset)
+        if rc == -2 { return nil }
+        let identity = rc == 0 ? PWFileIdentity(
+            device: UInt64(bitPattern: readI64(p, offset: PWShmLayout.fileStatDeviceOffset)),
+            inode: UInt64(bitPattern: readI64(p, offset: PWShmLayout.fileStatInodeOffset)),
+            mode: UInt32(bitPattern: readI32(p, offset: PWShmLayout.fileStatModeOffset)),
+            uid: UInt32(bitPattern: readI32(p, offset: PWShmLayout.fileStatUidOffset)),
+            gid: UInt32(bitPattern: readI32(p, offset: PWShmLayout.fileStatGidOffset))) : nil
+        return PWRunnerFileStat(rc: rc,
+            errno: rc == -1 ? readI32(p, offset: PWShmLayout.fileStatErrnoOffset) : nil,
+            identity: identity, size: rc == 0 ? readI64(p, offset: PWShmLayout.fileStatSizeOffset) : nil)
+    }
+    let opened = i(PWShmLayout.freshWriteOpenRcOffset)
+    let truncated = i(PWShmLayout.freshWriteTruncateRcOffset)
+    let written = readI64(base, offset: PWShmLayout.freshWriteWriteRcOffset)
+    let closed = i(PWShmLayout.freshWriteCloseRcOffset)
+    return PWRunnerFreshWrite(open_rc: opened, open_errno: error(opened, PWShmLayout.freshWriteOpenErrnoOffset),
+        truncate_rc: optional(truncated), truncate_errno: error(truncated, PWShmLayout.freshWriteTruncateErrnoOffset),
+        write_rc: written == -2 ? nil : written,
+        write_errno: written == -1 ? i(PWShmLayout.freshWriteWriteErrnoOffset) : nil,
+        close_rc: optional(closed), close_errno: error(closed, PWShmLayout.freshWriteCloseErrnoOffset),
+        preopen_stat: metadata(PWShmLayout.freshWritePreopenStatOffset),
+        opened_stat: metadata(PWShmLayout.freshWriteOpenedStatOffset),
+        truncated_stat: metadata(PWShmLayout.freshWriteTruncatedStatOffset),
+        written_stat: metadata(PWShmLayout.freshWriteWrittenStatOffset))
 }

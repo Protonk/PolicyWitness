@@ -132,7 +132,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 23, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 24, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL
@@ -144,7 +144,10 @@ versions, unsupported attempt/filter names and ineffective combinations produce
 `bad_request` with a bounded `request_failure`. Capacity admission is shared
 between service handling and direct orchestration.
 
-The optional `extensions` array declares a local token reference and target.
+The optional `extensions` array declares a local token reference, target and
+optional `authority` (`read` or `read_write`, defaulting to `read`). The fresh
+issuer chooses the corresponding native read or read-write class from that
+bounded value in its transient channel; callers cannot supply class strings.
 An explicit phase action is either an ordinary pair or a `step_id` plus
 `extension` operation. At most one declaration, consume and release are admitted;
 release references the earlier consume handle. Actions may be omitted or placed
@@ -183,6 +186,10 @@ Native observations remain distinct from summaries: the query's `native_rc`
 carries a native return, while attempt `rc` is PolicyWitness status.
 `file/read_fresh` retains open/stat/read/close results and descriptor identity
 under `attempt.fresh_read`; `open_read` remains open-only.
+`file/write_fresh` and `file/create_fresh` retain open, explicit truncation where
+applicable, fixed one-byte write, close and metadata observations under
+`attempt.fresh_write`. Creation is exclusive and has a diagnostic pre-open
+`lstat`; legacy `open_write` and `create` retain their existing meanings.
 `no_completed_result` means no completed attempt result; the lifecycle evidence,
 not the outcome, says whether an operation began. Missing subprocess records or lifecycle fields establish neither
 successful execution nor cleanup.

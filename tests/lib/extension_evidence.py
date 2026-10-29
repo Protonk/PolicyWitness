@@ -1,4 +1,4 @@
-"""Independent checks of native extension and fresh-read observations.
+"""Independent checks of native extension and fresh file observations.
 
 These rules inspect published evidence, not policy text or effective permissions.
 The lifecycle oracle separately checks action publication against worker slots.
@@ -115,6 +115,77 @@ def validate_fresh_read(attempt):
     return errors
 
 
+def validate_fresh_write(attempt):
+    write = attempt.get('fresh_write')
+    action = attempt.get('requested_action')
+    expected = attempt.get('requested_kind') == 'file' and action in ('write_fresh', 'create_fresh') \
+        and attempt.get('result_source') == 'worker'
+    if write is None:
+        return ['completed fresh write lacks syscall observations'] if expected else []
+    if not expected or not isinstance(write, dict):
+        return ['fresh write requires a completed fresh-write attempt']
+    errors = []
+    create = action == 'create_fresh'
+    failures = []
+
+    def syscall(operation, maximum=0):
+        result, error = write.get(operation + '_rc'), write.get(operation + '_errno')
+        if not _integer(result, -1, maximum):
+            errors.append('invalid fresh write ' + operation + ' result')
+            return None
+        if (result == -1 and not _integer(error, 0, (1 << 31) - 1)) or (result >= 0 and error is not None):
+            errors.append('fresh write ' + operation + ' errno lacks failure result')
+        if result == -1:
+            failures.append(error or None)
+        return result
+
+    def metadata(name, *, diagnostic=False):
+        value = write.get(name)
+        if not isinstance(value, dict) or not _integer(value.get('rc'), -1, 0):
+            errors.append('invalid fresh write ' + name + ' observation')
+            return
+        rc, error = value['rc'], value.get('errno')
+        if rc == -1:
+            if not _integer(error, 0, (1 << 31) - 1) or value.get('identity') is not None or value.get('size') is not None:
+                errors.append('failed fresh write ' + name + ' carries identity/size or lacks errno')
+            if not diagnostic:
+                failures.append(error or None)
+        elif error is not None or not _identity(value.get('identity')) or not _integer(value.get('size'), -(1 << 63), (1 << 63) - 1):
+            errors.append('successful fresh write ' + name + ' lacks identity/size or carries errno')
+
+    if create:
+        metadata('preopen_stat', diagnostic=True)
+    elif write.get('preopen_stat') is not None:
+        errors.append('write_fresh cannot supply preopen metadata')
+    opened = syscall('open', (1 << 31) - 1)
+    if opened == -1:
+        if any(write.get(key) is not None for key in ('opened_stat', 'truncate_rc', 'truncate_errno',
+                'truncated_stat', 'write_rc', 'write_errno', 'written_stat', 'close_rc', 'close_errno')):
+            errors.append('failed fresh write open cannot supply later syscall observations')
+    elif opened is not None:
+        metadata('opened_stat')
+        if create:
+            if any(write.get(key) is not None for key in ('truncate_rc', 'truncate_errno', 'truncated_stat')):
+                errors.append('create_fresh cannot supply truncation observations')
+            transfer = True
+        else:
+            truncate = syscall('truncate')
+            metadata('truncated_stat')
+            transfer = truncate == 0
+        if transfer:
+            count = syscall('write', 1)
+            if count == 0:
+                failures.append(None)  # A short write supplies no failure errno.
+            metadata('written_stat')
+        elif any(write.get(key) is not None for key in ('write_rc', 'write_errno', 'written_stat')):
+            errors.append('failed fresh truncation cannot supply write observations')
+        syscall('close')
+    status = (-1, failures[0], 'write_failed') if failures else (0, None, 'ok')
+    if (attempt.get('rc'), attempt.get('errno'), attempt.get('outcome')) != status:
+        errors.append('fresh write syscall results disagree with attempt')
+    return errors
+
+
 def validate_extensions(runner):
     declarations = runner.get('extensions', [])
     events = runner.get('extension_events', [])
@@ -125,7 +196,8 @@ def validate_extensions(runner):
     errors = []
     declaration = declarations[0] if declarations and isinstance(declarations[0], dict) else {}
     if declarations:
-        if not _reference(declaration.get('token_ref')) or declaration.get('extension_class') != 'com.apple.app-sandbox.read':
+        if not _reference(declaration.get('token_ref')) or declaration.get('extension_class') not in (
+                'com.apple.app-sandbox.read', 'com.apple.app-sandbox.read-write'):
             errors.append('invalid extension declaration reference/class')
         for key in ('submitted_target', 'resolved_target'):
             value = declaration.get(key)

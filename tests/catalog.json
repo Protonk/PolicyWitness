@@ -693,6 +693,17 @@
           "description": "Allowed create produces the independently observed target file"
         },
         {
+          "id": "fresh_write",
+          "command": [
+            "bash",
+            "tests/suites/runner_c_worker_harness/fresh_write.sh"
+          ],
+          "description": "Production fresh-write syscall ordering, separate native failures, short writes, creation absence and combined-failure preservation",
+          "requires": [
+            "clang"
+          ]
+        },
+        {
           "id": "terminal_erasure",
           "description": "Independent full-capacity and done-boundary token erasure, preserved departures and rejected mutations",
           "requires": [
@@ -1667,6 +1678,17 @@
           "command": [
             "bash",
             "tests/suites/witness_contract/phases.sh"
+          ]
+        },
+        {
+          "id": "extension_directory",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/extension_directory.sh"
+          ],
+          "description": "Directory read-write authority, fresh modification and exclusive creation, independent persistence and missing-publication controls",
+          "requires": [
+            "app"
           ]
         },
         {

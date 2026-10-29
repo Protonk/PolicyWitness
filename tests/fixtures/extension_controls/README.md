@@ -67,3 +67,10 @@ establish cleanup and publication order, not native authority. The registered
 `runner_c_worker_harness/terminal_erasure` case retains original and mutated
 source/build logs and byte-free observations, and rejects shortened erasure and
 erasure moved after the publication boundary.
+
+`write_control.c` includes the production fresh-write actions with independent
+native substitutes. It checks call order and arguments, each failure boundary,
+short writes without an invented errno, combined failures and diagnostic
+pre-open metadata. These controls do not issue or consume extensions and make
+no kernel policy claim. The `runner_c_worker_harness/fresh_write` case owns
+compilation and execution; public directory witnesses own real file effects.

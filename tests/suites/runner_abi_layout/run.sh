@@ -94,6 +94,16 @@ def swift_name_for(printer_key: str) -> str:
         return "headerBytes"
     if printer_key == "sizeof.pw_shm_slot_t":
         return "slotBytes"
+    if printer_key == "sizeof.pw_file_stat_t":
+        return "fileStatBytes"
+    if printer_key == "sizeof.pw_fresh_write_t":
+        return "freshWriteBytes"
+    if printer_key.startswith("offsetof.pw_file_stat_t."):
+        field = printer_key[len("offsetof.pw_file_stat_t."):]
+        return "fileStat" + ("Errno" if field == "errno_val" else title_first(to_camel(field))) + "Offset"
+    if printer_key.startswith("offsetof.pw_fresh_write_t."):
+        field = printer_key[len("offsetof.pw_fresh_write_t."):]
+        return "freshWrite" + title_first(to_camel(field)) + "Offset"
     if printer_key == "sizeof.pw_shm_param_t":
         return "paramBytes"
     if printer_key == "sizeof.pw_shm_evidence_t":

@@ -5001,6 +5001,647 @@
     "repeat_phase_actions": 255
   },
   {
+    "id": "extension_authority_read",
+    "phase": "execution",
+    "lesson": "The bounded authority choice preserves ordinary actions even when issuance preparation is unavailable.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "authority": "read"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_authority_read_write",
+    "phase": "execution",
+    "lesson": "The bounded authority choice preserves ordinary actions even when issuance preparation is unavailable.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "authority": "read_write"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_authority_null",
+    "phase": "execution",
+    "lesson": "The bounded authority choice preserves ordinary actions even when issuance preparation is unavailable.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "authority": null
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_authority_unknown",
+    "phase": "meaning",
+    "lesson": "Authority accepts only the two public spellings; invalid authority refuses the entire plan before effects.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "authority": "write_only"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unsupported_extension_authority",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      },
+      "xpc": {
+        "code": "unsupported_extension_authority",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_authority_native_class",
+    "phase": "meaning",
+    "lesson": "Authority accepts only the two public spellings; invalid authority refuses the entire plan before effects.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "authority": "com.apple.app-sandbox.read-write"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unsupported_extension_authority",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      },
+      "xpc": {
+        "code": "unsupported_extension_authority",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_authority_empty",
+    "phase": "meaning",
+    "lesson": "Authority accepts only the two public spellings; invalid authority refuses the entire plan before effects.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "authority": ""
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unsupported_extension_authority",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      },
+      "xpc": {
+        "code": "unsupported_extension_authority",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_authority_boolean",
+    "phase": "structure",
+    "lesson": "Authority accepts only the two public spellings; invalid authority refuses the entire plan before effects.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "authority": true
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "type_mismatch",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      },
+      "xpc": {
+        "code": "type_mismatch",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_authority_number",
+    "phase": "structure",
+    "lesson": "Authority accepts only the two public spellings; invalid authority refuses the entire plan before effects.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "authority": 1
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "type_mismatch",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      },
+      "xpc": {
+        "code": "type_mismatch",
+        "path": [
+          "extensions",
+          "0",
+          "authority"
+        ]
+      }
+    }
+  },
+  {
+    "id": "create_fresh",
+    "phase": "execution",
+    "lesson": "Exclusive creation writes a fixed byte on a fresh descriptor and records each native result separately.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create_fresh",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "write_fresh_after_create",
+    "phase": "execution",
+    "lesson": "Fresh writing has a separate action spelling; an earlier ordinary create supplies the existing file.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        },
+        {
+          "step_id": "write",
+          "sandbox_check": {
+            "operation": "file-write-data",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "write_fresh",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
     "id": "previous_request_version",
     "phase": "version",
     "lesson": "The previous request contract is unsupported.",

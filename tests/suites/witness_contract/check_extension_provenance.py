@@ -8,7 +8,7 @@ out = Path(sys.argv[1])
 state = json.loads((out / 'session.json').read_text())
 record = json.loads((out / 'readback/record.json').read_text())
 count = 0
-for directory in ('extensions', 'phases', 'maximum'):
+for directory in ('extensions', 'directory', 'phases', 'maximum'):
     for path in (out / directory).rglob('run.json'):
         envelope = json.loads(path.read_text())
         provenance = envelope['data']['specimen']['runner_provenance']

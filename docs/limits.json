@@ -1291,7 +1291,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 52595368,
+      "value": 52843694,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",
@@ -1326,7 +1326,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer and two lifecycle-event records, the issuer override, 256 fresh-read payloads, and 256 exec-observation payloads are added without subtracting the ordinary fields they replace. Those components include mutually exclusive optional fields, maximal native-width values, and JSON member punctuation. Exec allowance includes every optional member, widest native scalars and longest fixed vocabulary, even where branches cannot coexist. A separate ordinary full-reply encoder control carries valid exec evidence on every slot. This is an upper bound, not a reachable reply. Distinct maximal control-character identities satisfy the ordinary phase/action association. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read and mixed native workloads."
+      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer and two lifecycle-event records, the issuer override, 256 fresh-read payloads, 256 fresh-write payloads, and 256 exec-observation payloads are added without subtracting the ordinary fields they replace. Those components include mutually exclusive optional fields, maximal native-width values, and JSON member punctuation. Exec allowance includes every optional member, widest native scalars and longest fixed vocabulary, even where branches cannot coexist. A separate ordinary full-reply encoder control carries valid exec evidence on every slot; another carries valid fresh-write evidence. This is an upper bound, not a reachable reply. Distinct maximal control-character identities satisfy the ordinary phase/action association. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write and mixed native workloads."
     },
     {
       "id": "controller_output",
@@ -1363,7 +1363,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. runner_unit asserts the derivation against the compiled Rust constant's documented value. Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Admitted 256-action CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, plus fresh-read and mixed consume/release workloads, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. runner_unit asserts the derivation against the compiled Rust constant's documented value. Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Admitted 256-action CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, plus fresh-read, fresh-write and mixed consume/release workloads, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
     },
     {
       "id": "policy_helper_output",

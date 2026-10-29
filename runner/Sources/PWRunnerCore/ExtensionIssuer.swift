@@ -19,6 +19,7 @@ enum PWExtensionLayout {
     static let euidOffset: Int = 32
     static let gidOffset: Int = 36
     static let egidOffset: Int = 40
+    static let authorityOffset: Int = 44
     static let targetOffset: Int = 64
     static let tokenOffset: Int = 1088
 }
@@ -40,6 +41,7 @@ final class ExtensionSession {
     init(declaration: PWRunnerExtensionDeclaration, executable: String,
          processCalls: ChildProcessCalls = ChildProcessCalls()) {
         record = PWRunnerExtensionRecord(token_ref: declaration.token_ref, submitted_target: declaration.target)
+        record.extension_class = declaration.nativeClass
         guard FileManager.default.isExecutableFile(atPath: executable) else {
             capabilityUnavailable = true; record.issuance_status = "issuer_unavailable"; return
         }
@@ -73,6 +75,8 @@ final class ExtensionSession {
         memset(base, 0, Self.channelBytes)
         let bytes = base.assumingMemoryBound(to: UInt8.self)
         writeU32(bytes, offset: PWExtensionLayout.magicOffset, PWExtensionLayout.magic)
+        let authority: UInt32 = declaration.effectiveAuthority == "read_write" ? 1 : 0
+        writeU32(bytes, offset: PWExtensionLayout.authorityOffset, authority)
         _ = resolved.withUnsafeBytes { memcpy(bytes.advanced(by: PWExtensionLayout.targetOffset), $0.baseAddress!, Self.pathBytes) }
         // dup2(fd, fd) preserves FD_CLOEXEC; always use a distinct source.
         let spawnFD = fcntl(fd, F_DUPFD_CLOEXEC, 64)
@@ -130,6 +134,7 @@ final class ExtensionSession {
         if published {
             let state = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.statusOffset))
             let validHeader = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.magicOffset)) == PWExtensionLayout.magic
+                && UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.authorityOffset)) == authority
                 && readI32(bytes, offset: PWExtensionLayout.pidOffset) == pid && [1, 2, 3, 4].contains(state)
                 && (state == 4 ? !issuer.call_boundary_observed : issuer.call_boundary_observed)
             if !validHeader {

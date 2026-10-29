@@ -60,11 +60,14 @@ private func slot(
 
 private let W = PWRunnerWire.self
 
-// The eight supported (kind, action) pairs paired with the failure
+// The supported (kind, action) pairs paired with the failure
 // outcome buildAttemptResult must emit when the slot completed rc != 0.
 // This list IS the Layer-1/Layer-2 agreement contract.
 private let SUPPORTED: [(kind: String, action: String, failOutcome: String)] = [
     (W.attemptKindFile,       W.attemptActionOpenRead,   AttemptOutcome.openFailed),
+    (W.attemptKindFile,       W.attemptActionReadFresh,  AttemptOutcome.readFailed),
+    (W.attemptKindFile,       W.attemptActionWriteFresh, AttemptOutcome.writeFailed),
+    (W.attemptKindFile,       W.attemptActionCreateFresh, AttemptOutcome.writeFailed),
     (W.attemptKindFile,       W.attemptActionOpenWrite,  AttemptOutcome.openFailed),
     (W.attemptKindFile,       W.attemptActionCreate,     AttemptOutcome.openFailed),
     (W.attemptKindFile,       W.attemptActionUnlink,     AttemptOutcome.unlinkFailed),

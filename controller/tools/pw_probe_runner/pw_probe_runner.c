@@ -1486,6 +1486,62 @@ static void attempt_file_read_fresh(pw_shm_slot_t *slot) {
     }
 }
 
+static void record_file_stat(pw_file_stat_t *out, int result, int saved_errno, const struct stat *metadata) {
+    out->rc = result; out->errno_val = result ? saved_errno : 0;
+    if (!result) {
+        out->device = (uint32_t)metadata->st_dev; out->inode = metadata->st_ino;
+        out->mode = metadata->st_mode; out->uid = metadata->st_uid; out->gid = metadata->st_gid;
+        out->size = metadata->st_size;
+    }
+}
+static void fresh_write_stat(int fd, pw_file_stat_t *out) {
+    struct stat metadata;
+    errno = 0;
+    int result = fstat(fd, &metadata), saved_errno = errno;
+    record_file_stat(out, result, saved_errno, &metadata);
+}
+static void fresh_write_failure(pw_shm_slot_t *slot, int failed, int saved_errno) {
+    if (failed && slot->rc == 0) { slot->rc = -1; slot->errno_val = saved_errno; }
+}
+/* Distinct actions preserve the legacy open_write/create meanings. No target
+ * descriptor is acquired before application or retained after this attempt.
+ * A short transfer is a failed attempt with no fabricated native errno. */
+static void attempt_file_write_fresh(pw_shm_slot_t *slot, int create) {
+    pw_fresh_write_t *out = &slot->fresh_write;
+    out->open_rc = out->truncate_rc = out->close_rc = -2; out->write_rc = -2;
+    out->preopen_stat.rc = out->opened_stat.rc = out->truncated_stat.rc = out->written_stat.rc = -2;
+    if (create) {
+        struct stat metadata;
+        errno = 0;
+        int result = lstat(slot->target, &metadata), saved_errno = errno;
+        record_file_stat(&out->preopen_stat, result, saved_errno, &metadata);
+    }
+    errno = 0;
+    int fd = open(slot->target, O_WRONLY | O_CLOEXEC | (create ? O_CREAT | O_EXCL : 0), 0600);
+    out->open_rc = fd; out->open_errno = fd < 0 ? errno : 0;
+    if (fd < 0) { slot->rc = -1; slot->errno_val = out->open_errno; return; }
+    fresh_write_stat(fd, &out->opened_stat);
+    fresh_write_failure(slot, out->opened_stat.rc != 0, out->opened_stat.errno_val);
+    if (!create) {
+        errno = 0;
+        out->truncate_rc = ftruncate(fd, 0); out->truncate_errno = out->truncate_rc ? errno : 0;
+        fresh_write_failure(slot, out->truncate_rc != 0, out->truncate_errno);
+        fresh_write_stat(fd, &out->truncated_stat);
+        fresh_write_failure(slot, out->truncated_stat.rc != 0, out->truncated_stat.errno_val);
+    }
+    if (create || out->truncate_rc == 0) {
+        const char byte = 'x';
+        errno = 0;
+        out->write_rc = write(fd, &byte, 1); out->write_errno = out->write_rc < 0 ? errno : 0;
+        fresh_write_failure(slot, out->write_rc != 1, out->write_errno);
+        fresh_write_stat(fd, &out->written_stat);
+        fresh_write_failure(slot, out->written_stat.rc != 0, out->written_stat.errno_val);
+    }
+    errno = 0;
+    out->close_rc = close(fd); out->close_errno = out->close_rc ? errno : 0;
+    fresh_write_failure(slot, out->close_rc != 0, out->close_errno);
+}
+
 /* Dispatch on attempt_kind. Initializes slot outputs to "ok defaults"
  * before the per-kind helper runs so a kind that leaves a field
  * untouched lands at a known state. `completed` is the LAST write
@@ -1503,6 +1559,8 @@ static void run_attempt(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t phase
     case PW_ATTEMPT_EXTENSION_CONSUME: attempt_extension(slot, 0); break;
     case PW_ATTEMPT_EXTENSION_RELEASE: attempt_extension(slot, 1); break;
     case PW_ATTEMPT_FILE_READ_FRESH: attempt_file_read_fresh(slot); break;
+    case PW_ATTEMPT_FILE_WRITE_FRESH: attempt_file_write_fresh(slot, 0); break;
+    case PW_ATTEMPT_FILE_CREATE_FRESH: attempt_file_write_fresh(slot, 1); break;
     case PW_ATTEMPT_FILE_OPEN_READ:   attempt_file_open_read(slot);       break;
     case PW_ATTEMPT_FILE_OPEN_WRITE:  attempt_file_open_write(slot);      break;
     case PW_ATTEMPT_FILE_CREATE:      attempt_file_create(slot);          break;

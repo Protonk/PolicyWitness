@@ -6908,7 +6908,7 @@
           "kind": "mixed",
           "facts": {
             "Inventory ID": "S8c",
-            "Acquired by": "E: mmap, zero/header/path writes",
+            "Acquired by": "E: mmap, zero/header/path/authority writes",
             "When": "Before compilation",
             "Held across": "Through reply preparation",
             "Release / teardown action": "E erase before reply; deinit erases, unmaps",
@@ -7115,7 +7115,7 @@
             "When": "Before compilation",
             "Held across": "Copy/reject decision only",
             "Release / teardown action": "I bounded erase then free; oversized tail caveat",
-            "Authority": "Bearer bytes for native extension consumption",
+            "Authority": "Bearer bytes for internally selected native read or read-write extension consumption",
             "Reaches exec children": "No: issuer storage not inherited",
             "Role": "A"
           },
@@ -8161,6 +8161,76 @@
               "symbol": "extensions",
               "form": "test",
               "scope": "Fresh-read and extension action evidence is compared with independent file bytes and native-call controls; native release is not a revocation assertion."
+            }
+          ]
+        },
+        {
+          "id": "s32w",
+          "label": "Fresh write fd and observations",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S32w",
+            "Acquired by": "attempt_file_write_fresh: open(O_WRONLY | O_CLOEXEC), fstat, ftruncate, write",
+            "When": "After apply within an attempt",
+            "Held across": "Attempt only on successful close; close failure retained",
+            "Release / teardown action": "One close; failure retained; completed bytes may persist",
+            "Authority": "Modify the opened existing object",
+            "Reaches exec children": "No: close-on-exec and child exclusion",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_write_fresh"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/fresh_write.sh",
+              "symbol": "fresh_write",
+              "form": "test",
+              "scope": "Production syscall substitutions assert open/stat/truncate/write/close order, native failures, short writes and combined-failure preservation; no native policy effect is inferred."
+            },
+            {
+              "path": "tests/suites/witness_contract/extension_directory.sh",
+              "symbol": "extension_directory",
+              "form": "test",
+              "scope": "Owned existing files and initially absent children provide independent contents and entry observations through ordinary CLI phases, with authority controls and publication withholding."
+            }
+          ]
+        },
+        {
+          "id": "s32c",
+          "label": "Exclusive child creation and fd",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S32c",
+            "Acquired by": "attempt_file_write_fresh: lstat, open(O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600), fstat, write",
+            "When": "After apply within an attempt",
+            "Held across": "Attempt only on successful close; close failure retained",
+            "Release / teardown action": "One close; failure retained; created entry and bytes may persist",
+            "Authority": "Create an absent child and write its opened object",
+            "Reaches exec children": "No: close-on-exec and child exclusion",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_write_fresh"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/fresh_write.sh",
+              "symbol": "fresh_write",
+              "form": "test",
+              "scope": "Production syscall substitutions assert open/stat/truncate/write/close order, native failures, short writes and combined-failure preservation; no native policy effect is inferred."
+            },
+            {
+              "path": "tests/suites/witness_contract/extension_directory.sh",
+              "symbol": "extension_directory",
+              "form": "test",
+              "scope": "Owned existing files and initially absent children provide independent contents and entry observations through ordinary CLI phases, with authority controls and publication withholding."
             }
           ]
         },
@@ -10147,6 +10217,60 @@
               "symbol": "max_targets_reply_survives",
               "form": "test",
               "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
+            }
+          ]
+        },
+        {
+          "id": "W55",
+          "from": "s32w",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes separate write and metadata observations through completed slot",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_write_fresh"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/fresh_write.sh",
+              "symbol": "fresh_write",
+              "form": "test",
+              "scope": "Production syscall substitutions assert open/stat/truncate/write/close order, native failures, short writes and combined-failure preservation; no native policy effect is inferred."
+            },
+            {
+              "path": "tests/suites/witness_contract/extension_directory.sh",
+              "symbol": "extension_directory",
+              "form": "test",
+              "scope": "Owned existing files and initially absent children provide independent contents and entry observations through ordinary CLI phases, with authority controls and publication withholding."
+            }
+          ]
+        },
+        {
+          "id": "W56",
+          "from": "s32c",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes separate write and metadata observations through completed slot",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_write_fresh"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/fresh_write.sh",
+              "symbol": "fresh_write",
+              "form": "test",
+              "scope": "Production syscall substitutions assert open/stat/truncate/write/close order, native failures, short writes and combined-failure preservation; no native policy effect is inferred."
+            },
+            {
+              "path": "tests/suites/witness_contract/extension_directory.sh",
+              "symbol": "extension_directory",
+              "form": "test",
+              "scope": "Owned existing files and initially absent children provide independent contents and entry observations through ordinary CLI phases, with authority controls and publication withholding."
             }
           ]
         }
