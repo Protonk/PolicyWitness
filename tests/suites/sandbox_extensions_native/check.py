@@ -191,12 +191,12 @@ def run_experiment(binary, folder, case, target, issue, instrument):
     return r
 
 
-def main():
-    out = Path(sys.argv[1]).resolve()
+def prepare(out):
     binary = out / 'native'
     identity = os.environ.get('PW_BYOXPC_IDENTITY') or os.environ.get('IDENTITY')
     assert identity and identity.startswith('Developer ID Application: '), 'explicit Developer ID identity required'
     source_files = ['tests/fixtures/sandbox_extensions/native.c', 'tests/fixtures/sandbox_extensions/build.sh',
+                    'tests/suites/sandbox_extensions_native/directory_check.py', 'tests/suites/sandbox_extensions_native/directory.sh',
                     'tests/suites/sandbox_extensions_native/check.py', 'tests/suites/sandbox_extensions_native/run.sh',
                     'tests/catalog.json', 'tests/lib/case.sh', 'tests/lib/testlib.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh', 'tests/lib/test_cli.py',
                     'tests/lib/suite_run.py', 'tests/fixtures/sandbox_extensions/README.md',
@@ -226,6 +226,13 @@ def main():
     save(out / 'equipment.json', dict(identity=identity, binary_sha256=binary_hash,
         entitlements={}, roles_share_signed_executable=True, uid=os.getuid(), gid=os.getgid(),
         child_environment=['PATH=/usr/bin:/bin', 'LC_ALL=C']))
+    return binary_hash
+
+
+def main():
+    out = Path(sys.argv[1]).resolve()
+    binary = out / 'native'
+    binary_hash = prepare(out)
     for symbol in ('malloc_logger', '__syscall_logger'):
         command([binary, '--allocation-probe', symbol], out, symbol, required=False)
     results = []

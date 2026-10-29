@@ -68,6 +68,21 @@ struct access_result {
     struct file_identity identity;
 };
 struct call_result { int attempted, saved_errno; int64_t rc; struct counts allocations; };
+struct presence_result { int attempted, rc, saved_errno; struct file_identity identity; };
+struct write_result {
+    struct presence_result before;
+    struct call_result open, truncate, write, close;
+    struct presence_result opened, truncated, written;
+};
+struct directory_evidence {
+    int enabled, read_only, inherited_file_fds;
+    char existing[BOUNDARIES][PATH_MAX], child[BOUNDARIES][PATH_MAX];
+    struct file_identity existing_identity[BOUNDARIES];
+    struct presence_result issuance_absence[BOUNDARIES], host_absence[BOUNDARIES];
+    struct write_result writes[BOUNDARIES][2];
+    struct access_result completed[BOUNDARIES][2];
+    struct access_result after_release[BOUNDARIES][2], after_exit[BOUNDARIES][2];
+};
 struct evidence {
     char scenario[64], target[PATH_MAX], submitted_issue[PATH_MAX], issue_path[PATH_MAX];
     int instrument, no_consume, no_release, no_predicate, retain_fd, issuer_exits;
@@ -82,6 +97,7 @@ struct evidence {
     struct call_result issue, apply, consume, release;
     struct counts positive_before, positive_after;
     struct access_result parent_baseline, access[BOUNDARIES], retained;
+    struct directory_evidence directory;
     int fds_before_consume, fds_after_consume, fds_after_release;
     _Atomic unsigned arrival, go, ack[BOUNDARIES], issued, issuer_stop, worker_done;
 };
@@ -91,6 +107,22 @@ static const char *policy_with_predicate =
     "(allow file-read-data (extension \"com.apple.app-sandbox.read\"))";
 static const char *policy_without_predicate =
     "(version 1) (allow default) (deny file-read-data)";
+static const char *directory_policy =
+    "(version 1) (allow default) (deny file-read-data) (deny file-write*) "
+    "(allow file-read-data (extension \"com.apple.app-sandbox.read\") "
+    "(extension \"com.apple.app-sandbox.read-write\")) "
+    "(allow file-write* (extension \"com.apple.app-sandbox.read-write\"))";
+static const char *directory_no_predicate =
+    "(version 1) (allow default) (deny file-read-data) (deny file-write*)";
+static const char directory_payload[] = "PW directory effect\n";
+static const char *selected_policy(const struct evidence *e) {
+    if (e->directory.enabled) return e->no_predicate ? directory_no_predicate : directory_policy;
+    return e->no_predicate ? policy_without_predicate : policy_with_predicate;
+}
+static const char *selected_class(const struct evidence *e) {
+    return e->directory.enabled && !e->directory.read_only ?
+        "com.apple.app-sandbox.read-write" : "com.apple.app-sandbox.read";
+}
 
 static void identity_from_stat(struct file_identity *out, const struct stat *st) {
     *out = (struct file_identity){(uint64_t)st->st_dev, st->st_ino, st->st_mode,
@@ -128,6 +160,48 @@ static int access_file(const char *path, struct access_result *out, int retain) 
     read_fd(out->open_rc, out);
     if (!retain) close_fd(out->open_rc, out);
     return retain ? out->open_rc : -1;
+}
+static void presence(const char *path, struct presence_result *out) {
+    struct stat st;
+    out->attempted = 1; errno = 0;
+    out->rc = lstat(path, &st); out->saved_errno = errno;
+    if (!out->rc) identity_from_stat(&out->identity, &st);
+}
+static void descriptor(int fd, struct presence_result *out) {
+    struct stat st;
+    out->attempted = 1; errno = 0;
+    out->rc = fstat(fd, &st); out->saved_errno = errno;
+    if (!out->rc) identity_from_stat(&out->identity, &st);
+}
+static void write_file(const char *path, bool create, struct write_result *out) {
+    presence(path, &out->before);
+    out->open.attempted = 1; errno = 0;
+    int fd = open(path, O_WRONLY | O_CLOEXEC | (create ? O_CREAT | O_EXCL : 0), 0600);
+    out->open.rc = fd; out->open.saved_errno = errno;
+    if (fd < 0) return;
+    descriptor(fd, &out->opened);
+    if (!create) {
+        out->truncate.attempted = 1; errno = 0;
+        out->truncate.rc = ftruncate(fd, 0); out->truncate.saved_errno = errno;
+        descriptor(fd, &out->truncated);
+    }
+    if (create || !out->truncate.rc) {
+        out->write.attempted = 1; errno = 0;
+        out->write.rc = write(fd, directory_payload, sizeof(directory_payload) - 1);
+        out->write.saved_errno = errno;
+        descriptor(fd, &out->written);
+    }
+    out->close.attempted = 1; errno = 0;
+    out->close.rc = close(fd); out->close.saved_errno = errno;
+}
+static void directory_attempt(struct evidence *e, unsigned i) {
+    access_file(e->directory.existing[i], &e->access[i], 0);
+    write_file(e->directory.existing[i], false, &e->directory.writes[i][0]);
+    write_file(e->directory.child[i], true, &e->directory.writes[i][1]);
+}
+static void directory_snapshot(struct evidence *e, unsigned i, struct access_result out[2]) {
+    access_file(e->directory.existing[i], &out[0], 0);
+    access_file(e->directory.child[i], &out[1], 0);
 }
 static int fd_count(int limit) {
     int count = 0;
@@ -186,8 +260,10 @@ static int child_main(const char *role) {
         e->issuer_gid = getgid(); e->issuer_egid = getegid();
         issue_fn issue = (issue_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_issue_file");
         if (!issue) return 92;
+        if (e->directory.enabled) for (unsigned i = 0; i < BOUNDARIES; i++)
+            presence(e->directory.child[i], &e->directory.issuance_absence[i]);
         e->issue.attempted = 1; errno = 0;
-        char *raw = issue("com.apple.app-sandbox.read", e->bad_issue_path ? "" : e->issue_path, e->issue_flags);
+        char *raw = issue(selected_class(e), e->bad_issue_path ? "" : e->issue_path, e->issue_flags);
         e->issue.saved_errno = errno;
         e->issue_nonnull = raw != NULL;
         if (raw) {
@@ -225,18 +301,23 @@ static int child_main(const char *role) {
     e->fd_scan_limit = getdtablesize();
     e->inherited_target_fds = matching_fds(&e->target_identity, e->fd_scan_limit);
     e->inherited_other_target_fds = matching_fds(&e->issue_identity, e->fd_scan_limit);
-    access_file(e->target, &e->access[0], 0);
+    if (e->directory.enabled) {
+        for (unsigned i = 0; i < BOUNDARIES; i++)
+            e->directory.inherited_file_fds += matching_fds(&e->directory.existing_identity[i], e->fd_scan_limit);
+    } else access_file(e->target, &e->access[0], 0);
     char *error = NULL;
-    void *profile = compile(e->no_predicate ? policy_without_predicate : policy_with_predicate, NULL, &error);
+    void *profile = compile(selected_policy(e), NULL, &error);
     e->compile_ok = profile != NULL;
     /* Do not forward arbitrary native diagnostics into retained output. */
     if (!profile) return 95;
     if (gate(e, 0)) return 96;
+    if (e->directory.enabled) directory_attempt(e, 0);
     e->apply.attempted = 1; e->apply_count++; errno = 0;
     e->apply.rc = apply(profile); e->apply.saved_errno = errno;
     if (e->apply.rc) return 97;
     if (gate(e, 1)) return 96;
-    access_file(e->target, &e->access[1], 0);
+    if (e->directory.enabled) directory_attempt(e, 1);
+    else access_file(e->target, &e->access[1], 0);
     e->fds_before_consume = fd_count(e->fd_scan_limit);
     if (!e->no_consume && e->issue_nonnull) {
         e->consume.attempted = 1;
@@ -247,7 +328,9 @@ static int child_main(const char *role) {
     erase(token, sizeof(*token));
     e->fds_after_consume = fd_count(e->fd_scan_limit);
     if (gate(e, 2)) return 96;
-    int retained = access_file(e->target, &e->access[2], e->retain_fd);
+    int retained = -1;
+    if (e->directory.enabled) directory_attempt(e, 2);
+    else retained = access_file(e->target, &e->access[2], e->retain_fd);
     if (!e->no_release && e->consume.attempted && e->consume.rc != -1) {
         e->release.attempted = 1;
         measurement = e->instrument ? &e->release.allocations : NULL;
@@ -256,7 +339,8 @@ static int child_main(const char *role) {
     }
     e->fds_after_release = fd_count(e->fd_scan_limit);
     if (gate(e, 3)) return 96;
-    access_file(e->target, &e->access[3], 0);
+    if (e->directory.enabled) directory_attempt(e, 3);
+    else access_file(e->target, &e->access[3], 0);
     if (retained >= 0) {
         e->retained.seek_attempted = 1; errno = 0;
         e->retained.seek_rc = lseek(retained, 0, SEEK_SET); e->retained.seek_errno = errno;
@@ -344,6 +428,41 @@ static void json_access(FILE *f, const struct access_result *a) {
     for (int64_t i = 0; i < a->read_rc && i < CONTENT_CAP; i++) fprintf(f, "%02x", a->content[i]);
     fputs("\"}", f);
 }
+static void json_presence(FILE *f, const struct presence_result *p) {
+    fprintf(f, "{\"attempted\":%d,\"rc\":%d,\"errno\":%d,\"identity\":", p->attempted, p->rc, p->saved_errno);
+    json_identity(f, &p->identity); fputc('}', f);
+}
+static void json_write(FILE *f, const struct write_result *w) {
+    fputs("{\"before\":", f); json_presence(f, &w->before);
+    fputs(",\"open\":", f); json_call(f, &w->open);
+    fputs(",\"opened\":", f); json_presence(f, &w->opened);
+    fputs(",\"truncate\":", f); json_call(f, &w->truncate);
+    fputs(",\"truncated\":", f); json_presence(f, &w->truncated);
+    fputs(",\"write\":", f); json_call(f, &w->write);
+    fputs(",\"written\":", f); json_presence(f, &w->written);
+    fputs(",\"close\":", f); json_call(f, &w->close); fputc('}', f);
+}
+static void json_directory(FILE *f, const struct directory_evidence *d) {
+    fprintf(f, "{\"inherited_file_fds\":%d,\"boundaries\":[", d->inherited_file_fds);
+    for (unsigned i = 0; i < BOUNDARIES; i++) {
+        if (i) fputc(',', f);
+        fprintf(f, "{\"index\":%u,\"existing\":", i); string(f, d->existing[i]);
+        fputs(",\"child\":", f); string(f, d->child[i]);
+        fputs(",\"existing_identity\":", f); json_identity(f, &d->existing_identity[i]);
+        fputs(",\"issuance_absence\":", f); json_presence(f, &d->issuance_absence[i]);
+        fputs(",\"host_absence\":", f); json_presence(f, &d->host_absence[i]);
+        fputs(",\"child_prediction\":{\"attempted\":false,\"reason\":\"unresolved_absent_child\"},\"operations\":[", f);
+        for (unsigned k = 0; k < 2; k++) {
+            if (k) fputc(',', f);
+            fputs("{\"write\":", f); json_write(f, &d->writes[i][k]);
+            fputs(",\"completed\":", f); json_access(f, &d->completed[i][k]);
+            fputs(",\"after_release\":", f); json_access(f, &d->after_release[i][k]);
+            fputs(",\"after_exit\":", f); json_access(f, &d->after_exit[i][k]); fputc('}', f);
+        }
+        fputs("]}", f);
+    }
+    fputs("]}", f);
+}
 
 int main(int argc, char **argv) {
     struct rlimit no_core = {0, 0};
@@ -351,7 +470,8 @@ int main(int argc, char **argv) {
     if (argc == 3 && !strcmp(argv[1], "--allocation-probe")) return allocation_probe(argv[2]);
     if (argc == 2 && (!strcmp(argv[1], "--worker") || !strcmp(argv[1], "--issuer"))) return child_main(argv[1]);
     if (argc != 5) { fputs("usage: native CASE TARGET ISSUANCE_TARGET instrument|plain\n", stderr); return 2; }
-    const char *cases[] = {"lifecycle", "issuer_exit", "no_consume", "no_release", "no_predicate", "different_target", "issue_failure", "rejected_token", "retained_fd"};
+    const char *cases[] = {"lifecycle", "issuer_exit", "no_consume", "no_release", "no_predicate", "different_target", "issue_failure", "rejected_token", "retained_fd",
+        "directory", "directory_no_consume", "directory_no_predicate", "directory_different", "directory_read_only"};
     bool known = false;
     for (size_t i = 0; i < sizeof(cases)/sizeof(cases[0]); i++) if (!strcmp(argv[1], cases[i])) known = true;
     if (!known || (strcmp(argv[4], "instrument") && strcmp(argv[4], "plain"))) return 2;
@@ -363,8 +483,10 @@ int main(int argc, char **argv) {
     if (strlen(argv[1]) >= sizeof(e->scenario) || strlen(argv[2]) >= PATH_MAX || strlen(argv[3]) >= PATH_MAX) return 2;
     strcpy(e->scenario, argv[1]); strcpy(e->target, argv[2]); strcpy(e->submitted_issue, argv[3]);
     e->instrument = !strcmp(argv[4], "instrument");
-    e->no_consume = !strcmp(argv[1], "no_consume"); e->no_release = !strcmp(argv[1], "no_release");
-    e->no_predicate = !strcmp(argv[1], "no_predicate"); e->retain_fd = !strcmp(argv[1], "retained_fd");
+    e->no_consume = !strcmp(argv[1], "no_consume") || !strcmp(argv[1], "directory_no_consume");
+    e->no_release = !strcmp(argv[1], "no_release");
+    e->no_predicate = !strcmp(argv[1], "no_predicate") || !strcmp(argv[1], "directory_no_predicate");
+    e->retain_fd = !strcmp(argv[1], "retained_fd");
     e->issuer_exits = !strcmp(argv[1], "issuer_exit"); e->rejected_token = !strcmp(argv[1], "rejected_token");
     e->bad_issue_path = !strcmp(argv[1], "issue_failure"); e->issue_flags = 0;
     struct stat st;
@@ -376,13 +498,24 @@ int main(int argc, char **argv) {
         fputs("issuance target preparation failed\n", stderr); return 3;
     }
     identity_from_stat(&e->issue_identity, &st);
-    access_file(e->target, &e->parent_baseline, 0);
+    e->directory.enabled = !strncmp(argv[1], "directory", 9);
+    e->directory.read_only = !strcmp(argv[1], "directory_read_only");
+    if (e->directory.enabled) {
+        if (!S_ISDIR(e->target_identity.mode) || !S_ISDIR(e->issue_identity.mode)) return 3;
+        for (unsigned i = 0; i < BOUNDARIES; i++) {
+            if (snprintf(e->directory.existing[i], PATH_MAX, "%s/existing-%u", e->target, i) >= PATH_MAX ||
+                snprintf(e->directory.child[i], PATH_MAX, "%s/child-%u", e->target, i) >= PATH_MAX) return 3;
+            if (lstat(e->directory.existing[i], &st) || !S_ISREG(st.st_mode)) return 3;
+            identity_from_stat(&e->directory.existing_identity[i], &st);
+        }
+    } else access_file(e->target, &e->parent_baseline, 0);
     char executable[PATH_MAX], pathbuf[PATH_MAX]; uint32_t size = sizeof(pathbuf);
     if (_NSGetExecutablePath(pathbuf, &size) || !realpath(pathbuf, executable)) return 3;
     check_fn check = (check_fn)dlsym(RTLD_DEFAULT, "sandbox_check");
     const int *no_report = dlsym(RTLD_DEFAULT, "SANDBOX_CHECK_NO_REPORT");
     if (!check || !no_report) { fputs("query capability unavailable\n", stderr); return 3; }
     struct call_result queries[BOUNDARIES] = {0};
+    struct call_result write_queries[BOUNDARIES] = {0};
     pid_t worker = 0, issuer = 0;
     int worker_status = -1, issuer_status = -1, worker_reaped = 0, issuer_reaped = 0, failure = 0;
     unsigned observed = 0;
@@ -421,18 +554,34 @@ int main(int argc, char **argv) {
             pause_briefly();
         }
         observed++;
+        if (e->directory.enabled) {
+            if (i) directory_snapshot(e, i - 1, e->directory.completed[i - 1]);
+            presence(e->directory.child[i], &e->directory.host_absence[i]);
+            if (i == 3) for (unsigned j = 0; j < BOUNDARIES; j++)
+                directory_snapshot(e, j, e->directory.after_release[j]);
+        }
         if (!issuer_reaped) {
             pid_t alive = waitpid(issuer, &issuer_status, WNOHANG);
             issuer_live[i] = alive == 0;
             if (alive == issuer) issuer_reaped = 1;
         }
         queries[i].attempted = 1; errno = 0;
-        queries[i].rc = check(worker, "file-read-data", 1 | *no_report, e->target);
+        const char *query_path = e->directory.enabled ? e->directory.existing[i] : e->target;
+        queries[i].rc = check(worker, "file-read-data", 1 | *no_report, query_path);
         queries[i].saved_errno = errno;
+        if (e->directory.enabled) {
+            write_queries[i].attempted = 1; errno = 0;
+            write_queries[i].rc = check(worker, "file-write-data", 1 | *no_report, query_path);
+            write_queries[i].saved_errno = errno;
+        }
         atomic_store_explicit(&e->go, i + 1, memory_order_release);
     }
     worker_reaped = reap(worker, &worker_status, deadline);
     if (!worker_reaped) failure = 7;
+    else if (e->directory.enabled) {
+        directory_snapshot(e, 3, e->directory.completed[3]);
+        for (unsigned i = 0; i < BOUNDARIES; i++) directory_snapshot(e, i, e->directory.after_exit[i]);
+    }
 cleanup:
     atomic_store_explicit(&e->issuer_stop, 1, memory_order_release);
     int worker_kill = 0, issuer_kill = 0;
@@ -451,9 +600,9 @@ cleanup:
     fputs(",\"target\":", f); string(f, e->target);
     fputs(",\"submitted_issue\":", f); string(f, e->submitted_issue);
     fputs(",\"resolved_issue\":", f); string(f, e->issue_path);
-    fputs(",\"issue_class\":", f); string(f, "com.apple.app-sandbox.read");
+    fputs(",\"issue_class\":", f); string(f, selected_class(e));
     fputs(",\"native_issue_path\":", f); string(f, e->bad_issue_path ? "" : e->issue_path);
-    fputs(",\"policy\":", f); string(f, e->no_predicate ? policy_without_predicate : policy_with_predicate);
+    fputs(",\"policy\":", f); string(f, selected_policy(e));
     fprintf(f, ",\"instrumented\":%d,\"host_pid\":%d,\"worker_pid\":%d,\"issuer_pid\":%d,\"worker_uid\":%d,\"worker_euid\":%d,\"worker_gid\":%d,\"worker_egid\":%d,"
         "\"issuer_uid\":%d,\"issuer_euid\":%d,\"issuer_gid\":%d,\"issuer_egid\":%d,\"compile_ok\":%d,\"apply_count\":%d,\"capability\":%d,"
         "\"inherited_target_fds\":%d,\"inherited_other_target_fds\":%d,\"fd_scan_limit\":%d,\"issue_flags\":%u,\"issue_nonnull\":%d,\"token_length\":%u,"
@@ -484,9 +633,13 @@ cleanup:
     for (unsigned i = 0; i < BOUNDARIES; i++) {
         if (i) fputc(',', f);
         fprintf(f, "{\"index\":%u,\"ack\":%u,\"issuer_waitpid_observed_live\":%d,\"query\":", i, atomic_load(&e->ack[i]), issuer_live[i]);
-        json_call(f, &queries[i]); fputs(",\"access\":", f); json_access(f, &e->access[i]); fputc('}', f);
+        json_call(f, &queries[i]);
+        if (e->directory.enabled) { fputs(",\"write_query\":", f); json_call(f, &write_queries[i]); }
+        fputs(",\"access\":", f); json_access(f, &e->access[i]); fputc('}', f);
     }
-    fputs("]}\n", f); fclose(f);
+    fputc(']', f);
+    if (e->directory.enabled) { fputs(",\"directory\":", f); json_directory(f, &e->directory); }
+    fputs("}\n", f); fclose(f);
     bool leak = private_length && memmem(json, json_size, private_token, private_length);
     erase(private_token, sizeof(private_token));
     if (leak) { erase(json, json_size); free(json); fputs("token confinement failure; output withheld\n", stderr); return 8; }

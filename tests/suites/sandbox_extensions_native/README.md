@@ -50,3 +50,31 @@ deadline is a harness failure, not a native sandbox observation.
 These controls establish native feasibility under the recorded environment.
 They do not establish production phase ordering, XPC transport, BYOXPC signing,
 public admission or product token confinement.
+
+## Directory authority
+
+The opt-in `directory` case uses the same signing and process equipment. Its
+fixed policy denies data reads and file writes, permits reads through the native
+read and read-write extension predicates, and permits writes through the
+read-write predicate. It compares `com.apple.app-sandbox.read-write` issuance
+for an owned directory with no consumption, omitted predicates, a different
+directory and `com.apple.app-sandbox.read` issuance. Developer ID signing and its
+timestamp service justify opt-in membership, as with `feasibility`.
+
+Each boundary has a separate existing file and absent child name. The issuer
+records absence before issuance, the host before releasing the worker, and the
+worker immediately before exclusive creation. Existing-file open, explicit
+truncation, write, descriptor sizes and close are separately observed. The host
+reads effects after each completed boundary, after release and after worker
+exit; Python independently reads back the final filesystem state. Before-policy
+operations establish ordinary permissions. The positive consumed arrangement
+must modify the existing file and create the child; the four controls must not.
+Fresh post-release operations and native query answers have no required pattern.
+An absent child has no invented query prediction.
+
+`directory_check.py` verifies these observations independently of production
+actions and classifiers. Constructed controls reject missing absence, lifecycle,
+identity, operation and persistence evidence. It accepts unavailable or unchanged
+queries and failed release results without translating them into access claims.
+The case retains exact source, signing, native and external observations under
+the same evidence ownership as `feasibility`.

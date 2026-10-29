@@ -1980,6 +1980,7 @@
         "runner_byoxpc/entitlement_readback",
         "runner_byoxpc/entitlement_transfer",
         "sandbox_extensions_native/feasibility",
+        "sandbox_extensions_native/directory",
         "witness_contract/extensions_byoxpc",
         "witness_contract/path_query_observations",
         "witness_contract/path_query_integrated",
@@ -2074,6 +2075,15 @@
         {
           "id": "feasibility",
           "description": "Independent signed native extension lifecycle, access controls, issuer lifetime, token confinement and allocation observations",
+          "default": false
+        },
+        {
+          "id": "directory",
+          "command": [
+            "bash",
+            "tests/suites/sandbox_extensions_native/directory.sh"
+          ],
+          "description": "Independent directory read-write extension, existing-file modification, exclusive child creation and external persistence controls",
           "default": false
         }
       ]

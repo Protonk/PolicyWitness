@@ -59,7 +59,8 @@ deterministic, and checked into the repo so tests are hermetic.
   trees, plus OS identity/lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.
 - `sandbox_extensions/`: independent signed native issuer/worker experiment with
-  transient token transport, fresh file-access evidence and allocation controls;
+  transient token transport, fresh reads, directory writes and exclusive creation,
+  external persistence evidence and allocation controls;
   see its [README](sandbox_extensions/README.md).
 - `extension_controls/`: production issuer/worker boundary substitutions with
   transient independent receipts for native interruption and token confinement;

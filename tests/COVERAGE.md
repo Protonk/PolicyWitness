@@ -55,9 +55,10 @@ the reported records.
 
 The opt-in [native extension suite](suites/sandbox_extensions_native/README.md)
 establishes file-extension feasibility with independent native calls, target
-identity/content observations, issuer lifetime comparisons and allocation
-controls. It neither produces nor validates PW outcomes; production extension
-and phase integration is outside that case.
+identity/content observations, directory modification and exclusive creation,
+external persistence, issuer lifetime comparisons and allocation controls.
+It neither produces nor validates PW outcomes; production extension and phase
+integration is outside those cases.
 
 The default `witness_contract/extensions`, `extension_boundaries` and
 `extension_combinations` cases cover

@@ -38,3 +38,16 @@ allocation paths or kernel resources. No extension call is made before applicati
 The fixture's bounds live in its C definitions; they are experiment limits, not
 new product admission limits. Native failures and cleanup results remain in the
 raw report. The suite's checker, not the fixture, decides acceptance.
+
+Directory scenarios issue `com.apple.app-sandbox.read-write` (or the read-only
+control) for an owned directory. Distinct existing files and absent child names
+serve the four boundaries. Issuance completes before the first attempt; the
+issuer, host and worker independently record child absence before issuance,
+before releasing the boundary and immediately before exclusive creation.
+Existing-file writes use a fresh write-only open followed by explicit truncation,
+write and close. Each call and descriptor size is separate. The host snapshots
+completed effects, all targets after release while the worker is paused, and
+all targets after worker exit. No file descriptor is retained between attempts.
+Read and write queries use the existing file; the absent child has an explicit
+unavailable prediction. Persistence means observed contents and directory entries,
+not crash durability. These operations do not define production file actions.

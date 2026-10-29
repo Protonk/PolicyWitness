@@ -15,6 +15,8 @@ temporary workset material and retire together after final acceptance.
   responsibility map, scenarios and expectations; freeze at the C0 seal.
 - [C0 seal](records/workset/c0-seal.md): frozen account identity, readiness
   review, correction and acceptance limits.
+- [Directory native experiment](records/workset/directory-native.md): E1
+  apparatus, acceptance criteria and observations before public integration.
 
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.

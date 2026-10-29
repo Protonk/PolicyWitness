@@ -646,10 +646,12 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 
 ### Native sandbox extensions
 
-- **Case:** `sandbox_extensions_native/feasibility`
+- **Cases:** `sandbox_extensions_native/feasibility` and
+  `sandbox_extensions_native/directory`
 - **Location:** `tests/suites/sandbox_extensions_native/run.sh`
 - **Purpose:** Independent signed native lifecycle, fresh file-access and failure
-  controls, issuer lifetime, transient-token handling and allocation observations.
+  controls, directory modification and exclusive creation, external persistence,
+  issuer lifetime, transient-token handling and allocation observations.
 - **Resource dependency:** macOS C toolchain, Developer ID Application identity
   and unsandboxed execution; signing uses the timestamp service. No app or GUI
   service installation is required. Set `IDENTITY` or `PW_BYOXPC_IDENTITY`.
