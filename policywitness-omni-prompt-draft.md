@@ -26,6 +26,8 @@ Explicitly exclude the experimental atlas, the host-setup oracle correction, and
 
 Use these boundaries to resist opportunistic expansion. Work needed to satisfy an included obligation belongs in its plan; an interesting neighboring project does not automatically join the workset.
 
+You may accept ordinary milestones and stages against their stated criteria without asking me for confirmation. Record who reviewed the work and identify self-review as such. This authority includes final acceptance and retirement once the engagement's obligations are met. Findings that require reconsidering existing behavioral promises, and proposals to omit either required refactor, require my decision before they can be treated as accepted dispositions.
+
 ## Preserve the sequence and the historical states
 
 The main sequence is:
@@ -103,7 +105,7 @@ The refactors also provide a way to observe how changes in production organizati
 
 Keep a compact committed record under `records/` linking each material adaptation to the refactor that required it. Include the old and new arrangement, the reason for the adaptation, the obligations preserved, the relevant verification, and the commits in which it occurred. Record larger opportunities encountered without turning the refactors into an optional redesign of the testing framework. A later reader with git must be able to recover and correlate these pressures and responses.
 
-You may reject an approach that does not meet the intended improvement. If investigation supports not carrying out a planned refactor, make that outcome explicit to me, with its reasons and consequences for this workset. The refactors are intended partly to expose pressures on testing, so their omission is material even when justified. Do not silently drop them or describe an unperformed improvement as completed.
+You may reject an approach that does not meet the intended improvement. If investigation supports not carrying out a planned refactor, bring me the evidence, your recommendation, and its consequences for this workset. Omitting either required refactor needs my agreement; until then, its disposition remains unresolved. The refactors are intended partly to expose pressures on testing, so their omission is material even when justified. Do not silently drop them or describe an unperformed improvement as completed.
 
 ## Investigate and improve the documentation apparatus
 
