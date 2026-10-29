@@ -149,7 +149,9 @@ timebase and counter and run in `runner_c_worker_harness`:
 [clock_control.c](clock_control.c) (`clock_arithmetic`),
 [proceed_control.c](proceed_control.c) (`proceed_precedence`) and
 [exec_control.c](exec_control.c) (`exec_control_states`), each with its own
-build script. The exec case additionally runs six disposable bad-payload
+build script. Their macros precede the worker include and reach its private
+timing and exec headers in the same translation unit. The exec case additionally
+runs six disposable bad-payload
 producer variants through the unchanged assertions. Its native-call ledger
 records actual boundary order, arguments, return values and meaningful
 errno/status independently of the slot payload. The reviewed
@@ -159,6 +161,9 @@ candidate must preserve these 58 call sequences; changing the golden requires
 an explicit call-policy review. Native fixture calls do not create real children.
 The live process, stream and cleanup observations remain in
 [runner_exec_lifecycle](../../suites/runner_exec_lifecycle/README.md).
+The exec mutation recipe copies the complete local include closure, replaces
+only the exec owner, and also requires missing timing/exec owners to fail at
+their include boundary.
 
 [sysctl_control.c](sysctl_control.c) includes production `attempt_sysctl_read`
 with only `sysctlbyname` substituted. It records actual incoming call arguments

@@ -97,7 +97,7 @@ runs a plan that imports `system.sb`, reads `/etc/hosts`, spawns 32
 would need 128 descriptors, so every child exiting cleanly rules out holding
 all those pipe pairs at once in this run. Both reads and the import must
 succeed under the same ceiling. Source placement in
-[`exec_resources_acquire`](../../../controller/tools/pw_probe_runner/pw_probe_runner.c)
+[`exec_resources_acquire`](../../../controller/tools/pw_probe_runner/pw_worker_exec.h)
 establishes acquisition within the attempt after apply; the ceiling alone does
 not establish placement or spawn-handle lifetime. The
 [worker tour](../../../docs/WORKER.md#acquisitions-inside-attempts) separates
@@ -147,6 +147,8 @@ domain of relative ticks. Each control compiles the production C source with
 a controlled timebase and raw counter through its compile-time seams; expected
 answers are literals or the defining inequality, never the helper under test.
 Each seam leaves a stale `EPERM` that no timing record may report.
+The fixtures define their seams before including the worker entry source;
+its private timing and exec headers remain inside that interception scope.
 
 - `clock_arithmetic` ([clock_control.c](../../fixtures/worker_lifecycle/clock_control.c)):
   ceiling allowances at 1/1, 125/3, reciprocal and extreme ratios; the exact
@@ -492,6 +494,13 @@ command, stdout/stderr and return status. The fixed control creates no child,
 so it does not exercise process effects or publication through a real host. No
 process or sandbox is created by this control; `runner_exec_lifecycle` supplies
 independent live-process evidence.
+
+The mutations replace the copied `pw_worker_exec.h` owner; the entry source
+and all remaining headers are copied unchanged. Separate missing-owner controls
+remove the timing or exec header and require the compiler's corresponding
+include refusal, so an accidentally bypassed owner cannot supply a passing
+interception control. The independent call-policy golden remains the native
+behavior expectation.
 
 
 `terminal_erasure` compiles the production worker with substituted native

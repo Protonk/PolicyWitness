@@ -441,11 +441,11 @@
           },
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "attempt_exec_spawn"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -972,11 +972,11 @@
           "short": "posix_spawn after apply",
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "attempt_exec_spawn"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -1662,7 +1662,7 @@
               "symbol": "PW_FAILURE_LENGTH_EXPECTATION"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
               "symbol": "pw_timing_setup"
             }
           ],
@@ -1712,7 +1712,7 @@
               "symbol": "wait_for_proceed"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
               "symbol": "pw_clock_sample"
             },
             {
@@ -8330,7 +8330,7 @@
           },
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -8365,7 +8365,7 @@
           },
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -8400,7 +8400,7 @@
           },
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -8423,7 +8423,7 @@
           },
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -8446,7 +8446,7 @@
           },
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "attempt_exec_spawn"
             }
           ],
@@ -8499,11 +8499,11 @@
           },
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "attempt_exec_spawn"
             }
           ],
@@ -8819,7 +8819,7 @@
               "symbol": "read_all_from_fd"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
               "symbol": "pw_timing_setup"
             },
             {
@@ -8931,7 +8931,7 @@
           },
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -8970,11 +8970,11 @@
               "symbol": "fail_from_errno"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_setup_failed"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "attempt_exec_spawn"
             },
             {
@@ -9400,7 +9400,7 @@
           "label": "Spawn file actions select child descriptors",
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -9427,7 +9427,7 @@
           "label": "Spawn attributes select child process group",
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -9818,7 +9818,7 @@
           "label": "Child receives output endpoints as stdout/stderr",
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -9845,7 +9845,7 @@
           "label": "Child receives explicit stdin",
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "exec_resources_acquire"
             }
           ],
@@ -10019,7 +10019,7 @@
           "label": "Publishes spawn, wait and cleanup observations",
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "attempt_exec_spawn"
             }
           ],
@@ -10134,11 +10134,11 @@
           "label": "Worker drains child output",
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "attempt_exec_spawn"
             },
             {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
               "symbol": "drain_one"
             }
           ],

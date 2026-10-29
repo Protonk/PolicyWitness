@@ -41,6 +41,16 @@ runner children call the sandbox APIs. The host's source and shipped imports
 are checked by [source drift](../tests/suites/source_drift/README.md) and
 [artifact inspection](../tests/suites/preflight/README.md).
 
+The worker entry source keeps preparation, application, phase waits, attempt
+dispatch and terminal publication together. Its private included
+[timing owner](../controller/tools/pw_probe_runner/pw_worker_timing.h) supplies
+the shared clock, conversions, allowances and fault diagnostics; phase waiting
+commits a checked deadline extension immediately before acknowledgement. The
+[exec owner](../controller/tools/pw_probe_runner/pw_worker_exec.h) receives a slot
+and timing context and owns its pipes, spawn handles, collection and child cleanup
+within that attempt. Both compile in the worker's single translation unit, so
+native-call controls intercept the same included implementation.
+
 The default validator path is always the service's
 `Contents/MacOS/sb_api_validator`; an explicit `validator_executable_path`
 override takes precedence. Selection does not check executability or imply

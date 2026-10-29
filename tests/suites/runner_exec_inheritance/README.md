@@ -49,7 +49,10 @@ environment, and descriptor isolation disabled. The unchanged worker must pass;
 the other two must fail the ordinary assertions with the specific leak
 diagnostic. Setup failures, crashes, and malformed reports do not count as
 successful detection. Per-variant source, binaries, reports, and a mutation
-summary are retained. The app and production source files are not modified.
+summary are retained. Each variant copies the worker entry and all private
+headers, changes only its `pw_worker_exec.h` owner, and compiles that local
+closure. Source hashes and the compiler command identify the variant. The app
+and production source files are not modified.
 
 This development recipe deliberately depends on the C source's spawn details;
 it must be reviewed when those details change. It is opt-in so the normal

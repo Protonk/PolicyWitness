@@ -48,14 +48,19 @@ def canonical_ledger(path):
     return rows
 
 
-def build_run(directory, source, baseline=False):
+def build_run(directory, exec_source, baseline=False, missing_owner=None):
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / 'pw_probe_runner.c').write_text(source)
+    shutil.copy2(NATIVE / 'pw_probe_runner.c', directory / 'pw_probe_runner.c')
     # Preserve the entire include closure rather than reading live source during
     # compilation. The fixture and every source remain beside build receipts.
     for header in NATIVE.glob('*.h'):
         shutil.copy2(header, directory / header.name)
+    # Override the actual included owner only after copying the closure. The
+    # entry source and native interception fixture are identical in all variants.
+    (directory / 'pw_worker_exec.h').write_text(exec_source)
     shutil.copy2(FIXTURE, directory / 'exec_control.c')
+    if missing_owner:
+        (directory / missing_owner).unlink()
     sources = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                for p in directory.iterdir() if p.suffix in ('.c', '.h')}
     (directory / 'source-sha256.json').write_text(json.dumps(sources, indent=2, sort_keys=True) + '\n')
@@ -69,6 +74,11 @@ def build_run(directory, source, baseline=False):
     build = subprocess.run(command, capture_output=True, timeout=60)
     (directory / 'build.stdout').write_bytes(build.stdout)
     (directory / 'build.stderr').write_bytes(build.stderr)
+    if missing_owner:
+        assert build.returncode != 0, f'{missing_owner}: missing production owner still compiled'
+        assert f"'{missing_owner}' file not found" in build.stderr.decode(), (
+            f'{missing_owner}: failed outside the required include boundary: {build.stderr.decode()}')
+        return build.returncode
     assert build.returncode == 0, f'{directory.name}: compile failed: {build.stderr.decode()}'
     with (directory / 'run.stdout').open('wb') as stdout, (directory / 'run.stderr').open('wb') as stderr:
         run = subprocess.run([str(output)], stdout=stdout, stderr=stderr, timeout=20)
@@ -79,12 +89,20 @@ def build_run(directory, source, baseline=False):
 def main():
     out = Path(sys.argv[1]).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    source = (NATIVE / 'pw_probe_runner.c').read_text()
+    source = (NATIVE / 'pw_worker_exec.h').read_text()
     assert build_run(out / 'production', source) == 0, 'production controls failed'
     observed = canonical_ledger(out / 'production/run.stdout')
     (out / 'observed-call-policy.json').write_text(json.dumps(observed, indent=2) + '\n')
     expected = json.loads(GOLDEN.read_text())
     assert expected['attempts'] == observed, 'native call order/count/value policy changed; inspect observed-call-policy.json'
+
+    # The fixture's include closure must reach both actual implementation owners.
+    # A source identity alone would not establish that the control compiles them.
+    missing = []
+    for owner in ('pw_worker_timing.h', 'pw_worker_exec.h'):
+        status = build_run(out / ('missing-' + owner), source, missing_owner=owner)
+        missing.append(dict(owner=owner, returncode=status))
+    (out / 'missing-owner-refusals.json').write_text(json.dumps(missing, indent=2) + '\n')
 
     # Faults affect only the disposable producer's assembled payload. All native
     # calls and unchanged assertions are the same as the production control.

@@ -142,8 +142,10 @@ sb_api_validator = executable('sb_api_validator',
 
 # The sandboxed C worker. sandbox_compile_string and sandbox_apply are SPI
 # that live in libsandbox, linked dynamically as before. Its included headers
-# (the ABI header, worker evidence and profile capture) are tracked through
-# the compiler's dependency output, so editing one rebuilds the worker.
+# (ABI, evidence, profile capture, extension channel, timing and exec owners)
+# are tracked through the compiler's dependency output, so editing one rebuilds
+# the worker. Timing and exec remain private parts of this translation unit;
+# fixture interception macros therefore reach the same included implementation.
 pw_probe_runner = executable('pw-probe-runner',
   files('controller/tools/pw_probe_runner/pw_probe_runner.c'),
   c_args: c_executable_flags,

@@ -276,6 +276,26 @@ class WorkerIdentityTests(receipts.TestCase):
                 self.assertEqual(self.command(root).returncode, 0)
                 self.assertEqual(self.command(root, '--check').returncode, 0)
 
+    def test_private_worker_owners_change_identity(self):
+        changes = [
+            ('pw_worker_timing.h', 'uint64_t raw = PW_CONTINUOUS_READ(stage);',
+             'uint64_t raw = PW_CONTINUOUS_READ(stage) + 1;'),
+            ('pw_worker_exec.h', 'POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETPGROUP',
+             'POSIX_SPAWN_SETPGROUP'),
+        ]
+        for owner, old, new in changes:
+            with self.subTest(owner=owner):
+                root = self.checkout()
+                expected = identity_generator.identity(root)
+                path = root / 'controller/tools/pw_probe_runner' / owner
+                text = path.read_text()
+                self.assertEqual(text.count(old), 1)
+                path.write_text(text.replace(old, new, 1))
+                self.assertNotEqual(identity_generator.identity(root), expected)
+                self.assertEqual(self.command(root, '--check').returncode, 1)
+                self.assertEqual(self.command(root).returncode, 0)
+                self.assertEqual(self.command(root, '--check').returncode, 0)
+
     def test_symlinks_under_identity_sources_are_refused(self):
         for label, make in (('directory', lambda link: link.symlink_to('../../../outside')),
                             ('file', lambda link: link.symlink_to('../../../outside/helper.h'))):

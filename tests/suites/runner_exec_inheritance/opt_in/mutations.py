@@ -1,6 +1,8 @@
 """Build disposable worker variants and require specific contract failures."""
+import hashlib
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -18,7 +20,7 @@ def replace_once(source, old, new):
 def main():
     out, helper, harness = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
     source_dir = ROOT / 'controller' / 'tools' / 'pw_probe_runner'
-    source = (source_dir / 'pw_probe_runner.c').read_text()
+    source = (source_dir / 'pw_worker_exec.h').read_text()
     leak_env = replace_once(source, 'static char *empty_envp[] = { NULL };', 'extern char **environ;')
     leak_env = replace_once(leak_env, 'argv_local, empty_envp);', 'argv_local, environ);')
     leak_fds = replace_once(source, 'POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETPGROUP',
@@ -30,13 +32,23 @@ def main():
             ('inherited_descriptors', leak_fds, 'inherited descriptors:')]:
         case = out / name
         case.mkdir(parents=True, exist_ok=True)
-        candidate_source = case / 'worker.c'
-        candidate_source.write_text(body)
+        # Compile a complete copied closure: the mutation must replace the
+        # included exec owner, never leave production resolving a live header.
+        for path in source_dir.glob('*.h'):
+            shutil.copy2(path, case / path.name)
+        candidate_source = case / 'pw_probe_runner.c'
+        shutil.copy2(source_dir / candidate_source.name, candidate_source)
+        (case / 'pw_worker_exec.h').write_text(body)
+        sources = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                   for p in case.iterdir() if p.suffix in ('.c', '.h')}
+        (case / 'source-sha256.json').write_text(json.dumps(sources, indent=2, sort_keys=True) + '\n')
         worker = case / 'worker'
+        command = ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-Wall', '-Wextra',
+                   '-Werror', '-O2', '-std=c11', '-I', str(case), '-lsandbox',
+                   str(candidate_source), '-o', str(worker)]
+        (case / 'build-command.json').write_text(json.dumps(command, indent=2) + '\n')
         with (case / 'build.log').open('wb') as log:
-            subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-Wall', '-Wextra',
-                            '-Werror', '-O2', '-std=c11', '-I', str(source_dir), '-lsandbox',
-                            str(candidate_source), '-o', str(worker)],
+            subprocess.run(command,
                            stdout=log, stderr=subprocess.STDOUT, check=True, timeout=60)
         try:
             run_worker(str(worker), helper, harness, case)

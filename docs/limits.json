@@ -844,7 +844,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
           "symbol": "PW_PROCEED_WAIT_MS_DEFAULT"
         },
         {
@@ -1031,7 +1031,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
           "symbol": "PW_EXEC_CHILD_DEADLINE_MS_DEFAULT"
         }
       ],
@@ -1068,11 +1068,11 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
           "symbol": "PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT"
         },
         {
-          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
           "symbol": "pw_timing_setup"
         }
       ],
@@ -1109,7 +1109,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
           "symbol": "PW_EXEC_REAP_GRACE_MS"
         }
       ],

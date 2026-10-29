@@ -166,9 +166,80 @@ evidence stays local and gitignored under the repository retention contract.
 Design prepared by `c_refactor`; accepted by primary-agent source review after
 independent reading of timing, exec, phase and main lifecycle sites. The reviewed design keeps phase exclusion commits adjacent to acknowledgement,
 exec resources private to the attempt, and native interception transitive.
-No production source, build/test fixture or generator input has been changed
-for R1. D2 integration and its main verification precede the implementation
+At design acceptance, no production source, build/test fixture or generator
+input had been changed for R1. D2 integration and its main verification precede the implementation
 so shared documentation/check changes remain distinct. No existing
 behavioral promise is newly disputed by this inspection. F1 remains deferred
 as directed by the user. Implementation/adaptation commits and verification
 results will be added here after they exist.
+
+## Candidate implementation
+
+Implementation starts from clean `f8f3c24f29a3ae1a3af3802daa575ca684be751f`,
+after D2 integration/acceptance and D1 retirement. The candidate commit containing
+this section owns the two extractions, control adaptations and source-reference
+updates together. No signed build or dispatcher execution was performed during
+preparation; the old E2 app is not credited against this new identity.
+
+Exact comparison against that source established:
+
+| Extracted body | Bytes | SHA-256 of unchanged body |
+| --- | --- | --- |
+| Timing constants/types/helpers/setup | 10,268 | `c2bdd497bf5e2835dce82de454e0f5bb4acde70eae370096a16e77ff94b2e13f` |
+| Exec bookkeeping/setup/collection/cleanup | 24,122 | `893dd99a561b53ba1d689627eda643b54b851a45d9a52632308ec258afef8a36` |
+
+Both bodies are byte-for-byte extractions with header guards, declared includes
+and owner comments around them. Replacing the two include directives with those
+bodies reconstructs the old worker after removing only four system includes now
+owned by the private headers (`mach_time`, `poll`, `spawn`, `wait`). Main,
+phase wait, deadline commitment, ordinary/file/extension attempts and publication
+function bodies are unchanged. The historical exec-call golden is unchanged.
+These are source-comparison facts, not behavioral equivalence established by a
+runtime execution.
+
+`check_exec_evidence.py` now mutates the copied exec owner after copying the
+unchanged entry and full header closure. The original ledger and six mutation
+oracles remain unchanged. Two additional compile controls remove the actual
+timing or exec owner and require its specific missing-include refusal; they
+retain sources, hashes, command and diagnostic rather than treating any failed
+compile as detection. The inheritance recipe likewise copies the complete
+closure, mutates only exec and records source hashes/compiler command; its
+environment and descriptor leak oracles are unchanged.
+
+The existing identity case now applies an independently specified semantic edit
+to each private owner, requires changed identity/stale-copy refusal, regenerates,
+and requires currency. This is additional source-sensitivity coverage; the
+native controls establish actual intercepted calls. Ordinary source membership
+still expects one worker translation unit. Meson's target account names its
+private dependencies; the signed-build closure check remains required to prove
+what the compiler consumed.
+
+The source-reference audit relocated five limits citations and twenty-four
+architecture citations to their actual timing/exec owners, retaining lifecycle
+citations and D2's documents-graph corrections. Owning generators regenerated
+limits/architecture accounts and identity copies. Runner and fixture/suite
+accounts describe the included owners and the mutation recipes. The new worker
+identity is `b307fc295883bbcdf4bdd2b2855ce8d6fe969eb93d104e54c7e775075bad6b0f`;
+wire versions and ABI geometry were not changed.
+
+Local preparation checks passed: Python AST parsing for the three changed
+scripts; `clang -fsyntax-only` for the worker, exec, clock, proceed, fresh-write,
+terminal-erasure, compiled-limit and native-clock translation units; all five
+generator `--check` commands; and `git diff --check`. Preprocessing the exec,
+clock, proceed and fresh-write fixtures confirmed both actual owners are included
+once and production call expressions use their fixture substitutions. The
+fresh-write audit's first by-hand matcher expected a nonexistent local-variable
+spelling; inspection corrected that matcher to the unchanged `out->truncate_rc`
+assignment. It was not a compiler or product failure.
+
+Other controls retain their original direct inclusion: sysctl snapshots already
+discover all native `.c`/`.h` inputs; terminal-erasure and order-barrier variants
+resolve their unmodified private headers from the fixed candidate checkout,
+while their changed anchors remain in the copied entry source. Their evidence
+therefore depends on the committed candidate's header bytes, not merely a
+standalone mutated `.c` file. No unrelated fixture architecture was introduced.
+
+Primary verification and structural review remain pending. In particular, the
+204-case selection (201 defaults plus the three planned opt-in controls), signed
+compiler closure, native ledger equality and rejected mutations have not yet
+run against this candidate. F1 remains unresolved and untouched.
