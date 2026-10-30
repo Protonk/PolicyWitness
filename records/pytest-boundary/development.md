@@ -21,3 +21,12 @@ The observer now also durably records exits after its labeled safety cleanup.
 The same correction adds the remaining declared malformed-account controls
 (invalid outcome, unexpected skip, duplicate selection, unknown event) before
 the next complete run. Their expectations remain independently literal.
+
+Candidate `4211d48b`, `pytest-boundary-demo-02`: ordinary completion, failed
+pre-yield setup and simultaneous body/teardown failure passed. SIGINT also
+preserved incomplete active/queued accounting and witnessed child cleanup,
+but the observer rejected the actual finalizer receipt. Its exact receipt list
+had unnecessarily assumed no teardown on interruption. The predeclared contract
+requires no queued start and no invented active success, not absent finalizers.
+Correcting the expected SIGINT receipt to include `active.teardown` preserves
+those obligations. This is an observer defect; no candidate change is needed.

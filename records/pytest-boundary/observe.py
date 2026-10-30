@@ -233,7 +233,7 @@ def exercise(root, name, mode=None, equipment=HERE):
                 expected = ['completed.body', 'active.setup']
                 if name != 'setup_failure':
                     expected += ['active.body']
-                if name in ('normal', 'double_failure'):
+                if name in ('normal', 'double_failure', 'interrupt'):
                     expected += ['active.teardown']
                 if name in ('normal', 'setup_failure', 'double_failure'):
                     expected += ['queued.body']
