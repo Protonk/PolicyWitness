@@ -1,7 +1,7 @@
 # Bounded lookback and coherence pass
 
-Status: authorized investigation, ordinary coherence repair and proportionate
-verification in progress. Codex, 2026-10-30. Review baseline is
+Status: complete; five traces, localized release-account repair, verification and
+evidence/recovery sealing finished. Separate review remains pending. Codex, 2026-10-30. Review baseline is
 `809ef178f7a9ce2628f13fb137f1456452a49b85` on `adoption/pytest-exec-family`,
 left unchanged at `/private/tmp/pw-pytest-exec-candidate-20261030`.
 Follow-on work is isolated at `/private/tmp/pw-coherence-20261030` on
@@ -10,7 +10,14 @@ additional pytest family, CHECK.md work or cosmetic standardization is authorize
 
 Associated material: [interval and responsibility inventory](coherence/inventory.md),
 [machine-readable history](coherence/history.json), and
-[trace findings and verification sequence](coherence/traces.md).
+[trace findings and verification sequence](coherence/traces.md),
+[review and recovery entry point](coherence/recovery.md),
+[retained run identity](coherence/evidence-index.json),
+[ownership recovery index](coherence/recovery-index.json),
+[emitted-report walkthrough](coherence/walkthrough.json),
+[preservation checks](coherence/preservation.json),
+[pruning receipt](coherence/pruning.json), and
+[review-index equipment](coherence/seal.py).
 These records and this plan are temporary review material, retired together
 when review consumes them. Retiring documents does not release evidence/resources.
 
@@ -89,3 +96,13 @@ choice and recommendation, and continue independent traces. An external blocker
 or unsatisfied resource boundary also permits early return. Otherwise complete
 all five traces, repairs, verification, pin/recovery index and a committed reviewable
 candidate before reporting. Stage checkpoints do not require permission.
+
+## Completion
+
+Repair `6b35e27a` is separate from baseline `809ef178`. Fresh pinned run
+`coherence-01` (`20261030T214512Z_f209aff2`) passes all 11 selected parents.
+No production/oracle/ownership promise changed and no consequential choice remains.
+Proceed to separate review with the one-family candidate recommendation intact.
+The acceptance, sampling limits and recovery dispositions are in the associated
+records above. Keep this completed plan/package until review consumes them, then
+retire them together; pins and unresolved resources retain independent protection.
