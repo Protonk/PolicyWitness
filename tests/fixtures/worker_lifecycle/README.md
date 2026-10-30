@@ -204,3 +204,9 @@ controls. `ExtensionEvidenceTests` observe the mapped bytes before and after
 host erasure and descriptor closure, then inject unavailable wait/kill observations
 while independently reaping the real issuer. Published issuance remains visible,
 but unknown host cleanup prevents delivery. The test never prints token bytes.
+
+The exec evidence family is invoked through
+`tests/run.sh --case runner_c_worker_harness/exec_control_states`. Its nine pytest
+items retain this fixture and the independent 58-attempt golden unchanged; each
+native invocation remains a complete observation. Copied include closures and
+native stdout/stderr live in the family's per-variant artifacts.

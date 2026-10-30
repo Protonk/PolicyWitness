@@ -818,16 +818,7 @@ if test_selected proceed_precedence; then
   fi
 fi
 
-if test_selected exec_control_states; then
-  test_begin runner_c_worker_harness exec_control_states
-  test_step control "compare independent native call ledger and reject six exec evidence mutations"
-  if "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_exec_evidence.py" \
-      "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
-    test_pass "native call policy preserved; collection, cleanup requests and reap independently recorded; six mutations rejected"
-  else
-    test_fail "exec evidence control regression" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
-  fi
-fi
+
 
 if test_selected terminal_erasure; then
   test_begin runner_c_worker_harness terminal_erasure

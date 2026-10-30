@@ -10,6 +10,8 @@ import tempfile
 import zipfile
 import uuid
 import retention
+import execution_contract
+from pytest_support import read, contained
 
 import artifact
 import release_evidence
@@ -32,7 +34,7 @@ def battery_summary(run):
                 duration_ms=run.get('duration_ms'))
 
 
-def battery_problems(run, app):
+def battery_problems(run, app, *, expected=None, evidence=None):
     """Why a nested run is not a passing default battery against the extracted app; empty when it is."""
     problems = []
     completion = run.get('completion') or {}
@@ -54,6 +56,11 @@ def battery_problems(run, app):
         problems.append('an invalid or changed app')
     if any(c.get('status') != 'pass' for c in run.get('case_results') or []):
         problems.append('a case that did not pass')
+    if expected is not None:
+        try:
+            problems += execution_contract.problems(run, expected, lambda name: read(contained(evidence, evidence / name)))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            problems.append('required family evidence: ' + str(exc))
     return problems
 
 
@@ -76,7 +83,7 @@ def archive_layout(archive):
 
 def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
     retention.replacement_allowed(ROOT, out / 'tests', retention.load_index(ROOT))
-    report = dict(schema_version=2, archive=str(archive), ok=False, errors=[],
+    report = dict(schema_version=3, execution_contract=execution_contract.defaults(ROOT), archive=str(archive), ok=False, errors=[],
                   battery=dict(timeout_seconds=BATTERY_TIMEOUT_SECONDS))
     save(out / 'acceptance.json', report)
     staging, app, before = None, None, None
@@ -109,7 +116,7 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         invoke(out / 'execution', ['bash', ROOT / 'tests/run.sh'], timeout=BATTERY_TIMEOUT_SECONDS, env=env, cwd=ROOT)
         run = json.loads((run_out / 'run.json').read_bytes())
         report['battery'].update(battery_summary(run))
-        problems = battery_problems(run, app)
+        problems = battery_problems(run, app, expected=report['execution_contract'], evidence=run_out)
         if problems:
             raise ValueError('the default battery did not pass against the extracted app: '
                              + '; '.join(problems) + '; see tests/run.json')

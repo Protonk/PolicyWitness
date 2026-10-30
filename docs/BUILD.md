@@ -1202,3 +1202,9 @@ only points there, in document order.
   relies on the tools' records to establish whether cached outputs are
   current, and a cached output replaced before capture is described, not
   detected.
+
+Unresolved pytest command ownership also refuses shared checkout admission. The
+refusal names the ownership record and `tests/run.sh --recover-ownership RUN_ID`.
+See [command ownership recovery](../tests/README.md#command-ownership-recovery)
+for preview/apply, required settlement evidence and checkout-wide versus output-only
+holds. A historical PID alone never authorizes signalling or closure.

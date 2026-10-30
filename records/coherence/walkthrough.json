@@ -1,0 +1,703 @@
+[
+  {
+    "display_opening": [
+      "FAMILY runner_c_worker_harness/exec_control_states: PASS; execution=started accounting=complete",
+      "  runner_c_worker_harness/exec_control_states::production: passed (setup=passed, call=passed, teardown=passed)"
+    ],
+    "items": [
+      {
+        "id": "runner_c_worker_harness/exec_control_states::production",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::collection_from_final_reap",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::esrch_as_success",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::fallback_from_group",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::status_after_pending_wait",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::revents_as_native_errno",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::local_deadline_as_native_errno",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_timing.h",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_exec.h",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      }
+    ],
+    "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/integrated-normal/repo/tests/out/runs/run",
+    "overall_ok": true,
+    "parent": {
+      "accounting_state": "complete",
+      "context": "standard",
+      "engine": "pytest",
+      "execution_state": "started",
+      "family_report": "suites/runner_c_worker_harness/exec_control_states/family.json",
+      "id": "runner_c_worker_harness/exec_control_states",
+      "reason": "",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    "phase_report": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/integrated-normal/repo/tests/out/runs/run/suites/runner_c_worker_harness/exec_control_states/phases.jsonl",
+    "scenario": "integrated-normal"
+  },
+  {
+    "display_opening": [
+      "FAMILY runner_c_worker_harness/exec_control_states: FAIL; execution=started accounting=complete",
+      "  runner_c_worker_harness/exec_control_states::production: passed (setup=passed, call=passed, teardown=passed)"
+    ],
+    "items": [
+      {
+        "id": "runner_c_worker_harness/exec_control_states::production",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::collection_from_final_reap",
+        "outcome": "failed",
+        "phases": {
+          "call": "failed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::esrch_as_success",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::fallback_from_group",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::status_after_pending_wait",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::revents_as_native_errno",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::local_deadline_as_native_errno",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_timing.h",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_exec.h",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      }
+    ],
+    "native": {
+      "expectation.json": {
+        "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/wrong-rejection/repo/tests/out/runs/run/suites/runner_c_worker_harness/exec_control_states/artifacts/collection_from_final_reap/expectation.json",
+        "sha256": "942bb3ec4205c5c7fb8f016fcd715d41ea87d43e552ce8831b3d647ecf290b39",
+        "value": {
+          "expected": "slot->exec_leader_exit_observed == leader",
+          "formation": "one exec assembly boundary",
+          "kind": "mutation",
+          "submitted": "slot->exec_group_rc = 42;"
+        }
+      },
+      "observation.json": {
+        "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/wrong-rejection/repo/tests/out/runs/run/suites/runner_c_worker_harness/exec_control_states/artifacts/collection_from_final_reap/observation.json",
+        "sha256": "126bf9193080497f6384fe07b16bacd4a9cbd18d590b1758544fe8f3647b498b",
+        "value": {
+          "expected": "slot->exec_leader_exit_observed == leader",
+          "observed": "Assertion failed: (slot->exec_group_rc == group->rc && slot->exec_group_errno == group->error), function verify_ledger, file exec_control.c, line 221.\n",
+          "returncode": -6
+        }
+      },
+      "sources.json": {
+        "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/wrong-rejection/repo/tests/out/runs/run/suites/runner_c_worker_harness/exec_control_states/artifacts/collection_from_final_reap/sources.json",
+        "sha256": "aae8a81c921a935dfc785614bee96430d40feb7e2c573aea56e70d075860177b",
+        "value": {
+          "exec_call_policy.json": "353b7b5bc0b60905f82f1eaff180882e43f1fcc5c572d5965cebe8c0a1dc7e1e",
+          "exec_control.c": "adc11fd2f3e1daf2638c752221b8da97a6a102aaab8fbcc1c42401a93ebb6da5",
+          "expectation.json": "942bb3ec4205c5c7fb8f016fcd715d41ea87d43e552ce8831b3d647ecf290b39",
+          "pw_extension_channel.h": "c3f1a1c0eeea07fd906eb954f86cfcbcb52e110df08d6d37be7c2f479ae29023",
+          "pw_probe_runner.c": "47ce0448eb99b7f3394aa6abd7b566acdb244cf2c2ec88d27242e7a581965bd7",
+          "pw_probe_runner_abi.h": "72ad523a56a3f0ad1a6547655bc35794bfeef7f71ae065e2711e124f2bde008c",
+          "pw_profile_capture.h": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+          "pw_worker_evidence.h": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65",
+          "pw_worker_exec.h": "88881b06e46559a7aeb36715f2e77ae8b19ca7981e26725602d76df436d5ceac",
+          "pw_worker_timing.h": "c1d7b1924cf65d8ea9689910927a923c6bda8f722a38aa2d26f2c36f6f41bcf8",
+          "sources-before-formation.json": "1e7995fba5ce6db98405a867ad6c92cf8b636d61cb22eae8b819552ce7dfc068"
+        }
+      }
+    },
+    "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/wrong-rejection/repo/tests/out/runs/run",
+    "overall_ok": false,
+    "parent": {
+      "accounting_state": "complete",
+      "context": "standard",
+      "engine": "pytest",
+      "execution_state": "started",
+      "family_report": "suites/runner_c_worker_harness/exec_control_states/family.json",
+      "id": "runner_c_worker_harness/exec_control_states",
+      "reason": "",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    },
+    "phase_report": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/wrong-rejection/repo/tests/out/runs/run/suites/runner_c_worker_harness/exec_control_states/phases.jsonl",
+    "scenario": "wrong-rejection"
+  },
+  {
+    "display_opening": [
+      "FAMILY runner_c_worker_harness/exec_control_states: FAIL; execution=started accounting=complete",
+      "SHARED BASELINE: native call order/count/value policy changed; compare retained expected and observed ledgers; artifacts/baseline.json. Production observation retained; dependent setup failures did not run their bodies or submit mutations."
+    ],
+    "items": [
+      {
+        "id": "runner_c_worker_harness/exec_control_states::production",
+        "outcome": "failed",
+        "phases": {
+          "call": "failed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::collection_from_final_reap",
+        "outcome": "failed",
+        "phases": {
+          "setup": "failed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::esrch_as_success",
+        "outcome": "failed",
+        "phases": {
+          "setup": "failed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::fallback_from_group",
+        "outcome": "failed",
+        "phases": {
+          "setup": "failed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::status_after_pending_wait",
+        "outcome": "failed",
+        "phases": {
+          "setup": "failed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::revents_as_native_errno",
+        "outcome": "failed",
+        "phases": {
+          "setup": "failed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::local_deadline_as_native_errno",
+        "outcome": "failed",
+        "phases": {
+          "setup": "failed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_timing.h",
+        "outcome": "failed",
+        "phases": {
+          "setup": "failed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_exec.h",
+        "outcome": "failed",
+        "phases": {
+          "setup": "failed",
+          "teardown": "passed"
+        },
+        "started": true
+      }
+    ],
+    "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/baseline/repo/tests/out/runs/run",
+    "overall_ok": false,
+    "parent": {
+      "accounting_state": "complete",
+      "context": "standard",
+      "engine": "pytest",
+      "execution_state": "started",
+      "family_report": "suites/runner_c_worker_harness/exec_control_states/family.json",
+      "id": "runner_c_worker_harness/exec_control_states",
+      "reason": "",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    },
+    "phase_report": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/baseline/repo/tests/out/runs/run/suites/runner_c_worker_harness/exec_control_states/phases.jsonl",
+    "scenario": "baseline"
+  },
+  {
+    "display_opening": [
+      "FAMILY runner_c_worker_harness/exec_control_states: FAIL; execution=started accounting=complete",
+      "SHARED SESSION FINALIZER: input integrity uncertain for all family items; pytest attaches this to the last item teardown. Body outcomes survive; inspect each retained sources.json and input-integrity.json for applicability."
+    ],
+    "items": [
+      {
+        "id": "runner_c_worker_harness/exec_control_states::production",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::collection_from_final_reap",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::esrch_as_success",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::fallback_from_group",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::status_after_pending_wait",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::revents_as_native_errno",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::local_deadline_as_native_errno",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_timing.h",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_exec.h",
+        "outcome": "failed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "failed"
+        },
+        "started": true
+      }
+    ],
+    "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/input-finalizer/repo/tests/out/runs/run",
+    "overall_ok": false,
+    "parent": {
+      "accounting_state": "complete",
+      "context": "standard",
+      "engine": "pytest",
+      "execution_state": "started",
+      "family_report": "suites/runner_c_worker_harness/exec_control_states/family.json",
+      "id": "runner_c_worker_harness/exec_control_states",
+      "reason": "",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    },
+    "phase_report": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/input-finalizer/repo/tests/out/runs/run/suites/runner_c_worker_harness/exec_control_states/phases.jsonl",
+    "scenario": "input-finalizer"
+  },
+  {
+    "display_opening": [
+      "FAMILY runner_c_worker_harness/exec_control_states: FAIL; execution=started accounting=complete",
+      "SHARED SESSION FINALIZER: observation; all family items; attached to last item teardown. Cleanup failure after observations; recorded body outcomes and native assertions remain readable. See artifacts/session-finalizer.json."
+    ],
+    "items": [
+      {
+        "id": "runner_c_worker_harness/exec_control_states::production",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::collection_from_final_reap",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::esrch_as_success",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::fallback_from_group",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::status_after_pending_wait",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::revents_as_native_errno",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::local_deadline_as_native_errno",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_timing.h",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_exec.h",
+        "outcome": "failed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "failed"
+        },
+        "started": true
+      }
+    ],
+    "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/cleanup-finalizer/repo/tests/out/runs/run",
+    "overall_ok": false,
+    "parent": {
+      "accounting_state": "complete",
+      "context": "standard",
+      "engine": "pytest",
+      "execution_state": "started",
+      "family_report": "suites/runner_c_worker_harness/exec_control_states/family.json",
+      "id": "runner_c_worker_harness/exec_control_states",
+      "reason": "",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    },
+    "phase_report": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/cleanup-finalizer/repo/tests/out/runs/run/suites/runner_c_worker_harness/exec_control_states/phases.jsonl",
+    "scenario": "cleanup-finalizer"
+  },
+  {
+    "display_opening": [
+      "FAMILY runner_c_worker_harness/exec_control_states: FAIL; execution=started accounting=incomplete",
+      "  runner_c_worker_harness/exec_control_states::production: passed (setup=passed, call=passed, teardown=passed)"
+    ],
+    "items": [
+      {
+        "id": "runner_c_worker_harness/exec_control_states::production",
+        "outcome": "passed",
+        "phases": {
+          "call": "passed",
+          "setup": "passed",
+          "teardown": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::collection_from_final_reap",
+        "outcome": "incomplete",
+        "phases": {
+          "setup": "passed"
+        },
+        "started": true
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::esrch_as_success",
+        "outcome": "incomplete",
+        "phases": {},
+        "started": false
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::fallback_from_group",
+        "outcome": "incomplete",
+        "phases": {},
+        "started": false
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::status_after_pending_wait",
+        "outcome": "incomplete",
+        "phases": {},
+        "started": false
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::revents_as_native_errno",
+        "outcome": "incomplete",
+        "phases": {},
+        "started": false
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::local_deadline_as_native_errno",
+        "outcome": "incomplete",
+        "phases": {},
+        "started": false
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_timing.h",
+        "outcome": "incomplete",
+        "phases": {},
+        "started": false
+      },
+      {
+        "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_exec.h",
+        "outcome": "incomplete",
+        "phases": {},
+        "started": false
+      }
+    ],
+    "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/death-engine/repo/tests/out/runs/death",
+    "overall_ok": false,
+    "parent": {
+      "accounting_state": "incomplete",
+      "context": "standard",
+      "engine": "pytest",
+      "execution_state": "started",
+      "family_report": "suites/runner_c_worker_harness/exec_control_states/family.json",
+      "id": "runner_c_worker_harness/exec_control_states",
+      "reason": "incomplete execution accounting; valid earlier evidence retained; command receipts and phase operation references differ",
+      "state": "unrun",
+      "status": null,
+      "system_sleep_ms": 0
+    },
+    "phase_report": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/death-engine/repo/tests/out/runs/death/suites/runner_c_worker_harness/exec_control_states/phases.jsonl",
+    "scenario": "death-engine"
+  },
+  {
+    "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/missing-packages/repo/tests/out/runs/run",
+    "overall_ok": false,
+    "parent": {
+      "accounting_state": "unavailable",
+      "context": "standard",
+      "engine": "pytest",
+      "execution_state": "not_started",
+      "family_report": null,
+      "id": "runner_c_worker_harness/exec_control_states",
+      "reason": "missing prerequisites: ['pytest']",
+      "state": "unrun",
+      "status": null,
+      "system_sleep_ms": null
+    },
+    "scenario": "missing-packages"
+  }
+]

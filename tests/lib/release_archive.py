@@ -21,6 +21,8 @@ import plistlib
 import re
 import shutil
 import subprocess
+import execution_contract
+from pytest_support import read, contained
 import sys
 import tempfile
 import zipfile
@@ -101,6 +103,13 @@ def battery_record(root, acceptance_run, accepted, final_inventory):
     path = retention.bounded_path(root, acceptance_run / 'tests')
     run = retention.read_object(path / 'run.json')
     problems = []
+    expected_contract = accepted.get('execution_contract')
+    current_contract = execution_contract.defaults(root)
+    if expected_contract is not None or current_contract['required_families'] or accepted.get('schema_version', 0) >= 3:
+        if expected_contract != current_contract:
+            problems.append('acceptance lacks the independently expected producer/selection contract')
+        else:
+            problems += execution_contract.problems(run, expected_contract, lambda name: read(contained(path, path / name)))
     if run.get('ok') is not True or run.get('terminal') is not True:
         problems.append('battery run is not a completed passing run')
     counts, completion = run.get('counts') or {}, run.get('completion') or {}
@@ -247,7 +256,7 @@ def archive_locked(attempt, *, dist, root, notes):
     receipts += [dict(original_path=str(relative_attempt / item), archived_path=f'evidence/{item}')
                  for item in ('acceptance.json', 'release.json')]
     archived = dict(
-        schema_version=1, version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
+        schema_version=2 if accepted.get('execution_contract') is not None else 1, execution_contract=accepted.get('execution_contract'), version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
         source_commit=commit, origin=None, archive=name, sha256=final_hash, guide='PolicyWitness.md',
         notarization_submission_id=notarization.get('submission_id'),
         submitted_sha256=record.get('submitted_sha256'),
@@ -282,7 +291,7 @@ def archive_locked(attempt, *, dist, root, notes):
             shutil.copy2(notes, evidence / 'release-notes.md')
         (evidence / 'provenance.json').write_bytes(record_bytes)
         archived['test_evidence'] = release_runs.pack(staged / release_runs.BUNDLE, tag=tag, source=commit,
-                                                    runs=runs, battery=('acceptance', 'tests/run.json'))
+                                                    runs=runs, battery=('acceptance', 'tests/run.json'), expected_contract=archived['execution_contract'])
         retention.atomic_json(staged / 'release.json', archived)
         release_runs.verify_release(staged)
         release_runs.sync_tree(staged)

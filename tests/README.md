@@ -636,3 +636,74 @@ The opt-in `runner_byoxpc/reservation_controls` case compiles copied host and
 client sources to control reservation, execution-reply and capture-publication
 boundaries, with independent effects and process-exit evidence. Its controlled
 results do not replace ordinary BYOXPC acceptance; see the owning suite account.
+
+## Pytest exec family
+
+`runner_c_worker_harness/exec_control_states` is one public family containing nine
+pytest items. Public selection remains whole-family. Pytest owns item discovery,
+variants, fixtures and setup/call/teardown reporting; PolicyWitness owns artifact
+admission, checkout locks, durable accounting, command supervision and retention.
+Other families use their catalog commands. `tests/setup-pytest.sh` explicitly
+installs the exact wheels in `tests/requirements-pytest.lock` into an isolated,
+verified `.tmp/pytest` target; collection never downloads packages. External
+pytest plugins and ambient pytest/Python settings are excluded.
+
+`--list` collects the family without acquiring native equipment or replacing
+output. In execution, that same collected engine waits until ordinary admission
+allows it to proceed. Missing packages leave the family `not_started/unavailable`.
+Availability is decided when the plan is collected: packages provisioned later
+serve a later run, and the unrun family's reason names the collection-time error.
+Missing or truncated engine reports leave `started/incomplete` when start was
+observed, and `unknown/incomplete` otherwise. The legacy parent `unrun` count
+includes incomplete families; the explicit accompanying states distinguish them.
+`run.json.counts` and `reports` cover legacy reports only (`counts_scope` says so);
+`case_outcome_counts` covers all parent results. Nested item counts are separate.
+
+### Command ownership recovery
+
+The durable registry is `tests/out/pytest-owners/<run-id>/<operation-id>/record.json`,
+outside disposable run directories. It registers each real compiler/native
+command before launch, including argv, working directory and a digest of its
+filtered environment (inherited values are not published). The owner verifies
+that context before launch. An independent command owner holds the actual checkout
+lock descriptor, captures stdout/stderr, watches engine/supervisor exit and
+settles the command's process group. Fixture cleanup removes ordinary Python
+state; it does not establish exit or authorize deletion of external resources.
+This family does not launch processes that intentionally escape that group.
+
+If no command process comes to exist — a spawn error, the owner's refusal of an
+unauthorized release or changed context, a lost release gate, or a failure to
+start the owner itself — the party that could have released it removes its
+endpoint and publishes a never-launched settlement carrying the launch error.
+Group members that outlast a short grace after the command's own exit are killed,
+and the settlement records `group_signalled_after_leader_exit`. The engine credits
+neither result: like a timeout or cancellation, the item fails with the receipt
+named.
+
+When execution refuses admission, inspect with
+`tests/run.sh --recover-ownership RUN_ID`; use the same command with `--apply`
+for justified recovery. Preview changes nothing. Apply can authenticate a live
+owner by peer PID, nonce and inherited lock identity, or close already-settled
+records under a recovery-only lock claim. It cannot launch tests, bypass admission,
+signal a historical PID or force-clear an unknown obligation. An active session
+refuses recovery. A missing owner/start receipt is not proof that nothing launched.
+A durable reservation without launch authorization can be revoked; ambiguous
+launch authorization remains checkout-blocking until adequate evidence exists.
+
+Possible live/future commands block checkout execution, including the next
+selected case within an already admitted run. Proven group absence
+and revoked launch authority allow unrelated execution while unresolved isolated
+cleanup protects only that run's output. Closure leaves the registry history and
+portable ownership receipt intact. Pruning removes closed registry records only
+after their unpinned output is eligible. Recovery audit files preserve before/after
+identities and unresolved reasons. Builds share this admission check.
+
+Release acceptance captures the source/selection evidence contract before the
+battery starts. New family evidence, including the terminal ownership receipt,
+is required independently of optional fields in the result. Portable schema 3
+bundles are checked against the release's independently retained contract; older
+schema 2 bundles remain readable as historical transport evidence. Release
+verification additionally requires a positively identified historical producer
+source (checked against ZIP provenance) when no new contract exists; deleting
+the declaration and version fields does not establish historical provenance. A new acceptance
+cannot become legacy merely by deleting its family declaration or reference.

@@ -1,0 +1,687 @@
+{
+  "actual_commands": [
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/14b98a8892484555859ec3d4468fcc53/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/206ec679bd704338b3f0337ffcfe6012/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/230981a3480d477fba31b666ffed8f30/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/2734fb46df544ce0a7b36fa99ee93271/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/3aca2d1d05554b5ca6805a18b62d6451/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/4837b28c27e64a1ab2f112272a80c118/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/4cca0dc96f9e47b1b7731c5fbccfd972/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/7d810706099444c99c61772786655d28/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/98913192da7d4ab4851e9da28fbbdc21/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/a86f5520f618458e96a8013a00d4811a/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/ac3a876222e04a59bb35eb544593c357/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/bcfb0fa34f5645ecafbcfb850ea1bf8a/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/dfcf1d88c43d445f8e5ed11acb166f9c/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/e8148f8646d0422aa8476e92b3ee15cd/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/ee942ca8424c4c19b6e6c64cdcf36877/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    },
+    {
+      "blocking": "closed",
+      "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01",
+      "path": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners/20261030T214512Z_f209aff2/f12de1793d66431aaa0854169af36309/record.json",
+      "recovery": "tests/run.sh --recover-ownership 20261030T214512Z_f209aff2",
+      "run_id": "20261030T214512Z_f209aff2",
+      "state": "closed"
+    }
+  ],
+  "actual_unresolved": [],
+  "prior_recovery_index": "/private/tmp/pw-pytest-exec-candidate-20261030/records/pytest-exec-adoption/recovery-index.json",
+  "prior_resource_supplement": "/private/tmp/pw-pytest-exec-candidate-20261030/records/pytest-maintenance/resource-recovery.md",
+  "registry": "/private/tmp/pw-coherence-20261030/tests/out/pytest-owners",
+  "retained_fixtures": [
+    {
+      "blocking": "checkout",
+      "disposition": "Retain fixture record and enclosing pinned run; no historical PID signaling or forced closure.",
+      "identity": {
+        "argv": [
+          "/does-not-exist"
+        ],
+        "artifacts": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/runs/control/never",
+        "command_pgid": null,
+        "command_pid": null,
+        "controller_pid": 45178,
+        "engine_pid": 45178,
+        "family": "fixture/family",
+        "item": "fixture/family::two",
+        "lock_identity": [
+          16777233,
+          146079311
+        ],
+        "nonce": "af64249394494965a7313fca3bc8b31e",
+        "operation_id": "bcf2ed3632734412ad9920fb428d3bcf",
+        "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/runs/control",
+        "owner_pid": null,
+        "root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+        "run_id": "ambiguous",
+        "socket_dir": "/private/tmp/pwpx-7f44cbdb782045a989d41a7862f87d7c",
+        "state": "owner_launch_authorized",
+        "token": "ddb8655fc80d464bba2d0a3118f881bf"
+      },
+      "independent": {},
+      "missing": "Authenticated matching settlement, revoked launch authority and group absence (or affirmative never-launched receipt). Historical PID, direct return, external exits and available lock do not supply missing owner settlement.",
+      "observations": [
+        {
+          "name": "ambiguous authorization refuses historical PID recovery",
+          "recovery": {
+            "actions": [],
+            "after": [
+              {
+                "blocking": "checkout",
+                "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/runs/control",
+                "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/bcf2ed3632734412ad9920fb428d3bcf/record.json",
+                "recovery": "tests/run.sh --recover-ownership ambiguous",
+                "run_id": "ambiguous",
+                "state": "owner_launch_authorized"
+              }
+            ],
+            "apply": true,
+            "before": [
+              {
+                "blocking": "checkout",
+                "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/runs/control",
+                "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/bcf2ed3632734412ad9920fb428d3bcf/record.json",
+                "recovery": "tests/run.sh --recover-ownership ambiguous",
+                "run_id": "ambiguous",
+                "state": "owner_launch_authorized"
+              }
+            ],
+            "run_id": "ambiguous",
+            "unresolved": [
+              {
+                "error": "missing live peer and settlement evidence; historical PID not signalled",
+                "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/bcf2ed3632734412ad9920fb428d3bcf/record.json"
+              },
+              {
+                "blocking": "checkout",
+                "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/runs/control",
+                "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/bcf2ed3632734412ad9920fb428d3bcf/record.json",
+                "recovery": "tests/run.sh --recover-ownership ambiguous",
+                "run_id": "ambiguous",
+                "state": "owner_launch_authorized"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ambiguous fixture disposition",
+          "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/bcf2ed3632734412ad9920fb428d3bcf/record.json",
+          "reason": "observer never invoked a launcher",
+          "resource_started": false
+        }
+      ],
+      "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/bcf2ed3632734412ad9920fb428d3bcf/record.json",
+      "recovery_preview": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B -S -P -c 'import json,sys;from pathlib import Path;sys.path.insert(0,'\"'\"'/private/tmp/pw-coherence-20261030/tests/lib'\"'\"');import pytest_resources;print(json.dumps(pytest_resources.recover(Path('\"'\"'/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo'\"'\"'),'\"'\"'ambiguous'\"'\"'),indent=2))'",
+      "scenario": "ownership",
+      "sha256": "d22e2c2161ee7b73ae39721b58d06f6a063480fde95c40465701979afd3f4836"
+    },
+    {
+      "blocking": "checkout",
+      "disposition": "Retain fixture record and enclosing pinned run; no historical PID signaling or forced closure.",
+      "identity": {
+        "argv": [
+          "/bin/echo",
+          "never invoked"
+        ],
+        "artifacts": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/runs/pending/artifacts",
+        "command_pgid": null,
+        "command_pid": 45178,
+        "controller_pid": 45178,
+        "engine_pid": 45178,
+        "family": "runner_c_worker_harness/exec_control_states",
+        "item": "runner_c_worker_harness/exec_control_states::production",
+        "lock_identity": [
+          16777233,
+          146098544
+        ],
+        "nonce": "2c997784499645dab7c9ab8585fc8fa6",
+        "operation_id": "813ae5b2f96c4510ace58d6860e66623",
+        "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/runs/pending",
+        "owner_pid": 45178,
+        "root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+        "run_id": "command_release_authorized",
+        "socket_dir": "/private/tmp/pwpx-13ee85cf6b654c05b99689978e891fb8",
+        "state": "command_release_authorized",
+        "token": "9c12bb733cc540f7967c2ee16321fe51"
+      },
+      "independent": {},
+      "missing": "Authenticated matching settlement, revoked launch authority and group absence (or affirmative never-launched receipt). Historical PID, direct return, external exits and available lock do not supply missing owner settlement.",
+      "observations": [
+        {
+          "actual_launch": false,
+          "name": "recovery disposition command_release_authorized",
+          "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/813ae5b2f96c4510ace58d6860e66623/record.json"
+        }
+      ],
+      "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/813ae5b2f96c4510ace58d6860e66623/record.json",
+      "recovery_preview": "cd /private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo && tests/run.sh --recover-ownership command_release_authorized",
+      "scenario": "recovery-command_release_authorized",
+      "sha256": "3543d857a40d5c2d5b41443689451b5bc2da5418decefce7157d748f14c1e3ce"
+    },
+    {
+      "blocking": "checkout",
+      "disposition": "Retain fixture record and enclosing pinned run; no historical PID signaling or forced closure.",
+      "identity": {
+        "argv": [
+          "/bin/echo",
+          "never invoked"
+        ],
+        "artifacts": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/runs/pending/artifacts",
+        "command_pgid": null,
+        "command_pid": 45178,
+        "controller_pid": 45178,
+        "engine_pid": 45178,
+        "family": "runner_c_worker_harness/exec_control_states",
+        "item": "runner_c_worker_harness/exec_control_states::production",
+        "lock_identity": [
+          16777233,
+          146099159
+        ],
+        "nonce": "c427563d98c94b21ad78a4deb205c14c",
+        "operation_id": "0d079857a26b477dacd2fd6d993e6b87",
+        "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/runs/pending",
+        "owner_pid": 45178,
+        "root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+        "run_id": "command_started",
+        "socket_dir": "/private/tmp/pwpx-081430984f694bce8e8464df79c0304d",
+        "state": "command_started",
+        "token": "71cba41f5f2d4b118f09ace3f8849f69"
+      },
+      "independent": {},
+      "missing": "Authenticated matching settlement, revoked launch authority and group absence (or affirmative never-launched receipt). Historical PID, direct return, external exits and available lock do not supply missing owner settlement.",
+      "observations": [
+        {
+          "actual_launch": false,
+          "name": "recovery disposition command_started",
+          "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/0d079857a26b477dacd2fd6d993e6b87/record.json"
+        }
+      ],
+      "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/0d079857a26b477dacd2fd6d993e6b87/record.json",
+      "recovery_preview": "cd /private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo && tests/run.sh --recover-ownership command_started",
+      "scenario": "recovery-command_started",
+      "sha256": "ee3c241ddb34c7c1f39fc3d993e0b8fdf63cd91dba697a68486c2671ee6793f0"
+    },
+    {
+      "blocking": "checkout",
+      "disposition": "Retain fixture record and enclosing pinned run; no historical PID signaling or forced closure.",
+      "identity": {
+        "argv": [
+          "/bin/echo",
+          "never invoked"
+        ],
+        "artifacts": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/runs/pending/artifacts",
+        "command_pgid": null,
+        "command_pid": 45178,
+        "controller_pid": 45178,
+        "engine_pid": 45178,
+        "family": "runner_c_worker_harness/exec_control_states",
+        "item": "runner_c_worker_harness/exec_control_states::production",
+        "lock_identity": [
+          16777233,
+          146097928
+        ],
+        "nonce": "13ad853db28f4a5aa1f05d60f2bab4d1",
+        "operation_id": "c2c21da866ba4d809db347ab724f6305",
+        "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/runs/pending",
+        "owner_pid": 45178,
+        "root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+        "run_id": "owner_bound",
+        "socket_dir": "/private/tmp/pwpx-65d26f1e87a54764ae2917e886a86ea4",
+        "state": "owner_bound",
+        "token": "5360aeabedf8494485bca2a6083486da"
+      },
+      "independent": {},
+      "missing": "Authenticated matching settlement, revoked launch authority and group absence (or affirmative never-launched receipt). Historical PID, direct return, external exits and available lock do not supply missing owner settlement.",
+      "observations": [
+        {
+          "actual_launch": false,
+          "name": "recovery disposition owner_bound",
+          "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/c2c21da866ba4d809db347ab724f6305/record.json"
+        }
+      ],
+      "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/c2c21da866ba4d809db347ab724f6305/record.json",
+      "recovery_preview": "cd /private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo && tests/run.sh --recover-ownership owner_bound",
+      "scenario": "recovery-owner_bound",
+      "sha256": "540d153bfd32eb73836324e2fc35c55b2362968d671b6adf85ca41d82f82e685"
+    },
+    {
+      "blocking": "checkout",
+      "disposition": "Retain fixture record and enclosing pinned run; no historical PID signaling or forced closure.",
+      "identity": {
+        "argv": [
+          "/bin/echo",
+          "never invoked"
+        ],
+        "artifacts": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/runs/pending/artifacts",
+        "command_pgid": null,
+        "command_pid": 45178,
+        "controller_pid": 45178,
+        "engine_pid": 45178,
+        "family": "runner_c_worker_harness/exec_control_states",
+        "item": "runner_c_worker_harness/exec_control_states::production",
+        "lock_identity": [
+          16777233,
+          146097313
+        ],
+        "nonce": "fd883ec3fe2745dcb0f22a4166021076",
+        "operation_id": "2c997ca8dadd4dc29c30bc042b5ab9f3",
+        "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/runs/pending",
+        "owner_pid": 45178,
+        "root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+        "run_id": "owner_launch_authorized",
+        "socket_dir": "/private/tmp/pwpx-0747bd046af24e61aecfed8675524975",
+        "state": "owner_launch_authorized",
+        "token": "6651ab7ac61e4dc88345691eb6a6f2c5"
+      },
+      "independent": {},
+      "missing": "Authenticated matching settlement, revoked launch authority and group absence (or affirmative never-launched receipt). Historical PID, direct return, external exits and available lock do not supply missing owner settlement.",
+      "observations": [
+        {
+          "actual_launch": false,
+          "name": "recovery disposition owner_launch_authorized",
+          "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/2c997ca8dadd4dc29c30bc042b5ab9f3/record.json"
+        }
+      ],
+      "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/2c997ca8dadd4dc29c30bc042b5ab9f3/record.json",
+      "recovery_preview": "cd /private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo && tests/run.sh --recover-ownership owner_launch_authorized",
+      "scenario": "recovery-owner_launch_authorized",
+      "sha256": "1f0767b6dce8aa33ebc4bb98c5931c3dd72b355dff1168196d20a10b4bf9e98e"
+    },
+    {
+      "blocking": "checkout",
+      "disposition": "Retain fixture record and enclosing pinned run; no historical PID signaling or forced closure.",
+      "identity": {
+        "argv": [
+          "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+          "-B",
+          "-S",
+          "-P",
+          "-c",
+          "import os,socket,sys,time,signal; child=os.fork(); s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'child' if child==0 else b'command'); s.recv(1); signal.signal(signal.SIGINT,signal.SIG_IGN); time.sleep(60) if child==0 else None",
+          "/private/tmp/pw-window-after-return-45178/peer"
+        ],
+        "artifacts": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/runs/window/suites/runner_c_worker_harness/exec_control_states/artifacts/window-command",
+        "command_pgid": 47461,
+        "command_pid": 47461,
+        "controller_pid": 47441,
+        "engine_pid": 47458,
+        "family": "runner_c_worker_harness/exec_control_states",
+        "item": "runner_c_worker_harness/exec_control_states::production",
+        "lock_identity": [
+          16777233,
+          146106770
+        ],
+        "nonce": "16e97a147ebd487cb36ab7f02ed7a3b2",
+        "operation_id": "f3822415013d4f8db525613850d5f4dd",
+        "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/runs/window",
+        "owner_pid": 47460,
+        "root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+        "run_id": "20261030T214825Z_c28271ca",
+        "socket_dir": "/private/tmp/pwpx-b9e280c0d63f40c693c23357dfa83200",
+        "state": "command_started",
+        "token": "5f201b1dc1ec4cbbaf321244547c9e59"
+      },
+      "independent": {
+        "independent-exits.json": {
+          "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/independent-exits.json",
+          "sha256": "b38d61192071e9e711826131f8c2bb466686434e4e851ee4b4ebbbf6507831fc",
+          "value": {
+            "kernel_exits": [
+              47458,
+              47460,
+              47461,
+              47462
+            ],
+            "missing": [],
+            "pids": {
+              "child": 47462,
+              "command": 47461,
+              "engine": 47458,
+              "owner": 47460
+            }
+          }
+        },
+        "independent-starts.json": {
+          "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/independent-starts.json",
+          "sha256": "4206767827e45043dbc0b5cb6cc3da59121e2ad8866e7b143eb74fd63937441e",
+          "value": {
+            "pids": {
+              "child": 47462,
+              "command": 47461,
+              "engine": 47458,
+              "owner": 47460
+            },
+            "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T214825Z_c28271ca/f3822415013d4f8db525613850d5f4dd/record.json",
+            "state_before": "command_started"
+          }
+        }
+      },
+      "missing": "Authenticated matching settlement, revoked launch authority and group absence (or affirmative never-launched receipt). Historical PID, direct return, external exits and available lock do not supply missing owner settlement.",
+      "observations": [
+        {
+          "disposition": "fixture checkout remains protected; recorded external exits do not manufacture an owner settlement",
+          "kernel_exits": [
+            47458,
+            47460,
+            47461,
+            47462
+          ],
+          "name": "real crash window after-return",
+          "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/runs/window",
+          "pids": {
+            "child": 47462,
+            "command": 47461,
+            "engine": 47458,
+            "owner": 47460
+          },
+          "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T214825Z_c28271ca/f3822415013d4f8db525613850d5f4dd/record.json",
+          "source_sha256": {
+            "tests/lib/pytest_command_owner.py": "0888194ceec02ee09817810f18cdd4810f1bd97bc4ab4cd88c8641ee19f1b86e",
+            "tests/lib/pytest_resources.py": "df6ec5e02da1d62dab9345f873a4648e171ec24d62d734a43caa06f344cd5236",
+            "tests/suites/runner_c_worker_harness/test_exec_control_states.py": "ea8dac58b8eb35dd72de981e5da45ebe8a401abc380dfbf89d9e52bac920bebb"
+          },
+          "state_after": "command_started",
+          "state_before": "command_started"
+        }
+      ],
+      "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T214825Z_c28271ca/f3822415013d4f8db525613850d5f4dd/record.json",
+      "recovery_preview": "cd /private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo && tests/run.sh --recover-ownership 20261030T214825Z_c28271ca",
+      "scenario": "window-after-return",
+      "sha256": "e1d43c92cfcd4903678d4451073603736f4ef0e979b22f972a764928c348203f"
+    },
+    {
+      "blocking": "checkout",
+      "disposition": "Retain fixture record and enclosing pinned run; no historical PID signaling or forced closure.",
+      "identity": {
+        "argv": [
+          "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+          "-B",
+          "-S",
+          "-P",
+          "-c",
+          "import os,socket,sys,time,signal; s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'command'); s.recv(1); signal.signal(signal.SIGINT,signal.SIG_IGN); time.sleep(60)",
+          "/private/tmp/pw-window-before-owner-45178/peer"
+        ],
+        "artifacts": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/runs/window/suites/runner_c_worker_harness/exec_control_states/artifacts/window-command",
+        "command_pgid": null,
+        "command_pid": null,
+        "controller_pid": 47381,
+        "engine_pid": 47398,
+        "family": "runner_c_worker_harness/exec_control_states",
+        "item": "runner_c_worker_harness/exec_control_states::production",
+        "lock_identity": [
+          16777233,
+          146104897
+        ],
+        "nonce": "fc1bd930123440d882ad8bb00ce55c96",
+        "operation_id": "017b254ef9a84805a5ab75a0f599800e",
+        "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/runs/window",
+        "owner_pid": null,
+        "root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+        "run_id": "20261030T214823Z_3dc981cf",
+        "socket_dir": "/private/tmp/pwpx-58c4783eb28641dfba7951c78c87a867",
+        "state": "owner_launch_authorized",
+        "token": "47ca52f0818e4816b31463ae7c0bd9d0"
+      },
+      "independent": {
+        "independent-exits.json": {
+          "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/independent-exits.json",
+          "sha256": "ce31020103714f67eded491f6211120767ad71d91df2cae7e78e98d4870ded15",
+          "value": {
+            "kernel_exits": [
+              47381,
+              47398
+            ],
+            "missing": [],
+            "pids": {
+              "controller": 47381,
+              "engine": 47398
+            }
+          }
+        },
+        "independent-starts.json": {
+          "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/independent-starts.json",
+          "sha256": "594ed4c20c473937beb8793422bd0457e2b4e906940e65adaadc312c5b3caaa2",
+          "value": {
+            "pids": {
+              "controller": 47381,
+              "engine": 47398
+            },
+            "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T214823Z_3dc981cf/017b254ef9a84805a5ab75a0f599800e/record.json",
+            "state_before": "owner_launch_authorized"
+          }
+        }
+      },
+      "missing": "Authenticated matching settlement, revoked launch authority and group absence (or affirmative never-launched receipt). Historical PID, direct return, external exits and available lock do not supply missing owner settlement.",
+      "observations": [
+        {
+          "disposition": "fixture checkout remains protected; recorded external exits do not manufacture an owner settlement",
+          "kernel_exits": [
+            47381,
+            47398
+          ],
+          "name": "real crash window before-owner",
+          "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/runs/window",
+          "pids": {
+            "controller": 47381,
+            "engine": 47398
+          },
+          "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T214823Z_3dc981cf/017b254ef9a84805a5ab75a0f599800e/record.json",
+          "source_sha256": {
+            "tests/lib/pytest_command_owner.py": "0594a01aba06c472d8866a3d63e7ed8d1fb770567f103d8196ec737c0ed832e1",
+            "tests/lib/pytest_resources.py": "48bf4bc320a20d7e4758336bbc0136ded8edc21c0a8d0f34e29274139b15ee77",
+            "tests/suites/runner_c_worker_harness/test_exec_control_states.py": "310e3cd63584210781d88f0acb5bc0811892938ad781bb2899523c868e746dde"
+          },
+          "state_after": "owner_launch_authorized",
+          "state_before": "owner_launch_authorized"
+        }
+      ],
+      "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T214823Z_3dc981cf/017b254ef9a84805a5ab75a0f599800e/record.json",
+      "recovery_preview": "cd /private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo && tests/run.sh --recover-ownership 20261030T214823Z_3dc981cf",
+      "scenario": "window-before-owner",
+      "sha256": "612bd28236e82919b85b1ebafe8499d44dfde2969bc710053c2219ab5758cb14"
+    },
+    {
+      "blocking": "checkout",
+      "disposition": "Retain fixture record and enclosing pinned run; no historical PID signaling or forced closure.",
+      "identity": {
+        "argv": [
+          "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+          "-B",
+          "-S",
+          "-P",
+          "-c",
+          "import os,socket,sys,time,signal; s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'command'); s.recv(1); signal.signal(signal.SIGINT,signal.SIG_IGN); time.sleep(60)",
+          "/private/tmp/pw-window-before-start-publication-45178/peer"
+        ],
+        "artifacts": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/runs/window/suites/runner_c_worker_harness/exec_control_states/artifacts/window-command",
+        "command_pgid": null,
+        "command_pid": null,
+        "controller_pid": 47420,
+        "engine_pid": 47437,
+        "family": "runner_c_worker_harness/exec_control_states",
+        "item": "runner_c_worker_harness/exec_control_states::production",
+        "lock_identity": [
+          16777233,
+          146106137
+        ],
+        "nonce": "b4078b334ed349baaba0c1d3b469c239",
+        "operation_id": "119e1641010e4d05815701c7b686b4bf",
+        "out": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/runs/window",
+        "owner_pid": 47439,
+        "root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+        "run_id": "20261030T214824Z_3b32ca94",
+        "socket_dir": "/private/tmp/pwpx-d3ec56f71bf54047b2632db5ca8cabc7",
+        "state": "command_release_authorized",
+        "token": "c47137163a374f57beb7454f6e6e16c4"
+      },
+      "independent": {
+        "independent-exits.json": {
+          "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/independent-exits.json",
+          "sha256": "37b96b3ea1ed92a0ee5498af60b8fcee92faebef8d073bac6bff02f343767cbb",
+          "value": {
+            "kernel_exits": [
+              47437,
+              47439,
+              47440
+            ],
+            "missing": [],
+            "pids": {
+              "command": 47440,
+              "engine": 47437,
+              "owner": 47439
+            }
+          }
+        },
+        "independent-starts.json": {
+          "path": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/independent-starts.json",
+          "sha256": "3bc3be26b703c84c8d804c8577d8f8474f7ff4ae7d0c1aadef20296ae483733d",
+          "value": {
+            "pids": {
+              "command": 47440,
+              "engine": 47437,
+              "owner": 47439
+            },
+            "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T214824Z_3b32ca94/119e1641010e4d05815701c7b686b4bf/record.json",
+            "state_before": "command_release_authorized"
+          }
+        }
+      },
+      "missing": "Authenticated matching settlement, revoked launch authority and group absence (or affirmative never-launched receipt). Historical PID, direct return, external exits and available lock do not supply missing owner settlement.",
+      "observations": [
+        {
+          "disposition": "fixture checkout remains protected; recorded external exits do not manufacture an owner settlement",
+          "kernel_exits": [
+            47437,
+            47439,
+            47440
+          ],
+          "name": "real crash window before-start-publication",
+          "output": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/runs/window",
+          "pids": {
+            "command": 47440,
+            "engine": 47437,
+            "owner": 47439
+          },
+          "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T214824Z_3b32ca94/119e1641010e4d05815701c7b686b4bf/record.json",
+          "source_sha256": {
+            "tests/lib/pytest_command_owner.py": "2b35da1a5ea8a25188918c3c8944fb25fed1a2ba6d453706d1f502dbcfecf18a",
+            "tests/lib/pytest_resources.py": "df6ec5e02da1d62dab9345f873a4648e171ec24d62d734a43caa06f344cd5236",
+            "tests/suites/runner_c_worker_harness/test_exec_control_states.py": "15d45ca15b655b82067d34152a5a900b2b0334b9260d47a8f9d8c169d2e845d1"
+          },
+          "state_after": "command_release_authorized",
+          "state_before": "command_release_authorized"
+        }
+      ],
+      "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T214824Z_3b32ca94/119e1641010e4d05815701c7b686b4bf/record.json",
+      "recovery_preview": "cd /private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo && tests/run.sh --recover-ownership 20261030T214824Z_3b32ca94",
+      "scenario": "window-before-start-publication",
+      "sha256": "b05e0131b2884d14ba03073a1b3ac006f5f8f6077735f7e7c4fca50c7987176d"
+    }
+  ],
+  "worktree": "/private/tmp/pw-coherence-20261030"
+}

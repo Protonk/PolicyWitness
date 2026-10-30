@@ -79,7 +79,8 @@
             "cargo",
             "meson",
             "clang",
-            "swift"
+            "swift",
+            "pytest"
           ]
         },
         {
@@ -253,6 +254,15 @@
         {
           "id": "retention_controls",
           "description": "Retained inventories, managed run ownership and checkout serialization protect execution evidence"
+        },
+        {
+          "id": "pytest_controls",
+          "default": false,
+          "description": "pytest family ownership, accounting and integration controls",
+          "requires": [
+            "clang",
+            "pytest"
+          ]
         }
       ]
     },
@@ -887,7 +897,9 @@
         },
         {
           "id": "exec_control_states",
-          "description": "deterministic deadline, independent pipe/exit and native cleanup-failure controls"
+          "description": "deterministic deadline, independent pipe/exit and native cleanup-failure controls",
+          "engine": "pytest",
+          "module": "tests/suites/runner_c_worker_harness/test_exec_control_states.py"
         },
         {
           "id": "native_clock",
@@ -2057,7 +2069,8 @@
         "runner_unit/reaped_ack_mutation",
         "runner_unit/exec_reader_mutations",
         "runner_exec_lifecycle/closed_streams_leader_exit",
-        "runner_exec_inheritance/closed_worker_stderr"
+        "runner_exec_inheritance/closed_worker_stderr",
+        "dispatcher/pytest_controls"
       ]
     },
     "failure_boundaries": {

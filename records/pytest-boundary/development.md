@@ -1,0 +1,99 @@
+# Development observations
+
+`pytest-boundary-reference-01`, run `20261030T144802Z_0cf0ac62`, preserves
+automation-sandbox refusals for Unix socket binding and nested sandbox use.
+Accounting and retention passed. The unchanged four-case selection outside
+that sandbox passed in `pytest-boundary-reference-02`. These are distinct
+observations, not retrospective repair of the first run.
+
+Candidate `fa376979`, `pytest-boundary-demo-01`: ordinary completion passed.
+The partial-setup stimulus produced the intended pytest setup error and later
+independent pass, preserving separate phase reports. The supervisor nevertheless
+crashed on a Unix datagram `ConnectionResetError` while the engine was exiting,
+before it could finalize its resource lease. The independent exit observer
+rejected cleanup because the child remained alive. Its outside safety release
+is not candidate cleanup; the original acquired record and file remain in the
+pinned failed output. This is a consequential prototype defect, not evidence
+against failure continuation in pytest. The correction treats peer reset as
+engine termination only after reaping, then executes normal resource finalization.
+The observer now also durably records exits after its labeled safety cleanup.
+
+The same correction adds the remaining declared malformed-account controls
+(invalid outcome, unexpected skip, duplicate selection, unknown event) before
+the next complete run. Their expectations remain independently literal.
+
+Candidate `4211d48b`, `pytest-boundary-demo-02`: ordinary completion, failed
+pre-yield setup and simultaneous body/teardown failure passed. SIGINT also
+preserved incomplete active/queued accounting and witnessed child cleanup,
+but the observer rejected the actual finalizer receipt. Its exact receipt list
+had unnecessarily assumed no teardown on interruption. The predeclared contract
+requires no queued start and no invented active success, not absent finalizers.
+Correcting the expected SIGINT receipt to include `active.teardown` preserves
+those obligations. This is an observer defect; no candidate change is needed.
+
+Candidate `493309ed`, `pytest-boundary-demo-03`: engine-death and dual-death
+controls passed, including live child lock retention, rejected competing
+execution, authenticated recovery and independent kernel exits. Selection and
+deselection also passed. The environment observer then found that the actual
+macOS child environment adds `__CF_USER_TEXT_ENCODING` to the three explicitly
+supplied values. No inherited lock/capture descriptor or poisoned Python option
+was present. The subject launch now explicitly supplies that observed encoding
+value, and the observer requires the complete four-field environment. Engine
+version, capture, disabled optimization and external-plugin absence are also
+recorded and independently checked. This correction preserves exact environment
+verification rather than ignoring unspecified extra variables.
+
+Candidate `5c4cd41d`, `pytest-boundary-demo-04`: the exact four-field child
+environment passed. The added interpreter check compared a reported keg-path
+symlink with a fully resolved framework path as strings. Both identify the
+same executable. The observer now resolves both paths before comparison; it
+still rejects a different executable. No subject or engine change was needed.
+
+Candidate `cfbd753a`, `pytest-boundary-demo-05`: all eighteen observation groups
+passed, with ten accounting inputs inside the accounting group. The deliberately
+dropped descriptor made the lock free while the child remained responsive, and
+the independent control rejected that lifetime claim. Missing/duplicate/invalid
+reports and failed publication did not become successful completion. Candidate
+cleanup and outside safety cleanup remain separately recorded. The supervisor
+does not dispatch individual items. The bounded architecture remains credible;
+the next step is the single exposed C extraction replay specified prospectively.
+
+Replay equipment `0085bd54`: `pytest-boundary-replay-old-01` passed seven
+pytest items against `f8f3c24f`, including the 58-attempt golden ledger and all
+six intended native assertion rejections. The unchanged adapter against
+`341f9441`, `pytest-boundary-replay-stale-01`, produced one pass and six failures.
+The production ledger still matched, but each mutation failed its unique-anchor
+formation assertion before compilation. The outside observer accepted that
+expected negative control; the candidate run itself remains failed.
+
+The exposed adaptation copies the new entry source and full local header set,
+then writes the mutation into `pw_worker_exec.h` after copying, and adds the two
+missing-owner compilation cases. The native fixture, golden ledger, mutation
+values and intended rejection assertions remain unchanged. This is the same
+source-binding obligation as the historical change, with pytest owning the
+individual variant reports rather than a handwritten variant execution loop.
+
+Adapted source `fec0e181`, `pytest-boundary-replay-adapted-01`: all nine items
+passed. The outside observer independently checked the 58-entry ledger, six
+native rejection statuses and assertion strings, and both specific missing-header
+compiler refusals. The native fixture matched the pre-extraction bytes. This
+completes the authorized single replay; no second adaptation was attempted.
+
+Final source review exposed a narrow reporting issue: `finish` discarded all
+decoded events when any JSONL line was malformed. Although raw bytes survived
+and the run failed closed, a truncated final frame would erase the machine
+account's earlier completed status. An independently constructed truncation
+control is added before correcting the reader. This extends reporting-failure
+coverage; it does not start another architectural or adaptation experiment.
+
+`0d3af494` / `pytest-boundary-journal-red-01` rejected the existing reader with
+`truncated tail discarded a completed item`, after the previous ten accounting
+inputs passed. The correction accumulates decoded frames as they are read;
+on a parse failure it retains the preceding frames, adds the journal error and
+leaves later items incomplete. Raw evidence is never rewritten. Valid journals
+take the same per-line JSON decoding and unchanged account policy.
+
+`832e7717` / `pytest-boundary-demo-06` passed all eighteen groups, now including
+eleven accounting inputs. The final reader also reconciled the retained old,
+stale and adapted native journals to exactly their prior case results and errors;
+native inputs and adapters were unchanged, so no recompilation was needed.

@@ -242,7 +242,10 @@ def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_a
     run = {
         'schema_version': 1, 'terminal': True, 'run_id': run_id, 'started_at_unix_ms': started,
         'finished_at_unix_ms': finished, 'duration_ms': finished - started,
-        'ok': not errors and totals['fail'] == 0,
+        'ok': not errors and totals['fail'] == 0 and all(c['status'] in ('pass', 'skip') for c in case_results),
+        'execution_contract': plan.get('execution_contract'),
+        'counts_scope': 'legacy reports only',
+        'case_outcome_counts': dict(Counter(c['status'] or c['state'] for c in case_results)),
         'counts': totals, 'suites': by_suite, 'reports': reports,
         'requested_suites': plan['selection']['suites'],
         'requested_cases': plan['selection']['cases'],
@@ -295,8 +298,19 @@ def rosetta_probe():
 def requirements(case, config, env, root, cache, probes=None):
     missing = []
     for name in case['requires']:
+        if name == 'pytest' and case.get('engine') == 'pytest' and 'items' not in case:
+            # A family runs only in the engine collected with its plan; this plan has none.
+            missing.append(name)
+            continue
         if name not in cache:
-            if name == 'rosetta':
+            if name == 'pytest':
+                import pytest_packages
+                try:
+                    pytest_packages.target(root)
+                    ok = True
+                except (OSError, ValueError):
+                    ok = False
+            elif name == 'rosetta':
                 record = rosetta_probe()
                 if probes is not None:
                     probes[name] = record
@@ -325,6 +339,24 @@ def requirements(case, config, env, root, cache, probes=None):
 
 
 def account(item):
+    if item['cases'][0].get('engine') == 'pytest':
+        case = item['cases'][0]
+        family = item.get('family')
+        complete = bool(family and family['accounting_state'] == 'complete')
+        item['case_results'] = [dict(id=case['id'], context=case['context'], engine='pytest',
+            state='completed' if complete else 'unrun', status=('pass' if family['ok'] else 'fail') if complete else None,
+            execution_state=family['execution_state'] if family else 'not_started',
+            accounting_state=family['accounting_state'] if family else 'unavailable',
+            family_report='suites/' + case['id'] + '/family.json' if family else None,
+            reason=item.get('blocked_reason') or ('; '.join(family['errors']) if family else 'execution never began'),
+            system_sleep_ms=item.get('system_sleep_ms'))]
+        if not complete:
+            problem(item, 'unrun_case', case['id'] + ': ' + item['case_results'][0]['execution_state'] + '/' + item['case_results'][0]['accounting_state'])
+        if family and not complete:
+            print('FAMILY ' + case['id'] + ': ' + family['execution_state'] + '/incomplete; ' + '; '.join(family['errors']), flush=True)
+        if not family:
+            print('FAMILY ' + case['id'] + ': not_started/unavailable; ' + str(item.get('blocked_reason')), flush=True)
+        return
     expected = Counter((c['report_suite'], c['test_id']) for c in item['cases'])
     observed = {(r['suite'], r['test_id']): r for r in item['reports']}
     ambiguous = {key for key, count in expected.items() if count > 1}
@@ -381,7 +413,8 @@ def run_standard_command(command, root, env, scope):
             raise
 
 
-def execute(root, out, run_id, started, plan, config, scope):
+def execute(root, out, run_id, started, plan, config, scope, collectors=None):
+    collectors = collectors or {}
     # Most cases get their own process, so a failure cannot suppress a sibling.
     # BYOXPC shares installation and cleanup across its explicitly selected leaves.
     groups = []
@@ -447,9 +480,20 @@ def execute(root, out, run_id, started, plan, config, scope):
                 item['equipment'] = observed
             dependencies = {dep for c in group for dep in c['depends_on'] if dep not in group_ids}
             failed_deps = sorted(dep for dep in dependencies if outcomes.get(dep) != 'pass')
-            if interrupted or missing or failed_deps:
+            ownership_hold = None
+            if not interrupted:
+                from pytest_resources import guard
+                try:
+                    guard(root)
+                except (ValueError, OSError) as exc:
+                    ownership_hold = str(exc)
+            if interrupted or missing or failed_deps or ownership_hold:
                 item['state'] = 'blocked'
-                reason = 'interrupted' if interrupted else f'missing prerequisites: {missing}' if missing else f'dependencies did not pass: {failed_deps}'
+                unavailable = f'missing prerequisites: {missing}'
+                if 'pytest' in missing and group[0].get('engine_unavailable'):
+                    unavailable += '; no pytest engine was collected with this plan: ' + group[0]['engine_unavailable']
+                reason = ('interrupted' if interrupted else ownership_hold if ownership_hold else
+                          unavailable if missing else f'dependencies did not pass: {failed_deps}')
                 item['blocked_reason'] = reason
                 problem(item, 'not_run', reason)
             else:
@@ -457,10 +501,14 @@ def execute(root, out, run_id, started, plan, config, scope):
                 item.update(state='running', started_at_unix_ms=time.time_ns() // 1_000_000)
                 save(journal, {'run_id': run_id, 'invocations': invocations})
                 child_env = {**env, 'PW_TEST_CASES': '\n'.join(c['test_id'] for c in group)}
-                command = group[0]['command']
+                command = group[0].get('command')
                 clocks_before = sleep_clocks()
                 try:
-                    if group[0]['context'] == 'standard':
+                    if group[0].get('engine') == 'pytest':
+                        item['family'], was_interrupted = collectors[group[0]['id']].execute(out, run_id, scope)
+                        interrupted |= was_interrupted
+                        returncode = 0 if item['family']['ok'] else 1
+                    elif group[0]['context'] == 'standard':
                         returncode = run_standard_command(command, root, child_env, scope)
                     else:
                         returncode = subprocess.run(command, cwd=root, env=scope.child_env(child_env),
@@ -468,17 +516,26 @@ def execute(root, out, run_id, started, plan, config, scope):
                     item.update(state='exited', returncode=returncode)
                     if item['returncode'] != 0:
                         problem(item, 'suite_exit', f"case command exited with status {item['returncode']}")
-                except OSError as exc:
+                except (OSError, ValueError) as exc:
                     item['state'] = 'launch_failed'
-                    problem(item, 'launch_failed', str(exc))
+                    if group[0].get('engine') == 'pytest':
+                        collector = collectors[group[0]['id']]
+                        family = collector.result or dict(items=[], errors=[])
+                        family.update(ok=False, execution_state='started' if collector.started else 'unknown', accounting_state='incomplete')
+                        family['errors'].append('required family publication failed: ' + str(exc))
+                        item['family'] = family
+                        problem(item, 'family_publication_failed', str(exc))
+                    else:
+                        problem(item, 'launch_failed', str(exc))
                 except KeyboardInterrupt:
                     item['state'] = 'interrupted'
                     interrupted = True
                     problem(item, 'interrupted', 'test execution interrupted')
                 item['finished_at_unix_ms'] = time.time_ns() // 1_000_000
                 item['system_sleep_ms'], item['system_sleep_error'] = system_sleep(clocks_before, sleep_clocks())
-                previous_events, previous_reports = reconcile(item, out, run_id, previous_events,
-                                                              previous_reports, seen_cases, config['python']['realpath'])
+                if group[0].get('engine') != 'pytest':
+                    previous_events, previous_reports = reconcile(item, out, run_id, previous_events,
+                                                                  previous_reports, seen_cases, config['python']['realpath'])
             account(item)
             for case in item['case_results']:
                 outcomes[case['id']] = case['status'] if not item['harness_errors'] else 'fail'

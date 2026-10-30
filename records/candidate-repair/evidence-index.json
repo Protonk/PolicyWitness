@@ -1,0 +1,438 @@
+{
+ "accepted_app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+ "adoption_baseline": "809ef178f7a9ce2628f13fb137f1456452a49b85",
+ "branch": "review/pytest-candidate-repair",
+ "interpreter": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+ "pytest_target": ".tmp/pytest/6ef73c338e2f6f696446bb1a3337b7c1fcb2dc1023846105d9ea7e44dfb90392 (copied from /private/tmp/pw-coherence-20261030, verified by pytest_packages.target)",
+ "review": "candidate review and repair",
+ "reviewed_exception": {
+  "applicability": "repair-controls-02 and the 19 passing cases of repair-verify-01 do not read tests/README.md; nested fixtures copy tests/RETAINED.json but the added entries name runs/repair-* paths no fixture creates, like the existing inert entries. source_drift (which reads the README) was rerun as repair-drift-01.",
+  "between": "33104cd1..7e48461f",
+  "changed": [
+   "tests/README.md (one prose line)",
+   "tests/RETAINED.json (pin entries only)"
+  ]
+ },
+ "runs": {
+  "repair-controls-01": {
+   "artifact_integrity": null,
+   "cases": [
+    {
+     "id": "dispatcher/pytest_controls",
+     "state": "completed",
+     "status": "fail",
+     "system_sleep_ms": 0
+    }
+   ],
+   "completion": {
+    "completed": 1,
+    "selected": 1,
+    "skipped": 0,
+    "unrun": 0
+   },
+   "harness_errors": [
+    [
+     "suite_exit",
+     "case command exited with status 1"
+    ]
+   ],
+   "inventory_entries": 23695,
+   "inventory_sha256": "34615502d6764ad029fd36a12c0cd26e3f85072de21c7d96f3aab4d162e3b0c4",
+   "key_sha256": {
+    "console.txt": "79080b0d92c48a78742c1fd07a81f8f07f85ec73d56451917c6c48c99069e50e",
+    "plan.json": "447567f1e83a464cb05937e920f2876c73f62f9c58bf1f7ebfb12e9a47b640f6",
+    "run.json": "ae4a02515316108aac5bea3bd9a4103b8c86e6cc45a7e9188d8325f3bc9b9170",
+    "suites/dispatcher/pytest_controls/artifacts/assertions.log": "a0b69838be63b4303ab416d09a9cd2d13017b0403455bec50b8642d8107b8679",
+    "suites/dispatcher/pytest_controls/artifacts/observations.json": "764c855c465065e667593b44dd7d40fca3df3df2cb1e7a4f6f10b111cf0ed798"
+   },
+   "ok": false,
+   "path": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01",
+   "pin": {
+    "app_inventory": null,
+    "path": "runs/repair-controls-01",
+    "reason": "Candidate review: first run of the repaired candidate; six receipt controls pass, then a defect in the new integrated survivor control (it read a ledger the repaired engine correctly no longer publishes) aborted the baseline-cause control. Nested unresolved fixture records remain protected.",
+    "run_id": "20261030T224215Z_8d571b63",
+    "source": "e624b7f9e5802010a9f70e84af48488d403a97bf"
+   },
+   "run_id": "20261030T224215Z_8d571b63",
+   "selection": {
+    "cases": [
+     "dispatcher/pytest_controls"
+    ],
+    "mode": "explicit",
+    "suites": []
+   }
+  },
+  "repair-controls-02": {
+   "artifact_integrity": null,
+   "cases": [
+    {
+     "id": "dispatcher/pytest_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    }
+   ],
+   "completion": {
+    "completed": 1,
+    "selected": 1,
+    "skipped": 0,
+    "unrun": 0
+   },
+   "harness_errors": [],
+   "inventory_entries": 24290,
+   "inventory_sha256": "524d53fb762c4f28b2fd64f74d319abad159ea219f87d66f098a58b617fdfcf2",
+   "key_sha256": {
+    "console.txt": "7246193a99d94812a37bc78896dc224523a2e0a5dcc775f862147f0b6f49c5dd",
+    "plan.json": "871f342801d832c7e3cd89ccb25598a7e6c6ecc8ab8d074e175bee7e398bf25b",
+    "run.json": "5024699ed6bddf1931f3fa8bad8bbb5340540289dfaa743af2932995ff9a6218",
+    "suites/dispatcher/pytest_controls/artifacts/assertions.log": "e00d18c7324d9fab7e6c73b882a01f34b97481948d5a36e8f0f6b3fae2a92fc4",
+    "suites/dispatcher/pytest_controls/artifacts/observations.json": "e01d37da45f4efea6a920b48df7797bc99700ed4a28e417a22218a7d69f25710",
+    "suites/dispatcher/pytest_controls/artifacts/receipt-controls.json": "d3cd213739a86f6424cef0a79c4d9b592e8e31723fb4a6c54ccb04395389d0e0"
+   },
+   "ok": true,
+   "path": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02",
+   "pin": {
+    "app_inventory": null,
+    "path": "runs/repair-controls-02",
+    "reason": "Candidate review: dispatcher/pytest_controls passes on the repaired candidate, including eight receipt controls (never-launched settlement without holds, legacy sentinel continuation, refused survivor intervention, named ledger baseline cause). Nested unresolved fixture records remain protected.",
+    "run_id": "20261030T224502Z_f6603edf",
+    "source": "33104cd1fad5c83c54ca0733ca9e8b069e36c407"
+   },
+   "run_id": "20261030T224502Z_f6603edf",
+   "selection": {
+    "cases": [
+     "dispatcher/pytest_controls"
+    ],
+    "mode": "explicit",
+    "suites": []
+   }
+  },
+  "repair-drift-01": {
+   "artifact_integrity": null,
+   "cases": [
+    {
+     "id": "source_drift/runner_source_manifests_agree",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/limits_documentation",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/contract_versions",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/architecture_documentation",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/build_documentation",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/generator_contract",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/markdown_reader",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/direct_python_start",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    }
+   ],
+   "completion": {
+    "completed": 8,
+    "selected": 8,
+    "skipped": 0,
+    "unrun": 0
+   },
+   "harness_errors": [],
+   "inventory_entries": 6807,
+   "inventory_sha256": "91d359941c434b2fc2d3498dce50946f4c989c2329ca2175f3edbaabe4d16bb8",
+   "key_sha256": {
+    "console.txt": "69eba0779298ede198f8a1b4bebe0da8009e3f1a1f5fe83414051fce8934f3e8",
+    "plan.json": "a339696331a1256643383d88d1d7ed4f1601aaf105fee0fb1a7c98fd70c9a14e",
+    "run.json": "b1bf1c568cac9bb892f352831c3822cb65a9943517f8d8ecaa617b1bdb8a8262"
+   },
+   "ok": true,
+   "path": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-drift-01",
+   "pin": {
+    "app_inventory": null,
+    "path": "runs/repair-drift-01",
+    "reason": "Candidate review: all eight default source_drift cases pass after the README wording correction.",
+    "run_id": "20261030T225319Z_8314e456",
+    "source": "7e48461fef801de63a38bf7cbd3825f3982074a9"
+   },
+   "run_id": "20261030T225319Z_8314e456",
+   "selection": {
+    "cases": [],
+    "mode": "explicit",
+    "suites": [
+     "source_drift"
+    ]
+   }
+  },
+  "repair-prefix-01": {
+   "artifact_integrity": null,
+   "cases": [
+    {
+     "id": "dispatcher/pytest_controls",
+     "state": "completed",
+     "status": "fail",
+     "system_sleep_ms": 0
+    }
+   ],
+   "completion": {
+    "completed": 1,
+    "selected": 1,
+    "skipped": 0,
+    "unrun": 0
+   },
+   "harness_errors": [
+    [
+     "suite_exit",
+     "case command exited with status 1"
+    ]
+   ],
+   "inventory_entries": 24485,
+   "inventory_sha256": "d674ac7ecd0d235495df8bfe653c47f6a5da206a3a843f46a4ae4f8c323f5288",
+   "key_sha256": {
+    "console.txt": "5102331556e6093bf028df613f520ef5c4bfcdecceb3e69346384c6a9a3e37f0",
+    "plan.json": "920f5ba814aa1904e2be23a41c129b278620442c9d7efed09118972c23c9cce5",
+    "run.json": "f20132eab8b40b42e53c261538e130fa6f3ba5362af02cd5fbe6553f7dddf01b",
+    "suites/dispatcher/pytest_controls/artifacts/assertions.log": "5629dad793ed60b4f9b1f5b067f878b66bb22d45b5d3d9df0d9c8411c7edea3a",
+    "suites/dispatcher/pytest_controls/artifacts/observations.json": "5af2302bc5b204cf58a0a21bb4f449f5a082bbee778329be24ed85c426038d43",
+    "suites/dispatcher/pytest_controls/artifacts/receipt-controls.json": "87d52b14b7015a578b632f28d37cd707a89f74f3b73ef369119e90ea9c784002"
+   },
+   "ok": false,
+   "path": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01",
+   "pin": {
+    "app_inventory": null,
+    "path": "runs/repair-prefix-01",
+    "reason": "Candidate review: eight new receipt controls fail against the unrepaired candidate (unsettled launch failures, unrecoverable holds blocking the legacy sentinel, unreported survivor kill credited, misattributed shared baseline). Nested unresolved fixture records remain protected.",
+    "run_id": "20261030T223754Z_4478add4",
+    "source": "881ad3b18d4152bc0be27911a13fd472fd77beef"
+   },
+   "run_id": "20261030T223754Z_4478add4",
+   "selection": {
+    "cases": [
+     "dispatcher/pytest_controls"
+    ],
+    "mode": "explicit",
+    "suites": []
+   }
+  },
+  "repair-verify-01": {
+   "artifact_integrity": {
+    "app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+    "unchanged": true,
+    "valid_before": true
+   },
+   "cases": [
+    {
+     "id": "preflight/build_provenance_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "preflight/build_entry_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "preflight/release_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "preflight/release_deadline_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "preflight/release_publish_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "preflight/release_rotation_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/runner_source_manifests_agree",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/limits_documentation",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/contract_versions",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/architecture_documentation",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/build_documentation",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/generator_contract",
+     "state": "completed",
+     "status": "fail",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/markdown_reader",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "source_drift/direct_python_start",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "dispatcher/controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "dispatcher/accounting_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "dispatcher/cancellation_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "dispatcher/selection_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "dispatcher/retention_controls",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    },
+    {
+     "id": "runner_c_worker_harness/exec_control_states",
+     "state": "completed",
+     "status": "pass",
+     "system_sleep_ms": 0
+    }
+   ],
+   "completion": {
+    "completed": 20,
+    "selected": 20,
+    "skipped": 0,
+    "unrun": 0
+   },
+   "harness_errors": [
+    [
+     "suite_exit",
+     "case command exited with status 1"
+    ]
+   ],
+   "inventory_entries": 19908,
+   "inventory_sha256": "6b20f88564d8a281d23ae01822c70534ad4253d37e67316b236f048274fdc2e9",
+   "key_sha256": {
+    "console.txt": "471dbc661ba532428d7aa6187ca69c429bbb5068c0d63d5ea5cc612d2042d231",
+    "plan.json": "5ba57daa78fb096af0af97d296954f5c68a128075c2d958c14d17943def3023f",
+    "run.json": "6784b2bb1eb6350139175f36c0b948813c427e975a0d5483dd12e190e2eba666",
+    "suites/runner_c_worker_harness/exec_control_states/artifacts/production/observed-call-policy.json": "ace13bee495b616ea55e37de94da9b645fd358ce998a838b675cd34fa246f138",
+    "suites/runner_c_worker_harness/exec_control_states/family.json": "fe69e13997b6543cd6ff647018efbfbb73d3e2a1534110e291957422245e32d9",
+    "suites/runner_c_worker_harness/exec_control_states/ownership.json": "60afb2cc0ed861fba47c264e65cd989228e6a006e60a4329ecbe251341e04d28",
+    "suites/runner_c_worker_harness/exec_control_states/phases.jsonl": "b0f988292dad1fd39cccbd83ebcfec42c13c5b03988d0e8680089f3f5e2ffcc0",
+    "suites/runner_c_worker_harness/exec_control_states/selection.json": "f6c7cb8c35d3eab937c9ea902c0d462e7fd50ff8f795414568a989f4ac270af7",
+    "suites/runner_c_worker_harness/exec_control_states/summary.txt": "a6e10e6cb78cbb797e8541c305eccc4040c7b3fed06ea37cba0d59004d53b7cb"
+   },
+   "ok": false,
+   "path": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-verify-01",
+   "pin": {
+    "app_inventory": "artifact-integrity/before.json",
+    "path": "runs/repair-verify-01",
+    "reason": "Candidate review: 19 of 20 readers, admission, release and drift cases pass with the repaired candidate; the real family passes 9/9 with 16 closed commands and no PW group signal against the unchanged accepted app. source_drift/generator_contract fails on a G9 literal in the new README sentence.",
+    "run_id": "20261030T224720Z_91f1fd36",
+    "source": "33104cd1fad5c83c54ca0733ca9e8b069e36c407"
+   },
+   "run_id": "20261030T224720Z_91f1fd36",
+   "selection": {
+    "cases": [
+     "runner_c_worker_harness/exec_control_states",
+     "dispatcher/controls",
+     "dispatcher/accounting_controls",
+     "dispatcher/cancellation_controls",
+     "dispatcher/selection_controls",
+     "dispatcher/retention_controls",
+     "preflight/build_provenance_controls",
+     "preflight/build_entry_controls",
+     "preflight/release_controls",
+     "preflight/release_deadline_controls",
+     "preflight/release_publish_controls",
+     "preflight/release_rotation_controls",
+     "source_drift/runner_source_manifests_agree",
+     "source_drift/limits_documentation",
+     "source_drift/contract_versions",
+     "source_drift/architecture_documentation",
+     "source_drift/build_documentation",
+     "source_drift/generator_contract",
+     "source_drift/markdown_reader",
+     "source_drift/direct_python_start"
+    ],
+    "mode": "explicit",
+    "suites": []
+   }
+  }
+ },
+ "starting_revision": "ecd3795dfd44bddc7f437a122340c0fb10a65644",
+ "worktree": "/private/tmp/pw-candidate-repair-20261030"
+}

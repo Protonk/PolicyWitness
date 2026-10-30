@@ -49,6 +49,7 @@ def make_repo(work):
     git(repo, 'remote', 'add', 'origin', str(remote))
     git(repo, 'push', '-q', 'origin', 'main')
     (repo / 'tests').mkdir()
+    (repo / 'tests/catalog.json').write_text(json.dumps(dict(suites=dict(fixture=dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0','1','2'])))))
     (repo / 'tests/RETAINED.json').write_text('{"schema_version": 1, "runs": []}\n')
     return repo
 
@@ -227,6 +228,12 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
         with tempfile.TemporaryDirectory(prefix='pw-release-fixture-', dir='/private/tmp') as directory:
             prepare_provenance_fixture(Path(directory))
     commit = commit or git(repo, 'rev-parse', 'HEAD')
+    # This explicitly authored fixture models a historical three-legacy-case
+    # producer. Its source identity is fixed before any archive mutation.
+    release_runs.HISTORICAL_PRODUCERS.add(commit)
+    declaration = repo.parent / 'expected-historical-producers.json'
+    known = json.loads(declaration.read_text()) if declaration.exists() else []
+    declaration.write_text(json.dumps(sorted(set(known) | {commit})))
     dist = repo / 'dist'
     dist.mkdir(exist_ok=True)
     archive = dist / 'PolicyWitness.zip'

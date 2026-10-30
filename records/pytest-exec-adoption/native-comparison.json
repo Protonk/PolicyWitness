@@ -1,0 +1,11 @@
+{
+  "golden_sha256": "353b7b5bc0b60905f82f1eaff180882e43f1fcc5c572d5965cebe8c0a1dc7e1e",
+  "ledger_attempts": 58,
+  "ledger_equal": true,
+  "ledger_sha256": "b50665ff148d938af2c4217a3d7d36f86f32ddd33c46bdcec06635fe725c5830",
+  "mutation_count": 6,
+  "mutation_statements_and_expected_assertions_equal": true,
+  "native_files": 8,
+  "native_fixture_sha256": "adc11fd2f3e1daf2638c752221b8da97a6a102aaab8fbcc1c42401a93ebb6da5",
+  "native_input_closure_equal": true
+}

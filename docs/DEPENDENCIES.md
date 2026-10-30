@@ -73,3 +73,10 @@ impose additional conditions, such as the
   count. Outside a checkout, `PW_VERSION` and `PW_BUILD_NUMBER` supply them
   and the describe string and commit read `unknown`. A release refuses
   anything but a clean checkout at an annotated tag.
+
+The default exec-control family additionally needs pytest 9.0.2 and its exact
+locked dependencies. Run `tests/setup-pytest.sh` explicitly; it verifies wheel
+SHA-256 values from `tests/requirements-pytest.lock` and installs into an
+interpreter-specific `.tmp/pytest` target. `--wheels DIRECTORY` uses already
+downloaded matching wheels. This changes no application or global Python
+installation. The build helpers still use only the standard library and tree.

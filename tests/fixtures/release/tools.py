@@ -1,5 +1,6 @@
 """Independent command stand-ins: no Apple requests, signing, or PW execution."""
 import json
+import hashlib
 from pathlib import Path
 import zipfile
 
@@ -11,6 +12,10 @@ class Tools:
     def __init__(self, mode, receipts):
         self.mode, self.receipts = mode, receipts
         self.calls = []
+        # Independently authored producer declaration for this three-case fixture.
+        self.contract = dict(profile='pw-family-evidence-1', source=dict(fixture='three legacy release cases'),
+            selected=[dict(id=c,engine='legacy') for c in ['smoke/specimen_file_read_deny','witness_contract/happy_path_baseline','fixture/third_default_case']], required_families=[])
+        self.contract['identity'] = hashlib.sha256(json.dumps(self.contract,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
     def __call__(self, out, argv, *, timeout, env=None, cwd=None):
         argv = list(map(str, argv))
@@ -91,7 +96,7 @@ class Tools:
                 schema_version=1, run_id='release-fixture', out_dir=str(output), started_at_unix_ms=1)))
             raise RuntimeError(f'command timed out; remote work may still be pending; see {out}')
         cases = ['smoke/specimen_file_read_deny', 'witness_contract/happy_path_baseline', 'fixture/third_default_case']
-        summary = dict(schema_version=1, run_id='release-fixture', terminal=True, ok=True,
+        summary = dict(schema_version=1, execution_contract=self.contract, run_id='release-fixture', terminal=True, ok=True,
             started_at_unix_ms=1, finished_at_unix_ms=2, duration_ms=1,
             configuration={'app_dir': str(app)},
             completion=dict(selected=3, completed=3, skipped=0, unrun=0),

@@ -31,7 +31,7 @@ to exit, then kills remaining group members and reaps the leader. Later cases
 are not started. The summary retains completed and partial evidence and names
 interruption as the reason for unfinished selections.
 
-`dispatch.json` journals invocations and evidence. Each observed case needs one
+`dispatch.json` journals invocations and evidence. Each observed legacy case needs one
 start followed by one terminal event, a readable report with matching identity,
 and agreement between terminal event and report status. Reports must belong to
 the selected plan. Suite inclusions reuse canonical IDs, while runner contexts
@@ -228,3 +228,19 @@ descendants, symlink redirects, lock contention, and Makefile preview/apply pres
 An actual directory-permission restriction forces unlink failure; the test
 checks a nonzero apply exit, the reported error and the remaining inventory.
 Standalone files and release acceptance output survive every cleanup operation.
+
+`pytest_controls` is an opt-in control of the exec-family integration. Its external
+native peer, kernel exit observations and lock inode checks are independent of
+candidate summary interpretation. Deliberately unresolved fixture records are
+retained inside its artifacts and are never mistaken for live checkout ownership.
+Receipt controls launch a missing executable, a command whose registered context
+differs from the owner's, an owner that cannot start and an owner slower than its
+readiness wait; each must settle as never launched without a checkout hold, and a
+sentinel legacy case must still run after the integrated failure. A same-group
+child that outlives an ordinary leader exit is identified by its own socket peer
+and kernel exit event; its forced exit must be recorded and, with the real native
+ledger, refused. A producer close of an uncreated descriptor must leave one cached
+baseline failure naming the ledger error. Availability controls move the package
+target between plan collection and the prerequisite check in each direction; the
+run must still finish with a named `not_started/unavailable` family, a running
+legacy sentinel and a free checkout.

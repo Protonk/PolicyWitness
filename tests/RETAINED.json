@@ -254,6 +254,300 @@
       "reason": "Final D2/workset retirement: both source/structure and generator/prose-link cases pass, including F1 independent omission controls. Attached combined-acceptance-credit.json records 229 required cases (212 retained full-run, 15 F2 replacements, 2 final source checks), with caller-auth separate. Acceptance and recovery index: 67fff425:records/workset/checkpoint.md; D2/F1: 67fff425:records/checks-before-check/acceptance.md. Production remains 4407d0ae / signed build 1016.",
       "source": "638582213dbabb86f69ada2dac9d56b24b4b568e",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-reference-01",
+      "run_id": "20261030T144802Z_0cf0ac62",
+      "reason": "Pytest boundary reference: sandbox refused Unix socket and nested sandbox fixtures; accounting and retention completed. Preserve environmental failure before unsandboxed replacement.",
+      "source": "e93753101667a6255eed2439bb407996121aa555",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-01",
+      "run_id": "pytest-boundary-demo-01",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "fa376979e40373c993149cf96ef62db2550b2a9a",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-02",
+      "run_id": "pytest-boundary-demo-02",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "4211d48bc9638b0b319bbb88ea9997e30a96d8d1",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-03",
+      "run_id": "pytest-boundary-demo-03",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "493309ed51bcd0623a2cf69daba59b25b3b9486b",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-04",
+      "run_id": "pytest-boundary-demo-04",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "5c4cd41d0b2654a2280c60ee3ca0d1fd0579e78f",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-05/candidates/retained",
+      "run_id": "retained",
+      "source": null,
+      "app_inventory": null,
+      "reason": "Experimental retained-publication refusal stimulus."
+    },
+    {
+      "path": "runs/pytest-boundary-demo-05",
+      "run_id": "pytest-boundary-demo-05",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "cfbd753a4b701630ebeb741acf49aeec309494f9",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-reference-02",
+      "run_id": "20261030T145251Z_0059d39d",
+      "reason": "Unchanged dispatcher selection/accounting/cancellation/retention reference controls passed outside automation sandbox; records-only concurrent additions do not affect these owners.",
+      "source": "e93753101667a6255eed2439bb407996121aa555",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-replay-old-01",
+      "run_id": "pytest-boundary-replay-old-01",
+      "source": "0085bd545d1c941ad1298f6e0874542568ff71b3",
+      "app_inventory": null,
+      "reason": "Exposed C extraction replay: old adapter, native ledger and independent rejection observations."
+    },
+    {
+      "path": "runs/pytest-boundary-replay-stale-01",
+      "run_id": "pytest-boundary-replay-stale-01",
+      "source": "0085bd545d1c941ad1298f6e0874542568ff71b3",
+      "app_inventory": null,
+      "reason": "Exposed C extraction replay: stale adapter, native ledger and independent rejection observations."
+    },
+    {
+      "path": "runs/pytest-boundary-replay-adapted-01",
+      "run_id": "pytest-boundary-replay-adapted-01",
+      "source": "fec0e1811d21ce718bd007bbc0a1498b2f558c2f",
+      "app_inventory": null,
+      "reason": "Exposed C extraction replay: adapted adapter, native ledger and independent rejection observations."
+    },
+    {
+      "path": "runs/pytest-boundary-journal-red-01",
+      "run_id": "pytest-boundary-journal-red-01",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "0d3af494f7c4e1177523c2622711f83b51897120",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-06/candidates/retained",
+      "run_id": "retained",
+      "source": null,
+      "app_inventory": null,
+      "reason": "Experimental retained-publication refusal stimulus."
+    },
+    {
+      "path": "runs/pytest-boundary-demo-06",
+      "run_id": "pytest-boundary-demo-06",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "832e77170d92199e52bc21ef6fa7266106725658",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-ownership-01",
+      "run_id": "20261030T175318Z_e31f2b6d",
+      "reason": "Consequential ownership control failure: post-supervisor-death killpg EPERM; settlement absent and registry retained; original and unchanged unsandboxed repeat.",
+      "source": "46ec22898c0b47f41693ed2870622978309e2d06",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-ownership-02",
+      "run_id": "20261030T175354Z_0f017bc4",
+      "reason": "Consequential ownership control failure: post-supervisor-death killpg EPERM; settlement absent and registry retained; original and unchanged unsandboxed repeat.",
+      "source": "46ec22898c0b47f41693ed2870622978309e2d06",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-ownership-03",
+      "run_id": "20261030T175431Z_ec935bba",
+      "reason": "Ownership checkpoint passes independent native capture, actual lock inheritance, supervisor death, kernel exits, output-only retention, authenticated refusal and idempotent recovery after 71558219 correction.",
+      "source": "715582191bbf6e5b013c01bfbcb216f8a4261525",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-normal-01",
+      "run_id": "20261030T175836Z_e157ccaa",
+      "reason": "First public family success: nine complete items, unchanged 58-attempt native ledger, 16 closed command obligations and unchanged accepted app.",
+      "source": "b1f697e134286c14805c83e33300347ec798b51f",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-integration-01",
+      "run_id": "20261030T180210Z_6d18e5f7",
+      "reason": "Actual-family diagnostic and semantic portable deletion controls passed; consequential preflight fixture/locale and opt-in inventory failures retained before correction. Existing dispatcher/source checks separately recorded.",
+      "source": "7852f03adec113df3572040a4e6c0d84b6c96afe",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-integration-02",
+      "run_id": "20261030T181152Z_18f6c141",
+      "reason": "Passing public acceptance controls: real-family diagnostic matrix, independent engine/interrupt/dual-death observations, recovery and portable refusal; complete C-worker suite and release/selection regressions.",
+      "source": "9aa2d9631a062c5f3e25ccd8af91634996e3ed19",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-final-controls-01",
+      "run_id": "20261030T181854Z_7225d9ba",
+      "reason": "Passing final diagnostics, parent started/unknown publication refusal states, native family and relevant accounting/source/startup regressions.",
+      "source": "56aaf019196c4560a66c01c3c6c7c85dbe45ff19",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-windows-01",
+      "run_id": "20261030T182709Z_95f5db1c",
+      "reason": "Consequential observer failure: temporary engine peer closed before authenticated identity read; narrower real launch-window claim not credited. Prior diagnostic/recovery/consumer checks in this run passed.",
+      "source": "298624d65a868524ff362d97c77bd03516e2e07d",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-windows-02",
+      "run_id": "20261030T183137Z_b2e20b54",
+      "reason": "Passing corrected independent real crash windows and full integrated family controls; retains intentionally unresolved fixture ownership and externally observed actor exits.",
+      "source": "9beb44b1e11300257d054a318001a0427c49a919",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-01",
+      "run_id": "20261030T183758Z_83f17b9a",
+      "reason": "Family, complete integration and positive historical-source controls pass; interrupted-rotation fixture child lacks independent producer declaration. Consequential failure retained before equipment correction.",
+      "source": "40e81695b589403e0bea144deb3f4c486536a9f3",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-02",
+      "run_id": "20261030T184527Z_d03ebde4",
+      "reason": "Corrected positive legacy fixture provenance, selection and actual-family integration acceptance.",
+      "source": "eb4bcc11b064ad887a482eff6c04492c1649fe0d",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-03",
+      "run_id": "20261030T185214Z_3175db8a",
+      "reason": "Final ownership admission, dropped descriptor and false-closure controls; actual diagnostic walkthrough before shared-baseline display grouping.",
+      "source": "b1cff674a92c272528c4351f21e67ae3aeb71726",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-04",
+      "run_id": "20261030T190459Z_80910d88",
+      "reason": "Prominent grouped shared-baseline/finalizer diagnostics, complete source and Python-startup controls, real F.",
+      "source": "74ef845f0cb08d65a4a09041051ed2fb2e5e5471",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-05",
+      "run_id": "20261030T190926Z_91f42cce",
+      "reason": "Final actual-family diagnostic, crash/recovery, portable-deletion and registered command-context controls all pass.",
+      "source": "bdb007a2f7f30ebd0c4e71e2b19da83c335a4653",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-build-provenance-01",
+      "run_id": "20261030T191126Z_2fd4b87f",
+      "reason": "All 68 existing build-provenance controls pass after explicitly copying shared ownership helpers into the SDK containment fixture.",
+      "source": "39c04284dbeb7fc5a8264e1a96088b5644a106dc",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-timeout-control-01",
+      "run_id": "20261030T191631Z_2bf78096",
+      "reason": "Proven candidate false pass: native command printed designated assertion then actually timed out; independent control rejected the successful family result before correction.",
+      "source": "a562390ad483f0c24be61fda0d1849ec19c6f596",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-06",
+      "run_id": "20261030T191740Z_13eca72f",
+      "reason": "Corrected timeout bridge rejects matching assertion text; full independent integration controls and real F pass before baseline timeout caching refinement.",
+      "source": "3e93082f489d0b64271c95f7b1550544114bb2cd",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-07",
+      "run_id": "20261030T191944Z_31d2efb0",
+      "reason": "Final family acceptance: nine variants, all independent diagnostic/ownership/portable controls, timeout rejection and one cached stopped-baseline failure with eight blocked dependents.",
+      "source": "87b66cb878f8eaf948a0b5353ad66a1b274bbc1b",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-closure-control-01",
+      "run_id": "20261030T192810Z_ae850e84",
+      "reason": "Independent terminal-receipt control proves two absent token fields were wrongly accepted as a matching closure identity.",
+      "source": "94b09d60ecf0be52ed6820068b1e6b6ed7fbb41b",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-08",
+      "run_id": "20261030T192830Z_e7adb1dd",
+      "reason": "Final candidate: actual-family diagnostic/timeout/crash/recovery/deletion matrix, affirmative closure identities, and all three release-consumer regressions pass.",
+      "source": "79dc6fbee2b0da98e50241e41ad35cff9b4907da",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/coherence-01",
+      "run_id": "20261030T214512Z_f209aff2",
+      "reason": "Bounded coherence pass: release contract repair, five sampled relationships and independent refusal/crash/reader controls; nested ambiguous ownership fixtures remain protected.",
+      "source": "6b35e27a0baa9cc673a6e50784968ffe5f2e9767",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/repair-prefix-01",
+      "run_id": "20261030T223754Z_4478add4",
+      "reason": "Candidate review: eight new receipt controls fail against the unrepaired candidate (unsettled launch failures, unrecoverable holds blocking the legacy sentinel, unreported survivor kill credited, misattributed shared baseline). Nested unresolved fixture records remain protected.",
+      "source": "881ad3b18d4152bc0be27911a13fd472fd77beef",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/repair-controls-01",
+      "run_id": "20261030T224215Z_8d571b63",
+      "reason": "Candidate review: first run of the repaired candidate; six receipt controls pass, then a defect in the new integrated survivor control (it read a ledger the repaired engine correctly no longer publishes) aborted the baseline-cause control. Nested unresolved fixture records remain protected.",
+      "source": "e624b7f9e5802010a9f70e84af48488d403a97bf",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/repair-controls-02",
+      "run_id": "20261030T224502Z_f6603edf",
+      "reason": "Candidate review: dispatcher/pytest_controls passes on the repaired candidate, including eight receipt controls (never-launched settlement without holds, legacy sentinel continuation, refused survivor intervention, named ledger baseline cause). Nested unresolved fixture records remain protected.",
+      "source": "33104cd1fad5c83c54ca0733ca9e8b069e36c407",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/repair-verify-01",
+      "run_id": "20261030T224720Z_91f1fd36",
+      "reason": "Candidate review: 19 of 20 readers, admission, release and drift cases pass with the repaired candidate; the real family passes 9/9 with 16 closed commands and no PW group signal against the unchanged accepted app. source_drift/generator_contract fails on a G9 literal in the new README sentence.",
+      "source": "33104cd1fad5c83c54ca0733ca9e8b069e36c407",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/repair-drift-01",
+      "run_id": "20261030T225319Z_8314e456",
+      "reason": "Candidate review: all eight default source_drift cases pass after the README wording correction.",
+      "source": "7e48461fef801de63a38bf7cbd3825f3982074a9",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/repair-h2-prefix-01",
+      "run_id": "20261030T230715Z_92147082",
+      "reason": "Candidate review H2: packages provisioned between plan collection and the prerequisite check crash the dispatcher with KeyError before run.json and suppress the legacy sentinel; the reverse transition is already accounted. Nested unresolved fixture records remain protected.",
+      "source": "1713bb06de4386d9885968f5a220d94fc8203cae",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/repair-h2-controls-01",
+      "run_id": "20261030T230950Z_7ebb880d",
+      "reason": "Candidate review H2: dispatcher/pytest_controls passes after the correction, 54 observations; both availability transitions end with a terminal account, a named not_started/unavailable family, the legacy sentinel passing and a free checkout; receipt controls unchanged. Nested unresolved fixture records remain protected.",
+      "source": "da4699933f0461046c020e354efac153267ffe5d",
+      "app_inventory": null
     }
   ]
 }

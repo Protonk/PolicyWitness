@@ -28,7 +28,7 @@ from repository_tree import directory, pattern, required  # noqa: E402
 GENERATORS = ('contract', 'worker_identity', 'limits', 'architecture', 'build')
 # What build.sh admits and reads before its first generator check: the script, the lock front end and its Python
 # resolver, the SDK guard, the plists and entitlements it validates, and the augment profiles it inventories.
-BUILD_ENTRY = (required('build.sh'), required('tests/lib/checkout_lock.py'), required('tests/lib/checkout_lock.sh'),
+BUILD_ENTRY = (required('tests/lib/pytest_resources.py'), required('tests/lib/pytest_support.py'), required('build.sh'), required('tests/lib/checkout_lock.py'), required('tests/lib/checkout_lock.sh'),
                required('tests/lib/python_start.sh'), required('tests/lib/sdk_guard.sh'), required('Info.plist'),
                required('PolicyWitness.entitlements'), required('runner/Services/PWRunner/Info.plist'),
                required('runner/Services/PWRunner/Entitlements.plist'), pattern('runner/augments/*.sb'))

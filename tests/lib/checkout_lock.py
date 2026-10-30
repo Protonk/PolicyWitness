@@ -563,13 +563,15 @@ def group_finished(pgid, timeout, child=None):
 
 
 @contextmanager
-def owned(root, *, env=None):
+def owned(root, *, env=None, purpose='execution'):
     """Own the checkout lock for the block: take it, or be admitted by the owner of an inherited claim on this checkout.
 
     The acquisition scope serves admissions until its block ends; nested
     scopes preserve its channel. A claim on another checkout is not a claim
     on this one: separate worktrees have independent locks, so the scope takes
     this one itself and its children inherit only its own claim."""
+    if purpose not in ('execution', 'recovery', 'disposal'):
+        raise Refusal('unknown checkout ownership purpose')
     env = os.environ if env is None else env
     root = Path(root).resolve()
     if claim_for(root, env):
@@ -585,6 +587,12 @@ def owned(root, *, env=None):
         scope = Scope(root, fd, record['nonce'], (held.st_dev, held.st_ino), nested=False)
     scope.start()
     try:
+        if purpose == 'execution':
+            from pytest_resources import guard
+            try:
+                guard(root)
+            except (ValueError, OSError) as exc:
+                raise Refusal(str(exc))
         yield scope
     finally:
         scope.close()

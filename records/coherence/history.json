@@ -1,0 +1,1361 @@
+{
+  "observed_at": "2026-10-30T21:39:55.564880+00:00",
+  "base": "bf7e97faab75754efe719b0bad20e83b67762c15",
+  "review_baseline": "809ef178f7a9ce2628f13fb137f1456452a49b85",
+  "commits": [
+    {
+      "commit": "4b182843c360753beaf0398d0d1151cb0d33b710",
+      "parents": [
+        "bf7e97faab75754efe719b0bad20e83b67762c15"
+      ],
+      "subject": "Record workset intake and execution checkpoints"
+    },
+    {
+      "commit": "6cd868b251e00e55df641abab9955070d67ed4bc",
+      "parents": [
+        "4b182843c360753beaf0398d0d1151cb0d33b710"
+      ],
+      "subject": "Record the initial pytest-first counterfactual before implementation"
+    },
+    {
+      "commit": "0c22d2565b42f543bd6334a1d09f95781ef09386",
+      "parents": [
+        "6cd868b251e00e55df641abab9955070d67ed4bc"
+      ],
+      "subject": "Clarify ownership before durable counterfactual selection publication"
+    },
+    {
+      "commit": "cf0136bbb6366d5f787c3547ec69d757772898c0",
+      "parents": [
+        "0c22d2565b42f543bd6334a1d09f95781ef09386"
+      ],
+      "subject": "Seal the initial counterfactual before implementation"
+    },
+    {
+      "commit": "093eba3e1d078ba75e049dd8922d3a6f5294b2d9",
+      "parents": [
+        "cf0136bbb6366d5f787c3547ec69d757772898c0"
+      ],
+      "subject": "Protect historical inputs for the isolated binding investigation"
+    },
+    {
+      "commit": "3ce5d8fca43df0f5c97aae3e0a7dc09132d9bef3",
+      "parents": [
+        "093eba3e1d078ba75e049dd8922d3a6f5294b2d9"
+      ],
+      "subject": "Add independent directory extension effects experiment"
+    },
+    {
+      "commit": "def5de0080318bae53b436a8eb4a9aee3ec3ffe1",
+      "parents": [
+        "cf0136bbb6366d5f787c3547ec69d757772898c0"
+      ],
+      "subject": "Record D1 fixed-source inventory, launch trace and cost evidence"
+    },
+    {
+      "commit": "b6cac0d735f0384fc50d94a6eba6ab18e9323763",
+      "parents": [
+        "3ce5d8fca43df0f5c97aae3e0a7dc09132d9bef3"
+      ],
+      "subject": "Preserve failed native observations and correct directory checker assumptions"
+    },
+    {
+      "commit": "689cb49a243a298db54f7410d9a56747febbb764",
+      "parents": [
+        "def5de0080318bae53b436a8eb4a9aee3ec3ffe1"
+      ],
+      "subject": "Propose B1 applicability contract and commit open replay predictions"
+    },
+    {
+      "commit": "d2f3bbfdbde8c63ef3aa552f82911cdebf5b0625",
+      "parents": [
+        "b6cac0d735f0384fc50d94a6eba6ab18e9323763"
+      ],
+      "subject": "Accept native directory feasibility and retain E1 evidence"
+    },
+    {
+      "commit": "db75edf67fd607a2695926944ea88162b71aa682",
+      "parents": [
+        "689cb49a243a298db54f7410d9a56747febbb764"
+      ],
+      "subject": "Freeze B1 after open historical replays and churn accounting"
+    },
+    {
+      "commit": "8aa74027e78f0b7ab4c859c1ffa85f2b41a8a288",
+      "parents": [
+        "d2f3bbfdbde8c63ef3aa552f82911cdebf5b0625"
+      ],
+      "subject": "Extend native comparison to matched and crossed authority controls"
+    },
+    {
+      "commit": "152f984945c2affb7b21b91de18784728bb33804",
+      "parents": [
+        "db75edf67fd607a2695926944ea88162b71aa682"
+      ],
+      "subject": "Record sealed historical cases before held-back B1 evaluation"
+    },
+    {
+      "commit": "ad1c1caa4e2c14a6759e1a2983dbf14dcbab8663",
+      "parents": [
+        "8aa74027e78f0b7ab4c859c1ffa85f2b41a8a288"
+      ],
+      "subject": "Define the bounded public directory extension addition"
+    },
+    {
+      "commit": "3e08737fab2393993363b6b644943b7e165874b1",
+      "parents": [
+        "152f984945c2affb7b21b91de18784728bb33804"
+      ],
+      "subject": "Record B1 held-back evaluation and coverage limits"
+    },
+    {
+      "commit": "580152543786d873f8661b137278c505485c965d",
+      "parents": [
+        "3e08737fab2393993363b6b644943b7e165874b1"
+      ],
+      "subject": "Correct replay selectors and retain initial evaluation limits"
+    },
+    {
+      "commit": "084b843a226458770e29022449a2c900abe03e41",
+      "parents": [
+        "ad1c1caa4e2c14a6759e1a2983dbf14dcbab8663"
+      ],
+      "subject": "Record crossed authority observations and integration ownership"
+    },
+    {
+      "commit": "cd6adaafef28392df0028a6037bceb6f84fecc1d",
+      "parents": [
+        "580152543786d873f8661b137278c505485c965d"
+      ],
+      "subject": "Accept D1 investigation and record bounded transfer to D2"
+    },
+    {
+      "commit": "0992fa282d0b52158ef3bfe6cd4c0ea85494fa82",
+      "parents": [
+        "084b843a226458770e29022449a2c900abe03e41",
+        "cd6adaafef28392df0028a6037bceb6f84fecc1d"
+      ],
+      "subject": "Integrate the completed fixed-source binding investigation"
+    },
+    {
+      "commit": "7562d24ac2334122499ea349010fd67211058ac3",
+      "parents": [
+        "0992fa282d0b52158ef3bfe6cd4c0ea85494fa82"
+      ],
+      "subject": "Accept D1 for the amended documentation investigation"
+    },
+    {
+      "commit": "7e9d677dde875acfa802d794275cbf4651809b1d",
+      "parents": [
+        "7562d24ac2334122499ea349010fd67211058ac3"
+      ],
+      "subject": "Start D2 with accepted D1 absorption and amended scope"
+    },
+    {
+      "commit": "7426fc0920381d233eef90a1de06035af2a6d3c8",
+      "parents": [
+        "7562d24ac2334122499ea349010fd67211058ac3"
+      ],
+      "subject": "Add bounded read-write extension authority and fresh write observations"
+    },
+    {
+      "commit": "3ff8bf282d5b1a288c18757ca74bc72801300550",
+      "parents": [
+        "7426fc0920381d233eef90a1de06035af2a6d3c8"
+      ],
+      "subject": "Adopt harvested fresh-write layout and response shape"
+    },
+    {
+      "commit": "439c0799efbdc4aa6efedc3a530345fac3bc9219",
+      "parents": [
+        "7e9d677dde875acfa802d794275cbf4651809b1d"
+      ],
+      "subject": "Map D2 document ownership, discovery scopes and historical controls"
+    },
+    {
+      "commit": "a7c140892620e2ad6b5a01ac8aa644c37ac61335",
+      "parents": [
+        "3ff8bf282d5b1a288c18757ca74bc72801300550"
+      ],
+      "subject": "Refresh response24 acceptance fixtures from the signed candidate"
+    },
+    {
+      "commit": "4a62aaffa10f9eb2cfc9e87db2d3e6304b1fd05d",
+      "parents": [
+        "439c0799efbdc4aa6efedc3a530345fac3bc9219"
+      ],
+      "subject": "Trace D2 edit paths and scope supported factual and diagnostic repairs"
+    },
+    {
+      "commit": "b565c1b01d44e370c441ef205ba01c93cd8085a5",
+      "parents": [
+        "a7c140892620e2ad6b5a01ac8aa644c37ac61335"
+      ],
+      "subject": "Adapt enum mutation controls to fresh-write actions"
+    },
+    {
+      "commit": "29d1c797f7e057dae507abf0a8b47ee6473d7b55",
+      "parents": [
+        "b565c1b01d44e370c441ef205ba01c93cd8085a5"
+      ],
+      "subject": "Seal directory extension experiments and public integration"
+    },
+    {
+      "commit": "53b8e88e616f85b67cdecdd7d4cf9a1a4a487790",
+      "parents": [
+        "4a62aaffa10f9eb2cfc9e87db2d3e6304b1fd05d"
+      ],
+      "subject": "Correct documentation check ownership and generator repair commands"
+    },
+    {
+      "commit": "449e0c0af47e5585188d29084040305720dc87e4",
+      "parents": [
+        "29d1c797f7e057dae507abf0a8b47ee6473d7b55"
+      ],
+      "subject": "Record refactor preparation and evidence cleanup"
+    },
+    {
+      "commit": "80b3317c4746af8d6abf42686ed803fdaeb2fd3c",
+      "parents": [
+        "53b8e88e616f85b67cdecdd7d4cf9a1a4a487790"
+      ],
+      "subject": "Record isolated D2 verification and normalize investigation prose"
+    },
+    {
+      "commit": "6e40887fd337a44cd35230b407277ce7a2220ccf",
+      "parents": [
+        "449e0c0af47e5585188d29084040305720dc87e4"
+      ],
+      "subject": "Accept C timing and exec extraction design"
+    },
+    {
+      "commit": "f996212083878bf2c0e487bf5ab9a314e253aac7",
+      "parents": [
+        "80b3317c4746af8d6abf42686ed803fdaeb2fd3c"
+      ],
+      "subject": "Correct launch evidence availability and release baseline account"
+    },
+    {
+      "commit": "bb92c2133737fdd1a870797a2704297db1df8e50",
+      "parents": [
+        "6e40887fd337a44cd35230b407277ce7a2220ccf",
+        "f996212083878bf2c0e487bf5ab9a314e253aac7"
+      ],
+      "subject": "Integrate traced documentation apparatus corrections"
+    },
+    {
+      "commit": "96dffd5604542ed286d9a00c50f6a0b71b0269a3",
+      "parents": [
+        "bb92c2133737fdd1a870797a2704297db1df8e50"
+      ],
+      "subject": "Accept documentation findings and integrated corrections"
+    },
+    {
+      "commit": "950c604fdbd906c4171c50f4cb668c423c0b836e",
+      "parents": [
+        "96dffd5604542ed286d9a00c50f6a0b71b0269a3"
+      ],
+      "subject": "Retire absorbed Binding through replay plan and records"
+    },
+    {
+      "commit": "f8f3c24f29a3ae1a3af3802daa575ca684be751f",
+      "parents": [
+        "950c604fdbd906c4171c50f4cb668c423c0b836e"
+      ],
+      "subject": "Record staged Swift design and verified D1 retirement"
+    },
+    {
+      "commit": "341f9441bc96d147a1bc68b4c1df47e1f5464cb7",
+      "parents": [
+        "f8f3c24f29a3ae1a3af3802daa575ca684be751f"
+      ],
+      "subject": "Separate worker timing and exec owners with preserved native controls"
+    },
+    {
+      "commit": "96d0328ed2d47b003ea33d609c84d756d84d6b09",
+      "parents": [
+        "341f9441bc96d147a1bc68b4c1df47e1f5464cb7"
+      ],
+      "subject": "Accept verified C ownership refactor"
+    },
+    {
+      "commit": "46d2c2f392ef552f503693e84796cfb50524c712",
+      "parents": [
+        "96d0328ed2d47b003ea33d609c84d756d84d6b09"
+      ],
+      "subject": "Refresh checkpoint for staged Swift execution"
+    },
+    {
+      "commit": "721653008e09280ab7ddecbb0088e8a564a5655e",
+      "parents": [
+        "46d2c2f392ef552f503693e84796cfb50524c712"
+      ],
+      "subject": "Establish shared coding and disposition boundaries for Swift extraction"
+    },
+    {
+      "commit": "9af4d3d14148710a9cb3db33d52c17fdc24f3b93",
+      "parents": [
+        "721653008e09280ab7ddecbb0088e8a564a5655e"
+      ],
+      "subject": "Preserve phase-action access to the shared request key"
+    },
+    {
+      "commit": "2de5b1c72e32ba5c14cc140f3df2d34e37ea2321",
+      "parents": [
+        "9af4d3d14148710a9cb3db33d52c17fdc24f3b93"
+      ],
+      "subject": "Accept verified Swift preparatory boundaries"
+    },
+    {
+      "commit": "fd90eee66538cc02dc5d21b7a3fe8eca81a17403",
+      "parents": [
+        "2de5b1c72e32ba5c14cc140f3df2d34e37ea2321"
+      ],
+      "subject": "refactor: separate Swift wire families and host responsibilities"
+    },
+    {
+      "commit": "81f5d26032027ca72418f4377ec463755c919b7f",
+      "parents": [
+        "fd90eee66538cc02dc5d21b7a3fe8eca81a17403"
+      ],
+      "subject": "Correct refactor citations and preserve Stage 2 verification failures"
+    },
+    {
+      "commit": "590c5e42f010814b09cfe30b48973e972aa1609b",
+      "parents": [
+        "81f5d26032027ca72418f4377ec463755c919b7f"
+      ],
+      "subject": "Complete identity citations in the documentation ownership graph"
+    },
+    {
+      "commit": "6dab4430de6bafe1b87898c1189c9e4c576c77ed",
+      "parents": [
+        "590c5e42f010814b09cfe30b48973e972aa1609b"
+      ],
+      "subject": "Record verified corrections and unresolved BYOXPC acceptance failure"
+    },
+    {
+      "commit": "aa3069f31b28c1d781e340f14d734d06be5c2078",
+      "parents": [
+        "6dab4430de6bafe1b87898c1189c9e4c576c77ed"
+      ],
+      "subject": "Retire the accepted C modularization plan"
+    },
+    {
+      "commit": "17e02e6ad9025a09787f5bd0f1afc75cf06951ec",
+      "parents": [
+        "aa3069f31b28c1d781e340f14d734d06be5c2078"
+      ],
+      "subject": "Pin retirement checks and reconcile workset evidence"
+    },
+    {
+      "commit": "edf2c5612aca7c2a7a94ef645ec2933227290abb",
+      "parents": [
+        "17e02e6ad9025a09787f5bd0f1afc75cf06951ec"
+      ],
+      "subject": "Add bounded BYOXPC retirement observation for F2 investigation"
+    },
+    {
+      "commit": "45c1f5344a717f55e3dcb37e6e93761533269276",
+      "parents": [
+        "edf2c5612aca7c2a7a94ef645ec2933227290abb"
+      ],
+      "subject": "Record F2 baseline observations without attributing the transport failures"
+    },
+    {
+      "commit": "aa45aa487c52690805b619fc6214e24ef09a5419",
+      "parents": [
+        "45c1f5344a717f55e3dcb37e6e93761533269276"
+      ],
+      "subject": "Add controlled host reply and retirement observations for F2"
+    },
+    {
+      "commit": "7d3b57a5acb0d36b4c1f6164e81bb3a4866ae3d4",
+      "parents": [
+        "aa45aa487c52690805b619fc6214e24ef09a5419"
+      ],
+      "subject": "Disambiguate client PID conversion in the F2 trace fixture"
+    },
+    {
+      "commit": "b471226ad9c518a2523f9334e7d01f878ad640c2",
+      "parents": [
+        "7d3b57a5acb0d36b4c1f6164e81bb3a4866ae3d4"
+      ],
+      "subject": "Record F2 lost-refusal evidence and reservation repair direction"
+    },
+    {
+      "commit": "600100343049eaabac220246d32f3554130e1b39",
+      "parents": [
+        "b471226ad9c518a2523f9334e7d01f878ad640c2"
+      ],
+      "subject": "Specify mandatory reservation protocol and no-replay repair for F2"
+    },
+    {
+      "commit": "34496c0f9741234820505eab67365a16944ea7ca",
+      "parents": [
+        "600100343049eaabac220246d32f3554130e1b39"
+      ],
+      "subject": "Require reservation before specimen submission and preserve client transport evidence"
+    },
+    {
+      "commit": "74c7ec5604216e75eef8d2dca95baf8b2b76ddbd",
+      "parents": [
+        "34496c0f9741234820505eab67365a16944ea7ca"
+      ],
+      "subject": "Refresh envelope shape and align reservation documentation controls"
+    },
+    {
+      "commit": "a7289abf1a2905d87ca37b017ca84b5797286a27",
+      "parents": [
+        "74c7ec5604216e75eef8d2dca95baf8b2b76ddbd"
+      ],
+      "subject": "Refresh protocol-2 captures and stage live controls outside Desktop"
+    },
+    {
+      "commit": "3e24e47619bd809bd59c338bc5acd2414a56ac30",
+      "parents": [
+        "a7289abf1a2905d87ca37b017ca84b5797286a27"
+      ],
+      "subject": "Preserve native RPC errors across reservation acquisition"
+    },
+    {
+      "commit": "4407d0aedb84a9f4af7cf133803e05fbdaa174c7",
+      "parents": [
+        "3e24e47619bd809bd59c338bc5acd2414a56ac30"
+      ],
+      "subject": "Retain bounded native XPC route diagnostics"
+    },
+    {
+      "commit": "8500baff5f10a986657c58792594129d4637ef67",
+      "parents": [
+        "4407d0aedb84a9f4af7cf133803e05fbdaa174c7"
+      ],
+      "subject": "Adapt authored reply controls and verify runner protocol compatibility"
+    },
+    {
+      "commit": "600a7922462983b1ca1dcf8531bdb3a608469299",
+      "parents": [
+        "8500baff5f10a986657c58792594129d4637ef67"
+      ],
+      "subject": "Accept F2 reservation repair and seal combined refactor verification"
+    },
+    {
+      "commit": "5642c45243fd34e8cf48c11c4113364667f1ec05",
+      "parents": [
+        "600a7922462983b1ca1dcf8531bdb3a608469299"
+      ],
+      "subject": "Retire the accepted Swift modularization plan"
+    },
+    {
+      "commit": "69731d2093499a6e8d482e110938f67727c515ed",
+      "parents": [
+        "5642c45243fd34e8cf48c11c4113364667f1ec05"
+      ],
+      "subject": "Record passing Swift plan retirement checks"
+    },
+    {
+      "commit": "55116788c3d25b782008eb98388e3477284d2461",
+      "parents": [
+        "69731d2093499a6e8d482e110938f67727c515ed"
+      ],
+      "subject": "Expose missing host extension rejections with independent expectations"
+    },
+    {
+      "commit": "8ceb04eaffebf2395c7df839131c1b35d2b23ab2",
+      "parents": [
+        "55116788c3d25b782008eb98388e3477284d2461"
+      ],
+      "subject": "Reject host extension APIs and verify independent omission controls"
+    },
+    {
+      "commit": "67fff42593e7283e2ebf7c79a613072c19d0d818",
+      "parents": [
+        "8ceb04eaffebf2395c7df839131c1b35d2b23ab2"
+      ],
+      "subject": "Resolve F1 and accept the completed workset"
+    },
+    {
+      "commit": "638582213dbabb86f69ada2dac9d56b24b4b568e",
+      "parents": [
+        "67fff42593e7283e2ebf7c79a613072c19d0d818"
+      ],
+      "subject": "Retire accepted documentation and workset plans with their records"
+    },
+    {
+      "commit": "77eb987554eef10ffa3371ffb21b235097562a78",
+      "parents": [
+        "638582213dbabb86f69ada2dac9d56b24b4b568e"
+      ],
+      "subject": "Retain passing final workset retirement verification"
+    },
+    {
+      "commit": "e93753101667a6255eed2439bb407996121aa555",
+      "parents": [
+        "77eb987554eef10ffa3371ffb21b235097562a78"
+      ],
+      "subject": "Declare pytest boundary investigation and independent controls"
+    },
+    {
+      "commit": "fa376979e40373c993149cf96ef62db2550b2a9a",
+      "parents": [
+        "e93753101667a6255eed2439bb407996121aa555"
+      ],
+      "subject": "Implement isolated pytest engine and independent lifetime demonstrator"
+    },
+    {
+      "commit": "4211d48bc9638b0b319bbb88ea9997e30a96d8d1",
+      "parents": [
+        "fa376979e40373c993149cf96ef62db2550b2a9a"
+      ],
+      "subject": "Preserve peer-reset failure and finalize leases after engine exit"
+    },
+    {
+      "commit": "493309ed51bcd0623a2cf69daba59b25b3b9486b",
+      "parents": [
+        "4211d48bc9638b0b319bbb88ea9997e30a96d8d1"
+      ],
+      "subject": "Correct interruption observer to allow pytest finalization"
+    },
+    {
+      "commit": "5c4cd41d0b2654a2280c60ee3ca0d1fd0579e78f",
+      "parents": [
+        "493309ed51bcd0623a2cf69daba59b25b3b9486b"
+      ],
+      "subject": "Make macOS subject environment explicit and record engine configuration"
+    },
+    {
+      "commit": "cfbd753a4b701630ebeb741acf49aeec309494f9",
+      "parents": [
+        "5c4cd41d0b2654a2280c60ee3ca0d1fd0579e78f"
+      ],
+      "subject": "Compare actual interpreter identity through resolved paths"
+    },
+    {
+      "commit": "0085bd545d1c941ad1298f6e0874542568ff71b3",
+      "parents": [
+        "cfbd753a4b701630ebeb741acf49aeec309494f9"
+      ],
+      "subject": "Accept bounded engine boundary and prepare pre-extraction native replay"
+    },
+    {
+      "commit": "fec0e1811d21ce718bd007bbc0a1498b2f558c2f",
+      "parents": [
+        "0085bd545d1c941ad1298f6e0874542568ff71b3"
+      ],
+      "subject": "Replay extracted C ownership without changing native expectations"
+    },
+    {
+      "commit": "0d3af494f7c4e1177523c2622711f83b51897120",
+      "parents": [
+        "fec0e1811d21ce718bd007bbc0a1498b2f558c2f"
+      ],
+      "subject": "Declare and expose completed-prefix loss on a truncated report journal"
+    },
+    {
+      "commit": "832e77170d92199e52bc21ef6fa7266106725658",
+      "parents": [
+        "0d3af494f7c4e1177523c2622711f83b51897120"
+      ],
+      "subject": "Preserve completed phase records before a truncated journal tail"
+    },
+    {
+      "commit": "9e46c7b94207c6baa28a1c62f4aa78defc6efb25",
+      "parents": [
+        "832e77170d92199e52bc21ef6fa7266106725658"
+      ],
+      "subject": "Record pytest boundary findings, replay evidence and final preservation audit"
+    },
+    {
+      "commit": "842a2bce03ad16d46c7b4ea3c2db4ecf21f4ff3d",
+      "parents": [
+        "9e46c7b94207c6baa28a1c62f4aa78defc6efb25"
+      ],
+      "subject": "Plan bounded pytest maintenance comparison from frozen demonstration"
+    },
+    {
+      "commit": "5dbcf4d8255ca24a186e97488104772df9cb53d6",
+      "parents": [
+        "842a2bce03ad16d46c7b4ea3c2db4ecf21f4ff3d"
+      ],
+      "subject": "Conclude pytest maintenance comparison and preserve unresolved resource bookkeeping"
+    },
+    {
+      "commit": "0b7eb00bc4c55e0e5e85bcfb3db1874f814cbce0",
+      "parents": [
+        "5dbcf4d8255ca24a186e97488104772df9cb53d6"
+      ],
+      "subject": "Plan bounded pytest adoption for native exec evidence controls"
+    },
+    {
+      "commit": "56a28da28a348088787d1a7ac38c54dc33ccfd06",
+      "parents": [
+        "0b7eb00bc4c55e0e5e85bcfb3db1874f814cbce0"
+      ],
+      "subject": "Refine pytest adoption recovery, evidence contracts and diagnostic acceptance"
+    },
+    {
+      "commit": "8fd2c825a7cbf9b7df194c5bb260e94a4b2b3d98",
+      "parents": [
+        "56a28da28a348088787d1a7ac38c54dc33ccfd06"
+      ],
+      "subject": "Authorize isolated pytest adoption through acceptance and final disposition"
+    },
+    {
+      "commit": "46ec22898c0b47f41693ed2870622978309e2d06",
+      "parents": [
+        "8fd2c825a7cbf9b7df194c5bb260e94a4b2b3d98"
+      ],
+      "subject": "Prepare exec family engine and seal ownership contract checkpoint"
+    },
+    {
+      "commit": "715582191bbf6e5b013c01bfbcb216f8a4261525",
+      "parents": [
+        "46ec22898c0b47f41693ed2870622978309e2d06"
+      ],
+      "subject": "Preserve zombie-group uncertainty while reaping owned commands"
+    },
+    {
+      "commit": "b1f697e134286c14805c83e33300347ec798b51f",
+      "parents": [
+        "715582191bbf6e5b013c01bfbcb216f8a4261525"
+      ],
+      "subject": "Route the exec control family through pytest with PW ownership and evidence"
+    },
+    {
+      "commit": "7852f03adec113df3572040a4e6c0d84b6c96afe",
+      "parents": [
+        "b1f697e134286c14805c83e33300347ec798b51f"
+      ],
+      "subject": "Add emitted-diagnostic and portable evidence refusal controls"
+    },
+    {
+      "commit": "9aa2d9631a062c5f3e25ccd8af91634996e3ed19",
+      "parents": [
+        "7852f03adec113df3572040a4e6c0d84b6c96afe"
+      ],
+      "subject": "Complete recovery and death controls and align existing comparison fixtures"
+    },
+    {
+      "commit": "56aaf019196c4560a66c01c3c6c7c85dbe45ff19",
+      "parents": [
+        "9aa2d9631a062c5f3e25ccd8af91634996e3ed19"
+      ],
+      "subject": "Make unformed controls and failed report publication explicit"
+    },
+    {
+      "commit": "298624d65a868524ff362d97c77bd03516e2e07d",
+      "parents": [
+        "56aaf019196c4560a66c01c3c6c7c85dbe45ff19"
+      ],
+      "subject": "Verify actual ownership crash windows and bind retained family selection"
+    },
+    {
+      "commit": "9beb44b1e11300257d054a318001a0427c49a919",
+      "parents": [
+        "298624d65a868524ff362d97c77bd03516e2e07d"
+      ],
+      "subject": "Keep the independent engine observer alive through crash windows"
+    },
+    {
+      "commit": "40e81695b589403e0bea144deb3f4c486536a9f3",
+      "parents": [
+        "9beb44b1e11300257d054a318001a0427c49a919"
+      ],
+      "subject": "Require positive historical provenance for legacy evidence compatibility"
+    },
+    {
+      "commit": "eb4bcc11b064ad887a482eff6c04492c1649fe0d",
+      "parents": [
+        "40e81695b589403e0bea144deb3f4c486536a9f3"
+      ],
+      "subject": "Carry shared dependencies and producer provenance into isolated controls"
+    },
+    {
+      "commit": "b1cff674a92c272528c4351f21e67ae3aeb71726",
+      "parents": [
+        "eb4bcc11b064ad887a482eff6c04492c1649fe0d"
+      ],
+      "subject": "Recheck resource eligibility before each selected invocation"
+    },
+    {
+      "commit": "74ef845f0cb08d65a4a09041051ed2fb2e5e5471",
+      "parents": [
+        "b1cff674a92c272528c4351f21e67ae3aeb71726"
+      ],
+      "subject": "Present shared fixture scope before individual phase results"
+    },
+    {
+      "commit": "bdb007a2f7f30ebd0c4e71e2b19da83c335a4653",
+      "parents": [
+        "74ef845f0cb08d65a4a09041051ed2fb2e5e5471"
+      ],
+      "subject": "Bind native command receipts to registered execution context"
+    },
+    {
+      "commit": "39c04284dbeb7fc5a8264e1a96088b5644a106dc",
+      "parents": [
+        "bdb007a2f7f30ebd0c4e71e2b19da83c335a4653"
+      ],
+      "subject": "Supply ownership dependencies to SDK containment fixture"
+    },
+    {
+      "commit": "a562390ad483f0c24be61fda0d1849ec19c6f596",
+      "parents": [
+        "39c04284dbeb7fc5a8264e1a96088b5644a106dc"
+      ],
+      "subject": "Expose timeout text that could be mistaken for a completed rejection"
+    },
+    {
+      "commit": "3e93082f489d0b64271c95f7b1550544114bb2cd",
+      "parents": [
+        "a562390ad483f0c24be61fda0d1849ec19c6f596"
+      ],
+      "subject": "Reject stopped native commands despite matching assertion output"
+    },
+    {
+      "commit": "87b66cb878f8eaf948a0b5353ad66a1b274bbc1b",
+      "parents": [
+        "3e93082f489d0b64271c95f7b1550544114bb2cd"
+      ],
+      "subject": "Cache stopped baseline commands as failed shared prerequisites"
+    },
+    {
+      "commit": "09b478d73f75d9927daa7d11dfdc2128bb0fa700",
+      "parents": [
+        "87b66cb878f8eaf948a0b5353ad66a1b274bbc1b"
+      ],
+      "subject": "Pin completed family acceptance and stopped-baseline controls"
+    },
+    {
+      "commit": "94b09d60ecf0be52ed6820068b1e6b6ed7fbb41b",
+      "parents": [
+        "09b478d73f75d9927daa7d11dfdc2128bb0fa700"
+      ],
+      "subject": "Expose missing and contradictory ownership receipt identities"
+    },
+    {
+      "commit": "79dc6fbee2b0da98e50241e41ad35cff9b4907da",
+      "parents": [
+        "94b09d60ecf0be52ed6820068b1e6b6ed7fbb41b"
+      ],
+      "subject": "Require affirmative identity and consistent launch facts for closure"
+    },
+    {
+      "commit": "b93a70195d0b25002d1ed89d63c46d6a3c399695",
+      "parents": [
+        "79dc6fbee2b0da98e50241e41ad35cff9b4907da"
+      ],
+      "subject": "Pin final ownership and release-reader acceptance"
+    },
+    {
+      "commit": "809ef178f7a9ce2628f13fb137f1456452a49b85",
+      "parents": [
+        "b93a70195d0b25002d1ed89d63c46d6a3c399695"
+      ],
+      "subject": "Complete bounded pytest family adoption and seal acceptance evidence"
+    }
+  ],
+  "segments": [
+    {
+      "responsibility": "counterfactual_intake",
+      "start": "bf7e97faab75754efe719b0bad20e83b67762c15",
+      "end": "cf0136bbb6366d5f787c3547ec69d757772898c0",
+      "changes": [
+        "A\tWORKSET-EXECUTION-PLAN.md",
+        "M\tWORKSET-PLAN.md",
+        "A\trecords/workset/c0-seal.md",
+        "A\trecords/workset/checkpoint.md",
+        "A\trecords/workset/intake.md",
+        "A\trecords/workset/pytest-first.md"
+      ]
+    },
+    {
+      "responsibility": "extension_experiments_integration",
+      "start": "cf0136bbb6366d5f787c3547ec69d757772898c0",
+      "end": "29d1c797f7e057dae507abf0a8b47ee6473d7b55",
+      "changes": [
+        "M\tWORKSET-EXECUTION-PLAN.md",
+        "M\tcontroller/README.md",
+        "M\tcontroller/src/disposition.rs",
+        "M\tcontroller/src/json_contract.rs",
+        "M\tcontroller/tools/pw_probe_runner/pw_extension_channel.h",
+        "M\tcontroller/tools/pw_probe_runner/pw_extension_issuer.c",
+        "M\tcontroller/tools/pw_probe_runner/pw_probe_runner.c",
+        "M\tcontroller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "M\tdocs/CONTRACT.md",
+        "M\tdocs/LIMITS.md",
+        "M\tdocs/PolicyWitness.md",
+        "M\tdocs/QUESTIONS.md",
+        "M\tdocs/REQUEST-GRAMMAR.md",
+        "M\tdocs/WORKER.md",
+        "M\tdocs/architecture.json",
+        "M\tdocs/contract.json",
+        "M\tdocs/limits.json",
+        "M\tdocs/worker-capabilities.dot",
+        "M\tdocs/worker-capabilities.svg",
+        "A\trecords/check-support/README.md",
+        "A\trecords/check-support/acceptance.md",
+        "A\trecords/check-support/collect.py",
+        "A\trecords/check-support/cost-facts.json",
+        "A\trecords/check-support/costs.md",
+        "A\trecords/check-support/curator-review.md",
+        "A\trecords/check-support/design.md",
+        "A\trecords/check-support/findings.md",
+        "A\trecords/check-support/freeze.md",
+        "A\trecords/check-support/heldback-predictions.md",
+        "A\trecords/check-support/heldback-review.md",
+        "A\trecords/check-support/host-finding.json",
+        "A\trecords/check-support/inventory-inputs.json",
+        "A\trecords/check-support/inventory.md",
+        "A\trecords/check-support/l-facts.json",
+        "A\trecords/check-support/l-trace.md",
+        "A\trecords/check-support/open-review.md",
+        "A\trecords/check-support/replay/heldback-cases.json",
+        "A\trecords/check-support/replay/heldback-results-initial.json",
+        "A\trecords/check-support/replay/heldback-results.json",
+        "A\trecords/check-support/replay/heldback.py",
+        "A\trecords/check-support/replay/open-results.json",
+        "A\trecords/check-support/replay/open.py",
+        "A\trecords/check-support/replays.md",
+        "M\trecords/workset/checkpoint.md",
+        "A\trecords/workset/directory-native.md",
+        "A\trecords/workset/e2-seal.md",
+        "A\trecords/workset/extension-follow-on.md",
+        "A\trecords/workset/extension-integration.md",
+        "M\trunner/README.md",
+        "M\trunner/Sources/PWRunnerCore/CWorker.swift",
+        "M\trunner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+        "M\trunner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+        "M\trunner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "M\trunner/Sources/PWRunnerCore/ProbeRunner.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/ContractVersionTests.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+        "A\trunner/Tests/PWRunnerCoreTests/FreshWriteEvidenceTests.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/main.swift",
+        "M\ttests/CHANGE-VERIFICATION.md",
+        "M\ttests/COVERAGE.md",
+        "M\ttests/FAILURE-PROPAGATION-CONTRACT.md",
+        "M\ttests/README.md",
+        "M\ttests/RETAINED.json",
+        "M\ttests/catalog.json",
+        "M\ttests/fixtures/README.md",
+        "M\ttests/fixtures/blackbox_e2e/checker/README.md",
+        "A\ttests/fixtures/blackbox_e2e/checker/response24/extension_run.json",
+        "A\ttests/fixtures/blackbox_e2e/checker/response24/extension_specimen.json",
+        "A\ttests/fixtures/blackbox_e2e/checker/response24/issuer_abnormal_run.json",
+        "A\ttests/fixtures/blackbox_e2e/checker/response24/issuer_abnormal_specimen.json",
+        "A\ttests/fixtures/blackbox_e2e/checker/response24/missing_path_run.json",
+        "A\ttests/fixtures/blackbox_e2e/checker/response24/missing_path_specimen.json",
+        "A\ttests/fixtures/blackbox_e2e/checker/response24/valid_run.json",
+        "A\ttests/fixtures/blackbox_e2e/checker/response24/valid_specimen.json",
+        "M\ttests/fixtures/contract/abi_layout.txt",
+        "M\ttests/fixtures/contract/path_diagnostics.json",
+        "M\ttests/fixtures/contract/response_shape.json",
+        "M\ttests/fixtures/disposition/README.md",
+        "A\ttests/fixtures/disposition/response24/a1_expected.json",
+        "A\ttests/fixtures/disposition/response24/a1_specimen.json",
+        "M\ttests/fixtures/extension_controls/README.md",
+        "A\ttests/fixtures/extension_controls/write_control.c",
+        "M\ttests/fixtures/request_contract/examples.json",
+        "M\ttests/fixtures/sandbox_extensions/README.md",
+        "M\ttests/fixtures/sandbox_extensions/native.c",
+        "M\ttests/lib/consumer.py",
+        "M\ttests/lib/contract.py",
+        "M\ttests/lib/extension_evidence.py",
+        "M\ttests/suites/blackbox_e2e/README.md",
+        "M\ttests/suites/blackbox_e2e/checker_controls.py",
+        "M\ttests/suites/blackbox_e2e/comparison_controls.py",
+        "M\ttests/suites/blackbox_e2e/disposition_controls.py",
+        "M\ttests/suites/blackbox_e2e/extension_controls.py",
+        "A\ttests/suites/blackbox_e2e/fresh_write_controls.py",
+        "M\ttests/suites/blackbox_menagerie/checker_controls.py",
+        "M\ttests/suites/runner_abi_layout/extension_printer.c",
+        "M\ttests/suites/runner_abi_layout/printer.c",
+        "M\ttests/suites/runner_abi_layout/run.sh",
+        "M\ttests/suites/runner_c_worker_harness/README.md",
+        "A\ttests/suites/runner_c_worker_harness/fresh_write.sh",
+        "M\ttests/suites/sandbox_extensions_native/README.md",
+        "M\ttests/suites/sandbox_extensions_native/check.py",
+        "A\ttests/suites/sandbox_extensions_native/directory.sh",
+        "A\ttests/suites/sandbox_extensions_native/directory_check.py",
+        "M\ttests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md",
+        "M\ttests/suites/source_drift/check_planner.py",
+        "M\ttests/suites/witness_contract/README.md",
+        "A\ttests/suites/witness_contract/check_extension_directory.py",
+        "M\ttests/suites/witness_contract/check_extension_provenance.py",
+        "M\ttests/suites/witness_contract/check_max_target_reply.py",
+        "A\ttests/suites/witness_contract/extension_directory.sh",
+        "M\ttests/suites/witness_contract/opt_in/extensions_byoxpc.sh"
+      ]
+    },
+    {
+      "responsibility": "documentation_D1",
+      "start": "cf0136bbb6366d5f787c3547ec69d757772898c0",
+      "end": "cd6adaafef28392df0028a6037bceb6f84fecc1d",
+      "changes": [
+        "A\trecords/check-support/README.md",
+        "A\trecords/check-support/acceptance.md",
+        "A\trecords/check-support/collect.py",
+        "A\trecords/check-support/cost-facts.json",
+        "A\trecords/check-support/costs.md",
+        "A\trecords/check-support/curator-review.md",
+        "A\trecords/check-support/design.md",
+        "A\trecords/check-support/findings.md",
+        "A\trecords/check-support/freeze.md",
+        "A\trecords/check-support/heldback-predictions.md",
+        "A\trecords/check-support/heldback-review.md",
+        "A\trecords/check-support/host-finding.json",
+        "A\trecords/check-support/inventory-inputs.json",
+        "A\trecords/check-support/inventory.md",
+        "A\trecords/check-support/l-facts.json",
+        "A\trecords/check-support/l-trace.md",
+        "A\trecords/check-support/open-review.md",
+        "A\trecords/check-support/replay/heldback-cases.json",
+        "A\trecords/check-support/replay/heldback-results-initial.json",
+        "A\trecords/check-support/replay/heldback-results.json",
+        "A\trecords/check-support/replay/heldback.py",
+        "A\trecords/check-support/replay/open-results.json",
+        "A\trecords/check-support/replay/open.py",
+        "A\trecords/check-support/replays.md",
+        "M\ttests/suites/source_drift/BINDING-THRU-REPLAY-PLAN.md"
+      ]
+    },
+    {
+      "responsibility": "documentation_D2",
+      "start": "7562d24ac2334122499ea349010fd67211058ac3",
+      "end": "f996212083878bf2c0e487bf5ab9a314e253aac7",
+      "changes": [
+        "M\tdocs/ARCHITECTURE.md",
+        "M\tdocs/CHECKS-BEFORE-CHECK-PLAN.md",
+        "M\tdocs/SIGNING.md",
+        "M\tdocs/WORKER.md",
+        "M\tdocs/architecture-documents.dot",
+        "M\tdocs/architecture-documents.svg",
+        "M\tdocs/architecture.json",
+        "M\tdocs/generate_architecture.py",
+        "M\tdocs/generate_build.py",
+        "M\tdocs/worker-launch-observation.json",
+        "A\trecords/checks-before-check/README.md",
+        "A\trecords/checks-before-check/capture.py",
+        "A\trecords/checks-before-check/e2-reconciliation-facts.json",
+        "A\trecords/checks-before-check/e2-reconciliation.md",
+        "A\trecords/checks-before-check/implementation.md",
+        "A\trecords/checks-before-check/inherited/README.md",
+        "A\trecords/checks-before-check/inherited/acceptance.md",
+        "A\trecords/checks-before-check/inherited/cost-facts.json",
+        "A\trecords/checks-before-check/inherited/costs.md",
+        "A\trecords/checks-before-check/inherited/curator-review.md",
+        "A\trecords/checks-before-check/inherited/design.md",
+        "A\trecords/checks-before-check/inherited/findings.md",
+        "A\trecords/checks-before-check/inherited/heldback-review.md",
+        "A\trecords/checks-before-check/inherited/host-finding.json",
+        "A\trecords/checks-before-check/inherited/inventory-inputs.json",
+        "A\trecords/checks-before-check/inherited/l-facts.json",
+        "A\trecords/checks-before-check/inherited/l-trace.md",
+        "A\trecords/checks-before-check/inherited/manifest.json",
+        "A\trecords/checks-before-check/inherited/open-review.md",
+        "A\trecords/checks-before-check/intake.md",
+        "A\trecords/checks-before-check/ownership-facts.json",
+        "A\trecords/checks-before-check/ownership.md",
+        "A\trecords/checks-before-check/reconciliation.md",
+        "A\trecords/checks-before-check/trace-evidence.json",
+        "A\trecords/checks-before-check/traces.md",
+        "A\trecords/checks-before-check/verification-facts.json",
+        "A\trecords/checks-before-check/verification.md",
+        "M\ttests/suites/source_drift/README.md",
+        "M\ttests/suites/source_drift/architecture.py",
+        "M\ttests/suites/source_drift/build.py"
+      ]
+    },
+    {
+      "responsibility": "C_extraction",
+      "start": "f8f3c24f29a3ae1a3af3802daa575ca684be751f",
+      "end": "96d0328ed2d47b003ea33d609c84d756d84d6b09",
+      "changes": [
+        "M\tcontroller/tools/pw_probe_runner/pw_probe_runner.c",
+        "M\tcontroller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "A\tcontroller/tools/pw_probe_runner/pw_worker_exec.h",
+        "A\tcontroller/tools/pw_probe_runner/pw_worker_timing.h",
+        "M\tdocs/ARCHITECTURE.md",
+        "M\tdocs/LIMITS.md",
+        "M\tdocs/WORKER.md",
+        "M\tdocs/architecture.json",
+        "M\tdocs/limits.json",
+        "M\tmeson.build",
+        "M\trecords/workset/c-refactor.md",
+        "M\trecords/workset/checkpoint.md",
+        "M\trunner/README.md",
+        "M\trunner/Sources/PWRunnerCore/CWorker.swift",
+        "M\ttests/RETAINED.json",
+        "M\ttests/fixtures/worker_lifecycle/README.md",
+        "M\ttests/lib/contract.py",
+        "M\ttests/suites/runner_c_worker_harness/README.md",
+        "M\ttests/suites/runner_c_worker_harness/check_exec_evidence.py",
+        "M\ttests/suites/runner_exec_inheritance/README.md",
+        "M\ttests/suites/runner_exec_inheritance/opt_in/mutations.py",
+        "M\ttests/suites/source_drift/contract.py"
+      ]
+    },
+    {
+      "responsibility": "Swift_extraction",
+      "start": "46d2c2f392ef552f503693e84796cfb50524c712",
+      "end": "fd90eee66538cc02dc5d21b7a3fe8eca81a17403",
+      "changes": [
+        "M\tcontroller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "M\tdocs/ARCHITECTURE.md",
+        "M\tdocs/LIMITS.md",
+        "M\tdocs/REQUEST-GRAMMAR.md",
+        "M\tdocs/WORKER.md",
+        "M\tdocs/architecture.json",
+        "M\tdocs/limits.json",
+        "M\tmeson.build",
+        "M\trecords/workset/checkpoint.md",
+        "M\trecords/workset/swift-refactor.md",
+        "M\trunner/AGENTS.md",
+        "M\trunner/README.md",
+        "M\trunner/Sources/PWRunnerCore/CWorker.swift",
+        "A\trunner/Sources/PWRunnerCore/CWorkerComparison.swift",
+        "A\trunner/Sources/PWRunnerCore/CWorkerDisposition.swift",
+        "M\trunner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+        "A\trunner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+        "A\trunner/Sources/PWRunnerCore/CWorkerStepResults.swift",
+        "M\trunner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerCoding.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerExtension.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerReply.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+        "M\ttests/FAILURE-PROPAGATION-CONTRACT.md",
+        "M\ttests/RETAINED.json",
+        "M\ttests/lib/contract.py",
+        "M\ttests/lib/native_sources.py",
+        "M\ttests/suites/runner_unit/opt_in/exec_reader_mutations.py",
+        "M\ttests/suites/source_drift/README.md",
+        "M\ttests/suites/source_drift/check.py",
+        "M\ttests/suites/source_drift/check_planner.py"
+      ]
+    },
+    {
+      "responsibility": "citations_retirement",
+      "start": "fd90eee66538cc02dc5d21b7a3fe8eca81a17403",
+      "end": "17e02e6ad9025a09787f5bd0f1afc75cf06951ec",
+      "changes": [
+        "M\tWORKSET-EXECUTION-PLAN.md",
+        "M\tWORKSET-PLAN.md",
+        "M\tdocs/ARCHITECTURE.md",
+        "M\tdocs/CONTRACT.md",
+        "M\tdocs/LIMITS.md",
+        "M\tdocs/architecture-documents.dot",
+        "M\tdocs/architecture-documents.svg",
+        "M\tdocs/architecture.json",
+        "M\tdocs/generate_contract.py",
+        "M\trecords/checks-before-check/acceptance.md",
+        "D\trecords/distribution/C-RUNNER-MODULARIZATION-PLAN.md",
+        "A\trecords/workset/byoxpc-failure.md",
+        "M\trecords/workset/c-refactor.md",
+        "M\trecords/workset/checkpoint.md",
+        "M\trecords/workset/swift-refactor.md",
+        "M\ttests/RETAINED.json"
+      ]
+    },
+    {
+      "responsibility": "F2",
+      "start": "17e02e6ad9025a09787f5bd0f1afc75cf06951ec",
+      "end": "600a7922462983b1ca1dcf8531bdb3a608469299",
+      "changes": [
+        "M\tWORKSET-EXECUTION-PLAN.md",
+        "M\tcontroller/README.md",
+        "M\tcontroller/src/bundle.rs",
+        "M\tcontroller/src/json_contract.rs",
+        "M\tcontroller/src/main.rs",
+        "M\tcontroller/src/run_flow.rs",
+        "D\tcontroller/src/runner_acquisition.rs",
+        "M\tcontroller/src/runner_client.rs",
+        "M\tcontroller/src/runner_commands.rs",
+        "M\tcontroller/src/runner_manager.rs",
+        "M\tcontroller/src/runner_select.rs",
+        "M\tcontroller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+        "M\tdocs/ARCHITECTURE.md",
+        "M\tdocs/BUILD.md",
+        "M\tdocs/CONTRACT.md",
+        "M\tdocs/LIMITS.md",
+        "M\tdocs/PolicyWitness.md",
+        "M\tdocs/architecture-byoxpc.dot",
+        "M\tdocs/architecture-byoxpc.svg",
+        "M\tdocs/architecture-topology.dot",
+        "M\tdocs/architecture-topology.svg",
+        "M\tdocs/architecture.json",
+        "M\tdocs/build-steps.dot",
+        "M\tdocs/build-steps.svg",
+        "M\tdocs/build.json",
+        "M\tdocs/contract.json",
+        "M\tdocs/generate_contract.py",
+        "M\tdocs/generate_limits.py",
+        "M\tdocs/limits.json",
+        "M\tmeson.build",
+        "M\trecords/workset/byoxpc-failure.md",
+        "M\trecords/workset/c-refactor.md",
+        "M\trecords/workset/checkpoint.md",
+        "A\trecords/workset/f2-investigation.md",
+        "A\trecords/workset/f2-reservation-design.md",
+        "M\trecords/workset/swift-refactor.md",
+        "M\trunner/AGENTS.md",
+        "A\trunner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+        "M\trunner/Clients/PWRunnerClient/main.swift",
+        "M\trunner/README.md",
+        "M\trunner/Services/PWRunner/Info.plist",
+        "M\trunner/Sources/PWRunnerCore/CWorker.swift",
+        "M\trunner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+        "M\trunner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerReservation.swift",
+        "M\trunner/Sources/PWRunnerCore/PWRunnerService.swift",
+        "A\trunner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+        "A\trunner/Tests/PWRunnerClientSessionTests/main.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/EnvelopeInvariantTests.swift",
+        "A\trunner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+        "M\trunner/Tests/PWRunnerCoreTests/main.swift",
+        "M\ttests/CHANGE-VERIFICATION.md",
+        "M\ttests/COVERAGE.md",
+        "M\ttests/FAILURE-PROPAGATION-CONTRACT.md",
+        "M\ttests/README.md",
+        "M\ttests/RETAINED.json",
+        "M\ttests/catalog.json",
+        "M\ttests/fixtures/blackbox_e2e/checker/response24/extension_run.json",
+        "M\ttests/fixtures/blackbox_e2e/checker/response24/extension_specimen.json",
+        "M\ttests/fixtures/blackbox_e2e/checker/response24/issuer_abnormal_run.json",
+        "M\ttests/fixtures/blackbox_e2e/checker/response24/issuer_abnormal_specimen.json",
+        "M\ttests/fixtures/blackbox_e2e/checker/response24/missing_path_run.json",
+        "M\ttests/fixtures/blackbox_e2e/checker/response24/missing_path_specimen.json",
+        "M\ttests/fixtures/blackbox_e2e/checker/response24/valid_run.json",
+        "M\ttests/fixtures/blackbox_e2e/checker/response24/valid_specimen.json",
+        "A\ttests/fixtures/byoxpc/F2Process.c",
+        "A\ttests/fixtures/byoxpc/F2Trace.swift",
+        "M\ttests/fixtures/byoxpc/README.md",
+        "A\ttests/fixtures/byoxpc/ReservationClientTrace.swift",
+        "A\ttests/fixtures/byoxpc/ReservationDriver.swift",
+        "A\ttests/fixtures/byoxpc/ReservationTrace.swift",
+        "M\ttests/fixtures/contract/envelope_shape.json",
+        "M\ttests/fixtures/disposition/response24/a1_expected.json",
+        "M\ttests/fixtures/disposition/response24/a1_specimen.json",
+        "M\ttests/lib/blackbox.py",
+        "M\ttests/lib/consumer.py",
+        "M\ttests/lib/contract.py",
+        "M\ttests/lib/envelope_compare.py",
+        "M\ttests/lib/native_sources.py",
+        "A\ttests/lib/runner_client_capture.py",
+        "M\ttests/suites/blackbox_e2e/README.md",
+        "M\ttests/suites/blackbox_e2e/checker_controls.py",
+        "M\ttests/suites/blackbox_e2e/comparison_controls.py",
+        "M\ttests/suites/blackbox_e2e/extension_controls.py",
+        "A\ttests/suites/blackbox_e2e/runner_client_capture_controls.py",
+        "M\ttests/suites/blackbox_menagerie/checker_controls.py",
+        "M\ttests/suites/runner_byoxpc/README.md",
+        "M\ttests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.py",
+        "M\ttests/suites/runner_byoxpc/opt_in/registry_recovery.py",
+        "A\ttests/suites/runner_byoxpc/opt_in/reservation_controls.py",
+        "A\ttests/suites/runner_byoxpc/opt_in/reservation_controls.sh",
+        "A\ttests/suites/runner_byoxpc/opt_in/retirement_controls.py",
+        "A\ttests/suites/runner_byoxpc/opt_in/retirement_observations.py",
+        "A\ttests/suites/runner_byoxpc/opt_in/retirement_observations.sh",
+        "M\ttests/suites/runner_byoxpc/opt_in/single_use.py",
+        "M\ttests/suites/runner_byoxpc/opt_in/single_use.sh",
+        "M\ttests/suites/runner_filter_sysctl_name/checker_controls.py",
+        "M\ttests/suites/runner_outcome_bad_request/contract.py",
+        "M\ttests/suites/runner_outcome_bad_request/run.sh",
+        "M\ttests/suites/runner_specimen_isolation/check.py",
+        "M\ttests/suites/runner_unit/README.md",
+        "A\ttests/suites/runner_unit/client_session_controls.py",
+        "A\ttests/suites/runner_unit/client_session_controls.sh",
+        "M\ttests/suites/runner_unit/service_admission_controls.py",
+        "M\ttests/suites/runner_unit/service_admission_controls.sh",
+        "M\ttests/suites/smoke/README.md",
+        "M\ttests/suites/smoke/check_caller_auth.py",
+        "M\ttests/suites/smoke/pw_specimen_smoke.sh",
+        "M\ttests/suites/source_drift/README.md",
+        "M\ttests/suites/source_drift/check_planner.py",
+        "M\ttests/suites/source_drift/contract.py",
+        "M\ttests/suites/source_drift/generators.py",
+        "M\ttests/suites/source_drift/limits.py",
+        "M\ttests/suites/witness_contract/check_max_target_reply.py"
+      ]
+    },
+    {
+      "responsibility": "F1_acceptance_retirement",
+      "start": "600a7922462983b1ca1dcf8531bdb3a608469299",
+      "end": "77eb987554eef10ffa3371ffb21b235097562a78",
+      "changes": [
+        "D\tWORKSET-EXECUTION-PLAN.md",
+        "D\tWORKSET-PLAN.md",
+        "D\tdocs/CHECKS-BEFORE-CHECK-PLAN.md",
+        "D\trecords/checks-before-check/README.md",
+        "D\trecords/checks-before-check/acceptance.md",
+        "D\trecords/checks-before-check/capture.py",
+        "D\trecords/checks-before-check/e2-reconciliation-facts.json",
+        "D\trecords/checks-before-check/e2-reconciliation.md",
+        "D\trecords/checks-before-check/implementation.md",
+        "D\trecords/checks-before-check/inherited/README.md",
+        "D\trecords/checks-before-check/inherited/acceptance.md",
+        "D\trecords/checks-before-check/inherited/cost-facts.json",
+        "D\trecords/checks-before-check/inherited/costs.md",
+        "D\trecords/checks-before-check/inherited/curator-review.md",
+        "D\trecords/checks-before-check/inherited/design.md",
+        "D\trecords/checks-before-check/inherited/findings.md",
+        "D\trecords/checks-before-check/inherited/heldback-review.md",
+        "D\trecords/checks-before-check/inherited/host-finding.json",
+        "D\trecords/checks-before-check/inherited/inventory-inputs.json",
+        "D\trecords/checks-before-check/inherited/l-facts.json",
+        "D\trecords/checks-before-check/inherited/l-trace.md",
+        "D\trecords/checks-before-check/inherited/manifest.json",
+        "D\trecords/checks-before-check/inherited/open-review.md",
+        "D\trecords/checks-before-check/intake.md",
+        "D\trecords/checks-before-check/ownership-facts.json",
+        "D\trecords/checks-before-check/ownership.md",
+        "D\trecords/checks-before-check/reconciliation.md",
+        "D\trecords/checks-before-check/trace-evidence.json",
+        "D\trecords/checks-before-check/traces.md",
+        "D\trecords/checks-before-check/verification-facts.json",
+        "D\trecords/checks-before-check/verification.md",
+        "D\trecords/distribution/SWIFT-MODULARIZATION-PLAN.md",
+        "D\trecords/workset/byoxpc-failure.md",
+        "D\trecords/workset/c-refactor.md",
+        "D\trecords/workset/c0-seal.md",
+        "D\trecords/workset/checkpoint.md",
+        "D\trecords/workset/directory-native.md",
+        "D\trecords/workset/e2-seal.md",
+        "D\trecords/workset/extension-follow-on.md",
+        "D\trecords/workset/extension-integration.md",
+        "D\trecords/workset/f2-investigation.md",
+        "D\trecords/workset/f2-reservation-design.md",
+        "D\trecords/workset/intake.md",
+        "D\trecords/workset/pytest-first.md",
+        "D\trecords/workset/swift-refactor.md",
+        "M\ttests/RETAINED.json",
+        "M\ttests/suites/source_drift/README.md",
+        "M\ttests/suites/source_drift/check.py",
+        "M\ttests/suites/source_drift/check_planner.py"
+      ]
+    },
+    {
+      "responsibility": "boundary_investigation",
+      "start": "77eb987554eef10ffa3371ffb21b235097562a78",
+      "end": "9e46c7b94207c6baa28a1c62f4aa78defc6efb25",
+      "changes": [
+        "A\trecords/PYTEST-BOUNDARY-PLAN.md",
+        "A\trecords/pytest-boundary/amendment.md",
+        "A\trecords/pytest-boundary/assessment.md",
+        "A\trecords/pytest-boundary/audit.py",
+        "A\trecords/pytest-boundary/common.py",
+        "A\trecords/pytest-boundary/controls.md",
+        "A\trecords/pytest-boundary/development.md",
+        "A\trecords/pytest-boundary/engine.py",
+        "A\trecords/pytest-boundary/equipment.json",
+        "A\trecords/pytest-boundary/inventory.json",
+        "A\trecords/pytest-boundary/native_adapter.py",
+        "A\trecords/pytest-boundary/observe.py",
+        "A\trecords/pytest-boundary/observe_replay.py",
+        "A\trecords/pytest-boundary/prune-final.json",
+        "A\trecords/pytest-boundary/pytest.ini",
+        "A\trecords/pytest-boundary/recover.py",
+        "A\trecords/pytest-boundary/requirements.txt",
+        "A\trecords/pytest-boundary/resource_owner.py",
+        "A\trecords/pytest-boundary/supervisor.py",
+        "A\trecords/pytest-boundary/test_native.py",
+        "A\trecords/pytest-boundary/test_subject.py",
+        "M\ttests/RETAINED.json"
+      ]
+    },
+    {
+      "responsibility": "maintenance_comparison",
+      "start": "9e46c7b94207c6baa28a1c62f4aa78defc6efb25",
+      "end": "5dbcf4d8255ca24a186e97488104772df9cb53d6",
+      "changes": [
+        "A\trecords/PYTEST-MAINTENANCE-PLAN.md",
+        "A\trecords/pytest-maintenance/comparison.md",
+        "A\trecords/pytest-maintenance/decision.md",
+        "A\trecords/pytest-maintenance/preservation.json",
+        "A\trecords/pytest-maintenance/resource-recovery.md",
+        "A\trecords/pytest-maintenance/snapshot.py"
+      ]
+    },
+    {
+      "responsibility": "family_adoption",
+      "start": "5dbcf4d8255ca24a186e97488104772df9cb53d6",
+      "end": "809ef178f7a9ce2628f13fb137f1456452a49b85",
+      "changes": [
+        "M\tdocs/ARCHITECTURE.md",
+        "M\tdocs/BUILD.md",
+        "M\tdocs/DEPENDENCIES.md",
+        "M\tdocs/WORKER.md",
+        "M\tdocs/architecture.json",
+        "A\trecords/PYTEST-EXEC-ADOPTION-PLAN.md",
+        "A\trecords/pytest-exec-adoption/acceptance.md",
+        "A\trecords/pytest-exec-adoption/complete.py",
+        "A\trecords/pytest-exec-adoption/completion.json",
+        "A\trecords/pytest-exec-adoption/evidence-index.json",
+        "A\trecords/pytest-exec-adoption/implementation.md",
+        "A\trecords/pytest-exec-adoption/native-comparison.json",
+        "A\trecords/pytest-exec-adoption/pruning.json",
+        "A\trecords/pytest-exec-adoption/recovery-index.json",
+        "A\trecords/pytest-exec-adoption/recovery.md",
+        "A\trecords/pytest-exec-adoption/seal.py",
+        "A\trecords/pytest-exec-adoption/source-notes.md",
+        "A\trecords/pytest-exec-adoption/state.json",
+        "A\trecords/pytest-exec-adoption/walkthrough.json",
+        "M\ttests/AGENTS.md",
+        "M\ttests/CHANGE-VERIFICATION.md",
+        "M\ttests/README.md",
+        "M\ttests/RETAINED.json",
+        "M\ttests/catalog.json",
+        "M\ttests/fixtures/dispatcher/repository.py",
+        "M\ttests/fixtures/release/tools.py",
+        "M\ttests/fixtures/worker_lifecycle/README.md",
+        "M\ttests/lib/checkout_lock.py",
+        "A\ttests/lib/execution_contract.py",
+        "M\ttests/lib/fixture_inputs.py",
+        "A\ttests/lib/pytest_command_owner.py",
+        "A\ttests/lib/pytest_engine.py",
+        "A\ttests/lib/pytest_family.py",
+        "A\ttests/lib/pytest_packages.py",
+        "A\ttests/lib/pytest_resources.py",
+        "A\ttests/lib/pytest_support.py",
+        "A\ttests/lib/pytest_wire.py",
+        "M\ttests/lib/release_accept.py",
+        "M\ttests/lib/release_archive.py",
+        "M\ttests/lib/release_cleanup.py",
+        "M\ttests/lib/release_runs.py",
+        "M\ttests/lib/retention.py",
+        "M\ttests/lib/suite_run.py",
+        "M\ttests/lib/test_cli.py",
+        "A\ttests/pytest.ini",
+        "A\ttests/requirements-pytest.lock",
+        "A\ttests/setup-pytest.sh",
+        "M\ttests/suites/dispatcher/README.md",
+        "A\ttests/suites/dispatcher/check_pytest.py",
+        "A\ttests/suites/dispatcher/pytest_integration.py",
+        "A\ttests/suites/dispatcher/pytest_windows.py",
+        "M\ttests/suites/dispatcher/run.sh",
+        "M\ttests/suites/preflight/check_build_provenance.py",
+        "M\ttests/suites/preflight/check_release.py",
+        "M\ttests/suites/preflight/check_release_publish.py",
+        "M\ttests/suites/preflight/check_release_rotation.py",
+        "M\ttests/suites/preflight/opt_in/build_refusals.py",
+        "M\ttests/suites/runner_c_worker_harness/README.md",
+        "M\ttests/suites/runner_c_worker_harness/check_exec_evidence.py",
+        "A\ttests/suites/runner_c_worker_harness/exec_domain.py",
+        "M\ttests/suites/runner_c_worker_harness/run.sh",
+        "A\ttests/suites/runner_c_worker_harness/test_exec_control_states.py"
+      ]
+    }
+  ],
+  "worktrees": "worktree /Users/raccoon/Desktop/Security/PolicyWitness\nHEAD 77eb987554eef10ffa3371ffb21b235097562a78\nbranch refs/heads/main\n\nworktree /private/tmp/pw-coherence-20261030\nHEAD 809ef178f7a9ce2628f13fb137f1456452a49b85\nbranch refs/heads/review/pytest-coherence\n\nworktree /private/tmp/pw-f2-stage1\nHEAD 2de5b1c72e32ba5c14cc140f3df2d34e37ea2321\ndetached\n\nworktree /private/tmp/pw-pytest-adoption-plan-20261030\nHEAD 8fd2c825a7cbf9b7df194c5bb260e94a4b2b3d98\nbranch refs/heads/plan/pytest-exec-family\n\nworktree /private/tmp/pw-pytest-boundary-20261030\nHEAD 9e46c7b94207c6baa28a1c62f4aa78defc6efb25\nbranch refs/heads/investigation/pytest-boundary\n\nworktree /private/tmp/pw-pytest-exec-build-check-20261030\nHEAD 4ff5eee0a8506565bc21375531af0934ab8423f1\nbranch refs/heads/verification/pytest-exec-build\n\nworktree /private/tmp/pw-pytest-exec-candidate-20261030\nHEAD 809ef178f7a9ce2628f13fb137f1456452a49b85\nbranch refs/heads/adoption/pytest-exec-family\n\nworktree /private/tmp/pw-pytest-exec-comparison-20261030\nHEAD d03cc67f8409067aaf54a4ca21358a0888ceaf9a\nbranch refs/heads/comparison/pytest-exec-family\n\nworktree /private/tmp/pw-pytest-maintenance-20261030\nHEAD 5dbcf4d8255ca24a186e97488104772df9cb53d6\nbranch refs/heads/investigation/pytest-maintenance\n\nworktree /Users/raccoon/Desktop/Security/PolicyWitness-pytest-trial-evidence\nHEAD 6304fef56e8707e1eb79503f57ca831f200b482a\ndetached\n\n"
+}
