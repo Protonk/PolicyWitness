@@ -39,6 +39,8 @@ class Equipment:
             raise RuntimeError(reply['error'])
         self.completed_operations.append(reply['result']['operation_id'])
         self.observe([reply['result']['operation_id']])
+        if reply['result']['timed_out'] or reply['result']['cancelled']:
+            raise RuntimeError('native command timed out or was cancelled; receipt: ' + reply['result']['record'])
         return reply['result']
 
     def observe(self, operations):

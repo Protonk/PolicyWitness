@@ -229,3 +229,10 @@ Add that actual-family control first, retain its failing observation, then refus
 timeout/cancellation in the equipment bridge after recording operation identity.
 This restores the planned native completion obligation; no accepted native oracle
 or production behavior changes.
+
+Source `a562390a`: pinned `pytest-exec-timeout-control-01` proves the defect.
+The external control expected failure but the actual family returned success;
+the retained command receipt has `timed_out=true`, nonzero return status and the
+matching assertion in stderr. The bridge correction records the completed command
+reference before raising an explicit timeout/cancellation phase error. Resource
+settlement remains separate and the following independent case may proceed.

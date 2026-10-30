@@ -457,6 +457,13 @@
       "reason": "All 68 existing build-provenance controls pass after explicitly copying shared ownership helpers into the SDK containment fixture.",
       "source": "39c04284dbeb7fc5a8264e1a96088b5644a106dc",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-timeout-control-01",
+      "run_id": "20261030T191631Z_2bf78096",
+      "reason": "Proven candidate false pass: native command printed designated assertion then actually timed out; independent control rejected the successful family result before correction.",
+      "source": "a562390ad483f0c24be61fda0d1849ec19c6f596",
+      "app_inventory": null
     }
   ]
 }
