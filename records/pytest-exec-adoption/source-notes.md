@@ -137,3 +137,40 @@ The inherited `tests/RETAINED.json` difference from accepted source belongs to
 the prior investigations and is byte-identical to the maintenance worktree's
 index. This leg adds only its plan and record package. The preservation checker
 above passed without executing pytest, native controls or the application.
+
+## Review refinements after the initial plan
+
+The user supported the family, ownership split, intact native sequences, nine
+variants and whole-family selection. Their four requested refinements are now
+part of the existing integration/acceptance stages, with no additional general
+feasibility exercise or implementation in this revision:
+
+- The ownership state machine now distinguishes permission to launch from an
+  observed launch and from settlement/closure. The proposed public recovery mode
+  remains available during admission refusal. Its evidence/disposition table
+  covers both pre-launch and post-completion crash windows, current-identity
+  requirements, checkout-wide execution blocks, output-only holds and narrow
+  recovery/disposal capabilities. Ordinary record deletion is not recovery.
+- Expected family and closure evidence comes from outer invocation and verified
+  harness-source/selection provenance, not optional family fields in a result.
+  New controls remove the declaration/reference itself, and remove terminal
+  ownership evidence while repairing mutable archive checksums. Historical
+  interpretation needs affirmative legacy provenance; missing provenance is
+  unverified, not evidence that the legacy contract applies.
+- A new parent family account exposes execution and accounting states even
+  when the existing completion counter uses `unrun`. Positive starts, refusal
+  before eligibility and indeterminate starts have different ordinary displays.
+- Acceptance must trace actual emitted reports through phase, submitted
+  mutation, expected/observed rejection and native evidence. Shared-baseline
+  blockage, session-finalizer scope, input-integrity uncertainty and cleanup
+  failure after otherwise complete observations receive explicit reader checks.
+
+The relevant inspected existing primitives are `checkout_lock.acquire/owned`
+(including owner-metadata replacement when taking a new hold), the kernel peer/
+exit and start-identity observations in `tests/fixtures/exec/control.py`, and
+`release_runs.pack/verify_bundle`'s archive/inventory hash checks. Those hashes
+establish byte consistency; required evidence roles need the separately checked
+invocation/source contract. No newly discovered production defect is claimed:
+these refinements close gaps in the proposed integration before implementation.
+The original planning-state record stays intact; source and preservation checks
+are repeated only to verify that this review changed planning material alone.

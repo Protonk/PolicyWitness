@@ -1,6 +1,7 @@
 # Bounded pytest adoption: native exec evidence controls
 
-Status: ready for review; implementation is not authorized by this planning leg.
+Status: family and ownership split supported in review; recovery, compatibility
+and diagnostic refinements incorporated below. This revision is planning only.
 Prepared by Codex, 2026-10-30. Planning branch `plan/pytest-exec-family` starts
 at `5dbcf4d8255ca24a186e97488104772df9cb53d6`; accepted production/test source
 remains `77eb987554eef10ffa3371ffb21b235097562a78`. The planning worktree is
@@ -119,9 +120,11 @@ must not signal a historical PID merely because its number appears in a record.
 
 Store durable ownership under a new, bounded `tests/out/pytest-owners/<run-id>/`
 namespace, outside disposable `runs/`, with pointers to the owned run and
-command artifacts. Registration precedes launch. Unresolved or malformed records
-block replacement/pruning of the associated run, including explicit unfinished
-pruning; new execution is refused when ownership cannot be safely resolved.
+command artifacts. Registration precedes launch. Records protect their associated
+output until disposition is established. Possible live commands or unbounded
+ownership uncertainty also block checkout execution; proven quiescence with
+remaining isolated file/evidence work protects only the affected output. The
+operational classification and recovery path are specified below.
 Place that admission check in shared checkout admission for the new namespace,
 so both builds and tests respect an orphaned obligation even if its last lock
 descriptor has disappeared. Keep its parser independent of pytest and of the
@@ -132,6 +135,88 @@ with their unpinned run through supported pruning, after identity revalidation.
 Pins continue to protect overlap. This fills the prototype's known retention
 gap; merely setting `run.json.terminal=true` must not make a pending lease
 disposable. Do not import, reinterpret or recover earlier protected resources.
+
+### Recovery interface and dispositions (stage 2)
+
+Add a mutually exclusive public mode, available without pytest or app admission:
+
+```sh
+tests/run.sh --recover-ownership RUN_ID          # read-only diagnosis/preview
+tests/run.sh --recover-ownership RUN_ID --apply  # apply only evidence-justified recovery
+```
+
+Every registry refusal prints the record/run identity, blocking scope, evidence
+still missing and the concrete preview command. The mode does not accept test
+selectors, `--prune`, a force-clear option or an arbitrary PID. Preview writes
+nothing. Apply revalidates the preview's inputs; it never treats a prior preview
+as authorization to act on a changed identity. It leaves a durable recovery
+receipt with before/after record digests, actions, observations and disposition.
+Closure and deletion are separate: recovery does not prune evidence or remove
+pins. Retries after interruption must be idempotent.
+
+Recovery can inspect the registry before the ordinary unresolved-record guard.
+Its narrow capability permits only diagnosis, revocation/settlement of the named
+orphaned command and publication of recovery evidence. It cannot launch an engine
+or native test. For a surviving owner it authenticates the live socket peer,
+nonce and transferred held descriptor against the recorded checkout identity;
+it refuses cancellation of a still-active valid test session. For records with
+no live owner, mutation requires the ordinary OS lock acquired through a
+recovery-only path, retaining the original record bytes before any new lock
+owner metadata is written. Other unresolved entries are not waived: their live
+holds still prevent acquisition, and their dispositions still govern admission.
+A missing socket, available lock, old PID, changed nonce or elapsed time is not
+proof of process exit. Signals require current authenticated ownership or an
+independently established matching live process identity and scope; no signal
+is sent solely from a saved PID/PGID. If that proof is unavailable, preserve the
+record and identify the additional evidence or user decision needed.
+
+Use monotonic per-command transitions with durable authorizations before their
+effects: `reserved`, `owner_launch_authorized`, `owner_bound`,
+`command_release_authorized`, `command_started`, `command_settled`,
+`quiescent_retained`, `closed`. Each authorization is persisted before starting
+or releasing the corresponding process; it records permission, not proof the
+action occurred. The reservation identifies the authorizing controller and
+checkout/session; bindings retain peer PID, kernel process-start identity and
+boot identity where needed to distinguish reuse, plus the nonce/held descriptor.
+An identity query that cannot establish the required relation leaves it unknown.
+A gated owner cannot start the compiler until the command
+release authorization is durable. Neither native success nor `command_settled`
+alone proves the owner has relinquished its ability to launch further work.
+Settlement records identify the exact command, wait/exit and group observations,
+closed launch channel and remaining paths; recovery preserves the original
+sequence and appends its conclusion instead of rewriting earlier states.
+
+| Durable evidence / crash window | Recovery permitted and still missing | Blocking scope |
+| --- | --- | --- |
+| `reserved`, before any owner-launch authorization | After confirming the authorizing controller is stopped or has irrevocably revoked this reservation, the write-before-launch invariant establishes no owner/command could have launched. Record `never_launched` and close/reconcile isolated preparation files. Mere absence of a PID field is insufficient. | Checkout until no future release is possible; then only affected output if file/evidence work remains. |
+| Owner launch authorized, but no bound owner/PID receipt; or bound owner with no command-release authorization | The first case may contain a started gated owner. Authenticate and cancel it, or require positive lifecycle/revocation evidence; do not assume launch failed. In the second, the command-release invariant establishes no native command started only after the owner/controller can no longer release it. Observe the owner's exit before closing its hold. | Checkout while an owner or future launch remains possible; evidence/file hold afterwards. |
+| Command release authorized but start receipt absent, or a command is active | The native command may have started. Use the authenticated live owner to settle it and independently observe exit/group quiescence, then revoke launch authority. With no such owner and no adequate lifecycle evidence, retain unresolved ownership. | Whole checkout; associated output protected. |
+| Native command returned, then crash before `command_settled`/closure publication | A return code or output file does not settle descendants. The live owner may finish observations; otherwise require already durable matching wait/group/authority-revocation evidence. If that evidence is missing, do not reconstruct it from the current absence of a PID. | Whole checkout until quiescence and revocation are established. |
+| Durable settled/quiescent evidence, crash before `closed` publication or during isolated file cleanup | Revalidate receipt identities and that no further command can launch. Reconcile the remaining owned paths and publish closure idempotently. Missing test phases stay missing; ownership recovery cannot convert an incomplete run to a pass. | Only that run, registry record and specifically owned staging paths; other builds/tests may proceed. Release acceptance/disposal of this run remains blocked until its required closure evidence is complete. |
+| Malformed/truncated/conflicting record or unknown path/process scope | Preserve raw bytes. Recover only from independently matching intact receipts or a separately reviewed disposition; no “delete stale record” shortcut. | Whole checkout if live/future acquisition cannot be excluded. Narrow to output-only only with affirmative quiescence and bounded-path evidence. |
+| Valid closed receipt | No remaining operational block; normal retention and pins decide disposal. | Ordinary retained-output protection only. |
+
+“Whole checkout” means new build/test execution in that checkout, not read-only
+inspection, help, list or recovery preview; another worktree has its own ownership.
+An already authenticated owner may finish settling its registered command, but
+cannot use the exception to admit another session. Output-only holds do not
+silently become deletable because execution is again permitted. The guard is
+computed from validated evidence, not trusted from an editable `blocking_scope`
+label. Publish that classification and its supporting receipt references in both
+recovery preview and ordinary refusal messages.
+
+Disposal still needs the real checkout lock. If that lock is available and the
+record's affected paths are known, unrelated output may be pruned through a
+purpose-limited disposal admission; the pending run and its ownership/staging
+paths remain protected. A cleanup capability cannot launch tests/builds. If the
+record's path scope cannot be bounded, refuse managed-output deletion until
+recovery narrows it. Shared admission must distinguish execution, disposal and
+recovery explicitly rather than expose an environment-variable bypass.
+
+Commit/review this state machine and exercise its crash-window/disposition
+controls on isolated fixtures before enabling the registry in shared build,
+prune and release admission. This is part of stage 2, not another general
+feasibility trial. The registry stays limited to this family's new resource kind.
 
 ## 3. One public path and one item manifest
 
@@ -301,7 +386,28 @@ Framework continuation must not be overridden by an ambient max-failure option.
 Parent `case_results` continues to contain F once, with a typed family-summary
 reference and separate nested item counts. A complete set of failing phases is
 `completed/fail`; missing item/session evidence is `unrun` with an accounting
-error. F passes only when the family predicate above holds. Parent overall `ok`
+error for compatibility with the existing completion counters. **`unrun` does
+not mean never started.** Every new family parent result also carries required
+`execution_state` (`not_started`, `started`, `unknown`) and `accounting_state`
+(`complete`, `incomplete`, `unavailable`), a reason code and the decisive evidence
+references. Collection alone is not family execution. A durable item-start or
+actual PW command-start observation establishes `started`; a recorded refusal
+before eligibility establishes `not_started`. Eligibility without surviving
+start/non-start evidence yields `unknown`, not an inferred non-start.
+
+The ordinary console, parent summary and release failure diagnostic must display
+these states directly, for example:
+
+```
+F  INCOMPLETE — execution started; engine lost; 1/9 items complete; ownership pending
+F  NOT STARTED — missing clang; item accounting unavailable; no execution eligibility
+F  INCOMPLETE — execution start unknown after eligibility; phase evidence missing
+```
+
+Do not present all three as just `UNRUN`. Readers of a declared new family require
+the accompanying states; a missing state is malformed accounting. Old records
+retain their original counters without fabricated start evidence. F passes only
+when the family predicate above holds. Parent overall `ok`
 also retains all ordinary-family, artifact and sleep rules. Top-level case counts
 and nested item counts are labelled separately; nine items do not silently become
 nine catalog cases. `suite_run.finish` must consult authoritative case outcomes
@@ -313,9 +419,71 @@ that scope explicitly (`counts_scope: legacy_reports`). Add `case_outcome_counts
 derived from `case_results` for the parent console/reader's overall case summary;
 F contributes one outcome there. Its nine item outcomes live in `family.json`.
 The parent schema's existing ownership/completion fields remain compatible, with
-typed family references as additive fields. Old records without engine-family
-declarations retain their existing meaning. No phase data is duplicated into
+typed family references as additive fields. Compatibility is established from
+independently checked producer/selection information as specified below; absent
+family fields never establish a legacy run. No phase data is duplicated into
 fake shell reports to make old report counts look comprehensive.
+
+### Required evidence cannot be removed by selecting the legacy reader
+
+Before executing the battery, the outer PW invocation records the expected
+evidence contract from the actual harness source/configuration and requested
+selection: producer identity and protocol capability, catalog/source snapshot
+digests, selected top-level family IDs with their engine kinds, and required
+accounting/ownership receipt roles. This is independent of pytest's results and
+of the later `case_results` family reference. It lists family obligations, not
+a second registry of the nine item identities. Pytest's collected manifest still
+owns those items. A small standard-library contract reader should own this
+validation for dispatch, release acceptance and archive consumers.
+
+For live acceptance, construct and retain that expectation in the outer release
+invocation **before** starting `tests/run.sh`, using its recorded argv and verified
+harness/catalog inputs. Pass it explicitly to the battery reader; do not derive
+it from the returned run's optional engine fields. For ordinary runs the PW
+planner publishes its pre-execution contract alongside the owner/plan; inspection
+checks it against the recorded producer source identity. Product-app provenance
+alone does not identify which harness executed the tests.
+
+For portable evidence, archive the outer invocation contract, the relevant
+harness/catalog identity evidence and terminal ownership receipt with the run.
+Bind them into the verified release/evidence inventory and its source/run
+identity. The portable reader validates this against the independently established
+harness provenance/expected contract for that release, not a profile guessed
+from `family.json` or its absence. Required roles follow from that checked
+producer/catalog contract even if an optional-looking reference is removed from
+the run or archive manifest. The archive inventory establishes bytes and coverage;
+recomputing its hashes after dropping a file does not discharge a required role.
+
+Make the dependency explicit in the reader APIs: live acceptance/archive checks
+receive an `expected_contract` from their outer invocation; portable verification
+resolves the contract from a separately verified retained/release harness-source
+identity and its matching snapshot. The source is the actual test harness,
+recorded separately from the app build source. Use the repository's existing
+source/retention/release provenance mechanisms; no new signing service is part
+of this adoption. If that binding cannot be recovered, the reader can display
+the record but cannot certify it by selecting a legacy fallback.
+
+Legacy interpretation requires affirmative provenance identifying a producer
+and selection whose contract did not require these roles—for example the
+previously verified historical source/run or release identity and matching
+source/catalog snapshot. Historical records remain readable without new fields
+or rewriting. Unknown or stripped provenance is displayed as unverified and
+cannot qualify a new acceptance as legacy. If provenance is unavailable, report
+that missing prerequisite; do not infer age from timestamps, schema 1/2, or the
+absence of engine metadata. Local source snapshots and archive receipts must
+be bound to an independently checked source/release identity; internally
+self-consistent hashes alone are not authenticity proof. This covers omitted
+evidence/downgrade handling, not replacement of every external trust anchor.
+
+The terminal ownership receipt is mandatory for a new selected engine family,
+even when its registered-command set is empty. It identifies the complete
+registered operation set (bound to the durable registration/operations record),
+settlement/closure evidence and any unresolved entries. The archived copy must
+match those roles and identities; “no receipt/reference/pending flag” cannot
+mean “no resources.” A verified legacy producer had no such receipt obligation;
+that fact must come from its provenance, not the missing receipt. The portable
+reader must not require a now-unavailable local ownership registry to validate
+a properly closed archived run.
 
 Consumer changes are explicit:
 
@@ -323,8 +491,8 @@ Consumer changes are explicit:
 | --- | --- |
 | `test_cli.py`, `suite_run.py`, `--list` | Engine route, collection manifest and one family result; bypass legacy event/report reconciliation for F only. Keep legacy namespace scanning and tampering detection for other cases. Distinguish legacy report counts from family outcomes. |
 | `retention.py` replacement/pruning, release cleanup/rotation | Consult durable ownership, including ambiguous pending records; protect output/ownership together. Existing schema-1 parent completion validation remains useful, not sufficient for cleanup. |
-| `release_accept.py:battery_problems`, `release_archive.py:battery_record` | Verify the typed family summary/manifest digest, complete item accounting and closed ownership when an engine family is present. Preserve default-selection and artifact requirements; reject missing summaries even if the parent says pass. Preserve old-run reading when no engine family is declared. |
-| `release_runs.py` evidence snapshots | Parent still at `tests/run.json`; the existing whole-tree packer already includes in-run family files. Before packing, require closed ownership and copy the terminal ownership receipt into the run, then verify the family references remain resolvable inside the portable inventory. Do not require the local external ownership registry to interpret an accepted archived run. No product envelope change. |
+| `release_accept.py:battery_problems`, `release_archive.py:battery_record` | Take the independently checked invocation/source contract, require every expected family account and its parent execution/accounting states, then validate item completeness and ownership. Reject stripped declarations/references as well as missing summaries. Preserve historical interpretation only with affirmative legacy provenance; keep default-selection and artifact requirements. |
+| `release_runs.py` evidence snapshots | Parent still at `tests/run.json`; the existing whole-tree packer includes in-run family files. Include the outer invocation/source contract and terminal ownership receipt, verify their binding and required roles independently of optional references, and refuse missing closure even if mutable archive inventories are recomputed. A closed portable run needs no live local registry. No product envelope change. |
 | Dispatcher/source-drift controls and documentation | Teach engine routes as catalog commands without exempting missing/duplicate paths. Update Python startup/dependency declarations, suite/output documentation and fixture-input inventories. |
 | Architecture citations | Move `exec_control_states` citations from the retired shell block to the new owning test/helper in `docs/architecture.json`; regenerate `docs/ARCHITECTURE.md`/`docs/WORKER.md` through their owner. The native observation and its limits stay the same. |
 
@@ -354,10 +522,14 @@ tests/run.sh --case runner_c_worker_harness/exec_control_states
 2. **PW integration and ownership.** Add the collection barrier, durable reader,
    command ownership and retention guards; extend the existing dispatcher rather
    than copy its artifact/equipment/sleep logic. Preserve the datagram-reset and
-   valid-prefix corrections as integration invariants. Check package startup,
-   mixed-family accounting and the real compiler-group lifetime with the targeted
-   controls below. This is the main new operational work and a stopping point if
-   its boundary is not credible.
+   valid-prefix corrections as integration invariants. First seal the recovery
+   transitions/disposition table, recovery-only invocation and independent source
+   contract; exercise their refusal/recovery/downgrade controls in isolated
+   fixtures before making the registry a shared admission dependency. Check
+   package startup, explicit parent execution states, mixed-family accounting
+   and the real compiler-group lifetime with the targeted controls below. This
+   is the main new operational work and a stopping point if its boundary is not
+   credible.
 3. **Atomic route switch in the candidate branch.** Change F's catalog route,
    remove its shell `test_selected` block and the native checker's executable
    main loop, and complete reporting/consumer changes together. Keep its domain
@@ -366,8 +538,10 @@ tests/run.sh --case runner_c_worker_harness/exec_control_states
    command and refuse. All credited candidate runs now use `tests/run.sh`; old
    behavior is obtained only from the clearly labelled comparison worktree.
 4. **Diagnosis and obligation acceptance.** Run the matrix below through the
-   public path. Inspect actual reports and retained native observations, not just
-   return codes. Compare the accepted branch's ordinary result and representative
+   public path. Perform the emitted-report walkthrough below, including shared
+   baseline/finalizer scope and remaining observation applicability. Inspect
+   actual reports and retained native observations, not just return codes.
+   Compare the accepted branch's ordinary result and representative
    failures with candidate results. Record actual edited owners, removed wrapper/
    loop/declarations, added integration and what remains shared. Complete the
    targeted existing regression cases and reader controls, update current docs
@@ -405,6 +579,62 @@ below concern the real family and its integration into public execution.
 | Interrupt/death with one completed item, active supervised command and queued work | Independent start receipts distinguish active from queued; partial logs survive; completed evidence survives; command owner holds the actual lock; ordinary SIGINT cancels queued legacy work too. Engine-only death follows existing independent-case continuation policy once ownership settles. |
 | Death of outer/family supervisor while command/descendant survives | The new command owner or an unresolved durable record preserves ownership; a competing execution cannot acquire eligibility; authenticated recovery/observed exits permit closure. A dropped-hold/false-closure control must be rejected. This addresses the compiler integration gap, not arbitrary escaped processes. |
 | Unresolved ownership and pruning/replacement/release readers | All refuse disposal/acceptance despite visible passing item reports; closed unpinned control output becomes eligible. Pin decisive failure before any destructive cleanup control; controls act only on disposable fixture runs. |
+
+Extend those existing integration exercises with the following precise controls;
+they do not start a separate feasibility workstream:
+
+| Refinement | Required observation |
+| --- | --- |
+| Crash at each owner/command launch authorization boundary, including before launch and before PID/start publication | Independently record whether a gated owner/native command actually started. Recovery must not infer non-start from a missing PID receipt. With revoked authorization and affirmative no-launch evidence it closes the reservation without signalling; ambiguous authorization/start remains checkout-blocking. |
+| Crash after direct command return but before settlement; and after durable quiescence but before closure | Return-only evidence cannot close possible descendants. Durable matching settlement plus revoked launch authority permits idempotent closure or output-only retention for isolated cleanup; an unrelated build/test can then proceed while pruning the held run still refuses. |
+| Recovery entry while admission refuses; active owner, stale/reused identity and interrupted recovery | Preview remains usable/read-only; apply has no test-launch capability. Refuse an active session or identity mismatch without signals, preserve unknowns, and resume justified recovery without losing original evidence or clearing unrelated holds. |
+| Strip family engine declaration, typed reference, or both while leaving apparent passing parent fields | Against the independently captured new-producer/selection contract, reject even when the summary file still exists. Also remove the family directory and all run-local hints: missing source/contract evidence cannot create a legacy pass. Keep a positively identified legacy neighbor readable under its own contract. |
+| Strip terminal ownership receipt and its references from a new portable run | Recompute the mutable archive inventory, summary copies and checksums so a generic checksum failure cannot supply the result. The independently checked expected roles must still require closure; removing a receipt declaration, claiming an empty operation set, or making local registry lookup unavailable must not bypass it. A valid closed portable neighbor verifies without the original local registry. |
+| Parent result for engine death, missing equipment and an indeterminate start window | The actual ordinary display and reader fields distinguish `started/incomplete`, `not_started/unavailable` and `unknown/incomplete`; none is shown merely as “never ran.” Removing the required state from a new family is rejected. |
+
+Each deletion/downgrade control fixes its expected invocation/source contract
+outside the mutated result/archive fixture before mutation. Check that anchor
+remains unchanged. Also exercise removal or contradiction of the archived copy
+of that contract: the external expected identity still requires the missing
+roles, or verification fails for missing provenance; it never falls back to
+legacy. These controls test semantic completeness after repairing transport
+checksums, not adversarial replacement of all trusted source/release identities.
+
+### Acceptance walkthrough using emitted reports
+
+For each representative failed variant, start from the actual parent console
+summary or portable report and follow its links through: stable item ID;
+setup/call/teardown diagnosis; exact submitted mutation and source inventory;
+expected rejection versus observed assertion/status; raw compiler/native output;
+and its baseline/applicability and ownership receipts. A maintainer must be able
+to make that trace without reconstructing the shell loop or reading the result
+interpreter's implementation. Record the actual displayed excerpts, paths and
+answers beside the pinned run. The example strings in this plan are not an
+acceptance substitute. Any misleading emitted report is a consequential failed
+acceptance result, retained before correcting the renderer/association.
+
+For a shared baseline failure, the ordinary display should show one baseline
+cause and its evidence, the production outcome, the list of dependent items
+whose bodies did not run, and why no mutation rejection is credited. Preserve
+the baseline's raw native observation even though it did not satisfy the golden;
+do not describe the unattempted controls as independent native failures. Detailed
+pytest phase records remain available behind the grouped explanation.
+
+For a session finalizer failure, name the shared fixture, its affected item
+scope and the fact that pytest attached the report to the last item's teardown.
+Preserve each recorded body outcome. Distinguish **input-integrity uncertainty**
+(show the changed inputs and qualify dependent observation applicability until
+their retained per-variant input receipts establish otherwise) from **cleanup
+failure after complete observations** (show the cleanup/ownership hold without
+claiming the native assertions failed). Neither permits family success. Inspect
+both emitted cases: a correct last-item traceback alone is insufficient if a
+reader cannot tell which observations remain usable or why.
+
+The acceptance record states whether every link resolved and whether a reader
+could identify the phase, submitted control, expected/observed rejection, shared
+failure scope, observation limitations and operational disposition. Compare
+that experience with the retained current-harness failure where useful. This
+is an exposed diagnostic evaluation, not a timed or blinded productivity test.
 
 For the changed dispatcher, run `dispatcher/selection_controls`,
 `accounting_controls`, `cancellation_controls`, `retention_controls` and `controls`;
@@ -467,8 +697,9 @@ reviewed revert of the coherent route/consumer change; it must continue to read
 or preserve new-format retained evidence and pending ownership. Deleting new
 readers while their records remain unresolved is not a rollback plan.
 
-The review choice is whether the reporting/organization benefits justify this
-**one-family** dependency and integration cost. Proposed defaults are fixed:
+The family choice and ownership split are supported by the user's review.
+The refinements above belong to integration stage 2 and acceptance stage 4;
+they preserve the **one-family** boundary. Proposed defaults are fixed:
 retain app/worker admission and default membership; use whole-family public
 selection; retain nine complete native variants; keep operational ownership
 outside pytest. There is no unresolved family-selection choice requiring another
