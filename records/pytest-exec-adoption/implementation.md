@@ -180,3 +180,15 @@ work and require an explicit ownership refusal. A dropped-native-descriptor
 control and a closed-label/false-settlement control test the rejection side of
 the hold contract. This is an ordinary integration correction within the selected
 ownership boundary, not a change to application or native-test promises.
+
+Source `eb4bcc11`: pinned `pytest-exec-acceptance-02` passes corrected historical
+fixture handoff, selection, actual-family diagnostics and F. Source `b1cff674`:
+pinned `pytest-exec-acceptance-03` passes all final ownership/accounting/cancellation/
+retention controls and F. Review of its actual summary found the shared baseline
+cause followed eight repeated setup tracebacks. The phase evidence was correct,
+but the ordinary display made the reader scan redundant diagnostics. A final
+renderer correction puts shared baseline/finalizer scope before item results and
+groups the eight explicitly identified baseline setup errors. Raw phase and pytest
+diagnostics remain complete; unrelated setup failures are never collapsed. The
+control now inspects prominence, eight blocked bodies and preserved detailed
+reports. This correction is confined to diagnosis, not native expectations.

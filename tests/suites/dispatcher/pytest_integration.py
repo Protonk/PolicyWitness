@@ -114,7 +114,11 @@ class Integration:
         require(family['items'][0]['phases']['call']['outcome']=='failed','baseline body failure missing')
         require(all(i['phases']['setup']['outcome']=='failed' and 'call' not in i['phases'] for i in family['items'][1:]),'baseline dependents ran')
         require(len(read(out/'suites'/F/'ownership.json')['commands'])==2,'mutant command started after bad baseline')
-        require('SHARED BASELINE' in (out/'suites'/F/'summary.txt').read_text(),'shared baseline display absent')
+        summary=(out/'suites'/F/'summary.txt').read_text()
+        require(summary.splitlines()[1].startswith('SHARED BASELINE:'),'shared cause is not prominent')
+        require(summary.count('setup blocked by shared baseline; body not run.')==8,'dependent setup display is not grouped')
+        require('shared production baseline unavailable:' not in summary,'repeated baseline tracebacks obscure the cause')
+        require('shared production baseline unavailable:' in (out/'suites'/F/'pytest.txt').read_text(),'detailed setup diagnostics lost')
         self.note('shared baseline cause retains observation and eight unattempted bodies',output=str(out))
         for kind,before,after in [
             ('input-finalizer',"        after = inventory(self.inputs)","        (self.inputs / 'pw_worker_exec.h').write_text('changed fixture input')\n        after = inventory(self.inputs)"),
@@ -123,7 +127,7 @@ class Integration:
             require(all(i['phases']['call']['outcome']=='passed' for i in family['items']),'finalizer erased body outcomes')
             require(family['items'][-1]['phases']['teardown']['outcome']=='failed','last teardown diagnosis absent')
             summary=(out/'suites'/F/'summary.txt').read_text()
-            require('SHARED SESSION FINALIZER' in summary and 'all family items' in summary,'shared scope display absent')
+            require(summary.splitlines()[1].startswith('SHARED SESSION FINALIZER:') and 'all family items' in summary,'shared scope is not prominent')
             self.note(kind+' preserves body outcomes and explicitly displays scope',output=str(out))
         root,out,run,family=self.fault('body-and-teardown',MODULE,"    assert result['ok'], result['error']", "    assert False, 'controlled body failure'")
         # Separate source fixture: add function finalizer to that same body-failing item.

@@ -199,20 +199,10 @@ class Collector:
 
 def display(directory, family):
     lines = [f"FAMILY {family['family']}: {'PASS' if family['ok'] else 'FAIL'}; execution={family['execution_state']} accounting={family['accounting_state']}"]
-    for item in family['items']:
-        phases = ', '.join(f'{k}={v["outcome"]}' for k,v in item['phases'].items())
-        lines.append(f"  {item['id']}: {item['outcome']} ({phases or 'no phase evidence'})")
-        for phase in item['phases'].values():
-            if phase['diagnostic']:
-                lines.append(f"    {phase['phase']}: {phase['diagnostic']}")
-        suffix = item['id'].split('::', 1)[1]
-        if (directory / 'artifacts' / suffix).is_dir():
-            lines.append(f'    Native evidence: artifacts/{suffix}/; phases.jsonl; pytest.txt')
-        else:
-            lines.append('    No native variant observation; see shared prerequisite/finalizer diagnosis and operations.jsonl for any setup commands.')
     baseline = directory / 'artifacts/baseline.json'
-    if baseline.exists() and not read(baseline)['ok']:
-        lines.append('SHARED BASELINE: artifacts/baseline.json; production observation retained. Dependent setup failures did not run their bodies or submit mutations.')
+    bad_baseline = baseline.exists() and not read(baseline)['ok']
+    if bad_baseline:
+        lines.append('SHARED BASELINE: ' + read(baseline)['error'] + '; artifacts/baseline.json. Production observation retained; dependent setup failures did not run their bodies or submit mutations.')
     integrity = directory / 'artifacts/input-integrity.json'
     if integrity.exists() and not read(integrity)['ok']:
         lines.append('SHARED SESSION FINALIZER: input integrity uncertain for all family items; pytest attaches this to the last item teardown. Body outcomes survive; inspect each retained sources.json and input-integrity.json for applicability.')
@@ -222,6 +212,21 @@ def display(directory, family):
         lines.append('SHARED SESSION FINALIZER: ' + record['fixture'] + '; ' + record['scope'] + '; attached to last item teardown. ' + ('Cleanup failure after observations; recorded body outcomes and native assertions remain readable.' if record['kind'] == 'cleanup' else 'Input integrity uncertain; inspect per-variant source receipts.') + ' See artifacts/session-finalizer.json.')
     if not read(directory / 'ownership.json')['closed']:
         lines.append('OWNERSHIP UNRESOLVED: complete native observations remain readable; this is not a claim that their assertions failed. See ownership.json and the public recovery command.')
+    for item in family['items']:
+        phases = ', '.join(f'{k}={v["outcome"]}' for k,v in item['phases'].items())
+        lines.append(f"  {item['id']}: {item['outcome']} ({phases or 'no phase evidence'})")
+        suffix = item['id'].split('::', 1)[1]
+        for phase in item['phases'].values():
+            if not phase['diagnostic']:
+                continue
+            if bad_baseline and suffix != 'production' and phase['phase'] == 'setup' and 'call' not in item['phases'] and 'shared production baseline unavailable:' in phase['diagnostic']:
+                lines.append('    setup blocked by shared baseline; body not run. Full diagnostic: phases.jsonl; pytest.txt')
+            else:
+                lines.append(f"    {phase['phase']}: {phase['diagnostic']}")
+        if (directory / 'artifacts' / suffix).is_dir():
+            lines.append(f'    Native evidence: artifacts/{suffix}/; phases.jsonl; pytest.txt')
+        else:
+            lines.append('    No native variant observation; see shared prerequisite/finalizer diagnosis and operations.jsonl for any setup commands.')
     lines.extend('ACCOUNT: ' + e for e in family['errors'])
     lines.append('Ownership: ownership.json; command receipts: operations.jsonl; manifest: selection.json')
     text = '\n'.join(lines) + '\n'
