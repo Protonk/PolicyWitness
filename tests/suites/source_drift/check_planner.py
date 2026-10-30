@@ -1294,6 +1294,14 @@ def isolation_controls(out):
 
 def host_invariance_controls(out):
     """Controls distinguish native use from schema, prose and unrelated APIs; they test the rule, once per case."""
+    # These expectations come from the host boundary, independently of the
+    # checker's symbol set. An omitted API must leave a failing control.
+    required_symbols = (
+        'sandbox_check', 'sandbox_apply', 'sandbox_compile_string',
+        'sandbox_create_params', 'sandbox_set_param', 'sandbox_free_params',
+        'sandbox_free_profile', 'sandbox_free_error',
+        'sandbox_extension_issue_file', 'sandbox_extension_consume', 'sandbox_extension_release',
+    )
     accepted = [
         'let name = "sandbox_check(pid) and dlopen(x) are examples"',
         '// sandbox_apply(p)\n/* outer /* sandbox_free_error(e) */ dlsym(h, "sandbox_check") */',
@@ -1306,9 +1314,12 @@ def host_invariance_controls(out):
         'let name: String = "malloc"\nlet f = dlsym(h, name)',
         '@_silgen_name("posix_spawn") func spawn() -> Int32',
         'let example = #"dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW)"#',
+        '// sandbox_extension_issue_file(value)\n/* sandbox_extension_consume(value) */',
+        'let example = "sandbox_extension_release(value)"',
+        'var sandbox_extension_consume: String\nenum CodingKeys { case sandbox_extension_release }',
     ]
     rejected = []
-    for name in sorted(check.HOST_SANDBOX_SYMBOLS):
+    for name in required_symbols:
         rejected += [
             f'{name}(value)',
             f'int {name}(void *value);',

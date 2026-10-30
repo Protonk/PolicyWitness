@@ -107,3 +107,20 @@ with independent rejected/restoration controls, no sleep/skips/unrun/errors.
 Primary review accepts the bounded final citation corrections and their current
 applicability. F1 and the separate required BYOXPC failure remain unresolved;
 this does not grant final D2/workset retirement or runtime acceptance.
+
+## Authorized F1 correction
+
+At source `69731d20`, the user accepted preserving the host boundary and fixing
+both the missing symbol coverage and the dependent test expectations. The
+scope is the three extension APIs already promised by the source check,
+independently authored expectations for all eleven APIs, omission controls,
+and precise documentation of literal-form coverage. No runtime or schema
+change is required. The original inherited finding remains unchanged.
+
+First replace the checker-derived test list with independently authored API
+names and retain accepted extension comments, strings and schema properties.
+Run that candidate against the unchanged checker to establish the missing
+rejections through the dispatcher. Then add the missing symbols, exercise
+omission sensitivity and source-scope controls, and rerun affected checks.
+Acceptance and D2/workset retirement await those observations and final reuse
+review; no counterfactual evaluation or pytest trial is authorized here.

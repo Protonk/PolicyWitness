@@ -1,5 +1,11 @@
 # Workset checkpoint
 
+F1 continuation: the user has now authorized the proposed source-check and
+independent-control repair. The checker is still unchanged while the first
+candidate adds independent expectations to reproduce its missing rejections.
+Complete the bounded correction, verification and final D2/workset retirement.
+The accepted runtime/refactor evidence below remains unchanged.
+
 Current state: F2's authorized reservation repair, Swift Stage 2 and the combined
 C/Swift refactor stage are accepted. Final test source is `8500baff`; production
 source `4407d0ae` is signed v0.3.3 build 1016. The required 229-case selection
