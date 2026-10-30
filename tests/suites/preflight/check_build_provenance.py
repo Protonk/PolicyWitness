@@ -1010,7 +1010,8 @@ class ShimContainmentTests(unittest.TestCase):
         root = self.work / 'checkout'
         for relative in ('build.sh', 'Makefile', 'tests/run.sh', 'tests/accept-release.sh', 'tests/suites/unit/run.sh',
                          'tests/lib/testlib.sh', 'tests/lib/python_start.sh', 'tests/lib/python.sh', 'tests/lib/sdk_guard.sh',
-                         'tests/lib/checkout_lock.sh', 'tests/lib/checkout_lock.py', 'Info.plist', 'PolicyWitness.entitlements',
+                         'tests/lib/checkout_lock.sh', 'tests/lib/checkout_lock.py',
+                         'tests/lib/pytest_resources.py', 'tests/lib/pytest_support.py', 'Info.plist', 'PolicyWitness.entitlements',
                          'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist'):
             target = root / relative
             target.parent.mkdir(parents=True, exist_ok=True)

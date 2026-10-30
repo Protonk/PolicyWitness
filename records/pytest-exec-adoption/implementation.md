@@ -202,3 +202,17 @@ of the filtered inherited environment; the owner checks it before launch and
 carries it into its receipt. Inherited values are not published. The existing
 native descriptor/capture control also observes cwd/locale and independently
 checks the recorded digest. This changes experimental accounting only.
+
+Source `bdb007a2`: pinned `pytest-exec-acceptance-05` passes the complete registered
+pytest integration controls and real F, including the final command-context
+identity and emitted diagnostic experience.
+
+Build continuation source `9cbed1b8` completed its five selected build sequences
+and all 202 default-battery cases. Exactly one failed: the SDK containment fixture
+in `preflight/build_provenance_controls` copied checkout_lock.py without its new
+shared registry helpers. The other 201 cases, including F, passed; the release
+reader correctly refused overall acceptance. `pytest-exec-build-continuation-01`
+is pinned in the verification worktree. Add the two helpers to that fixture's
+explicit input list, verify that existing case directly, then repeat only the
+remaining release-battery and mutation sequences on fixed candidate-derived
+source. No application or SDK oracle is changed.
