@@ -216,3 +216,16 @@ is pinned in the verification worktree. Add the two helpers to that fixture's
 explicit input list, verify that existing case directly, then repeat only the
 remaining release-battery and mutation sequences on fixed candidate-derived
 source. No application or SDK oracle is changed.
+
+The direct containment correction at `39c04284` passes all 68 existing provenance
+checks in pinned `pytest-exec-build-provenance-01`. Remaining build controls are
+observing fixed `cecfdeef` in the separate verification worktree.
+
+Final contract audit identified one ordinary candidate defect: the native bridge
+retained timeout/cancellation receipts, but returned their status to domain code
+without forcing a phase failure. A controlled command that emits the designated
+assertion text and then times out could therefore be credited as a rejection.
+Add that actual-family control first, retain its failing observation, then refuse
+timeout/cancellation in the equipment bridge after recording operation identity.
+This restores the planned native completion obligation; no accepted native oracle
+or production behavior changes.

@@ -1,6 +1,8 @@
 # Bounded pytest adoption: native exec evidence controls
 
-Status: implementation authorized in an isolated candidate worktree. Authorization
+Status: candidate integration implemented; final acceptance controls and evidence
+sealing are in progress. Implementation is authorized in the isolated candidate
+worktree. Authorization
 includes dependency provisioning, integration, controls, ordinary correction of
 defects introduced by this work, documentation/citation updates and the planned
 verification. The accepted checkout is not an integration target for this leg.

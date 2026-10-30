@@ -109,6 +109,16 @@ class Integration:
         root,out,run,family=self.fault('wrong-rejection',DOMAIN,"'slot->exec_leader_exit_observed = reaped == child;'","'slot->exec_group_rc = 42;'")
         require('outside its designated oracle' in family['items'][1]['phases']['call']['diagnostic'],'wrong rejection credited')
         self.note('wrong native rejection remains a failed control',output=str(out))
+        # Matching assertion text is insufficient when PW had to stop the command.
+        before="        run = self.equipment.command([str(output)], directory / 'run', 20)"
+        native="import sys,time;print('Assertion failed: slot->exec_leader_exit_observed == leader',file=sys.stderr,flush=True);time.sleep(60)"
+        after="        if name == 'collection_from_final_reap':\n            import sys\n            run = self.equipment.command([sys.executable,'-B','-S','-P','-c',"+repr(native)+"], directory / 'run', .2)\n        else:\n    "+before
+        root,out,run,family=self.fault('timed-out-rejection',DOMAIN,before,after)
+        require('timed out' in family['items'][1]['phases']['call']['diagnostic'],'timed-out rejection credited')
+        receipt=read(out/'suites'/F/'artifacts/collection_from_final_reap/run/command.json')
+        require(receipt['timed_out'] and receipt['returncode']!=0,'timeout control did not actually stop the native command')
+        require('Assertion failed: slot->exec_leader_exit_observed == leader' in (out/'suites'/F/'artifacts/collection_from_final_reap/run/stderr').read_text(),'expected-text stimulus missing')
+        self.note('matching rejection text cannot conceal a timed-out command',output=str(out))
         root=self.fixture('baseline');golden=root/'tests/fixtures/worker_lifecycle/exec_call_policy.json';v=read(golden);v['attempts'][0]['sha256']='0'*64;write(golden,v)
         out,run=self.run(root,expected=1);family=read(out/'suites'/F/'family.json')
         require(family['items'][0]['phases']['call']['outcome']=='failed','baseline body failure missing')
