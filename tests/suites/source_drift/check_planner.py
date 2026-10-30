@@ -277,6 +277,11 @@ def host_scenarios(repo):
          'const char *symbol = "sandbox_check"; void *f = dlsym(handle, symbol);', ['host.native_use']),
         ('shim-explanatory-string', shim, shim_original, 'const char *example = "sandbox_check(pid)";', []),
     ]
+    for name in ('sandbox_extension_issue_file', 'sandbox_extension_consume', 'sandbox_extension_release'):
+        rows += [
+            (f'host-{name}', HOST, original, f'@_silgen_name("{name}") func native() -> Int32', ['host.native_use']),
+            (f'shim-{name}', shim, shim_original, f'void forbidden(void) {{ {name}(0); }}', ['host.native_use']),
+        ]
     return [Scenario(name, {path: source + '\n' + snippet + '\n'}, {HOSTS: keys}, native if keys else None)
             for name, path, source, snippet, keys in rows]
 
@@ -1318,38 +1323,71 @@ def host_invariance_controls(out):
         'let example = "sandbox_extension_release(value)"',
         'var sandbox_extension_consume: String\nenum CodingKeys { case sandbox_extension_release }',
     ]
-    rejected = []
+    native_uses = {}
     for name in required_symbols:
-        rejected += [
+        native_uses[name] = [
             f'{name}(value)',
             f'int {name}(void *value);',
             f'@_silgen_name("{name}") func native() -> Int32',
+            f'@_silgen_name(#"{name}"#) func native() -> Int32',
+            f'extern int native(void) __asm__("{name}");',
             f'let f = dlsym(handle, "{name}")',
             f'let symbol: String = "{name}"\nlet f = dlsym(handle, symbol)',
             f'const char *symbol = "{name}"; void *f = dlsym(handle, symbol);',
             f'#define SYMBOL "{name}"\nvoid *f = dlsym(handle, SYMBOL);',
         ]
-    rejected += [
+    rejected = [snippet for uses in native_uses.values() for snippet in uses] + [
         'let h = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW)',
         'let library = "/usr/lib/libsandbox.1.dylib"\nlet h = dlopen(library, RTLD_NOW)',
         'const char *library = "/usr/lib/libsandbox.dylib"; void *h = dlopen(library, RTLD_NOW);',
-        '@_silgen_name(#"sandbox_check"#) func native() -> Int32',
-        'extern int native(void) __asm__("sandbox_check");',
     ]
-    problems = []
-    outcomes = []
-    for expected, snippets in ((False, accepted), (True, rejected)):
-        for snippet in snippets:
-            found = check.host_invariance_problems('control', snippet)
-            outcomes.append(dict(snippet=snippet, expected_rejection=expected, records=[p.message for p in found]))
-            if bool(found) != expected:
-                problems.append(f'expected rejection={expected}: {snippet!r}: {found}')
+
+    def observe():
+        outcomes, problems = [], []
+        for expected, snippets in ((False, accepted), (True, rejected)):
+            for snippet in snippets:
+                found = check.host_invariance_problems('control', snippet)
+                keys = [p.key for p in found]
+                expected_keys = ['host.native_use'] if expected else []
+                outcomes.append(dict(snippet=snippet, expected_rejection=expected, keys=keys,
+                                     records=[p.message for p in found]))
+                if keys != expected_keys:
+                    problems.append(snippet)
+        return outcomes, problems
+
+    outcomes, problems = observe()
     record = dict(scenario='host-invariance-controls', mode='in-process', accepted=len(accepted), rejected=len(rejected),
                   outcomes=outcomes, problems=problems)
     (out / 'host-invariance-controls.json').write_text(json.dumps(record, indent=2) + '\n')
     if problems:
         raise AssertionError('host invariance controls: ' + '; '.join(problems))
-    return [dict(scenario='host-invariance-controls', mode='in-process')]
+
+    # Remove each promised name from the real rule's set in turn. The fixed
+    # test-side examples must detect exactly that omission, with no parser
+    # failure or loss of unrelated rejections. Always restore module state.
+    original = check.HOST_SANDBOX_SYMBOLS
+    omissions, sensitivity_problems = [], []
+    try:
+        for name in required_symbols:
+            check.HOST_SANDBOX_SYMBOLS = original - {name}
+            observed, missed = observe()
+            omitted = [row for row in observed if row['snippet'] in native_uses[name]]
+            detected = missed == native_uses[name] and all(not row['records'] for row in omitted)
+            omissions.append(dict(removed=name, detected=detected, missed=missed, outcomes=observed))
+            if not detected:
+                sensitivity_problems.append(f'omission of {name} did not produce exactly its missing rejections')
+    finally:
+        check.HOST_SANDBOX_SYMBOLS = original
+    restored, restored_problems = observe()
+    if restored != outcomes or restored_problems:
+        sensitivity_problems.append('restoring the symbol set did not restore the complete baseline')
+    (out / 'host-symbol-omissions.json').write_text(json.dumps(dict(
+        omissions=omissions, restored=restored == outcomes and not restored_problems,
+        problems=sensitivity_problems), indent=2) + '\n')
+    if sensitivity_problems:
+        raise AssertionError('host symbol omission controls: ' + '; '.join(sensitivity_problems))
+    return [dict(scenario='host-invariance-controls', mode='in-process'),
+            dict(scenario='host-symbol-omissions', mode='in-process')]
 
 
 if __name__ == '__main__':

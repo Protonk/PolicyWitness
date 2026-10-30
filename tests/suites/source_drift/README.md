@@ -59,14 +59,19 @@ The host-source check covers Swift and C sources and headers under
 `runner/Sources/`. It rejects direct calls/declarations and string-named
 bindings to `sandbox_check`, `sandbox_apply`, `sandbox_compile_string`,
 `sandbox_create_params`, `sandbox_set_param`, `sandbox_free_params`,
-`sandbox_free_profile`, `sandbox_free_error` and the native extension
-issue/consume/release functions. It also rejects `dlsym` of
+`sandbox_free_profile`, `sandbox_free_error`, `sandbox_extension_issue_file`,
+`sandbox_extension_consume` and `sandbox_extension_release`. It also rejects `dlsym` of
 those symbols and `dlopen` of literal libsandbox paths, including simple named
 constants. Schema properties, comments, explanatory strings, unrelated dynamic
-loads and C calling conventions are accepted. Controls exercise both groups.
+loads and C calling conventions are accepted. Controls exercise both groups
+using an independently authored list of required APIs. Each required symbol is
+removed from the rule's set in turn: its native-use examples must lose their
+rejections, unrelated cases must retain their results, and restoration must
+restore the complete baseline. File mutations also place each extension API
+in the Swift host and C shim to exercise source-scope discovery.
 Computed library/symbol names and complete Swift/C analysis are outside this
 check. The companion [artifact check](../preflight/README.md) inspects the
-shipped host's undefined symbols; the production C worker and validator retain
+shipped host's undefined symbols; the production C worker, validator and issuer retain
 their sandbox API calls outside this source scope. Both checks look at symbols
 and literal lookup forms rather than file paths because libsandbox is resident
 in the dyld shared cache on a current macOS install: none of

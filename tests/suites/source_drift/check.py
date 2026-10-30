@@ -769,9 +769,10 @@ def check_prediction_unavailable_agreement(tree: repository_tree.Tree) -> list[P
 # Host invariance: the XPC host source never names the native sandbox API.
 #
 # The host must not link, load or call libsandbox. Every native sandbox
-# operation belongs to the worker (pw-probe-runner) or the validator
-# (sb_api_validator). The host joins their observations without executing
-# either child's sandbox API work. The companion binary check is
+# operation belongs to the worker (pw-probe-runner), validator
+# (sb_api_validator), or extension issuer (pw-extension-issuer). The host
+# joins their observations without executing their sandbox API work. The
+# companion binary check is
 # tests/lib/artifact.py (`nm -u` on the shipped PWRunner).
 # ---------------------------------------------------------------------------
 
@@ -781,6 +782,7 @@ HOST_SANDBOX_SYMBOLS = frozenset({
     'sandbox_check', 'sandbox_apply', 'sandbox_compile_string',
     'sandbox_create_params', 'sandbox_set_param', 'sandbox_free_params',
     'sandbox_free_profile', 'sandbox_free_error',
+    'sandbox_extension_issue_file', 'sandbox_extension_consume', 'sandbox_extension_release',
 })
 
 

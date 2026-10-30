@@ -124,3 +124,20 @@ rejections through the dispatcher. Then add the missing symbols, exercise
 omission sensitivity and source-scope controls, and rerun affected checks.
 Acceptance and D2/workset retirement await those observations and final reuse
 review; no counterfactual evaluation or pytest trial is authorized here.
+
+The independent-expectations candidate `55116788` fails exactly as expected in
+`workset-f1-red-01`, run `20261030T024703Z_892e823d`: all 21 extension examples
+(seven forms for each of the three APIs) lack rejection. The 14 accepted
+examples and the existing API/library rejections retain their expected results.
+The sole case fails, with its corresponding suite-exit error; no sleep, skips
+or unrun cases occur. This is retained checker evidence, not a production host
+violation. The run and console are pinned with their actual source identity.
+
+The correction adds the three names to the real rule, explicitly names them
+in the suite account, and includes the issuer in its source-boundary explanation.
+Independent examples now cover raw-string and C asm bindings for every required
+API. In-process omission controls remove each of the eleven names in turn and
+require exactly its examples to lose rejection, with complete restoration.
+Six file mutations also place the extension bindings/calls in the Swift host
+and C shim. The checker/parser, source scope, artifact checker, runtime sources
+and schemas otherwise remain unchanged. Passing dispatcher verification is next.

@@ -233,6 +233,13 @@
       "reason": "Accepted Swift plan retirement: source/structure, generator and prose-link controls pass; no implementation changes or repeated live-test claim.",
       "source": "5642c45243fd34e8cf48c11c4113364667f1ec05",
       "app_inventory": null
+    },
+    {
+      "path": "runs/workset-f1-red-01",
+      "run_id": "20261030T024703Z_892e823d",
+      "reason": "F1 expected regression failure: independently authored expectations expose all 21 missing extension API rejections in the unchanged checker; accepted and existing rejected controls remain correct. No product runtime failure is claimed.",
+      "source": "55116788c3d25b782008eb98388e3477284d2461",
+      "app_inventory": null
     }
   ]
 }
