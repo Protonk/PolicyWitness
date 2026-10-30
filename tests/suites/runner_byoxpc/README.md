@@ -22,6 +22,7 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 - `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`
 - `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh`
 - `tests/suites/runner_byoxpc/opt_in/single_use.sh`
+- `tests/suites/runner_byoxpc/opt_in/retirement_observations.sh`
 - `tests/suites/runner_byoxpc/opt_in/default_location.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh`
@@ -91,6 +92,37 @@ establish state transitions; the opt-in case supplies actual launchd evidence.
 host. A concurrent public request records that same generation's refusal, waits
 for observed retirement, then succeeds on a fresh generation. Append-only effects
 establish one execution per successful request and none for the raw refusal.
+
+`retirement_observations` is a bounded experiment, not a service reliability
+acceptance control. It makes 48 public CLI requests with an ordinary allow-default
+policy and empty probe plan: twelve each at predeclared minimum inter-call gaps
+of 0, 10, 30 and 60 milliseconds, in that order. Each request has a 5000-millisecond
+client timeout and a separate 15-second capture watchdog. The harness never
+retries a request or waits for host retirement between calls; production
+acquisition records remain in each envelope. Inputs are prepared before the
+sequence and replies validated afterward. A blocking child wait avoids timeout
+polling between calls; receipts retain actual start/completion times and gaps,
+including capture and scheduling overhead.
+
+The case requires GUI launchd and matching signing equipment and remains opt-in
+because it observes live timing and Unified Logging. ProcessWatch is the only
+full-process scanner. A separate observer queries sampled generations directly;
+ESRCH or an observed different start time establishes the earlier generation's
+absence. Unseen samples and missed short-lived processes do not establish exit.
+A bounded post-sequence observation retains direct exits for every seen
+generation before session cleanup. Missing exits, invalid envelopes, interrupted
+logging or watchdog intervention make the experiment incomplete. Runner outcomes
+are counted separately, including `ok`, `already_ran`, `xpc_error` and
+`xpc_timeout`, without a required success ratio or causal interpretation.
+
+`retirement/` retains every request and raw capture, per-request observations,
+the selected app's provenance/inventory and case sources, generation samples and
+direct exit receipts, the narrowly filtered unified-log stream, and a summary
+even after an exception. Log attachment is asynchronous; no initial delay or
+complete-event-coverage claim is made. A pass means the observation completed
+with valid accounting and verified removal of the one owned session. It does
+not establish BYOXPC reliability. Select a baseline or candidate with `PW_APP_DIR`
+and use separate output directories to run the identical case against each app.
 
 `bad_neighbor_claims` is the coexistence acceptance control. Schedule A spaces
 requests and requires zero re-acquisitions. Public back-to-back (B), foreign-held

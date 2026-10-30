@@ -644,6 +644,36 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   `processes.json` (sampled generations), `unified-log.ndjson`,
   `checker-controls.json` and `summary.json`.
 
+### BYOXPC retirement observations
+
+- **Case:** `runner_byoxpc/retirement_observations`
+- **Location:** `tests/suites/runner_byoxpc/opt_in/retirement_observations.sh`
+- **Purpose:** Observe 48 ordinary allow-default empty-plan requests through the
+  public CLI, twelve at each minimum inter-call gap of 0, 10, 30 and 60
+  milliseconds. Record each outcome separately; there is no required success
+  ratio, retry or inferred cause. A pass means completed observation, not BYOXPC
+  reliability acceptance.
+- **When to run:** Investigating request/retirement timing or comparing the same
+  observation against selected baseline and candidate apps via `PW_APP_DIR`.
+- **Equipment:** Signed app, matching Developer ID, GUI launchd session and
+  Unified Logging access. Live timing and logging make this case opt-in.
+- **Bounds:** Each public request has a 5000-millisecond timeout; a separate
+  capture watchdog allows 15 seconds. After the sequence, allow at most ten
+  seconds to observe exits of sampled generations. This never gates or retries
+  a request. Actual gaps include scheduling/capture overhead. Unseen generations
+  are not exits, and asynchronous log attachment can miss early events.
+- **Ownership:** Shared session helper; only its exact service/plist/registry is
+  removed, with verified removal and unchanged source-app inventory before
+  staging deletion. A harness failure preserves observational evidence first.
+- **Artifacts:** `retirement/` holds all 48 prepared inputs/captures, request
+  observations, source/app identities, process samples/direct exit receipts,
+  raw unified log, observational receipts and summary, including on exceptions.
+
+```sh
+PW_APP_DIR=/path/to/baseline.app PW_TEST_OUT_DIR=tests/out/runs/retirement-baseline tests/run.sh --case runner_byoxpc/retirement_observations
+PW_APP_DIR=/path/to/candidate.app PW_TEST_OUT_DIR=tests/out/runs/retirement-candidate tests/run.sh --case runner_byoxpc/retirement_observations
+```
+
 ### Native sandbox extensions
 
 - **Cases:** `sandbox_extensions_native/feasibility` and

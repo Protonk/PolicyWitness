@@ -196,6 +196,13 @@ shared deadlines and preservation of the admitted client's time span.
 `runner_byoxpc/default_location` keeps default registry/plist resolution live;
 `shell_helpers/byoxpc_setup` checks private registry routing and durable cleanup.
 
+`runner_byoxpc/retirement_observations` separately records 48 ordinary empty-plan
+requests at predeclared gaps, every public envelope, sampled host/worker
+generations, direct observed exits and Unified Logging. It counts successful,
+refused and XPC-failed outcomes without interpreting cause. Passing establishes
+complete observational accounting and owned cleanup, not BYOXPC reliability or
+a replacement for the acceptance controls above.
+
 ## Worker resource challenge observations
 
 The opt-in `runner_exec_lifecycle/closed_streams_leader_exit` case combines

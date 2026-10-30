@@ -371,7 +371,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `runner_c_worker_harness` | Baseline + opt-in | Direct worker application, shared-memory publication, release barrier, refusal, policy delivery acknowledgement, exec-resource/budget controls and a first-touch publication control with pre-touched sensitivity controls. Separate deterministic clock, proceed, exec and sysctl controls compile production worker code with controlled time or native calls. The opt-in case observes the continuous clock natively under deny-default profiles. | App, embedded worker and clang; the opt-in case also reads unified logging. | [Suite](suites/runner_c_worker_harness/README.md) |
 | `runner_use_c_worker` | Baseline | CLI-to-worker evidence, request refusals, timeout with completed effects, query planning and exec arguments/streams. | App and XPC. | [Suite](suites/runner_use_c_worker/README.md) |
 | `runner_mach_service_liveness` | Baseline | Direct Mach-service host launch stays alive; does not establish that it services a connection. | App. | [Suite](suites/runner_mach_service_liveness/README.md) |
-| `runner_byoxpc` | Opt-in | Owned external-runner installation, shared smoke/blackbox contracts, authentication, entitlements and registry recovery. Cleanup verifies removal. | App, GUI launchd session and matching signing identity for installation. | [Suite](suites/runner_byoxpc/README.md) |
+| `runner_byoxpc` | Opt-in | Owned external-runner installation, shared smoke/blackbox contracts, authentication, entitlements and registry recovery; bounded retirement observations separately report outcomes without a reliability acceptance claim. Cleanup verifies removal. | App, GUI launchd session and matching signing identity for installation. | [Suite](suites/runner_byoxpc/README.md) |
 | `smoke` | Baseline + opt-in | Built-app contract versions, build stamp and ordinary specimens; opt-in caller-auth checks use identical-client controls and independent effects. | App and XPC; whole-suite selection also needs a matching signing identity. | [Suite](suites/smoke/README.md) |
 | `blackbox_e2e` | Baseline | Complete correlated envelopes and separate prediction/attempt assertions; independent checker and build-comparison controls. | App/XPC for live cases; controls have separate equipment. | [Suite](suites/blackbox_e2e/README.md) |
 | `blackbox_menagerie` | Baseline | Local PAWL policy fixtures, evidence correlation and annotated canonicalization mismatches; checker controls run independently. | App/XPC for live cases; Python for validation controls. | [Suite](suites/blackbox_menagerie/README.md) |
@@ -549,6 +549,8 @@ The [dispatcher suite](suites/dispatcher/README.md) documents the independent co
 BYOXPC sessions use durable private registries. The opt-in
 `runner_byoxpc/default_location` case alone exercises the shared default registry;
 `bad_neighbor_claims` and `single_use` establish re-acquisition under contention.
+`retirement_observations` records a fixed ordinary-request sequence and sampled
+generation exits; its pass means completed observation, not reliable acquisition.
 
 ## Comparing native builds
 
