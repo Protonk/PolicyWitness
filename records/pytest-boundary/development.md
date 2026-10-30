@@ -85,3 +85,10 @@ and the run failed closed, a truncated final frame would erase the machine
 account's earlier completed status. An independently constructed truncation
 control is added before correcting the reader. This extends reporting-failure
 coverage; it does not start another architectural or adaptation experiment.
+
+`0d3af494` / `pytest-boundary-journal-red-01` rejected the existing reader with
+`truncated tail discarded a completed item`, after the previous ten accounting
+inputs passed. The correction accumulates decoded frames as they are read;
+on a parse failure it retains the preceding frames, adds the journal error and
+leaves later items incomplete. Raw evidence is never rewritten. Valid journals
+take the same per-line JSON decoding and unchanged account policy.

@@ -331,6 +331,13 @@
       "source": "fec0e1811d21ce718bd007bbc0a1498b2f558c2f",
       "app_inventory": null,
       "reason": "Exposed C extraction replay: adapted adapter, native ledger and independent rejection observations."
+    },
+    {
+      "path": "runs/pytest-boundary-journal-red-01",
+      "run_id": "pytest-boundary-journal-red-01",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "0d3af494f7c4e1177523c2622711f83b51897120",
+      "app_inventory": null
     }
   ]
 }

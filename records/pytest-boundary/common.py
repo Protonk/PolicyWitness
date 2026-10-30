@@ -31,9 +31,9 @@ def read(path):
 
 
 def rows(path):
-    if not Path(path).exists():
-        return []
-    return [json.loads(line) for line in Path(path).read_text().splitlines()]
+    if Path(path).exists():
+        for line in Path(path).read_text().splitlines():
+            yield json.loads(line)
 
 
 def account(selection, events, engine_code, resources):
@@ -75,11 +75,11 @@ def account(selection, events, engine_code, resources):
 
 def finish(out, engine_code, *, recovery=False):
     owner, plan = read(out / 'owner.json'), read(out / 'plan.json')
-    parse_errors = []
+    parse_errors, events = [], []
     try:
-        events = rows(out / 'reports.jsonl')
+        for event in rows(out / 'reports.jsonl'):
+            events.append(event)
     except (ValueError, OSError) as exc:
-        events = []
         parse_errors.append('unreadable_journal:' + str(exc))
     resources = [read(p) for p in sorted((out / 'resources').glob('*/record.json'))]
     results, errors = account([c['id'] for c in plan['cases']], events, engine_code, resources)
