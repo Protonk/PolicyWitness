@@ -7,7 +7,13 @@ from exec_domain import FAMILY, MUTATIONS, OWNERS, Observation
 def observation(pw_equipment):
     value = Observation(pw_equipment)
     yield value
-    value.finish()
+    try:
+        value.finish()
+    except BaseException as exc:
+        pw_equipment.publish('session-finalizer.json', dict(fixture='observation', scope='all family items',
+            attached_to='last item teardown', error=str(exc),
+            kind='input-integrity' if 'shared input integrity' in str(exc) else 'cleanup'))
+        raise
 
 
 @pytest.fixture

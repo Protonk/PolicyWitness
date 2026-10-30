@@ -55,3 +55,11 @@ loop. The canonical parser remains importable. Shared build admission, pruning,
 release acceptance and portable readers now use the ownership/evidence contract.
 New current documentation describes the public command and recovery operations.
 The next observations test this integrated route; they are not acceptance yet.
+
+Source `b1f697e1`: `pytest-exec-normal-01` is the first public candidate F run.
+Nine complete passing items, unchanged 58-attempt ledger, 16 settled commands,
+and unchanged accepted app inspection are retained. Diagnostic/negative controls
+now run actual family source in explicitly isolated fixture checkouts; their
+catalog omits app equipment only for native/reporting interventions. This does
+not change F's production catalog admission. Normal accepted-app verification
+and existing selection/artifact controls cover that separate boundary.

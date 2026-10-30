@@ -90,7 +90,7 @@ class Controls:
         contract = dict(profile=execution_contract.PROFILE, source={'fixture':'independent expected producer'}, selected=selected, required_families=[family])
         contract['identity'] = value_digest(contract)
         selection = dict(items=[dict(id=family+'::one')])
-        account = dict(manifest_digest=value_digest(selection), items=[dict(id=family+'::one', outcome='passed')],
+        account = dict(manifest_digest=value_digest(selection), items=[dict(id=family+'::one', outcome='passed', phases={p:dict(outcome='passed',operations=['op']) for p in ('setup','call','teardown')})],
                        accounting_state='complete', ok=True, operations=['op'])
         command = dict(operation_id='op', state='closed', token='bound', command_pid=10,
                        settlement=dict(token='bound', authority_revoked=True, group_absent=True, command_pid=10, returncode=0))
@@ -173,3 +173,5 @@ if __name__ == '__main__':
     control.ownership()
     control.contract()
     control.detached()
+    from pytest_integration import Integration
+    Integration(control.out, control.note).all()

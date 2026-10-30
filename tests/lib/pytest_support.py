@@ -64,8 +64,9 @@ def append(path, value):
 def rows(path):
     # Yield each decoded record: a broken tail must not discard the valid prefix.
     if Path(path).exists():
-        for line in Path(path).read_text().splitlines():
-            yield json.loads(line)
+        with Path(path).open('rb') as stream:
+            for line in stream:
+                yield json.loads(line)
 
 
 def contained(base, path):

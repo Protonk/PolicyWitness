@@ -47,6 +47,17 @@ def validate_family(family, ownership, selection):
     if (family.get('accounting_state') != 'complete' or family.get('ok') is not True or
             any(i.get('outcome') != 'passed' for i in items)):
         errors.append('family did not complete successfully')
+    referenced = set()
+    for item in items:
+        phases = item.get('phases', {})
+        if set(phases) != {'setup', 'call', 'teardown'} or any(p.get('outcome') != 'passed' for p in phases.values()):
+            errors.append('missing or unsuccessful item phases')
+        item_operations = {op for phase in phases.values() for op in phase.get('operations', [])}
+        if not item_operations:
+            errors.append('native item has no command observation')
+        referenced |= item_operations
+    if referenced != set(family.get('operations', [])):
+        errors.append('item command references differ from declared operation set')
     if ownership.get('closed') is not True or ownership.get('problems'):
         errors.append('ownership not closed')
     commands = ownership.get('commands')

@@ -208,6 +208,10 @@ def display(directory, family):
     integrity = directory / 'artifacts/input-integrity.json'
     if integrity.exists() and not read(integrity)['ok']:
         lines.append('SHARED SESSION FINALIZER: input integrity uncertain for all family items; pytest attaches this to the last item teardown. Body outcomes survive; inspect each retained sources.json and input-integrity.json for applicability.')
+    finalizer = directory / 'artifacts/session-finalizer.json'
+    if finalizer.exists():
+        record = read(finalizer)
+        lines.append('SHARED SESSION FINALIZER: ' + record['fixture'] + '; ' + record['scope'] + '; attached to last item teardown. ' + ('Cleanup failure after observations; recorded body outcomes and native assertions remain readable.' if record['kind'] == 'cleanup' else 'Input integrity uncertain; inspect per-variant source receipts.') + ' See artifacts/session-finalizer.json.')
     if not read(directory / 'ownership.json')['closed']:
         lines.append('OWNERSHIP UNRESOLVED: complete native observations remain readable; this is not a claim that their assertions failed. See ownership.json and the public recovery command.')
     lines.extend('ACCOUNT: ' + e for e in family['errors'])
