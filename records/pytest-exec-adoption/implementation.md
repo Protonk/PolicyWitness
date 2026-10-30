@@ -261,3 +261,11 @@ authored missing-token pair. The correction requires a nonempty token, a positiv
 command PID for launched settlement, and no contradictory command/return fields
 for never-launched settlement. Existing valid historical receipts retain their
 meaning. Final controls cover these deletions alongside the actual crash windows.
+
+Source `79dc6fbe`: pinned `pytest-exec-acceptance-08` passes all five selections:
+real F, the complete independent integration matrix, release acceptance, release
+publication and interrupted rotation controls. Closure rejects absent token/PID
+bindings and contradictory never-launched claims; historical valid receipts still
+verify. The final native/runtime source is now fixed. The separate `cecfdeef`
+build continuation has passed its real 202-case default battery with no skip,
+unrun or harness errors; its 16 existing build mutation controls are finishing.
