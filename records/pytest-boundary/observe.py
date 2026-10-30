@@ -201,6 +201,10 @@ def exercise(root, name, mode=None, equipment=HERE):
             require(not starts, 'body or fixture started before eligibility')
             require(process.returncode == 0 if name == 'preview' else process.returncode != 0, 'wrong publication result')
             require(not (out / 'run.json').exists(), 'publication failure/preview invented terminal result')
+            if name == 'preview':
+                listing = (work / 'stdout').read_text()
+                require('test_completed' in listing and 'test_queued' in listing and 'test_active' not in listing,
+                        'preview did not describe pytest selection')
             if name in ('existing', 'retained'):
                 require(snapshot(out) == before, 'refusal changed existing evidence')
         elif name == 'dropped_lock':
@@ -236,6 +240,8 @@ def exercise(root, name, mode=None, equipment=HERE):
                 require(starts == expected, 'independent start receipts differ: ' + repr(starts))
                 cases = run['case_results']
                 require(len(cases) == 3 and cases[0]['status'] == 'pass', 'completed obligation lost')
+                require([c['id'].split('::')[-1] for c in cases] == ['test_completed','test_active','test_queued'],
+                        'selection accounting identities differ')
                 active_reports = [r for r in reports if r.get('nodeid','').endswith('::test_active') and r['kind']=='report']
                 if name == 'setup_failure':
                     require([(r['when'],r['outcome']) for r in active_reports] == [('setup','failed'),('teardown','passed')], 'partial setup accounting')
@@ -254,6 +260,8 @@ def exercise(root, name, mode=None, equipment=HERE):
         observation['exited_before_safety_cleanup'] = sorted(tree.exits())
         (work / 'observation.json').write_text(json.dumps(observation, indent=2)+'\n')
         tree.close()
+        observation['exited_after_safety_cleanup'] = sorted(tree.exited)
+        (work / 'observation.json').write_text(json.dumps(observation, indent=2)+'\n')
         if process is not None and process.poll() is None:
             os.killpg(process.pid, signal.SIGKILL)
             process.wait(timeout=5)
@@ -272,11 +280,17 @@ def accounting(root):
     events += [dict(kind='session_finish', exitstatus=0)]
     changes = dict(valid=lambda x:x, missing=lambda x:x[:2]+x[3:], duplicate=lambda x:x[:3]+[x[2]]+x[3:],
                    unexpected=lambda x:x+[dict(kind='start',nodeid='other/c')],
-                   reordered=lambda x:x[4:8]+x[:4]+x[8:], missing_finish=lambda x:x[:-1])
+                   reordered=lambda x:x[4:8]+x[:4]+x[8:], missing_finish=lambda x:x[:-1],
+                   invalid_outcome=lambda x:[dict(e,outcome='forgotten') if e.get('when')=='call' else e for e in x],
+                   unexpected_skip=lambda x:[dict(e,outcome='skipped') if e.get('when')=='call' else e for e in x],
+                   unknown_event=lambda x:x+[dict(kind='unrecognized')],
+                   duplicated_selection=lambda x:x)
     for name, change in changes.items():
         work = root/'observations'/('accounting_'+name)
         work.mkdir(parents=True)
         data = dict(selection=selected, events=change(copy.deepcopy(events)), engine_code=0, resources=[])
+        if name == 'duplicated_selection':
+            data['selection'] = selected + [selected[0]]
         (work/'input.json').write_text(json.dumps(data,indent=2)+'\n')
         script = 'import json,sys;sys.path.insert(0,sys.argv[1]);from common import account;d=json.load(open(sys.argv[2]));r,e=account(**d);print(json.dumps(dict(results=r,errors=e,ok=not e and all(x["status"]=="pass" for x in r))))'
         result = subprocess.run([PYTHON,'-B','-I','-c',script,str(HERE),str(work/'input.json')],

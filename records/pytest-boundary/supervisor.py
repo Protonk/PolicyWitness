@@ -70,7 +70,13 @@ def main():
                     pass
             if not select.select([parent], [], [], 0.02)[0]:
                 continue
-            message = json.loads(parent.recv(65536))
+            try:
+                message = json.loads(parent.recv(65536))
+            except ConnectionResetError:
+                # A normal engine exit can make the datagram peer readable
+                # before poll() observes it. Reap before resource finalization.
+                engine.wait(timeout=5)
+                break
             try:
                 if message['op'] == 'selection':
                     selected = message['ids']

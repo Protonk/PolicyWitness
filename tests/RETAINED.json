@@ -261,6 +261,13 @@
       "reason": "Pytest boundary reference: sandbox refused Unix socket and nested sandbox fixtures; accounting and retention completed. Preserve environmental failure before unsandboxed replacement.",
       "source": "e93753101667a6255eed2439bb407996121aa555",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-01",
+      "run_id": "pytest-boundary-demo-01",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "fa376979e40373c993149cf96ef62db2550b2a9a",
+      "app_inventory": null
     }
   ]
 }

@@ -41,6 +41,8 @@ def account(selection, events, engine_code, resources):
     errors, results = [], []
     if not selection or len(set(selection)) != len(selection):
         errors.append('invalid_selection')
+    if any(e.get('kind') not in ('start', 'report', 'session_finish') for e in events):
+        errors.append('unknown_event')
     if any(e.get('nodeid') not in selection for e in events if 'nodeid' in e):
         errors.append('unexpected_item')
     terminal = [e for e in events if e.get('kind') == 'session_finish']
