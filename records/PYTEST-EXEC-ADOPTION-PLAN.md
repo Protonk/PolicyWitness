@@ -1,11 +1,12 @@
 # Bounded pytest adoption: native exec evidence controls
 
-Status: candidate integration implemented; final acceptance controls and evidence
-sealing are in progress. Implementation is authorized in the isolated candidate
-worktree. Authorization
-includes dependency provisioning, integration, controls, ordinary correction of
-defects introduced by this work, documentation/citation updates and the planned
-verification. The accepted checkout is not an integration target for this leg.
+Status: bounded implementation and acceptance verification complete in the isolated
+candidate; recommend accepting this family after review. Final runtime source is
+`79dc6fbe` on `adoption/pytest-exec-family`; the review commit also carries the
+completed records and pins. All five stages, the acceptance matrix, emitted-report
+walkthrough and recovery index are complete. The accepted checkout remains
+unchanged; no merge or adoption of another family is authorized by this leg.
+
 Prepared by Codex, 2026-10-30. Planning branch `plan/pytest-exec-family` starts
 at `5dbcf4d8255ca24a186e97488104772df9cb53d6`; accepted production/test source
 remains `77eb987554eef10ffa3371ffb21b235097562a78`. The planning worktree is
@@ -21,10 +22,23 @@ dependencies and their current guides are authorized within this family.
 CHECK.md, merging into the accepted checkout and expansion to another family
 remain outside scope.
 
-Associated records: [source and consumer investigation](pytest-exec-adoption/source-notes.md)
-[planning-state identities](pytest-exec-adoption/state.json), and
-[implementation sequence and recovery index](pytest-exec-adoption/implementation.md). They distinguish
-inspected facts, proposed contracts and outstanding implementation checks.
+Associated records:
+
+- [Acceptance decision, matrix, responsibility account and emitted walkthrough](pytest-exec-adoption/acceptance.md)
+- [Retained-run and operational recovery entry points](pytest-exec-adoption/recovery.md)
+- [Full source/run identities and inventory digests](pytest-exec-adoption/evidence-index.json)
+- [Indexed unresolved fixture identities and recovery prerequisites](pytest-exec-adoption/recovery-index.json)
+- [Actual report paths, outcomes, source receipts and displayed scope](pytest-exec-adoption/walkthrough.json)
+- [Native input, ledger and expectation comparison](pytest-exec-adoption/native-comparison.json)
+- [Final preservation and completion checks](pytest-exec-adoption/completion.json)
+- [Supported pruning result](pytest-exec-adoption/pruning.json)
+- [Implementation sequence and consequential corrections](pytest-exec-adoption/implementation.md)
+- [Original source/consumer investigation](pytest-exec-adoption/source-notes.md) and [planning-state snapshot](pytest-exec-adoption/state.json)
+- [Evidence/index sealing equipment](pytest-exec-adoption/seal.py) and [completion verification equipment](pytest-exec-adoption/complete.py)
+
+These are temporary acceptance-review materials. Retire this plan and its associated
+records together when review consumes them; raw pins and unresolved resource
+dispositions remain governed by retention/recovery, not document retirement.
 
 ## 1. First family and fixed observations
 

@@ -269,3 +269,20 @@ bindings and contradictory never-launched claims; historical valid receipts stil
 verify. The final native/runtime source is now fixed. The separate `cecfdeef`
 build continuation has passed its real 202-case default battery with no skip,
 unrun or harness errors; its 16 existing build mutation controls are finishing.
+
+Final verification source `cecfdeef`: pinned `pytest-exec-build-continuation-02`
+passes the corrected 202-case default battery and all 16 build mutation controls.
+Together with the explicitly retained prefix and five earlier completed sequences,
+this finishes planned build verification. Optional inventory references in this
+leg's build pins are null when the outer control did not inspect an app; the nested
+real battery retains its own before/after inventories. No observation bytes were
+rewritten by that bookkeeping clarification.
+
+The final source/run matrix, emitted-report walkthrough, native equality proof,
+responsibility account and conservative recovery disposition are sealed with this
+plan. Recommend accepting F only. Actual candidate command obligations are closed;
+ambiguous nested fixture records and the previous protected resources remain
+retained. Supported pruning removed nothing because all completed material is
+pinned. The accepted checkout is unchanged. No merge, second-family adoption or
+CHECK.md work was performed. The review package remains until acceptance review
+consumes it, then retires with this plan under CONTRIBUTING.md.

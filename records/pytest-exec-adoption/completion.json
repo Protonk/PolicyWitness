@@ -1,0 +1,128 @@
+{
+  "accepted_application_inventory_sha256": "2f039086649351776c55fe9ec780b3507fb41b6f5335539294253df13de65ab4",
+  "actual_candidate_command_records": 176,
+  "build_continuation": {
+    "battery_completion": {
+      "completed": 202,
+      "selected": 202,
+      "skipped": 0,
+      "unrun": 0
+    },
+    "completed_mutations": [
+      [
+        "native_builder_required",
+        "guard removed"
+      ],
+      [
+        "native_builder_required",
+        "guard moved past Python and SDK setup"
+      ],
+      [
+        "native_builder_required",
+        "guard moved past the lock front end"
+      ],
+      [
+        "missing_cargo_output",
+        "guard removed"
+      ],
+      [
+        "ninja_old",
+        "guard removed"
+      ],
+      [
+        "missing_native_output",
+        "guard moved past assembly"
+      ],
+      [
+        "missing_tree_input",
+        "admission moved after the first check"
+      ],
+      [
+        "sign_target_not_macho",
+        "check moved after codesign"
+      ],
+      [
+        "builddir_stamp_missing",
+        "stamp validation removed"
+      ],
+      [
+        "worker_identity_mismatch",
+        "worker identity check removed"
+      ],
+      [
+        "cargo_target_reused",
+        "rebuild requirement dropped"
+      ],
+      [
+        "cache_path_unsafe",
+        "path admission disabled in the session helper"
+      ],
+      [
+        "output_target_mismatch",
+        "Cargo output check removed"
+      ],
+      [
+        "output_target_mismatch",
+        "assembled check moved past the first signature"
+      ],
+      [
+        "output_target_mismatch",
+        "output predicate reduced to arm64 membership"
+      ],
+      [
+        "meson_target",
+        "output-target assertion removed"
+      ]
+    ],
+    "final_reader_problems": [],
+    "independent_contract_identity": "f29f013379ba6b91347ec0093a636306299fdea522c00572d15c9d1974006256",
+    "path": "/private/tmp/pw-pytest-exec-build-check-20261030/tests/out/runs/pytest-exec-build-continuation-02",
+    "run_id": "20261030T191151Z_c9610695",
+    "source": "cecfdeef3d13fd9f86fc20df9be7d2453d200ae0"
+  },
+  "candidate_branch": "adoption/pytest-exec-family",
+  "candidate_worktree": "/private/tmp/pw-pytest-exec-candidate-20261030",
+  "code_commit": "79dc6fbee2b0da98e50241e41ad35cff9b4907da",
+  "current_toolchain": {
+    "clang": "Apple clang version 21.0.0 (clang-2100.4.1.1)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin\n",
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n",
+    "sdk": "27.2"
+  },
+  "endpoint": "bounded implementation and verification complete; recommend acceptance for this family only",
+  "final_family_run": {
+    "path": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08",
+    "run_id": "20261030T192830Z_e7adb1dd",
+    "source": "79dc6fbee2b0da98e50241e41ad35cff9b4907da"
+  },
+  "integration": "not merged; no adoption of another family",
+  "observed_at_utc": "2026-10-30T19:56:13.191950+00:00",
+  "original_counterfactual": {
+    "blob": "a3b1de9b412461ab4a84f2864f2d972ebedc0637",
+    "reference": "0c22d256:records/workset/pytest-first.md"
+  },
+  "preservation_verification": {
+    "retained_runs": 12,
+    "retention_entries": 50,
+    "unresolved_resource": "preserved; cleanup not established",
+    "verified": true
+  },
+  "prior_pin_entries_unchanged": 50,
+  "protected_worktrees": {
+    "/Users/raccoon/Desktop/Security/PolicyWitness": {
+      "head": "77eb987554eef10ffa3371ffb21b235097562a78",
+      "status": "?? policywitness-workset-review-prompt.md\n?? records/WORKSET-REVIEW-PLAN.md\n?? records/workset-review/\n"
+    },
+    "/private/tmp/pw-pytest-boundary-20261030": {
+      "head": "9e46c7b94207c6baa28a1c62f4aa78defc6efb25",
+      "status": ""
+    },
+    "/private/tmp/pw-pytest-maintenance-20261030": {
+      "head": "5dbcf4d8255ca24a186e97488104772df9cb53d6",
+      "status": ""
+    }
+  },
+  "retention": "decisive and consequential runs pinned in owning worktrees; ambiguous nested fixture records retained",
+  "retirement": "plan and associated records remain for acceptance review, then retire together per CONTRIBUTING.md",
+  "source_before_review_commit": "b93a70195d0b25002d1ed89d63c46d6a3c399695",
+  "unresolved_actual_candidate_records": []
+}
