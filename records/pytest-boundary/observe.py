@@ -222,7 +222,7 @@ def exercise(root, name, mode=None, equipment=HERE):
                 helper = read(witness / 'helper.stdout')
                 require(helper['env'] == {'LC_ALL':'C','LANG':'C','BOUNDARY_SENTINEL':'exact',
                                          '__CF_USER_TEXT_ENCODING':f'0x{os.getuid():X}:0x0:0x0'}, 'helper environment drift')
-                require(helper['executable'] == str(Path('/opt/homebrew/opt/python@3.14/bin/python3.14').resolve()),
+                require(Path(helper['executable']).resolve() == Path('/opt/homebrew/opt/python@3.14/bin/python3.14').resolve(),
                         'subject interpreter changed')
                 configuration = read(out / 'engine_configuration.json')
                 require(configuration['pytest']=='9.0.2' and configuration['capture']=='fd'

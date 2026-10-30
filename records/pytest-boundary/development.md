@@ -42,3 +42,9 @@ value, and the observer requires the complete four-field environment. Engine
 version, capture, disabled optimization and external-plugin absence are also
 recorded and independently checked. This correction preserves exact environment
 verification rather than ignoring unspecified extra variables.
+
+Candidate `5c4cd41d`, `pytest-boundary-demo-04`: the exact four-field child
+environment passed. The added interpreter check compared a reported keg-path
+symlink with a fully resolved framework path as strings. Both identify the
+same executable. The observer now resolves both paths before comparison; it
+still rejects a different executable. No subject or engine change was needed.
