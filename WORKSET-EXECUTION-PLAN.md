@@ -34,6 +34,9 @@ temporary workset material and retire together after final acceptance.
 - [F2 investigation](records/workset/f2-investigation.md): fixed baseline comparison,
   controlled lifecycle observations and agreed repair direction.
 
+- [F2 reservation repair design](records/workset/f2-reservation-design.md): mandatory
+  protocol, state ownership, capture/version boundaries and acceptance controls.
+
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.
 The documentation investigations retain their own associated plans and record

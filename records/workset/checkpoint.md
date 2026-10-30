@@ -4,9 +4,10 @@ Current state: independent authorized implementation and documentation work is
 complete, but Swift Stage 2, the combined refactor seal and whole-workset
 completion remain unaccepted. Required BYOXPC verification failed twice (F2).
 F1 remains unresolved at the user's explicit request. The bounded F2
-investigation is complete; the user accepted separate acquisition/reservation
-as the repair direction, but no production repair has been designed or applied.
-No build or dispatcher is running. Do not treat either finding as a waiver.
+investigation is complete. The user accepted reservation, authorized continuation
+and allowed schema changes. The concrete mandatory-protocol repair design is
+prepared in f2-reservation-design.md; production implementation and verification
+are next. No build or dispatcher is running. Neither finding is a waiver.
 
 ## Current source and evidence
 
@@ -44,10 +45,11 @@ F2: the original two BYOXPC 4097 failures remain unattributed. The new ungated,
 instrumented public trace establishes a lost refusal: the prior owner's exit
 overtook a request whose admission claim had failed. Separate controls produced
 4097 with no execution and with a completed effect. Generic retry is unsafe.
-The agreed repair direction is an effect-free reservation before submission,
-with bounded retry only before execution is sent and no replay after submission.
-The concrete protocol, reservation lifecycle, evidence and legacy compatibility
-design are next. Exact observations and limits are in f2-investigation.md;
+The agreed repair is an effect-free reservation before submission, with bounded
+retry only before execution is sent and no replay after submission. The concrete
+design requires runner protocol 2 and envelope 9, preserves request 5/response
+24, and removes legacy execution fallback while retaining old-installation
+cleanup. Implementation and acceptance are next. Observations and limits are in f2-investigation.md;
 original failures and cleanup remain in byoxpc-failure.md. Required BYOXPC
 verification remains unmet, so do not seal or retire the Swift plan.
 
@@ -114,6 +116,6 @@ remain at /private/tmp/pw-f2-stage1; its build log and comparison are attached
 to the baseline observation run. Controlled fixture preparation remains under
 /private/tmp/pw-f2-controlled-prep; accepted equipment is committed in tests/.
 Production sources and the inspected app are unchanged. See f2-investigation.md
-for exact identities, evidence, proposal and acceptance controls. Next: concrete
-reservation protocol and compatibility design, followed by authorized repair
-and the still-required integrated verification.
+for exact identities, evidence and proposal. f2-reservation-design.md fixes the
+protocol, lifecycle, reader and acceptance boundaries. Next: coordinated repair,
+generators and controls, then a normal signed build and required verification.
