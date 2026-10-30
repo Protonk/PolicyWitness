@@ -506,6 +506,13 @@
       "reason": "Candidate review: eight new receipt controls fail against the unrepaired candidate (unsettled launch failures, unrecoverable holds blocking the legacy sentinel, unreported survivor kill credited, misattributed shared baseline). Nested unresolved fixture records remain protected.",
       "source": "881ad3b18d4152bc0be27911a13fd472fd77beef",
       "app_inventory": null
+    },
+    {
+      "path": "runs/repair-controls-01",
+      "run_id": "20261030T224215Z_8d571b63",
+      "reason": "Candidate review: first run of the repaired candidate; six receipt controls pass, then a defect in the new integrated survivor control (it read a ledger the repaired engine correctly no longer publishes) aborted the baseline-cause control. Nested unresolved fixture records remain protected.",
+      "source": "e624b7f9e5802010a9f70e84af48488d403a97bf",
+      "app_inventory": null
     }
   ]
 }

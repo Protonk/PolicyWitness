@@ -212,7 +212,10 @@ def integrated_survivor(control, integration):
              + repr(native) + ",str(output)], directory / 'run', 20)\n        else:\n    " + before)
     root, out, run, family = integration.fault('survivor-integrated', DOMAIN, before, after)
     folder = out / 'suites' / F
-    require(read(folder / 'artifacts/production/observed-call-policy.json') == read(root / 'tests/fixtures/worker_lifecycle/exec_call_policy.json')['attempts'],
+    # Read the raw native output directly: a refused command publishes no ledger.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'runner_c_worker_harness'))
+    from check_exec_evidence import canonical_ledger
+    require(canonical_ledger(folder / 'artifacts/production/run/stdout') == read(root / 'tests/fixtures/worker_lifecycle/exec_call_policy.json')['attempts'],
             'stimulus changed the native ledger')
     diagnostic = family['items'][0]['phases']['call']['diagnostic']
     require('remained after the native command exited' in diagnostic, 'group intervention not named by the item')
@@ -249,9 +252,10 @@ def exercise(control, integration):
     for check in CONTROLS:
         try:
             facts = check(control, integration)
-        except AssertionError as exc:
-            failures.append(dict(control=check.__name__, error=str(exc)))
-            print('FAILED:', check.__name__ + ':', exc, flush=True)
+        except Exception as exc:
+            error = str(exc) if isinstance(exc, AssertionError) else f'{type(exc).__name__}: {exc}'
+            failures.append(dict(control=check.__name__, error=error))
+            print('FAILED:', check.__name__ + ':', error, flush=True)
         else:
             control.note(check.__name__, **facts)
     write(control.out / 'receipt-controls.json', dict(controls=[c.__name__ for c in CONTROLS], failures=failures))
