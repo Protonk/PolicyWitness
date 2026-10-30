@@ -630,3 +630,9 @@ ordering chain. The [failure contract](FAILURE-PROPAGATION-CONTRACT.md#compariso
 names which case owns which rows and invariants. Step identity, independent
 file/process observations, native results and partial-evidence protections
 remain separately asserted.
+
+
+The opt-in `runner_byoxpc/retirement_controls` investigation compiles a copied
+host and controls reply/retirement boundaries with independent effects and
+process-exit evidence. Its controlled results and ordinary observations do not
+replace BYOXPC reliability acceptance; see the owning suite account.

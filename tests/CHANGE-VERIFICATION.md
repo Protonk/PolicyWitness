@@ -674,6 +674,26 @@ PW_APP_DIR=/path/to/baseline.app PW_TEST_OUT_DIR=tests/out/runs/retirement-basel
 PW_APP_DIR=/path/to/candidate.app PW_TEST_OUT_DIR=tests/out/runs/retirement-candidate tests/run.sh --case runner_byoxpc/retirement_observations
 ```
 
+### BYOXPC reply and retirement controls
+
+- **Case:** `runner_byoxpc/retirement_controls`
+- **Location:** `tests/suites/runner_byoxpc/opt_in/retirement_controls.sh`
+- **When to run:** Investigating whether host retirement can overtake a refusal,
+  or whether a transport failure can accompany completed work.
+- **Equipment:** Signed app, matching Developer ID, GUI launchd, Swift, clang
+  and Meson. The fixture compiles and signs disposable host copies.
+- **Observations:** An ungated session records public/raw request outcomes.
+  Separate arrangements deliver a refusal, retire before refusal delivery, and
+  terminate an identified host after its real worker completed but before its
+  reply. Request hashes, boundary traces, independent append effects and kernel
+  generation exits distinguish these cases. No generic XPC error licenses retry.
+- **Limits:** Trace IO/gates perturb timing; a controlled error code does not
+  attribute an earlier failure. Passing establishes the experiment's boundaries
+  and cleanup, not ordinary BYOXPC reliability or production equivalence.
+- **Artifacts:** Original/instrumented sources, hashes and build/signing receipts;
+  each arrangement's request/reply bytes, trace, effects, process identities,
+  owned session and resource-cleanup records. Unknown cleanup retains resources.
+
 ### Native sandbox extensions
 
 - **Cases:** `sandbox_extensions_native/feasibility` and

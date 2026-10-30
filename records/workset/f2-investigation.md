@@ -88,3 +88,29 @@ app and then `PW_APP_DIR=/private/tmp/pw-f2-stage1/dist/PolicyWitness.app`.
 The baseline original workload used that same PW_APP_DIR and
 `--case witness_contract/extensions_byoxpc`. No request was resubmitted by the
 experiment, and no expected failure was changed into success.
+
+## Controlled equipment candidate
+
+`review_public_extension` prepared the copied-source fixture; primary review
+checked the insertion sites, process-generation observations, independent effect
+assertions and cleanup ownership before integration. It adds no production API
+or behavior. The case compiles the current explicit host membership with only
+recorded instrumentation changes in service, entry and the post-spawn host
+boundary. Its flags retain the production arm64/macOS 26 target and Onone/g
+Swift settings. The existing generated identity is intentionally retained for
+the unchanged real worker, so this is a disclosed instrumentation build rather
+than normal source-identity or equivalence evidence.
+
+The trace-only arrangement makes 24 public and 24 raw-client empty requests;
+all outcomes remain data. Separate owned services exercise delivered refusal,
+lost refusal and lost execution reply. The existing timer remains in place;
+reply/exit gates are outside admission locks. Replies are encoded once and the
+trace distinguishes encoding, invocation and return from client receipt.
+Independent append effects and SDK process-generation observations accompany
+the encoded-reply gates. The executed-reply-loss intervention is explicit
+SIGKILL of the exact identified owned host, not a natural retirement claim.
+
+Preparation checked Python/shell syntax, Swift parsing, C syntax and exact
+replacement anchors. Compilation, signed installation and execution still need
+the dispatcher. Command: `tests/run.sh --case runner_byoxpc/retirement_controls`
+with a fresh F2 output directory and the unchanged current app.

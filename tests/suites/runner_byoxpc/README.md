@@ -23,6 +23,7 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 - `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh`
 - `tests/suites/runner_byoxpc/opt_in/single_use.sh`
 - `tests/suites/runner_byoxpc/opt_in/retirement_observations.sh`
+- `tests/suites/runner_byoxpc/opt_in/retirement_controls.sh`
 - `tests/suites/runner_byoxpc/opt_in/default_location.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh`
@@ -141,3 +142,29 @@ checks the default list and real user plist, runs one specimen without
 `PW_RUNNER_REGISTRY`, and verifies removal. Registry contention is a failure,
 without retry. All other sessions use durable private registries; see the
 [fixture recovery contract](../../fixtures/byoxpc/README.md).
+
+
+`retirement_controls` compiles copied host sources with a declared trace fixture,
+leaving the inspected app and production code unchanged. One ungated session
+records 24 public and 24 raw-client empty-plan requests, including refusals and
+transport errors. Three separate sessions hold an encoded reply or hold the
+existing retirement callback to distinguish delivered refusal, retirement before
+refusal delivery, and host loss after completed work before reply delivery.
+The last arrangement deliberately terminates its identified host generation.
+No request is resubmitted by the fixture. The selected app supplies the real
+worker and raw client; admission and orchestration remain the production bodies.
+
+The temporary source changes, original/copy hashes, compiler commands, signed
+substitution provenance, request/reply bytes, trace events, kernel generations,
+independent append effects and cleanup receipts remain in case artifacts. Trace
+and gate files live in owned `/private/tmp` directories. Unknown cleanup retains
+ownership and any recovery app required by the session helper. Build products
+use case scratch. The fixture deliberately retains the original worker identity
+to pair its instrumented host with the unchanged worker; it supplies no normal
+build or production-equivalence credit. Trace IO and gates alter timing.
+
+A pass establishes the specified controlled boundaries, recorded ordinary
+outcomes and verified cleanup. Neither a matching error number nor a missing
+trace event attributes a historical failure. This opt-in investigation needs
+GUI launchd, signing, Swift, clang and Meson. It does not replace the existing
+BYOXPC acceptance cases.

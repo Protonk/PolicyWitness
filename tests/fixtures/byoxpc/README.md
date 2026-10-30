@@ -76,3 +76,13 @@ children still exposing the host path before exec are recorded as fork children,
 and observed executable transitions are retained. A generation
 missing from a later sweep is reported as unseen, not as exited. Processes
 shorter than a sweep can be missed; sweep timing is retained with the samples.
+
+
+`F2Trace.swift` and `F2Process.c` are compiled only by
+`runner_byoxpc/retirement_controls` with copied production host sources. They
+record bounded request identifiers/hashes, admission, worker spawn/reap, reply
+encoding/invocation and scheduled exit through files in owned temporary storage.
+The C helper reads SDK-defined process generation fields. Named gates hold only
+the encoded reply or the existing exit callback, outside the admission lock.
+No token, policy text or reply body is written into the trace. Trace records and
+independent effects remain distinct from client receipt and process-exit proof.

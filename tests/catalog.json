@@ -1813,6 +1813,23 @@
           ]
         },
         {
+          "id": "retirement_controls",
+          "description": "Instrument copied production host sources to observe ordinary requests and distinguish delivered refusal, retirement before refusal delivery, and loss of an executed reply without resubmitting requests",
+          "default": false,
+          "requires": [
+            "app",
+            "gui",
+            "identity",
+            "swift",
+            "clang",
+            "meson"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_byoxpc/opt_in/retirement_controls.sh"
+          ]
+        },
+        {
           "id": "bad_neighbor_claims",
           "description": "Re-acquire occupied hosts with attributed refusals, bounded waiting and exactly-once effects",
           "requires": [
@@ -2013,6 +2030,7 @@
         "runner_byoxpc/default_location",
         "runner_byoxpc/single_use",
         "runner_byoxpc/retirement_observations",
+        "runner_byoxpc/retirement_controls",
         "runner_byoxpc/bad_neighbor_claims",
         "runner_byoxpc/entitlement_readback",
         "runner_byoxpc/entitlement_transfer",

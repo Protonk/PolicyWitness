@@ -202,6 +202,11 @@ generations, direct observed exits and Unified Logging. It counts successful,
 refused and XPC-failed outcomes without interpreting cause. Passing establishes
 complete observational accounting and owned cleanup, not BYOXPC reliability or
 a replacement for the acceptance controls above.
+`runner_byoxpc/retirement_controls` uses an instrumented host copy to distinguish
+a delivered refusal, a refused request whose reply is lost at retirement, and
+completed work whose reply is lost. Independent effects and process generations
+remain separate from the client transport result; controlled error codes do not
+attribute historical failures.
 
 ## Worker resource challenge observations
 
