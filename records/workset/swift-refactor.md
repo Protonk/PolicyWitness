@@ -401,6 +401,7 @@ of the original two failures from the passing repair. F1 remains unresolved and
 still prevents final D2/workset disposition. The original directory fixture
 with no worker-exit witness remains protected.
 
-The accepted Swift plan may retire in a separate commit. This workset-owned
+The accepted Swift plan is retired separately; recover it at `600a7922` under
+records/distribution/SWIFT-MODULARIZATION-PLAN.md. This workset-owned
 design/adaptation/acceptance record remains with its active overarching plan,
 as does the C refactor record; neither retirement releases evidence pins.

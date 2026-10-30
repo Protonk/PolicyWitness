@@ -10,8 +10,9 @@ case overlaps sleep; the app remains unchanged. The original four fixture
 failures remain preserved, and the original two BYOXPC 4097 failures remain
 unattributed. F1 is unresolved at the user's explicit request, so final D2 and
 whole-workset disposition remain blocked. No build or dispatcher is running.
-Next: retire the accepted Swift plan and check affected structure/links. Keep
-the workset records and F1 package live; no pytest counterfactual trial is in scope.
+The accepted Swift plan is retired; recover it and the acceptance account at
+`600a7922`. Check the retirement's affected structure/links next. Keep the workset
+records and F1 package live; no pytest counterfactual trial is in scope.
 
 ## Current source and evidence
 
