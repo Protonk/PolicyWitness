@@ -220,7 +220,15 @@ def exercise(root, name, mode=None, equipment=HERE):
             elif name == 'environment':
                 require(starts == ['environment.body'], 'environment selection')
                 helper = read(witness / 'helper.stdout')
-                require(helper['env'] == {'LC_ALL':'C','LANG':'C','BOUNDARY_SENTINEL':'exact'}, 'helper environment drift')
+                require(helper['env'] == {'LC_ALL':'C','LANG':'C','BOUNDARY_SENTINEL':'exact',
+                                         '__CF_USER_TEXT_ENCODING':f'0x{os.getuid():X}:0x0:0x0'}, 'helper environment drift')
+                require(helper['executable'] == str(Path('/opt/homebrew/opt/python@3.14/bin/python3.14').resolve()),
+                        'subject interpreter changed')
+                configuration = read(out / 'engine_configuration.json')
+                require(configuration['pytest']=='9.0.2' and configuration['capture']=='fd'
+                        and configuration['optimize']==0 and configuration['external_plugins']==[], 'engine configuration drift')
+                require(configuration['environment']=={'PYTEST_ADDOPTS':None,'PYTHONPATH':None,
+                                                      'PYTEST_DISABLE_PLUGIN_AUTOLOAD':'1'}, 'ambient engine options leaked')
                 require(helper['fds'] == [] and helper['cwd'] == str(witness), 'helper descriptor/cwd drift')
                 require(helper['argv'] == ['literal $() ; spaces'] and helper['stdin'] == b'literal\x00input'.hex(), 'helper input drift')
                 require((witness / 'helper.stderr').read_bytes() == b'explicit stderr\n', 'helper stderr drift')

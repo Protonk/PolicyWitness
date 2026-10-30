@@ -76,7 +76,8 @@ print(json.dumps(dict(argv=sys.argv[1:],cwd=os.getcwd(),env=dict(os.environ),std
 os.write(2,b'explicit stderr\\n')
 '''
     explicit = subprocess.run([interpreter, '-B', '-I', '-S', '-c', code, 'literal $() ; spaces'],
-                              env={'LC_ALL': 'C', 'LANG': 'C', 'BOUNDARY_SENTINEL': 'exact'},
+                              env={'LC_ALL': 'C', 'LANG': 'C', 'BOUNDARY_SENTINEL': 'exact',
+                                   '__CF_USER_TEXT_ENCODING': f'0x{os.getuid():X}:0x0:0x0'},
                               cwd=WITNESS, input=b'literal\x00input', capture_output=True)
     (WITNESS / 'helper.stdout').write_bytes(explicit.stdout)
     (WITNESS / 'helper.stderr').write_bytes(explicit.stderr)

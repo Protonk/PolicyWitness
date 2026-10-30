@@ -30,3 +30,15 @@ had unnecessarily assumed no teardown on interruption. The predeclared contract
 requires no queued start and no invented active success, not absent finalizers.
 Correcting the expected SIGINT receipt to include `active.teardown` preserves
 those obligations. This is an observer defect; no candidate change is needed.
+
+Candidate `493309ed`, `pytest-boundary-demo-03`: engine-death and dual-death
+controls passed, including live child lock retention, rejected competing
+execution, authenticated recovery and independent kernel exits. Selection and
+deselection also passed. The environment observer then found that the actual
+macOS child environment adds `__CF_USER_TEXT_ENCODING` to the three explicitly
+supplied values. No inherited lock/capture descriptor or poisoned Python option
+was present. The subject launch now explicitly supplies that observed encoding
+value, and the observer requires the complete four-field environment. Engine
+version, capture, disabled optimization and external-plugin absence are also
+recorded and independently checked. This correction preserves exact environment
+verification rather than ignoring unspecified extra variables.

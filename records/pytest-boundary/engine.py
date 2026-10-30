@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pytest
-from common import append
+from common import append, write
 
 
 class Journal:
@@ -31,6 +31,10 @@ class Journal:
         os.environ['PW_CHECKOUT_LOCK_FD'] = str(fds[0])
         os.environ['PW_CHECKOUT_LOCK_CHANNEL'] = str(fds[1])
         self.out = Path(reply['out'])
+        write(self.out / 'engine_configuration.json', dict(pytest=pytest.__version__, python=sys.version,
+              capture=session.config.option.capture, optimize=sys.flags.optimize,
+              external_plugins=[d.project_name for _, d in session.config.pluginmanager.list_plugin_distinfo()],
+              environment={k:os.environ.get(k) for k in ('PYTEST_ADDOPTS','PYTHONPATH','PYTEST_DISABLE_PLUGIN_AUTOLOAD')}))
         session.config.boundary = self
 
     def pytest_runtest_logstart(self, nodeid, location):

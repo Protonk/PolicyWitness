@@ -275,6 +275,13 @@
       "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
       "source": "4211d48bc9638b0b319bbb88ea9997e30a96d8d1",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-03",
+      "run_id": "pytest-boundary-demo-03",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "493309ed51bcd0623a2cf69daba59b25b3b9486b",
+      "app_inventory": null
     }
   ]
 }
