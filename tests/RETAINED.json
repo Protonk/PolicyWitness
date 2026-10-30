@@ -254,6 +254,13 @@
       "reason": "Final D2/workset retirement: both source/structure and generator/prose-link cases pass, including F1 independent omission controls. Attached combined-acceptance-credit.json records 229 required cases (212 retained full-run, 15 F2 replacements, 2 final source checks), with caller-auth separate. Acceptance and recovery index: 67fff425:records/workset/checkpoint.md; D2/F1: 67fff425:records/checks-before-check/acceptance.md. Production remains 4407d0ae / signed build 1016.",
       "source": "638582213dbabb86f69ada2dac9d56b24b4b568e",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-reference-01",
+      "run_id": "20261030T144802Z_0cf0ac62",
+      "reason": "Pytest boundary reference: sandbox refused Unix socket and nested sandbox fixtures; accounting and retention completed. Preserve environmental failure before unsandboxed replacement.",
+      "source": "e93753101667a6255eed2439bb407996121aa555",
+      "app_inventory": null
     }
   ]
 }
