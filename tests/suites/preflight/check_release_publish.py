@@ -228,6 +228,9 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
         with tempfile.TemporaryDirectory(prefix='pw-release-fixture-', dir='/private/tmp') as directory:
             prepare_provenance_fixture(Path(directory))
     commit = commit or git(repo, 'rev-parse', 'HEAD')
+    # This explicitly authored fixture models a historical three-legacy-case
+    # producer. Its source identity is fixed before any archive mutation.
+    release_runs.HISTORICAL_PRODUCERS.add(commit)
     dist = repo / 'dist'
     dist.mkdir(exist_ok=True)
     archive = dist / 'PolicyWitness.zip'

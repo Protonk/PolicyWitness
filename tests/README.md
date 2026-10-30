@@ -688,5 +688,8 @@ Release acceptance captures the source/selection evidence contract before the
 battery starts. New family evidence, including the terminal ownership receipt,
 is required independently of optional fields in the result. Portable schema 3
 bundles are checked against the release's independently retained contract; older
-schema 2 bundles remain readable as historical transport evidence. A new acceptance
+schema 2 bundles remain readable as historical transport evidence. Release
+verification additionally requires a positively identified historical producer
+source (checked against ZIP provenance) when no new contract exists; deleting
+the declaration and version fields does not establish historical provenance. A new acceptance
 cannot become legacy merely by deleting its family declaration or reference.

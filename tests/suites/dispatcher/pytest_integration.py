@@ -36,6 +36,7 @@ class Integration:
     def __init__(self, out, note):
         self.out, self.note = out, note
         self.normal = None
+        self.expected = None
 
     def fixture(self, name):
         root = self.out / name / 'repo'
@@ -81,7 +82,13 @@ class Integration:
         before=artifact.inventory(root)
         self.run(root,'list',args=('--list',))
         require(before==artifact.inventory(root),'--list changed fixture checkout')
+        self.expected = dict(profile='pw-family-evidence-1',
+            source=dict(catalog=read(root/'tests/catalog.json'),catalog_sha256=digest(root/'tests/catalog.json'),reader_sha256=digest(root/'tests/lib/execution_contract.py')),
+            selected=[dict(id=F,engine='pytest'),dict(id='sentinel/later',engine='legacy')], required_families=[F])
+        self.expected['identity'] = value_digest(self.expected)
+        write(root.parent/'expected-producer.json',self.expected)
         out,run=self.run(root)
+        require(run['execution_contract']==self.expected,'run changed independently fixed producer expectation')
         require(run['ok'] and len(run['case_results'])==2,'normal parent account')
         family=read(out/'suites'/F/'family.json')
         require(len(family['items'])==9 and all(i['outcome']=='passed' for i in family['items']),'nine ordinary items')
@@ -161,7 +168,7 @@ class Integration:
 
     def portable(self):
         root,out,run,family=self.normal
-        expected=run['execution_contract'];anchor=value_digest(expected)
+        expected=self.expected;anchor=value_digest(expected)
         acceptance=self.out/'portable-source';shutil.copytree(out,acceptance/'tests')
         write(acceptance/'acceptance.json',dict(schema_version=3,ok=True,execution_contract=expected))
         entry=dict(path='release-acceptance/fixture',run_id=run['run_id'],source='0'*40,app_inventory=None,reason='controlled portable family')
@@ -199,6 +206,19 @@ class Integration:
         # The valid portable family has no dependency on its local registry.
         release_runs.verify_bundle(valid,expected_contract=expected)
         self.note('portable semantic deletion controls reject after repaired transport hashes',expected_identity=anchor,output=str(valid))
+        # Remove the outer declaration and schema too. The source identity is
+        # independently fixed, not a field inside the mutated battery/receipt.
+        source='f'*40
+        for schema in (None,1,2):
+            record=dict(source_commit=source)
+            if schema is not None:record['schema_version']=schema
+            try:release_runs.producer_contract(record)
+            except ValueError:pass
+            else:raise AssertionError('unknown/new producer silently treated as historical')
+        historic=next(iter(release_runs.HISTORICAL_PRODUCERS))
+        require(release_runs.producer_contract(dict(schema_version=1,source_commit=historic)) is None,'positively identified historical neighbor refused')
+        self.note('outer declaration/schema deletion cannot downgrade an unknown producer to historical evidence')
+
 
     def recovery(self):
         import checkout_lock

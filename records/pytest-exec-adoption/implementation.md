@@ -125,3 +125,23 @@ continued. This is an observer defect, not a candidate recovery result. The
 correction keeps the observer socket on the plugin instance for the engine
 lifetime. The failed nested fixture's reservation and any missing exit evidence
 remain retained; no historical PID is signalled or reservation force-cleared.
+
+Source `9beb44b1`: `pytest-exec-windows-02` passes every registered integration
+control, including four actual crash windows. `independent-starts.json` and
+`independent-exits.json` retain live peer identities and registered kernel exits.
+Before command release, the owner publishes affirmative never-launch settlement
+and recovery closes it. Before owner launch, before start publication and after
+direct return with a surviving child, missing settlement remains a checkout hold.
+External controlled peers establish and settle their actual process lifetimes;
+those observer facts do not silently manufacture a missing owner receipt. The
+nested fixture records and stale recovery endpoints remain protected and indexed.
+
+Final reader review makes the independent compatibility anchor explicit: absent
+new release declarations require a source in the finite historical-producer set,
+whose identity is also checked against the ZIP's build provenance. The six source
+IDs come from the unchanged accepted v0.2.7–v0.3.3 archive records (unsupported old
+bundle schemas still refuse). A new/unknown source cannot downgrade by erasing its
+contract and version fields. Historical synthetic release fixtures explicitly
+declare their own known legacy source identities before mutation. The actual-family
+portable control now constructs its expected source/selection contract independently
+before ordinary execution, rather than taking even that initial copy from run.json.

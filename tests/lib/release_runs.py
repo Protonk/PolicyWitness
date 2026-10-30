@@ -22,6 +22,26 @@ import build_provenance
 import retention
 
 BUNDLE = 'evidence/test-runs'
+# Positive historical producer identities, read from the already accepted release
+# records and independently checked against the ZIP's build provenance below.
+# Absence of a new declaration is never evidence that a new producer was legacy.
+HISTORICAL_PRODUCERS = {
+    '50802056dfdf6ef55d36d49c40512603594e65ae',
+    '9d35671e1e3e6a09e5c766cd6db73cc1d402fc8a',
+    '1046c77bcb862eb9bcf231a2215af86613225371',
+    '2717a7495b9c7508a91d09246adab0ae32871143',
+    '3c98b39601f2e475bfbcc7d639c6cdcff79b95af',
+    '1bf0341cd06c48122af1635e8aa8cac77517d9e1',
+}
+
+
+def producer_contract(record):
+    expected = record.get('execution_contract')
+    if expected is None and (record.get('schema_version') != 1 or
+                             record.get('source_commit') not in HISTORICAL_PRODUCERS):
+        raise ValueError('release lacks required producer contract and positive historical source identity')
+    return expected
+
 
 
 def sync_tree(path):
@@ -207,9 +227,7 @@ def verify_release(archive):
     if (reference.get('path') != BUNDLE + '/manifest.json'
             or artifact.digest(real_path(archive / reference['path'])) != reference.get('sha256')):
         raise ValueError('release has no verified portable test evidence')
-    expected_contract = record.get('execution_contract')
-    if record.get('schema_version') == 2 and expected_contract is None:
-        raise ValueError('release has no independently captured harness contract')
+    expected_contract = producer_contract(record)
     manifest = verify_bundle(archive / BUNDLE, expected_contract=expected_contract)
     if manifest['tag'] != tag or manifest['source_commit'] != record['source_commit']:
         raise ValueError('test evidence belongs to a different release')
