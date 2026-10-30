@@ -12,8 +12,10 @@ recorded in f2-reservation-design.md. Current envelope-9 fixtures are untouched
 captures from the successful owning cases. The new live apparatus hit Desktop
 permission prompts with its independently compiled driver; the user refused.
 All nine arrangements verified cleanup. Runtime staging is corrected to owned
-`/private/tmp`; focused rerun and combined acceptance remain. No build or
-dispatcher is running. Neither finding is a waiver.
+`/private/tmp`; all nine arrangements pass on rerun with cleanup verified.
+Caller-auth then exposed generic client callbacks discarding native RPC errors;
+the narrow diagnostic fix is prepared. A new signed build, focused checks and
+combined acceptance remain. No build or dispatcher is running. Neither finding is a waiver.
 
 ## Current source and evidence
 

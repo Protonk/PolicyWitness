@@ -20,8 +20,10 @@ final class PWRunnerXPCConnection: PWRunnerClientConnection {
         connection = machService ? NSXPCConnection(machServiceName: service, options: privileged ? [.privileged] : [])
             : NSXPCConnection(serviceName: service)
         connection.remoteObjectInterface = NSXPCInterface(with: PWRunnerProtocol.self)
-        connection.interruptionHandler = { failure(.init(reason: "interrupted", message: "XPC connection interrupted", error: nil)) }
-        connection.invalidationHandler = { failure(.init(reason: "invalidated", message: "XPC connection invalidated", error: nil)) }
+        // The pending RPC owns its native error. Generic connection callbacks
+        // can arrive first and discard that NSError when acquisition advances.
+        // Reservation/overall deadlines bound a missing RPC callback; after
+        // submission that deadline can end the wait but can never permit replay.
         connection.resume()
     }
     private func proxy() -> PWRunnerProtocol? {

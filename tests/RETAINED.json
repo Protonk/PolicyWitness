@@ -191,6 +191,13 @@
       "reason": "F2 envelope-9 live fixture harvest at signed build1012: five owning captures and Rust unit pass. New no-replay controls pass for lost grant/execution/helper capture and old control; independent-driver arrangements incomplete amid user-denied Desktop prompts. All nine cleanups verified. Source-list mutation anchor also fails; not acceptance.",
       "source": "74c7ec5604216e75eef8d2dca95baf8b2b76ddbd",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/f2-reservation-controls-02",
+      "run_id": "20261030T013614Z_2756615a",
+      "reason": "F2 current capture/source controls and all nine signed reservation arrangements pass after runtime relocation, with verified cleanup. Caller-auth preserves its rejection and fails because generic client interruption callbacks discard native NSError details; retained regression evidence before narrow callback fix.",
+      "source": "a7289abf1a2905d87ca37b017ca84b5797286a27",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

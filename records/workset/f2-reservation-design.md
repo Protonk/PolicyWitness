@@ -359,3 +359,20 @@ inspection. It does not treat timeout alone as proof of caller rejection.
 Both preparation runs are pinned in tests/RETAINED.json; raw output is local and
 gitignored. Their source identities and the app's identity remain distinct.
 Neither is whole-candidate acceptance.
+
+`f2-reservation-controls-02`, `20261030T013614Z_2756615a`, test source
+`a7289abf`, same signed build 1012, completed four passing cases and one failure.
+Source-list mutations and independent comparison/checker controls pass; all nine
+reservation arrangements now pass with verified cleanup after runtime relocation.
+The caller-auth check retained its route assertion and exposed an introduced
+client diagnostic regression: the generic interruption callback advances the
+attempt before its richer native RPC error can be retained. Every captured
+failure in that restricted arrangement was generic `interrupted`.
+
+The narrow correction removes only the client's generic connection callbacks.
+The pending RPC's error callback owns the native diagnostic; existing reservation
+and overall deadlines still bound missing callbacks. Server invalidation and
+reservation lifetime handlers remain. No schema, state transition or replay rule
+changes. Independent review found no new correctness hazard; signed caller-auth
+and reply-loss reruns must establish the exercised behavior. This run is pinned,
+including its failure, separately from the corrected candidate.
