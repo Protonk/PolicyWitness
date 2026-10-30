@@ -376,3 +376,15 @@ reservation lifetime handlers remain. No schema, state transition or replay rule
 changes. Independent review found no new correctness hazard; signed caller-auth
 and reply-loss reruns must establish the exercised behavior. This run is pinned,
 including its failure, separately from the corrected candidate.
+
+`f2-reservation-errors-03`, `20261030T014038Z_7b9f5ac7`, clean `3e24e476`
+and signed build 1015: actual client controls and all nine live reservation
+arrangements pass, with every cleanup verified. Caller-auth still fails its
+unchanged route requirement. Domain/code are now retained, but Foundation's
+localizedDescription is only an abbreviated helper-error summary. The prior
+client retained a detailed native description. The correction selects only
+NSDebugDescriptionErrorKey when present, falling back to localizedDescription,
+then applies the same UTF-8 bound and truncation flag. It never copies arbitrary
+userInfo. A focused at/over-boundary Swift assertion pins that preference. The
+worker identity regenerates because this shared source belongs to its
+conservative digest closure; worker execution logic is unchanged.

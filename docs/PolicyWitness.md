@@ -1287,7 +1287,9 @@ outcome and any control observation or error. Control observations retain byte
 count and SHA-256 plus admitted peer-reported status, host PID/instance and
 lease/reason fields; they omit the credential. Transport errors retain stage,
 reason and bounded message, with paired native domain/code when observed and
-explicit message/domain truncation flags. A successful grant does not by itself
+explicit message/domain truncation flags. The message retains the native debug
+description when available, otherwise its localized description; arbitrary
+native error metadata is not copied. A successful grant does not by itself
 establish invocation or execution.
 
 `runner_reply` contains the exact retained host bytes as base64, received and

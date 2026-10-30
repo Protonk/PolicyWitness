@@ -152,6 +152,18 @@ func runReservationAdmissionTests(_ tk: TestKit) {
             try expectEqual(refused?.reason, "expired"); try expectEqual(exits, 1)
         }
         tk.run("native error bytes are bounded without splitting UTF8 scalars") {
+            for count in [1023, 1024, 1025] {
+                let native = NSError(domain: "NSCocoaErrorDomain", code: 4099, userInfo: [
+                    NSLocalizedDescriptionKey: "abbreviated summary",
+                    NSDebugDescriptionErrorKey: String(repeating: "d", count: count),
+                    "unrelated": "not part of the retained diagnostic",
+                ])
+                let captured = PWRunnerTransportError(stage: "acquisition", reason: "xpc_error", message: "unused", error: native)
+                try expectEqual(captured.message, String(repeating: "d", count: min(count, 1024)))
+                try expectEqual(captured.message_truncated, count > 1024)
+                try expectEqual(captured.domain, "NSCocoaErrorDomain")
+                try expectEqual(captured.code, 4099)
+            }
             for n in [127, 128, 129] {
                 let native = NSError(domain: String(repeating: "d", count: n), code: 4097,
                     userInfo: [NSLocalizedDescriptionKey: String(repeating: "m", count: 1024)])

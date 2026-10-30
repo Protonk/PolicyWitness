@@ -105,7 +105,11 @@ struct PWRunnerTransportError: Codable {
         let ns = error.map { $0 as NSError }
         let domain = ns.map { pwTransportBoundedString($0.domain, bytes: PWRunnerTransportLimits.errorDomainBytes) }
         self.domain = domain?.0; self.domain_truncated = domain?.1 ?? false; self.code = ns?.code
-        let bounded = pwTransportBoundedString(ns?.localizedDescription ?? message, bytes: PWRunnerTransportLimits.errorMessageBytes)
+        // XPC's localized summary omits the service/route diagnostic. Retain
+        // this one native diagnostic string, never the arbitrary userInfo map.
+        let diagnostic = ns?.userInfo[NSDebugDescriptionErrorKey] as? String
+        let bounded = pwTransportBoundedString(diagnostic ?? ns?.localizedDescription ?? message,
+            bytes: PWRunnerTransportLimits.errorMessageBytes)
         self.message = bounded.0; self.message_truncated = bounded.1
     }
 }

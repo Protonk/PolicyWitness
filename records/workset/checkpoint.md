@@ -14,8 +14,10 @@ permission prompts with its independently compiled driver; the user refused.
 All nine arrangements verified cleanup. Runtime staging is corrected to owned
 `/private/tmp`; all nine arrangements pass on rerun with cleanup verified.
 Caller-auth then exposed generic client callbacks discarding native RPC errors;
-the narrow diagnostic fix is prepared. A new signed build, focused checks and
-combined acceptance remain. No build or dispatcher is running. Neither finding is a waiver.
+RPC callback ownership now preserves domain/code, and all nine controls pass
+again. Caller-auth additionally needs the bounded native debug description;
+that correction and its control are prepared. A new signed build, caller-auth
+check and combined acceptance remain. No build or dispatcher is running. Neither finding is a waiver.
 
 ## Current source and evidence
 
