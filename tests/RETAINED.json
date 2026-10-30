@@ -226,6 +226,13 @@
       "reason": "F2 replacement verification: 17/17 changed owners, Rust and source checks pass on unchanged signed build 1016. Includes public invalid-marker refusal and protocol-1 registry cleanup. Attached credit account distinguishes 212 reviewed prior passes from 17 replacements; original four failures remain preserved.",
       "source": "8500baff5f10a986657c58792594129d4637ef67",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/f2-swift-retirement-01",
+      "run_id": "20261030T021632Z_e84998e5",
+      "reason": "Accepted Swift plan retirement: source/structure, generator and prose-link controls pass; no implementation changes or repeated live-test claim.",
+      "source": "5642c45243fd34e8cf48c11c4113364667f1ec05",
+      "app_inventory": null
     }
   ]
 }

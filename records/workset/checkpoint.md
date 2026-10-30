@@ -11,7 +11,10 @@ failures remain preserved, and the original two BYOXPC 4097 failures remain
 unattributed. F1 is unresolved at the user's explicit request, so final D2 and
 whole-workset disposition remain blocked. No build or dispatcher is running.
 The accepted Swift plan is retired; recover it and the acceptance account at
-`600a7922`. Check the retirement's affected structure/links next. Keep the workset
+`600a7922`. Retirement commit `5642c452` passes both affected source/structure
+and generator/prose-link cases in `f2-swift-retirement-01`, run
+`20261030T021632Z_e84998e5`. Its evidence is pinned. All 33 retained identities
+and inventory paths reconcile; pruning has no eligible run. Keep the workset
 records and F1 package live; no pytest counterfactual trial is in scope.
 
 ## Current source and evidence
@@ -74,9 +77,9 @@ original failures and protected cleanup remain in byoxpc-failure.md. The repair
 does not guarantee reply delivery or explain the original failures. Runtime
 fixture relocation avoids the denied Desktop requests; no TCC setting changed.
 
-F1 needs later discussion before final D2/workset disposition. Continue only
-the accepted-plan retirement here. Do not implement F1, weaken its guarantee or
-start a pytest counterfactual evaluation/trial.
+F1 needs later discussion before final D2/workset disposition. The accepted-plan
+retirement and its verification are complete. Do not implement F1, weaken its
+guarantee or start a pytest counterfactual evaluation/trial.
 
 ## Resources and retention
 
