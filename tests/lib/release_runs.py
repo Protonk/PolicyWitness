@@ -108,12 +108,12 @@ def pack(destination, *, tag, source, runs, battery, expected_contract=None):
 def battery_source(manifest):
     """The required battery's role and path in a supported bundle manifest."""
     if manifest.get('schema_version') not in (2, 3):
-        raise ValueError('unsupported release test evidence schema; expected schema 2')
+        raise ValueError('unsupported release test evidence schema; expected schema 2 or 3')
     declared = manifest.get('battery')
     if not isinstance(declared, dict):
-        raise ValueError('a schema 2 evidence manifest declares its battery')
+        raise ValueError('a schema 2 or 3 evidence manifest declares its battery')
     if declared != dict(role='acceptance', path='tests/run.json'):
-        raise ValueError('a schema 2 battery must be acceptance/tests/run.json')
+        raise ValueError('a schema 2 or 3 battery must be acceptance/tests/run.json')
     return declared['role'], declared['path']
 
 

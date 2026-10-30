@@ -245,15 +245,24 @@ submission is the only remote step in `make release`.
 
 Each archive contains `evidence/test-runs/runs.tar.gz` with the full acceptance
 directory under `acceptance/`, the default battery's dispatcher run nested at
-`acceptance/tests/`. Its `manifest.json` (`schema_version` 2) records the
+`acceptance/tests/`. Its `manifest.json` (`schema_version` 3) records the
 retention entry, per-file hashes, modes and symlink targets, which file inside
 the acceptance is the battery summary, and checksums of the compressed archive
 and the standalone `acceptance.json` and `battery.json` summaries.
 `release.json` binds that manifest by SHA-256. Its `acceptance.path` and
 `battery.path` resolve to summaries within the release archive;
-`original_path` records the former location under `tests/out`. Verification,
-publication and rotation accept exactly evidence-bundle schema 2; other formats
-are unsupported. Stored archives are not migrated or rewritten. Original
+`original_path` records the former location under `tests/out`. Schema 3 also
+binds the selected families to the producer's execution contract, captured before
+the battery starts and retained independently in `release.json`. Verification,
+publication and rotation require each family's selection, phase account and
+terminal ownership receipt against that contract. Passing item reports alone
+do not establish complete execution or resolved ownership.
+
+Historical schema 2 bundles remain readable. A release without an execution
+contract must have a positively recognized historical producer source, checked
+against the archived ZIP's provenance; missing new fields do not establish that
+an archive is historical. Other evidence-bundle formats are unsupported.
+Stored archives are not migrated or rewritten. Original
 command receipts retain their original paths. Verification reads the portable
 copy directly, independently of the working test directories.
 
