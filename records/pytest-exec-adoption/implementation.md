@@ -243,3 +243,9 @@ timeout to the shared baseline: command failure must use the ordinary assertion
 failure channel already cached by the baseline helper, so eight dependent setup
 errors do not repeat baseline execution. The added control requires precisely
 two baseline commands, no dependent bodies and a retained failed prerequisite.
+
+Source `87b66cb8`: pinned `pytest-exec-acceptance-07` passes the complete final
+actual-family matrix and normal F. The timed-out baseline is recorded once
+(two commands), with eight blocked setup phases and no dependent bodies. All
+normal F command obligations are closed. The emitted walkthrough and source
+comparison are being sealed; the separate build continuation remains in progress.

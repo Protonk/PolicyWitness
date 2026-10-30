@@ -471,6 +471,13 @@
       "reason": "Corrected timeout bridge rejects matching assertion text; full independent integration controls and real F pass before baseline timeout caching refinement.",
       "source": "3e93082f489d0b64271c95f7b1550544114bb2cd",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-acceptance-07",
+      "run_id": "20261030T191944Z_31d2efb0",
+      "reason": "Final family acceptance: nine variants, all independent diagnostic/ownership/portable controls, timeout rejection and one cached stopped-baseline failure with eight blocked dependents.",
+      "source": "87b66cb878f8eaf948a0b5353ad66a1b274bbc1b",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
