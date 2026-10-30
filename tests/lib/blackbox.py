@@ -5,8 +5,29 @@ does not launch processes, interpret policies, choose expectations, or skip
 tests. Errors accumulate so a broken channel cannot conceal another failure.
 """
 
+import base64
+import json
+
 import contract
 from consumer import validate
+
+
+def recapture_host_reply(envelope):
+    """Encode a deliberately constructed host-record control into its carrier.
+
+    Call only after authoring a host semantic mutation. Transport-failure
+    controls must retain their authored byte/count/state contradictions.
+    Existing client observations are retained; this does not represent a run.
+    """
+    client = envelope['data'].get('runner_client')
+    runner = envelope['data'].get('runner_result')
+    if runner is None or client is None:
+        return envelope
+    raw = json.dumps(runner, ensure_ascii=True, separators=(',', ':')).encode('utf-8')
+    client['transport']['runner_reply'] = {
+        'bytes_received': len(raw), 'bytes_retained': len(raw), 'truncated': False,
+        'data_base64': base64.b64encode(raw).decode('ascii')}
+    return envelope
 
 
 def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
@@ -19,7 +40,7 @@ def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
     reason = 'constructed control: no runner was selected'
     binary = {'path': None, 'actual_sha256': None, 'baseline_sha256': None,
               'verification': 'unavailable', 'reason': reason}
-    return {
+    envelope = {
         'schema_version': contract.CONTROLLER_ENVELOPE, 'kind': 'run',
         'result': {'ok': ok, 'rc': None, 'exit_code': 0 if ok else 1,
                    'normalized_outcome': (runner or {}).get('normalized_outcome'), 'errno': None,
@@ -36,10 +57,31 @@ def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
                 'binaries': {'service': dict(binary), 'worker': dict(binary), 'validator': dict(binary), 'issuer': dict(binary)}},
             'policy_check': None, 'timeout_ms': timeout_ms,
             'runner_client': {'argv': ['constructed-client'], 'started_at_unix_ms': 1000, 'ended_at_unix_ms': 2500,
-                              'exit_code': 0, 'request_delivery': {'bytes_written': 2, 'error': None}},
+                              'exit_code': 0, 'request_delivery': {'bytes_written': 2, 'error': None},
+                              'transport_admission': 'accepted', 'transport_error': None,
+                              'submission': 'invoked', 'runner_reply_error': None,
+                              'transport': {
+                                  'kind': 'runner_client_capture', 'protocol_version': contract.RUNNER_PROTOCOL,
+                                  'client_pid': 123, 'clock': 'mach_continuous_time_ns', 'clock_available': True,
+                                  'started_continuous_ns': 1000000000,
+                                  'deadline_continuous_ns': 1000000000 + timeout_ms * 1000000,
+                                  'ended_continuous_ns': 1100000000, 'timeout_ms': timeout_ms,
+                                  'attempts': [{'ordinal': 1,
+                                      'attempt_id': '11111111-1111-4111-8111-111111111111',
+                                      'started_elapsed_ms': 0, 'ended_elapsed_ms': 1, 'outcome': 'granted',
+                                      'control': {'bytes_received': 300, 'sha256': 'a' * 64,
+                                          'status': 'granted', 'host_pid': 124,
+                                          'host_instance': '22222222-2222-4222-8222-222222222222',
+                                          'lease_ms': 5000}}],
+                                  'acquisition_stop': 'granted',
+                                  'submission': {'state': 'invoked', 'invoked_elapsed_ms': 2},
+                                  'terminal': 'runner_reply'}},
             'runner_result': runner, 'runner_sandbox_diagnostics': None,
         },
     }
+    if runner is None:
+        envelope['data']['runner_client'] = None
+    return recapture_host_reply(envelope)
 
 
 def validate_run_shape(run, expected_steps, *, policy_format=None,

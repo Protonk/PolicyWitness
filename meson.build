@@ -101,6 +101,7 @@ if get_option('xpc')
   pwrunner_contract = files(
     'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
     'runner/Sources/PWRunnerCore/PWRunnerCoding.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerTransport.swift',
     'runner/Sources/PWRunnerCore/PWRunnerRequest.swift',
     'runner/Sources/PWRunnerCore/PWRunnerExtension.swift',
     'runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift',
@@ -116,7 +117,7 @@ if get_option('xpc')
   # build.sh named this output pw-runner-client, which is not a Swift module
   # identifier, so swiftc fell back to the module name `main`; keep it.
   pw_runner_client = executable('pw-runner-client',
-    pwrunner_contract, files('runner/Clients/PWRunnerClient/main.swift'),
+    pwrunner_contract, files('runner/Clients/PWRunnerClient/main.swift', 'runner/Clients/PWRunnerClient/PWRunnerClientSession.swift'),
     swift_module_name: 'main',
     swift_args: swift_flags,
     override_options: executable_options)
@@ -137,6 +138,7 @@ if get_option('xpc')
     'runner/Sources/PWRunnerCore/CWorkerComparison.swift',
     'runner/Sources/PWRunnerCore/CWorkerDisposition.swift',
     'runner/Sources/PWRunnerCore/PWRunnerService.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerReservation.swift',
     'runner/Sources/PWRunnerCore/PWRunnerListener.swift',
   )
   pwrunner = executable('PWRunner',

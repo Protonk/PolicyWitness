@@ -1,7 +1,7 @@
 import Foundation
 
-// Thin NSXPC wrapper. On XPC failure it emits a synthetic RunResult JSON; it
-// never interprets sandbox behavior or probe outcomes.
+// Reservation and submission transport. The output is a client-owned capture;
+// exact host reply bytes remain separate from locally observed failures.
 private func die(_ message: String, code: Int32) -> Never {
     fputs(message + "\n", stderr)
     exit(code)
@@ -10,36 +10,47 @@ private func die(_ message: String, code: Int32) -> Never {
 private func usage() -> String {
     """
     usage:
-      pw-runner-client run [--timeout-ms <n>] [--mach-service] [--privileged] <xpc-service-name> <request.json>
-      pw-runner-client run [--timeout-ms <n>] [--mach-service] [--privileged] --request - <xpc-service-name>
+      pw-runner-client run [--timeout-ms <n>] [--deadline-ticks <n>] [--mach-service] [--privileged] <xpc-service-name> <request.json>
+      pw-runner-client run [--timeout-ms <n>] [--deadline-ticks <n>] [--mach-service] [--privileged] --request - <xpc-service-name>
 
     notes:
       - the first form reads the request from the named file; the second reads it from stdin to EOF.
       - the whole request is read before the connection is opened or any output is written.
-      - prints the raw RunResult JSON returned by the runner (JSON-over-Data).
-      - on open/call failure, prints a synthetic RunResult with normalized_outcome set.
+      - prints one protocol-versioned transport capture, including exact host reply bytes.
+      - acquisition may retry within the allowance; submission is never replayed.
+      - --deadline-ticks is an absolute mach_continuous_time deadline from the caller.
       - use --mach-service for Mach services; add --privileged for system scope.
     """
 }
 
-private struct XpcErrorDetails: Codable {
-    var domain: String?
-    var code: Int?
-    var message: String
-    var user_info: [String: String]?
+private func emit(_ capture: PWRunnerClientCapture) -> Never {
+    do {
+        let bytes = try pwRunnerEncodeClientCapture(capture)
+        FileHandle.standardOutput.write(bytes)
+        FileHandle.standardOutput.write(Data("\n".utf8))
+        exit(capture.terminal == "runner_reply" ? 0 : 1)
+    } catch {
+        // A missing capture leaves submission unknown to the caller.
+        die("could not encode client transport capture: \(error)", code: 1)
+    }
 }
 
-private func nsErrorDetails(_ error: Error) -> XpcErrorDetails {
-    let ns = error as NSError
-    var ui: [String: String] = [:]
-    for (k, v) in ns.userInfo {
-        ui[String(describing: k)] = String(describing: v)
-    }
-    return XpcErrorDetails(domain: ns.domain, code: ns.code, message: String(describing: error), user_info: ui.isEmpty ? nil : ui)
+private func readFailure(_ error: Error, timeoutMs: UInt64, deadlineNs: UInt64?) -> Never {
+    let now = PWContinuousClock.now()
+    let start: UInt64? = now == UInt64.max ? nil : now
+    let end = deadlineNs ?? start.map { PWContinuousClock.adding(milliseconds: timeoutMs, to: $0) }
+    let deadline = end == UInt64.max ? nil : end
+    let available = start != nil && deadline != nil
+    var capture = PWRunnerClientCapture(clock_available: available, started_continuous_ns: start,
+        deadline_continuous_ns: deadline, ended_continuous_ns: available ? start : nil, timeout_ms: timeoutMs)
+    capture.error = PWRunnerTransportError(stage: "local", reason: available ? "input_read_failed" : "clock_error",
+        message: available ? "could not read request" : "continuous clock unavailable", error: available ? error : nil)
+    emit(capture)
 }
 
 private func run(args: [String]) -> Never {
     var timeoutMs = PWRunnerWire.defaultClientTimeoutMs
+    var deadlineTicks: UInt64?
     var useMachService = false
     var privileged = false
     var requestFromStdin = false
@@ -61,6 +72,11 @@ private func run(args: [String]) -> Never {
             guard idx + 1 < args.count else { die("missing value for --timeout-ms", code: 2) }
             guard let v = Int(args[idx + 1]) else { die("invalid --timeout-ms", code: 2) }
             timeoutMs = max(1, v)
+            idx += 2
+        case "--deadline-ticks":
+            guard idx + 1 < args.count, let value = UInt64(args[idx + 1]) else { die("invalid --deadline-ticks", code: 2) }
+            guard deadlineTicks == nil else { die("duplicate --deadline-ticks", code: 2) }
+            deadlineTicks = value
             idx += 2
         case "--mach-service":
             useMachService = true
@@ -89,7 +105,8 @@ private func run(args: [String]) -> Never {
     if requestFromStdin {
         guard idx == args.count else { die("unexpected argument after <xpc-service-name> with --request -\n\n\(usage())", code: 2) }
         // Read the whole request to EOF before connecting or writing anything.
-        requestBytes = FileHandle.standardInput.readDataToEndOfFile()
+        do { requestBytes = try FileHandle.standardInput.readToEnd() ?? Data() }
+        catch { readFailure(error, timeoutMs: UInt64(timeoutMs), deadlineNs: deadlineTicks.map(PWContinuousClock.nanoseconds)) }
     } else {
         guard idx < args.count else { die("missing <request.json>\n\n\(usage())", code: 2) }
         let requestPath = args[idx]
@@ -98,124 +115,23 @@ private func run(args: [String]) -> Never {
         do {
             requestBytes = try Data(contentsOf: URL(fileURLWithPath: requestPath))
         } catch {
-            die("failed to read request.json: \(error)", code: 2)
+            readFailure(error, timeoutMs: UInt64(timeoutMs), deadlineNs: deadlineTicks.map(PWContinuousClock.nanoseconds))
         }
     }
 
-    let conn: NSXPCConnection
-    if useMachService {
-        let opts: NSXPCConnection.Options = privileged ? [.privileged] : []
-        conn = NSXPCConnection(machServiceName: serviceName, options: opts)
-    } else {
-        conn = NSXPCConnection(serviceName: serviceName)
-    }
-    conn.remoteObjectInterface = NSXPCInterface(with: PWRunnerProtocol.self)
-    conn.resume()
-
-    let sema = DispatchSemaphore(value: 0)
-    let lock = NSLock()
-    var done = false
-    var replyData: Data?
-    var replyError: Error?
-
-    guard let proxy = conn.remoteObjectProxyWithErrorHandler({ error in
-        lock.lock()
-        defer { lock.unlock() }
-        if done { return }
-        done = true
-        replyError = error
-        sema.signal()
-    }) as? PWRunnerProtocol else {
-        let resp = PWRunnerRunResult(
-            specimen_id: "<unknown>",
-            run_kind: nil,
-            rc: 1,
-            normalized_outcome: NormalizedOutcome.xpcProxyTypeMismatch,
-            error: "remote proxy type mismatch",
-            pid: Int(getpid()),
-            bundle_id: nil,
-            policy_format: "unknown",
-            steps: []
-        )
-        let out = (try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8)
-        FileHandle.standardOutput.write(out)
-        FileHandle.standardOutput.write(Data("\n".utf8))
-        exit(1)
-    }
-
-    proxy.runSpecimen(requestBytes) { data in
-        lock.lock()
-        defer { lock.unlock() }
-        if done { return }
-        done = true
-        replyData = data
-        sema.signal()
-    }
-
-    let deadline = DispatchTime.now() + .milliseconds(timeoutMs)
-    if sema.wait(timeout: deadline) == .timedOut {
-        let resp = PWRunnerRunResult(
-            specimen_id: "<unknown>",
-            run_kind: nil,
-            rc: 1,
-            normalized_outcome: NormalizedOutcome.xpcTimeout,
-            error: "xpc call timeout after \(timeoutMs)ms",
-            pid: Int(getpid()),
-            bundle_id: nil,
-            policy_format: "unknown",
-            steps: []
-        )
-        let out = (try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8)
-        FileHandle.standardOutput.write(out)
-        FileHandle.standardOutput.write(Data("\n".utf8))
-        exit(1)
-    }
-
-    lock.lock()
-    let data = replyData
-    let err = replyError
-    lock.unlock()
-
-    if let err {
-        let details = nsErrorDetails(err)
-        let resp = PWRunnerRunResult(
-            specimen_id: "<unknown>",
-            run_kind: nil,
-            rc: 1,
-            normalized_outcome: NormalizedOutcome.xpcError,
-            error: "\(details.domain ?? "unknown"):\(details.code ?? -1) \(details.message)",
-            pid: Int(getpid()),
-            bundle_id: nil,
-            policy_format: "unknown",
-            steps: []
-        )
-        let out = (try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8)
-        FileHandle.standardOutput.write(out)
-        FileHandle.standardOutput.write(Data("\n".utf8))
-        exit(1)
-    }
-
-    if let data {
-        FileHandle.standardOutput.write(data)
-        FileHandle.standardOutput.write(Data("\n".utf8))
-        exit(0)
-    }
-
-    let resp = PWRunnerRunResult(
-        specimen_id: "<unknown>",
-        run_kind: nil,
-        rc: 1,
-        normalized_outcome: NormalizedOutcome.xpcNoReply,
-        error: "xpc call failed (no reply and no error)",
-        pid: Int(getpid()),
-        bundle_id: nil,
-        policy_format: "unknown",
-        steps: []
-    )
-    let out = (try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8)
-    FileHandle.standardOutput.write(out)
-    FileHandle.standardOutput.write(Data("\n".utf8))
-    exit(1)
+    let queue = DispatchQueue(label: "PolicyWitness.runner-client-session")
+    let finished = DispatchSemaphore(value: 0)
+    var result: PWRunnerClientCapture?
+    let session = PWRunnerClientSession(request: requestBytes, timeoutMs: UInt64(timeoutMs),
+        deadlineNs: deadlineTicks.map(PWContinuousClock.nanoseconds),
+        enqueue: { work in queue.async(execute: work) },
+        schedule: { milliseconds, work in queue.asyncAfter(deadline: .now() + .milliseconds(milliseconds), execute: work) },
+        connect: { failure in PWRunnerXPCConnection(service: serviceName, machService: useMachService,
+            privileged: privileged, failure: failure) },
+        finish: { capture in result = capture; finished.signal() })
+    session.start()
+    finished.wait()
+    emit(result!)
 }
 
 let argv = Array(CommandLine.arguments.dropFirst())

@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
 from consumer import validate
+from runner_client_capture import validate_capture
 sys.path.insert(0, str(ROOT / "tests/fixtures/byoxpc"))
 from neighbor_lab import process_identity, generation, generation_state
 
@@ -28,7 +29,7 @@ processes = []
 effects = Path(state['staging']) / 'effects'
 effects.mkdir()
 
-def launch(name, hang=0, direct=False):
+def launch(name, hang=0, direct=False, timeout=30000):
     effect = effects / name
     assert not effect.exists(), 'refusing reused effect path'
     spec = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id=name,
@@ -40,7 +41,7 @@ def launch(name, hang=0, direct=False):
     if hang: spec['_test_overrides'] = dict(worker_post_apply_hang_ms=hang)
     path = out / (name + '.specimen.json'); path.write_text(json.dumps(spec, indent=2)+'\n')
     with (out/(name+'.json')).open('w') as stdout, (out/(name+'.stderr')).open('w') as stderr:
-        argv = [str(Path(pw).parent / 'pw-runner-client'), 'run', '--timeout-ms', '30000', '--mach-service', service, str(path)] if direct else [pw, 'run', str(path), '--timeout-ms', '30000']
+        argv = [str(Path(pw).parent / 'pw-runner-client'), 'run', '--timeout-ms', str(timeout), '--mach-service', service, str(path)] if direct else [pw, 'run', str(path), '--timeout-ms', str(timeout)]
         process = subprocess.Popen(argv,
             stdout=stdout, stderr=stderr, start_new_session=True)
     processes.append(process)
@@ -49,7 +50,8 @@ def launch(name, hang=0, direct=False):
 def receive(process, name, code, direct=False):
     assert process.wait(timeout=40) == code, name
     doc = json.loads((out/(name+'.json')).read_text())
-    assert not validate(doc), validate(doc)
+    problems = validate_capture(doc) if direct else validate(doc)
+    assert not problems, problems
     return doc if direct else doc['data']['runner_result']
 
 try:
@@ -83,28 +85,31 @@ try:
 
     owner_generation = process_identity(host_pid)
     assert owner_generation['observed']
-    second, absent = launch('refused', direct=True)
-    refusal = receive(second, 'refused', 0, direct=True)
+    second, absent = launch('refused', direct=True, timeout=1000)
+    refusal = receive(second, 'refused', 1, direct=True)
     assert first.poll() is None, 'refusal retired the active owner'
-    assert refusal['normalized_outcome'] == 'already_ran', refusal
-    assert refusal.get('runner_subprocess') is None and refusal['steps'] == [], refusal
+    assert refusal['terminal'] == 'xpc_timeout' and refusal['submission']['state'] == 'not_invoked', refusal
+    assert refusal.get('runner_reply') is None, refusal
+    assert any((a.get('control') or {}).get('host_pid') == host_pid and
+               (a.get('control') or {}).get('status') == 'occupied' for a in refusal['attempts']), refusal
     assert not absent.exists(), 'refused request attempted file creation'
     waiting, waiting_effect = launch('reacquired')
     owner = receive(first, 'owner', 0)
     recovered = receive(waiting, 'reacquired', 0)
     envelope = json.loads((out / 'reacquired.json').read_text())
-    attempts = envelope['data']['runner_acquisition']
-    assert len(attempts) == 1, attempts
-    attempt = attempts[0]
-    assert generation(attempt['generation']) == generation(owner_generation), attempt
-    assert attempt['wait_outcome'] == 'retired' and attempt['observed_exit'] is not None
-    assert envelope['data']['runner_client']['started_at_unix_ms'] >= attempt['observed_exit']['observed_at_unix_ms']
+    transport = envelope['data']['runner_client']['transport']
+    attempts = transport['attempts']
+    assert any((a.get('control') or {}).get('host_pid') == host_pid and
+               (a.get('control') or {}).get('status') == 'occupied' for a in attempts), attempts
+    assert attempts[-1]['outcome'] == 'granted' and attempts[-1]['control']['host_pid'] != host_pid, attempts
+    assert transport['submission']['state'] == 'invoked'
+    assert transport['submission']['invoked_elapsed_ms'] >= attempts[-1]['ended_elapsed_ms']
     assert generation_state(generation(owner_generation)) == 'gone'
     assert recovered['runner_subprocess']['pid'] != owner['runner_subprocess']['pid']
     assert waiting_effect.read_bytes() == b'x'
     assert owner['normalized_outcome'] == 'ok' and owner['runner_subprocess']['reaped'] is True, owner
     assert owner['test_overrides']['worker_post_apply_hang_ms'] == 15000
-    assert refusal['pid'] == host_pid and owner['runner_subprocess']['pid'] == worker_children[0], 'host/child receipts disagree with replies'
+    assert owner['runner_subprocess']['pid'] == worker_children[0], 'host/child receipts disagree with replies'
     assert marker.read_bytes() == b'x' and not absent.exists()
     pid = host_pid; deadline = time.monotonic()+5
     while True:

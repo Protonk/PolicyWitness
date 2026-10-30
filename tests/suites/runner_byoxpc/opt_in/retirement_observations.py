@@ -119,7 +119,7 @@ def identities(out, state, pw):
     paths = ['tests/suites/runner_byoxpc/opt_in/retirement_observations.py',
              'tests/suites/runner_byoxpc/opt_in/retirement_observations.sh',
              'tests/fixtures/byoxpc/neighbor_lab.py', 'tests/fixtures/byoxpc/session.py',
-             'tests/lib/run_capture.py', 'tests/lib/consumer.py', 'tests/lib/contract.py',
+             'tests/lib/run_capture.py', 'tests/lib/consumer.py', 'tests/lib/runner_client_capture.py', 'tests/lib/contract.py',
              'tests/lib/case.sh', 'tests/lib/testlib.sh', 'tests/catalog.json']
     hashes = {}
     for name in paths:
@@ -271,7 +271,7 @@ def main(pw, directory):
         save(out / 'unified-log-capture.json', log_record)
         # Preserve every result, including malformed/nonzero captures. Neither
         # an outcome nor a nonzero CLI status causes a retry or removes evidence.
-        counts = {str(gap): dict(ok=0, already_ran=0, xpc_error=0, xpc_timeout=0) for gap in GAPS_MS}
+        counts = {str(gap): dict(host_ok=0, client_xpc_error=0, client_xpc_timeout=0) for gap in GAPS_MS}
         for capture, record in zip(captures, records):
             try:
                 if record['state'] != 'exited':
@@ -279,13 +279,18 @@ def main(pw, directory):
                 else:
                     envelope = capture.load_json()
                     record['validation_errors'] = validate(envelope)
-                    reply = envelope.get('data', {}).get('runner_result')
-                    if not isinstance(reply, dict) or not isinstance(reply.get('normalized_outcome'), str):
-                        record['validation_errors'].append('missing runner result/outcome')
+                    data = envelope.get('data', {})
+                    reply = data.get('runner_result')
+                    transport = (data.get('runner_client') or {}).get('transport') or {}
+                    if isinstance(reply, dict) and isinstance(reply.get('normalized_outcome'), str):
+                        record.update(outcome='host_' + reply['normalized_outcome'], reply_pid=reply.get('pid'),
+                                      worker_pid=(reply.get('runner_subprocess') or {}).get('pid'))
+                    elif isinstance(transport.get('terminal'), str):
+                        record.update(outcome='client_' + transport['terminal'], reply_pid=None, worker_pid=None)
                     else:
-                        record.update(outcome=reply['normalized_outcome'], reply_pid=reply.get('pid'),
-                                      worker_pid=(reply.get('runner_subprocess') or {}).get('pid'),
-                                      acquisitions=envelope['data'].get('runner_acquisition', []))
+                        record['validation_errors'].append('missing host outcome and client terminal')
+                    record['acquisitions'] = transport.get('attempts', [])
+                    if 'outcome' in record:
                         group = counts[str(record['gap_ms'])]
                         group[record['outcome']] = group.get(record['outcome'], 0) + 1
                 if record['validation_errors']:

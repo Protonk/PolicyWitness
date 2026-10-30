@@ -632,7 +632,7 @@ file/process observations, native results and partial-evidence protections
 remain separately asserted.
 
 
-The opt-in `runner_byoxpc/retirement_controls` investigation compiles a copied
-host and controls reply/retirement boundaries with independent effects and
-process-exit evidence. Its controlled results and ordinary observations do not
-replace BYOXPC reliability acceptance; see the owning suite account.
+The opt-in `runner_byoxpc/reservation_controls` case compiles copied host and
+client sources to control reservation, execution-reply and capture-publication
+boundaries, with independent effects and process-exit evidence. Its controlled
+results do not replace ordinary BYOXPC acceptance; see the owning suite account.

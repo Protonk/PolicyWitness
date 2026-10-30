@@ -3,7 +3,7 @@
 Coexistence acceptance control. The session's requests and a
 foreign authorized client's requests reach one owned service. Process
 observations attribute each refusal to the host generation that issued it and
-to the request that held that host's claim; the already_ran string alone never
+to the request that held that host's slot; a peer-reported PID alone never
 does. Public requests must recover within their deadline without duplicate effects.
 """
 import json
@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
 import contract
 from consumer import validate
+from runner_client_capture import validate_capture, host_reply
 from neighbor_lab import ProcessWatch, generation, generation_state, process_label, save, wait_for
 
 pw, directory = sys.argv[1:3]
@@ -139,16 +140,20 @@ def finish(process, record):
     folder = Path(record['folder'])
     raw = json.loads((folder / 'stdout').read_text())
     if record['direct']:
-        reply = raw
+        assert not validate_capture(raw), validate_capture(raw)
+        transport = raw
+        reply = host_reply(raw) if raw.get('runner_reply') else None
     else:
         assert not validate(raw), validate(raw)
         reply = raw['data']['runner_result']
-        record['acquisitions'] = raw['data']['runner_acquisition']
         record['final_client'] = raw['data']['runner_client']
-    subprocess_record = reply.get('runner_subprocess') or {}
-    record.update(outcome=reply['normalized_outcome'], reply_pid=reply.get('pid'),
-                  worker_pid=subprocess_record.get('pid'), steps=len(reply.get('steps') or []),
-                  effect_exists=Path(record['effect']).exists())
+        transport = raw['data']['runner_client']['transport']
+    record['transport'] = transport
+    record['acquisitions'] = [a for a in transport['attempts'] if a['outcome'] != 'granted']
+    subprocess_record = (reply or {}).get('runner_subprocess') or {}
+    record.update(outcome=reply['normalized_outcome'] if reply else transport['terminal'],
+                  reply_pid=(reply or {}).get('pid'), worker_pid=subprocess_record.get('pid'),
+                  steps=len((reply or {}).get('steps') or []), effect_exists=Path(record['effect']).exists())
     if record['effect_exists']:
         observed = Path(record['effect']).read_bytes()
         (folder / 'effect.bytes').write_bytes(observed)
@@ -287,10 +292,6 @@ for record in requests:
         record['host'], record['host_basis'] = served_host(record, hosts, workers + fork_children)
         served.append(record)
 attributions = {}
-for record in requests:
-    if record.get('outcome') == 'already_ran':
-        record['attribution'] = attribute(record, hosts, served)
-        attributions[record['name']] = record['attribution']
 save(work / 'requests.json', requests)
 by_name = {r['name']: r for r in requests}
 summary = dict(service=service, schedules=schedules, attributions=attributions,
@@ -303,46 +304,49 @@ save(work / 'summary.json', summary)
 spaced = [by_name[n] for n in schedules['spaced']]
 assert all(r['outcome'] == 'ok' and r['effect_exists'] for r in spaced), [r['outcome'] for r in spaced]
 assert len({r['host'] for r in spaced}) == 3 and None not in {r['host'] for r in spaced}, [r['host'] for r in spaced]
-# Every refusal is pre-effect, whatever held the claim.
+# A failed acquisition invokes no specimen, independently witnessed by its
+# separate target. An invoked request is never inferred absent from an error.
 for record in requests:
-    if record.get('outcome') == 'already_ran':
+    if record['transport']['submission']['state'] == 'not_invoked':
         assert record['steps'] == 0 and record['worker_pid'] is None and not record['effect_exists'], record
-# Attribute every refusal in a public acquisition from independent sampled
-# generations and the owner requests, never from the refusal outcome alone.
+# Attribute occupied replies using independent process samples and known owner
+# requests. The containing request span is a conservative observation window;
+# client clock values are not treated as the sampler's clock or kernel identity.
 for record in requests:
     for index, attempt in enumerate(record.get('acquisitions', [])):
-        key = generation(attempt['generation'])
-        matches = [h for h in hosts if h['generation'] == key]
-        assert len(matches) == 1 and attempt['generation']['executable_path'] == HOST, attempt
-        holders = [r for r in served if r['host'] == key]
-        assert len(holders) == 1, ('unattributed refusing generation', key, holders)
-        attribution = dict(host=key, cause=holders[0]['actor'] + '_claim', holder=holders[0]['name'])
+        control = attempt.get('control') or {}
+        if control.get('status') != 'occupied':
+            continue  # transport loss contains no host identity to attribute
+        observation = dict(reply_pid=control['host_pid'], start_ns=record['start_ns'], end_ns=record['end_ns'])
+        attribution = attribute(observation, hosts, served)
+        assert attribution['cause'] in ('session_claim', 'neighbor_claim'), (record['name'], attempt, attribution)
+        key = attribution['host']
         attributions[f"{record['name']}:{index}"] = attribution
-        assert attempt['runner_result']['pid'] == matches[0]['pid']
-        assert attempt['runner_result']['steps'] == [] and attempt['runner_result'].get('runner_subprocess') is None
         if record['outcome'] == 'ok':
-            assert record['host'] != key, ('re-acquired a generation that already refused us', record)
-            assert attempt['wait_outcome'] == 'retired' and attempt['observed_exit'] is not None
-            assert record['final_client']['started_at_unix_ms'] >= attempt['observed_exit']['observed_at_unix_ms']
+            assert record['host'] != key, ('executed on an occupied generation', record)
+            assert generation_state(key) == 'gone', ('occupied generation did not retire', key)
 for name in schedules['spaced']:
     assert by_name[name]['acquisitions'] == [], by_name[name]
 for names in [schedules['public_back_to_back'], [schedules['foreign_held']['refused']],
-              [row['session'] for row in schedules['throttle_queue']]]:
+              [row['session'] for row in schedules['throttle_queue']],
+              [name for pair in schedules['direct_after_reply'] for name in pair]]:
     records = [by_name[name] for name in names]
     assert all(r['outcome'] == 'ok' and r['effect_exists'] for r in records), records
-    assert sum(len(r['acquisitions']) for r in records) >= 1, records
+
+def attributed_to(name, holder):
+    return any(k.startswith(name + ':') and v.get('holder') == holder for k, v in attributions.items())
 foreign = by_name[schedules['foreign_held']['refused']]
-assert attributions[foreign['name'] + ':0']['holder'] == 'neighbor-held'
+assert attributed_to(foreign['name'], 'neighbor-held'), attributions
 for row in schedules['throttle_queue']:
     assert by_name[row['session']]['acquisitions'], row
-    assert attributions[row['session'] + ':0']['holder'] == row['neighbor']
+    assert attributed_to(row['session'], row['neighbor']), attributions
     queued_host = next(h for h in hosts if h['generation'] == by_name[row['neighbor']]['host'])
     assert queued_host['first_seen_ns'] > by_name[row['session']]['start_ns'], ('clients did not queue before spawn', row)
 bounded = by_name[schedules['bounded']]
-assert bounded['outcome'] == 'already_ran' and not bounded['effect_exists'], bounded
-assert len(bounded['acquisitions']) == 1 and bounded['acquisitions'][0]['wait_outcome'] == 'deadline'
-assert bounded['acquisitions'][0]['observed_exit'] is None
-assert attributions[bounded['name'] + ':0']['holder'] == 'neighbor-bounded'
+assert bounded['outcome'] == 'xpc_timeout' and not bounded['effect_exists'], bounded
+assert bounded['transport']['submission']['state'] == 'not_invoked'
+assert bounded['transport']['acquisition_stop'] == 'overall_deadline'
+assert attributed_to(bounded['name'], 'neighbor-bounded'), attributions
 summary['attributions'] = attributions
 save(work / 'summary.json', summary)
 lock = schedules['registry_lock']

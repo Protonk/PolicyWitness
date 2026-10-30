@@ -10,7 +10,9 @@ import Darwin
 // object graphs.
 
 @objc protocol PWRunnerProtocol {
-    func runSpecimen(_ request: Data, withReply reply: @escaping (Data) -> Void)
+    func reserveRunner(_ request: Data, withReply reply: @escaping (Data) -> Void)
+    func runReservedSpecimen(_ request: Data, reservation: String,
+        withReply reply: @escaping (Bool, Data) -> Void)
 }
 
 // Wire string constants used across runner/client code. Keep these stable.
@@ -67,7 +69,6 @@ enum NormalizedOutcome {
     // runner_failed with the published status word or failure record.
     static let badPolicy = "bad_policy"
     static let badRequest = "bad_request"
-    static let alreadyRan = "already_ran"
     static let workerSpawnFailed = "worker_spawn_failed"
 
     // ----- emitted by the host classifier (CWorker.swift sentinel
@@ -92,12 +93,6 @@ enum NormalizedOutcome {
     static let validatorNoReply = "validator_no_reply"
     static let validatorDecodeFailure = "validator_decode_failure"
     static let validatorUnavailable = "validator_unavailable"
-
-    // ----- synthesized by pw-runner-client when the XPC peer is unreachable
-    static let xpcError = "xpc_error"
-    static let xpcTimeout = "xpc_timeout"
-    static let xpcProxyTypeMismatch = "xpc_proxy_type_mismatch"
-    static let xpcNoReply = "xpc_no_reply"
 }
 
 /// Canonical step.attempt.outcome values. Parallels NormalizedOutcome
@@ -161,5 +156,6 @@ enum SandboxCheckOutcome {
 enum PWContract {
     static let requestSchema: Int = 5
     static let responseSchema: Int = 24
+    static let runnerProtocol: Int = 2
 }
 // END GENERATED CONTRACT VERSIONS

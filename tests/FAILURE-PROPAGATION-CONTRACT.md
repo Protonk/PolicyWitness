@@ -1009,6 +1009,28 @@ For the runner client and sbpl-check, the controller collects full
 `Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->152 MiB<!-- /span --> prefix per runner-client
 stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
 up to 4 MiB) and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
+Runner-client stdout is a protocol-versioned client capture, not a synthetic
+host result. Admission first checks the complete capture/version and its state
+invariants, then the embedded bytes and the host response's independent version.
+`submission.state=invoked` means the client irrevocably committed to its one
+execution invocation; it does not prove receipt or execution. Before that
+decision, reservation attempts contain no specimen and may reconnect. No event
+after the decision permits replay. A grant followed by deadline expiry before
+invocation retains the grant and `not_invoked`; missing or inadmissible capture
+leaves submission unknown. Failed clock observations remain missing rather than
+being substituted with usable elapsed times.
+
+The capture's control hashes/counts and admitted PID/instance/lease values are
+client observations of peer messages, not independently observed process
+generations. Credentials are omitted. Host-result bytes have distinct received
+and retained counts, base64 encoding and explicit truncation. Truncated or
+malformed bytes supply no host claims; an unsupported parsed host result is
+retained without interpretation. `runner_result` contains only a parsed host
+reply, and the independent consumer checks its agreement with the accepted
+capture. Local delivery failure keeps precedence. `runner verify` uses these
+same admission rules. Neither unknown submission nor host-reply loss is a
+proof that no worker ran.
+
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver

@@ -2,6 +2,7 @@
 import copy
 import importlib.util
 import json
+import plistlib
 import re
 import subprocess
 import sys
@@ -88,7 +89,8 @@ class ContractVersionTests(receipts.TestCase):
         module = importlib.util.module_from_spec(module_spec)
         module_spec.loader.exec_module(module)
         self.assertEqual({'request_schema': module.REQUEST_SCHEMA, 'response_schema': module.RESPONSE_SCHEMA,
-                          'controller_envelope': module.CONTROLLER_ENVELOPE},
+                          'controller_envelope': module.CONTROLLER_ENVELOPE,
+                          'runner_protocol': module.RUNNER_PROTOCOL},
                          self.manifest['versions'])
 
     def test_copies_table_names_generated_symbols_with_their_values(self):
@@ -96,6 +98,9 @@ class ContractVersionTests(receipts.TestCase):
             for path, symbol in copies:
                 self.assertIn(path, generator.TARGETS, (key, path))
                 text = (ROOT / path).read_text()
+                if path.endswith('.plist'):
+                    self.assertEqual(plistlib.loads(text.encode())[symbol], self.versions[key])
+                    continue
                 name = symbol.rsplit('.', 1)[-1]
                 pattern = re.compile(r'\b' + re.escape(name) + r'\b[^\n]*?\b' + str(self.versions[key]) + r'u?\b')
                 self.assertTrue(any(pattern.search(self.body(text, s, e)) for s, e, _ in generator.TARGETS[path]),

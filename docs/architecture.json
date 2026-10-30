@@ -279,19 +279,19 @@
             "Started by": "the controller",
             "Sandboxed": "no",
             "Native sandbox API": "none",
-            "Lifetime": "one acquisition attempt; external pre-admission refusals can require another client within the same deadline"
+            "Lifetime": "one helper per request; effect-free reservation attempts and the single execution invocation share one absolute deadline"
           },
           "sources": [
             {
-              "path": "controller/src/runner_acquisition.rs",
-              "symbol": "acquire"
+              "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+              "symbol": "PWRunnerClientSession"
             },
             {
               "path": "runner/Clients/PWRunnerClient/main.swift",
-              "symbol": "readDataToEndOfFile"
+              "symbol": "readToEnd"
             },
             {
-              "path": "runner/Clients/PWRunnerClient/main.swift",
+              "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
               "symbol": "NSXPCConnection"
             }
           ],
@@ -307,8 +307,8 @@
               "form": "test"
             },
             {
-              "path": "controller/src/runner_acquisition.rs",
-              "symbol": "retirement_and_pid_reuse_allow_only_a_fresh_attempt_with_remaining_budget",
+              "path": "runner/Tests/PWRunnerClientSessionTests/main.swift",
+              "symbol": "runClientSessionControls",
               "form": "test"
             }
           ]
@@ -323,9 +323,9 @@
             "Started by": "launchd: XPC service lookup, or a Mach service for BYOXPC",
             "Sandboxed": "no",
             "Native sandbox API": "none, by the invariance rule",
-            "Lifetime": "one specimen; exits {limit:host_exit_delay} after replying"
+            "Lifetime": "one reservation and at most one specimen; unused reservation expiry or abandonment retires the host"
           },
-          "note": "All authorized connections share one terminal, locked request claim. Only its owner schedules host exit; connections racing retirement can still fail before refusal.",
+          "note": "All authorized connections share one locked reservation slot. Only the connection holding its grant can consume it, before specimen decoding. Stale expiry or disconnect cannot retire an executing owner; client loss after submission never permits replay.",
           "sources": [
             {
               "path": "runner/Services/PWRunner/main.swift",
@@ -333,7 +333,7 @@
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-              "symbol": "runSpecimen"
+              "symbol": "runReservedSpecimen"
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
@@ -528,7 +528,7 @@
           "facts": {
             "Language": "Rust",
             "Where": "app top level",
-            "Started by": "the controller, only for an admitted xpc_error reply",
+            "Started by": "the controller, only for an admitted client terminal xpc_error",
             "Sandboxed": "no",
             "Native sandbox API": "sandbox_compile_string and params; never applies",
             "Lifetime": "one compile"
@@ -666,7 +666,7 @@
           "from": "controller",
           "to": "client",
           "kind": "spawn",
-          "label": "spawn; held request on stdin, read to EOF; reply on stdout",
+          "label": "spawn once; held request on stdin, read to EOF; versioned client capture on stdout",
           "short": "spawn; stdin, stdout",
           "sources": [
             {
@@ -675,7 +675,7 @@
             },
             {
               "path": "runner/Clients/PWRunnerClient/main.swift",
-              "symbol": "readDataToEndOfFile"
+              "symbol": "readToEnd"
             }
           ],
           "checks": [
@@ -696,16 +696,16 @@
           "from": "client",
           "to": "host",
           "kind": "channel",
-          "label": "NSXPC runSpecimen(Data) and its reply",
-          "short": "NSXPC runSpecimen",
+          "label": "effect-free NSXPC reservation, then one runReservedSpecimen call and its reply",
+          "short": "NSXPC reservation and submission",
           "sources": [
             {
-              "path": "runner/Clients/PWRunnerClient/main.swift",
+              "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
               "symbol": "NSXPCConnection"
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-              "symbol": "runSpecimen"
+              "symbol": "runReservedSpecimen"
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
@@ -844,7 +844,7 @@
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-              "symbol": "runSpecimen"
+              "symbol": "runReservedSpecimen"
             }
           ],
           "checks": [
@@ -998,7 +998,7 @@
           "from": "controller",
           "to": "sbpl_check",
           "kind": "spawn",
-          "label": "spawn only for an admitted xpc_error reply; held request in; helper envelope out",
+          "label": "spawn only for an admitted client terminal xpc_error; held request in; helper envelope out",
           "short": "spawn on xpc_error only",
           "sources": [
             {
@@ -5416,7 +5416,8 @@
               "symbol": "single_use",
               "form": "test"
             }
-          ]
+          ],
+          "note": "All authorized connections share one locked reservation slot. Only the connection holding its grant can consume it, before specimen decoding. Stale expiry or disconnect cannot retire an executing owner; client loss after submission never permits replay."
         },
         {
           "id": "client",
@@ -5442,8 +5443,8 @@
               "form": "test"
             },
             {
-              "path": "controller/src/runner_acquisition.rs",
-              "symbol": "retirement_and_pid_reuse_allow_only_a_fresh_attempt_with_remaining_budget",
+              "path": "runner/Tests/PWRunnerClientSessionTests/main.swift",
+              "symbol": "runClientSessionControls",
               "form": "test"
             }
           ]
@@ -5626,7 +5627,7 @@
           "kind": "command",
           "facts": {
             "Behavior": "sends a fixed allow-all request through the client and waits {limit:runner_verify_wait} by default",
-            "Lifecycle": "the host it reaches: an immediately following request meets that host's terminal claim (already_ran) or waits for the generated plist's {limit:byoxpc_throttle_interval} ThrottleInterval; a refusal executed nothing and the request can be sent again"
+            "Lifecycle": "one reserved host and at most one execution; subsequent acquisition can wait through occupied hosts or the generated plist throttle, without sending a specimen before its own grant"
           },
           "sources": [
             {
@@ -5638,7 +5639,7 @@
               "symbol": "verify_request"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "path": "runner/Sources/PWRunnerCore/PWRunnerReservation.swift",
               "symbol": "PWRunnerAdmission"
             }
           ],
@@ -6249,7 +6250,7 @@
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-              "symbol": "runSpecimen"
+              "symbol": "runReservedSpecimen"
             }
           ],
           "checks": [

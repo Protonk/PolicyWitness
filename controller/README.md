@@ -13,7 +13,7 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 | --- | --- |
 | CLI and orchestration | [main.rs](src/main.rs), [cli.rs](src/cli.rs), [run_flow.rs](src/run_flow.rs): dispatch, run preparation and envelope assembly. |
 | Requests | [request_patch.rs](src/request_patch.rs): parsing, version admission and structured refusals; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
-| Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): Swift-client invocation and capture; [runner_acquisition.rs](src/runner_acquisition.rs): external host generation observation and re-acquisition; [disposition.rs](src/disposition.rs): worker disposition validation/projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
+| Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): one Swift-client invocation and separate client/host capture admission; [disposition.rs](src/disposition.rs): worker disposition validation/projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
 | Provenance | [dossier.rs](src/dossier.rs), [evidence.rs](src/evidence.rs), [digest.rs](src/digest.rs), [host_facts.rs](src/host_facts.rs): specimen records, manifest lookup, hashes and host facts. |
 | Policy inspection | [policy_check.rs](src/policy_check.rs): independent compile-check capture; [sbpl_imports.rs](src/sbpl_imports.rs) and [sbpl_lex.rs](src/sbpl_lex.rs): bounded import scan and lexer, shared with `sbpl-check`. |
 | External runners | [runner_commands.rs](src/runner_commands.rs), [runner_manager.rs](src/runner_manager.rs): commands, registry and launchd; [bundle.rs](src/bundle.rs) and [plist.rs](src/plist.rs): install-time bundle metadata. |
@@ -65,16 +65,17 @@ The [build-stamp contract](../docs/CONTRACT.md#build-stamp) defines these fields
 2. Remove controller-owned selection fields and serialize the resolved request
    once. Deliver those held bytes to `pw-runner-client run --request -` on stdin;
    no temporary request file is written.
-3. Invoke a fresh host for the specimen. For an external runner, an admitted
-   `already_ran` with empty steps and no worker permits re-acquisition only after
-   its live PID and start time identify the selected executable and that
-   generation is observed gone. All attempts share the original timeout.
-   Unknown process observations stop acquisition with the refusal. After successful policy application in
+3. Invoke one client with the original absolute deadline. It acquires an
+   effect-free reservation, then invokes execution once on the same connection.
+   Acquisition can reconnect before submission; invocation permanently ends
+   that loop. A lost execution reply remains unknown and is never replayed.
+   After successful policy application in
    a fresh worker, the host collects eligible validator queries against that
    waiting worker, closes collection, then releases attempts and joins the
    observations into its reply. It omits the validator when no queries are
    eligible; refusals and earlier failures can stop before either child exists.
-4. Admit the reply version, complete execution evidence, and print a single `kind="run"` JSON envelope to stdout.
+4. Admit the client capture, then the host reply version, complete execution
+   evidence, and print a single `kind="run"` JSON envelope to stdout.
 
 The validator uses batch NDJSON and `SANDBOX_CHECK_NO_REPORT` for every query,
 including `none` filters, which pass no filter argument and report
@@ -99,25 +100,24 @@ the app evidence manifest once, requested augment files under
 `Contents/Resources/Augments/`, the literal SBPL import closure, selected binary
 bytes needed for dossier hashes, and host `sysctl` facts. Evidence verification
 additionally hashes manifest entries. Built-in selection uses the manifest's
-fixed service path; external selection reads the registry. External host re-acquisition also reads
-process start times with `proc_pidinfo` and executable paths with `proc_pidpath`;
-only ESRCH or an observed different start time establishes retirement. Neither reads an
+fixed service path; external selection reads the registry and admits its
+advertised execution protocol. Neither reads an
 `Info.plist`: service names come from the manifest or registry.
 
 The controller launches `pw-runner-client` for the selected run, `sbpl-check`
-only after an admitted `xpc_error` reply. PlistBuddy, codesign, plutil, id and launchctl
+only after an admitted client terminal `xpc_error`. PlistBuddy, codesign, plutil, id and launchctl
 belong to the separately dispatched `runner` commands; `bundle::read_bundle_info`
 is used only by install.
 
 [`RunDependencies`](src/run_flow.rs) names the controllable app root, manifest
-loader, registry location, process observer and client invocation. Orchestration tests count
+loader, registry location and client invocation. Orchestration tests count
 manifest loads and client calls; the built-in selection control uses an app
 root without an Info.plist.
 
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 24, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 24, controller envelope 9, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
@@ -130,12 +130,13 @@ admitting its exact response version. Another integer version produces
 runner-derived diagnostics. Request-delivery failure takes
 precedence as `tool_error`, leaving any captured reply uninterpreted.
 
-`data.runner_acquisition` records qualifying refused attempts, their client
-captures, refusing generations and exit or failed-wait observations. It is empty
-when none qualified. The final attempt alone supplies `runner_client`,
-`runner_result`; refusal records never supply downstream
-worker evidence. `runner verify` uses the same acquisition procedure and retains
-the same refusal array.
+`data.runner_client.transport` retains the versioned client capture: acquisition
+attempts, submission decision, structured transport errors and exact host reply
+bytes. Client-reported host identity is not an independently observed kernel
+generation. Capture admission precedes host-response admission. Missing,
+truncated, malformed or unsupported capture leaves submission unknown.
+`runner_result` contains only a received parsed host reply; client failures do
+not manufacture one. `runner verify` uses this same path and admission order.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
 received/retained byte counts. Each stream retains at

@@ -74,6 +74,7 @@ VALUE_OWNERS = {
     'tests/suites/runner_abi_layout/limits.py',
     'tests/suites/runner_c_worker_harness/check_sysctl.py',
     'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
+    'runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift',
     'controller/src/run_flow.rs',
     'controller/src/bin/sbpl-check.rs',
     'controller/src/runner_manager.rs', 'controller/src/runner_commands.rs',

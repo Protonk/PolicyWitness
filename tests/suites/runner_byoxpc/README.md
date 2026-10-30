@@ -23,7 +23,7 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 - `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh`
 - `tests/suites/runner_byoxpc/opt_in/single_use.sh`
 - `tests/suites/runner_byoxpc/opt_in/retirement_observations.sh`
-- `tests/suites/runner_byoxpc/opt_in/retirement_controls.sh`
+- `tests/suites/runner_byoxpc/opt_in/reservation_controls.sh`
 - `tests/suites/runner_byoxpc/opt_in/default_location.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh`
@@ -89,10 +89,11 @@ supplied launchd observations: bootout/unlink failures, unknown/unowned state,
 process loss after bootout, and failed retirement persistence. These controls
 establish state transitions; the opt-in case supplies actual launchd evidence.
 
-`single_use` retains the raw shipped-client refusal while an owner holds its
-host. A concurrent public request records that same generation's refusal, waits
-for observed retirement, then succeeds on a fresh generation. Append-only effects
-establish one execution per successful request and none for the raw refusal.
+`single_use` retains the shipped client's bounded, not-invoked capture while an
+owner holds its host. A concurrent public request records an occupied response
+from that same host, then succeeds on a fresh generation. Independent process
+observations establish the prior generation's absence. Append-only effects
+establish one execution per successful request and none for the bounded request.
 
 `retirement_observations` is a bounded experiment, not a service reliability
 acceptance control. It makes 48 public CLI requests with an ordinary allow-default
@@ -112,9 +113,9 @@ ESRCH or an observed different start time establishes the earlier generation's
 absence. Unseen samples and missed short-lived processes do not establish exit.
 A bounded post-sequence observation retains direct exits for every seen
 generation before session cleanup. Missing exits, invalid envelopes, interrupted
-logging or watchdog intervention make the experiment incomplete. Runner outcomes
-are counted separately, including `ok`, `already_ran`, `xpc_error` and
-`xpc_timeout`, without a required success ratio or causal interpretation.
+logging or watchdog intervention make the experiment incomplete. Host outcomes and client transport terminals are counted separately, including
+`ok`, `xpc_error` and `xpc_timeout`, without a required success ratio or causal
+interpretation. A transport failure need not contain a host result.
 
 `retirement/` retains every request and raw capture, per-request observations,
 the selected app's provenance/inventory and case sources, generation samples and
@@ -126,15 +127,16 @@ not establish BYOXPC reliability. Select a baseline or candidate with `PW_APP_DI
 and use separate output directories to run the identical case against each app.
 
 `bad_neighbor_claims` is the coexistence acceptance control. Schedule A spaces
-requests and requires zero re-acquisitions. Public back-to-back (B), foreign-held
-(D) and throttle-queued (E) requests must succeed with recorded re-acquisition;
-every refusing generation is attributed from independent process samples and
-owner requests. C retains the raw shipped-client observation. A bounded request
-ends in `already_ran` without an effect while its neighbor continues holding.
-The case checks that the default registry does not advertise its private session,
-and keeps fixture registry-lock contention controls. A successful effect contains
-exactly one appended byte. Artifacts include every attempt, generation, attribution
-and the host's XPC log stream. Constructed controls reject PID reuse and unknown
+requests and requires every acquisition to succeed on its first attempt. Public
+back-to-back (B) and raw-client (C) requests must succeed with one effect each;
+these schedules do not require a timing race to occur. Foreign-held (D) and
+throttle-queued (E) requests require occupied responses attributed to the known
+owner through independent process samples. Any other transport loss remains
+unlocalized. A bounded request ends in `xpc_timeout`, with submission
+`not_invoked` and no effect, while its neighbor continues holding. The case
+checks that the default registry does not advertise its private session and
+keeps fixture registry-lock contention controls. A successful effect contains
+exactly one appended byte. Constructed controls reject PID reuse and unknown
 holders before live scheduling.
 
 `default_location` is the sole session using the shared default registry. It
@@ -144,27 +146,25 @@ without retry. All other sessions use durable private registries; see the
 [fixture recovery contract](../../fixtures/byoxpc/README.md).
 
 
-`retirement_controls` compiles copied host sources with a declared trace fixture,
-leaving the inspected app and production code unchanged. One ungated session
-records 24 public and 24 raw-client empty-plan requests, including refusals and
-transport errors. Three separate sessions hold an encoded reply or hold the
-existing retirement callback to distinguish delivered refusal, retirement before
-refusal delivery, and host loss after completed work before reply delivery.
-The last arrangement deliberately terminates its identified host generation.
-No request is resubmitted by the fixture. The selected app supplies the real
-worker and raw client; admission and orchestration remain the production bodies.
+`reservation_controls` compiles copied host and client sources with declared
+trace fixtures, leaving the inspected app unchanged. Controlled arrangements
+exercise credential and connection binding, consumed grants, expiry and
+abandonment, lost acquisition replies followed by fresh acquisition, and lost
+execution replies after a real worker completed one append. A copied helper
+terminated before stdout publication leaves submission unknown in the controller;
+independent traces establish one helper and one execution invocation. Legacy
+selectors and unsupported protocol replies cannot reach specimen execution.
 
-The temporary source changes, original/copy hashes, compiler commands, signed
+Temporary source changes, original/copy hashes, compiler commands, signed
 substitution provenance, request/reply bytes, trace events, kernel generations,
 independent append effects and cleanup receipts remain in case artifacts. Trace
 and gate files live in owned `/private/tmp` directories. Unknown cleanup retains
 ownership and any recovery app required by the session helper. Build products
-use case scratch. The fixture deliberately retains the original worker identity
-to pair its instrumented host with the unchanged worker; it supplies no normal
-build or production-equivalence credit. Trace IO and gates alter timing.
+use case scratch. The instrumented host retains the original worker identity to
+pair it with the unchanged worker; this supplies no normal-build or production
+equivalence credit. Trace IO and gates alter timing.
 
-A pass establishes the specified controlled boundaries, recorded ordinary
-outcomes and verified cleanup. Neither a matching error number nor a missing
-trace event attributes a historical failure. This opt-in investigation needs
-GUI launchd, signing, Swift, clang and Meson. It does not replace the existing
-BYOXPC acceptance cases.
+A pass establishes the controlled boundaries and verified cleanup. Neither a
+matching error number nor a missing trace event attributes a historical failure.
+This opt-in case needs GUI launchd, signing, Swift, clang and Meson. Ordinary
+BYOXPC acceptance cases remain independently required.

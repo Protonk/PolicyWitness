@@ -17,7 +17,6 @@ column says why, and names the closest unit or harness coverage.
 | `ok` | C worker (pw-probe-runner) + validator (sb_api_validator) joined by `CWorkerOrchestrator` | `runner_apply_isolation_v2`, `runner_apply_isolation_v3`, `integration`, `runner_use_c_worker`, others | The happy path; covered everywhere. |
 | `bad_policy` | defensive host policy-hash failure (`computePolicyHash`) | `runner_unit` (`EnvelopeInvariantTests`) | Public admission refuses missing source or wrong format as `bad_request` before this boundary. A published compilation/setup/application failure maps to `runner_failed`. |
 | `bad_request` | controller syntax/version/selector/augment checks + host closed request decode + `CWorkerOrchestrator.admissionFailure(for:)` (capacity first) + `requestMeaningFailure` | `runner_outcome_bad_request/accepted_input_contract`, `runner_unit`, `runner_use_c_worker.duplicate_step_id_rejected`, `failure_boundaries.admission` | Structured `request_failure` names the refusal and location. Unknown filters, unsupported attempt pairs, duplicate IDs and inapplicable fields refuse the whole specimen before children. Known unavailable predictions retain their per-step observations. |
-| `already_ran` | host (PWRunnerService) | `runner_unit`, `runner_byoxpc/single_use`, `runner_byoxpc/bad_neighbor_claims` | Shared host admission through distinct services, simultaneous claims and owner-only exit; live two-client file effects and fresh-host acceptance; live attribution of refusals to retirement lag or a foreign holder. |
 | `worker_spawn_failed` | host (PWRunnerService) | `runner_outcome_worker_spawn_failed` | Driven via `_test_overrides.worker_executable_path`. |
 | `runner_timeout` | host classifier | `runner_outcome_runner_timeout`, `runner_use_c_worker/worker_timeout_ms_honored`, `witness_contract/worker_post_apply_hang_seam`; `runner_unit` / `PolicyTransferTests` | Deliberate empty-plan control plus completed single-write and mixed allowed/denied-write plans. All assert host-kill timeout evidence and both overrides; populated plans independently check file effects and retained step evidence (allow/`succeeded` and deny/`permission_failure` records) and `partial_steps=false`. A policy transfer timeout without an observed worker refusal (the stalled lifecycle fixture) stays here with no EOF receipt. |
 | `runner_failed` | host classifier | `runner_unit` / `HostOutcomeClassifierTests`, `CWorkerLifecycleTests`, `WorkerEvidenceTests`, `CWorkerTests`, `PolicyTransferTests`; `witness_contract/worker_termination`, `worker_progress_and_failure`, `worker_sparse_failure`; `runner_c_worker_harness` policy delivery refusals; `WorkerClockTests` | Published worker operation/native-result failure, a clock-setup refusal (operation 12, exit 12) or a local timing refusal of a proceed wait (operation 11, code 14), imprecise published failure, inconsistent/incomplete report, abnormal or unconfirmed disposition, cleanup/wait fault, or host setup/transport failure. Source-cap rejection and simultaneous host EPIPE survive together. A truncated policy delivery is the worker's length refusal (code 13) joined to the host's transfer timeout, with the EOF receipt beside the write counts. Completed slots survive; the underlying cause can remain unknown. |
@@ -26,10 +25,25 @@ column says why, and names the closest unit or harness coverage.
 | `validator_no_reply` | host classifier (`verdictReadFailed` / `probeWriteFailed`) | `runner_outcome_validator_no_reply/validator_io_deadline_releases_worker`; `runner_unit` | Real monotonic I/O deadline after one of two verdicts; exact override echo and deadline diagnostic, retained eligible prediction, confirmed validator cleanup and both independently observed worker writes after release. |
 | `validator_decode_failure` | host classifier (UTF-8/JSON/structure rejection) | `runner_validator_failure/validator_decode_failure_reports_degraded`, `witness_contract/validator_decode_failure_reports_degraded` | Two valid verdicts arrive in reverse step order before malformed JSON. Asserts partial verdict association, all three completed attempt outcomes and file effects, an explicit gap with its missing reason, and the honored override. |
 | `validator_unavailable` | host classifier (unique expected-ID coverage and confirmed clean disposition) | `runner_validator_failure/validator_unavailable_reports_degraded`, `witness_contract/validator_unavailable_reports_degraded` | Checked-in transcript returns 2 of 3 verdicts in reverse step order, then clean EOF. Asserts partial verdict association, all three completed attempt outcomes and file effects, the shortfall diagnostic, the gap's missing reason, and the honored override. |
-| `xpc_error` | client (`pw-runner-client`) synthetic reply | `smoke/runner_caller_auth` (real rejected and missing-service calls); `runner_unit` response-default controls | Client-generated failure replies carry the current response schema with empty steps. The caller-auth suite preserves no-effect controls and verifies disposable app copies without altering the selected source app. |
-| `xpc_timeout` | client synthetic reply | none (e2e requires a slow specimen plus tight `--timeout-ms`) | Trigger is real (`--timeout-ms 50` plus a long `_test_overrides.worker_post_apply_hang_ms`) but not currently scripted. |
-| `xpc_proxy_type_mismatch` | client synthetic reply | none (no realistic trigger) | Fires only if the remote XPC proxy doesn't conform to `PWRunnerProtocol`. Defense-in-depth for a code path that should never run with our matched client/host. |
-| `xpc_no_reply` | client synthetic reply | none (no realistic trigger) | Fires only if the XPC reply never arrives but no error fires either. Defense-in-depth. |
+
+## Client transport outcomes
+
+Client failures are carried by the versioned transport capture, not a synthetic
+host RunResult. `runner_unit/client_session_controls` checks bounded acquisition,
+absolute deadlines and no replay after invocation. Independent capture controls
+reject impossible state/terminal combinations and false nonexecution claims.
+`runner_byoxpc/single_use` and `bad_neighbor_claims` establish one-effect
+coexistence and bounded acquisition through real services. Reservation loss
+controls separately exercise replies lost before and after execution.
+
+The controller maps captured XPC loss/overall expiry to `xpc_error`/`xpc_timeout`,
+attempt exhaustion to `xpc_acquisition_failed`, explicit submission refusal to
+`xpc_submission_refused`, invalid controls to `xpc_protocol_error`, and local
+client failures to `runner_client_error`. Missing, malformed or unsupported
+capture produces `missing_runner_client`, `malformed_runner_client` or
+`unsupported_runner_client`, with submission unknown. A truncated host payload
+is `runner_reply_truncated`; malformed/unsupported host responses retain their
+separate admission outcomes. None of these paths permits execution replay.
 
 ## Evidence contract coverage
 
@@ -189,24 +203,25 @@ attribution remains covered by `witness_contract/worker_progress_and_failure`,
 listed in the [coverage ownership table](FAILURE-PROPAGATION-CONTRACT.md#coverage-audit-and-acceptance-ownership).
 
 BYOXPC host acquisition is covered by `runner_byoxpc/single_use` and
-`runner_byoxpc/bad_neighbor_claims`: attributed refusals, fresh generations,
-exactly-once effects, a bounded refusal, and a spaced zero-re-acquisition control.
-`unit/rust.unit` covers non-qualifying replies, failed observations, PID reuse,
-shared deadlines and preservation of the admitted client's time span.
-`runner_byoxpc/default_location` keeps default registry/plist resolution live;
-`shell_helpers/byoxpc_setup` checks private registry routing and durable cleanup.
+`runner_byoxpc/bad_neighbor_claims`: attributed occupied responses, fresh
+generations, exactly-once effects, bounded non-invocation and a spaced
+first-attempt acquisition control. `runner_unit/client_session_controls`
+exercises the actual client session with controlled clocks and connections;
+`unit/rust.unit` covers capture admission, one helper invocation and delivery
+precedence. `runner_byoxpc/default_location` keeps default registry/plist
+resolution live; `shell_helpers/byoxpc_setup` checks private registry routing
+and durable cleanup.
 
 `runner_byoxpc/retirement_observations` separately records 48 ordinary empty-plan
-requests at predeclared gaps, every public envelope, sampled host/worker
-generations, direct observed exits and Unified Logging. It counts successful,
-refused and XPC-failed outcomes without interpreting cause. Passing establishes
-complete observational accounting and owned cleanup, not BYOXPC reliability or
-a replacement for the acceptance controls above.
-`runner_byoxpc/retirement_controls` uses an instrumented host copy to distinguish
-a delivered refusal, a refused request whose reply is lost at retirement, and
-completed work whose reply is lost. Independent effects and process generations
-remain separate from the client transport result; controlled error codes do not
-attribute historical failures.
+requests at predeclared gaps, public envelopes, sampled host/worker generations,
+direct observed exits and Unified Logging. It separates host outcomes from
+client transport terminals without interpreting cause. Passing establishes
+complete observational accounting and owned cleanup, not BYOXPC reliability.
+`runner_byoxpc/reservation_controls` uses instrumented host/client copies to
+exercise credential binding, expiry, abandonment, safe acquisition retry and
+lost execution replies or helper captures without replay. Independent effects
+and process generations remain separate from the client transport result;
+controlled error codes do not attribute historical failures.
 
 ## Worker resource challenge observations
 

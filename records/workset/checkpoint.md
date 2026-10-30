@@ -6,8 +6,10 @@ completion remain unaccepted. Required BYOXPC verification failed twice (F2).
 F1 remains unresolved at the user's explicit request. The bounded F2
 investigation is complete. The user accepted reservation, authorized continuation
 and allowed schema changes. The concrete mandatory-protocol repair design is
-prepared in f2-reservation-design.md; production implementation and verification
-are next. No build or dispatcher is running. Neither finding is a waiver.
+committed at `60010034`. Production, readers, controls and documentation are
+implemented for protocol 2/envelope 9 and under final review. Generator refresh,
+compilation, untouched live fixture refresh and signed acceptance verification
+remain. No build or dispatcher is running. Neither finding is a waiver.
 
 ## Current source and evidence
 
@@ -49,7 +51,8 @@ The agreed repair is an effect-free reservation before submission, with bounded
 retry only before execution is sent and no replay after submission. The concrete
 design requires runner protocol 2 and envelope 9, preserves request 5/response
 24, and removes legacy execution fallback while retaining old-installation
-cleanup. Implementation and acceptance are next. Observations and limits are in f2-investigation.md;
+cleanup. The candidate implementation is prepared; compilation and acceptance
+are next. Observations and limits are in f2-investigation.md;
 original failures and cleanup remain in byoxpc-failure.md. Required BYOXPC
 verification remains unmet, so do not seal or retire the Swift plan.
 

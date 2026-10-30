@@ -66,10 +66,14 @@ creates no validator spawn failure.
 
 ## Run lifecycle
 
-1. Caller authorization gates the connection. The host shares one terminal
-   request claim across connections; another request receives `already_ran`.
-   The claim precedes decoding, so a refused request also consumes the host.
-   Only the claim owner schedules exit after its reply.
+1. Caller authorization gates the connection. All connections share one
+   reservation slot. The effect-free reservation binds a single-use identifier
+   to its authenticated connection and a fixed expiry. Only that connection can
+   consume it for execution, before specimen decoding. Expiry or abandonment
+   retires an unused host; an executing host finishes its existing worker
+   lifecycle despite client loss. Every callback checks the shared state before
+   scheduling exit. The client retries only acquisition; it never replays after
+   invoking execution. Reservation credentials remain inside the connection.
 2. The service decodes and admits the request and validates meaning before
    creating children. `probe_plan` becomes one phase named `main`; explicit
    phases share one total action capacity. The worker receives policy bytes on
@@ -148,7 +152,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 24, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 24, controller envelope 9, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL

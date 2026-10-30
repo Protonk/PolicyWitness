@@ -867,7 +867,8 @@ class GeneratorContractTests(receipts.TestCase):
         without Git loads every helper module from inside the fixture; an omitted helper is a clear refusal."""
         known = {
             'contract': ['docs/contract.json', 'docs/generate_contract.py', 'docs/CONTRACT.md', 'tests/lib/contract.py',
-                         'controller/src/json_contract.rs', 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift'],
+                         'controller/src/json_contract.rs', 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
+                         'runner/Services/PWRunner/Info.plist'],
             'worker_identity': ['docs/generate_worker_identity.py', 'build.sh', 'meson.build', 'meson.options', 'runner/Package.swift',
                                 'controller/tools/pw_probe_runner/pw_probe_runner.c', 'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
                                 'runner/Sources/PWRunnerCore/CWorker.swift', 'tests/lib/contract.py'],

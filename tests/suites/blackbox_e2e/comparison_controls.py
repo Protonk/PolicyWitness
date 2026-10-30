@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+from blackbox import recapture_host_reply
 BASE = ROOT / 'tests/fixtures/blackbox_e2e/checker/response24/valid_run.json'
 COMPARER = ROOT / 'tests/lib/envelope_compare.py'
 
@@ -41,6 +43,9 @@ def main():
         directory = out / name
         candidate = copy.deepcopy(baseline)
         mutate(candidate)
+        # These are authored comparison inputs. Encode the changed host
+        # record explicitly; capture-failure controls live in checker_controls.
+        recapture_host_reply(candidate)
         for side, document in [('candidate', candidate), ('baseline', baseline)]:
             target = directory / side
             target.mkdir(parents=True)
@@ -82,12 +87,15 @@ def main():
     run('renamed_service', rename_service)
     for flags in (['--mach-service'], ['--mach-service', '--privileged']):
         base = copy.deepcopy(original)
-        argv(base)[4:4] = flags
+        argv(base)[6:6] = flags
         run('renamed_service_' + str(len(flags)), rename_service, baseline=base)
 
+    run('absolute_deadline_varies', lambda d: argv(d).__setitem__(5, str(int(argv(d)[5]) + 1)))
     for label, index, value in [('command', 1, 'validate'), ('timeout_flag', 2, '--another-flag'),
-                                ('timeout', 3, '1'), ('request_flag', 4, '--different'),
-                                ('request', 5, '/different.json'), ('service', 6, 'wrong.service'),
+                                ('timeout', 3, '1'), ('deadline_flag', 4, '--another-deadline'),
+                                ('deadline_text', 5, 'not-a-tick'), ('deadline_negative', 5, '-1'),
+                                ('deadline_overflow', 5, str(2**64)), ('request_flag', 6, '--different'),
+                                ('request', 7, '/different.json'), ('service', 8, 'wrong.service'),
                                 ('executable', 0, '/wrong/Contents/MacOS/pw-runner-client')]:
         run('changed_' + label, lambda d, i=index, v=value: argv(d).__setitem__(i, v),
             rejected=f'{argv_path}[{index}]')

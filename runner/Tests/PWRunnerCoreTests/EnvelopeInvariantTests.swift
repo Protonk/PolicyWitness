@@ -231,16 +231,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectTrue((step["sandbox_check"] as! [String: Any])["pid"] is NSNull)
             try expectNil(try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes).steps[0].sandbox_check.pid)
         }
-        tk.run("client XPC failure emitters share the current response default") {
-            for outcome in [NormalizedOutcome.xpcError, NormalizedOutcome.xpcTimeout,
-                            NormalizedOutcome.xpcProxyTypeMismatch, NormalizedOutcome.xpcNoReply] {
-                let result = hostShortCircuitResult(outcome: outcome)
-                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(result))
-                try expectEqual(decoded.schema_version, PWContract.responseSchema)
-                try expectNil(decoded.runner_subprocess)
-                try expectTrue(decoded.steps.isEmpty)
-            }
-        }
+
     }
 
     tk.group("PWRunnerRunResult: host short-circuit result") {
@@ -249,7 +240,6 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 NormalizedOutcome.workerSpawnFailed,
                 NormalizedOutcome.badRequest,
                 NormalizedOutcome.badPolicy,
-                NormalizedOutcome.alreadyRan,
             ] {
                 let result = hostShortCircuitResult(outcome: outcome)
                 try expectNil(result.runner_subprocess, "outcome=\(outcome)")

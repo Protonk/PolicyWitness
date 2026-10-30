@@ -96,6 +96,10 @@ def main():
 
         def check(label, envelope, diagnostics=(), status=1, raw=None):
             nonlocal count
+            # Each mutation here authors a host record; preserve that exact
+            # record in its constructed carrier before exercising the reader.
+            from blackbox import recapture_host_reply
+            recapture_host_reply(envelope)
             count += 1
             stem = artifacts / f"{name}.{label}"
             run_path = Path(f"{stem}.run.json")

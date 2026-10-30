@@ -41,9 +41,24 @@ VOLATILE = {
         'data.runner_result.pid', 'data.runner_result.runner_subprocess.pid',
         'data.runner_result.steps[].sandbox_check.pid', 'data.runner_result.phases[].validator_subprocess.pid',
         'data.runner_result.steps[].attempt.child_pid',
+        'data.runner_client.transport.client_pid',
+        'data.runner_client.transport.attempts[].control.host_pid',
     ),
     'time': (
         'generated_at_unix_ms', 'data.runner_client.started_at_unix_ms', 'data.runner_client.ended_at_unix_ms',
+        'data.runner_client.transport.started_continuous_ns',
+        'data.runner_client.transport.deadline_continuous_ns',
+        'data.runner_client.transport.ended_continuous_ns',
+        'data.runner_client.transport.attempts[].started_elapsed_ms',
+        'data.runner_client.transport.attempts[].ended_elapsed_ms',
+        'data.runner_client.transport.submission.invoked_elapsed_ms',
+    ),
+    'reservation_identity': (
+        'data.runner_client.transport.attempts[].attempt_id',
+        'data.runner_client.transport.attempts[].control.host_instance',
+    ),
+    'control_hash': (
+        'data.runner_client.transport.attempts[].control.sha256',
     ),
     'bundle_identity': (
         'data.runner_result.bundle_id', 'data.specimen.runner_provenance.runner_bundle_id',
@@ -55,6 +70,9 @@ VOLATILE = {
     ),
     'bytes': (
         'data.runner_client.stdout_bytes_received', 'data.runner_client.stdout_bytes_retained',
+        'data.runner_client.transport.attempts[].control.bytes_received',
+        'data.runner_client.transport.runner_reply.bytes_received',
+        'data.runner_client.transport.runner_reply.bytes_retained',
     ),
 }
 STAMPS = ('build.commit', 'build.describe', 'build.number', 'build.version')
@@ -99,12 +117,16 @@ def client_argument_class(path, candidate, baseline):
     arguments = [field(d, 'data.runner_client.argv') for d in (candidate, baseline)]
     # Built-in, user Mach service, and privileged Mach service command shapes.
     for argv in arguments:
-        if (not isinstance(argv, list) or len(argv) < 7 or argv[1:3] != ['run', '--timeout-ms']
+        if (not isinstance(argv, list) or len(argv) < 9 or argv[1:3] != ['run', '--timeout-ms']
+                or argv[4] != '--deadline-ticks' or not isinstance(argv[5], str)
+                or re.fullmatch('[1-9][0-9]*', argv[5]) is None or int(argv[5]) > 2**64 - 1
                 or argv[-3:-1] != ['--request', '-']
-                or argv[4:-3] not in ([], ['--mach-service'], ['--mach-service', '--privileged'])):
+                or argv[6:-3] not in ([], ['--mach-service'], ['--mach-service', '--privileged'])):
             return None
     if len(arguments[0]) != len(arguments[1]):
         return None
+    if path == 'data.runner_client.argv[5]':
+        return 'client_absolute_deadline'
     if path == 'data.runner_client.argv[0]':
         suffix = '/Contents/Resources/Evidence/manifest.json'
         for document, argv in zip((candidate, baseline), arguments):
@@ -140,6 +162,15 @@ def run_fixtures(app, out):
 
 
 def classify(path, candidate, baseline):
+    if path == 'data.runner_client.transport.runner_reply.data_base64':
+        # validate_client already requires exact decoded equality with each
+        # envelope's runner_result. Compare those host records recursively;
+        # their redundant encodings necessarily change for volatile host data.
+        if all(field(d, 'data.runner_client.transport_admission') == 'accepted'
+               and field(d, 'data.runner_client.transport.terminal') == 'runner_reply'
+               for d in (candidate, baseline)):
+            return 'captured_host_bytes'
+        return None
     generic = GENERIC_INDEX.sub('[]', path)
     for klass, paths in VOLATILE.items():
         if generic in paths:

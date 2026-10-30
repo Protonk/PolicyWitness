@@ -20,7 +20,6 @@ mod policy_check;
 mod reply_fixtures;
 mod request_patch;
 mod run_flow;
-mod runner_acquisition;
 mod runner_client;
 mod runner_commands;
 mod runner_manager;

@@ -208,22 +208,11 @@ func requestDecodeDiagnostic(_ error: Error) -> String {
     return "request decode failed: \(kind) at \(parts.isEmpty ? "<root>" : parts.joined(separator: "."))"
 }
 
-/// One terminal claim per host, shared across NSXPC's per-connection queues.
-final class PWRunnerAdmission {
-    private let lock = NSLock()
-    private var claimed = false
-    func claim() -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        guard !claimed else { return false }
-        claimed = true
-        return true
-    }
-}
-
 final class PWRunnerService: NSObject, PWRunnerProtocol {
     private let admission: PWRunnerAdmission
+    private let connectionID = PWRunnerAdmission.Connection()
     private let scheduleExit: () -> Void
+    private let scheduleExpiry: (Int, @escaping () -> Void) -> Void
     private let orchestrate: (PWRunnerRunSpec, String, String?, String, String) -> PWRunnerRunResult
 
     // These boundaries let tests observe entry and retirement without exiting
@@ -233,37 +222,80 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
          scheduleExit: @escaping () -> Void = {
              DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(hostExitDelayMs)) { exit(0) }
          },
+         scheduleExpiry: @escaping (Int, @escaping () -> Void) -> Void = { delay, action in
+             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(delay), execute: action)
+         },
          orchestrate: @escaping (PWRunnerRunSpec, String, String?, String, String) -> PWRunnerRunResult = {
              CWorkerOrchestrator.run(parsed: $0, policyHash: $1, bundleId: $2,
                  workerExecutablePath: $3, validatorExecutablePath: $4)
          }) {
         self.admission = admission
         self.scheduleExit = scheduleExit
+        self.scheduleExpiry = scheduleExpiry
         self.orchestrate = orchestrate
         super.init()
     }
 
-    func runSpecimen(_ request: Data, withReply reply: @escaping (Data) -> Void) {
-        func replyAndExit(_ result: PWRunnerRunResult) {
-            reply(pwRunnerReplyData(result))
-            // Allow the XPC reply to flush before exiting the process.
-            scheduleExit()
-        }
+    private func control(_ status: String, attempt: String? = nil, token: String? = nil,
+                         lease: Int? = nil, reason: String? = nil) -> Data {
+        // This fixed, bounded representation has no specimen-derived strings.
+        try! pwRunnerEncodeJSON(PWRunnerControlReply(status: status, attempt_id: attempt,
+            host_instance: admission.instance, reservation_id: token, lease_ms: lease, reason: reason))
+    }
 
-        if !admission.claim() {
-            let resp = PWRunnerRunResult(
-                specimen_id: "<unknown>",
-                run_kind: nil,
-                rc: 1,
-                normalized_outcome: NormalizedOutcome.alreadyRan,
-                error: "runner instance only supports one RunSpecimen request",
-                pid: Int(getpid()),
-                bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: "unknown",
-                steps: []
-            )
-            reply(pwRunnerReplyData(resp))
+    func reserveRunner(_ request: Data, withReply reply: @escaping (Data) -> Void) {
+        guard request.count <= PWRunnerTransportLimits.controlBytes else {
+            reply(control("invalid_request", reason: "control_too_large")); return
+        }
+        struct Version: Decodable { var protocol_version: Int }
+        guard let version = try? pwRunnerDecodeJSON(Version.self, from: request) else {
+            reply(control("invalid_request", reason: "malformed_control")); return
+        }
+        guard version.protocol_version == PWContract.runnerProtocol else {
+            reply(control("unsupported_protocol", reason: "unsupported_protocol")); return
+        }
+        guard let parsed = try? pwRunnerDecodeJSON(PWRunnerReservationRequest.self, from: request),
+              parsed.attempt_id.utf8.count == 36, UUID(uuidString: parsed.attempt_id) != nil, parsed.lease_ms > 0 else {
+            reply(control("invalid_request", reason: "malformed_control")); return
+        }
+        let decision = admission.reserve(owner: connectionID, leaseMs: parsed.lease_ms)
+        if decision.retire { scheduleExit() }
+        guard let held = decision.reservation else {
+            reply(control(decision.reason == "clock_error" ? "invalid_request" : "occupied",
+                attempt: parsed.attempt_id, reason: decision.reason == "clock_error" ? "clock_error" : nil))
             return
+        }
+        let state = admission, exit = scheduleExit, schedule = scheduleExpiry
+        func checkExpiry() {
+            if state.expire(owner: held.owner, token: held.token) { exit(); return }
+            if let delay = state.expiryDelay(owner: held.owner, token: held.token) {
+                schedule(delay, checkExpiry)
+            }
+        }
+        // Short ticks recheck continuous time after system sleep. An early
+        // callback rearms only while the same unused reservation still exists.
+        schedule(min(100, held.leaseMs), checkExpiry)
+        reply(control("granted", attempt: parsed.attempt_id, token: held.token, lease: held.leaseMs))
+    }
+
+    func connectionInvalidated() {
+        if admission.disconnected(owner: connectionID) { scheduleExit() }
+    }
+
+    func runReservedSpecimen(_ request: Data, reservation: String,
+                             withReply reply: @escaping (Bool, Data) -> Void) {
+        let decision = admission.submit(owner: connectionID, token: reservation)
+        guard decision.accepted else {
+            reply(false, control("reservation_refused", reason: decision.reason))
+            if decision.retire { scheduleExit() }
+            return
+        }
+        func replyAndExit(_ result: PWRunnerRunResult) {
+            let data = pwRunnerReplyData(result)
+            let retire = admission.complete(owner: connectionID, token: reservation)
+            reply(true, data)
+            // Allow the XPC reply to flush before exiting the process.
+            if retire { scheduleExit() }
         }
 
         let parsed: PWRunnerRunSpec
@@ -390,6 +422,8 @@ final class PWRunnerSessionDelegate: NSObject, NSXPCListenerDelegate {
         let exported = PWRunnerService(admission: admission)
         newConnection.exportedInterface = NSXPCInterface(with: PWRunnerProtocol.self)
         newConnection.exportedObject = exported
+        newConnection.invalidationHandler = { exported.connectionInvalidated() }
+        newConnection.interruptionHandler = { exported.connectionInvalidated() }
         newConnection.resume()
         return true
     }

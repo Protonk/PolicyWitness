@@ -67,9 +67,11 @@ SHARED_CONTRACT_SOURCES = (
     'runner/Sources/PWRunnerCore/PWRunnerDisposition.swift',
     'runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift',
     'runner/Sources/PWRunnerCore/PWRunnerReply.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerTransport.swift',
 )
 SERVICE_MAIN = 'runner/Services/PWRunner/main.swift'
 CLIENT_MAIN = 'runner/Clients/PWRunnerClient/main.swift'
+CLIENT_SESSION = 'runner/Clients/PWRunnerClient/PWRunnerClientSession.swift'
 WORKER = 'controller/tools/pw_probe_runner/pw_probe_runner.c'
 VALIDATOR = 'controller/tools/sb_api_validator/sb_api_validator.c'
 ISSUER = 'controller/tools/pw_probe_runner/pw_extension_issuer.c'
@@ -207,7 +209,7 @@ def expected(root, xpc=True):
     targets = {'sb_api_validator': {VALIDATOR}, 'pw-probe-runner': {WORKER}, 'pw-extension-issuer': {ISSUER}}
     if xpc:
         targets['PWCWorkerShim'] = {p.relative_to(root).as_posix() for p in (root / SHIM_DIR).rglob('*.c')}
-        targets['pw-runner-client'] = set(SHARED_CONTRACT_SOURCES) | {CLIENT_MAIN}
+        targets['pw-runner-client'] = set(SHARED_CONTRACT_SOURCES) | {CLIENT_MAIN, CLIENT_SESSION}
         targets['PWRunner'] = {p.relative_to(root).as_posix() for p in (root / CORE_DIR).rglob('*.swift')} | {SERVICE_MAIN}
     return targets
 

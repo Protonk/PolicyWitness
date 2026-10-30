@@ -12,8 +12,7 @@ use std::path::{Path, PathBuf};
 use crate::app_layout::{BUNDLE_ISSUER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
-use crate::runner_acquisition::{NativeObserver, RefusedAttempt, acquire};
-use crate::runner_client::run_pw_runner_client;
+use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::{
     self, RunnerKind, RunnerOwnership, RunnerRecord, RunnerRegistry, RunnerScope, RunnerState,
 };
@@ -31,7 +30,8 @@ struct RunnerInstallData {
 
 #[derive(Serialize)]
 struct RunnerVerifyData {
-    runner_acquisition: Vec<RefusedAttempt>,
+    runner_client: Option<RunnerClientRun>,
+    runner_result: Option<Value>,
     state: RunnerState,
     runner_id: Option<String>,
     service_name: String,
@@ -257,6 +257,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             bundle_path.display()
         )
     })?;
+    runner_manager::require_current_protocol(bundle_info.protocol_version)?;
     if bundle_info.package_type.as_deref() != Some("XPC!") {
         return Err(format!(
             "external runners require CFBundlePackageType=XPC! in Info.plist (got {:?})",
@@ -358,6 +359,15 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         );
     }
     runner_manager::codesign_verify(&sign_target)?;
+    let signed_info = read_bundle_info(&bundle_path)?;
+    runner_manager::require_current_protocol(signed_info.protocol_version)?;
+    if signed_info.protocol_version != bundle_info.protocol_version
+        || signed_info.bundle_id != bundle_info.bundle_id
+        || signed_info.executable != bundle_info.executable
+        || signed_info.package_type != bundle_info.package_type
+    {
+        return Err("runner bundle metadata changed during signing; installation refused".into());
+    }
     let signature = runner_manager::codesign_metadata(&executable_path)?;
     if signature.adhoc && !allow_adhoc {
         return Err("runner is ad-hoc signed; pass --allow-adhoc to accept".to_string());
@@ -403,7 +413,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         executable_path: executable_path.display().to_string(),
         bundle_id,
         scope,
-        protocol_version: runner_manager::RUNNER_PROTOCOL_VERSION,
+        protocol_version: signed_info.protocol_version,
         signature,
         entitlements,
         installed_at_unix_ms: now_unix_ms(),
@@ -598,38 +608,26 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
             return Err("external runners cannot be built-in kinds".to_string());
         }
     };
-    let acquired = acquire(
-        timeout_ms,
-        Some(Path::new(&record.executable_path)),
-        &NativeObserver,
-        |remaining| run_pw_runner_client(&record.service_name, &held, remaining, &connection),
-    );
-    let acquired = match acquired {
-        Ok(value) => value,
-        Err(failure) if failure.refusals.is_empty() => return Err(failure.error),
-        Err(failure) => {
-            let data = RunnerVerifyData {
-                runner_acquisition: failure.refusals,
-                state: record.state,
-                runner_id: Some(record.id.clone()),
-                service_name: record.service_name.clone(),
-                runner_pid: None,
-                normalized_outcome: "tool_error".into(),
-            };
-            json_contract::print_envelope(
-                "runner_verify",
-                json_contract::JsonResult::new(false, 2, Some("tool_error"), Some(failure.error)),
-                &data,
-            )?;
-            return Ok(2);
-        }
-    };
-    let runner_result = acquired.reply;
-    let (runner_pid, outcome) = project_verify_reply(runner_result.as_ref());
-
-    let ok = outcome == "ok";
+    runner_manager::require_current_protocol(record.protocol_version)?;
+    let (client, runner_result) =
+        run_pw_runner_client(&record.service_name, &held, timeout_ms, &connection)?;
+    let (runner_pid, outcome, exit_code, error) =
+        match crate::run_flow::admit_reply(&client, runner_result.as_ref()) {
+            crate::run_flow::ReplyAdmission::DeliveryFailed(error) => {
+                (None, "tool_error".into(), 2, Some(error))
+            }
+            crate::run_flow::ReplyAdmission::Refused { outcome, error } => {
+                (None, outcome.into(), 1, Some(error))
+            }
+            crate::run_flow::ReplyAdmission::Admitted => {
+                let (pid, outcome) = project_verify_reply(runner_result.as_ref());
+                let code = if outcome == "ok" { 0 } else { 1 };
+                (pid, outcome, code, None)
+            }
+        };
     let data = RunnerVerifyData {
-        runner_acquisition: acquired.refusals,
+        runner_client: Some(client),
+        runner_result,
         state: record.state,
         runner_id: Some(record.id.clone()),
         service_name: record.service_name.clone(),
@@ -637,9 +635,9 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         normalized_outcome: outcome.clone(),
     };
     let result =
-        json_contract::JsonResult::new(ok, if ok { 0 } else { 1 }, Some(outcome.as_str()), None);
+        json_contract::JsonResult::new(exit_code == 0, exit_code, Some(outcome.as_str()), error);
     json_contract::print_envelope("runner_verify", result, &data)?;
-    Ok(if ok { 0 } else { 1 })
+    Ok(exit_code)
 }
 
 fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {

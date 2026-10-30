@@ -29,6 +29,7 @@ from lifecycle_adapter import read_lifecycle, summaries
 from document_versions import is_envelope, version_errors, require_supported as _gate
 from extension_evidence import validate_extensions, validate_fresh_read, validate_fresh_write
 from phase_evidence import collection_problem, ownership_problem
+from runner_client_capture import validate_client
 
 
 # The comparison record vocabulary (docs/PolicyWitness.md, "Reading a comparison record").
@@ -56,8 +57,7 @@ _CONTRACT_DIR = Path(__file__).resolve().parents[1] / 'fixtures' / 'contract'
 ENVELOPE_SHAPE = json.loads((_CONTRACT_DIR / 'envelope_shape.json').read_text())['shape']
 REPLY_SHAPE = json.loads((_CONTRACT_DIR / 'response_shape.json').read_text())['shape']
 # Paths whose contents another golden records, with that golden and its root.
-_REROOTED = {'envelope.data.runner_result': (REPLY_SHAPE, 'reply'),
-             'envelope.data.runner_acquisition[].runner_result': (REPLY_SHAPE, 'reply')}
+_REROOTED = {'envelope.data.runner_result': (REPLY_SHAPE, 'reply')}
 SPECIMEN_KEYS = ('request_path', 'policy', 'host', 'runner_provenance', 'app_provenance', 'binaries')
 AUGMENTATION_STATUSES = ('not_requested', 'applied', 'failed', 'not_applicable')
 IMPORT_STATUSES = ('complete', 'incomplete', 'failed', 'not_applicable')
@@ -275,6 +275,10 @@ def validate_shape(value, path, shape, errors):
             errors.append(f'unknown key {path}.{key}')
             continue
         child_path = f'{path}.{key}'
+        if child_path == 'envelope.data.runner_client.transport':
+            # Client admission independently governs this value; rejected or
+            # unsupported captures remain opaque, even to shape traversal.
+            continue
         if child_path == 'envelope.data.policy_check.envelope':
             _validate_policy_check_reply(value, child_path, shape, errors)
             continue
@@ -750,61 +754,12 @@ def _validate_envelope(document):
         app = specimen.get('app_provenance')
         if app is not None and (not isinstance(app, dict) or set(app) != {'evidence_manifest_path', 'evidence_verify'}):
             errors.append('data.specimen.app_provenance carries keys other than the manifest path and verify report')
-    client = data.get('runner_client')
-    if client is not None:
-        if not isinstance(client, dict) or 'request_delivery' not in client:
-            errors.append('data.runner_client lacks request_delivery')
-        else:
-            delivery = client['request_delivery']
-            if delivery is not None and (not isinstance(delivery, dict) or type(delivery.get('bytes_written')) is not int
-                                         or (delivery.get('error') is not None and not isinstance(delivery['error'], str))):
-                errors.append('invalid data.runner_client.request_delivery')
-    acquisitions = data.get('runner_acquisition', [])
-    if not isinstance(acquisitions, list):
-        errors.append('data.runner_acquisition is not an array')
-    else:
-        for attempt in acquisitions:
-            if not isinstance(attempt, dict):
-                errors.append('invalid acquisition attempt')
-                continue
-            refusal = attempt.get('runner_result')
-            identity = attempt.get('generation')
-            capture = attempt.get('runner_client')
-            if not all(isinstance(value, dict) for value in (refusal, identity, capture)):
-                errors.append('acquisition requires refusal, generation and client objects')
-                continue
-            if (refusal.get('schema_version') != contract.RESPONSE_SCHEMA or
-                    refusal.get('normalized_outcome') != 'already_ran' or
-                    refusal.get('steps') != [] or refusal.get('runner_subprocess') is not None or
-                    refusal.get('pid') != identity.get('pid')):
-                errors.append('acquisition requires an admitted pre-worker refusal from its generation')
-            if (type(identity.get('pid')) is not int or identity['pid'] <= 0 or
-                    type(identity.get('start_sec')) is not int or type(identity.get('start_usec')) is not int or
-                    not isinstance(identity.get('executable_path'), str)):
-                errors.append('acquisition requires a process generation and executable')
-            delivery = capture.get('request_delivery') or {}
-            if not isinstance(delivery, dict) or delivery.get('error') is not None:
-                errors.append('failed delivery cannot qualify for acquisition')
-            exited, status = attempt.get('observed_exit'), attempt.get('wait_outcome')
-            if status not in ('retired', 'deadline', 'observation_failed') or (status == 'retired') != isinstance(exited, dict):
-                errors.append('acquisition wait outcome disagrees with exit observation')
-            if (status == 'observation_failed') != isinstance(attempt.get('observation_error'), str):
-                errors.append('acquisition observation error disagrees with wait outcome')
-            if isinstance(exited, dict):
-                replacement = exited.get('replacement')
-                if exited.get('basis') == 'esrch':
-                    if replacement is not None:
-                        errors.append('ESRCH cannot name a replacement generation')
-                elif exited.get('basis') == 'pid_reused':
-                    if (not isinstance(replacement, dict) or replacement.get('pid') != identity.get('pid') or
-                            type(replacement.get('start_sec')) is not int or type(replacement.get('start_usec')) is not int or
-                            (replacement.get('start_sec'), replacement.get('start_usec')) == (identity.get('start_sec'), identity.get('start_usec'))):
-                        errors.append('PID reuse requires a different start time')
-                else:
-                    errors.append('unknown acquisition exit basis')
+    errors.extend(validate_client(data.get('runner_client'), data.get('runner_result')))
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None and not isinstance(diagnostics, dict):
         errors.append('data.runner_sandbox_diagnostics is not an object')
+    if diagnostics is not None and data.get('runner_result') is None:
+        errors.append('client observations cannot supply host-derived sandbox diagnostics')
     return errors
 
 

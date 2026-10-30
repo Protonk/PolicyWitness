@@ -19,9 +19,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = "docs/contract.json"
-KEYS = ("request_schema", "response_schema", "controller_envelope")
+KEYS = ("request_schema", "response_schema", "controller_envelope", "runner_protocol")
 TITLES = {"request_schema": "request schema", "response_schema": "response schema",
-          "controller_envelope": "controller envelope"}
+          "controller_envelope": "controller envelope", "runner_protocol": "runner protocol"}
 BEGIN = "BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)"
 END = "END GENERATED CONTRACT VERSIONS"
 TABLE_BEGIN = "<!-- BEGIN GENERATED CONTRACT TABLE -->"
@@ -38,6 +38,10 @@ COPIES = {
                         ("tests/lib/contract.py", "RESPONSE_SCHEMA")],
     "controller_envelope": [("controller/src/json_contract.rs", "SCHEMA_VERSION"),
                             ("tests/lib/contract.py", "CONTROLLER_ENVELOPE")],
+    "runner_protocol": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "runnerProtocol"),
+                        ("controller/src/json_contract.rs", "RUNNER_PROTOCOL_VERSION"),
+                        ("tests/lib/contract.py", "RUNNER_PROTOCOL"),
+                        ("runner/Services/PWRunner/Info.plist", "PWRunnerProtocolVersion")],
 }
 
 
@@ -89,6 +93,7 @@ TARGETS = {
             "enum PWContract {",
             f"    static let requestSchema: Int = {v['request_schema']}",
             f"    static let responseSchema: Int = {v['response_schema']}",
+            f"    static let runnerProtocol: Int = {v['runner_protocol']}",
             "}"]))],
     "controller/src/json_contract.rs": [
         (*region("// ", ""), lambda v: "\n".join([
@@ -96,7 +101,12 @@ TARGETS = {
             "/// The accepted request contract, independent of implementation revisions.",
             f"pub const REQUEST_SCHEMA_VERSION: u32 = {v['request_schema']};",
             "/// The one runner response schema this controller reads; any other version is refused.",
-            f"pub const RESPONSE_SCHEMA_VERSION: u32 = {v['response_schema']};"]))],
+            f"pub const RESPONSE_SCHEMA_VERSION: u32 = {v['response_schema']};",
+            "/// Required reservation RPC and client capture protocol.",
+            f"pub const RUNNER_PROTOCOL_VERSION: u32 = {v['runner_protocol']};"]))],
+    "runner/Services/PWRunner/Info.plist": [
+        (*region("<!-- ", " -->", "  "), lambda v:
+            f"  <key>PWRunnerProtocolVersion</key>\n  <integer>{v['runner_protocol']}</integer>")],
     "tests/lib/contract.py": [
         (*region("# ", ""), lambda v: "\n".join(f"{k.upper()} = {v[k]}" for k in KEYS))],
     "docs/CONTRACT.md": [(*region("<!-- ", " -->"), sentence), (TABLE_BEGIN, TABLE_END, table)],

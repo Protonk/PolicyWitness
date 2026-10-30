@@ -78,11 +78,13 @@ missing from a later sweep is reported as unseen, not as exited. Processes
 shorter than a sweep can be missed; sweep timing is retained with the samples.
 
 
-`F2Trace.swift` and `F2Process.c` are compiled only by
-`runner_byoxpc/retirement_controls` with copied production host sources. They
-record bounded request identifiers/hashes, admission, worker spawn/reap, reply
-encoding/invocation and scheduled exit through files in owned temporary storage.
-The C helper reads SDK-defined process generation fields. Named gates hold only
-the encoded reply or the existing exit callback, outside the admission lock.
-No token, policy text or reply body is written into the trace. Trace records and
-independent effects remain distinct from client receipt and process-exit proof.
+`ReservationTrace.swift`, `ReservationClientTrace.swift`, `ReservationDriver.swift`
+and `F2Process.c` supply the opt-in `runner_byoxpc/reservation_controls` case.
+They instrument copied production sources or act as an independent protocol
+client. Bounded hashes and boundary events distinguish acquisition, invocation,
+worker completion and capture publication. The C helper reads SDK-defined
+process generation fields. Gates operate outside the admission lock. Traces
+exclude reservation credentials, extension tokens, policy text and reply bodies.
+Independent effects and process exits remain separate from client receipt.
+The shared arrangement and cleanup equipment lives in `retirement_controls.py`;
+its earlier protocol-specific experiment is not a current executable case.

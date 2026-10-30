@@ -3,6 +3,13 @@
 Swift unit tests for the `PWRunnerCore` library — small helpers and
 classifier branches, live worker/validator drivers, and host lifecycle observations.
 
+`client_session_controls` separately compiles the production client session and
+its shared wire sources with controlled connections and clocks. It exercises
+acquisition limits, late callbacks, the grant/deadline boundary and the
+irreversible submission decision without requiring live XPC. Its source hashes,
+compiler invocation and product hash are retained; compiled products stay in
+case scratch. Live reservation loss and independent effects remain BYOXPC work.
+
 `PhaseProtocolTests` checks eight held arrivals against independently observed
 unlink effects, fresh planning and fresh validator processes, stale/future
 release refusal, interrupted later collection and aggregate exhaustion.
@@ -172,9 +179,11 @@ and a known UTF-8 decoder fault through the actual subprocess encoder. The CLI
 transport witness separately exercises C publication and client/controller
 forwarding; these unit inputs do not establish native failure attribution.
 
-`ServiceAdmissionTests` checks host-wide admission and owner-only retirement.
-`service_admission_controls` restores per-connection claims and refusal exits
-separately in a disposable source copy; each must restore its specific failure.
+`ServiceAdmissionTests` checks host-wide reservation admission and owner-only
+retirement. `service_admission_controls` introduces per-connection slots and
+nonowner refusal exits separately in a disposable source copy; each must cause
+its specific assertion failure. `ReservationAdmissionTests` covers lease expiry,
+connection binding, stale callbacks, bounds and maximal capture size.
 `PolicyTransferTests` checks real stalled/draining pipes, partial and interrupted
 writes, zero progress, clock loss and failed cleanup, and joins the host's
 transfer timeout to the shipped worker's length refusal of a truncated delivery

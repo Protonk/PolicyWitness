@@ -26,7 +26,6 @@ use crate::evidence::{self, EvidenceManifest};
 use crate::json_contract;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
 use crate::request_patch::{RequestError, parse_request, validate_request_version};
-use crate::runner_acquisition::{NativeObserver, ProcessObserver, RefusedAttempt, acquire};
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
@@ -37,7 +36,7 @@ const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 
 /// `data` of a `kind: "run"` envelope: the dossier plus the execution records.
 /// Execution keys are present on every run envelope; an uncollected record is
-/// null. Acquisition history is empty when no refusal qualified. The optional
+/// null. Acquisition/submission observations belong to the client capture. The optional
 /// request_failure is included only when supplied.
 #[derive(Serialize)]
 struct ExecutionData {
@@ -46,7 +45,6 @@ struct ExecutionData {
     pub timeout_ms: Option<u64>,
     pub runner_client: Option<RunnerClientRun>,
     pub runner_result: Option<Value>,
-    pub runner_acquisition: Vec<RefusedAttempt>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_failure: Option<Value>,
 }
@@ -140,7 +138,6 @@ fn execution_only(
             timeout_ms,
             runner_client,
             runner_result,
-            runner_acquisition: Vec::new(),
             request_failure: None,
         },
         runner_sandbox_diagnostics: None,
@@ -224,7 +221,6 @@ struct RunDependencies<'a> {
     pub load_manifest: &'a dyn Fn(&Path) -> Result<EvidenceManifest, String>,
     /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
     pub registry_path: Option<&'a Path>,
-    pub process_observer: &'a dyn ProcessObserver,
     pub client: &'a dyn Fn(
         &str,
         &str,
@@ -240,7 +236,6 @@ impl RunDependencies<'static> {
             load_manifest: &evidence::load_manifest,
             registry_path: None,
             client: &run_pw_runner_client,
-            process_observer: &NativeObserver,
         }
     }
 }
@@ -315,7 +310,7 @@ fn policy_dossier(
 /// What a client capture permits. A delivery error is a controller failure
 /// that takes precedence over any captured reply; otherwise the reply's
 /// version gates every semantic reader.
-enum ReplyAdmission {
+pub(crate) enum ReplyAdmission {
     DeliveryFailed(String),
     Refused {
         outcome: &'static str,
@@ -324,13 +319,16 @@ enum ReplyAdmission {
     Admitted,
 }
 
-fn admit_reply(client: &RunnerClientRun, reply: Option<&Value>) -> ReplyAdmission {
+pub(crate) fn admit_reply(client: &RunnerClientRun, reply: Option<&Value>) -> ReplyAdmission {
     if let Some(error) = client
         .request_delivery
         .as_ref()
         .and_then(|d| d.error.clone())
     {
         return ReplyAdmission::DeliveryFailed(error);
+    }
+    if let Some((outcome, error)) = client.failure() {
+        return ReplyAdmission::Refused { outcome, error };
     }
     match reply.map(reply_version) {
         None | Some(ReplyVersion::Supported) => ReplyAdmission::Admitted,
@@ -356,13 +354,13 @@ fn runner_outcome(reply: Option<&Value>) -> &str {
 }
 
 /// The independent fallback compilation, requested only for an admitted
-/// `xpc_error` reply. A helper launch or delivery failure is recorded as an
+/// client-terminal `xpc_error`. A helper launch or delivery failure is recorded as an
 /// unavailable capture; the runner reply is never changed by it.
 fn fallback_policy_check(
-    reply: Option<&Value>,
+    client: &RunnerClientRun,
     run: impl FnOnce() -> Result<PolicyCheckCapture, String>,
 ) -> Option<PolicyCheckCapture> {
-    if runner_outcome(reply) != "xpc_error" {
+    if !client.fallback_eligible() {
         return None;
     }
     Some(run().unwrap_or_else(PolicyCheckCapture::unavailable))
@@ -629,35 +627,15 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     let held = serde_json::to_string_pretty(&request_value)
         .map_err(|e| format!("failed to encode request JSON: {e}"))?;
 
-    let acquired = acquire(
+    let (runner_client, runner_result) = match (deps.client)(
+        &runner_target.service_name,
+        &held,
         parsed.timeout_ms,
-        matches!(
-            runner_target.connection,
-            RunnerConnectionKind::MachService { .. }
-        )
-        .then_some(runner_target.executable_path.as_deref())
-        .flatten(),
-        deps.process_observer,
-        |remaining| {
-            (deps.client)(
-                &runner_target.service_name,
-                &held,
-                remaining,
-                &runner_target.connection,
-            )
-        },
-    );
-    let acquired = match acquired {
+        &runner_target.connection,
+    ) {
         Ok(value) => value,
-        Err(failure) => {
-            let (result, mut data) = tool_error_envelope(specimen, timeout_ms, failure.error);
-            data.execution.runner_acquisition = failure.refusals;
-            return envelope(result, &data, 2);
-        }
+        Err(error) => return tool_error(specimen, timeout_ms, error),
     };
-    let runner_client = acquired.client;
-    let runner_result = acquired.reply;
-    let runner_acquisition = acquired.refusals;
 
     // The reply is retained unchanged on every refusal; nothing reads it
     // before admission.
@@ -665,15 +643,13 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         ReplyAdmission::DeliveryFailed(error) => ("tool_error", 2, error),
         ReplyAdmission::Refused { outcome, error } => (outcome, 1, error),
         ReplyAdmission::Admitted => {
-            let policy_check =
-                fallback_policy_check(runner_result.as_ref(), || run_policy_check(&held));
+            let policy_check = fallback_policy_check(&runner_client, || run_policy_check(&held));
             let execution = complete_execution(ExecutionData {
                 specimen,
                 policy_check,
                 timeout_ms,
                 runner_client: Some(runner_client),
                 runner_result,
-                runner_acquisition,
                 request_failure: None,
             });
             let (result, data, exit_code) = execution_envelope(execution);
@@ -681,7 +657,10 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         }
     };
     let mut data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
-    data.execution.runner_acquisition = runner_acquisition;
+    data.execution.policy_check =
+        fallback_policy_check(data.execution.runner_client.as_ref().unwrap(), || {
+            run_policy_check(&held)
+        });
     envelope(
         json_contract::JsonResult::new(false, exit_code, Some(outcome), Some(error)),
         &data,
@@ -766,27 +745,7 @@ mod tests {
     }
 
     fn client_run(runner: Option<&Value>) -> RunnerClientRun {
-        let stdout = serde_json::to_vec(&runner).unwrap();
-        let (output, _) = crate::utils::capture_json_output(
-            &std::process::Output {
-                status: std::os::unix::process::ExitStatusExt::from_raw(0),
-                stdout,
-                stderr: b"fixed runner-client diagnostic".to_vec(),
-            },
-            "runner",
-            crate::utils::RUNNER_CAPTURE_BYTES,
-        );
-        RunnerClientRun {
-            argv: vec!["controlled-client".into()],
-            started_at_unix_ms: 1_000,
-            ended_at_unix_ms: 2_500,
-            exit_code: 0,
-            request_delivery: Some(RequestDelivery {
-                bytes_written: 2,
-                error: None,
-            }),
-            output,
-        }
+        crate::runner_client::test_client_run(runner)
     }
 
     fn execution_data(runner: Option<Value>) -> ExecutionData {
@@ -796,14 +755,12 @@ mod tests {
             timeout_ms: Some(DEFAULT_TIMEOUT_MS),
             runner_client: Some(client_run(runner.as_ref())),
             runner_result: runner,
-            runner_acquisition: Vec::new(),
             request_failure: None,
         }
     }
 
-    const DATA_KEYS: [&str; 7] = [
+    const DATA_KEYS: [&str; 6] = [
         "policy_check",
-        "runner_acquisition",
         "runner_client",
         "runner_result",
         "runner_sandbox_diagnostics",
@@ -1345,7 +1302,7 @@ else:
     }
 
     #[test]
-    fn delivery_failure_takes_precedence_and_retains_the_reply_unread() {
+    fn delivery_failure_takes_precedence_and_retains_the_client_frame_unread() {
         let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
         let reply = worker("ok", None);
         let unsupported = json!({"schema_version": current + 1, "normalized_outcome": "ok"});
@@ -1354,6 +1311,10 @@ else:
             bytes_written: 1,
             error: Some("request delivery failed after 1 bytes: Broken pipe (os error 32)".into()),
         });
+        broken.transport_admission = "delivery_failed".into();
+        broken.transport_error = broken.request_delivery.as_ref().unwrap().error.clone();
+        broken.submission = "unknown".into();
+        let retained_transport = broken.transport.clone();
         let intact = client_run(Some(&reply));
         for captured in [Some(&reply), Some(&unsupported), None] {
             match admit_reply(&broken, captured) {
@@ -1386,9 +1347,9 @@ else:
             }
             _ => panic!("malformed version admitted"),
         }
-        // The refusal envelope retains the capture and the reply unchanged, with
-        // no policy check or diagnostics.
-        let data = execution_only(specimen(), Some(7), Some(broken), Some(unsupported.clone()));
+        // Failed local delivery retains the outer capture opaquely, without
+        // recovering a host body, policy check or diagnostics.
+        let data = execution_only(specimen(), Some(7), Some(broken), None);
         let text = json_contract::render_envelope(
             "run",
             json_contract::JsonResult::new(false, 2, Some("tool_error"), Some("controlled".into())),
@@ -1397,7 +1358,12 @@ else:
         .unwrap();
         let wire: Value = serde_json::from_str(&text).unwrap();
         assert_eq!(keys(&wire["data"]), DATA_KEYS);
-        assert_eq!(wire["data"]["runner_result"], unsupported);
+        assert!(wire["data"]["runner_result"].is_null());
+        assert_eq!(
+            wire["data"]["runner_client"]["transport"],
+            retained_transport.unwrap()
+        );
+        assert_eq!(wire["data"]["runner_client"]["submission"], "unknown");
         assert_eq!(
             wire["data"]["runner_client"]["request_delivery"]["bytes_written"],
             1
@@ -1415,14 +1381,15 @@ else:
     fn fallback_compilation_is_requested_only_for_an_admitted_xpc_error() {
         let xpc_error = json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
             "normalized_outcome": "xpc_error", "error": "NSCocoaErrorDomain:4099 refused", "steps": []});
-        let before = xpc_error.clone();
+        let failed_client = client_run(None);
+        let before = serde_json::to_value(&failed_client).unwrap();
         let mut invoked = 0;
-        let capture = fallback_policy_check(Some(&xpc_error), || {
+        let capture = fallback_policy_check(&failed_client, || {
             invoked += 1;
             Err("sbpl-check request delivery failed: Broken pipe".into())
         });
         assert_eq!(invoked, 1);
-        let capture = capture.expect("an xpc_error reply requests the helper");
+        let capture = capture.expect("an admitted client xpc_error requests the helper");
         assert_eq!(capture.status, "unavailable");
         assert!(capture.envelope.is_none());
         assert!(
@@ -1430,27 +1397,38 @@ else:
             "{}",
             capture.output.stderr
         );
-        // The original reply is retained exactly as received.
-        assert_eq!(xpc_error, before);
+        assert_eq!(serde_json::to_value(&failed_client).unwrap(), before);
         let mut invoked = 0;
         for reply in [
-            Some(worker("ok", None)),
-            Some(worker("runner_failed", Some(9))),
-            Some(worker("xpc_timeout", None)),
-            None,
+            worker("ok", None),
+            worker("runner_failed", Some(9)),
+            worker("xpc_timeout", None),
+            xpc_error.clone(),
         ] {
             assert!(
-                fallback_policy_check(reply.as_ref(), || {
+                fallback_policy_check(&client_run(Some(&reply)), || {
                     invoked += 1;
                     Err("never requested".into())
                 })
                 .is_none()
             );
         }
+        let mut missing = client_run(None);
+        missing.transport = None;
+        missing.transport_admission = "missing".into();
+        missing.transport_error = Some("no complete client capture".into());
+        missing.submission = "unknown".into();
+        assert!(
+            fallback_policy_check(&missing, || {
+                invoked += 1;
+                Err("never requested".into())
+            })
+            .is_none()
+        );
         assert_eq!(invoked, 0);
 
         // Helper success, rejection and an unavailable capture leave the
-        // runner reply and the controller's outcome unchanged.
+        // client evidence and the controller's outcome unchanged.
         let helper_envelope = |outcome: &str| {
             json!({"schema_version": json_contract::SCHEMA_VERSION, "kind": "sbpl_check",
                 "result": {"normalized_outcome": outcome}, "data": {}})
@@ -1470,32 +1448,25 @@ else:
                 ),
                 envelope: envelope.clone(),
             };
-            let completed = complete_execution(ExecutionData {
-                specimen: specimen(),
-                policy_check: Some(capture),
-                timeout_ms: Some(7),
-                runner_client: None,
-                runner_result: Some(xpc_error.clone()),
-                runner_acquisition: Vec::new(),
-                request_failure: None,
-            });
-            assert_eq!(completed.exit_code, 1, "{status}");
+            let client = client_run(None);
+            let (outcome, error) = client.failure().unwrap();
+            let mut data = execution_only(specimen(), Some(7), Some(client), None);
+            data.execution.policy_check = Some(capture);
+            let text = json_contract::render_envelope(
+                "run",
+                json_contract::JsonResult::new(false, 1, Some(outcome), Some(error)),
+                &data,
+            )
+            .unwrap();
+            let wire: Value = serde_json::from_str(&text).unwrap();
             assert_eq!(
-                completed.result.normalized_outcome.as_deref(),
-                Some("xpc_error"),
+                wire["result"]["normalized_outcome"], "xpc_error",
                 "{status}"
             );
-            assert_eq!(
-                completed.result.error.as_deref(),
-                Some("NSCocoaErrorDomain:4099 refused"),
-                "{status}"
-            );
-            assert_eq!(
-                completed.data.runner_result,
-                Some(before.clone()),
-                "{status}"
-            );
-            let check = completed.data.policy_check.as_ref().unwrap();
+            assert_eq!(wire["result"]["error"], "controlled XPC error", "{status}");
+            assert!(wire["data"]["runner_result"].is_null(), "{status}");
+            assert_eq!(wire["data"]["runner_client"], before, "{status}");
+            let check = data.execution.policy_check.as_ref().unwrap();
             assert_eq!(check.status, status);
             assert_eq!(check.envelope, envelope);
         }
@@ -1941,6 +1912,16 @@ else:
             args: &[&str],
             reply: Value,
         ) -> Observed {
+            observe_client(app, registry, args, Some(reply))
+        }
+
+        /// `None` is an admitted client XPC failure, with no host result.
+        fn observe_client(
+            app: &Path,
+            registry: Option<&Path>,
+            args: &[&str],
+            reply: Option<Value>,
+        ) -> Observed {
             let loads = RefCell::new(Vec::new());
             let calls = RefCell::new(Vec::new());
             let load_manifest = |path: &Path| {
@@ -1958,11 +1939,10 @@ else:
                     connection: *connection,
                 });
                 let reply = reply.clone();
-                Ok((client_run(Some(&reply)), Some(reply)))
+                Ok((client_run(reply.as_ref()), reply))
             };
             let app_root = app.to_path_buf();
             let deps = RunDependencies {
-                process_observer: &NativeObserver,
                 app_root: &|| Ok(app_root.clone()),
                 load_manifest: &load_manifest,
                 registry_path: registry,
@@ -2156,9 +2136,9 @@ else:
         fn refused_reply_versions_request_no_fallback_compilation() {
             // Through production admission: a reply under another response
             // version is refused before anything reads it, so no helper is
-            // requested and `policy_check` is null. An admitted `xpc_error`
-            // reply requests the helper; the synthetic app embeds none, so the
-            // capture is unavailable while the reply and the outcome stand.
+            // requested and `policy_check` is null. The same holds for a host
+            // body naming xpc_error: only a client transport observation can
+            // authorize the separate fallback compiler.
             let root = scratch("refused-reply-versions");
             let app = synthetic_app(&root);
             install_manifest(&app, ManifestState::Valid);
@@ -2206,6 +2186,23 @@ else:
             assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
             assert_eq!(wire["result"]["error"], "NSCocoaErrorDomain:4099 refused");
             assert_eq!(wire["data"]["runner_result"], xpc_error);
+            assert!(wire["data"]["policy_check"].is_null());
+
+            // A client-side failure after submission requests the fallback
+            // compiler once, without resubmitting or creating a host result.
+            let observed = observe_client(&app, None, &args, None);
+            assert_eq!(observed.calls.len(), 1);
+            let (wire, exit_code) = envelope_of(&observed.output);
+            assert_eq!(exit_code, 1);
+            assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
+            assert_eq!(wire["result"]["error"], "controlled XPC error");
+            assert!(wire["data"]["runner_result"].is_null());
+            assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
+            assert_eq!(wire["data"]["runner_client"]["submission"], "invoked");
+            assert_eq!(
+                wire["data"]["runner_client"]["transport"]["terminal"],
+                "xpc_error"
+            );
             let check = &wire["data"]["policy_check"];
             assert_eq!(check["status"], "unavailable");
             assert!(check["envelope"].is_null());
@@ -2699,7 +2696,7 @@ else:
                 "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
                 "normalized_outcome": "ok", "rc": 0, "pid": 42, "steps": [],
             });
-            let mut data = RunData {
+            let data = RunData {
                 execution: ExecutionData {
                     specimen,
                     policy_check: Some(PolicyCheckCapture {
@@ -2719,9 +2716,13 @@ else:
                             error: Some("constructed".into()),
                         }),
                         output: capture(crate::utils::RUNNER_CAPTURE_BYTES),
+                        transport: Some(crate::runner_client::test_shape_capture()),
+                        transport_admission: "accepted".into(),
+                        transport_error: Some("constructed".into()),
+                        submission: "invoked".into(),
+                        runner_reply_error: Some("constructed".into()),
                     }),
                     runner_result: Some(reply),
-                    runner_acquisition: vec![crate::runner_acquisition::tests::shape_attempt()],
                     // Field-complete shape fixture, including an optional refusal record.
                     request_failure: Some(
                         json!({"code": "unknown_field", "path": ["policy", "typo"],
@@ -2739,8 +2740,6 @@ else:
                     )],
                 }),
             };
-            data.execution.runner_acquisition[0].runner_client =
-                serde_json::to_value(data.execution.runner_client.as_ref().unwrap()).unwrap();
             (full_result(), data)
         }
 
@@ -2798,10 +2797,7 @@ else:
             crate::shape::collect(
                 &wire,
                 "envelope",
-                &[
-                    "envelope.data.runner_result",
-                    "envelope.data.runner_acquisition[].runner_result",
-                ],
+                &["envelope.data.runner_result"],
                 &mut current,
             )
             .unwrap();

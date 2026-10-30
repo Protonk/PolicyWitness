@@ -14,7 +14,7 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 # Well-formed JSON that the Rust controller passes through unchanged
 # (valid JSON object, so it reaches the runner) but PWRunnerRunSpec
 # cannot decode (missing required specimen_id).
-# Hits the JSON decode branch of PWRunnerService.runSpecimen.
+# Hits the JSON decode branch of PWRunnerService.runReservedSpecimen.
 #
 # Do not use "not json at all" here: the Rust controller rejects
 # malformed JSON before invoking the runner, so that input would never

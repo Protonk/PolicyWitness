@@ -325,7 +325,7 @@
         "full",
         "partial"
       ],
-      "reads": "docs/contract.json, docs/architecture.json and their generated copies",
+      "reads": "docs/contract.json (including the runner protocol and signed service marker), docs/architecture.json and their generated copies",
       "writes": "nothing",
       "refusals": [
         "stale_contract",

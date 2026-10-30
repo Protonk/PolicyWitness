@@ -1,13 +1,13 @@
 # PolicyWitness wire contracts
 
-[contract.json](contract.json) owns the request, response and controller-envelope
+[contract.json](contract.json) owns the request, response, controller-envelope and runner-protocol
 version numbers. `tests/lib/python.sh docs/generate_contract.py` copies the numbers into the code
 and documents listed below; `--check` verifies the copies without writing. The
 build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 24, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 24, controller envelope 9, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
@@ -15,7 +15,8 @@ Current wire contracts: request schema 5, response schema 24, controller envelop
 | --- | --- | --- |
 | request schema (`request_schema`) | 5 | [`requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
 | response schema (`response_schema`) | 24 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 8 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 9 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| runner protocol (`runner_protocol`) | 2 | [`runnerProtocol`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RUNNER_PROTOCOL_VERSION`](../controller/src/json_contract.rs); [`RUNNER_PROTOCOL`](../tests/lib/contract.py); [`PWRunnerProtocolVersion`](../runner/Services/PWRunner/Info.plist) |
 <!-- END GENERATED CONTRACT TABLE -->
 
 ## What each number identifies
@@ -41,6 +42,14 @@ Current wire contracts: request schema 5, response schema 24, controller envelop
   `data`). It is rendered by [json_contract.rs](../controller/src/json_contract.rs),
   which `sbpl-check` includes by `#[path]`. The frame also appears on the
   helper envelope retained unchanged at `data.policy_check.envelope`.
+- **Runner protocol**: reservation RPC/control messages and the
+  `runner_client_capture` printed by the Swift client. The client acquires an
+  effect-free reservation on one connection before invoking execution on that
+  same connection. Its capture distinguishes acquisition, submission and reply
+  receipt; it is admitted before any embedded host response. The protocol is
+  mandatory, with no legacy execution fallback. The service's signed plist
+  advertises the version, while an admitted RPC response establishes actual
+  protocol participation.
 
 ## Supported versions
 
@@ -59,6 +68,10 @@ remain useful; their worker identities need not match. Identity equality is a
 requirement between components of one worker execution, not between experiments.
 
 Persisted runner-installation recovery is separate from run interpretation.
+An unsupported runner protocol prevents run/verify selection without preventing
+list, reconcile or owned removal of that installation. Installation admits the
+bundle's advertised protocol before publishing an operational record; run and
+verify independently admit the actual reservation response.
 The registry loader accepts the retired `machme` and `debuggable` kind spellings
 so existing owned launchd jobs can still be listed and removed. Removing those
 aliases would make the registry unreadable and strand cleanup. New runner-kind
@@ -66,7 +79,10 @@ input accepts `standard` and `byoxpc`; the recovery aliases do not admit any
 historical run format. Current accepted request spellings retain their own
 input contract.
 
-A reader checks a version before interpreting its record. Missing or
+A reader checks a version before interpreting its record. The controller first
+admits the client's complete capture and its protocol, then the embedded host
+response independently. Missing or invalid client capture leaves submission
+unknown and never authorizes replay. Missing or
 noninteger version fields are malformed; other integer versions are
 unsupported. For an envelope, the envelope version is checked first, then any
 nonnull runner reply. An unsupported document yields one version error, with

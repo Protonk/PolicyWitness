@@ -5,6 +5,7 @@ from pathlib import Path
 
 from lifecycle_oracle import check_record
 from consumer import validate
+from blackbox import recapture_host_reply
 
 
 def run_extension_controls(run):
@@ -22,6 +23,8 @@ def run_extension_controls(run):
             for key in keys[:-1]:
                 target = target[int(key)] if isinstance(target, list) else target[key]
             target[int(keys[-1]) if isinstance(target, list) else keys[-1]] = deepcopy(patch['value'])
+        # These patches author host records, not client transport failures.
+        recapture_host_reply(document)
         before = deepcopy(document)
         errors, findings = validate(document), check_record(document)
         assert (not errors) == case['accepted'], (case['name'], errors)

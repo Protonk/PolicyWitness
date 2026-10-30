@@ -629,9 +629,10 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - **Case:** `runner_byoxpc/bad_neighbor_claims`
 - **Location:** `tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.sh`
-- **Purpose:** Require deadline-bounded re-acquisition without duplicate effects,
-  with each refused attempt attributed to a host generation and its owner: local retirement lag, a foreign authorized client holding a
-  host, and clients queued together during launchd's respawn throttle. Also
+- **Purpose:** Require deadline-bounded reservation acquisition without duplicate effects.
+  Attribute occupied responses to independently observed host generations and
+  owners; keep transport errors unlocalized. Exercise spaced, back-to-back,
+  foreign-held and throttle-queued requests. Also
   observes registry lock contention on a fixture registry.
 - **Execution considerations:** Live launchd service, timing-sensitive schedules and a
   same-UID foreign client.
@@ -674,22 +675,23 @@ PW_APP_DIR=/path/to/baseline.app PW_TEST_OUT_DIR=tests/out/runs/retirement-basel
 PW_APP_DIR=/path/to/candidate.app PW_TEST_OUT_DIR=tests/out/runs/retirement-candidate tests/run.sh --case runner_byoxpc/retirement_observations
 ```
 
-### BYOXPC reply and retirement controls
+### BYOXPC reservation and lost-reply controls
 
-- **Case:** `runner_byoxpc/retirement_controls`
-- **Location:** `tests/suites/runner_byoxpc/opt_in/retirement_controls.sh`
-- **When to run:** Investigating whether host retirement can overtake a refusal,
-  or whether a transport failure can accompany completed work.
+- **Case:** `runner_byoxpc/reservation_controls`
+- **Location:** `tests/suites/runner_byoxpc/opt_in/reservation_controls.sh`
+- **When to run:** After changing reservation admission, connection lifetime,
+  acquisition retry, execution submission or client capture publication.
 - **Equipment:** Signed app, matching Developer ID, GUI launchd, Swift, clang
-  and Meson. The fixture compiles and signs disposable host copies.
-- **Observations:** An ungated session records public/raw request outcomes.
-  Separate arrangements deliver a refusal, retire before refusal delivery, and
-  terminate an identified host after its real worker completed but before its
-  reply. Request hashes, boundary traces, independent append effects and kernel
-  generation exits distinguish these cases. No generic XPC error licenses retry.
+  and Meson. Fixtures compile and sign disposable host and client copies.
+- **Observations:** Wrong, cross-connection and consumed credentials cannot
+  execute; expired and abandoned leases retire. Lost acquisition replies permit
+  fresh acquisition before submission. Lost execution replies and lost helper
+  captures cannot cause replay. Independent append effects, request hashes,
+  boundary traces and kernel generations establish the controlled observations.
+  Old execution selectors and unsupported protocol replies cannot execute.
 - **Limits:** Trace IO/gates perturb timing; a controlled error code does not
-  attribute an earlier failure. Passing establishes the experiment's boundaries
-  and cleanup, not ordinary BYOXPC reliability or production equivalence.
+  attribute an earlier failure. Passing establishes these boundaries and
+  cleanup, not ordinary BYOXPC reliability or production equivalence.
 - **Artifacts:** Original/instrumented sources, hashes and build/signing receipts;
   each arrangement's request/reply bytes, trace, effects, process identities,
   owned session and resource-cleanup records. Unknown cleanup retains resources.

@@ -14,7 +14,18 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 pub const RUNNER_REGISTRY_SCHEMA_VERSION: u32 = 1;
-pub const RUNNER_PROTOCOL_VERSION: u32 = 1;
+pub use crate::json_contract::RUNNER_PROTOCOL_VERSION;
+
+/// Execution compatibility is separate from registry readability and cleanup.
+pub fn require_current_protocol(version: u32) -> Result<(), String> {
+    if version == RUNNER_PROTOCOL_VERSION {
+        Ok(())
+    } else {
+        Err(format!(
+            "runner advertises protocol {version}; this client requires protocol {RUNNER_PROTOCOL_VERSION}; upgrade and reinstall the runner"
+        ))
+    }
+}
 /// After `launchctl bootout` returns, launchd can still list the job for a
 /// moment. `runner remove` re-reads the service every poll interval until it
 /// is absent or this nominal allowance is spent, then judges completion from

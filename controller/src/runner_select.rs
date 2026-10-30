@@ -473,6 +473,7 @@ fn resolve_external_target(
     record: &RunnerRecord,
     selector: &RunnerSelector,
 ) -> Result<RunnerTarget, String> {
+    runner_manager::require_current_protocol(record.protocol_version)?;
     let record_kind = infer_record_kind(record);
     if let Some(mode) = selector.mode {
         if mode != record_kind {
@@ -1268,6 +1269,27 @@ mod tests {
             assert_eq!(
                 find_external_record(&reg, &selector).unwrap_err(),
                 "external runner is pending installation"
+            );
+        }
+    }
+
+    #[test]
+    fn historical_protocol_records_remain_readable_but_not_executable() {
+        for version in [0, 1, runner_manager::RUNNER_PROTOCOL_VERSION + 1] {
+            let mut record = record_named("older", "com.example.older");
+            record.protocol_version = version;
+            let registry = registry_of(vec![record]);
+            let encoded = serde_json::to_string(&registry).unwrap();
+            let decoded: RunnerRegistry = serde_json::from_str(&encoded).unwrap();
+            assert_eq!(decoded.runners[0].protocol_version, version);
+            let error = err_of(resolve_external_target(
+                &decoded.runners[0],
+                &RunnerSelector::default(),
+            ));
+            assert!(error.contains("upgrade and reinstall"), "{error}");
+            assert!(
+                decoded.find(Some("older"), None).is_some(),
+                "cleanup can still find the record"
             );
         }
     }

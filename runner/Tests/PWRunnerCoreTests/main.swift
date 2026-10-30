@@ -36,6 +36,8 @@ runExecObservationTests(tk)
 runReplyFailureTests(tk)
 // Shared host admission, concurrent exported objects and owner-only exit scheduling.
 runServiceAdmissionTests(tk)
+// Reservation expiry, owner actions, transport limits and bounded capture encoding.
+runReservationAdmissionTests(tk)
 // Bundle-local default selection and explicit validator override precedence.
 runValidatorSelectionTests(tk)
 // Production host classifier fed constructed worker/validator results; the

@@ -22,8 +22,10 @@ for name in ('ServiceAdmissionTests.swift','TestKit.swift'):
 service=package/'Sources/PWRunnerCore/PWRunnerService.swift'
 fixed=service.read_text()
 mutations=[('fixed',None,None,None),
-    ('per_connection','self.admission = admission','self.admission = PWRunnerAdmission()', 'expected 1, got 2'),
-    ('refusal_exits','            reply(pwRunnerReplyData(resp))','            replyAndExit(resp)', 'refusal must not retire the active owner')]
+    ('per_connection','self.admission = admission','self.admission = PWRunnerAdmission()', 'expected occupied, got granted'),
+    ('refusal_exits','            reply(false, control("reservation_refused", reason: decision.reason))',
+     '            scheduleExit()\n            reply(false, control("reservation_refused", reason: decision.reason))',
+     'refusal and invalidation must not retire the active owner')]
 results=[]
 for name,anchor,replacement,reason in mutations:
     if anchor: assert fixed.count(anchor)==1, (name,'mutation anchor changed')

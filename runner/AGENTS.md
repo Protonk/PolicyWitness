@@ -134,9 +134,12 @@ keeping the inspected artifact unchanged. A permission-shaped failure alone
 does not establish its cause. For signing, signature verification or compiler
 discovery failures, follow [the build guidance](../docs/BUILD.md#sandboxed-automation-harnesses).
 
-When the harness blocks XPC lookup before host launch, the envelope reports
-`normalized_outcome: "xpc_error"`, an error diagnostic, empty `steps` and no
-`runner_subprocess`. The controller's fallback `sbpl-check` result in
-`data.policy_check` establishes only whether the policy compiles; it says nothing
-about worker execution. An `xpc_error` alone does not establish that the harness
-caused it; use the diagnostic and the unsandboxed retry.
+When XPC lookup prevents reservation, an admitted client capture records the
+failed acquisition attempts and `submission.state: "not_invoked"`. Bounded
+acquisition ends at its attempt limit or overall deadline; the envelope keeps
+`data.runner_result` null and reports the transport failure separately. A missing
+or rejected capture leaves submission unknown. The controller's fallback
+`sbpl-check` result in `data.policy_check` establishes only whether the policy
+compiles; it says nothing about worker execution. A transport error alone does
+not establish that the harness caused it; use the diagnostic and the
+unsandboxed retry.

@@ -20,12 +20,13 @@ FIXTURES = ROOT / "tests/fixtures/blackbox_e2e"
 CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
-from blackbox import envelope_skeleton
+from blackbox import envelope_skeleton, recapture_host_reply
 from consumer import lifecycle, select, steps, validate, validate_exec_observation
 from lifecycle_adapter import read_lifecycle
 from lifecycle_oracle import check_record
 from path_diagnostics_contract import check_cases
 from worker_exit_witness import worker_exit_witness
+from runner_client_capture import validate_capture
 
 
 def policy_check_controls(run):
@@ -180,40 +181,21 @@ def consumer_controls(artifacts, current):
         require(len(chosen) == 1 and chosen[0]['attempt']['outcome'] == 'ok', 'allowed write must be selectable by its record')
     run('retained_live_run', current, allowed_write)
 
-    # Constructed acquisition interpretation, independent of the controller.
-    acquired = copy.deepcopy(current)
-    attempt = dict(runner_client=copy.deepcopy(current['data']['runner_client']),
-        runner_result=dict(schema_version=contract.RESPONSE_SCHEMA, normalized_outcome='already_ran', steps=[], pid=987),
-        generation=dict(pid=987, start_sec=1, start_usec=2, executable_path='/constructed/host'),
-        observed_exit=dict(basis='esrch', observed_at_unix_ms=3, replacement=None),
-        wait_outcome='retired', observation_error=None)
-    acquired['data']['runner_acquisition'] = [attempt]
-    run('acquisition_retired', acquired, allowed_write)
-    for name, mutate, diagnostic in [
-        ('malformed_generation', lambda a: a.update(generation=['invalid']), 'requires refusal, generation and client objects'),
-        ('worker_present', lambda a: a['runner_result'].update(runner_subprocess={}), 'pre-worker refusal'),
-        ('wrong_pid', lambda a: a['generation'].update(pid=988), 'pre-worker refusal'),
-        ('unsupported_refusal', lambda a: a['runner_result'].update(schema_version=0), 'pre-worker refusal'),
-        ('unknown_is_not_exit', lambda a: a.update(wait_outcome='observation_failed', observation_error='denied'), 'wait outcome'),
-        ('reuse_missing_start', lambda a: a['observed_exit'].update(basis='pid_reused', replacement=dict(pid=987)), 'different start time'),
-        ('reuse_same_start', lambda a: a['observed_exit'].update(basis='pid_reused', replacement=copy.deepcopy(a['generation'])), 'different start time'),
-        ('delivery_failed', lambda a: a['runner_client'].update(request_delivery=dict(bytes_written=0, error='broken pipe')), 'failed delivery'),
-    ]:
-        changed = copy.deepcopy(acquired)
-        mutate(changed['data']['runner_acquisition'][0])
-        run('acquisition_' + name, changed, rejected_by=diagnostic)
-    for status in ('deadline', 'observation_failed'):
-        changed = copy.deepcopy(acquired)
-        changed['data']['runner_acquisition'][0].update(wait_outcome=status, observed_exit=None,
-            observation_error='denied' if status == 'observation_failed' else None)
-        run('acquisition_' + status, changed, allowed_write)
+    from runner_client_capture_controls import run_capture_controls
+    run_capture_controls(run)
+
+    def run_host(name, envelope, expected=None, rejected_by=None):
+        # The authored host record is the input under test, so encode that
+        # exact record into its constructed carrier before validating it.
+        recapture_host_reply(envelope)
+        run(name, envelope, expected, rejected_by)
 
     # Source identity is provenance across runs, not a reader admission gate.
     # These constructed metadata changes assert no agreement between hosts.
     other_producer = copy.deepcopy(current)
     other_producer['data']['runner_result']['runner_subprocess']['worker_evidence']['abi_identity'] = 'a' * 64
     other_producer['data']['specimen']['host'].update(macos_version='15.0', macos_build='24A000')
-    run('current_format_other_producer_and_os', other_producer, allowed_write)
+    run_host('current_format_other_producer_and_os', other_producer, allowed_write)
 
     # Version refusal needs only a constructed frame. The version gate must
     # reject it before requiring the current envelope's fields.
@@ -221,21 +203,21 @@ def consumer_controls(artifacts, current):
                 'kind': 'run', 'data': {}}
     errors = validate(previous)
     assert len(errors) == 1 and 'unsupported controller envelope' in errors[0], errors
-    run('previous_envelope_rejected', previous, rejected_by='unsupported controller envelope')
+    run_host('previous_envelope_rejected', previous, rejected_by='unsupported controller envelope')
     # Context facts have independent readers; the fixture is authored separately
     # from the producer and keeps application observations outside the receipt.
     context_cases = json.loads((ROOT / 'tests/fixtures/contract/compiled_profile.json').read_text())
     for case in context_cases:
         document = copy.deepcopy(current)
         runner(document)['compiled_profile'] = case['receipt']
-        run('compiled_profile_' + case['name'], document,
+        run_host('compiled_profile_' + case['name'], document,
             rejected_by=None if case['valid'] else 'compiled_profile')
     retired = copy.deepcopy(current)
     runner(retired)['applied_profile'] = None
-    run('retired_profile_field', retired, rejected_by='unknown key reply.applied_profile')
-    policy_check_controls(run)
+    run_host('retired_profile_field', retired, rejected_by='unknown key reply.applied_profile')
+    policy_check_controls(run_host)
     from extension_controls import run_extension_controls
-    run_extension_controls(run)
+    run_extension_controls(run_host)
 
     # Attempt forms have their own compact contract beside the query forms.
     resolved = copy.deepcopy(current)
@@ -250,7 +232,7 @@ def consumer_controls(artifacts, current):
     for record in runner(resolved)['phases'][0]['validator_subprocess']['records']:
         if record['step_id'] == 'fs_write_allowed':
             record['filter_value'] = '/link/file'
-    run('attempt_path_forms', resolved)
+    run_host('attempt_path_forms', resolved)
     for name, change, diagnostic in [
         ('input_mismatch', lambda a: a['path_diagnostics'].update(input='/unrelated/file'), 'input differs from requested_path'),
         ('wrong_observer', lambda a: a['path_diagnostics'].update(observer='worker'), 'host/stage provenance'),
@@ -262,7 +244,7 @@ def consumer_controls(artifacts, current):
     ]:
         malformed = copy.deepcopy(resolved)
         change(first(malformed)['attempt'])
-        run('attempt_path_' + name, malformed, rejected_by=diagnostic)
+        run_host('attempt_path_' + name, malformed, rejected_by=diagnostic)
 
     # The worker's EOF receipt for the policy pipe is read by field: both members
     # present and within the source capacity, agreement with the host's own
@@ -282,10 +264,10 @@ def consumer_controls(artifacts, current):
         receipt = {'bytes_expected': 64, 'bytes_received': 64}
         with_receipt = copy.deepcopy(current)
         runner(with_receipt)['runner_subprocess']['worker_evidence']['policy_read'] = dict(receipt)
-        run('policy_read_constructed_receipt', with_receipt)
+        run_host('policy_read_constructed_receipt', with_receipt)
     partial = copy.deepcopy(with_receipt)
     runner(partial)['runner_subprocess']['worker_evidence']['policy_read']['bytes_received'] = receipt['bytes_expected'] - 1
-    run('policy_read_mismatch_after_execution', partial, rejected_by='contradict observations after the policy length check')
+    run_host('policy_read_mismatch_after_execution', partial, rejected_by='contradict observations after the policy length check')
     for name, change, diagnostic in [
         ('missing_member', lambda s: s['worker_evidence']['policy_read'].pop('bytes_received'),
          'invalid worker_evidence.policy_read'),
@@ -299,7 +281,7 @@ def consumer_controls(artifacts, current):
     ]:
         malformed = copy.deepcopy(with_receipt)
         change(runner(malformed)['runner_subprocess'])
-        run('policy_read_' + name, malformed, rejected_by=diagnostic)
+        run_host('policy_read_' + name, malformed, rejected_by=diagnostic)
 
     # The shape goldens are the readers' allowlists: an unknown key at a recorded
     # path and a present key of another type are rejected, under the envelope
@@ -317,7 +299,7 @@ def consumer_controls(artifacts, current):
     ]:
         broken = copy.deepcopy(current)
         change(broken)
-        run('shape_' + name, broken, rejected_by=diagnostic)
+        run_host('shape_' + name, broken, rejected_by=diagnostic)
 
     # Vocabulary and classification against the raw channel fields.
     for name, change, diagnostic in [
@@ -337,7 +319,7 @@ def consumer_controls(artifacts, current):
     ]:
         broken = copy.deepcopy(current)
         change(broken)
-        run('classification_' + name, broken, rejected_by=diagnostic)
+        run_host('classification_' + name, broken, rejected_by=diagnostic)
 
     # The ordering chain: query_first needs the complete chain and an eligible
     # native record; an eligible record with the chain must say query_first.
@@ -359,17 +341,17 @@ def consumer_controls(artifacts, current):
     ]:
         broken = copy.deepcopy(current)
         change(broken)
-        run('order_' + name, broken, rejected_by=diagnostic)
+        run_host('order_' + name, broken, rejected_by=diagnostic)
     # A recorded violation beside a falsified chain flag is not a contradiction
     # the validator invents: the fault must be listed.
     broken = copy.deepcopy(current)
     ordering(broken).update(proceed_set=False)
     for step in runner(broken)['steps']:
         step['comparison']['order'] = 'unestablished'
-    run('order_unmarked_violation', broken, rejected_by='unmarked ordering protocol violation')
+    run_host('order_unmarked_violation', broken, rejected_by='unmarked ordering protocol violation')
     # The marked fault is retained beside the raw chain; no row claims an order.
     ordering(broken)['protocol_violations'] = ['acknowledgement_without_release']
-    run('order_marked_violation_retained', broken)
+    run_host('order_marked_violation_retained', broken)
 
     # Reporting failures retain diagnostic observations but certify no comparison.
     def degraded(e, retained=True):
@@ -390,7 +372,7 @@ def consumer_controls(artifacts, current):
         require(all(s['comparison'] is None for s in steps(e)), 'every comparison withheld')
     failed = copy.deepcopy(current)
     degraded(failed)
-    run('reporting_failure_preserved', failed, preserved)
+    run_host('reporting_failure_preserved', failed, preserved)
     # Reporting failure retains the contradictory receipt that stopped ordinary
     # encoding. Its values are diagnostics; object/member types remain required.
     for name, receipt in [
@@ -399,15 +381,15 @@ def consumer_controls(artifacts, current):
     ]:
         retained = copy.deepcopy(failed)
         runner(retained)['runner_subprocess']['worker_evidence']['policy_read'] = receipt
-        run('reporting_failure_policy_read_' + name, retained)
+        run_host('reporting_failure_policy_read_' + name, retained)
     for name, receipt in [('missing', {'bytes_expected': 43}),
                           ('type', {'bytes_expected': 43, 'bytes_received': '28'})]:
         malformed = copy.deepcopy(failed)
         runner(malformed)['runner_subprocess']['worker_evidence']['policy_read'] = receipt
-        run('reporting_failure_policy_read_' + name, malformed, rejected_by='policy_read')
+        run_host('reporting_failure_policy_read_' + name, malformed, rejected_by='policy_read')
     minimal = copy.deepcopy(current)
     degraded(minimal, retained=False)
-    run('reporting_failure_minimal', minimal, lambda e: require(steps(e) == [], 'no steps without retention'))
+    run_host('reporting_failure_minimal', minimal, lambda e: require(steps(e) == [], 'no steps without retention'))
     for name, change, diagnostic in [
         ('comparison_kept', lambda e: first(e).update(comparison=copy.deepcopy(first(current)['comparison'])), 'must withhold every comparison'),
         ('ok_summary', lambda e: runner(e).update(normalized_outcome='ok'), 'reporting failure requires a failed summary'),
@@ -418,11 +400,11 @@ def consumer_controls(artifacts, current):
     ]:
         broken = copy.deepcopy(failed)
         change(broken)
-        run('reporting_failure_' + name, broken, rejected_by=diagnostic)
+        run_host('reporting_failure_' + name, broken, rejected_by=diagnostic)
     for key in ['origin', 'diagnostic', 'original_rc', 'original_normalized_outcome', 'evidence_retained']:
         broken = copy.deepcopy(failed)
         runner(broken)['reporting_failure'].pop(key)
-        run('reporting_failure_missing_' + key, broken, rejected_by='invalid reporting_failure diagnostics')
+        run_host('reporting_failure_missing_' + key, broken, rejected_by='invalid reporting_failure diagnostics')
 
     # The host's raw launch evidence is preserved without an errno allowlist.
     spawn = dict(origin='runner_host', operation='posix_spawn',
@@ -439,7 +421,7 @@ def consumer_controls(artifacts, current):
         step['sandbox_check'].update(outcome='error', result_source='synthetic', native_rc=None, errno=None,
                                      missing_reason='validator_not_invoked')
         step['comparison'].update(order='unestablished')
-    run('unfamiliar_spawn_failure', spawned, lambda e: require(runner(e)['phases'][0]['validator_spawn_failure'] == spawn, 'raw launch record changed'))
+    run_host('unfamiliar_spawn_failure', spawned, lambda e: require(runner(e)['phases'][0]['validator_spawn_failure'] == spawn, 'raw launch record changed'))
     for name, change, diagnostic in [
         ('zero_code', lambda e: runner(e)['phases'][0]['validator_spawn_failure'].update(return_code=0), 'invalid validator_spawn_failure'),
         ('string_code', lambda e: runner(e)['phases'][0]['validator_spawn_failure'].update(return_code='2'), 'invalid validator_spawn_failure'),
@@ -449,12 +431,12 @@ def consumer_controls(artifacts, current):
     ]:
         broken = copy.deepcopy(spawned)
         change(broken)
-        run('malformed_spawn_' + name, broken, rejected_by=diagnostic)
+        run_host('malformed_spawn_' + name, broken, rejected_by=diagnostic)
 
     # The lifecycle record is required beside a worker subprocess.
     unrecorded = copy.deepcopy(current)
     runner(unrecorded)['runner_subprocess'].pop('disposition')
-    run('record_required', unrecorded, rejected_by='without runner_subprocess.disposition')
+    run_host('record_required', unrecorded, rejected_by='without runner_subprocess.disposition')
 
     # D5: versions are read exactly, before anything else.
     for name, change, diagnostic in [
@@ -494,7 +476,7 @@ def consumer_controls(artifacts, current):
     no_reply = copy.deepcopy(current)
     no_reply['data'].update(runner_result=None, runner_client=None, runner_sandbox_diagnostics=None)
     no_reply['result'].update(ok=False, exit_code=2, normalized_outcome='tool_error', error='controlled')
-    run('no_reply_envelope', no_reply, lambda e: require(steps(e) == [], 'absence must not invent evidence'))
+    run_host('no_reply_envelope', no_reply, lambda e: require(steps(e) == [], 'absence must not invent evidence'))
     bare = copy.deepcopy(runner(current))
     assert not validate(bare), validate(bare)
     assert lifecycle(bare)['reporting'] == 'reported'
@@ -507,16 +489,12 @@ def consumer_controls(artifacts, current):
 
 
 def client_output_control(artifacts):
-    """The shipped client's own failure reply validates under the current contract.
-
-    A connection to a service that does not exist yields a client-synthesized
-    reply; it must carry the current response version with no steps.
-    """
+    """A missing service produces client observations with no host RunResult."""
     app = Path(os.environ.get('PW_APP_DIR') or (ROOT / 'dist/PolicyWitness.app'))
     client = app / 'Contents/MacOS/pw-runner-client'
     assert client.is_file(), f'shipped client missing: {client}'
     request = artifacts / 'client-request.json'
-    request.write_text(json.dumps({'schema_version': 5, 'specimen_id': 'client-control',
+    request.write_text(json.dumps({'schema_version': contract.REQUEST_SCHEMA, 'specimen_id': 'client-control',
                                    'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
                                    'probe_plan': []}) + '\n')
     result = subprocess.run([str(client), 'run', '--timeout-ms', '2000', '--request', '-',
@@ -525,26 +503,27 @@ def client_output_control(artifacts):
     (artifacts / 'client.stdout').write_bytes(result.stdout)
     (artifacts / 'client.stderr').write_bytes(result.stderr)
     assert result.returncode == 1, result
-    reply = json.loads(result.stdout)
-    assert reply['schema_version'] == contract.RESPONSE_SCHEMA, reply.get('schema_version')
-    assert reply['normalized_outcome'] in ('xpc_error', 'xpc_timeout', 'xpc_no_reply'), reply
-    assert reply['steps'] == [] and reply.get('runner_subprocess') is None, reply
-    errors = validate(reply)
+    capture = json.loads(result.stdout)
+    errors = validate_capture(capture)
     assert not errors, errors
-    assert not validate(envelope_skeleton(reply, ok=False)), validate(envelope_skeleton(reply, ok=False))
-    print('client failure reply validates under the current contract: ' + reply['normalized_outcome'], flush=True)
+    assert capture['terminal'] in ('xpc_timeout', 'acquisition_failed'), capture
+    assert capture['submission'] == {'state': 'not_invoked'}, capture
+    assert 'runner_reply' not in capture and 'submission_refusal' not in capture, capture
+    assert capture['acquisition_stop'] in ('overall_deadline', 'attempt_limit'), capture
+    assert all(a['outcome'] in ('transport_error', 'timeout') for a in capture['attempts']), capture
+    print('missing-service client capture records no invocation: ' + capture['terminal'], flush=True)
 
 
 def cleanup_witness_controls(artifacts):
     """Envelope shapes and the staging removal each permits; constructed, no process launched.
 
-    Only a confirmed reap witnesses worker exit. A client-synthesized xpc_timeout
-    reply, a lost reply and the minimal reporting-failure reply carry no
+    Only a confirmed reap witnesses worker exit. A client xpc_timeout
+    observation, a lost reply and the minimal reporting-failure reply carry no
     subprocess record although a worker may have spawned; an unreaped or
     unrecorded reap says it may still run. Each must retain staging.
     """
     cases = [
-        ('client_timeout', {'data': {'runner_result': {'normalized_outcome': 'xpc_timeout', 'steps': []}}}, False),
+        ('client_timeout', {'data': {'runner_result': None, 'runner_client': {'submission': 'invoked'}}}, False),
         ('lost_runner_reply', {'data': {'runner_result': None}}, False),
         ('no_envelope', None, False),
         ('minimal_reporting_failure', {'data': {'runner_result': {
@@ -582,6 +561,7 @@ def mutation_order_controls(artifacts, current):
     for record in r['phases'][0]['validator_subprocess']['records']:
         if record['step_id'] == step['step_id']:
             record['operation'] = 'file-write-unlink'
+    recapture_host_reply(base)
     assert not validate(base), validate(base)
     chosen = select(steps(base), step_id=step['step_id'], order='query_first', observation='succeeded', operation_relation='matched')
     assert len(chosen) == 1 and chosen[0]['attempt']['requested_action'] == 'unlink', chosen
@@ -594,12 +574,14 @@ def mutation_order_controls(artifacts, current):
     for s in unordered['data']['runner_result']['steps']:
         s['sandbox_check'].update(result_source='synthetic', native_rc=None, errno=None, outcome='error', missing_reason='validator_not_invoked')
         s['comparison']['order'] = 'unestablished'
+    recapture_host_reply(unordered)
     assert not validate(unordered), validate(unordered)
     chosen = select(steps(unordered), step_id=step['step_id'], order='unestablished', observation='succeeded')
     assert len(chosen) == 1, chosen
     records.append({'control': 'unordered_unlink', 'rejected': False})
     claimed = copy.deepcopy(unordered)
     claimed['data']['runner_result']['steps'][0]['comparison']['order'] = 'query_first'
+    recapture_host_reply(claimed)
     errors = validate(claimed)
     assert any('lacks eligible record' in e for e in errors), errors
     records.append({'control': 'unordered_unlink_claims_order', 'rejected': True, 'errors': errors})
@@ -617,6 +599,7 @@ def main():
     failures = []
 
     def check(name, envelope, diagnostics=(), case="BBX-001"):
+        recapture_host_reply(envelope)
         run_path = artifacts / f"{name}.json"
         run_path.write_text(json.dumps(envelope, indent=2) + "\n")
         result = subprocess.run(

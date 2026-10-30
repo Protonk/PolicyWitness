@@ -637,8 +637,8 @@
       "title": "Host reply flush delay",
       "value": 50,
       "unit": "milliseconds",
-      "counting": "Delay scheduled by the terminal request owner after replying.",
-      "effect": "The unsandboxed host exits when the delay elapses. A second connection reaching the retiring host meets the terminal claim.",
+      "counting": "Delay scheduled once by the terminal execution or abandoned-reservation owner.",
+      "effect": "The unsandboxed host schedules exit after the delay. An occupied host grants no further reservation; client acquisition can reconnect before submission.",
       "control": "Fixed.",
       "sources": [
         {
@@ -654,13 +654,13 @@
           "form": "test"
         },
         {
-          "path": "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
-          "symbol": "runServiceAdmissionTests",
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
           "kind": "path",
           "form": "test"
         }
       ],
-      "behavior": "Compiled value agreement and the terminal request claim are tested. Actual XPC reply flushing and scheduling latency are source-inspected; this is not a delivery guarantee."
+      "behavior": "Compiled value, single retirement ownership and stale-timer refusal are tested. The delay is not a delivery guarantee and does not bound scheduling latency."
     },
     {
       "id": "runner_verify_wait",
@@ -668,8 +668,8 @@
       "title": "Runner verification wait",
       "value": 5000,
       "unit": "milliseconds",
-      "counting": "Default allowance for the fixed runner verify specimen, shared across host re-acquisition and client waits.",
-      "effect": "An expired client RPC returns its timeout outcome; acquisition deadline exhaustion returns the last qualifying already_ran refusal. An admitted verification consumes its single-use host.",
+      "counting": "Default allowance for the fixed runner verify specimen, shared by reservation acquisition and the execution reply wait.",
+      "effect": "Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate.",
       "control": "Flag `--timeout-ms` on `runner verify`.",
       "sources": [
         {
@@ -677,8 +677,8 @@
           "symbol": "RUNNER_VERIFY_DEFAULT_TIMEOUT_MS"
         },
         {
-          "path": "controller/src/runner_acquisition.rs",
-          "symbol": "acquire"
+          "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+          "symbol": "PWRunnerClientSession"
         }
       ],
       "checks": [
@@ -695,13 +695,13 @@
           "form": "test"
         },
         {
-          "path": "controller/src/runner_acquisition.rs",
-          "symbol": "multiple_refusals_share_one_budget_and_launch_failure_preserves_history",
+          "path": "runner/Tests/PWRunnerClientSessionTests/main.swift",
+          "symbol": "runClientSessionControls",
           "kind": "path",
           "form": "test"
         }
       ],
-      "behavior": "The compiled default, fixed verification request and shared acquisition deadline are tested."
+      "behavior": "Compiled defaults and the fixed verification request are checked separately from production-client controls for shared deadlines, late callbacks, grant-before-deadline-expiry and no replay after invocation."
     },
     {
       "id": "worker_policy_transfer",
@@ -1135,8 +1135,8 @@
       "title": "Runner RPC wait",
       "value": 240000,
       "unit": "milliseconds",
-      "counting": "Default reply allowance; external runner acquisition shares it across refused attempts, retirement waits and the final client. Each client capture records its own wall-clock span.",
-      "effect": "An expired client RPC yields `xpc_timeout`. Exhaustion while waiting after a qualifying external `already_ran` returns the last refusal. Inner worker and validator budgets do not expand.",
+      "counting": "One absolute client allowance, including helper launch/stdin delivery, reservation acquisition and the execution reply wait. Direct helper invocation starts after reading input.",
+      "effect": "Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate.",
       "control": "Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted.",
       "sources": [
         {
@@ -1152,8 +1152,8 @@
           "symbol": "defaultClientTimeoutMs"
         },
         {
-          "path": "controller/src/runner_acquisition.rs",
-          "symbol": "acquire"
+          "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+          "symbol": "PWRunnerClientSession"
         }
       ],
       "checks": [
@@ -1170,13 +1170,13 @@
           "form": "test"
         },
         {
-          "path": "controller/src/runner_acquisition.rs",
-          "symbol": "multiple_refusals_share_one_budget_and_launch_failure_preserves_history",
+          "path": "runner/Tests/PWRunnerClientSessionTests/main.swift",
+          "symbol": "runClientSessionControls",
           "kind": "path",
           "form": "test"
         }
       ],
-      "behavior": "Compiled default agreement is tested. Controlled acquisition tests cover shared deadlines, retirement observation failures and the last refusal; live coexistence covers held and queued hosts."
+      "behavior": "Compiled defaults and the fixed verification request are checked separately from production-client controls for shared deadlines, late callbacks, grant-before-deadline-expiry and no replay after invocation."
     },
     {
       "id": "runner_remove_teardown_wait",
@@ -1216,7 +1216,7 @@
       "value": 1,
       "unit": "seconds",
       "counting": "`ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit.",
-      "effect": "A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that.",
+      "effect": "A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. Acquisition reaching an occupied or retiring host can retry without sending the specimen; the interval still controls launch pacing.",
       "control": "Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement.",
       "sources": [
         {
@@ -1334,8 +1334,8 @@
       "title": "Runner client output",
       "value": 159383552,
       "unit": "bytes",
-      "counting": "Captured bytes per stdout or stderr stream from the runner client, before text decoding.",
-      "effect": "Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
+      "counting": "Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes.",
+      "effect": "Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred.",
       "control": "Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag.",
       "sources": [
         {
@@ -1361,9 +1361,15 @@
           "symbol": "main",
           "kind": "path",
           "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "boundary",
+          "form": "test"
         }
       ],
-      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. runner_unit asserts the derivation against the compiled Rust constant's documented value. Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Admitted 256-action CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, plus fresh-read, fresh-write and mixed consume/release workloads, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or process-memory limit. The production maximal-capture control includes base64 expansion of the 64 MiB retained host reply and 256 bounded attempt/error records and requires the result to fit this cap. Independent receiver controls exercise oversized and malformed captures; normal maximal workloads separately establish actual host replies."
     },
     {
       "id": "policy_helper_output",
@@ -2523,6 +2529,254 @@
         }
       ],
       "behavior": "Known file contents just below, at and above the prefix capacity, descriptor identity and unchanged source bytes through standard and BYOXPC CLI."
+    },
+    {
+      "id": "reservation_lease",
+      "section": "execution",
+      "title": "Reservation lease",
+      "value": 5000,
+      "unit": "milliseconds",
+      "counting": "Requested unused lease, capped by the host; the client requests no more than its remaining allowance.",
+      "effect": "Expiry or owner disconnect retires the unused host. Submission checks expiry atomically and an old timer cannot terminate execution.",
+      "control": "Fixed. No renewal.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "reservationLeaseMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
+    },
+    {
+      "id": "reservation_rpc_wait",
+      "section": "execution",
+      "title": "Reservation RPC wait",
+      "value": 5000,
+      "unit": "milliseconds",
+      "counting": "Maximum wait for one reserve reply, also bounded by the original overall client deadline.",
+      "effect": "Expiry abandons and invalidates that connection; acquisition may continue without submitting a specimen.",
+      "control": "Fixed per-attempt ceiling.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "reservationRPCMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerClientSessionTests/main.swift",
+          "symbol": "runClientSessionControls",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
+    },
+    {
+      "id": "reservation_attempts",
+      "section": "execution",
+      "title": "Reservation acquisition attempts",
+      "value": 256,
+      "unit": "items",
+      "counting": "Every opened acquisition attempt, including transport failures and occupied replies.",
+      "effect": "Exhaustion ends acquisition explicitly at attempt_limit with no submission; it can precede the overall timeout. Every attempted acquisition stays in the capture.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "acquisitionAttempts"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerClientSessionTests/main.swift",
+          "symbol": "runClientSessionControls",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
+    },
+    {
+      "id": "reservation_retry_delay",
+      "section": "execution",
+      "title": "Reservation retry delay",
+      "value": 100,
+      "unit": "milliseconds",
+      "counting": "Minimum delay between a failed/occupied attempt and another connection, within the remaining allowance.",
+      "effect": "No delay after a successful grant. Scheduling may take longer; neither waiting nor progress renews the deadline.",
+      "control": "Fixed minimum.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "retryDelayMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerClientSessionTests/main.swift",
+          "symbol": "runClientSessionControls",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
+    },
+    {
+      "id": "reservation_control_bytes",
+      "section": "transport",
+      "title": "Reservation control bytes",
+      "value": 65536,
+      "unit": "bytes",
+      "counting": "Encoded reservation request or control reply, before JSON decoding.",
+      "effect": "Excess is a protocol failure. No oversized control can grant execution.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "controlBytes"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
+    },
+    {
+      "id": "client_error_message",
+      "section": "transport",
+      "title": "Client error message",
+      "value": 1024,
+      "unit": "UTF-8 bytes",
+      "counting": "Retained error prose at a Unicode boundary.",
+      "effect": "Excess is truncated with message_truncated; error stage, domain and native code remain separate observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "errorMessageBytes"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
+    },
+    {
+      "id": "client_error_domain",
+      "section": "transport",
+      "title": "Client error domain",
+      "value": 128,
+      "unit": "UTF-8 bytes",
+      "counting": "Retained native error domain at a Unicode boundary.",
+      "effect": "Excess is truncated with domain_truncated. No arbitrary userInfo dictionary is retained.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "errorDomainBytes"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
+    },
+    {
+      "id": "client_reply_retention",
+      "section": "transport",
+      "title": "Client host reply retention",
+      "value": 67108864,
+      "unit": "bytes",
+      "counting": "Host result bytes retained before base64 encoding in the client capture.",
+      "effect": "Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct.",
+      "control": "Fixed; must cover the informative maximal reply.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "runnerReplyBytes"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
     }
   ]
 }

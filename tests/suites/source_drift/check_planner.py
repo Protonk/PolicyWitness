@@ -612,7 +612,7 @@ def rule_gap_scenarios(repo):
         Scenario('rule-runner-outcome-suite-row-removed', {coverage: without(coverage, timeout_row)},
                  {SUITE_ROWS: ['matrix.suite_without_row'], NORMALIZED: ['matrix.missing_row']},
                  "suite 'runner_outcome_runner_timeout' has no row for outcome 'runner_timeout'"),
-        Scenario('rule-normalized-matrix-extra-row', {coverage: with_after(coverage, last, renamed(last, 'xpc_no_reply', 'bogus_outcome'))},
+        Scenario('rule-normalized-matrix-extra-row', {coverage: with_after(coverage, last, renamed(last, 'validator_unavailable', 'bogus_outcome'))},
                  {NORMALIZED: ['matrix.unknown_row'], SUITE_ROWS: []},
                  "coverage matrix lists 'bogus_outcome' but no NormalizedOutcome constant by that name exists"),
         Scenario('rule-attempt-matrix-row-removed', {coverage: without(coverage, sysctl_row)}, {ATTEMPTS: ['attempt_matrix.missing_row']},

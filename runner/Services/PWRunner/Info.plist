@@ -15,6 +15,10 @@
   <string>0.0.0</string>
   <key>CFBundleVersion</key>
   <string>0</string>
+  <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
+  <key>PWRunnerProtocolVersion</key>
+  <integer>2</integer>
+  <!-- END GENERATED CONTRACT VERSIONS -->
   <key>PWRunnerRequireSignedCaller</key>
   <true/>
   <key>PWRunnerAllowedIdentifiers</key>

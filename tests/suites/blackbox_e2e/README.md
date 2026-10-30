@@ -163,9 +163,20 @@ current-version envelope passes; another or malformed version is reported as
 a present key of another type are rejected under each shape golden
 (`tests/fixtures/contract/envelope_shape.json`, `response_shape.json`);
 each limitation outside the vocabulary, a record that contradicts its raw
-fields and a `query_first` claim without its chain are rejected; the client's
-own failure replies validate; and the ordering of a successful unlink against
+fields and a `query_first` claim without its chain are rejected; a missing
+service produces a client capture with no invocation or host reply; and the ordering of a successful unlink against
 its query is read from `order` alone.
+
+Constructed protocol-2 client controls independently check version-first
+admission, ordered reservation attempts, bounded observations, exact base64
+host bytes, invocation without replay, and transport/host separation. Rejected
+or incomplete outer captures project unknown submission; unsupported parsed
+captures remain opaque. Clock failures preserve earlier readings without
+inventing missing times. Empty received host bytes differ from no reply, and
+delivery failure takes precedence over a captured response. Host-record
+mutations explicitly encode their authored record into its carrier; transport
+negative controls preserve the contradictory bytes, counts and state being
+tested. Constructed controls establish interpretation, not live execution.
 
 Constructed policy-check captures cover the same current helper admission gate
 as the controller. Rejected parsed payloads remain unchanged and opaque under
@@ -199,9 +210,12 @@ raw forwarding, including degraded reporting-failure replies.
 `comparison_controls` exercises `tests/lib/envelope_compare.py` through its CLI
 using the checked-in live envelope and constructed mutations. It runs offline
 without a built app or migration output. Changed commands, flags, timeouts,
-request arguments, argument order and list lengths must fail. Only executable
-relocation and service renaming corroborated by each envelope's provenance may
-pass. Predicate changes must retain the same filter apart from the recorded
+request arguments, argument order and list lengths must fail. Executable
+relocation and service renaming require matching envelope provenance. The
+absolute `--deadline-ticks` value may vary only in the current argument shape
+as a positive UInt64; its flag and placement remain fixed. Capture timing,
+reservation identities and hashes may vary, while admitted host bytes must
+decode exactly to the separately compared host result. Predicate changes must retain the same filter apart from the recorded
 worker PID. Structural controls reject missing empty containers, added fields,
 container and scalar type changes, and missing or null volatile values. Each
 control retains its inputs, report and diagnostics; negative controls must

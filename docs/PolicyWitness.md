@@ -845,8 +845,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| Host reply flush delay (`host_exit_delay`) | 50 milliseconds | Delay scheduled by the terminal request owner after replying. The unsandboxed host exits when the delay elapses. A second connection reaching the retiring host meets the terminal claim. | Fixed. |
-| Runner verification wait (`runner_verify_wait`) | 5,000 milliseconds | Default allowance for the fixed runner verify specimen, shared across host re-acquisition and client waits. An expired client RPC returns its timeout outcome; acquisition deadline exhaustion returns the last qualifying already_ran refusal. An admitted verification consumes its single-use host. | Flag `--timeout-ms` on `runner verify`. |
+| Host reply flush delay (`host_exit_delay`) | 50 milliseconds | Delay scheduled once by the terminal execution or abandoned-reservation owner. The unsandboxed host schedules exit after the delay. An occupied host grants no further reservation; client acquisition can reconnect before submission. | Fixed. |
+| Runner verification wait (`runner_verify_wait`) | 5,000 milliseconds | Default allowance for the fixed runner verify specimen, shared by reservation acquisition and the execution reply wait. Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate. | Flag `--timeout-ms` on `runner verify`. |
 | Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence. | Fixed; internal driver controls may shorten it. |
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
 | Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
@@ -859,12 +859,16 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Continuous time after successful spawn, limited by the remaining `exec_attempt_budget`. Expiry fails the attempt while preserving any observed natural exit code. An unusable sample or unrepresentable child deadline ends observation as a local timing fault with no errno. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped. | Fixed. |
 | Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Continuous time from the worker origin before setup, shared by exec steps, including worker setup and intervening work but excluding each acknowledged release wait. Continuous time includes system sleep. Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. An unusable sample refuses spawn with no errno, or after spawn records a local timing fault beside any native error; after a rejected sample, later spawns are refused. Blocking spawn and non-exec operations may outlast this allowance. | Fixed. |
 | Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Continuous-time allowance to confirm an exec child's exit after observation ends. Expiry, an unusable sample or a wait error leaves reaping unconfirmed and supplies no invented exit status; an unusable clock still permits the immediate exit check. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit. | Fixed. |
-| Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Default reply allowance; external runner acquisition shares it across refused attempts, retirement waits and the final client. Each client capture records its own wall-clock span. An expired client RPC yields `xpc_timeout`. Exhaustion while waiting after a qualifying external `already_ran` returns the last refusal. Inner worker and validator budgets do not expand. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
+| Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | One absolute client allowance, including helper launch/stdin delivery, reservation acquisition and the execution reply wait. Direct helper invocation starts after reading input. Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
-| External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
+| External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. Acquisition reaching an occupied or retiring host can retry without sending the specimen; the interval still controls launch pacing. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
 | Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
 | Issuer collection wait (`extension_issuer_wait`) | 5,000 milliseconds | Monotonic host wait starting after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; phase collection and worker waits have not started. Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait. | Fixed. |
 | Sysctl value-read destination (`sysctl_read_bytes`) | 4,096 bytes | Destination for one post-apply sysctlbyname value read with a non-null buffer; no sizing call or retry. Larger values can fail within this bound. Returned value bytes and post-call length are discarded; a failed call does not diagnose whether capacity was insufficient. | Fixed. |
+| Reservation lease (`reservation_lease`) | 5,000 milliseconds | Requested unused lease, capped by the host; the client requests no more than its remaining allowance. Expiry or owner disconnect retires the unused host. Submission checks expiry atomically and an old timer cannot terminate execution. | Fixed. No renewal. |
+| Reservation RPC wait (`reservation_rpc_wait`) | 5,000 milliseconds | Maximum wait for one reserve reply, also bounded by the original overall client deadline. Expiry abandons and invalidates that connection; acquisition may continue without submitting a specimen. | Fixed per-attempt ceiling. |
+| Reservation acquisition attempts (`reservation_attempts`) | 256 items | Every opened acquisition attempt, including transport failures and occupied replies. Exhaustion ends acquisition explicitly at attempt_limit with no submission; it can precede the overall timeout. Every attempted acquisition stays in the capture. | Fixed. |
+| Reservation retry delay (`reservation_retry_delay`) | 100 milliseconds | Minimum delay between a failed/occupied attempt and another connection, within the remaining allowance. No delay after a successful grant. Scheduling may take longer; neither waiting nor progress renews the deadline. | Fixed minimum. |
 
 ### Queries and transport
 
@@ -872,7 +876,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
 | Informative reply size bound (`runner_reply_maximum`) | 52,843,694 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
-| Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
+| Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
 | Validator reply frame (`validator_reply_frame`) | 8,192 bytes | UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain. | Fixed. |
@@ -887,6 +891,10 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Transient token storage (`extension_token_storage`) | 16,384 bytes | Fixed token array including its terminating NUL; never part of a retained reply. Empty, oversized or malformed publications cannot supply a consumed token. | Fixed. |
 | Maximum token payload (`extension_token_payload`) | 16,383 bytes | Nonempty token bytes excluding the required trailing NUL. Larger native results report `token_oversized`; malformed delivery is unavailable. | Fixed. |
 | Transient extension channel (`extension_channel`) | 17,472 bytes | Logical mapped channel with header, resolved path and token array. The OS backing object may round its storage up. Insufficient backing size or invalid channel geometry cannot supply a token. | Fixed. |
+| Reservation control bytes (`reservation_control_bytes`) | 65,536 bytes | Encoded reservation request or control reply, before JSON decoding. Excess is a protocol failure. No oversized control can grant execution. | Fixed. |
+| Client error message (`client_error_message`) | 1,024 UTF-8 bytes | Retained error prose at a Unicode boundary. Excess is truncated with message_truncated; error stage, domain and native code remain separate observations. | Fixed. |
+| Client error domain (`client_error_domain`) | 128 UTF-8 bytes | Retained native error domain at a Unicode boundary. Excess is truncated with domain_truncated. No arbitrary userInfo dictionary is retained. | Fixed. |
+| Client host reply retention (`client_reply_retention`) | 67,108,864 bytes | Host result bytes retained before base64 encoding in the client capture. Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct. | Fixed; must cover the informative maximal reply. |
 
 ### Evidence capture
 
@@ -987,11 +995,10 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 24, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 24, controller envelope 9, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
-Two documents carry these numbers. The runner reply is the JSON that
-`pw-runner-client` prints: its `schema_version` is the response schema, and it
+The runner reply is the host's JSON: its `schema_version` is the response schema, and it
 holds `normalized_outcome`, `steps`, `runner_subprocess`, `phases`
 and the policy identity (`specimen_id`, `policy_format`, `policy_sha256`). It is
 readable on its own. The controller envelope is what `policy-witness run`
@@ -1002,6 +1009,9 @@ fallback compilation (`policy_check`), the controller's projections
 (`runner_sandbox_diagnostics`) and `timeout_ms`. Readers that interpret either
 document accept exactly the current numbers; another version is reported as
 unsupported, with the bytes retained (see [CONTRACT.md](CONTRACT.md)).
+`pw-runner-client` prints a separate `runner_client_capture` at the current
+runner protocol. It carries acquisition and submission observations and the
+received host bytes, rather than manufacturing host results for client errors.
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
 fresh batch validator for each eligible phase. Worker identity for
@@ -1255,6 +1265,39 @@ structurally valid diagnostic outcomes remain visible even when their per-step s
 its own retained reply; `stdout_parse_error` means the untruncated bytes could
 not be decoded as JSON. Records inside a lost envelope are unavailable. The
 independent fallback helper's admission refusal remains `policy_too_large`.
+
+The parsed client frame is retained in `transport`. `transport_admission`
+is `accepted`, `missing`, `unsupported`, `malformed` or `delivery_failed`;
+`transport_error`
+explains rejection. The controller's `submission` projection is `invoked`,
+`not_invoked` or `unknown`. It is known only from an admitted capture.
+`runner_reply_error` reports truncated host bytes or a host body that is not
+JSON; the retained bytes remain available inside the capture.
+
+The admitted frame records `clock: "mach_continuous_time_ns"`,
+`clock_available`, available absolute start/deadline/end readings, `timeout_ms`,
+`attempts`, `acquisition_stop`, `submission` and `terminal`. The overall deadline
+includes controller-side launch and stdin delivery. Attempt start/end and
+invocation elapsed milliseconds use the helper's continuous-clock start.
+Clock failure preserves earlier readings and invocation state, then stops with
+`local_error`; absent readings never establish elapsed time.
+
+Each acquisition attempt records an ordinal, attempt UUID, elapsed times,
+outcome and any control observation or error. Control observations retain byte
+count and SHA-256 plus admitted peer-reported status, host PID/instance and
+lease/reason fields; they omit the credential. Transport errors retain stage,
+reason and bounded message, with paired native domain/code when observed and
+explicit message/domain truncation flags. A successful grant does not by itself
+establish invocation or execution.
+
+`runner_reply` contains the exact retained host bytes as base64, received and
+retained byte counts, and a truncation flag. Only a reply accepted before the
+deadline can populate it. The capture retains a prefix up to the documented
+limit; an incomplete body cannot become `runner_result`. A complete JSON host
+body is preserved as `runner_result` and independently admitted under the
+response schema before its meaning is used. Client transport failures do not
+create synthetic host results. The helper writes this versioned capture to
+stdout, including when no host reply arrived.
 
 The controller delivers the request to the client on stdin (`--request -`)
 and records that delivery in `runner_client.request_delivery`:
@@ -1779,20 +1822,22 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, o
   that cannot take effect are also refused. `request_failure` supplies the
   structured code and field path; the controller mirrors it at
   `data.request_failure`. See [request refusals](CONTRACT.md#structured-request-refusals).
-- `already_ran` — the XPC service instance only accepts one
-  `runSpecimen` call. A second call returns this error.
 
-`xpc_error`, `xpc_timeout`, `xpc_proxy_type_mismatch`, and
-`xpc_no_reply` are synthesized by `pw-runner-client` for an XPC error,
-RPC wait expiry, a proxy type mismatch, or completion without a reply or error,
-respectively. A host reply can be delayed or lost.
+Client failures are separately attributed in `runner_client.transport` and the
+controller's result: `xpc_error` is a captured transport error and `xpc_timeout`
+is expiry of the overall client allowance. `xpc_acquisition_failed` means the
+client exhausted its bounded reservation attempts; `xpc_submission_refused`
+means the execution method returned a reservation refusal. Protocol/local
+failures retain their stage and diagnostic. Missing, malformed or unsupported
+client capture leaves submission unknown. These paths have no host RunResult.
+A host reply can be delayed or lost; an invoked execution is never replayed.
 
 For ordinary, successfully captured client output, the two timeout layers map
 to these fields:
 
 | Event | `result.normalized_outcome` | `data.runner_result.normalized_outcome` | Result origin and distinguishing evidence |
 | --- | --- | --- | --- |
-| Client RPC wait expires | `xpc_timeout` | `xpc_timeout` | Client synthesizes a present result with empty steps and no host subprocess report. Client exit code is 1. |
+| Client allowance expires | `xpc_timeout` | null | Client capture retains whether execution was invoked. After invocation, execution is unknown; before invocation, it was not submitted. |
 | Host sentinel budget expires and its reply arrives | `runner_timeout` | `runner_timeout` | Host result includes `runner_subprocess.poll_stop_reason: "sentinel_deadline"` and available disposition evidence. Client exit code is 0 because it delivered the reply. |
 
 The client exit code is `data.runner_client.exit_code`. The controller
@@ -1800,14 +1845,14 @@ The client exit code is `data.runner_client.exit_code`. The controller
 before the client's deadline. It does not prove the host never ran, was
 unreachable or crashed, and does not establish cancellation of host work.
 
-If client stdout supplies no parsed reply, `data.runner_result` is null and
-the controller can report `runner_output_not_json`; inspect the
+If client stdout supplies no admitted capture, `data.runner_result` is null and
+the controller reports a missing, malformed or unsupported client capture; inspect the
 [capture evidence](#receiver-evidence) for empty, undecodable or truncated output.
 Client launch or request-delivery failures are `tool_error` paths. These differ
-from a captured, client-synthesized RPC timeout and from a parsed reply retained
+from a captured client RPC timeout and from a parsed host reply retained
 but refused as `unsupported_runner_response` or `malformed_runner_response`.
 
-The controller's own outcomes (`tool_error`, `runner_output_not_json`,
+The controller's own outcomes (`tool_error`, client capture refusals,
 `unsupported_runner_response` and `malformed_runner_response`) appear in
 `result.normalized_outcome` and are documented in the
 [controller README](../controller/README.md#output-contract).
@@ -2033,37 +2078,34 @@ Common decode errors (quick fixes)
 
 ## External runners (BYOXPC)
 
-For `run` and `runner verify`, a qualifying `already_ran` refusal triggers
-re-acquisition within the existing request timeout. The reply must pass current
-response admission, carry empty steps and no worker, and name a live host whose
-executable matches the selected registry record. The controller captures its
-kernel start time and waits for that generation to disappear (ESRCH or a changed
-start time) before starting another client. The host remains single-use.
+For `run` and `runner verify`, one client acquires a reservation before sending
+the specimen for execution. Acquisition messages contain no specimen bytes.
+An occupied host or a connection lost during acquisition can lead to another
+connection within the original deadline and acquisition limits. A grant is
+single-use and bound to that connection. An abandoned or expired reservation
+retires its host without executing a specimen.
 
-The last refusal is returned when the deadline expires. A refusal can reach the
-caller earlier if it does not qualify or a process observation fails before
-retirement is established. Hosts that cannot be observed, including system-scope
-hosts under restricted access, keep that refusal behavior.
+The client marks submission `invoked` immediately before calling execution on
+the reserved connection. No later error, refusal or timeout causes replay.
+In particular, XPC error 4097 can accompany completed work and cannot establish
+nonexecution. A grant alone also does not establish invocation: the overall
+deadline can expire after the grant but before submission.
 
-Other outcomes, including XPC connection errors, do not trigger re-acquisition.
+`data.runner_client.transport` records acquisition attempts, their control
+observations, the acquisition stop reason, submission state, terminal event
+and host reply bytes accepted before the deadline. Host PID/instance values in a grant are
+peer-reported identities, not kernel-generation receipts. Reservation credentials
+are omitted. The controller admits the capture's protocol and state invariants
+before reading the host result. Missing or inadmissible capture means submission
+unknown, never known nonexecution. `runner_result` is null without a parsed
+host reply, and no client error is represented as a host execution observation.
 
-Known gap: a connection racing a host's exit can fail at the XPC layer before
-delivering an `already_ran` refusal. The controller returns that connection
-error without retrying; it does not establish that the request was refused
-before admission.
-
-`data.runner_acquisition` is an array of qualifying refused attempts (empty when
-none qualified). Each contains `runner_client`, the unchanged refusal in
-`runner_result`, and `generation` with `pid`, `start_sec`, `start_usec` and
-`executable_path`. `wait_outcome` is `retired`, `deadline` or
-`observation_failed`; `observation_error` retains a failed observation diagnostic.
-`observed_exit` is null without established retirement, otherwise it records
-`basis` (`esrch` or `pid_reused`), `observed_at_unix_ms`, and the replacement
-identity for PID reuse. The replacement's executable is uncollected. These
-records identify the refusing host, not the client holding its claim.
-Only the final attempt supplies the ordinary runner result, client capture,
-execution evidence and downstream observations. On deadline exhaustion that
-final result is the last refusal, also retained in the acquisition array.
+External runners must advertise the current runner protocol in their signed
+bundle and participate in its reservation RPC. Install rejects missing or
+unsupported advertisements; run and verify independently check the actual
+protocol response. Old registry records remain available for list, reconcile
+and removal, but cannot be selected for execution. Remove and reinstall an
+updated runner to use it; there is no automatic legacy execution fallback.
 
 
 Use this when you need entitlements that are not in the built-in runner.
@@ -2194,11 +2236,10 @@ a <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span
 Verification consumes the host it reaches: every host serves one request and
 exits. The next request starts a fresh host once launchd allows a launch,
 which the installed plist's `ThrottleInterval` bounds at <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> after the
-previous launch. A request that reaches the verified host while it is still
-retiring, or a fresh host that another connection reached first, is refused
-with `normalized_outcome: already_ran`. The controller re-acquires after this
-pre-worker refusal only when it can identify the selected host's generation
-and observe its retirement, as described above.
+previous launch. Acquisition that reaches the verified host while it is still
+retiring, or a fresh host another connection reserved first, may reconnect
+without submitting a specimen. Execution remains a single invocation after
+the grant, as described above.
 
 ### Use the runner in a specimen
 

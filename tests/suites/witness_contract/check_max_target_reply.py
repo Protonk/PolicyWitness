@@ -151,9 +151,9 @@ def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_F
 def host_handoff(directory):
     """Start size-limit workloads after the preceding host has retired.
 
-    Large replies take time to decode, so the next request can race the previous
-    host's exit without receiving an already_ran reply. Contention is exercised
-    separately; this test needs a reply from the host that checks its limits.
+    Large replies take time to decode. This control starts with the prior host
+    absent so acquisition contention does not consume its size-check budget.
+    Contention and reservation retry are exercised separately.
     Failed launchctl/process observations never establish retirement.
     """
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures/byoxpc'))
