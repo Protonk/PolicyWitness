@@ -114,6 +114,13 @@ class Controls:
         bad = json.loads(json.dumps(files))
         bad['suites/'+family+'/ownership.json']['commands'][0]['settlement']['group_absent'] = False
         require(execution_contract.problems(run,contract,bad.__getitem__), 'a closed label concealed unresolved group ownership')
+        for omitted in ('token','command_pid'):
+            bad=json.loads(json.dumps(files))
+            command=bad['suites/'+family+'/ownership.json']['commands'][0]
+            command.pop(omitted);command['settlement'].pop(omitted)
+            require(execution_contract.problems(run,contract,bad.__getitem__), 'missing identity pair accepted: '+omitted)
+        bad=json.loads(json.dumps(files));bad['suites/'+family+'/ownership.json']['commands'][0]['settlement']['never_launched']=True
+        require(execution_contract.problems(run,contract,bad.__getitem__), 'never-launched claim contradicted a recorded command PID')
         self.note('independent producer contract refuses missing family declarations, ownership roles and false closure')
 
     def detached(self, live=False):

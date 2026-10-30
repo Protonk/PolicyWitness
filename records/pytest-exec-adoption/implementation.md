@@ -249,3 +249,9 @@ actual-family matrix and normal F. The timed-out baseline is recorded once
 (two commands), with eight blocked setup phases and no dependent bodies. All
 normal F command obligations are closed. The emitted walkthrough and source
 comparison are being sealed; the separate build continuation remains in progress.
+
+Final receipt-schema review adds a localized missing-identity control: settlement
+must not compare two absent token/PID fields as a successful binding, and an
+affirmative never-launched claim must not contradict a recorded command PID. The
+independent ownership-contract control exercises those removals before correction.
+This tightens the existing closure contract; it introduces no new resource kind.
