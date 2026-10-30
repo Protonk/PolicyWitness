@@ -62,3 +62,11 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "retention controls fail
   "${ROOT_DIR}/tests/suites/dispatcher/check_retention.py" "${PW_TEST_ARTIFACTS}"
 test_pass "retained evidence and incomplete runs survive output replacement"
 fi
+
+if test_selected pytest_controls; then
+test_begin dispatcher pytest_controls
+test_step ownership "observe the pytest command boundary and evidence contract"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "pytest integration controls failed" \
+  "${ROOT_DIR}/tests/suites/dispatcher/check_pytest.py" "${PW_TEST_ARTIFACTS}"
+test_pass "pytest ownership and evidence controls preserve independent observations"
+fi

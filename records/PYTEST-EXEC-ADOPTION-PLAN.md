@@ -20,7 +20,8 @@ CHECK.md, merging into the accepted checkout and expansion to another family
 remain outside scope.
 
 Associated records: [source and consumer investigation](pytest-exec-adoption/source-notes.md)
-and [planning-state identities](pytest-exec-adoption/state.json). They distinguish
+[planning-state identities](pytest-exec-adoption/state.json), and
+[implementation sequence and recovery index](pytest-exec-adoption/implementation.md). They distinguish
 inspected facts, proposed contracts and outstanding implementation checks.
 
 ## 1. First family and fixed observations

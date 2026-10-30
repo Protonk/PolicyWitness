@@ -253,6 +253,11 @@
         {
           "id": "retention_controls",
           "description": "Retained inventories, managed run ownership and checkout serialization protect execution evidence"
+        },
+        {
+          "id": "pytest_controls",
+          "default": false,
+          "description": "pytest family ownership, accounting and integration controls"
         }
       ]
     },
