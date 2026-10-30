@@ -107,7 +107,10 @@ class Controls:
             require(execution_contract.problems(run, contract, altered.__getitem__), 'missing '+role+' accepted')
         altered = dict(run); altered.pop('execution_contract'); altered['case_results'] = []
         require(execution_contract.problems(altered, contract, {}.__getitem__), 'erasing all local family hints accepted')
-        self.note('independent producer contract refuses missing family declarations and ownership roles')
+        bad = json.loads(json.dumps(files))
+        bad['suites/'+family+'/ownership.json']['commands'][0]['settlement']['group_absent'] = False
+        require(execution_contract.problems(run,contract,bad.__getitem__), 'a closed label concealed unresolved group ownership')
+        self.note('independent producer contract refuses missing family declarations, ownership roles and false closure')
 
     def detached(self, live=False):
         root, out = self.fixture('detached-live' if live else 'detached')

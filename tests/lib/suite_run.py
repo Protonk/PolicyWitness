@@ -476,9 +476,17 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
                 item['equipment'] = observed
             dependencies = {dep for c in group for dep in c['depends_on'] if dep not in group_ids}
             failed_deps = sorted(dep for dep in dependencies if outcomes.get(dep) != 'pass')
-            if interrupted or missing or failed_deps:
+            ownership_hold = None
+            if not interrupted:
+                from pytest_resources import guard
+                try:
+                    guard(root)
+                except (ValueError, OSError) as exc:
+                    ownership_hold = str(exc)
+            if interrupted or missing or failed_deps or ownership_hold:
                 item['state'] = 'blocked'
-                reason = 'interrupted' if interrupted else f'missing prerequisites: {missing}' if missing else f'dependencies did not pass: {failed_deps}'
+                reason = ('interrupted' if interrupted else ownership_hold if ownership_hold else
+                          f'missing prerequisites: {missing}' if missing else f'dependencies did not pass: {failed_deps}')
                 item['blocked_reason'] = reason
                 problem(item, 'not_run', reason)
             else:

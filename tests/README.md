@@ -677,7 +677,8 @@ refuses recovery. A missing owner/start receipt is not proof that nothing launch
 A durable reservation without launch authorization can be revoked; ambiguous
 launch authorization remains checkout-blocking until adequate evidence exists.
 
-Possible live/future commands block checkout execution. Proven group absence
+Possible live/future commands block checkout execution, including the next
+selected case within an already admitted run. Proven group absence
 and revoked launch authority allow unrelated execution while unresolved isolated
 cleanup protects only that run's output. Closure leaves the registry history and
 portable ownership receipt intact. Pruning removes closed registry records only

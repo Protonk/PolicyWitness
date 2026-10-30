@@ -50,7 +50,7 @@ def exercise(control):
             roles={'engine','owner','command','child'}
         env={k:v for k,v in os.environ.items() if not k.startswith(('PW_','PYTEST','PYTHON'))};env['PW_TEST_OUT_DIR']='tests/out/runs/window'
         log=(root.parent/'invocation.log').open('wb')
-        process=subprocess.Popen(['bash','tests/run.sh','--case',F],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+        process=subprocess.Popen(['bash','tests/run.sh'],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
         queue=select.kqueue();pids={};peers=[];exits=set()
         def collect(timeout):
             exits.update(e.ident for e in queue.control(None,max(1,len(pids)),timeout) if e.fflags & select.KQ_NOTE_EXIT)
@@ -72,6 +72,9 @@ def exercise(control):
                 require(before['state']==('command_release_authorized' if mode=='before-start-publication' else 'command_started'),'crash window not established')
                 os.kill(pids['owner'],signal.SIGKILL)
             process.wait(timeout=20)
+            if mode in ('before-start-publication','after-return'):
+                run=read(out/'run.json')
+                require(run['case_results'][1]['state']=='unrun' and 'pytest ownership' in run['case_results'][1]['reason'], 'unresolved ownership admitted queued legacy work inside the same run')
             if mode in ('before-start-publication','after-return'):
                 live=pids['child'] if mode=='after-return' else pids['command']
                 collect(0)

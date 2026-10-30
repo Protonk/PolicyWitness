@@ -170,3 +170,13 @@ and `disable_plugin_autoload` now state their actual predicates. Controls check
 those predicates, absent site initialization/ambient packages, locale preservation
 and the actual lock inode through pytest fd capture. The observed behavior was
 already correct; the earlier field labels were ambiguous.
+
+Final ownership review found a candidate admission gap: the shared guard ran at
+checkout acquisition, but a still-unresolved family operation could be followed
+by an already-selected legacy case under that same acquisition. The correction
+checks resource eligibility before each invocation, without changing selection or
+pytest item scheduling. The actual owner-death windows now include queued legacy
+work and require an explicit ownership refusal. A dropped-native-descriptor
+control and a closed-label/false-settlement control test the rejection side of
+the hold contract. This is an ordinary integration correction within the selected
+ownership boundary, not a change to application or native-test promises.

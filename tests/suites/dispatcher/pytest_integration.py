@@ -325,6 +325,18 @@ class Integration:
                 for peer in peers:peer.close()
                 listener.close();(directory/'peer').unlink();directory.rmdir()
 
+    def dropped_hold(self):
+        root=self.fixture('dropped-native-hold')
+        helper=root/'tests/lib/pytest_command_owner.py';text=helper.read_text();needle='pass_fds=(lock_fd,), start_new_session=True'
+        require(text.count(needle)==1,'native hold fault anchor');helper.write_text(text.replace(needle,'pass_fds=(), start_new_session=True'))
+        program="import os,sys; expected=os.stat(sys.argv[1]).st_ino; found=False\nfor fd in range(3,256):\n try: found |= os.fstat(fd).st_ino == expected\n except OSError: pass\nprint('inherited_checkout_hold='+str(found)); sys.exit(0 if found else 1)"
+        setup="    import sys\n    receipt = pw_equipment.command([sys.executable,'-B','-S','-P','-c',"+repr(program)+","+repr(str(root/'tests/.checkout.lock'))+"],pw_equipment.artifacts/'hold-observer',5)\n    assert receipt['returncode'] == 0, 'native command lost actual checkout hold'\n    value = Observation(pw_equipment)"
+        module=root/MODULE;module.write_text(module.read_text().replace('    value = Observation(pw_equipment)',setup))
+        out,run=self.run(root,expected=1);family=read(out/'suites'/F/'family.json')
+        require('inherited_checkout_hold=False' in (out/'suites'/F/'artifacts/hold-observer/stdout').read_text(),'native descriptor observer did not see the weakened hold')
+        require(all(i['phases']['setup']['outcome']=='failed' for i in family['items']),'dropped native hold was accepted')
+        self.note('dropped native lock inheritance is rejected by native descriptor observation',output=str(out))
+
     def publication(self):
         root=self.fixture('publication-summary')
         helper=root/'tests/lib/pytest_family.py';text=helper.read_text();needle="                write(family_out / 'family.json', family)"
@@ -344,6 +356,6 @@ class Integration:
         self.note('initial publication refusal exposes unknown/incomplete without command acquisition',output=str(out))
 
     def all(self):
-        self.native();self.discovery();self.accounting();self.portable();self.recovery();self.deaths();self.publication()
+        self.native();self.discovery();self.accounting();self.portable();self.recovery();self.deaths();self.publication();self.dropped_hold()
         from pytest_windows import exercise
         exercise(self)
