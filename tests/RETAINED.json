@@ -352,6 +352,20 @@
       "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
       "source": "832e77170d92199e52bc21ef6fa7266106725658",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-ownership-01",
+      "run_id": "20261030T175318Z_e31f2b6d",
+      "reason": "Consequential ownership control failure: post-supervisor-death killpg EPERM; settlement absent and registry retained; original and unchanged unsandboxed repeat.",
+      "source": "46ec22898c0b47f41693ed2870622978309e2d06",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-ownership-02",
+      "run_id": "20261030T175354Z_0f017bc4",
+      "reason": "Consequential ownership control failure: post-supervisor-death killpg EPERM; settlement absent and registry retained; original and unchanged unsandboxed repeat.",
+      "source": "46ec22898c0b47f41693ed2870622978309e2d06",
+      "app_inventory": null
     }
   ]
 }

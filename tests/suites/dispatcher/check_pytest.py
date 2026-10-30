@@ -153,6 +153,7 @@ with checkout_lock.owned(root,env={}) as scope:
                 exits.update(e.ident for e in queue.control(None,2,1) if e.fflags & select.KQ_NOTE_EXIT)
             require(exits == {pid,owner}, 'command/owner exits not independently observed')
             require(not busy(root), 'quiescent owner kept physical lock')
+            self.note('external exit observations before disposition', command_pid=pid, owner_pid=owner, exit_events=sorted(exits), lock_busy=busy(root))
             state = resources.inspect(root,'detached')
             require(state[0]['blocking']=='output','settled command still blocks checkout or lost output hold')
             result = resources.recover(root,'detached',apply=True)

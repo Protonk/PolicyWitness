@@ -23,3 +23,21 @@ basis. Their launcher was never invoked by the fixture controller.
 
 No acceptance claim has yet been made. Subsequent source commits, fresh run
 identities, corrections and dispositions are recorded below before final sealing.
+
+### Consequential failure and correction
+
+Source `46ec2289`: pinned `pytest-exec-ownership-01` and unchanged unsandboxed
+repeat `pytest-exec-ownership-02` both failed after the controlled supervisor's
+death. `owner.stderr` records `killpg(SIGKILL)` raising EPERM. The native peer and
+owner exited (the control registered kernel exit observers before killing its
+own supervisor), but settlement was never published; the registry correctly
+remains checkout-blocking. This is not labelled environmental: the unsandboxed
+repeat failed too. These are isolated nested fixture registries, not active
+candidate-checkout ownership claims.
+
+The correction polls/reaps before signalling and treats macOS zombie-group EPERM
+as **not yet absent**, as the existing group observer already does. It never
+turns EPERM into cleanup permission. The control now persists its external exit
+observations before asserting the candidate's disposition. The failed runs'
+empty recovery socket directories remain protected pending separately supported
+bookkeeping; their paths and missing settlement are in each operation record.

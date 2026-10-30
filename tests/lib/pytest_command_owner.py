@@ -69,17 +69,24 @@ def main(path, gate_fd, lock_fd):
                         cancelled = True
                 timed_out |= time.monotonic() - started > record['timeout']
                 cancelled |= bool(gone)
+                code = command.poll()
+                if code is not None:
+                    break
                 if timed_out or cancelled:
                     if stopping is None:
                         stopping = time.monotonic()
                         try:
                             os.killpg(command.pid, signal.SIGINT)
-                        except ProcessLookupError:
+                        except (ProcessLookupError, PermissionError):
+                            # EPERM can denote an unreaped zombie on macOS.
+                            # It is not absence evidence; poll/group observation follows.
                             pass
                     elif time.monotonic() - stopping > 1:
                         try:
                             os.killpg(command.pid, signal.SIGKILL)
-                        except ProcessLookupError:
+                        except (ProcessLookupError, PermissionError):
+                            # EPERM can denote an unreaped zombie on macOS.
+                            # It is not absence evidence; poll/group observation follows.
                             pass
                 code = command.poll()
                 if code is not None:
@@ -89,7 +96,7 @@ def main(path, gate_fd, lock_fd):
             if not group_absent:
                 try:
                     os.killpg(command.pid, signal.SIGKILL)
-                except ProcessLookupError:
+                except (ProcessLookupError, PermissionError):
                     pass
                 group_absent = checkout_lock.group_finished(command.pid, 5, command)
             stdout.flush(); stderr.flush()
