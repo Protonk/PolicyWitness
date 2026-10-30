@@ -300,7 +300,12 @@ def requirements(case, config, env, root, cache, probes=None):
     for name in case['requires']:
         if name not in cache:
             if name == 'pytest':
-                ok = not case.get('engine_unavailable')
+                import pytest_packages
+                try:
+                    pytest_packages.target(root)
+                    ok = True
+                except (OSError, ValueError):
+                    ok = False
             elif name == 'rosetta':
                 record = rosetta_probe()
                 if probes is not None:

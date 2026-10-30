@@ -231,6 +231,9 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
     # This explicitly authored fixture models a historical three-legacy-case
     # producer. Its source identity is fixed before any archive mutation.
     release_runs.HISTORICAL_PRODUCERS.add(commit)
+    declaration = repo.parent / 'expected-historical-producers.json'
+    known = json.loads(declaration.read_text()) if declaration.exists() else []
+    declaration.write_text(json.dumps(sorted(set(known) | {commit})))
     dist = repo / 'dist'
     dist.mkdir(exist_ok=True)
     archive = dist / 'PolicyWitness.zip'

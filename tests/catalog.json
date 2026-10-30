@@ -79,7 +79,8 @@
             "cargo",
             "meson",
             "clang",
-            "swift"
+            "swift",
+            "pytest"
           ]
         },
         {
@@ -257,7 +258,11 @@
         {
           "id": "pytest_controls",
           "default": false,
-          "description": "pytest family ownership, accounting and integration controls"
+          "description": "pytest family ownership, accounting and integration controls",
+          "requires": [
+            "clang",
+            "pytest"
+          ]
         }
       ]
     },

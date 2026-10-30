@@ -990,7 +990,8 @@ def control_lock_lifetime(co, variant):
     other = co.work / 'other-worktree'
     if not other.exists():
         (other / 'tests/lib').mkdir(parents=True)
-        for name in ('checkout_lock.py', 'checkout_lock.sh', 'python_start.sh', 'sdk_guard.sh'):
+        for name in ('checkout_lock.py', 'checkout_lock.sh', 'python_start.sh', 'sdk_guard.sh',
+                     'pytest_resources.py', 'pytest_support.py'):
             shutil.copy2(co.root / 'tests/lib' / name, other / 'tests/lib' / name)
     other_front_end = ['/bin/bash', str(other / 'tests/lib/checkout_lock.sh'), '--root', str(other), '--']
     killed, holder, release = lifetime_kill(co, variant, 'lifetime-killed')
@@ -1963,6 +1964,11 @@ def control_release_battery(co, variant):
     # Give the battery a fresh source snapshot, independent of those sequences.
     with tempfile.TemporaryDirectory(prefix='pw-release-battery-', dir='/private/tmp') as temporary:
         fresh = Checkout(Path(temporary), co.identity, co.out)
+        # Verified host equipment, copied explicitly into the isolated battery;
+        # collection and execution never download dependencies.
+        import pytest_packages
+        packages, _ = pytest_packages.target(ROOT)
+        shutil.copytree(packages, fresh.root / packages.relative_to(ROOT))
         git = ['git', '-C', str(fresh.root), '-c', 'user.name=Control',
                '-c', 'user.email=control@example.invalid', '-c', 'commit.gpgsign=false']
         subprocess.run([*git, 'init', '-q'], check=True)

@@ -145,3 +145,28 @@ contract and version fields. Historical synthetic release fixtures explicitly
 declare their own known legacy source identities before mutation. The actual-family
 portable control now constructs its expected source/selection contract independently
 before ordinary execution, rather than taking even that initial copy from run.json.
+
+Source `40e81695`: pinned `pytest-exec-acceptance-01` passes F and all integration
+controls, including independently fixed source expectations and removal of the
+outer contract/version hints. Interrupted release rotation failed because its
+fresh subprocess did not inherit the parent fixture's in-memory legacy-producer
+set. The fixture now carries a parent-authored source declaration outside the
+mutated archive and explicitly loads it in the crash child. Production readers
+still require positive provenance; their rejection was correct.
+
+The fixed `9aa2d963` build worktree's pinned `pytest-exec-build-refusals-01` passed
+all full/partial baseline/refusal rows and the first six sequences, then its
+secondary-worktree fixture omitted pytest_resources.py/pytest_support.py. The
+candidate explicitly copies those shared lock dependencies. Its real-default-
+battery fixture also needs a verified copy of the host's pinned pytest target;
+that equipment is copied explicitly, with no runtime download. Those two opt-in
+integration controls now declare pytest equipment. Continue the remaining
+sequences and mutation phase through the existing `--only` development entry,
+wrapped by the public case in a separately sealed verification worktree; retain
+the prefix and continuation as distinct evidence, not an uninterrupted full run.
+
+Environment walkthrough also clarified two field names: `dont_write_bytecode`
+and `disable_plugin_autoload` now state their actual predicates. Controls check
+those predicates, absent site initialization/ambient packages, locale preservation
+and the actual lock inode through pytest fd capture. The observed behavior was
+already correct; the earlier field labels were ambiguous.

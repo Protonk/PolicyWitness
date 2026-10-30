@@ -90,9 +90,9 @@ class Journal:
         self.lock_fd = descriptors[0]
         self.out = Path(message['out'])
         write(self.out / 'environment.json', dict(executable=sys.executable, python=sys.version,
-            pythoncoercelocale=os.environ.get('PYTHONCOERCECLOCALE'), external_plugins=os.environ.get('PYTEST_DISABLE_PLUGIN_AUTOLOAD'),
+            pythoncoercelocale=os.environ.get('PYTHONCOERCECLOCALE'), disable_plugin_autoload=os.environ.get('PYTEST_DISABLE_PLUGIN_AUTOLOAD') == '1',
             sys_path=sys.path, lock_identity=[os.fstat(self.lock_fd).st_dev,os.fstat(self.lock_fd).st_ino],
-            capture='fd', bytecode=sys.dont_write_bytecode, site='site' in sys.modules))
+            capture='fd', dont_write_bytecode=sys.dont_write_bytecode, site='site' in sys.modules))
         append(self.out / 'phases.jsonl', dict(kind='session_start', family=FAMILY, items=[r['id'] for r in items]))
         send(PEER, dict(kind='started'))
 

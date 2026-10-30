@@ -345,6 +345,8 @@ def acceptance_lifetime(out):
 
 def crash(repo, mode):
     """Exit abruptly at one boundary while rotating the previous release's acceptance directory."""
+    # Parent-authored fixture provenance is outside the archive being changed.
+    release_runs.HISTORICAL_PRODUCERS.update(json.loads((repo.parent / 'expected-historical-producers.json').read_text()))
     archive = repo / 'dist/archive/v0.9.1'
     rename, write, remove = Path.rename, retention.write_index, shutil.rmtree
     def interrupted_rename(path, target):
