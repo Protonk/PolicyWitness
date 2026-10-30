@@ -338,6 +338,20 @@
       "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
       "source": "0d3af494f7c4e1177523c2622711f83b51897120",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-06/candidates/retained",
+      "run_id": "retained",
+      "source": null,
+      "app_inventory": null,
+      "reason": "Experimental retained-publication refusal stimulus."
+    },
+    {
+      "path": "runs/pytest-boundary-demo-06",
+      "run_id": "pytest-boundary-demo-06",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "832e77170d92199e52bc21ef6fa7266106725658",
+      "app_inventory": null
     }
   ]
 }

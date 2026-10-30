@@ -92,3 +92,8 @@ inputs passed. The correction accumulates decoded frames as they are read;
 on a parse failure it retains the preceding frames, adds the journal error and
 leaves later items incomplete. Raw evidence is never rewritten. Valid journals
 take the same per-line JSON decoding and unchanged account policy.
+
+`832e7717` / `pytest-boundary-demo-06` passed all eighteen groups, now including
+eleven accounting inputs. The final reader also reconciled the retained old,
+stale and adapted native journals to exactly their prior case results and errors;
+native inputs and adapters were unchanged, so no recompilation was needed.

@@ -1,0 +1,439 @@
+{
+  "accepted_baseline": "77eb987554eef10ffa3371ffb21b235097562a78",
+  "reviewed_source": "832e77170d92199e52bc21ef6fa7266106725658",
+  "prior_pins_unchanged": true,
+  "main_retention_unchanged": true,
+  "accepted_app_inventory_errors": [],
+  "app_inventory_sha256": "9529b7f22ca49559a3aee9200fd4ac9fe83268351576dc77d1c501e8f13cd4da",
+  "c0_2_sha256": "9c155b77a99870ed4519bcbe9ea0c3675d964bb129a9d90d7262bd0e99c8ec6c",
+  "demo_dependencies_equal_final": {
+    "observe.py": true,
+    "test_subject.py": true,
+    "pytest.ini": true,
+    "common.py": true,
+    "engine.py": true,
+    "supervisor.py": true,
+    "resource_owner.py": true,
+    "recover.py": true
+  },
+  "retained_runs": [
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-01",
+      "run_id": "pytest-boundary-demo-01",
+      "ok": false,
+      "completion": {
+        "selected": 18,
+        "completed": 2,
+        "skipped": 0,
+        "unrun": 16
+      },
+      "source": "fa376979e40373c993149cf96ef62db2550b2a9a",
+      "run_sha256": "08407e09765278a82029bb85333b6748267d1d925e51ebe263e8990395cee3be"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-02",
+      "run_id": "pytest-boundary-demo-02",
+      "ok": false,
+      "completion": {
+        "selected": 18,
+        "completed": 4,
+        "skipped": 0,
+        "unrun": 14
+      },
+      "source": "4211d48bc9638b0b319bbb88ea9997e30a96d8d1",
+      "run_sha256": "7a47240840fab1e1f43f63454860c9bfdd1c4e29087e36458acdaf788c2d45d8"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-03",
+      "run_id": "pytest-boundary-demo-03",
+      "ok": false,
+      "completion": {
+        "selected": 18,
+        "completed": 9,
+        "skipped": 0,
+        "unrun": 9
+      },
+      "source": "493309ed51bcd0623a2cf69daba59b25b3b9486b",
+      "run_sha256": "c1b13b6763f2b7995b0317dff1486fcdc0387e71d4cc4c910165676c4090f046"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-04",
+      "run_id": "pytest-boundary-demo-04",
+      "ok": false,
+      "completion": {
+        "selected": 18,
+        "completed": 9,
+        "skipped": 0,
+        "unrun": 9
+      },
+      "source": "5c4cd41d0b2654a2280c60ee3ca0d1fd0579e78f",
+      "run_sha256": "e82c27f86c85c9391a5e19f7671d1ad1d61e2c3f43a44d798af114b31ccfa5e9"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-05",
+      "run_id": "pytest-boundary-demo-05",
+      "ok": true,
+      "completion": {
+        "selected": 18,
+        "completed": 18,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "source": "cfbd753a4b701630ebeb741acf49aeec309494f9",
+      "run_sha256": "7b7a40961613427542a088f03da2e1fc70bbda4f2aa79cd4e0f31aefb7179160"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-06",
+      "run_id": "pytest-boundary-demo-06",
+      "ok": true,
+      "completion": {
+        "selected": 18,
+        "completed": 18,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "source": "832e77170d92199e52bc21ef6fa7266106725658",
+      "run_sha256": "4717d3ee7224b395ba2d0df439cb373dbfb30c10c4460d9a3cd11f6ee91545fa"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-journal-red-01",
+      "run_id": "pytest-boundary-journal-red-01",
+      "ok": false,
+      "completion": {
+        "selected": 1,
+        "completed": 1,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "source": "0d3af494f7c4e1177523c2622711f83b51897120",
+      "run_sha256": "d5e8da0512f70b45a85e3df70289880539561ec7fa6f6f25f6f0dc4de3c26dc5"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-reference-01",
+      "run_id": "20261030T144802Z_0cf0ac62",
+      "ok": false,
+      "completion": {
+        "completed": 4,
+        "selected": 4,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "source": "e93753101667a6255eed2439bb407996121aa555",
+      "run_sha256": "90179e132e9892ac6945e168ff23b45dfb26bdeaa6ac6e08fd4184bd80ef67a6"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-reference-02",
+      "run_id": "20261030T145251Z_0059d39d",
+      "ok": true,
+      "completion": {
+        "completed": 4,
+        "selected": 4,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "source": "e93753101667a6255eed2439bb407996121aa555",
+      "run_sha256": "af4111d83d887ccbe1ee061afabfe43d8bd68d39b57ba2c4110d6c743a7ee0e9"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-replay-adapted-01",
+      "run_id": "pytest-boundary-replay-adapted-01",
+      "ok": true,
+      "completion": {
+        "selected": 1,
+        "completed": 1,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "source": "fec0e1811d21ce718bd007bbc0a1498b2f558c2f",
+      "run_sha256": "9204a157f31b469867396a5f13ad92f064dbee99e5a3149a807b3bc58e34e17b"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-replay-old-01",
+      "run_id": "pytest-boundary-replay-old-01",
+      "ok": true,
+      "completion": {
+        "selected": 1,
+        "completed": 1,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "source": "0085bd545d1c941ad1298f6e0874542568ff71b3",
+      "run_sha256": "1f5facb0d51b6bbdb4f4b7c2d76ae6bcfcefdcfd908d085772416a5f99e17e47"
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-replay-stale-01",
+      "run_id": "pytest-boundary-replay-stale-01",
+      "ok": true,
+      "completion": {
+        "selected": 1,
+        "completed": 1,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "source": "0085bd545d1c941ad1298f6e0874542568ff71b3",
+      "run_sha256": "220512b5cd2bd2b1e4cc12b714ecf7acdf299ab1ec4d8bcc002b4530b015eacd"
+    }
+  ],
+  "native_journals_reconciled_with_final_reader": {
+    "old": {
+      "same_cases": true,
+      "same_errors": true
+    },
+    "stale": {
+      "same_cases": true,
+      "same_errors": true
+    },
+    "adapted": {
+      "same_cases": true,
+      "same_errors": true
+    }
+  },
+  "source_lines": {
+    "common.py": 97,
+    "engine.py": 65,
+    "supervisor.py": 167,
+    "resource_owner.py": 79,
+    "recover.py": 50,
+    "native_adapter.py": 55,
+    "test_native.py": 76,
+    "observe.py": 389,
+    "observe_replay.py": 114,
+    "test_subject.py": 87
+  },
+  "resource_records": [
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-01/candidates/normal/resources/0/record.json",
+      "state": "closed",
+      "pid": 71945,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-01/candidates/setup_failure/resources/0/record.json",
+      "state": "acquired",
+      "pid": 71948,
+      "resource_exists": true,
+      "socket_dir_exists": true
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-02/candidates/double_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 72288,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-02/candidates/interrupt/resources/0/record.json",
+      "state": "closed",
+      "pid": 72291,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-02/candidates/normal/resources/0/record.json",
+      "state": "closed",
+      "pid": 72282,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-02/candidates/setup_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 72285,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-03/candidates/both_death/resources/0/record.json",
+      "state": "closed",
+      "pid": 72773,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-03/candidates/double_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 72764,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-03/candidates/engine_death/resources/0/record.json",
+      "state": "closed",
+      "pid": 72770,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-03/candidates/interrupt/resources/0/record.json",
+      "state": "closed",
+      "pid": 72767,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-03/candidates/normal/resources/0/record.json",
+      "state": "closed",
+      "pid": 72758,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-03/candidates/setup_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 72761,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-04/candidates/both_death/resources/0/record.json",
+      "state": "closed",
+      "pid": 74403,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-04/candidates/double_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 74394,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-04/candidates/engine_death/resources/0/record.json",
+      "state": "closed",
+      "pid": 74400,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-04/candidates/interrupt/resources/0/record.json",
+      "state": "closed",
+      "pid": 74397,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-04/candidates/normal/resources/0/record.json",
+      "state": "closed",
+      "pid": 74388,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-04/candidates/setup_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 74391,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-05/candidates/both_death/resources/0/record.json",
+      "state": "closed",
+      "pid": 76358,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-05/candidates/double_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 76349,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-05/candidates/dropped_lock/resources/0/record.json",
+      "state": "acquired",
+      "pid": 76386,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-05/candidates/engine_death/resources/0/record.json",
+      "state": "closed",
+      "pid": 76355,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-05/candidates/interrupt/resources/0/record.json",
+      "state": "closed",
+      "pid": 76352,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-05/candidates/normal/resources/0/record.json",
+      "state": "closed",
+      "pid": 76343,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-05/candidates/setup_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 76346,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-06/candidates/both_death/resources/0/record.json",
+      "state": "closed",
+      "pid": 89795,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-06/candidates/double_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 89786,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-06/candidates/dropped_lock/resources/0/record.json",
+      "state": "acquired",
+      "pid": 89823,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-06/candidates/engine_death/resources/0/record.json",
+      "state": "closed",
+      "pid": 89792,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-06/candidates/interrupt/resources/0/record.json",
+      "state": "closed",
+      "pid": 89789,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-06/candidates/normal/resources/0/record.json",
+      "state": "closed",
+      "pid": 89780,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    },
+    {
+      "path": "/private/tmp/pw-pytest-boundary-20261030/tests/out/runs/pytest-boundary-demo-06/candidates/setup_failure/resources/0/record.json",
+      "state": "closed",
+      "pid": 89783,
+      "resource_exists": false,
+      "socket_dir_exists": false
+    }
+  ],
+  "protected_existing": {
+    "/private/tmp/pw-extension-directory-uge3532e": true,
+    "/private/tmp/pw-f2-stage1": true,
+    "/private/tmp/pw-f2-controlled-prep": true,
+    "/Users/raccoon/Desktop/Security/PolicyWitness-pytest-trial-evidence": true
+  },
+  "limitations": [
+    "Hashes establish identity, not complete semantic dependencies.",
+    "No new original-worker exit or signing verification is inferred."
+  ]
+}

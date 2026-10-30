@@ -66,3 +66,25 @@ The exposed replay uses the [native adapter](pytest-boundary/native_adapter.py),
 [outside replay observer](pytest-boundary/observe_replay.py). The pre-extraction
 adapter remains recoverable at `0085bd54`; its actual adaptation is the next
 source commit, so the comparison need not be reconstructed from prose.
+
+Completed: the [assessment](pytest-boundary/assessment.md) gives the qualified
+boundary verdict and displacement account. The [read-only audit](pytest-boundary/audit.py)
+and [inventory](pytest-boundary/inventory.json) preserve final identity and
+retention checks; the [final pruning preview](pytest-boundary/prune-final.json)
+found all twelve material run roots retained and none eligible for deletion. The final demonstrator
+at `832e7717` also preserves completed records before a truncated journal tail,
+with an independently failing control committed before the reader correction.
+The original checkout
+and application remain at their accepted state; no integration is proposed.
+
+To reproduce the isolated environment, create the venv named in the equipment
+record using the pinned Homebrew Python and install `requirements.txt`. Run
+`observe.py --name FRESH_NAME` from this worktree with that venv's Python,
+`-B -I`, outside an automation sandbox that refuses Unix sockets or process
+observation. It owns and pins fresh output itself. Replay commands are recorded
+verbatim under each replay run's `command.json`; their outside driver is
+`observe_replay.py --name FRESH_NAME --revision REV --expect old|stale|adapted`.
+Use `0085bd54` equipment for old/stale and `fec0e181` for adapted. Execution in
+one checkout stays serial. Investigation source and assessments are committed;
+raw local runs and the virtual environment are not. Retire this plan and records together only
+through a future disposition; no retirement is part of this assignment.
