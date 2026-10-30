@@ -323,7 +323,7 @@
             "Started by": "launchd: XPC service lookup, or a Mach service for BYOXPC",
             "Sandboxed": "no",
             "Native sandbox API": "none, by the invariance rule",
-            "Lifetime": "one reservation and at most one specimen; unused reservation expiry or abandonment retires the host"
+            "Lifetime": "one reservation and at most one specimen; unused reservation expiry or abandonment retires the host; terminal reply flush delay {limit:host_exit_delay} is best effort"
           },
           "note": "All authorized connections share one locked reservation slot. Only the connection holding its grant can consume it, before specimen decoding. Stale expiry or disconnect cannot retire an executing owner; client loss after submission never permits replay.",
           "sources": [
