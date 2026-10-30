@@ -361,3 +361,46 @@ older credits: 206 distinct selected cases have passing evidence. The remaining
 BYOXPC case failed twice and has no acceptance credit. This is an explicit
 reviewed applicability exception, not a claim that a single 207-case run passed.
 The F2 record supplies the observed failure and exact retained-resource state.
+
+## Stage 2 and combined refactor acceptance
+
+The Stage 2 extraction candidate remains `fd90eee66538cc02dc5d21b7a3fe8eca81a17403`;
+its source-preservation review and original failed verification above remain
+historical facts. The separately authorized F2 repair is implemented through
+`4407d0aedb84a9f4af7cf133803e05fbdaa174c7`, signed v0.3.3 build 1016, worker
+identity `87c9ac8e3b6dec120ae1c6a5a726fde3ddfc338907bf26a0e91d12efde176336`.
+Final test adaptations are `8500baff5f10a986657c58792594129d4637ef67`. Its
+cfg(test)/suite-local changes leave production and the inspected app unchanged.
+
+The final verification identities and reviewed reuse are recorded in
+f2-reservation-design.md: full run `20261030T014533Z_3f5dbde2` has 225 pass / four
+constructed-fixture failures; replacement run `20261030T020912Z_f6e7fb69`
+passes all 17 affected owners and source checks. Together, 212 retained passes
+and 17 replacements cover all 229 selected cases. The selection includes all
+202 defaults, all 21 BYOXPC cases and six native/refactor opt-ins. Caller-auth
+also passes in `20261030T014440Z_1028993a`. App inventories are identical,
+no credited case overlaps sleep, and owned live services have verified cleanup.
+The attached acceptance-credit.json names each case and its actual run/source.
+
+Accept both Swift stages and the combined C/Swift refactor stage. The API's
+request, coding, prediction, step, path, lifecycle/extension and disposition
+families retain their codecs and local validity rules with their owners. The
+orchestrator's request planning, association, step results, comparison and
+disposition owners use the Stage 1 boundaries; run still exposes the driver,
+collection, assembly and cleanup sequence. Host-only work stays out of the
+client target. No unused preparatory layer or pending CWorker.swift extraction
+is required. Source-membership, relocation/mutation, independent-consumer,
+native/ABI, ordering, failure and integrated extension evidence all pass on the
+combined implementation, which also contains the D2 apparatus corrections.
+
+The refactor itself preserves behavior. F2 is a separate authorized behavioral
+change: mandatory runner protocol 2 and envelope 9, reservation and client
+capture replace the old transport path. Request 5 and host response 24 remain.
+Do not describe the whole combined delta as wire-preserving or infer the cause
+of the original two failures from the passing repair. F1 remains unresolved and
+still prevents final D2/workset disposition. The original directory fixture
+with no worker-exit witness remains protected.
+
+The accepted Swift plan may retire in a separate commit. This workset-owned
+design/adaptation/acceptance record remains with its active overarching plan,
+as does the C refactor record; neither retirement releases evidence pins.

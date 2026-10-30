@@ -433,3 +433,58 @@ and the replacement checks remain to complete; the failed run stays failed and
 pinned. Both runs above
 and their console logs are retained in gitignored tests/out/runs/ and indexed
 in tests/RETAINED.json.
+
+## Acceptance
+
+The test candidate is `8500baff5f10a986657c58792594129d4637ef67`; production
+and the signed app remain `4407d0aedb84a9f4af7cf133803e05fbdaa174c7`, build
+1016 with the worker identity above. `f2-reservation-replacements-01`, run
+`20261030T020912Z_f6e7fb69`, passes 17/17: the four failed owners, expanded
+registry_recovery, all four Rust cases and all eight source_drift cases. All
+488 Swift assertions and both actual-driver Rust/Python replays pass. No sleep,
+skips, unrun cases, harness errors or app changes occur. The six invalid marker
+variants retain unchanged bundle/signature, registry/lock and LaunchAgents
+observations, with exact service absence. The constructed protocol-1 registry
+record refuses run/verify, remains readable, and completes pending cleanup and
+removal without a protocol rewrite. Staging removal is verified.
+
+The combined acceptance credits 212 unchanged passing cases from the full run
+and these 17 replacements: 229 distinct required cases, plus the separate
+caller-auth case. This is not a single passing 229-case run. The replacement
+run's attached `acceptance-credit.json` names every credited case, source and
+run, including caller-auth separately. Both original failures and replacements
+remain pinned. Their before/after app inventories are byte-identical, SHA-256
+`9529b7f22ca49559a3aee9200fd4ac9fe83268351576dc77d1c501e8f13cd4da`.
+
+Reviewed applicability exception from the signed candidate to the test candidate:
+the only Rust delta is the embedded Python control within cfg(test); the exact
+production prefix before that module is unchanged. The other executable deltas
+are the three suite-local Python control owners and registry_recovery. Their
+wrappers are unchanged and each owner reruns. The BYOXPC README, two workset
+records and retention index do not alter the remaining executed paths; all
+source/documentation checks rerun. Shared helpers/readers, live capture files,
+native sources, build inputs, constants and worker identity are unchanged.
+The remaining 212 cases retain their unchanged command/configuration, helper and
+fixture dependencies and the same inspected app. These file and inventory
+comparisons are mechanical facts; the executed-path applicability judgment is
+the reviewed exception, not a claim that hashes establish reachability.
+
+The required state/actual-client controls, independent reader rejections,
+normal signed workload, all 21 BYOXPC cases, native/order/refactor mutations,
+caller-auth diagnostics and public compatibility controls now pass. The nine
+instrumented reservation arrangements independently establish ownership,
+expiry/abandonment, refusal, lost-grant/occupied reacquisition, completed effect
+with lost execution reply, and missing helper capture with no replay. They
+remain instrumented observations, not proof of production timing equivalence.
+The old-control fixture supplies protocol-1 control replies; no historical host
+binary was executed. Registry compatibility separately uses a constructed old
+record on the current host. No stronger compatibility claim is made.
+
+Accept the authorized F2 repair. Supported clients reserve before sending the
+specimen and never replay after invocation. Receipt remains best effort; missing
+reply/capture can still accompany completed work. The original two 4097 failures
+remain unattributed. This acceptance resolves the verification blocker for
+Swift Stage 2 and the combined refactor seal, not F1 or whole-workset completion.
+The user-denied Desktop requests remain denied; no TCC setting was changed.
+The original unwitnessed-worker directory remains retained. The prune preview
+finds no eligible unpinned runs; existing release and cleanup records stay intact.

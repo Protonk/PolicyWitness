@@ -1,25 +1,33 @@
 # Workset checkpoint
 
-Current state: independent authorized implementation and documentation work is
-complete, but Swift Stage 2, the combined refactor seal and whole-workset
-completion remain unaccepted. Required BYOXPC verification failed twice (F2).
-F1 remains unresolved at the user's explicit request. The bounded F2
-investigation is complete. The user accepted reservation, authorized continuation
-and allowed schema changes. The concrete mandatory-protocol repair design is
-committed at `60010034`, implemented at `34496c0f`, and corrected through
-`4407d0aedb84a9f4af7cf133803e05fbdaa174c7`, signed v0.3.3 build 1016.
-Preparation, fixture harvest and diagnostic runs are pinned and recorded in
-f2-reservation-design.md. Runtime staging is corrected to owned `/private/tmp`
-after the user denied Desktop requests; no privacy permission was changed.
-Caller-auth passes with bounded native diagnostics. Combined verification
-`f2-reservation-final-01` completes 229 cases: 225 pass, four constructed-fixture
-adaptation failures. All 21 BYOXPC cases and all nine reservation arrangements
-pass with verified cleanup; no sleep or app changes occurred. Corrections to the
-four authored capture carriers and public marker/old-registry compatibility
-controls are prepared. Rerun their owners and reconcile acceptance next.
-No build or dispatcher is running. Neither finding is a waiver.
+Current state: F2's authorized reservation repair, Swift Stage 2 and the combined
+C/Swift refactor stage are accepted. Final test source is `8500baff`; production
+source `4407d0ae` is signed v0.3.3 build 1016. The required 229-case selection
+has 212 reviewed unchanged passes and 17 replacement passes, with separate
+caller-auth coverage. All 21 BYOXPC cases, all nine reservation arrangements and
+the added installation-marker/old-registry cleanup controls pass. No credited
+case overlaps sleep; the app remains unchanged. The original four fixture
+failures remain preserved, and the original two BYOXPC 4097 failures remain
+unattributed. F1 is unresolved at the user's explicit request, so final D2 and
+whole-workset disposition remain blocked. No build or dispatcher is running.
+Next: retire the accepted Swift plan and check affected structure/links. Keep
+the workset records and F1 package live; no pytest counterfactual trial is in scope.
 
 ## Current source and evidence
+
+- Production `4407d0aedb84a9f4af7cf133803e05fbdaa174c7`, build 1016, worker
+  identity `87c9ac8e3b6dec120ae1c6a5a726fde3ddfc338907bf26a0e91d12efde176336`.
+  Test source `8500baff5f10a986657c58792594129d4637ef67` changes only cfg(test)
+  Python, suite-local controls and records/documentation; the app is applicable
+  under the reviewed exception in f2-reservation-design.md.
+- `f2-reservation-final-01`, `20261030T014533Z_3f5dbde2`: 225 pass / four
+  constructed-fixture failures, all 229 complete. `f2-reservation-replacements-01`,
+  `20261030T020912Z_f6e7fb69`: all 17 pass, replacing the four failed owners,
+  registry_recovery, Rust and source checks. Its acceptance-credit.json identifies
+  every credited case and source. `f2-native-route-04`,
+  `20261030T014440Z_1028993a`, separately passes caller-auth. All are pinned.
+
+The following earlier identities remain historical, not current acceptance:
 
 - Swift Stage 2 implementation: `fd90eee66538cc02dc5d21b7a3fe8eca81a17403`.
   Signed v0.3.3 build 1000, worker identity
@@ -28,9 +36,8 @@ No build or dispatcher is running. Neither finding is a waiver.
   host/client membership and control reach are recorded in swift-refactor.md.
 - Citation corrections: refactor `81f5d260`, D2 follow-up `590c5e42`.
   These do not change production, test sources, generated constants/identity,
-  contract/limits/build manifests or app bytes. The latter is the current
-  verified documentation source; subsequent F2 commits add investigative
-  fixtures and their documentation, without changing production sources.
+  contract/limits/build manifests or app bytes. The latter was the verified
+  documentation source before the separately authorized F2 production repair.
 - `workset-r2-final-01`, `20261029T231443Z_9c34b030`: all 201 defaults plus
   six applicable opt-ins completed, 205 pass / 2 fail. No sleep, skips, unrun
   cases or app changes. Two suite-exit errors correspond to the two failures.
@@ -59,16 +66,16 @@ The agreed repair is an effect-free reservation before submission, with bounded
 retry only before execution is sent and no replay after submission. The concrete
 design requires runner protocol 2 and envelope 9, preserves request 5/response
 24, and removes legacy execution fallback while retaining old-installation
-cleanup. The signed implementation and live reservation controls pass;
-constructed test adaptations and compatibility coverage still precede
-acceptance. Observations and limits are in f2-investigation.md;
-original failures and cleanup remain in byoxpc-failure.md. Required BYOXPC
-verification remains unmet, so do not seal or retire the Swift plan.
+cleanup. The signed implementation, independent loss controls, public
+compatibility controls and combined workload now pass and are accepted.
+Observations and limits are in f2-investigation.md and f2-reservation-design.md;
+original failures and protected cleanup remain in byoxpc-failure.md. The repair
+does not guarantee reply delivery or explain the original failures. Runtime
+fixture relocation avoids the denied Desktop requests; no TCC setting changed.
 
-Once these decisions are made, complete the affected investigation/authorized
-repair and matching verification, reconcile current evidence, seal the refactor
-stage if justified, and retire the remaining accepted plans/packages. No pytest
-counterfactual evaluation or trial belongs in this workset.
+F1 needs later discussion before final D2/workset disposition. Continue only
+the accepted-plan retirement here. Do not implement F1, weaken its guarantee or
+start a pytest counterfactual evaluation/trial.
 
 ## Resources and retention
 
@@ -117,7 +124,7 @@ All retained paths and run IDs were reconciled; no credited result or owned
 cleanup record was released. The C plan is recoverable at `6dab4430` under
 records/distribution/C-RUNNER-MODULARIZATION-PLAN.md.
 
-F2 investigation: fixed harness `edf2c561` ran 48 ordinary requests each on
+Historical F2 investigation checkpoint: fixed harness `edf2c561` ran 48 ordinary requests each on
 current build 1000 and Stage 1 build 999, all ok with 47 acquisitions each. The
 original BYOXPC workload also passed once on Stage 1. These do not reproduce or
 resolve the original failures. Controlled equipment `aa45aa48` failed to compile;
@@ -127,7 +134,7 @@ All six runs are pinned, preserving the compile failure. Baseline worktree/app
 remain at /private/tmp/pw-f2-stage1; its build log and comparison are attached
 to the baseline observation run. Controlled fixture preparation remains under
 /private/tmp/pw-f2-controlled-prep; accepted equipment is committed in tests/.
-Production sources and the inspected app are unchanged. See f2-investigation.md
+At that checkpoint production sources and the inspected app were unchanged. See f2-investigation.md
 for exact identities, evidence and proposal. f2-reservation-design.md fixes the
-protocol, lifecycle, reader and acceptance boundaries. Next: coordinated repair,
-generators and controls, then a normal signed build and required verification.
+protocol, lifecycle, reader and acceptance boundaries. The subsequent repair,
+signed build and accepted verification are identified at the top of this record.

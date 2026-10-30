@@ -300,3 +300,11 @@ transport failure. These do not reverse the independently established R1
 acceptance at 96d0328e. The C modularization plan may retire now; the associated
 workset still owns this design/adaptation/acceptance record, which remains until
 that workset can close. The combined refactor seal remains withheld for F2.
+
+F2's authorized reservation repair now passes combined verification on signed
+build 1016, production source `4407d0ae` and test source `8500baff`. The
+229-case acceptance reconciles 212 unchanged full-run passes with 17 replacement
+passes, as recorded in f2-reservation-design.md and swift-refactor.md. It includes
+R1's native-clock, inheritance, ABI, source/identity and order-barrier controls.
+The combined C/Swift refactor stage is accepted; F1 and whole-workset disposition
+remain separate. The C acceptance and protected historical evidence are unchanged.

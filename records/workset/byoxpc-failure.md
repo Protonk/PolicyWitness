@@ -68,3 +68,10 @@ completion. F1 independently remains unresolved at the user's explicit request.
 Do not weaken either guarantee, add retries to turn the workload green, claim
 an environmental explanation, or silently accept missing BYOXPC evidence.
 All independent citation corrections and their checks are completed separately.
+
+The subsequent bounded investigation and user-authorized reservation repair
+are accepted in f2-reservation-design.md. Combined verification now covers the
+required BYOXPC workload and independent reply-loss/no-replay controls, resolving
+F2's stage-acceptance blocker. This does not attribute either original failure or
+supply the missing original worker-exit witness. That directory and its evidence
+remain protected. F1 remains unresolved by the user's explicit decision.
