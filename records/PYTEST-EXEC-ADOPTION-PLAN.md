@@ -1,0 +1,482 @@
+# Bounded pytest adoption: native exec evidence controls
+
+Status: ready for review; implementation is not authorized by this planning leg.
+Prepared by Codex, 2026-10-30. Planning branch `plan/pytest-exec-family` starts
+at `5dbcf4d8255ca24a186e97488104772df9cb53d6`; accepted production/test source
+remains `77eb987554eef10ffa3371ffb21b235097562a78`. The planning worktree is
+`/private/tmp/pw-pytest-adoption-plan-20261030`.
+
+The objective is better ordinary diagnosis and organization for **one family**,
+with fewer repeated selection/setup/report declarations. Keeping operational
+and evidence machinery outside pytest is intentional. Fewer total lines and
+eventual replacement of the entire harness are not acceptance requirements.
+No production, fixture, expectation, dependency, harness or permanent guide is
+changed by this plan. CHECK.md remains outside scope.
+
+Associated records: [source and consumer investigation](pytest-exec-adoption/source-notes.md)
+and [planning-state identities](pytest-exec-adoption/state.json). They distinguish
+inspected facts, proposed contracts and outstanding implementation checks.
+
+## 1. First family and fixed observations
+
+Adopt only `runner_c_worker_harness/exec_control_states` (abbreviated **F**).
+Keep its canonical catalog ID, default membership, standard context, inherited
+requirements `app`, `worker`, `clang`, empty skip allowance and lack of catalog
+dependencies. Its native code itself needs no app, but removing its existing
+artifact admission is not part of this adoption. Other C-worker cases and live
+exec lifecycle/inheritance suites retain their current paths.
+
+This is a meaningful family: production worker code is compiled with deterministic
+native-call equipment, checked against an independent ledger, and deliberately
+mutated to test the assertions' ability to reject incorrect evidence. Its current
+single shell result obscures which variant failed and which phase failed. Its
+established controls and completed C replay make the benefits inspectable without
+another feasibility demonstration.
+
+Pytest will collect nine named items from one suite-local declaration:
+
+| Stable item suffix | Required observation |
+| --- | --- |
+| `production` | Complete control executable succeeds; canonical native ledger equals all 58 golden attempts, including order, arguments, counts and digests. |
+| `collection_from_final_reap` | Formed mutation is rejected by the unchanged collection/leader observation assertion. |
+| `esrch_as_success` | Formed mutation is rejected by the unchanged group return/errno assertion. |
+| `fallback_from_group` | Formed mutation is rejected by the unchanged independent fallback assertion. |
+| `status_after_pending_wait` | Formed mutation is rejected by the unchanged wait result/errno assertion. |
+| `revents_as_native_errno` | Formed mutation is rejected by the unchanged waitid/poll errno assertion. |
+| `local_deadline_as_native_errno` | Formed mutation is rejected by the unchanged wait result/errno assertion. |
+| `missing-pw_worker_timing.h` | Compiler refuses specifically at the missing timing-header include. |
+| `missing-pw_worker_exec.h` | Compiler refuses specifically at the missing exec-header include. |
+
+Full ID is `F::<suffix>`. Production source, native fixture, golden values,
+mutation bodies and designated assertion text keep their accepted meanings.
+The six mutation/expectation pairs become one case-local table, independently
+authored rather than derived from producer constants. Missing-anchor failure is
+failure to form a control, never successful detection of a production defect.
+
+**Do not split the 58 ledger attempts into pytest items.** They include shared
+state, repeated attempts, exclusions and sticky timing-fault relationships in
+one native program. Each normal/mutant binary runs its complete existing native
+sequence. The two missing-header variants compile only. Native “child” PIDs in
+this fixture are substituted values, not evidence of real process creation or
+kernel enforcement. Real compiler/linker/control processes are distinct resources.
+
+Preserve baseline applicability without a second test scheduler. A session-scoped
+pytest fixture supplies immutable source inputs and a lazily evaluated baseline
+result. One domain helper builds/runs/canonicalizes the unmodified baseline once
+and caches its receipt and validation findings, including failure. The `production`
+item asserts that result in its **body**. A prerequisite fixture for every other
+item requests the same result and raises a **setup error** if it is invalid,
+before compiling that variant. Thus order does not affect applicability or repeat
+baseline execution; no fixture calls another test function. Successful baseline
+receipts link to every dependent item. An invalid baseline cannot yield credited
+mutation passes. This preserves the current script's prerequisite relationship
+while giving explicit diagnostics for blocked work.
+
+## 2. Ownership boundary
+
+| Owner | Responsibilities and proposed source location |
+| --- | --- |
+| Pytest | Collection and ordering of F's items, fixture caching/order/finalizers, variant execution, assertion and setup/call/teardown reports. `tests/suites/runner_c_worker_harness/test_exec_control_states.py`. |
+| Domain helper | Source closure, immutable input inventory, mutation formation, native ledger normalization, literal expectations and artifact naming. Refactor existing `check_exec_evidence.py` into an importable helper; retain `canonical_ledger` there and remove its executable test loop. It imports no pytest. |
+| Pytest integration | Collection manifest, eligibility wait, durable phase export and evidence links. Proposed `tests/lib/pytest_engine.py` and explicit `tests/pytest.ini`. No native resource acquisition at import/collection. |
+| PW family adapter/supervisor | Admit the engine to the existing checkout claim, publish selected identities, authorize commands, supervise engine/process ownership, validate durable accounting and return one derived family result. Proposed `tests/lib/pytest_family.py`. No iteration that invokes individual pytest items. |
+| PW command ownership | Gated command launch, direct stdout/stderr capture, deadlines, process-group and exit observations, recoverable ownership records. Proposed narrow `tests/lib/pytest_command_owner.py`; shared record/closure operations belong in a neutral module, not imported from a launcher. |
+| Existing PW infrastructure | `checkout_lock.py`, `artifact.py`, `suite_run.py` equipment/dependency gates and sleep accounting, `retention.py`, release cleanup and acceptance consumers. These remain maintained infrastructure. |
+
+Ordinary fixture cleanup checks immutable inputs and asks to remove completed
+scratch. Resources with obligations beyond the engine belong to PW **before
+acquisition**. Fixtures request execution and await receipts; they do not launch
+unowned `subprocess.run` commands or depend on post-yield code to reap them.
+Compile and control commands retain the current 60-second and 20-second limits.
+PW records timeout/interruption separately from the native result; a killed
+control cannot count as its designated assertion rejection without that evidence.
+
+For each command, publish intent (run/family/item, operation, command/cwd/env
+identity, paths and nonce), start a gated command owner, register its PID/exit
+observation, persist ownership, then release it to launch. The command owner
+holds the verified checkout descriptor and supervises the command's separate
+process group, retaining stdout/stderr directly in files even if pytest dies.
+It waits/reaps and establishes group quiescence before declaring the obligation
+closed. Do not infer closure from a requested signal or compiler-leader exit.
+The owner stays outside the engine group and retains the claim while compiler
+descendants remain, including descendants that close inherited descriptors.
+
+This is a deliberately narrow resource kind: the invoked toolchain/control
+process group and its files, not launchd installations or arbitrary escaping
+descendants. The implementation must establish actual toolchain topology and
+descriptor behavior. If that cannot support the stated ownership boundary,
+stop at that finding and return a localized alternative; do not silently widen
+the claim or build a general process service.
+
+On engine death the live PW supervisor cancels/settles active commands and
+preserves their partial bytes. On outer dispatcher/family-supervisor death the
+command owner must remain identifiable, hold the claim, and settle or await
+restricted recovery; it admits no new engine. Reuse the demonstrated authenticated
+peer/nonce/descriptor and independent-exit principles, not its synthetic file
+owner verbatim. If that owner also dies or its identity cannot be established,
+retain an unresolved obligation and refuse successful finalization. Recovery
+must not signal a historical PID merely because its number appears in a record.
+
+Store durable ownership under a new, bounded `tests/out/pytest-owners/<run-id>/`
+namespace, outside disposable `runs/`, with pointers to the owned run and
+command artifacts. Registration precedes launch. Unresolved or malformed records
+block replacement/pruning of the associated run, including explicit unfinished
+pruning; new execution is refused when ownership cannot be safely resolved.
+Place that admission check in shared checkout admission for the new namespace,
+so both builds and tests respect an orphaned obligation even if its last lock
+descriptor has disappeared. Keep its parser independent of pytest and of the
+retention module to avoid circular ownership. Existing unrelated recovery
+namespaces are not adopted by this check.
+The same guard applies to release rotation/cleanup. Closed records are removable
+with their unpinned run through supported pruning, after identity revalidation.
+Pins continue to protect overlap. This fills the prototype's known retention
+gap; merely setting `run.json.terminal=true` must not make a pending lease
+disposable. Do not import, reinterpret or recover earlier protected resources.
+
+## 3. One public path and one item manifest
+
+Keep `tests/run.sh` and `make test`. `--case F`, its owning suite, the default
+battery and `--all` reach the same registered family route, once under the existing
+union/deduplication rules. Add an explicit catalog engine kind for this one case;
+retain the current engine as the default for other entries. Do not put nine IDs
+in the catalog or keep nine shell branches. Other families continue through
+the existing executor. F remains one top-level case, like the existing Rust/Swift
+batch cases, but has a visible nine-item account.
+
+Concretely, F's catalog entry gains `engine: pytest` and its single `module`
+path. Its effective configuration excludes the inherited shell `command`;
+`test_cli.catalog` validates the engine-specific module/launcher instead of
+requiring a bash command for that entry. Other rows keep their present schema
+and validation. The pytest engine kind contributes its `pytest` equipment
+requirement to the effective `requires` displayed in the plan, alongside the
+unchanged inherited three. The fixed PW launcher constructs the actual command
+and records it; the catalog does not repeat item declarations or launcher flags.
+
+The first adoption deliberately keeps **whole-family public selection**. It
+does not add `-k`, raw node selectors or a new variant flag. Rerun a named failure
+with `tests/run.sh --case runner_c_worker_harness/exec_control_states`; the
+family is bounded. Item IDs support diagnostics
+and evidence, not a second public execution interface. No direct pytest command
+is an accepted run; executing fixtures require the authenticated PW session.
+
+After ordinary argument/config/catalog validation, start the fixed family engine
+in collection mode. Pytest discovers the module, attaches unique explicit stable
+suffixes, and sends the immutable manifest: protocol version, family ID, stable
+ID-to-nodeid mapping, fixture/prerequisite descriptions, source/config/package
+identities and request identity. The supervisor checks family/request binding,
+uniqueness and structural validity; it does not reconstruct expected variant
+names or choose an order. Independent controls—not a second runtime registry—
+assert that the accepted family still contains the intended nine observations.
+
+For execution, keep that same engine waiting at the collection barrier: no
+collect-twice admission. Once collection succeeds, the dispatcher acquires its
+normal lock and durably publishes the ordinary plan with the family manifest
+and its digest. Existing equipment/dependency/app checks decide whether the
+family may run. At F's invocation slot, the PW adapter transfers verified
+descriptors/session authorization and permits pytest execution. It does not
+start items individually. Earlier ordinary-family failures do not suppress F
+unless interruption or an actual prerequisite requires it. A queued engine's
+wait is tied to the parent session/overall deadline, not the prototype's fixed
+60-second socket timeout. Cancellation also closes/reaps collected but queued
+engines without acquiring test equipment. Revalidate declared module/helper,
+configuration and package identities against the collected manifest before
+eligibility. A mismatch fails admission and requires a fresh invocation rather
+than silently recollecting different code.
+
+`--list` uses collection only, displays the nine IDs and prerequisites in the
+parent plan, and then terminates the collector without eligibility or owned
+output. Collection may read declared source/package files but may not compile,
+probe the app, create scratch/cache/bytecode, acquire a resource, or touch old
+output. Disable plugin autoload and cache/bytecode writes; review the sole family
+module's import path. Independent no-execution/file-snapshot controls cover this
+boundary. This is a controlled trusted import, not a claim that pytest sandboxes
+arbitrary Python imports.
+
+Syntax/import/collection errors, duplicate IDs or empty collection reject the
+plan with exit 2 before output replacement; stderr identifies the source and
+collection phase. No partial item list becomes an executable selection. A missing
+pytest installation is a declared equipment failure: during execution account
+for F as unrun with `items: unavailable` and let independent families proceed,
+as for other missing equipment; never invent a zero-item pass. `--list` cannot
+claim complete discovery in that condition and exits 2 without output changes.
+The parent family selection remains known even when its child discovery is not.
+
+## 4. Dependency and invocation changes
+
+Pin the already examined pytest **9.0.2**, pluggy **1.7.0**, iniconfig **2.3.1**,
+packaging **26.3** and pygments **2.21.0** in a test-only hashed installation
+manifest at proposed `tests/requirements-pytest.lock`. Continue using the
+repository-resolved Homebrew Python 3.14 and its
+recorded real path/version. The reference investigation used Python 3.14.9;
+record the actual accepted interpreter when implementation begins.
+
+Use an explicitly provisioned package target beneath `.tmp/pytest/`, keyed by
+the lock digest and interpreter identity. A separate documented setup command,
+proposed `tests/setup-pytest.sh`, uses the existing Python resolver to install
+and verify that target. No default
+test, collection, build or fixture downloads or repairs dependencies. The
+engine alone adds that verified target to its import path, using the normal
+`PW_PYTHON -B -S` entry form; no ambient site packages, `.pth` processing or
+`PYTHONPATH`. PW helpers and command owners remain standard-library processes.
+This keeps the existing interpreter identity comparison meaningful. Reject an
+incompatible/missing target rather than falling back to ambient pytest.
+
+Provision a fresh target under the checkout lock and publish it atomically;
+never reinstall into a target used by a run. It is disposable cache under the
+scratch guidance. Copy package/input hash manifests and setup receipt into run
+evidence; keep no sole recovery record or decisive evidence in `.tmp/`.
+
+Keep assertions enabled, serial execution, `--capture=fd`, `--import-mode=importlib`,
+`-p no:cacheprovider`, explicit test/config paths and disabled plugin autoload.
+Remove ambient pytest options before launch and validate the effective settings.
+Native command environments/descriptor inheritance remain explicitly recorded;
+pytest capture is supplementary to the directly retained native output. This
+package-target startup differs from the demonstrated venv, so verify imports,
+identity, FD capture and environment at the integration boundary once. Do not
+claim it was covered by the old run.
+
+This adds a dependency to an existing default member and makes complete `--list`
+discovery require that package target. That is an intentional adoption cost for
+review, not a reduction in production coverage or an automatic opt-out.
+
+## 5. Reporting contract and reader experience
+
+The family protocol is versioned independently of the product wire envelope.
+Use the existing parent run ownership/retention format only where real consumers
+need it; do not fabricate shell `test_begin`/`test_pass` events or a legacy
+`report.json` for every pytest item.
+
+Within `suites/runner_c_worker_harness/exec_control_states/`, retain:
+
+```
+selection.json                 # fixed manifest, mapping and identities
+phases.jsonl                   # engine-only fsynced start/phase/session records
+operations.jsonl               # PW command/ownership observations, separate writer
+family.json                    # derived item and run-state account, version 1
+summary.txt                    # readable projection, never an authority
+artifacts/inputs/...           # immutable source closure and inventory
+artifacts/baseline/...         # baseline build/run and canonical ledger
+artifacts/<suffix>/...         # variant source hashes, commands, raw outputs
+scratch/...                    # removed only after supervised commands settle
+```
+
+Phase records carry run/session, manifest digest, stable item ID, nodeid, sequence,
+phase, outcome, diagnostic and relative evidence references. A shared fixture
+failure names the fixture and affected IDs. Command receipts include intent,
+actual invocation/environment/tool identities, returned status or missing status,
+timeouts and independently obtained ownership/exit evidence. Byte inventories
+are source identity, not a replacement for native observations.
+
+Console summary and `summary.txt` show stable item, setup/call/teardown outcomes,
+one short failure reason and exact relative artifact paths. They also show
+separate **execution/accounting** and **ownership** states. Examples below are
+proposed displays, not new experimental results:
+
+| Reader sees | Evidence path and meaning |
+| --- | --- |
+| `F::esrch_as_success PASS — expected native assertion rejected formed mutation` | `artifacts/esrch_as_success/{source-sha256.json,build.stderr,run.stderr,command.json}` plus baseline receipt. A native nonzero exit is expected here; its exact designated assertion, successful compilation and formation checks are required. |
+| `F::esrch_as_success FAIL call — mutation accepted` | Same paths show the submitted mutation and unexpected zero native status. Later applicable items still run. A wrong assertion names expected and observed rejection separately. |
+| `F::fallback_from_group ERROR setup — baseline ledger mismatch; body not started` | `artifacts/baseline/{run.stdout,observed-call-policy.json,validation.json}` names the first differing attempt and links expected golden/source identities. Production item has its own body failure. No mutant command receipt is invented. |
+| `F::production ERROR setup — input closure could not be prepared` | Input-preparation receipt names the missing/unreadable file; native invocation absent. Setup and missing body remain distinguishable. |
+| `F::local_deadline_as_native_errno FAIL teardown — shared inputs changed` | Call remains passed; teardown diagnostic links immutable input before/after inventories. A session-finalizer report attached to the last item explicitly names its shared scope and affected items. Whole-family integrity fails without rewriting earlier assertion outcomes. |
+
+Both body and teardown failures retain separate diagnostics and attachments.
+Scratch deletion failure similarly appears as teardown/operational failure; it
+is not a native assertion failure. If ordinary tests pass but a command cannot
+be proven stopped, show `tests: passed; accounting: complete; ownership:
+unresolved; run: unsuccessful`. If phase/session evidence is missing, accounting
+is incomplete even if all visible calls passed. Missing exit evidence is never
+rendered as a successful reap.
+
+The PW reader joins the manifest to durable phases and operation receipts. It
+preserves valid frames before a truncated tail, leaves absent phases incomplete,
+and records malformed/duplicate/unselected records and nonterminal sessions as
+errors. It never reruns a missing item or infers its outcome from artifact names.
+SIGINT stops queued items; engine SIGKILL preserves completed items, partial
+native bytes and started-versus-unstarted identities. A full-family pass requires
+all nine valid item accounts, successful engine/session termination, no unexpected
+skips/xfails, no integrity/accounting errors and all ownership obligations closed.
+Framework continuation must not be overridden by an ambient max-failure option.
+
+Parent `case_results` continues to contain F once, with a typed family-summary
+reference and separate nested item counts. A complete set of failing phases is
+`completed/fail`; missing item/session evidence is `unrun` with an accounting
+error. F passes only when the family predicate above holds. Parent overall `ok`
+also retains all ordinary-family, artifact and sleep rules. Top-level case counts
+and nested item counts are labelled separately; nine items do not silently become
+nine catalog cases. `suite_run.finish` must consult authoritative case outcomes
+as well as errors: its present success calculation based on legacy report counts
+cannot simply ignore the new family.
+
+For mixed runs, retain `reports` and `counts` for actual legacy reports and label
+that scope explicitly (`counts_scope: legacy_reports`). Add `case_outcome_counts`
+derived from `case_results` for the parent console/reader's overall case summary;
+F contributes one outcome there. Its nine item outcomes live in `family.json`.
+The parent schema's existing ownership/completion fields remain compatible, with
+typed family references as additive fields. Old records without engine-family
+declarations retain their existing meaning. No phase data is duplicated into
+fake shell reports to make old report counts look comprehensive.
+
+Consumer changes are explicit:
+
+| Consumer | Required adaptation |
+| --- | --- |
+| `test_cli.py`, `suite_run.py`, `--list` | Engine route, collection manifest and one family result; bypass legacy event/report reconciliation for F only. Keep legacy namespace scanning and tampering detection for other cases. Distinguish legacy report counts from family outcomes. |
+| `retention.py` replacement/pruning, release cleanup/rotation | Consult durable ownership, including ambiguous pending records; protect output/ownership together. Existing schema-1 parent completion validation remains useful, not sufficient for cleanup. |
+| `release_accept.py:battery_problems`, `release_archive.py:battery_record` | Verify the typed family summary/manifest digest, complete item accounting and closed ownership when an engine family is present. Preserve default-selection and artifact requirements; reject missing summaries even if the parent says pass. Preserve old-run reading when no engine family is declared. |
+| `release_runs.py` evidence snapshots | Parent still at `tests/run.json`; the existing whole-tree packer already includes in-run family files. Before packing, require closed ownership and copy the terminal ownership receipt into the run, then verify the family references remain resolvable inside the portable inventory. Do not require the local external ownership registry to interpret an accepted archived run. No product envelope change. |
+| Dispatcher/source-drift controls and documentation | Teach engine routes as catalog commands without exempting missing/duplicate paths. Update Python startup/dependency declarations, suite/output documentation and fixture-input inventories. |
+| Architecture citations | Move `exec_control_states` citations from the retired shell block to the new owning test/helper in `docs/architecture.json`; regenerate `docs/ARCHITECTURE.md`/`docs/WORKER.md` through their owner. The native observation and its limits stay the same. |
+
+## 6. Implementation stages after review
+
+Each stage has a fixed source commit before observation. Use separate candidate
+and accepted-comparison worktrees and fresh output, never the frozen investigations.
+No actor changes sources, expectations or shared equipment during another run.
+
+The candidate's ordinary family command remains concrete and public (use a new
+run name each time; the app is inspected, never repaired by this command):
+
+```sh
+PW_APP_DIR=/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app \
+PW_TEST_OUT_DIR=tests/out/runs/pytest-exec-normal-01 \
+tests/run.sh --case runner_c_worker_harness/exec_control_states
+```
+
+1. **Dependency and domain preparation.** Provision the fixed test packages
+   explicitly; record interpreter/packages/toolchain. Extract the current native
+   recipe and canonical parser without changing the fixture/golden/production
+   bytes. Pair mutation/expectation declarations. Add the pytest module with
+   baseline prerequisite caching and per-variant inputs. In the isolated branch,
+   only the old public route remains authoritative until the route switch; new
+   equipment is not advertised as accepted execution. Review import-only behavior
+   and phase/evidence mapping before any experimental execution.
+2. **PW integration and ownership.** Add the collection barrier, durable reader,
+   command ownership and retention guards; extend the existing dispatcher rather
+   than copy its artifact/equipment/sleep logic. Preserve the datagram-reset and
+   valid-prefix corrections as integration invariants. Check package startup,
+   mixed-family accounting and the real compiler-group lifetime with the targeted
+   controls below. This is the main new operational work and a stopping point if
+   its boundary is not credible.
+3. **Atomic route switch in the candidate branch.** Change F's catalog route,
+   remove its shell `test_selected` block and the native checker's executable
+   main loop, and complete reporting/consumer changes together. Keep its domain
+   helper importable and the standalone fixture build tool as equipment, not an
+   alternate test runner. Direct old checker execution should point to the public
+   command and refuse. All credited candidate runs now use `tests/run.sh`; old
+   behavior is obtained only from the clearly labelled comparison worktree.
+4. **Diagnosis and obligation acceptance.** Run the matrix below through the
+   public path. Inspect actual reports and retained native observations, not just
+   return codes. Compare the accepted branch's ordinary result and representative
+   failures with candidate results. Record actual edited owners, removed wrapper/
+   loop/declarations, added integration and what remains shared. Complete the
+   targeted existing regression cases and reader controls, update current docs
+   and generated citations, then seal source/run identities.
+5. **Decision for this family only.** Present the evidence and any remaining
+   obligations for acceptance. Successful family adoption authorizes no expansion.
+   If diagnosis/organization does not improve or preservation is not credible,
+   abandon the candidate route and retain its evidence. Acceptance does not depend
+   on a global harness-replacement argument or an agent-time productivity claim.
+
+Permanent implementation locations are proposals for the later change, not
+files added by this plan. Update `tests/README.md`, the owning suite/fixture
+READMEs, `docs/DEPENDENCIES.md`, `tests/AGENTS.md` where engine-owned items require
+clarification, applicable verification guidance, and the source-drift rules and
+their independent rejection controls together. Keep “every case is registered”
+for top-level families/cases; document pytest item ownership explicitly rather
+than weakening registration checks generally. Inventory new dependency/command
+sources in disposable control fixtures so their copied trees remain meaningful.
+
+## 7. Proportionate acceptance evidence
+
+Reuse the completed investigation for bounded architecture feasibility. Do not
+rerun its entire 18-group demonstrator as an adoption prerequisite. The gaps
+below concern the real family and its integration into public execution.
+
+| Exercise | Inspectable acceptance observation |
+| --- | --- |
+| Ordinary F, old and candidate, same native inputs/toolchain | Candidate has nine named items, unchanged 58-attempt canonical ledger, six exact native refusals and two exact include refusals. No observation is weakened to “any nonzero exit.” |
+| Absent mutation anchor in a disposable source copy; accepted mutation or wrong rejection in a controlled copy | Reports name each affected variant/phase and retain submitted source/output; formation failure is not credited as rejection. Baseline stays independently valid where the intervention allows it. Compare the old diagnostic without changing old sources during its run. |
+| Invalid unmodified baseline/golden comparison using separate controlled inputs | Production body fails; dependents have setup errors and no variant-command starts. Neither skipped bodies nor unavailable prerequisites become passing controls. Never rewrite the accepted golden. |
+| Setup acquisition followed by failure; body failure plus teardown failure | Real command ownership is published before launch; both diagnostics survive; later independent applicable work continues. Outside peer/exit observations establish resource disposition, not the candidate summary. |
+| Import/syntax error, duplicate/empty IDs and publication refusal | No native command starts; collection fails explicitly; protected output/app bytes unchanged. Successful `--list` is read-only and agrees with the executing manifest. |
+| Missing package/clang, invalid app and a mixed selection | F unrun with reason; independent eligible legacy case continues. Default/suite/case union still executes F once. App before/after inspection and interpreter/sleep records retain their meanings. Use existing fixture bundles for damaged-app controls. |
+| Valid-prefix/truncated-tail, missing finish and contradictory phases | Earlier completed items retained, later/unreported items incomplete, overall unsuccessful. Outside expected observations do not import the candidate account function. Reuse the established accounting stimuli at the integrated reader boundary. |
+| Interrupt/death with one completed item, active supervised command and queued work | Independent start receipts distinguish active from queued; partial logs survive; completed evidence survives; command owner holds the actual lock; ordinary SIGINT cancels queued legacy work too. Engine-only death follows existing independent-case continuation policy once ownership settles. |
+| Death of outer/family supervisor while command/descendant survives | The new command owner or an unresolved durable record preserves ownership; a competing execution cannot acquire eligibility; authenticated recovery/observed exits permit closure. A dropped-hold/false-closure control must be rejected. This addresses the compiler integration gap, not arbitrary escaped processes. |
+| Unresolved ownership and pruning/replacement/release readers | All refuse disposal/acceptance despite visible passing item reports; closed unpinned control output becomes eligible. Pin decisive failure before any destructive cleanup control; controls act only on disposable fixture runs. |
+
+For the changed dispatcher, run `dispatcher/selection_controls`,
+`accounting_controls`, `cancellation_controls`, `retention_controls` and `controls`;
+run `artifact_controls` if its gate/inspection path changes rather than just a
+new adapter calling it. Add narrowly scoped integration controls to those owners
+or one registered dispatcher case, not a second ad hoc production harness.
+Run `source_drift/runner_source_manifests_agree`, `architecture_documentation`,
+`generator_contract` and `direct_python_start` (each with the `source_drift/`
+prefix), plus `shell_helpers/python_startup` and
+`shell_helpers/interpreter_boundary`. Extend/run `preflight/release_controls`
+for acceptance, `preflight/release_publish_controls` for archive readers and
+`preflight/release_rotation_controls` for portable evidence and the ownership
+blocker. Extend the existing lock admission controls in
+`dispatcher/retention_controls` and the build-side lock refusal controls in
+`preflight/build_refusal_controls` for the new namespace guard; extend their
+fixture inputs explicitly. The latter uses its declared signing/build equipment
+and disposable fixture outputs, not a rebuild of the accepted app.
+At implementation time record exact canonical selections, source/configuration
+and applicable app/tool identities; this plan does not credit unexecuted tests.
+
+A complete `runner_c_worker_harness` suite against the accepted unchanged app
+checks neighboring selection paths. No native production behavior changes are
+planned, so a fresh build, entire live battery, ordering mutation control or
+release operation is not prescribed solely for adopting this family. Broaden
+verification if implementation crosses those boundaries, using repository rules;
+return production defects or changed promises with localized evidence to the
+user before making that change. Protect the original tests/docs that establish
+the promise while that decision is pending.
+
+Acceptance answers five concrete questions:
+
+1. Can a reader identify the item, failing phase and native evidence from the
+   report without reconstructing the shell loop? Inspect the retained examples.
+2. Is family logic found in one test module and one domain helper, with shared
+   infrastructure clearly separate? Inspect the actual edit map.
+3. Are the old wrapper/variant loop and parallel expectation maps retired, with
+   one manifest and one public route? Check source and selection receipts.
+4. Do complete native sequences, baseline applicability and the independent
+   formation/rejection controls retain their meaning? Compare raw witnesses.
+5. Can incomplete accounting or unresolved ownership still appear successful or
+   disposable? The negative controls must refute that possibility at the family,
+   parent, retention and release-reader boundaries.
+
+## 8. Evidence, abandonment and review decisions
+
+Pin decisive results, representative diagnostic comparisons and consequential
+failures before pruning, with actual source commit/configuration and raw evidence.
+Use fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>` for every separate run. Review
+disposable output periodically using repository pruning tools; impose no fixed
+quota. Keep ownership records and staged resources until their closure is
+established. Never prune prior engagement evidence or modify its pins. A failed
+control and its correction retain separate source/run identities.
+
+Before acceptance the candidate lives only in its implementation worktree;
+abandonment leaves the accepted route unchanged. Preserve the candidate commit
+and pins, settle or retain its owned resources, then use supported cleanup only
+for eligible disposable output. Do not leave a fallback toggle selecting two
+implementations of F. After a later accepted integration, reversal would be a
+reviewed revert of the coherent route/consumer change; it must continue to read
+or preserve new-format retained evidence and pending ownership. Deleting new
+readers while their records remain unresolved is not a rollback plan.
+
+The review choice is whether the reporting/organization benefits justify this
+**one-family** dependency and integration cost. Proposed defaults are fixed:
+retain app/worker admission and default membership; use whole-family public
+selection; retain nine complete native variants; keep operational ownership
+outside pytest. There is no unresolved family-selection choice requiring another
+investigation. Implementation needs subsequent authorization. A compiler/resource
+boundary that cannot meet the proposed contract, or a production behavior/oracle
+change, requires the user's participation rather than unbounded extension.
+
+Planning records and this plan are temporary acceptance material and are retired
+together under CONTRIBUTING.md. No permanent index links to them. Original
+counterfactual, demonstrations, maintenance comparison, pinned evidence, unknown
+worker/resource directories and accepted application remain in place.
