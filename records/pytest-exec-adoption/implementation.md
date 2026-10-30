@@ -236,3 +236,10 @@ the retained command receipt has `timed_out=true`, nonzero return status and the
 matching assertion in stderr. The bridge correction records the completed command
 reference before raising an explicit timeout/cancellation phase error. Resource
 settlement remains separate and the following independent case may proceed.
+
+Source `3e93082f`: pinned `pytest-exec-acceptance-06` passes the timeout correction
+and all existing integration controls. A final adjacent check applies the same
+timeout to the shared baseline: command failure must use the ordinary assertion
+failure channel already cached by the baseline helper, so eight dependent setup
+errors do not repeat baseline execution. The added control requires precisely
+two baseline commands, no dependent bodies and a retained failed prerequisite.
