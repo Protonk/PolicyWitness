@@ -192,4 +192,7 @@ if __name__ == '__main__':
     control.detached()
     control.detached(live=True)
     from pytest_integration import Integration
-    Integration(control.out, control.note).all()
+    integration = Integration(control.out, control.note)
+    integration.all()
+    from pytest_receipts import exercise
+    exercise(control, integration)
