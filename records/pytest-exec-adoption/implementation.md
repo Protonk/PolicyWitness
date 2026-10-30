@@ -41,3 +41,17 @@ turns EPERM into cleanup permission. The control now persists its external exit
 observations before asserting the candidate's disposition. The failed runs'
 empty recovery socket directories remain protected pending separately supported
 bookkeeping; their paths and missing settlement are in each operation record.
+
+Source `71558219`: pinned `pytest-exec-ownership-03` passes. External command
+start, kernel exit events and physical-lock observations are in `observations.json`.
+The corrected receipt moves to output-only protection and explicit recovery
+closes it idempotently. The source-contract control rejects removal of family
+engine/reference/state and ownership roles with its expectation fixed externally.
+This checkpoint permits activating shared guards in the candidate. No production
+admission behavior was changed before that observation.
+
+Stage 3 switches only F to pytest and removes the shell block/executable native
+loop. The canonical parser remains importable. Shared build admission, pruning,
+release acceptance and portable readers now use the ownership/evidence contract.
+New current documentation describes the public command and recovery operations.
+The next observations test this integrated route; they are not acceptance yet.

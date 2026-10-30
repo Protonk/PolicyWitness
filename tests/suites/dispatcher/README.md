@@ -228,3 +228,8 @@ descendants, symlink redirects, lock contention, and Makefile preview/apply pres
 An actual directory-permission restriction forces unlink failure; the test
 checks a nonzero apply exit, the reported error and the remaining inventory.
 Standalone files and release acceptance output survive every cleanup operation.
+
+`pytest_controls` is an opt-in control of the exec-family integration. Its external
+native peer, kernel exit observations and lock inode checks are independent of
+candidate summary interpretation. Deliberately unresolved fixture records are
+retained inside its artifacts and are never mistaken for live checkout ownership.

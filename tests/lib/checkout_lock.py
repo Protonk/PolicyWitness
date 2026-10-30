@@ -587,6 +587,12 @@ def owned(root, *, env=None, purpose='execution'):
         scope = Scope(root, fd, record['nonce'], (held.st_dev, held.st_ino), nested=False)
     scope.start()
     try:
+        if purpose == 'execution':
+            from pytest_resources import guard
+            try:
+                guard(root)
+            except (ValueError, OSError) as exc:
+                raise Refusal(str(exc))
         yield scope
     finally:
         scope.close()

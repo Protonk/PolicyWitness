@@ -517,3 +517,30 @@ A shortened erase must fail the whole-buffer oracle. An erase moved after the
 store/gate must fail the independent boundary oracle despite a zero buffer after
 reap. These fixtures establish production control flow and memory observations,
 not kernel sandbox effects; signed-worker cases establish native terminal exit.
+
+## Exec control family reports
+
+`tests/run.sh --case runner_c_worker_harness/exec_control_states` selects the
+whole family. Its pytest module owns production, six mutation variants and two
+missing-include variants. Each executable retains the complete native sequence;
+the 58 baseline attempts are not independent tests. `exec_domain.py` owns copied
+inputs, native build recipes and independently authored rejection expectations.
+`check_exec_evidence.py` retains the canonical ledger parser; it is not a runner.
+
+Use `tests/setup-pytest.sh` once to provision the pinned test packages explicitly.
+The family retains its app, worker and clang requirements. Collection imports
+only declarations and waits for the dispatcher's eligibility decision.
+
+The parent summary links `suites/runner_c_worker_harness/exec_control_states/family.json`.
+Read `summary.txt` for item and phase outcomes, `pytest.txt` for pytest diagnostics,
+and `phases.jsonl` for the durable engine stream. `artifacts/<variant>/` contains
+the submitted sources, source hashes, expected rejection, observed rejection and
+raw `build/` and `run/` stdout/stderr. `artifacts/baseline.json` states the shared
+prerequisite. A failed baseline leaves eight dependent bodies unattempted; their
+setup failures do not establish independent native rejection.
+
+`artifacts/input-integrity.json` describes the shared session finalizer. Pytest
+attaches its failure to the last item's teardown; earlier body outcomes remain
+recorded. Changed shared inputs qualify applicability, so inspect per-variant
+source receipts. `ownership.json` separately reports command settlement and
+cleanup. Passing assertions cannot override incomplete accounting or ownership.

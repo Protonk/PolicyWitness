@@ -8,6 +8,7 @@ the battery as the dispatcher run nested inside it (`tests/run.json`).
 The packer writes that format; unsupported bundles remain unchanged.
 """
 import hashlib
+import json
 import os
 from pathlib import Path, PurePosixPath
 import plistlib
@@ -45,7 +46,7 @@ def real_path(path):
     return path
 
 
-def pack(destination, *, tag, source, runs, battery):
+def pack(destination, *, tag, source, runs, battery, expected_contract=None):
     """Caller holds the checkout lock. runs maps roles to (directory, entry); battery is
     (role, relative path) naming the dispatcher run.json inside that role."""
     role, relative = battery
@@ -71,11 +72,13 @@ def pack(destination, *, tag, source, runs, battery):
         if artifact.digest(target) != entry['sha256']:
             raise ValueError(f'{name} changed while archiving')
         summaries[name] = artifact.digest(target)
-    manifest = dict(schema_version=2, tag=tag, source_commit=source,
+    manifest = dict(schema_version=3 if expected_contract is not None else 2, tag=tag, source_commit=source,
                     archive=archive.name, sha256=artifact.digest(archive),
                     runs=snapshots, battery=dict(role=role, path=relative), summaries=summaries)
+    if expected_contract is not None:
+        manifest['execution_contract'] = expected_contract
     retention.atomic_json(destination / 'manifest.json', manifest)
-    verify_bundle(destination)
+    verify_bundle(destination, expected_contract=expected_contract)
     for role, (path, _) in runs.items():
         if artifact.inventory(path) != snapshots[role]['inventory']:
             raise ValueError(f'{role} evidence changed while archiving')
@@ -84,7 +87,7 @@ def pack(destination, *, tag, source, runs, battery):
 
 def battery_source(manifest):
     """The required battery's role and path in a supported bundle manifest."""
-    if manifest.get('schema_version') != 2:
+    if manifest.get('schema_version') not in (2, 3):
         raise ValueError('unsupported release test evidence schema; expected schema 2')
     declared = manifest.get('battery')
     if not isinstance(declared, dict):
@@ -94,7 +97,7 @@ def battery_source(manifest):
     return declared['role'], declared['path']
 
 
-def verify_bundle(destination):
+def verify_bundle(destination, *, expected_contract=None):
     destination = real_path(destination)
     manifest = retention.read_object(destination / 'manifest.json')
     battery = battery_source(manifest)
@@ -144,6 +147,16 @@ def verify_bundle(destination):
         if (artifact.digest(summary) != manifest['summaries'][name]
                 or manifest['summaries'][name] != manifest['runs'][role]['inventory'][relative]['sha256']):
             raise ValueError(f'{name[:-5]} summary checksum mismatch')
+    if expected_contract is not None or manifest['schema_version'] == 3:
+        import execution_contract
+        if expected_contract is None or manifest.get('execution_contract') != expected_contract:
+            raise ValueError('portable evidence requires the independently expected producer contract')
+        with tarfile.open(archive, 'r:gz') as zipped:
+            def load(name):
+                return json.loads(zipped.extractfile('acceptance/tests/' + str(retention.relative_path(name))).read())
+            errors = execution_contract.problems(load('run.json'), expected_contract, load)
+        if errors:
+            raise ValueError('; '.join(errors))
     return manifest
 
 
@@ -194,7 +207,10 @@ def verify_release(archive):
     if (reference.get('path') != BUNDLE + '/manifest.json'
             or artifact.digest(real_path(archive / reference['path'])) != reference.get('sha256')):
         raise ValueError('release has no verified portable test evidence')
-    manifest = verify_bundle(archive / BUNDLE)
+    expected_contract = record.get('execution_contract')
+    if record.get('schema_version') == 2 and expected_contract is None:
+        raise ValueError('release has no independently captured harness contract')
+    manifest = verify_bundle(archive / BUNDLE, expected_contract=expected_contract)
     if manifest['tag'] != tag or manifest['source_commit'] != record['source_commit']:
         raise ValueError('test evidence belongs to a different release')
     accepted = retention.read_object(archive / BUNDLE / 'acceptance.json')

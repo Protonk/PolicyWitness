@@ -739,3 +739,14 @@ strength of existing requirements and distinguish them from investigative uses;
 explain concrete equipment, cost and cleanup conditions where they affect the
 verification choice. Membership and dependencies belong in the catalog, and
 selection and execution belong in the harness README.
+
+## Exec family engine boundary
+
+For exec-family organization or reporting changes, run
+`tests/run.sh --case dispatcher/pytest_controls` and
+`tests/run.sh --case runner_c_worker_harness/exec_control_states`. Inspect the
+emitted phase reports and native evidence, including controlled baseline and
+finalizer failures. Changes to shared ownership admission also need dispatcher
+retention/cancellation and preflight build-refusal/release-reader controls.
+Never infer a completed run from passing item reports without complete accounting
+and justified terminal command ownership.

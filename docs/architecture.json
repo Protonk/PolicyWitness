@@ -391,8 +391,8 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_control_states",
+              "path": "tests/suites/runner_c_worker_harness/test_exec_control_states.py",
+              "symbol": "test_production",
               "form": "test"
             },
             {
@@ -796,8 +796,8 @@
               "form": "test"
             },
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_control_states",
+              "path": "tests/suites/runner_c_worker_harness/test_exec_control_states.py",
+              "symbol": "test_production",
               "form": "test"
             },
             {
@@ -987,8 +987,8 @@
               "form": "test"
             },
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_control_states",
+              "path": "tests/suites/runner_c_worker_harness/test_exec_control_states.py",
+              "symbol": "test_production",
               "form": "test"
             }
           ]
@@ -1678,8 +1678,8 @@
               "form": "test"
             },
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_control_states",
+              "path": "tests/suites/runner_c_worker_harness/test_exec_control_states.py",
+              "symbol": "test_production",
               "form": "test"
             },
             {
@@ -8511,8 +8511,8 @@
               "scope": "Independent child observations establish survival after worker death and retain fixture-owned cleanup."
             },
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_control_states",
+              "path": "tests/suites/runner_c_worker_harness/test_exec_control_states.py",
+              "symbol": "test_production",
               "form": "test",
               "scope": "Production exec code with controlled native returns checks collection, termination-request and leader-reap separation and native call order."
             }
@@ -8556,8 +8556,8 @@
               "scope": "Independent child observations establish survival after worker death and retain fixture-owned cleanup."
             },
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_control_states",
+              "path": "tests/suites/runner_c_worker_harness/test_exec_control_states.py",
+              "symbol": "test_production",
               "form": "test",
               "scope": "Production exec code with controlled native returns checks collection, termination-request and leader-reap separation and native call order."
             }

@@ -366,6 +366,13 @@
       "reason": "Consequential ownership control failure: post-supervisor-death killpg EPERM; settlement absent and registry retained; original and unchanged unsandboxed repeat.",
       "source": "46ec22898c0b47f41693ed2870622978309e2d06",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-ownership-03",
+      "run_id": "20261030T175431Z_ec935bba",
+      "reason": "Ownership checkpoint passes independent native capture, actual lock inheritance, supervisor death, kernel exits, output-only retention, authenticated refusal and idempotent recovery after 71558219 correction.",
+      "source": "715582191bbf6e5b013c01bfbcb216f8a4261525",
+      "app_inventory": null
     }
   ]
 }

@@ -188,6 +188,8 @@ def disposition(path):
 
 
 def replacement_allowed(root, out, retained):
+    from pytest_resources import guard
+    guard(root, purpose='disposal', target=out)
     bounded_path(root, out)
     protected = retained_overlap(out, retained)
     if protected:
@@ -206,7 +208,7 @@ def replacement_allowed(root, out, retained):
 
 
 @contextmanager
-def checkout_lock(root, *, preview=False):
+def checkout_lock(root, *, preview=False, purpose='execution'):
     """Own tests/.checkout.lock for the block; a preview only observes whether it is held.
 
     Acquisition, nested admission under an inherited claim and the busy
@@ -220,7 +222,7 @@ def checkout_lock(root, *, preview=False):
         with ownership.preview(root) as busy:
             yield busy
         return
-    with ownership.owned(root) as scope:
+    with ownership.owned(root, purpose=purpose) as scope:
         yield scope
 
 
@@ -302,6 +304,8 @@ def unfinished_row(root, name, retained):
         raise ValueError(f'cannot remove retained output: {path}')
     if not path.is_dir():
         raise ValueError(f'no managed run directory: {path}')
+    from pytest_resources import guard
+    guard(root, purpose='disposal', target=path)
     valid_owner(path)
     state = disposition(path)
     if state not in ('interrupted', 'ambiguous'):
@@ -322,7 +326,7 @@ def prune(root, *, apply=False, unfinished=None):
             pass
         return {'schema_version': 1, 'apply': False, 'checkout_busy': busy,
                 'runs': prune_rows(root, retained, busy=busy), 'removed': [], 'failures': []}
-    with checkout_lock(root):
+    with checkout_lock(root, purpose='disposal'):
         retained = load_index(root)
         rows = ([unfinished_row(root, unfinished, retained)] if unfinished is not None
                 else prune_rows(root, retained))
@@ -341,7 +345,10 @@ def prune(root, *, apply=False, unfinished=None):
                     replacement_allowed(root, path, retained)
                     if disposition(path) != 'completed':
                         raise ValueError('run no longer has valid completion evidence')
+                from pytest_resources import guard, retire_closed
+                guard(root, purpose='disposal', target=path)
                 shutil.rmtree(path)
+                retire_closed(root, path)
                 result['removed'].append(row['path'])
             except (OSError, ValueError) as exc:
                 result['failures'].append({'path': row['path'], 'error': str(exc)})

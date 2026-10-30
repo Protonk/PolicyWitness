@@ -1,6 +1,7 @@
 """Release-checkpoint policy for working test output; no age or size thresholds."""
 import fcntl
 import os
+from pathlib import Path
 import retention
 
 CONTAINERS = ('runs', 'release-acceptance')
@@ -60,6 +61,12 @@ def cleanup_blocker(path):
     External-runner recovery remains owned by its existing session equipment.
     This helper never contacts launchd, removes services or follows staging links.
     """
+    import pytest_resources
+    root = Path(__file__).resolve().parents[2]
+    try:
+        pytest_resources.guard(root, purpose='disposal', target=path)
+    except (OSError, ValueError) as exc:
+        return str(exc)
     tests = path / 'tests' if path.parent.name == 'release-acceptance' else path
     if tests.is_symlink():
         return 'redirected nested test output'

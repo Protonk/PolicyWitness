@@ -636,3 +636,57 @@ The opt-in `runner_byoxpc/reservation_controls` case compiles copied host and
 client sources to control reservation, execution-reply and capture-publication
 boundaries, with independent effects and process-exit evidence. Its controlled
 results do not replace ordinary BYOXPC acceptance; see the owning suite account.
+
+## Pytest exec family
+
+`runner_c_worker_harness/exec_control_states` is one public family containing nine
+pytest items. Public selection remains whole-family. Pytest owns item discovery,
+variants, fixtures and setup/call/teardown reporting; PolicyWitness owns artifact
+admission, checkout locks, durable accounting, command supervision and retention.
+Other families use their catalog commands. `tests/setup-pytest.sh` explicitly
+installs the exact wheels in `tests/requirements-pytest.lock` into an isolated,
+verified `.tmp/pytest` target; collection never downloads packages. External
+pytest plugins and ambient pytest/Python settings are excluded.
+
+`--list` collects the family without acquiring native equipment or replacing
+output. In execution, that same collected engine waits until ordinary admission
+allows it to proceed. Missing packages leave the family `not_started/unavailable`;
+missing or truncated engine reports leave `started/incomplete` when start was
+observed, and `unknown/incomplete` otherwise. The legacy parent `unrun` count
+includes incomplete families; the explicit accompanying states distinguish them.
+`run.json.counts` and `reports` cover legacy reports only (`counts_scope` says so);
+`case_outcome_counts` covers all parent results. Nested item counts are separate.
+
+### Command ownership recovery
+
+The durable registry is `tests/out/pytest-owners/<run-id>/<operation-id>/record.json`,
+outside disposable run directories. It registers each real compiler/native
+command before launch. An independent command owner holds the actual checkout
+lock descriptor, captures stdout/stderr, watches engine/supervisor exit and
+settles the command's process group. Fixture cleanup removes ordinary Python
+state; it does not establish exit or authorize deletion of external resources.
+This family does not launch processes that intentionally escape that group.
+
+When execution refuses admission, inspect with
+`tests/run.sh --recover-ownership RUN_ID`; use the same command with `--apply`
+for justified recovery. Preview changes nothing. Apply can authenticate a live
+owner by peer PID, nonce and inherited lock identity, or close already-settled
+records under a recovery-only lock claim. It cannot launch tests, bypass admission,
+signal a historical PID or force-clear an unknown obligation. An active session
+refuses recovery. A missing owner/start receipt is not proof that nothing launched.
+A durable reservation without launch authorization can be revoked; ambiguous
+launch authorization remains checkout-blocking until adequate evidence exists.
+
+Possible live/future commands block checkout execution. Proven group absence
+and revoked launch authority allow unrelated execution while unresolved isolated
+cleanup protects only that run's output. Closure leaves the registry history and
+portable ownership receipt intact. Pruning removes closed registry records only
+after their unpinned output is eligible. Recovery audit files preserve before/after
+identities and unresolved reasons. Builds share this admission check.
+
+Release acceptance captures the source/selection evidence contract before the
+battery starts. New family evidence, including the terminal ownership receipt,
+is required independently of optional fields in the result. Portable schema 3
+bundles are checked against the release's independently retained contract; older
+schema 2 bundles remain readable as historical transport evidence. A new acceptance
+cannot become legacy merely by deleting its family declaration or reference.

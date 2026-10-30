@@ -194,6 +194,8 @@ def recover(root, run_id, *, apply=False):
                 # The old bytes were retained above and are never replaced by this claim.
                 with checkout_lock.owned(root, purpose='recovery'):
                     record = validate(root, path)
+                    if record['state'] == 'reserved':
+                        record = transition(path, 'quiescent_retained', settlement=dict(token=record['token'], authority_revoked=True, group_absent=True, never_launched=True), recovery_basis='durable reservation without any launch authorization')
                     if not settled(record):
                         raise ValueError('missing live peer and settlement evidence; historical PID not signalled')
                     close_record(path)

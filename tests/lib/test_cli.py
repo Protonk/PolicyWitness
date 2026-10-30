@@ -46,14 +46,19 @@ def catalog(root):
             if report_path in report_paths:
                 raise ValueError(f'catalog report path {"/".join(report_path)} shared by {report_paths[report_path]} and {key}')
             report_paths[report_path] = key
-            if not case.get('command') or not all(isinstance(x, str) and x for x in case['command']):
+            if case.get('engine') == 'pytest':
+                case.pop('command', None)
+                if case.get('context') != 'standard' or not isinstance(case.get('module'), str):
+                    raise ValueError(f'invalid pytest family: {key}')
+                case['requires'] = [*case['requires'], 'pytest']
+            elif not case.get('command') or not all(isinstance(x, str) and x for x in case['command']):
                 raise ValueError(f'missing command: {key}')
             if not isinstance(case['default'], bool) or case['context'] not in ('standard', 'byoxpc'):
                 raise ValueError(f'invalid default/context: {key}')
             for field in ('requires', 'skip_reasons', 'depends_on'):
                 if not isinstance(case[field], list) or not all(isinstance(x, str) and x for x in case[field]):
                     raise ValueError(f'invalid {field}: {key}')
-            unknown = set(case['requires']) - {'app', 'worker', 'cargo', 'swift', 'clang', 'gui', 'identity', 'meson', 'rosetta'}
+            unknown = set(case['requires']) - {'app', 'worker', 'cargo', 'swift', 'clang', 'gui', 'identity', 'meson', 'rosetta', 'pytest'}
             if unknown:
                 raise ValueError(f'unknown prerequisites for {key}: {sorted(unknown)}')
             cases[key] = case
@@ -174,7 +179,15 @@ def main():
     parser.add_argument('--prune', action='store_true', help='preview dispositions of managed run output')
     parser.add_argument('--apply', action='store_true', help='apply the prune plan under the checkout lock')
     parser.add_argument('--unfinished', metavar='NAME', help='deliberately remove one interrupted or ambiguous managed run with --prune --apply')
+    parser.add_argument('--recover-ownership', metavar='RUN_ID', help='inspect a pytest command ownership run; --apply attempts justified recovery')
     args = parser.parse_args()
+    if args.recover_ownership:
+        if args.prune or args.unfinished or args.suite or args.case or args.all or args.list:
+            parser.error('ownership recovery cannot be combined with selection/prune')
+        from pytest_resources import recover
+        result = recover(root, args.recover_ownership, apply=args.apply)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 1 if result['unresolved'] else 0
     if args.apply and not args.prune:
         parser.error('--apply requires --prune')
     if args.unfinished is not None and not args.apply:
@@ -192,7 +205,21 @@ def main():
         cases, suites = catalog(root)
         selected = select(cases, suites, args)
         config = resolve_config(root, os.environ)
+        collectors = {}
         for case in selected:
+            if case.get('engine') == 'pytest':
+                import pytest_packages
+                from pytest_family import Collector
+                try:
+                    pytest_packages.target(root)
+                except (ValueError, OSError) as exc:
+                    case['engine_unavailable'] = str(exc)
+                    if args.list:
+                        raise ValueError('pytest discovery unavailable; run tests/setup-pytest.sh: ' + str(exc))
+                else:
+                    collectors[case['id']] = Collector(root, case)
+                    case['items'] = collectors[case['id']].manifest
+                continue
             command = case['command']
             if command[0] != 'bash' or len(command) < 2:
                 raise ValueError(f'case command must start with bash and a repository script: {case["id"]}')
@@ -207,7 +234,11 @@ def main():
                            for name, keys in suites.items() if selected_ids.intersection(keys)}}
     except (ValueError, OSError, KeyError, TypeError) as exc:
         parser.error(str(exc))
+    from execution_contract import capture
+    plan['execution_contract'] = capture(root, selected)
     if args.list:
+        for collector in collectors.values():
+            collector.stop(); collector.log.close()
         print(json.dumps(plan, indent=2, sort_keys=True))
         return 0
     out = Path(config['out_dir'])
@@ -224,9 +255,13 @@ def main():
             save(out / 'owner.json', {'schema_version': 1, 'run_id': run_id,
                                      'out_dir': str(out), 'started_at_unix_ms': started})
             save(out / 'plan.json', plan)
-            return execute(root, out, run_id, started, plan, config, scope)
+            return execute(root, out, run_id, started, plan, config, scope, collectors)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
+    finally:
+        for collector in collectors.values():
+            if collector.process.poll() is None:
+                collector.stop(); collector.log.close()
 
 
 if __name__ == '__main__':

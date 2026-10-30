@@ -892,7 +892,9 @@
         },
         {
           "id": "exec_control_states",
-          "description": "deterministic deadline, independent pipe/exit and native cleanup-failure controls"
+          "description": "deterministic deadline, independent pipe/exit and native cleanup-failure controls",
+          "engine": "pytest",
+          "module": "tests/suites/runner_c_worker_harness/test_exec_control_states.py"
         },
         {
           "id": "native_clock",
