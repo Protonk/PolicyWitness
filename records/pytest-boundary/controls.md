@@ -26,6 +26,7 @@ The existing fixture catalog and event encoding are not candidate oracles.
 | Dropped inherited lock descriptor | With both owners dead and child responsive, the independent lock probe detects the free lock and rejects the lifetime claim. Outside safety cleanup is labeled and never credited to the candidate. |
 | Missing/duplicate/unexpected/invalid phase records | Independent malformed inputs to finalization cannot yield success. Complete reordered item records may remain valid; legal within-item phase order stays required. No candidate summary supplies the expected result. |
 | Report write failure | Nonzero engine/session result and incomplete durable evidence, even if an ordinary body completed; no reconstruction of success from its return code. |
+| Truncated last report frame (added prospectively after source review, before reader correction) | A complete earlier item retains its phase observations and completed status; later items remain incomplete, the raw bytes are unchanged, and the overall run fails with a journal diagnostic. |
 | Subprocess environment/descriptors | FD capture catches deliberately inherited writes; an explicitly piped isolated helper has exact argv, cwd, env, stdin and outputs, no capture/lock FD. Protected child explicitly holds the stable lock descriptor; dropping it is detected. |
 
 Compatibility choices: retain owner/terminal envelope fields sufficient for

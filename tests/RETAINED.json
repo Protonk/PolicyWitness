@@ -324,6 +324,13 @@
       "source": "0085bd545d1c941ad1298f6e0874542568ff71b3",
       "app_inventory": null,
       "reason": "Exposed C extraction replay: stale adapter, native ledger and independent rejection observations."
+    },
+    {
+      "path": "runs/pytest-boundary-replay-adapted-01",
+      "run_id": "pytest-boundary-replay-adapted-01",
+      "source": "fec0e1811d21ce718bd007bbc0a1498b2f558c2f",
+      "app_inventory": null,
+      "reason": "Exposed C extraction replay: adapted adapter, native ledger and independent rejection observations."
     }
   ]
 }

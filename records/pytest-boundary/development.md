@@ -72,3 +72,16 @@ missing-owner compilation cases. The native fixture, golden ledger, mutation
 values and intended rejection assertions remain unchanged. This is the same
 source-binding obligation as the historical change, with pytest owning the
 individual variant reports rather than a handwritten variant execution loop.
+
+Adapted source `fec0e181`, `pytest-boundary-replay-adapted-01`: all nine items
+passed. The outside observer independently checked the 58-entry ledger, six
+native rejection statuses and assertion strings, and both specific missing-header
+compiler refusals. The native fixture matched the pre-extraction bytes. This
+completes the authorized single replay; no second adaptation was attempted.
+
+Final source review exposed a narrow reporting issue: `finish` discarded all
+decoded events when any JSONL line was malformed. Although raw bytes survived
+and the run failed closed, a truncated final frame would erase the machine
+account's earlier completed status. An independently constructed truncation
+control is added before correcting the reader. This extends reporting-failure
+coverage; it does not start another architectural or adaptation experiment.

@@ -307,7 +307,27 @@ def accounting(root):
         (work/'stderr').write_bytes(result.stderr)
         require(result.returncode==0,'accounting equipment failed')
         require(json.loads(result.stdout)['ok'] is (name in ('valid','reordered')), 'accounting accepted malformed evidence:'+name)
-    return dict(name='accounting',ok=True,controls=list(changes))
+    # Constructed finalization input, not a claim about live publication/locking.
+    work=root/'observations/accounting_truncated'
+    work.mkdir(parents=True)
+    retention.atomic_json(work/'owner.json',dict(schema_version=1,run_id='constructed',out_dir=str(work),started_at_unix_ms=1))
+    retention.atomic_json(work/'plan.json',dict(cases=[dict(id=n) for n in selected],configuration=dict(out_dir=str(work))))
+    (work/'resources').mkdir()
+    raw=''.join(json.dumps(e)+'\n' for e in events[:5])+'{"kind":"report","nodeid":'
+    (work/'reports.jsonl').write_text(raw)
+    script='import sys;from pathlib import Path;sys.path.insert(0,sys.argv[1]);from common import finish;finish(Path(sys.argv[2]),None)'
+    result=subprocess.run([PYTHON,'-B','-I','-c',script,str(HERE),str(work)],env={'BOUNDARY_ROOT':str(ROOT)},capture_output=True,timeout=5)
+    (work/'stdout').write_bytes(result.stdout)
+    (work/'stderr').write_bytes(result.stderr)
+    require(result.returncode==0,'truncation finalization crashed')
+    summary=read(work/'run.json')
+    require(summary['ok'] is False,'truncated journal passed')
+    require(summary['case_results'][0]['state']=='completed' and summary['case_results'][0]['status']=='pass',
+            'truncated tail discarded a completed item')
+    require(summary['case_results'][1]['state']=='unrun','truncated active item completed')
+    require(any('journal' in e for e in summary['harness_errors']),'truncation lacks journal diagnostic')
+    require((work/'reports.jsonl').read_text()==raw,'truncated raw evidence rewritten')
+    return dict(name='accounting',ok=True,controls=[*changes,'truncated_tail'])
 
 
 def main():
