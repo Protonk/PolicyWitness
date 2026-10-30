@@ -15,7 +15,7 @@ from control import ExitObserver, TreeControl, process_snapshot
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
-from blackbox import validate_run_shape, validate_step
+from blackbox import validate_run_shape, validate_step, recapture_host_reply
 
 
 def save(path, data):
@@ -125,9 +125,18 @@ def exercise_checker(witnesses, envelopes, out):
 
     counts = {'accepted': 0, 'rejected': 0}
 
-    def check(name, broken, witness, required=(), *, same_diagnostics_as=None):
-        save(controls / f'{name}.json', broken)
-        errors = envelope_errors(broken, witness)
+    def check(name, broken, witness, required=(), *, same_diagnostics_as=None, authored_host=True):
+        # These variants author host records. Update only a private control
+        # copy's existing carrier; live and whole-foreign envelopes stay exact.
+        document = copy.deepcopy(broken)
+        data = document.get('data') if isinstance(document, dict) else None
+        client = data.get('runner_client') if isinstance(data, dict) else None
+        transport = client.get('transport') if isinstance(client, dict) else None
+        if (authored_host and isinstance(data, dict) and isinstance(data.get('runner_result'), dict)
+                and isinstance(transport, dict) and isinstance(transport.get('runner_reply'), dict)):
+            recapture_host_reply(document)
+        save(controls / f'{name}.json', document)
+        errors = envelope_errors(document, witness)
         diagnostic = '\n'.join(errors)
         (controls / f'{name}.log').write_text(diagnostic + '\n')
         if required:
@@ -171,7 +180,7 @@ def exercise_checker(witnesses, envelopes, out):
                     broken['data']['runner_result']['steps'][1][key]['pid'] = witness['processes']['worker']['pid']
                 required = ['filter value:', 'expected sandbox_check'] if part == 'prediction' else ['requested_path:', 'attempt outcome:']
             name = f"{witness['label']}_{part}"
-            check(name, broken, witness, required)
+            check(name, broken, witness, required, authored_host=part != 'envelope')
 
     for witness, envelope in zip(witnesses, envelopes):
         # Expectations are a fixed test-side table, never inferred from the
@@ -218,7 +227,8 @@ def exercise_checker(witnesses, envelopes, out):
         # Baseline acceptance and the named attempt failure are independent
         # expectations. Their paired reorders must preserve all step errors,
         # including multiplicity, while allowing diagnostic order to change.
-        valid_diagnostics = check(f"{witness['label']}_attribution_valid_ordered", envelope, witness)
+        valid_diagnostics = check(f"{witness['label']}_attribution_valid_ordered", envelope, witness,
+                                  authored_host=False)
         changed = copy.deepcopy(envelope)
         changed['data']['runner_result']['steps'].reverse()
         check(f"{witness['label']}_reordered_broken_partition", changed, witness,

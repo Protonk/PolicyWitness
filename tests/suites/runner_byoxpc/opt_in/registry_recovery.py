@@ -11,6 +11,7 @@ from pathlib import Path
 import plistlib
 import secrets
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -50,6 +51,52 @@ def data(args, **kwargs):
 
 def records():
     return data(['runner', 'list'])
+
+
+def filesystem_entry(path):
+    try:
+        entry = path.lstat()
+    except FileNotFoundError:
+        return dict(presence='absent')
+    value = dict(presence='present', device=entry.st_dev, inode=entry.st_ino,
+                 mode=stat.S_IMODE(entry.st_mode), size=entry.st_size, mtime_ns=entry.st_mtime_ns)
+    if stat.S_ISREG(entry.st_mode):
+        value.update(kind='file', sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+    elif stat.S_ISDIR(entry.st_mode):
+        value['kind'] = 'directory'
+    elif stat.S_ISLNK(entry.st_mode):
+        value.update(kind='symlink', target=os.readlink(path))
+    else:
+        raise AssertionError(f'unexpected fixture file type: {path}')
+    return value
+
+
+def inventory(root):
+    return {str(path.relative_to(root)): filesystem_entry(path)
+            for path in [root, *sorted(root.rglob('*'))]}
+
+
+def compatibility_snapshot(bundle, plist):
+    # Include signature files and the registry lock inode, not just the plist
+    # marker or parsed registry fields. Reads do not change these observations.
+    return dict(bundle=inventory(bundle), registry=inventory(registry.parent),
+                launch_agents=inventory(agents), plist=filesystem_entry(plist))
+
+
+def service_observation(service, label):
+    global sequence
+    sequence += 1
+    args = ['/bin/launchctl', 'print', f'gui/{os.getuid()}/{service}']
+    result = subprocess.run(args, capture_output=True, timeout=10)
+    absent = result.returncode != 0 and f'Could not find service "{service}"'.encode() in result.stderr
+    value = dict(argv=args, returncode=result.returncode,
+                 presence='absent' if absent else 'present' if result.returncode == 0 else 'unknown')
+    destination = out / f'{sequence:03d}-{label}'
+    destination.mkdir(parents=True)
+    (destination / 'stdout').write_bytes(result.stdout)
+    (destination / 'stderr').write_bytes(result.stderr)
+    save(destination / 'receipt.json', value)
+    return value
 
 
 def prepare():
@@ -99,6 +146,39 @@ try:
     assert b'external runner is pending installation' in rejected.stderr + rejected.stdout
     remove(service, skip=True)
     observations.append('skip-bootstrap completes installation; pending status and specimen rejection; pending removal')
+
+    for label, marker in [('missing', None), ('string', '2'), ('real', 2.0),
+                          ('boolean', True), ('old', 1), ('future', 3)]:
+        service, bundle, plist = prepare()
+        info_path = bundle / 'Contents/Info.plist'
+        info = plistlib.loads(info_path.read_bytes())
+        if marker is None:
+            info.pop('PWRunnerProtocolVersion', None)
+        else:
+            info['PWRunnerProtocolVersion'] = marker
+        info_path.write_bytes(plistlib.dumps(info))
+        (out / f'protocol-marker-{label}-Info.plist').write_bytes(info_path.read_bytes())
+        before = compatibility_snapshot(bundle, plist)
+        save(out / f'protocol-marker-{label}-before.json', before)
+        assert before['plist']['presence'] == 'absent'
+        assert service_observation(service, f'marker-{label}-before')['presence'] == 'absent'
+        try:
+            # This would bootstrap if accepted: the marker must stop the
+            # public installation before signing, registry or launchd changes.
+            rejected = install(bundle, live=True, code=2)
+        finally:
+            after = compatibility_snapshot(bundle, plist)
+            save(out / f'protocol-marker-{label}-after.json', after)
+            service_after = service_observation(service, f'marker-{label}-after')
+        assert after == before, label
+        assert service_after['presence'] == 'absent', (label, service_after)
+        assert not rejected.stdout, (label, rejected.stdout)
+        assert (b'upgrade and reinstall' if label in ('old', 'future')
+                else b'PWRunnerProtocolVersion must be an integer') in rejected.stderr
+        current = records()
+        assert not any(r['service_name'] == service for r in current['runners'] + current['pending_cleanup'])
+        assert compatibility_snapshot(bundle, plist) == before
+        observations.append(f'{label} protocol marker refused; unchanged filesystem and no residual service or record')
 
     for boundary in ('initial_pending_save', 'plist_creation', 'initial_cleanup_save'):
         service, bundle, plist = prepare()
@@ -187,19 +267,61 @@ try:
     service, bundle, plist = prepare()
     installed = install(bundle, live=True)
     assert installed['bootstrapped'] and installed['state'] == 'installed'
+    assert installed['runner']['protocol_version'] == 2
     data(['runner', 'verify', '--service-name', service])
+    # A constructed historical registry record on a current host proves that
+    # the execution gate does not prevent inspection or owned cleanup. It does
+    # not establish RPC behavior against a historical service implementation.
+    current = json.loads(registry.read_text())
+    historical = next(r for r in current['runners'] if r['service_name'] == service)
+    historical['protocol_version'] = 1
+    save(registry, current)
+    save(out / 'historical-registry.json', current)
+    before = compatibility_snapshot(bundle, plist)
+    save(out / 'historical-before.json', before)
+    specimen = staging / 'historical.json'
+    save(specimen, dict(schema_version=5, specimen_id='historical-registry',
+                       policy=dict(format='sbpl', sbpl_source='(version 1)\n(allow default)'),
+                       runner=dict(mode='byoxpc', service=service), probe_plan=[]))
+    rejected = json.loads(command(['run', specimen], code=2, label='historical-run').stdout)
+    assert rejected['result']['normalized_outcome'] == 'tool_error'
+    assert 'upgrade and reinstall' in rejected['result']['error']
+    assert rejected['data']['runner_client'] is None and rejected['data']['runner_result'] is None
+    verified = command(['runner', 'verify', '--service-name', service], code=2, label='historical-verify')
+    assert b'upgrade and reinstall' in verified.stderr and not verified.stdout
+    listed = records()
+    assert next(r for r in listed['runners'] if r['service_name'] == service) == historical
+    assert data(['runner', 'status', '--service-name', service]) == historical
+    report = data(['runner', 'reconcile'])
+    row = next(r for r in report['records'] if r['runner']['service_name'] == service)
+    assert row['recorded_state'] == 'installed' and row['runner'] == historical
+    assert row['service']['presence'] == row['plist']['presence'] == 'present'
+    assert row['service_ownership'] == row['plist_ownership'] == 'owned'
+    after = compatibility_snapshot(bundle, plist)
+    save(out / 'historical-after-read-commands.json', after)
+    assert after == before
+    observations.append('constructed protocol-1 record rejects run/verify while list/status/reconcile preserve current-host ownership')
     result = remove(service, retained=True, skip=True)
     assert result['plist_removed'] and not plist.exists()
+    assert result['retained_record']['protocol_version'] == 1
     report = data(['runner', 'reconcile'])
     row = next(r for r in report['records'] if r['runner']['service_name'] == service)
     assert row['recorded_state'] == 'pending_cleanup' and row['service']['presence'] == 'present' and row['plist']['presence'] == 'absent'
+    assert row['runner']['protocol_version'] == 1
     # Recovery is driven only by the durable registry and staged bundle pointer.
     disposable = staging / 'original-test-output'
     disposable.mkdir(); save(disposable / 'receipt.json', result)
     shutil.rmtree(disposable)
-    assert Path(records()['pending_cleanup'][0]['bundle_path']) == bundle
-    remove(service)
-    observations.append('live bootstrap; skipped bootout retains service without plist; recovery after output deletion')
+    pending = next(r for r in records()['pending_cleanup'] if r['service_name'] == service)
+    assert Path(pending['bundle_path']) == bundle and pending['protocol_version'] == 1
+    removed = remove(service)
+    assert removed['booted_out'] and not removed.get('warnings')
+    current = records()
+    assert not any(r['service_name'] == service for r in current['runners'] + current['pending_cleanup'])
+    assert service_observation(service, 'historical-after-remove')['presence'] == 'absent'
+    assert filesystem_entry(plist)['presence'] == 'absent'
+    assert inventory(bundle) == before['bundle']
+    observations.append('live bootstrap; protocol-1 pending cleanup after skipped bootout; recovery without protocol rewrite or original output')
 except BaseException as error:
     failure = error
 finally:

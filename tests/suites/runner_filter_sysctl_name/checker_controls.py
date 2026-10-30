@@ -94,16 +94,24 @@ def main():
         mach = name == "local_name"
         baseline = envelope_skeleton(current_reply(step_id, operation, value, sysctl, mach=mach))
 
-        def check(label, envelope, diagnostics=(), status=1, raw=None):
+        def check(label, envelope, diagnostics=(), status=1, raw=None, *, authored_host=True):
             nonlocal count
-            # Each mutation here authors a host record; preserve that exact
-            # record in its constructed carrier before exercising the reader.
+            # Only authored host mutations receive new captured host bytes.
+            # Preserve the caller's input and pass malformed outer inputs to
+            # the checker without manufacturing or repairing their containers.
             from blackbox import recapture_host_reply
-            recapture_host_reply(envelope)
+            document = copy.deepcopy(envelope)
+            data = document.get('data') if isinstance(document, dict) else None
+            client = data.get('runner_client') if isinstance(data, dict) else None
+            transport = client.get('transport') if isinstance(client, dict) else None
+            if (authored_host and raw is None and isinstance(data, dict)
+                    and isinstance(data.get('runner_result'), dict) and isinstance(transport, dict)
+                    and isinstance(transport.get('runner_reply'), dict)):
+                recapture_host_reply(document)
             count += 1
             stem = artifacts / f"{name}.{label}"
             run_path = Path(f"{stem}.run.json")
-            run_path.write_text(raw if raw is not None else json.dumps(envelope, indent=2) + "\n")
+            run_path.write_text(raw if raw is not None else json.dumps(document, indent=2) + "\n")
             argv = [sys.executable, '-B', '-S', str(CHECKER), str(run_path), "--step-id", step_id,
                     "--operation", operation, "--filter-value", value, "--attempt", attempt_contract]
             result = subprocess.run(argv, capture_output=True, text=True, timeout=5)
@@ -119,7 +127,7 @@ def main():
             envelope = copy.deepcopy(baseline)
             return envelope, envelope["data"]["runner_result"]["steps"][0]
 
-        check("valid_nullable_evidence", baseline, status=0)
+        check("valid_nullable_evidence", baseline, status=0, authored_host=False)
         # The version is read exactly: other and malformed versions are one error.
         for label, version in (("previous", contract.RESPONSE_SCHEMA - 1), ("next", contract.RESPONSE_SCHEMA + 1),
                                ("null", None), ("string", str(contract.RESPONSE_SCHEMA)),
@@ -130,7 +138,7 @@ def main():
             check("version_" + label, changed, (expected,))
         changed, _ = mutate()
         changed["schema_version"] = contract.CONTROLLER_ENVELOPE + 1
-        check("version_envelope_next", changed, ("unsupported controller envelope",))
+        check("version_envelope_next", changed, ("unsupported controller envelope",), authored_host=False)
         changed, step = mutate()
         del step["comparison"]["order"]
         check("missing_order", changed, ("invalid comparison.order",))
@@ -244,15 +252,15 @@ def main():
 
         broken, _ = mutate()
         broken["result"]["ok"] = False
-        check("failed_result", broken, ("expected result.ok=true",))
+        check("failed_result", broken, ("expected result.ok=true",), authored_host=False)
         broken, _ = mutate()
         broken["data"]["runner_result"]["normalized_outcome"] = "runner_failed"
         check("failed_runner", broken, ("expected runner normalized_outcome=ok",))
         broken, _ = mutate()
         broken["data"]["runner_result"]["policy_format"] = "unrequested-format"
         check("wrong_policy_format", broken, ("expected policy_format='sbpl'",))
-        check("malformed_json", None, ("cannot read run JSON",), raw="{invalid")
-        check("non_object_json", [], ("run is not an object",))
+        check("malformed_json", None, ("cannot read run JSON",), raw="{invalid", authored_host=False)
+        check("non_object_json", [], ("run is not an object",), authored_host=False)
 
         if mach:
             broken, step = mutate()

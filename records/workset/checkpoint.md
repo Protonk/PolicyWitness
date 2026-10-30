@@ -6,18 +6,18 @@ completion remain unaccepted. Required BYOXPC verification failed twice (F2).
 F1 remains unresolved at the user's explicit request. The bounded F2
 investigation is complete. The user accepted reservation, authorized continuation
 and allowed schema changes. The concrete mandatory-protocol repair design is
-committed at `60010034`, implemented at `34496c0f`, and built as signed
-v0.3.3 build 1012. Preparation and live fixture harvest runs are pinned and
-recorded in f2-reservation-design.md. Current envelope-9 fixtures are untouched
-captures from the successful owning cases. The new live apparatus hit Desktop
-permission prompts with its independently compiled driver; the user refused.
-All nine arrangements verified cleanup. Runtime staging is corrected to owned
-`/private/tmp`; all nine arrangements pass on rerun with cleanup verified.
-Caller-auth then exposed generic client callbacks discarding native RPC errors;
-RPC callback ownership now preserves domain/code, and all nine controls pass
-again. Caller-auth additionally needs the bounded native debug description;
-that correction and its control are prepared. A new signed build, caller-auth
-check and combined acceptance remain. No build or dispatcher is running. Neither finding is a waiver.
+committed at `60010034`, implemented at `34496c0f`, and corrected through
+`4407d0aedb84a9f4af7cf133803e05fbdaa174c7`, signed v0.3.3 build 1016.
+Preparation, fixture harvest and diagnostic runs are pinned and recorded in
+f2-reservation-design.md. Runtime staging is corrected to owned `/private/tmp`
+after the user denied Desktop requests; no privacy permission was changed.
+Caller-auth passes with bounded native diagnostics. Combined verification
+`f2-reservation-final-01` completes 229 cases: 225 pass, four constructed-fixture
+adaptation failures. All 21 BYOXPC cases and all nine reservation arrangements
+pass with verified cleanup; no sleep or app changes occurred. Corrections to the
+four authored capture carriers and public marker/old-registry compatibility
+controls are prepared. Rerun their owners and reconcile acceptance next.
+No build or dispatcher is running. Neither finding is a waiver.
 
 ## Current source and evidence
 
@@ -59,8 +59,9 @@ The agreed repair is an effect-free reservation before submission, with bounded
 retry only before execution is sent and no replay after submission. The concrete
 design requires runner protocol 2 and envelope 9, preserves request 5/response
 24, and removes legacy execution fallback while retaining old-installation
-cleanup. The candidate implementation is prepared; compilation and acceptance
-are next. Observations and limits are in f2-investigation.md;
+cleanup. The signed implementation and live reservation controls pass;
+constructed test adaptations and compatibility coverage still precede
+acceptance. Observations and limits are in f2-investigation.md;
 original failures and cleanup remain in byoxpc-failure.md. Required BYOXPC
 verification remains unmet, so do not seal or retire the Swift plan.
 

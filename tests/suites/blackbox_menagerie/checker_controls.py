@@ -14,16 +14,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response24/missing_path_run.json"
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+from blackbox import recapture_host_reply
 
 
 def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
-    baseline = json.loads(BASELINE.read_text())
+    captured = json.loads(BASELINE.read_text())
+    baseline = copy.deepcopy(captured)
     submitted = json.loads(BASELINE.with_name("missing_path_specimen.json").read_text())
     allowed_read = next(step["attempt"] for step in submitted["probe_plan"]
                         if step["step_id"] == "fs_read_allowed")
     baseline["data"]["runner_result"]["policy_sha256"] = "a" * 64
+    # The hash is authored test evidence; preserve the received capture and
+    # encode the constructed baseline's host record in its own carrier.
+    recapture_host_reply(baseline)
     expectations = {
         "blackbox_e2e": {
             "policy_format": "sbpl", "require_sandboxed_after_apply": True,
@@ -52,15 +58,24 @@ def main():
     count = 0
 
     def check(name, envelope, diagnostics=(), *, expected=None, suites=None, status=0,
-              same_diagnostics_as=None):
+              same_diagnostics_as=None, authored_host=True):
         nonlocal count
+        # Host-record variants get matching constructed bytes. Outer-shape
+        # controls remain malformed, and the caller's document is unchanged.
+        document = copy.deepcopy(envelope)
+        data = document.get('data') if isinstance(document, dict) else None
+        client = data.get('runner_client') if isinstance(data, dict) else None
+        transport = client.get('transport') if isinstance(client, dict) else None
+        if (authored_host and isinstance(data, dict) and isinstance(data.get('runner_result'), dict)
+                and isinstance(transport, dict) and isinstance(transport.get('runner_reply'), dict)):
+            recapture_host_reply(document)
         observed = {}
         for suite in suites or expectations:
             count += 1
             stem = artifacts / f"{suite}.{name}"
             run_path = Path(f"{stem}.run.json")
             expected_path = Path(f"{stem}.expected.json")
-            run_path.write_text(json.dumps(envelope, indent=2) + "\n")
+            run_path.write_text(json.dumps(document, indent=2) + "\n")
             expected_path.write_text(json.dumps((expected or expectations)[suite], indent=2) + "\n")
             checker = ROOT / "tests/suites" / suite / "validate_run.py"
             result = subprocess.run(
@@ -92,7 +107,7 @@ def main():
         envelope = copy.deepcopy(baseline)
         return envelope, envelope["data"]["runner_result"]["steps"]
 
-    valid_diagnostics = check("valid_nullable_evidence", baseline)
+    valid_diagnostics = check("valid_nullable_evidence", baseline, authored_host=False)
     for channel, key, diagnostic in (
         ("sandbox_check", "errno", "missing sandbox_check.errno"),
         ("sandbox_check", "filter_type_id", "missing sandbox_check.filter_type_id"),
@@ -187,7 +202,7 @@ def main():
     for key in ("result", "data"):
         broken, _ = mutate()
         broken[key] = []
-        check(f"malformed_{key}", broken, (f"{key} is not an object",), status=1)
+        check(f"malformed_{key}", broken, (f"{key} is not an object",), status=1, authored_host=False)
 
     # The shared checks accept the documented nullable filter type on explicit
     # error/sentinel results. Neither suite may silently skip their attempts.
@@ -222,22 +237,22 @@ def main():
     del first["attempt_ok"]
     first.update(policy="deny", mismatch_reason="control_boundary")
     check("unobserved_mismatch", baseline, ("expected mismatch (control_boundary) not observed",),
-          expected=expected, suites=("blackbox_menagerie",), status=3)
+          expected=expected, suites=("blackbox_menagerie",), status=3, authored_host=False)
     broken, steps = mutate()
     steps[2]["attempt"].update(rc=1)
     check("pending_skip_and_later_failure", broken, ("fs_read_allowed: expected attempt_ok=True",),
           expected=expected, suites=("blackbox_menagerie",), status=1)
     first["policy"] = "allow"
     check("observed_mismatch", baseline, ("mismatch evidence: fs_read_missing:control_boundary",),
-          expected=expected, suites=("blackbox_menagerie",))
+          expected=expected, suites=("blackbox_menagerie",), authored_host=False)
     del first["mismatch_reason"]
     check("unannotated_mismatch", baseline, ("fs_read_missing: policy=allow but attempt_ok=False",),
-          expected=expected, suites=("blackbox_menagerie",), status=1)
+          expected=expected, suites=("blackbox_menagerie",), status=1, authored_host=False)
 
     expected = copy.deepcopy(expectations)
     expected["blackbox_menagerie"]["steps"][2]["attempt"] = {
         "kind": "file", "action": "open_read", "target": allowed_read["target"]}
-    check("file_observation", baseline, expected=expected, suites=("blackbox_menagerie",))
+    check("file_observation", baseline, expected=expected, suites=("blackbox_menagerie",), authored_host=False)
     broken, steps = mutate()
     steps[2]["attempt"]["observed_path"] = None
     check("missing_file_observation", broken, ("expected observed_path for successful open/create",),
@@ -249,7 +264,7 @@ def main():
 
     expected = copy.deepcopy(expectations)
     expected["blackbox_e2e"]["steps"][1].update(expect_denial=False)
-    check("denial_classification", baseline, expected=expected, suites=("blackbox_e2e",))
+    check("denial_classification", baseline, expected=expected, suites=("blackbox_e2e",), authored_host=False)
     broken, steps = mutate()
     steps[1]["sandbox_check"].update(outcome="deny", rc=1, native_rc=1)
     expected["blackbox_e2e"]["steps"][1]["sandbox_outcome"] = "deny"

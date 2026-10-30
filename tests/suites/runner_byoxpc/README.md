@@ -84,6 +84,16 @@ user-scope installation proves skipped bootout retains the running service after
 plist removal and that recovery works without original diagnostic output.
 Every uniquely owned service and plist must be absent before staging is deleted.
 
+The same case submits missing, string, real, boolean, old and future protocol
+markers through public installation. It retains before/after bundle inventories,
+registry and lock observations, and launchctl receipts to establish refusal with
+unchanged files and no residual service, plist or registry record. These endpoint
+observations do not establish that no transient activity occurred. A current live
+installation supplies a constructed protocol-1 registry record: run and verify
+refuse it, list/status/reconcile still inspect it, and removal recovers its owned
+service through pending cleanup without changing the protocol back. This tests
+historical registry compatibility on the current host, not historical host RPC.
+
 Rust unit controls separately exercise the production removal transaction with
 supplied launchd observations: bootout/unlink failures, unknown/unowned state,
 process loss after bootout, and failed retirement persistence. These controls

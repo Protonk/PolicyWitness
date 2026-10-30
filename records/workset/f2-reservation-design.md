@@ -388,3 +388,48 @@ then applies the same UTF-8 bound and truncation flag. It never copies arbitrary
 userInfo. A focused at/over-boundary Swift assertion pins that preference. The
 worker identity regenerates because this shared source belongs to its
 conservative digest closure; worker execution logic is unchanged.
+
+## Signed candidate and combined verification
+
+Candidate `4407d0aedb84a9f4af7cf133803e05fbdaa174c7` is signed v0.3.3
+build 1016, worker identity
+`87c9ac8e3b6dec120ae1c6a5a726fde3ddfc338907bf26a0e91d12efde176336`.
+`f2-native-route-04`, run `20261030T014440Z_1028993a`, passes the caller-auth
+case with native route diagnostics, independent restrictions and positive
+controls. Its attached build log identifies this candidate.
+
+`f2-reservation-final-01`, run `20261030T014533Z_3f5dbde2`, executes all 202
+defaults, all 21 BYOXPC cases and six refactor opt-ins: native_clock,
+exec-inheritance mutations, order-barrier mutations, exec-reader mutations,
+reaped-ack mutation and extensions_byoxpc. All 229 finish: 225 pass, four fail,
+with no sleep, skips, unrun cases or changed app bytes. The four suite-exit
+errors correspond to these failures. All 21 BYOXPC cases pass; all nine
+reservation arrangements complete with verified cleanup. Default registry and
+reconcile inspection afterward show no records, candidates or inspection
+errors. The original unwitnessed-worker directory remains protected.
+
+The remaining failures identify constructed test inputs that were not fully
+adapted to envelope 9's exact captured-host-byte invariant:
+
+- `runner_unit/pwrunner_core_unit_executable`: all 488 Swift assertions pass;
+  its Rust/Python policy-transfer replay changes the constructed host record
+  without updating the capture. Original driver replies remain unchanged.
+- `runner_filter_sysctl_name/checker_controls`: its recapture call also runs
+  on deliberately malformed top-level JSON. Those inputs must pass unchanged.
+- `runner_specimen_isolation/overlapping_runs_keep_evidence_separate`: live
+  overlap completes, but authored optional-diagnostic omissions retain stale
+  captured bytes. Recapture only the constructed host mutations.
+- `blackbox_menagerie/validation_controls`: its authored policy hash and host
+  variants likewise retain stale bytes. Preserve malformed outer carriers.
+
+The repair belongs at these test construction sites, not in reader admission.
+Keep live originals and negative transport controls intact. The normal signed
+app remains applicable because the corrections are Python controls and an
+embedded Python script inside Rust's cfg(test) module. Rerun all changed owners,
+Rust checks and affected source/documentation checks before assigning credit.
+The existing registry-recovery case now also contains the design's public
+installation-marker and protocol-1 registry cleanup controls. Their execution
+and the replacement checks remain to complete; the failed run stays failed and
+pinned. Both runs above
+and their console logs are retained in gitignored tests/out/runs/ and indexed
+in tests/RETAINED.json.

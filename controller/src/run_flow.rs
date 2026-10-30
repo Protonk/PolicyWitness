@@ -981,6 +981,7 @@ mod tests {
 sys.path.insert(0,sys.argv[1])
 from consumer import validate,lifecycle
 from lifecycle_oracle import check_record
+from blackbox import recapture_host_reply
 e=json.load(sys.stdin); errors=validate(e); assert not errors,errors
 errors=check_record(e); assert not errors,errors
 sub=e['data']['runner_result']['runner_subprocess']
@@ -1000,6 +1001,7 @@ if e['data']['runner_result']['specimen_id']=='timeout':
     partial=copy.deepcopy(e); s=partial['data']['runner_result']['runner_subprocess']
     s['worker_evidence']['policy_read']={'bytes_expected':s['policy_transfer_timeout']['bytes_expected'],
         'bytes_received':s['policy_transfer_timeout']['bytes_written']}
+    recapture_host_reply(partial)
     assert validate(partial)==[], validate(partial)
 if e['data']['runner_result'].get('reporting_failure') is not None:
     import copy
@@ -1008,6 +1010,7 @@ if e['data']['runner_result'].get('reporting_failure') is not None:
     assert all(s.get('comparison') is None for s in e['data']['runner_result']['steps'])
     malformed=copy.deepcopy(e)
     malformed['data']['runner_result']['runner_subprocess']['worker_evidence']['policy_read'].pop('bytes_received')
+    recapture_host_reply(malformed)
     assert any('policy_read' in x for x in validate(malformed))
 if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_result'].get('reporting_failure') is None:
     import copy
@@ -1016,7 +1019,9 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
     # Rejected variants: a refusal detail that is not the received count, a host
     # expectation that disagrees with the receipt, and a receipt member out of range.
     def rejected(mutate):
-        bad=copy.deepcopy(e); mutate(bad['data']['runner_result']['runner_subprocess']); errors=validate(bad)
+        bad=copy.deepcopy(e); mutate(bad['data']['runner_result']['runner_subprocess'])
+        recapture_host_reply(bad)
+        errors=validate(bad)
         assert any('policy_read' in x for x in errors), errors
     rejected(lambda s: s['worker_evidence']['failure'].update(detail=29))
     rejected(lambda s: s['policy_transfer_timeout'].update(bytes_expected=44))
