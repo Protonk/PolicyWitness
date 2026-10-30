@@ -255,3 +255,9 @@ must not compare two absent token/PID fields as a successful binding, and an
 affirmative never-launched claim must not contradict a recorded command PID. The
 independent ownership-contract control exercises those removals before correction.
 This tightens the existing closure contract; it introduces no new resource kind.
+
+Source `94b09d60`: pinned `pytest-exec-closure-control-01` fails on the independently
+authored missing-token pair. The correction requires a nonempty token, a positive
+command PID for launched settlement, and no contradictory command/return fields
+for never-launched settlement. Existing valid historical receipts retain their
+meaning. Final controls cover these deletions alongside the actual crash windows.

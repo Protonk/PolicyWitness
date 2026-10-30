@@ -53,11 +53,16 @@ def validate(root, path):
 
 def settled(record):
     receipt = record.get('settlement', {})
-    return (receipt.get('token') == record.get('token') and receipt.get('authority_revoked') is True
-            and receipt.get('group_absent') is True
-            and (receipt.get('never_launched') is True or
-                 (receipt.get('command_pid') == record.get('command_pid') and
-                  type(receipt.get('returncode')) is int)))
+    token = record.get('token')
+    if (not isinstance(token, str) or not token or receipt.get('token') != token or
+            receipt.get('authority_revoked') is not True or receipt.get('group_absent') is not True):
+        return False
+    if receipt.get('never_launched') is True:
+        return (record.get('command_pid') is None and receipt.get('command_pid') is None
+                and receipt.get('returncode') is None)
+    pid = record.get('command_pid')
+    return (type(pid) is int and pid > 0 and receipt.get('command_pid') == pid
+            and type(receipt.get('returncode')) is int)
 
 
 def disposition(record):
