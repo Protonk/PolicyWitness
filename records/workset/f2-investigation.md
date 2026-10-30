@@ -52,3 +52,39 @@ attempt only after an admitted pre-worker refusal and observed generation
 retirement. A generic XPC error supplies neither fact. Any proposal to change
 that boundary must address duplicate effects, unknown execution, client loss,
 resource ownership and the original overall deadline together.
+
+## First comparison observations
+
+Harness source is `edf2c561`; runtime builds remain separately identified above.
+All three runs completed without sleep, skipped/unrun cases, harness errors or
+app changes. Session cleanup verified removal in each run. Raw evidence is
+local/gitignored and explicitly pinned; no failed historical credit is replaced.
+
+| Run | Run ID | Actual observation |
+| --- | --- | --- |
+| f2-current-observe-01 | 20261030T000733Z_74846c01 | Current build: all 48 ordinary requests returned ok; 47 required admitted refusal/observed-retirement acquisition. 60.843 s. |
+| f2-stage1-observe-01 | 20261030T000928Z_32f8abcc | Accepted Stage 1: all 48 returned ok; 47 required the same acquisition path. 60.792 s. |
+| f2-stage1-original-01 | 20261030T001113Z_ef6793ae | Original extensions_byoxpc workload passed once on Stage 1, including directory effects, phases, maximum replies, issuer refusal and verified cleanup. 68.995 s. |
+
+The reduction did not reproduce F2. Nor does one passing original baseline run
+establish that the failure was introduced by Stage 2. The ordinary comparison
+controls show successful execution of the existing refusal/retirement path
+under this schedule. Actual retirement is observed, not inferred from the
+nominal 50 ms delay. In the current run, median actual inter-call gaps were
+0.091, 12.492, 33.775 and 61.806 ms; maximum process sweep was 7.550 ms.
+Short-lived unsampled processes remain outside those observations.
+
+Primary source comparison found byte-identical service, listener, service entry,
+client, acquisition, runner-client and runner-manager sources at Stage 1 and
+current. Embedded provenance reports identical toolchain and signing, with
+expected source/membership/identity and worktree/build-directory differences.
+The source-hash comparison and baseline build transcript are attached under
+f2-stage1-observe-01/investigation. The underlying source commits remain the
+recoverable authority; this small comparison is not a complete dependency proof.
+
+Commands used the main dispatcher and its fixed harness, with fresh output:
+`tests/run.sh --case runner_byoxpc/retirement_observations` against the default
+app and then `PW_APP_DIR=/private/tmp/pw-f2-stage1/dist/PolicyWitness.app`.
+The baseline original workload used that same PW_APP_DIR and
+`--case witness_contract/extensions_byoxpc`. No request was resubmitted by the
+experiment, and no expected failure was changed into success.

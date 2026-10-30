@@ -3,8 +3,9 @@
 Current state: independent authorized implementation and documentation work is
 complete, but Swift Stage 2, the combined refactor seal and whole-workset
 completion remain unaccepted. Required BYOXPC verification failed twice (F2).
-F1 remains unresolved at the user's explicit request. No build, dispatcher or
-agent assignment is running. Do not treat either finding as an accepted waiver.
+F1 remains unresolved at the user's explicit request. F2 investigation is now authorized and in progress. No build or dispatcher is
+running at this checkpoint; a controlled fixture is being prepared outside the
+working tree. Do not treat either finding as an accepted waiver.
 
 ## Current source and evidence
 
@@ -96,3 +97,13 @@ checks in pinned `workset-r1-retirement-01`, run `20261029T233533Z_3cf679ab`.
 All retained paths and run IDs were reconciled; no credited result or owned
 cleanup record was released. The C plan is recoverable at `6dab4430` under
 records/distribution/C-RUNNER-MODULARIZATION-PLAN.md.
+
+F2 investigation: fixed harness `edf2c561` ran 48 ordinary requests each on
+current build1000 and Stage1 build999, all ok with47 acquisitions each. The
+original BYOXPC workload also passed once on Stage1. These do not reproduce or
+resolve F2. All three runs are pinned. Baseline worktree/app remain at
+/private/tmp/pw-f2-stage1; its build log is attached to the baseline observation
+run. Controlled fixture preparation is under /private/tmp/pw-f2-controlled-prep.
+Next: review and execute trace-only plus delivered/lost refusal and lost
+execution-reply arrangements, preserving production behavior; then report a
+concrete repair proposal. See f2-investigation.md for exact run IDs and limits.
