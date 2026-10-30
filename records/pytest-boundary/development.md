@@ -48,3 +48,12 @@ environment passed. The added interpreter check compared a reported keg-path
 symlink with a fully resolved framework path as strings. Both identify the
 same executable. The observer now resolves both paths before comparison; it
 still rejects a different executable. No subject or engine change was needed.
+
+Candidate `cfbd753a`, `pytest-boundary-demo-05`: all eighteen observation groups
+passed, with ten accounting inputs inside the accounting group. The deliberately
+dropped descriptor made the lock free while the child remained responsive, and
+the independent control rejected that lifetime claim. Missing/duplicate/invalid
+reports and failed publication did not become successful completion. Candidate
+cleanup and outside safety cleanup remain separately recorded. The supervisor
+does not dispatch individual items. The bounded architecture remains credible;
+the next step is the single exposed C extraction replay specified prospectively.

@@ -42,3 +42,21 @@ selection, recovery or successful-completion interpretation.
 No production repair, CHECK handoff, historical pruning, or integration of
 the demonstrator is in scope. A new production defect or proposed change to an
 existing promise returns to the user. Ordinary equipment corrections proceed.
+
+The [development account](pytest-boundary/development.md) preserves corrections
+and original evidence. Candidate source is [supervisor](pytest-boundary/supervisor.py),
+[pytest integration](pytest-boundary/engine.py), [accounting](pytest-boundary/common.py),
+[resource owner](pytest-boundary/resource_owner.py) and [recovery](pytest-boundary/recover.py).
+The [independent driver](pytest-boundary/observe.py) and
+[synthetic subjects](pytest-boundary/test_subject.py) are investigative equipment.
+[Dependency inventory](pytest-boundary/equipment.json) and
+[version requirements](pytest-boundary/requirements.txt) identify the environment.
+
+Credibility decision after `cfbd753a` / `pytest-boundary-demo-05`: all eighteen
+declared groups passed, including ten independent accounting inputs and the
+deliberately dropped-lock negative control. Pytest owns ordinary selection and
+execution; the supervisor waits on one engine and resource requests, not selected
+case commands. The selected obligations survived. This warrants the one exposed
+C extraction replay, not migration or a claim of net savings. Durability here
+means process death with fsync-backed records, not power loss; the external
+resource adapter is one bounded file/child kind, not launchd.

@@ -289,6 +289,27 @@
       "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
       "source": "5c4cd41d0b2654a2280c60ee3ca0d1fd0579e78f",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-demo-05/candidates/retained",
+      "run_id": "retained",
+      "source": null,
+      "app_inventory": null,
+      "reason": "Experimental retained-publication refusal stimulus."
+    },
+    {
+      "path": "runs/pytest-boundary-demo-05",
+      "run_id": "pytest-boundary-demo-05",
+      "reason": "Pytest primary-engine boundary experiment: independent observations, source snapshot and consequential outcomes.",
+      "source": "cfbd753a4b701630ebeb741acf49aeec309494f9",
+      "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-reference-02",
+      "run_id": "20261030T145251Z_0059d39d",
+      "reason": "Unchanged dispatcher selection/accounting/cancellation/retention reference controls passed outside automation sandbox; records-only concurrent additions do not affect these owners.",
+      "source": "e93753101667a6255eed2439bb407996121aa555",
+      "app_inventory": null
     }
   ]
 }
