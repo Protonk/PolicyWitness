@@ -247,6 +247,13 @@
       "reason": "F1 repair acceptance: source guard and generator/documentation checks pass; 14 accepted and 102 rejected snippets, all eleven independent symbol-omission controls with restoration, and Swift/C extension source mutations. Production and signed build 1016 are unchanged.",
       "source": "8ceb04eaffebf2395c7df839131c1b35d2b23ab2",
       "app_inventory": null
+    },
+    {
+      "path": "runs/workset-final-retirement-01",
+      "run_id": "20261030T025834Z_b1b498cd",
+      "reason": "Final D2/workset retirement: both source/structure and generator/prose-link cases pass, including F1 independent omission controls. Attached combined-acceptance-credit.json records 229 required cases (212 retained full-run, 15 F2 replacements, 2 final source checks), with caller-auth separate. Acceptance and recovery index: 67fff425:records/workset/checkpoint.md; D2/F1: 67fff425:records/checks-before-check/acceptance.md. Production remains 4407d0ae / signed build 1016.",
+      "source": "638582213dbabb86f69ada2dac9d56b24b4b568e",
+      "app_inventory": null
     }
   ]
 }
