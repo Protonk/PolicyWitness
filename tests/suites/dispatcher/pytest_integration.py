@@ -191,5 +191,100 @@ class Integration:
         release_runs.verify_bundle(valid,expected_contract=expected)
         self.note('portable semantic deletion controls reject after repaired transport hashes',expected_identity=anchor,output=str(valid))
 
+    def recovery(self):
+        import checkout_lock
+        import pytest_resources as resources
+        from repository import completed_output
+        for state in ('reserved','owner_launch_authorized','owner_bound','command_release_authorized','command_started'):
+            root=self.fixture('recovery-'+state);out=root/'tests/out/runs/pending';completed_output(out)
+            with checkout_lock.owned(root,env={}) as scope:
+                path=resources.reserve(root,out,state,F,F+'::production',['/bin/echo','never invoked'],out/'artifacts',5,scope,os.getpid())
+                if state!='reserved':resources.transition(path,state,owner_pid=os.getpid(),command_pid=os.getpid())
+            before=path.read_bytes()
+            self.run(root,'preview',args=('--recover-ownership',state))
+            require(path.read_bytes()==before,'recovery preview changed reservation')
+            _,_=self.run(root,'recover',args=('--recover-ownership',state,'--apply'),expected=0 if state=='reserved' else 1)
+            if state=='reserved':
+                require(read(path)['state']=='closed','unlaunched reservation did not close')
+            else:
+                require(path.read_bytes()==before,'historical PID/ambiguous authorization altered')
+                # This fixture never calls a launcher. The same refusal applies
+                # to the live crash window where the missing publication is ambiguous.
+                _,r=self.run(root,'admission',args=('--case','sentinel/later'),expected=2)
+                require(r is None,'unknown ownership admitted an execution')
+                self.run(root,'prune',args=('--prune','--apply'))
+                require(out.exists(),'pruning removed an ambiguous ownership run')
+            self.note('recovery disposition '+state,record=str(path),actual_launch=False)
+        root=self.fixture('recovery-settled');out=root/'tests/out/runs/pending';completed_output(out)
+        with checkout_lock.owned(root,env={}) as scope:
+            command=resources.Command(root,out,'settled',F,F+'::production',['/bin/echo','completed'],out/'artifacts',5,scope,os.getpid())
+            command.process.wait(timeout=10);command.gate.close()
+            for log in command.logs:log.close()
+        require(read(command.path)['state']=='quiescent_retained','missing durable settlement')
+        self.run(root,'later',args=('--case','sentinel/later'))
+        self.run(root,'prune-before',args=('--prune','--apply'))
+        require(out.exists(),'quiescent held output was pruned')
+        self.run(root,'recover',args=('--recover-ownership','settled','--apply'))
+        self.run(root,'recover-again',args=('--recover-ownership','settled','--apply'))
+        self.run(root,'prune-after',args=('--prune','--apply'))
+        require(not out.exists(),'closed unpinned output not pruned')
+        self.note('post-command pre-closure recovery admits independent work and protects output until closure')
+
+    def deaths(self):
+        import select
+        import checkout_lock
+        import pytest_resources as resources
+        for mode in ('engine','interrupt','both'):
+            root=self.fixture('death-'+mode)
+            directory=Path('/private/tmp')/('pw-exec-observe-'+mode+'-'+str(os.getpid()));directory.mkdir()
+            listener=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);listener.bind(str(directory/'peer'));listener.listen(4);listener.settimeout(20)
+            native="import os,socket,sys,time,signal; child=os.fork(); s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'child' if child==0 else b'command'); signal.signal(signal.SIGINT,signal.SIG_IGN); time.sleep(60)"
+            injected="""    if mutation.name == 'collection_from_final_reap':
+        import socket, sys
+        peer=socket.socket(socket.AF_UNIX); peer.connect(ENDPOINT); peer.sendall(b'engine')
+        baseline.equipment.command([sys.executable,'-B','-S','-P','-c',NATIVE,ENDPOINT],baseline.equipment.artifacts/'active-command',60)
+""".replace('ENDPOINT',repr(str(directory/'peer'))).replace('NATIVE',repr(native))
+            module=root/MODULE;module.write_text(module.read_text().replace('    baseline.mutation(mutation)',injected+'    baseline.mutation(mutation)'))
+            env={k:v for k,v in os.environ.items() if not k.startswith(('PW_','PYTEST','PYTHON'))};env['PW_TEST_OUT_DIR']='tests/out/runs/death'
+            log=(root.parent/'invocation.log').open('wb')
+            process=subprocess.Popen(['bash','tests/run.sh'],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+            queue=select.kqueue();peers=[];pids={};exits=set()
+            try:
+                for _ in range(3):
+                    peer,_=listener.accept();peers.append(peer);pid=peer.getsockopt(0,2);role=peer.recv(32).decode();pids[role]=pid
+                    queue.control([select.kevent(pid,filter=select.KQ_FILTER_PROC,flags=select.KQ_EV_ADD|select.KQ_EV_ONESHOT,fflags=select.KQ_NOTE_EXIT)],0,0)
+                require(set(pids)=={'engine','command','child'},'independent start identities missing')
+                out=root/'tests/out/runs/death';folder=out/'suites'/F
+                events=[json.loads(line) for line in (folder/'phases.jsonl').read_text().splitlines()]
+                require(sum(e['kind']=='item_finish' for e in events)==1,'completed/active/queued arrangement not established')
+                if mode=='interrupt':process.send_signal(signal.SIGINT)
+                else:
+                    os.kill(pids['engine'],signal.SIGKILL)
+                    if mode=='both':process.kill()
+                with checkout_lock.preview(root) as held:require(held,'owned descendant lost lock before exit')
+                process.wait(timeout=20)
+                deadline=time.monotonic()+20
+                while len(exits)<3 and time.monotonic()<deadline:
+                    exits.update(e.ident for e in queue.control(None,3,1) if e.fflags & select.KQ_NOTE_EXIT)
+                require(exits==set(pids.values()),'independent descendant/engine exit observation missing')
+                if mode!='both':
+                    run=read(out/'run.json');parent=run['case_results'][0]
+                    require(parent['execution_state']=='started' and parent['accounting_state']=='incomplete' and not run['ok'],'death ordinary parent display conceals incomplete execution')
+                    result=read(folder/'family.json')
+                    require(result['items'][0]['outcome']=='passed' and not result['items'][2]['started'],'completed/queued evidence misclassified')
+                    require(run['case_results'][1]['status']==('pass' if mode=='engine' else None),'independent continuation/cancellation changed')
+                    require('execution=started accounting=incomplete' in (folder/'summary.txt').read_text(),'ordinary display missing started/incomplete')
+                else:
+                    require(not (out/'run.json').exists(),'killed supervisor published successful run')
+                    run_id=read(out/'owner.json')['run_id']
+                    result=resources.recover(root,run_id,apply=True)
+                    require(not result['unresolved'],'dual-death recovery did not close observed quiescence')
+                self.note('independent '+mode+' loss observations',pids=pids,kernel_exits=sorted(exits),output=str(out))
+            finally:
+                if process.poll() is None:process.kill();process.wait()
+                queue.close();log.close()
+                for peer in peers:peer.close()
+                listener.close();(directory/'peer').unlink();directory.rmdir()
+
     def all(self):
-        self.native();self.discovery();self.accounting();self.portable()
+        self.native();self.discovery();self.accounting();self.portable();self.recovery();self.deaths()

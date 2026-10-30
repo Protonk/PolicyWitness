@@ -286,7 +286,14 @@ def prune_rows(root, retained, *, busy=False):
             decision = ('keep: retained' if protected else 'delete' if state == 'completed'
                         else 'keep: active or interrupted' if busy and state == 'interrupted'
                         else 'keep: ' + state)
-            rows.append(dict(path=str(path.relative_to(base)), disposition=decision))
+            from pytest_resources import guard
+            try:
+                guard(root, purpose='disposal', target=path)
+            except (OSError, ValueError) as exc:
+                decision = 'keep: ownership unresolved'
+                rows.append(dict(path=str(path.relative_to(base)), disposition=decision, reason=str(exc)))
+            else:
+                rows.append(dict(path=str(path.relative_to(base)), disposition=decision))
     if base.exists():
         for path in sorted(base.iterdir()):
             if path == runs or not path.is_dir():

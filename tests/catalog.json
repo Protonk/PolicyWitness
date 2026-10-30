@@ -2064,7 +2064,8 @@
         "runner_unit/reaped_ack_mutation",
         "runner_unit/exec_reader_mutations",
         "runner_exec_lifecycle/closed_streams_leader_exit",
-        "runner_exec_inheritance/closed_worker_stderr"
+        "runner_exec_inheritance/closed_worker_stderr",
+        "dispatcher/pytest_controls"
       ]
     },
     "failure_boundaries": {

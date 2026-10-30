@@ -105,7 +105,7 @@ def battery_record(root, acceptance_run, accepted, final_inventory):
     problems = []
     expected_contract = accepted.get('execution_contract')
     current_contract = execution_contract.defaults(root)
-    if current_contract['required_families'] or accepted.get('schema_version', 0) >= 3:
+    if expected_contract is not None or current_contract['required_families'] or accepted.get('schema_version', 0) >= 3:
         if expected_contract != current_contract:
             problems.append('acceptance lacks the independently expected producer/selection contract')
         else:
@@ -256,7 +256,7 @@ def archive_locked(attempt, *, dist, root, notes):
     receipts += [dict(original_path=str(relative_attempt / item), archived_path=f'evidence/{item}')
                  for item in ('acceptance.json', 'release.json')]
     archived = dict(
-        schema_version=2, execution_contract=accepted.get('execution_contract'), version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
+        schema_version=2 if accepted.get('execution_contract') is not None else 1, execution_contract=accepted.get('execution_contract'), version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
         source_commit=commit, origin=None, archive=name, sha256=final_hash, guide='PolicyWitness.md',
         notarization_submission_id=notarization.get('submission_id'),
         submitted_sha256=record.get('submitted_sha256'),

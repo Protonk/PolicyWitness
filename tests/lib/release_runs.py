@@ -3,9 +3,9 @@
 Archive members are inspected as streams, never extracted. Symlinks are recorded
 without following them. Original paths remain provenance, not archive lookups.
 
-Only schema 2 verifies. It packs the acceptance directory alone and declares
+Schemas 2 (historical transport) and 3 (source-bound family obligations) verify. It packs the acceptance directory alone and declares
 the battery as the dispatcher run nested inside it (`tests/run.json`).
-The packer writes that format; unsupported bundles remain unchanged.
+Schema 3 requires an independently supplied producer contract; unsupported bundles remain unchanged.
 """
 import hashlib
 import json

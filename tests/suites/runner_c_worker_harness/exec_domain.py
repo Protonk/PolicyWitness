@@ -83,6 +83,7 @@ class Observation:
 
     def baseline(self):
         if self.baseline_result is None:
+            initial = len(self.equipment.completed_operations)
             result = dict(ok=False, evidence='artifacts/production', error=None)
             try:
                 directory, code = self.build_run('production')
@@ -94,8 +95,10 @@ class Observation:
                 result.update(ok=True, attempts=len(observed))
             except (AssertionError, OSError, ValueError) as exc:
                 result['error'] = str(exc)
+            result['operations'] = self.equipment.completed_operations[initial:]
             self.baseline_result = result
             self.equipment.publish('baseline.json', result)
+        self.equipment.observe(self.baseline_result['operations'])
         return self.baseline_result
 
     def mutation(self, mutation):

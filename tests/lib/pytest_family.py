@@ -82,6 +82,7 @@ class Collector:
         self.peer, child = socket.socketpair()
         self.log = tempfile.TemporaryFile()
         environment = {k:v for k,v in os.environ.items() if not k.startswith(('PYTEST', 'PYTHON', 'PW_CHECKOUT', 'PW_TEST_'))}
+        environment['PYTHONCOERCECLOCALE'] = '0'
         environment['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] = '1'
         self.process = subprocess.Popen([sys.executable, '-B', '-S', str(root / 'tests/lib/pytest_engine.py'),
             str(root), case['id'], case['module'], str(child.fileno())], cwd=root, env=environment,

@@ -41,6 +41,7 @@ def main(path, gate_fd, lock_fd):
         artifact = Path(record['artifacts'])
         artifact.mkdir(parents=True, exist_ok=True)
         environment = {k:v for k,v in os.environ.items() if not k.startswith(('PYTEST', 'PYTHON', 'PW_CHECKOUT'))}
+        environment['PYTHONCOERCECLOCALE'] = '0'
         started = time.monotonic()
         with (artifact / 'stdout').open('wb') as stdout, (artifact / 'stderr').open('wb') as stderr:
             command = subprocess.Popen(record['argv'], cwd=record['root'], env=environment,

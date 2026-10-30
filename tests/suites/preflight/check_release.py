@@ -13,6 +13,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import artifact
+import execution_contract
 import release_evidence
 from release_accept import accept
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
@@ -166,7 +167,8 @@ def check(out):
             with redirect_stdout(stdout), redirect_stderr(stderr), patch.dict(os.environ, {
                     'PW_APP_DIR': str(source), 'PW_BIN': str(source / 'Contents/MacOS/policy-witness'),
                     'PW_TEST_RUNNER_MODE': 'byoxpc'}):
-                result = accept(archive, work, invoke=tools, inspect=inspect)
+                with patch.object(execution_contract, 'defaults', return_value=tools.contract):
+                    result = accept(archive, work, invoke=tools, inspect=inspect)
         record = json.loads((work / 'acceptance.json').read_text())
         assert result == (0 if mode == 'valid' else 1), (mode, record)
         assert record['ok'] is (mode == 'valid')

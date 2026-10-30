@@ -373,6 +373,20 @@
       "reason": "Ownership checkpoint passes independent native capture, actual lock inheritance, supervisor death, kernel exits, output-only retention, authenticated refusal and idempotent recovery after 71558219 correction.",
       "source": "715582191bbf6e5b013c01bfbcb216f8a4261525",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-exec-normal-01",
+      "run_id": "20261030T175836Z_e157ccaa",
+      "reason": "First public family success: nine complete items, unchanged 58-attempt native ledger, 16 closed command obligations and unchanged accepted app.",
+      "source": "b1f697e134286c14805c83e33300347ec798b51f",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/pytest-exec-integration-01",
+      "run_id": "20261030T180210Z_6d18e5f7",
+      "reason": "Actual-family diagnostic and semantic portable deletion controls passed; consequential preflight fixture/locale and opt-in inventory failures retained before correction. Existing dispatcher/source checks separately recorded.",
+      "source": "7852f03adec113df3572040a4e6c0d84b6c96afe",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

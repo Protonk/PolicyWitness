@@ -58,7 +58,7 @@ class Controls:
     def ownership(self):
         root, out = self.fixture('ownership')
         with checkout_lock.owned(root, env={}) as scope:
-            argv = [sys.executable, '-B', '-S', '-c',
+            argv = [sys.executable, '-B', '-S', '-P', '-c',
                     'import os,sys; print("native stdout"); print("native stderr",file=sys.stderr); print(os.fstat(int(sys.argv[1])).st_ino)', str(scope.fd)]
             command = resources.Command(root, out, 'normal', 'fixture/family', 'fixture/family::one',
                                         argv, out / 'captured', 5, scope, os.getpid())
@@ -109,8 +109,8 @@ class Controls:
         require(execution_contract.problems(altered, contract, {}.__getitem__), 'erasing all local family hints accepted')
         self.note('independent producer contract refuses missing family declarations and ownership roles')
 
-    def detached(self):
-        root, out = self.fixture('detached')
+    def detached(self, live=False):
+        root, out = self.fixture('detached-live' if live else 'detached')
         # This is an external observation channel, not an engine report. Its peer
         # is the command itself. The fixture runs the actual command owner code.
         directory = Path('/private/tmp') / ('pw-control-' + str(os.getpid()))
@@ -126,7 +126,7 @@ from pytest_resources import Command
 root,out=map(Path,sys.argv[2:4])
 with checkout_lock.owned(root,env={}) as scope:
     command=Command(root,out,'detached','fixture/family','fixture/family::one',
-      [sys.executable,'-B','-S','-c',"import socket,sys,time,signal; s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'started'); signal.signal(signal.SIGINT,signal.SIG_IGN); time.sleep(60)",sys.argv[4]],out/'command',60,scope,os.getpid())
+      [sys.executable,'-B','-S','-P','-c',"import socket,sys,time,signal; s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'started'); signal.signal(signal.SIGINT,signal.SIG_IGN); time.sleep(60)",sys.argv[4]],out/'command',60,scope,os.getpid())
     (out/'owner-pid').write_text(str(command.process.pid))
     time.sleep(60)
 ''')
@@ -147,6 +147,9 @@ with checkout_lock.owned(root,env={}) as scope:
             require(active['unresolved'], 'active session recovery accepted')
             process.kill(); process.wait(timeout=5)
             require(busy(root), 'lock released before owned command exits')
+            live_result = None
+            if live:
+                live_result = resources.recover(root, 'detached', apply=True)
             exits=set()
             deadline=time.monotonic()+12
             while len(exits)<2 and time.monotonic()<deadline:
@@ -155,11 +158,11 @@ with checkout_lock.owned(root,env={}) as scope:
             require(not busy(root), 'quiescent owner kept physical lock')
             self.note('external exit observations before disposition', command_pid=pid, owner_pid=owner, exit_events=sorted(exits), lock_busy=busy(root))
             state = resources.inspect(root,'detached')
-            require(state[0]['blocking']=='output','settled command still blocks checkout or lost output hold')
+            require(state[0]['blocking'] in (('output','closed') if live else ('output',)),'settled command still blocks checkout or lost output hold')
             result = resources.recover(root,'detached',apply=True)
             require(not result['unresolved'],'settled command recovery failed')
             require(not resources.recover(root,'detached',apply=True)['unresolved'],'recovery not idempotent')
-            self.note('supervisor death preserves hold through command exit; recover closes settled output', command_pid=pid, owner_pid=owner, exit_events=sorted(exits))
+            self.note('supervisor death preserves hold through command exit; recover closes settled output', command_pid=pid, owner_pid=owner, exit_events=sorted(exits), live_recovery=live_result)
         finally:
             if process.poll() is None:
                 process.kill(); process.wait()
@@ -173,5 +176,6 @@ if __name__ == '__main__':
     control.ownership()
     control.contract()
     control.detached()
+    control.detached(live=True)
     from pytest_integration import Integration
     Integration(control.out, control.note).all()

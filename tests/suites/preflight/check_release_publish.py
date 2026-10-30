@@ -49,6 +49,7 @@ def make_repo(work):
     git(repo, 'remote', 'add', 'origin', str(remote))
     git(repo, 'push', '-q', 'origin', 'main')
     (repo / 'tests').mkdir()
+    (repo / 'tests/catalog.json').write_text(json.dumps(dict(suites=dict(fixture=dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0','1','2'])))))
     (repo / 'tests/RETAINED.json').write_text('{"schema_version": 1, "runs": []}\n')
     return repo
 

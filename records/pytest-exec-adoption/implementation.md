@@ -63,3 +63,20 @@ now run actual family source in explicitly isolated fixture checkouts; their
 catalog omits app equipment only for native/reporting interventions. This does
 not change F's production catalog admission. Normal accepted-app verification
 and existing selection/artifact controls cover that separate boundary.
+
+Source `7852f03a`: pinned `pytest-exec-integration-01` passes the actual-family
+normal, formation, accepted-mutation, wrong-rejection, shared baseline, both
+shared-finalizer classes, setup-before-yield, simultaneous body/teardown,
+collection, missing-package, valid-prefix and portable semantic deletion controls.
+The emitted walkthrough source paths are in its `observations.json`.
+
+Five existing groups failed: selection's opt-in membership list had not included
+the new opt-in case; release fixtures lacked the new independent producer data or
+a source catalog; build refusal's C-locale stimulus inherited `LC_ALL=C.UTF-8`.
+A read-only probe shows `LANG=C` with that override never coerces LC_CTYPE, with
+or without `-E`. The build/refusal source is unchanged. Rerun that control with
+LC_ALL absent rather than change its oracle or production behavior. Release
+fixtures now declare their actual three legacy cases independently, and historical
+archives retain their positive old-format identity. Current acceptance still
+requires the new contract before launch; none of these corrections permits a
+new family to fall back to historical interpretation.

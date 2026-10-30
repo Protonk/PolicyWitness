@@ -19,6 +19,7 @@ import pytest
 class Equipment:
     def __init__(self, plugin):
         self.plugin = plugin
+        self.completed_operations = []
         self.root = ROOT
         self.artifacts = plugin.out / 'artifacts'
         self.artifacts.mkdir(exist_ok=True)
@@ -36,8 +37,14 @@ class Equipment:
             raise RuntimeError('command owner unavailable: ' + str(reply))
         if reply.get('error'):
             raise RuntimeError(reply['error'])
-        self.plugin.operations.append(reply['result']['operation_id'])
+        self.completed_operations.append(reply['result']['operation_id'])
+        self.observe([reply['result']['operation_id']])
         return reply['result']
+
+    def observe(self, operations):
+        for operation in operations:
+            if operation not in self.plugin.operations:
+                self.plugin.operations.append(operation)
 
 
 class Journal:
@@ -82,6 +89,10 @@ class Journal:
             raise ValueError('missing checkout hold')
         self.lock_fd = descriptors[0]
         self.out = Path(message['out'])
+        write(self.out / 'environment.json', dict(executable=sys.executable, python=sys.version,
+            pythoncoercelocale=os.environ.get('PYTHONCOERCECLOCALE'), external_plugins=os.environ.get('PYTEST_DISABLE_PLUGIN_AUTOLOAD'),
+            sys_path=sys.path, lock_identity=[os.fstat(self.lock_fd).st_dev,os.fstat(self.lock_fd).st_ino],
+            capture='fd', bytecode=sys.dont_write_bytecode, site='site' in sys.modules))
         append(self.out / 'phases.jsonl', dict(kind='session_start', family=FAMILY, items=[r['id'] for r in items]))
         send(PEER, dict(kind='started'))
 
