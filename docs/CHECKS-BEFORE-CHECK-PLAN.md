@@ -12,7 +12,8 @@ handoff for its future writer. Acceptance and disposition finish in this workset
 Supported changes may include generators, checks, ownership arrangements and
 tests, with independent accepted/rejected controls. A change to a checker's
 promised guarantee still requires the workset's behavioral-defect discussion.
-F1 from D1 remains unresolved by explicit user decision. Initial investigation
+F1 from D1 is resolved by the explicitly authorized correction recorded in
+the package's final acceptance. Initial investigation
 source is 7562d24; initial writes are limited to this plan and its records while
 E2 changes shared implementation and documentation. Coordinate and refresh
 source before any permanent or executable correction.
@@ -39,7 +40,7 @@ The [E2 reconciliation](../records/checks-before-check/e2-reconciliation.md) and
 record source inspection and the factual availability/release-account follow-up.
 
 The [primary acceptance](../records/checks-before-check/acceptance.md) records
-findings, main verification, the unresolved F1 boundary and D1 absorption.
+findings, main verification, F1's authorized disposition and D1 absorption.
 
 Follow [planning guidance](../CONTRIBUTING.md#planning-a-change),
 [documentation guidance](AGENTS.md) and [test working guidance](../tests/AGENTS.md).

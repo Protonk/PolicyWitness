@@ -141,3 +141,51 @@ require exactly its examples to lose rejection, with complete restoration.
 Six file mutations also place the extension bindings/calls in the Swift host
 and C shim. The checker/parser, source scope, artifact checker, runtime sources
 and schemas otherwise remain unchanged. Passing dispatcher verification is next.
+
+## Final acceptance and retirement readiness
+
+F1 is resolved at `8ceb04eaffebf2395c7df839131c1b35d2b23ab2` under the user's
+explicit authorization. `workset-f1-green-01`, `20261030T025029Z_6523788d`,
+passes both source/structure and generator/documentation cases. The guard
+accepts all 14 benign snippets and rejects all 102 native-use/library examples.
+Every one of eleven single-symbol omissions loses exactly its nine expected
+rejections; unrelated results and the restored baseline remain correct. Six
+Swift-host/C-shim mutations establish source-scope reach. No sleep, skips,
+unrun cases or harness errors occur. The failed red run remains failed and
+pinned; this correction does not demonstrate a historical production violation.
+Computed names and complete Swift/C analysis remain explicitly outside the rule.
+
+Primary final review accepts the D2 investigation, C1–C5 and this separately
+authorized F1 correction. The final F2 repair/refactor verification is accepted
+at `600a7922`; its original failures remain unattributed and its raw evidence
+retained. The workset checkpoint owns the combined applicability account.
+Final test source is `8ceb04ea`; production `4407d0ae` and signed build 1016
+remain unchanged. The current F1 checks replace the same two earlier case
+credits; they do not add two cases to the 229-case required selection.
+
+The final read-through preserves all six distinct traces: shared prose's author
+and copier; independently authored limit values and implementation comparison;
+graph/table generation and citation limits; contract-manifest constants and
+current protocol-2 signed marker with identity refresh; ordinary prose discovery;
+and build/release admission. Their ownership and strongest supported conclusions
+remain identifiable. Historical inventories, costs and trace receipts retain
+their original source stamps. All twelve inherited files still match both the
+absorption manifest hashes and their committed originals byte-for-byte.
+
+The B1 registry/reverse-index/census machinery remains explicitly declined.
+Different discovery scopes and generator ownership remain understood limits,
+not unresolved implementation work. No CHECK narrative, future-writer handoff,
+semantic-analysis guarantee, counterfactual evaluation or pytest trial was
+introduced. With F1 settled, no remaining D2 question blocks acceptance.
+Commit this account before retiring the D2 plan and its complete owned package;
+preserve the original D1 chain and selected evidence pins. Post-retirement
+source/structure and generator/prose-link checks remain the final deletion gate.
+
+Independent final review by `review_public_extension` examined
+`55116788..8ceb04ea`, the green receipts and the cumulative production/build
+delta. It found no blocker: exact host.native_use keys prevent parser failures
+from satisfying rejection, each omission has its own fixed examples, restoration
+is complete, and runtime/build inputs are unchanged. It also reviewed retirement
+ownership and the six trace paths. The reviewer made no edits and ran no tests;
+dispatcher execution and the final applicability judgment belong to the primary
+executor. All delegated work is finished before this acceptance.
