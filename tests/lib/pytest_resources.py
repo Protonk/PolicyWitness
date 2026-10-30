@@ -34,7 +34,7 @@ def record_paths(root, run_id=None):
         parent /= run_id
     if not parent.exists():
         return []
-    if parent.resolve() != parent:
+    if not parent.is_dir() or parent.resolve() != parent:
         raise ValueError('redirected ownership registry')
     return sorted(parent.glob('*/record.json') if run_id else parent.glob('*/*/record.json'))
 
@@ -70,6 +70,10 @@ def inspect(root, run_id=None):
     results = []
     try:
         paths = record_paths(root, run_id)
+        if base(root).exists():
+            for run in base(root).iterdir():
+                if not run.is_dir() or run.is_symlink() or not RUN.fullmatch(run.name):
+                    raise ValueError('invalid ownership run entry: ' + str(run))
         # Empty/incomplete operation directories are not silently ignored.
         parent = base(root) / run_id if run_id else base(root)
         dirs = sorted(parent.glob('*') if run_id else parent.glob('*/*')) if parent.exists() else []

@@ -78,6 +78,8 @@ def account(manifest, stream, returncode, ownership, operations):
 class Collector:
     def __init__(self, root, case):
         self.root, self.case = root, case
+        self.started = False
+        self.result = None
         pytest_packages.target(root)
         self.peer, child = socket.socketpair()
         self.log = tempfile.TemporaryFile()
@@ -138,6 +140,7 @@ class Collector:
                         self.peer.settimeout(None)
                     if message['kind'] == 'started':
                         started = True
+                        self.started = True
                     elif message['kind'] == 'command':
                         if command or not started or message['item'] not in {r['id'] for r in self.manifest['items']}:
                             raise ValueError('invalid command ownership request')
@@ -186,6 +189,7 @@ class Collector:
                     family['execution_state'] = 'started'
                 family['errors'].extend(errors)
                 family['ok'] &= not errors
+                self.result = family
                 write(family_out / 'family.json', family)
                 display(family_out, family)
             finally:
@@ -202,7 +206,10 @@ def display(directory, family):
             if phase['diagnostic']:
                 lines.append(f"    {phase['phase']}: {phase['diagnostic']}")
         suffix = item['id'].split('::', 1)[1]
-        lines.append(f'    Native evidence: artifacts/{suffix}/; phases.jsonl; pytest.txt')
+        if (directory / 'artifacts' / suffix).is_dir():
+            lines.append(f'    Native evidence: artifacts/{suffix}/; phases.jsonl; pytest.txt')
+        else:
+            lines.append('    No native variant observation; see shared prerequisite/finalizer diagnosis and operations.jsonl for any setup commands.')
     baseline = directory / 'artifacts/baseline.json'
     if baseline.exists() and not read(baseline)['ok']:
         lines.append('SHARED BASELINE: artifacts/baseline.json; production observation retained. Dependent setup failures did not run their bodies or submit mutations.')

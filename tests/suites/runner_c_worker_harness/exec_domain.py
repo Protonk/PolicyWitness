@@ -53,10 +53,13 @@ class Observation:
         for source in self.inputs.iterdir():
             shutil.copy2(source, directory / source.name)
         if mutation:
-            self.equipment.publish(name + '/expectation.json', dict(kind='mutation', submitted=mutation.statement,
-                                 expected=mutation.expected, formation='one exec assembly boundary'))
+            self.equipment.publish(name + '/expectation.json', dict(kind='mutation', proposed=mutation.statement,
+                                 expected=mutation.expected, formation='not yet established'))
+            self.equipment.publish(name + '/sources-before-formation.json', inventory(directory))
             assert self.source.count(MARKER) == 1, f'{name}: exec assembly boundary changed; mutation not submitted'
             (directory / 'pw_worker_exec.h').write_text(self.source.replace(MARKER, '    ' + mutation.statement + '\n' + MARKER))
+            self.equipment.publish(name + '/expectation.json', dict(kind='mutation', submitted=mutation.statement,
+                                  expected=mutation.expected, formation='one exec assembly boundary'))
         if missing:
             self.equipment.publish(name + '/expectation.json', dict(kind='include', removed=missing,
                                     expected=f"'{missing}' file not found"))

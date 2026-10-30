@@ -80,3 +80,27 @@ fixtures now declare their actual three legacy cases independently, and historic
 archives retain their positive old-format identity. Current acceptance still
 requires the new contract before launch; none of these corrections permits a
 new family to fall back to historical interpretation.
+
+Source `9aa2d963`: pinned `pytest-exec-integration-02` passes all selected groups,
+including the complete C-worker suite. The new controls observed one completed,
+one active and queued items, real command/child peer identities and kernel exits
+under engine death, ordinary interruption and engine+supervisor death. Parent
+states and continuation/cancellation matched independent expectations. Recovery
+covered reserved, ambiguous authorization/start, durable settlement before closure,
+active/live owner refusal and public recovery while ordinary admission refuses.
+
+Walkthrough found an ordinary diagnostic defect in retained formation failures:
+`expectation.json` prematurely called the proposed mutation “submitted” before
+checking its anchor. The native test correctly failed formation; the receipt was
+misleading. The correction preserves proposed/unformed status and pre-formation
+source inventory, then publishes “submitted” only after formation. Reports also
+stop linking to nonexistent native directories for bodies that never ran.
+Publication-failure review added an explicit parent fallback retaining
+started/incomplete (or unknown/incomplete) if the family summary cannot be
+published. These changes preserve the native oracle; final controls inspect the
+emitted states and receipts.
+
+Periodic supported prune preview kept all decisive pins and the active run. It
+found no disposable completed run to remove; no prior engagement evidence was
+modified. The full build-refusal regression runs on fixed `9aa2d963` in
+`/private/tmp/pw-pytest-exec-build-check-20261030`, separately from ongoing sources.

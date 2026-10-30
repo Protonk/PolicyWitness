@@ -343,6 +343,8 @@ def account(item):
             system_sleep_ms=item.get('system_sleep_ms'))]
         if not complete:
             problem(item, 'unrun_case', case['id'] + ': ' + item['case_results'][0]['execution_state'] + '/' + item['case_results'][0]['accounting_state'])
+        if family and not complete:
+            print('FAMILY ' + case['id'] + ': ' + family['execution_state'] + '/incomplete; ' + '; '.join(family['errors']), flush=True)
         if not family:
             print('FAMILY ' + case['id'] + ': not_started/unavailable; ' + str(item.get('blocked_reason')), flush=True)
         return
@@ -494,9 +496,17 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
                     item.update(state='exited', returncode=returncode)
                     if item['returncode'] != 0:
                         problem(item, 'suite_exit', f"case command exited with status {item['returncode']}")
-                except OSError as exc:
+                except (OSError, ValueError) as exc:
                     item['state'] = 'launch_failed'
-                    problem(item, 'launch_failed', str(exc))
+                    if group[0].get('engine') == 'pytest':
+                        collector = collectors[group[0]['id']]
+                        family = collector.result or dict(items=[], errors=[])
+                        family.update(ok=False, execution_state='started' if collector.started else 'unknown', accounting_state='incomplete')
+                        family['errors'].append('required family publication failed: ' + str(exc))
+                        item['family'] = family
+                        problem(item, 'family_publication_failed', str(exc))
+                    else:
+                        problem(item, 'launch_failed', str(exc))
                 except KeyboardInterrupt:
                     item['state'] = 'interrupted'
                     interrupted = True

@@ -286,5 +286,23 @@ class Integration:
                 for peer in peers:peer.close()
                 listener.close();(directory/'peer').unlink();directory.rmdir()
 
+    def publication(self):
+        root=self.fixture('publication-summary')
+        helper=root/'tests/lib/pytest_family.py';text=helper.read_text();needle="                write(family_out / 'family.json', family)"
+        require(text.count(needle)==1,'summary publication fault anchor')
+        helper.write_text(text.replace(needle,"                raise PermissionError('controlled family summary publication failure')\n"+needle))
+        out,run=self.run(root,expected=1);parent=run['case_results'][0]
+        require(parent['execution_state']=='started' and parent['accounting_state']=='incomplete','missing summary conceals started execution')
+        require(not (out/'suites'/F/'family.json').exists(),'publication fault did not take effect')
+        require(run['case_results'][1]['status']=='pass','publication failure suppressed independent work')
+        self.note('missing family publication remains started/incomplete in parent',output=str(out))
+        root=self.fixture('publication-start');helper=root/'tests/lib/pytest_engine.py';text=helper.read_text();needle="        append(self.out / 'phases.jsonl', dict(kind='session_start'"
+        require(text.count(needle)==1,'start publication fault anchor')
+        helper.write_text(text.replace(needle,"        raise OSError('controlled initial publication refusal')\n"+needle))
+        out,run=self.run(root,expected=1);parent=run['case_results'][0]
+        require(parent['execution_state']=='unknown' and parent['accounting_state']=='incomplete','indeterminate start mislabeled never started')
+        require(not (root/'tests/out/pytest-owners').exists(),'publication failure launched a command')
+        self.note('initial publication refusal exposes unknown/incomplete without command acquisition',output=str(out))
+
     def all(self):
-        self.native();self.discovery();self.accounting();self.portable();self.recovery();self.deaths()
+        self.native();self.discovery();self.accounting();self.portable();self.recovery();self.deaths();self.publication()
