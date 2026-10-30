@@ -93,8 +93,12 @@ def problems(run, expected, load):
             base = 'suites/' + family
             if reference != base + '/family.json':
                 raise ValueError('invalid family report reference')
+            selection = load(base + '/selection.json')
+            planned = [c for c in run['plan']['cases'] if c['id'] == family]
+            if len(planned) != 1 or planned[0].get('items') != selection:
+                raise ValueError('family selection differs from the collection fixed in the parent plan')
             errors += [family + ': ' + e for e in validate_family(load(reference),
-                    load(base + '/ownership.json'), load(base + '/selection.json'))]
+                    load(base + '/ownership.json'), selection)]
         except (OSError, ValueError, KeyError, TypeError) as exc:
             errors.append('required family evidence missing or invalid: ' + family + ': ' + str(exc))
     return errors

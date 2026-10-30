@@ -138,6 +138,15 @@ class Integration:
         parent=run['case_results'][0];require(parent['execution_state']=='not_started' and parent['accounting_state']=='unavailable','missing equipment parent state')
         require(run['case_results'][1]['status']=='pass','missing engine suppressed legacy case')
         self.note('missing engine equipment visible as not_started/unavailable with legacy continuation',output=str(out))
+        for name,requirements in [('clang',['clang']),('app',['app','worker'])]:
+            root=self.fixture('missing-'+name);catalog=read(root/'tests/catalog.json');catalog['suites']['runner_c_worker_harness']['cases'][0]['requires']=requirements;write(root/'tests/catalog.json',catalog)
+            if name=='clang':
+                helper=root/'tests/lib/suite_run.py';text=helper.read_text();text=text.replace("ok = shutil.which(name, path=env.get('PATH')) is not None", "ok = False if name == 'clang' else shutil.which(name, path=env.get('PATH')) is not None");helper.write_text(text)
+            out,run=self.run(root,expected=1);parent=run['case_results'][0]
+            require(parent['execution_state']=='not_started' and parent['accounting_state']=='unavailable','unavailable '+name+' not explicit')
+            require(run['case_results'][1]['status']=='pass' and not (root/'tests/out/pytest-owners').exists(),'unavailable family acquired equipment or suppressed independent work')
+            self.note('family '+name+' admission refusal before command release',output=str(out))
+
 
     def accounting(self):
         root,out,run,family=self.normal;folder=out/'suites'/F
@@ -212,6 +221,12 @@ class Integration:
                 # to the live crash window where the missing publication is ambiguous.
                 _,r=self.run(root,'admission',args=('--case','sentinel/later'),expected=2)
                 require(r is None,'unknown ownership admitted an execution')
+                marker=root.parent/'build-launched'
+                environment={k:v for k,v in os.environ.items() if not k.startswith(('PW_','PYTHON'))}
+                build=subprocess.run(['bash',str(root/'tests/lib/checkout_lock.sh'),'--','/usr/bin/touch',str(marker)],env=environment,capture_output=True,text=True,timeout=20)
+                require(build.returncode==2 and 'pytest ownership' in build.stderr and not marker.exists(),'shared build front end bypassed unresolved ownership')
+                write(root.parent/'build-admission.json',dict(returncode=build.returncode,stderr=build.stderr,launched=marker.exists()))
+
                 self.run(root,'prune',args=('--prune','--apply'))
                 require(out.exists(),'pruning removed an ambiguous ownership run')
             self.note('recovery disposition '+state,record=str(path),actual_launch=False)
@@ -306,3 +321,5 @@ class Integration:
 
     def all(self):
         self.native();self.discovery();self.accounting();self.portable();self.recovery();self.deaths();self.publication()
+        from pytest_windows import exercise
+        exercise(self)

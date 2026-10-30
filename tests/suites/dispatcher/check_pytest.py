@@ -96,7 +96,7 @@ class Controls:
                        settlement=dict(token='bound', authority_revoked=True, group_absent=True, command_pid=10, returncode=0))
         ownership = dict(closed=True, problems=[], commands=[command])
         parent = dict(id=family, engine='pytest', execution_state='started', accounting_state='complete', family_report='suites/'+family+'/family.json')
-        run = dict(execution_contract=contract, case_results=[parent])
+        run = dict(execution_contract=contract, case_results=[parent], plan=dict(cases=[dict(id=family,items=selection)]))
         files = {'suites/'+family+'/'+name+'.json':v for name,v in [('family',account),('selection',selection),('ownership',ownership)]}
         require(not execution_contract.problems(run, contract, files.__getitem__), 'valid family rejected')
         for field in ('engine', 'family_report', 'execution_state'):

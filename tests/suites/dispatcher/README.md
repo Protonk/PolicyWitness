@@ -31,7 +31,7 @@ to exit, then kills remaining group members and reaps the leader. Later cases
 are not started. The summary retains completed and partial evidence and names
 interruption as the reason for unfinished selections.
 
-`dispatch.json` journals invocations and evidence. Each observed case needs one
+`dispatch.json` journals invocations and evidence. Each observed legacy case needs one
 start followed by one terminal event, a readable report with matching identity,
 and agreement between terminal event and report status. Reports must belong to
 the selected plan. Suite inclusions reuse canonical IDs, while runner contexts

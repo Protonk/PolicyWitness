@@ -104,3 +104,14 @@ Periodic supported prune preview kept all decisive pins and the active run. It
 found no disposable completed run to remove; no prior engagement evidence was
 modified. The full build-refusal regression runs on fixed `9aa2d963` in
 `/private/tmp/pw-pytest-exec-build-check-20261030`, separately from ongoing sources.
+
+Source `56aaf019`: `pytest-exec-final-controls-01` passes the diagnostic corrections,
+summary-publication refusal (`started/incomplete`), initial-publication refusal
+(`unknown/incomplete`), accounting/retention regressions, source/generator checks,
+Python startup checks and real F against the accepted app. The remaining targeted
+addition exercises actual process loss in the authorization/PID-publication and
+direct-return/settlement windows, beyond the already passing constructed-state
+disposition table. These are isolated copies of the same owner code, with externally
+observed peers and kernel exits, not production fault switches. It also checks the
+shared build lock front end refuses the same pending records and that the family
+summary selection agrees with the already-fixed parent collection manifest.
