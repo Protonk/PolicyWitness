@@ -23,8 +23,11 @@ and invoked by the BYOXPC runner suite.
 - Specimen smoke scripts exit 0 and produce `result.ok=true`.
 - Caller-auth success requires both positive file effects and bounded negative
   responses with marker bytes preserved through fixture process cleanup.
-  Missing-service lookup failures and timeouts are equipment failures, not
-  authorization evidence. Actual successful
+  Rejected clients retain protocol-2 acquisition errors until the bounded
+  overall deadline, with no submission or host reply. Native rejection-route
+  diagnostics must identify the target service; missing-service lookup errors,
+  truncated diagnostics and a timeout without those observations remain
+  equipment failures, not authorization evidence. Actual successful
   relaxed-policy runs must fail the rejection checker with both completion and
   file-effect diagnostics; a real missing-service run must fail it as equipment.
 - Fixture signatures are applied inside-out and verified, retain the production

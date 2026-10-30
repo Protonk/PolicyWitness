@@ -1,41 +1,86 @@
 {
   "build": {
-    "commit": "7426fc0920381d233eef90a1de06035af2a6d3c8",
-    "describe": "v0.3.3-124-g7426fc0",
-    "number": "977",
+    "commit": "34496c0f9741234820505eab67365a16944ea7ca",
+    "describe": "v0.3.3-159-g34496c0f",
+    "number": "1012",
     "version": "0.3.3"
   },
   "data": {
     "policy_check": null,
-    "runner_acquisition": [],
     "runner_client": {
       "argv": [
         "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
         "run",
         "--timeout-ms",
         "240000",
+        "--deadline-ticks",
+        "47673449243974",
         "--request",
         "-",
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1793310926481,
+      "ended_at_unix_ms": 1793323797995,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 1397,
         "error": null
       },
-      "started_at_unix_ms": 1793310926442,
+      "runner_reply_error": null,
+      "started_at_unix_ms": 1793323797955,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
       "stderr_truncated": false,
-      "stdout_bytes_received": 9225,
-      "stdout_bytes_retained": 9225,
+      "stdout_bytes_received": 13140,
+      "stdout_bytes_retained": 13140,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
       "stdout_raw": null,
-      "stdout_truncated": false
+      "stdout_truncated": false,
+      "submission": "invoked",
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "BEF67333-8679-4C98-BE21-42D01A1EF9B2",
+            "control": {
+              "bytes_received": 237,
+              "host_instance": "DE42A044-13E9-424C-8A7D-3B653DC9052C",
+              "host_pid": 62632,
+              "lease_ms": 5000,
+              "sha256": "6fe704d172c69d49da074c73992d3522e3f1e8b5fb4feae8ed66e2abeeaadd61",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 17,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 62631,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "deadline_continuous_ns": 1986393718498916,
+        "ended_continuous_ns": 1986153758096500,
+        "kind": "runner_client_capture",
+        "protocol_version": 2,
+        "runner_reply": {
+          "bytes_received": 9224,
+          "bytes_retained": 9224,
+          "data_base64": "eyJidW5kbGVfaWQiOiJjb20ucG9saWN5d2l0bmVzcy5wb2xpY3ktd2l0bmVzcy5QV1J1bm5lciIsIm5vcm1hbGl6ZWRfb3V0Y29tZSI6Im9rIiwicGhhc2VzIjpbeyJhY3Rpb25faWRzIjpbImZzX3JlYWRfbWlzc2luZyIsIm1hY2hfbG9va3VwX2ludmFsaWQiLCJmc19yZWFkX2FsbG93ZWQiXSwiYXJyaXZhbF9vYnNlcnZlZCI6dHJ1ZSwiY29sbGVjdGlvbl9zdGF0dXMiOiJjb2xsZWN0ZWQiLCJjb21wbGV0aW9uX29ic2VydmVkIjp0cnVlLCJvcmRlcmluZyI6eyJjb2xsZWN0aW9uX2Nsb3NlZF9iZWZvcmVfcHJvY2VlZCI6dHJ1ZSwicHJvY2VlZF9vYnNlcnZlZCI6dHJ1ZSwicHJvY2VlZF9zZXQiOnRydWUsInByb3RvY29sX3Zpb2xhdGlvbnMiOltdLCJ2YWxpZGF0b3JfZGlzcG9zaXRpb24iOiJyZWFwZWQiLCJ3b3JrZXJfbGlmZXRpbWVfZXN0YWJsaXNoZWQiOnRydWV9LCJvcmRpbmFsIjoxLCJwaGFzZV9pZCI6Im1haW4iLCJ2YWxpZGF0b3Jfc3VicHJvY2VzcyI6eyJhc3NvY2lhdGlvbl9pc3N1ZXMiOltdLCJleGl0X2NvZGUiOjAsImV4aXRfZ3JhY2Vfd2FpdCI6eyJidWRnZXRfbXMiOjEwMDAsImNsb2NrX2ZhdWx0IjpmYWxzZSwiZWxhcHNlZF9tcyI6MCwic3RvcCI6InJlYXBlZCJ9LCJleHBlY3RlZF9zdGVwX2lkcyI6WyJtYWNoX2xvb2t1cF9pbnZhbGlkIiwiZnNfcmVhZF9hbGxvd2VkIl0sIm9yZGluYWwiOjEsInBoYXNlX2lkIjoibWFpbiIsInBpZCI6NjI2MzQsInByb2JlX2J5dGVzX2V4cGVjdGVkIjoyOTIsInByb2JlX2J5dGVzX3dyaXR0ZW4iOjI5MiwicmVhcGVkIjp0cnVlLCJyZWNvcmRzIjpbeyJlcnJubyI6MCwiZmlsdGVyX3R5cGUiOiJHTE9CQUxfTkFNRSIsImZpbHRlcl90eXBlX2lkIjoyLCJmaWx0ZXJfdmFsdWUiOiJjb20uZXhhbXBsZS5wb2xpY3l3aXRuZXNzLmludmFsaWQiLCJvcGVyYXRpb24iOiJtYWNoLWxvb2t1cCIsIm91dGNvbWUiOiJhbGxvdyIsInJhd19saW5lIjoie1wia2luZFwiOlwic2JfYXBpX3ZhbGlkYXRvcl92ZXJkaWN0XCIsXCJzY2hlbWFfdmVyc2lvblwiOjEsXCJzdGVwX2lkXCI6XCJtYWNoX2xvb2t1cF9pbnZhbGlkXCIsXCJvcGVyYXRpb25cIjpcIm1hY2gtbG9va3VwXCIsXCJmaWx0ZXJfdHlwZVwiOlwiR0xPQkFMX05BTUVcIixcImZpbHRlcl90eXBlX2lkXCI6MixcImZpbHRlcl92YWx1ZVwiOlwiY29tLmV4YW1wbGUucG9saWN5d2l0bmVzcy5pbnZhbGlkXCIsXCJyY1wiOjAsXCJlcnJub1wiOjAsXCJvdXRjb21lXCI6XCJhbGxvd1wiLFwiZXJyb3JcIjpudWxsfSIsInJjIjowLCJzdGVwX2lkIjoibWFjaF9sb29rdXBfaW52YWxpZCJ9LHsiZXJybm8iOjAsImZpbHRlcl90eXBlIjoiUEFUSCIsImZpbHRlcl90eXBlX2lkIjoxLCJmaWx0ZXJfdmFsdWUiOiJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4LkxwYzhBYVwvYWxsb3ctcmVhZFwvZXhpc3RpbmcudHh0Iiwib3BlcmF0aW9uIjoiZmlsZS1yZWFkLWRhdGEiLCJvdXRjb21lIjoiYWxsb3ciLCJyYXdfbGluZSI6IntcImtpbmRcIjpcInNiX2FwaV92YWxpZGF0b3JfdmVyZGljdFwiLFwic2NoZW1hX3ZlcnNpb25cIjoxLFwic3RlcF9pZFwiOlwiZnNfcmVhZF9hbGxvd2VkXCIsXCJvcGVyYXRpb25cIjpcImZpbGUtcmVhZC1kYXRhXCIsXCJmaWx0ZXJfdHlwZVwiOlwiUEFUSFwiLFwiZmlsdGVyX3R5cGVfaWRcIjoxLFwiZmlsdGVyX3ZhbHVlXCI6XCJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4LkxwYzhBYVwvYWxsb3ctcmVhZFwvZXhpc3RpbmcudHh0XCIsXCJyY1wiOjAsXCJlcnJub1wiOjAsXCJvdXRjb21lXCI6XCJhbGxvd1wiLFwiZXJyb3JcIjpudWxsfSIsInJjIjowLCJzdGVwX2lkIjoiZnNfcmVhZF9hbGxvd2VkIn1dLCJzdGRvdXRfYnl0ZXNfcmVjZWl2ZWQiOjUyNywic3Rkb3V0X2NvbGxlY3Rpb25fc3RvcCI6ImVvZiIsIndhaXRfZXJyb3JzIjpbXX19XSwicGlkIjo2MjYzMywicG9saWN5X2Zvcm1hdCI6InNicGwiLCJwb2xpY3lfc2hhMjU2IjoiY2M2MmRlNjQ0ZTdkMWE5NTI0Y2E1MzZhMmIwNDA1OTc5MThjMGRlNTM2Yzk2YWRkMGE4Y2QxNWI5YzE2MWVlYiIsInJjIjowLCJydW5uZXJfc3VicHJvY2VzcyI6eyJjbGVhbnVwX3RyaWdnZXIiOiJjb21wbGV0aW9uIiwiY29sbGVjdGlvbl9iYXNpcyI6ImFmdGVyX2NvbmZpcm1lZF9yZWFwIiwiZGlzcG9zaXRpb24iOnsiaXNzdWVzIjpbXSwicXVlc3Rpb25zIjp7ImNsZWFudXBfdHJpZ2dlciI6eyJhbnN3ZXIiOiJjb21wbGV0aW9uIiwiYmFzaXMiOlsiY2xlYW51cF90cmlnZ2VyIiwiZXhpdF9yZXF1ZXN0ZWQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwiY29sbGVjdGlvbl9iYXNpcyI6eyJhbnN3ZXIiOiJhZnRlcl9jb25maXJtZWRfcmVhcCIsImJhc2lzIjpbImNvbGxlY3Rpb25fYmFzaXMiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwiZmluYWxfc3RhdHVzIjp7ImFuc3dlciI6ImV4aXRfY29kZSIsImJhc2lzIjpbInJlYXBlZCIsImV4aXRfY29kZSJdLCJzdGF0ZSI6InN1cHBvcnRlZCIsInZhbHVlIjowfSwiZ3JhY2VfZW5kIjp7ImFuc3dlciI6InJlYXBlZF9kdXJpbmdfZ3JhY2UiLCJiYXNpcyI6WyJncmFjZV9lbmQiLCJleGl0X3JlcXVlc3RlZCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJraWxsX3JlcXVlc3RfYW5kX3Jlc3VsdCI6eyJhbnN3ZXIiOiJub25lIiwiYmFzaXMiOlsidGVybWluYXRpb25fcmVxdWVzdCIsImV4aXRfcmVxdWVzdGVkIl0sInN0YXRlIjoic3VwcG9ydGVkIn0sInByb2dyZXNzX2Fzc29jaWF0aW9uIjp7ImFuc3dlciI6Im5vbmUiLCJiYXNpcyI6WyJwcm9ncmVzcyJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdG9wX3JlYXNvbiI6eyJhbnN3ZXIiOiJkb25lIiwiYmFzaXMiOlsicG9sbF9zdG9wX3JlYXNvbiJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9fSwic3RlcHMiOlt7ImF0dGVtcHRfc3VwcG9ydCI6InN1cHBvcnRlZCIsImluZGV4IjowLCJxdWVzdGlvbnMiOnsic3RlcF9ib3VuZGFyeV9yZWFjaGVkIjp7ImFuc3dlciI6InJlYWNoZWQiLCJiYXNpcyI6WyJwcm9ncmVzcyIsInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXF1ZXN0ZWRfb3BlcmF0aW9uX2FwcGxpY2FiaWxpdHkiOnsiYW5zd2VyIjoic3VwcG9ydGVkIiwiYmFzaXMiOlsiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN0ZXBfcmVzdWx0X3B1Ymxpc2hlZCI6eyJhbnN3ZXIiOiJwdWJsaXNoZWQiLCJiYXNpcyI6WyJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn19LCJzbG90IjoiY29tcGxldGVkIiwic3RlcF9pZCI6ImZzX3JlYWRfbWlzc2luZyJ9LHsiYXR0ZW1wdF9zdXBwb3J0Ijoic3VwcG9ydGVkIiwiaW5kZXgiOjEsInF1ZXN0aW9ucyI6eyJzdGVwX2JvdW5kYXJ5X3JlYWNoZWQiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdGVwX3JlcXVlc3RlZF9vcGVyYXRpb25fYXBwbGljYWJpbGl0eSI6eyJhbnN3ZXIiOiJzdXBwb3J0ZWQiLCJiYXNpcyI6WyJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXN1bHRfcHVibGlzaGVkIjp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifX0sInNsb3QiOiJjb21wbGV0ZWQiLCJzdGVwX2lkIjoibWFjaF9sb29rdXBfaW52YWxpZCJ9LHsiYXR0ZW1wdF9zdXBwb3J0Ijoic3VwcG9ydGVkIiwiaW5kZXgiOjIsInF1ZXN0aW9ucyI6eyJzdGVwX2JvdW5kYXJ5X3JlYWNoZWQiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdGVwX3JlcXVlc3RlZF9vcGVyYXRpb25fYXBwbGljYWJpbGl0eSI6eyJhbnN3ZXIiOiJzdXBwb3J0ZWQiLCJiYXNpcyI6WyJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXN1bHRfcHVibGlzaGVkIjp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifX0sInNsb3QiOiJjb21wbGV0ZWQiLCJzdGVwX2lkIjoiZnNfcmVhZF9hbGxvd2VkIn1dfSwiZG9uZV9vYnNlcnZlZCI6dHJ1ZSwiZXhpdF9jb2RlIjowLCJleGl0X2dyYWNlX3dhaXQiOnsiYnVkZ2V0X21zIjoxMDAwLCJjbG9ja19mYXVsdCI6ZmFsc2UsImVsYXBzZWRfbXMiOjAsInN0b3AiOiJyZWFwZWRfZHVyaW5nX2dyYWNlIn0sImV4aXRfcmVxdWVzdGVkIjp0cnVlLCJncmFjZV9lbmQiOiJyZWFwZWRfZHVyaW5nX2dyYWNlIiwicGFydGlhbF9zdGVwcyI6ZmFsc2UsInBpZCI6NjI2MzMsInBvbGxfc3RvcF9yZWFzb24iOiJkb25lIiwicmVhZHlfYnl0ZV9yZWNlaXZlZCI6dHJ1ZSwicmVhZHlfd2FpdCI6eyJidWRnZXRfbXMiOjEwMDAsImNsb2NrX2ZhdWx0IjpmYWxzZSwiZWxhcHNlZF9tcyI6MTIsInN0b3AiOiJyZWNlaXZlZCJ9LCJyZWFwZWQiOnRydWUsInNlbnRpbmVsX3dhaXQiOnsiYnVkZ2V0X21zIjoxMjAwMDAsImNsb2NrX2ZhdWx0IjpmYWxzZSwiZWxhcHNlZF9tcyI6NCwiZXhjbHVkZWRfbXMiOjEsInN0b3AiOiJkb25lIn0sIndhaXRfZXJyb3JzIjpbXSwid29ya2VyX2V2aWRlbmNlIjp7ImFiaV9pZGVudGl0eSI6Ijg2ZGY1M2EzYTg5OTI1OWJjNTI5YzhmODE5YTU0ZGEwOGMzM2I5MGI2NzkxNjY3NzBjNDNmNmY1YWZlZDdkMTgiLCJkaWFnbm9zdGljIjp7InN0YXRlIjowLCJzdGF0dXMiOiJhYnNlbnQifSwiZmFpbHVyZV9wdWJsaWNhdGlvbiI6MCwiZmFpbHVyZV9zdGF0ZSI6ImFic2VudCIsInBvbGljeV9yZWFkIjp7ImJ5dGVzX2V4cGVjdGVkIjo2NywiYnl0ZXNfcmVjZWl2ZWQiOjY3fSwicHJvZ3Jlc3MiOnsib3BlcmF0aW9uIjoxMCwicmF3IjoxNjk4NjkzMTIsInN0YWdlIjoyfSwicmVhZGluZXNzIjp7InJjIjowfX19LCJzYW5kYm94ZWRfYWZ0ZXJfYXBwbHkiOnRydWUsInNjaGVtYV92ZXJzaW9uIjoyNCwic3BlY2ltZW5faWQiOiJCQlgtMDAyIiwic3RlcHMiOlt7ImF0dGVtcHQiOnsiZXJybm8iOjIsImVycm9yIjoib3BlbihPX1JET05MWSk6IE5vIHN1Y2ggZmlsZSBvciBkaXJlY3RvcnkiLCJsaWZlY3ljbGUiOnsiYm91bmRhcnkiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJyZXN1bHQiOnsiYW5zd2VyIjoicHVibGlzaGVkIiwiYmFzaXMiOlsic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdW1tYXJ5IjoiY29tcGxldGVkIn0sIm9ic2VydmVkX3BhdGgiOm51bGwsIm91dGNvbWUiOiJvcGVuX2ZhaWxlZCIsInBhdGhfZGlhZ25vc3RpY3MiOnsiaW5wdXQiOiJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4LkxwYzhBYVwvZG9lcy1ub3QtZXhpc3QudHh0Iiwib2JzZXJ2ZXIiOiJydW5uZXJfaG9zdCIsInJlYWxwYXRoX3Jlc29sdmVkIjpudWxsLCJzYW1lX2FzX2lucHV0IjpbInBhcmVudF9yZWFscGF0aF9yZXNvbHZlZCJdLCJzdGFnZSI6ImFmdGVyX29yY2hlc3RyYXRpb24ifSwicmMiOjEsInJlcXVlc3RlZF9hY3Rpb24iOiJvcGVuX3JlYWQiLCJyZXF1ZXN0ZWRfa2luZCI6ImZpbGUiLCJyZXF1ZXN0ZWRfcGF0aCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguTHBjOEFhXC9kb2VzLW5vdC1leGlzdC50eHQiLCJyZXN1bHRfc291cmNlIjoid29ya2VyIn0sImNvbXBhcmlzb24iOnsibGltaXRhdGlvbnMiOlsicXVlcnlfcGxhbjpwYXRoX3VucmVzb2x2ZWRfYXRfcGxhbm5pbmciXSwib2JzZXJ2YXRpb24iOiJvdGhlcl9mYWlsdXJlIiwib2JzZXJ2YXRpb25fYmFzaXMiOiJjb21wbGV0ZWRfd29ya2VyX3N0YXR1cyIsIm9wZXJhdGlvbl9yZWxhdGlvbiI6Im1hdGNoZWQiLCJvcmRlciI6InVuZXN0YWJsaXNoZWQiLCJ0YXJnZXRfcmVsYXRpb24iOiJzYW1lX3N1Ym1pdHRlZCJ9LCJwaGFzZV9pZCI6Im1haW4iLCJzYW5kYm94X2NoZWNrIjp7ImVycm5vIjpudWxsLCJlcnJvciI6InRhcmdldCBwYXRoIFwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguTHBjOEFhXC9kb2VzLW5vdC1leGlzdC50eHQgZGlkIG5vdCByZXNvbHZlIG9uIHRoZSBob3N0IHdoZW4gdGhlIHF1ZXJ5IHdhcyBwbGFubmVkIiwiZmlsdGVyX2tpbmQiOiJwYXRoIiwiZmlsdGVyX3R5cGVfaWQiOm51bGwsImZpbHRlcl92YWx1ZSI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguTHBjOEFhXC9kb2VzLW5vdC1leGlzdC50eHQiLCJtaXNzaW5nX3JlYXNvbiI6InF1ZXJ5X25vdF9yZXF1ZXN0ZWQiLCJuYXRpdmVfcmMiOm51bGwsIm9wZXJhdGlvbiI6ImZpbGUtcmVhZC1kYXRhIiwib3V0Y29tZSI6InByZWRpY3Rpb25fdW5hdmFpbGFibGUiLCJwYXRoX2RpYWdub3N0aWNzIjp7ImZpcm1saW5rX3Jlc29sdmVkIjoiXC9TeXN0ZW1cL1ZvbHVtZXNcL0RhdGFcL3ByaXZhdGVcL3RtcFwvcHctYmJ4LkxwYzhBYVwvZG9lcy1ub3QtZXhpc3QudHh0IiwiaW5wdXQiOiJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4LkxwYzhBYVwvZG9lcy1ub3QtZXhpc3QudHh0Iiwib2JzZXJ2ZXIiOiJydW5uZXJfaG9zdCIsInJlYWxwYXRoX3Jlc29sdmVkIjpudWxsLCJzYW1lX2FzX2lucHV0IjpbXSwic3RhZ2UiOiJhZnRlcl9vcmNoZXN0cmF0aW9uIn0sInBpZCI6NjI2MzMsInJjIjotMSwicmVzdWx0X3NvdXJjZSI6InN5bnRoZXRpYyJ9LCJzdGVwX2lkIjoiZnNfcmVhZF9taXNzaW5nIn0seyJhdHRlbXB0Ijp7ImVycm5vIjpudWxsLCJlcnJvciI6ImJvb3RzdHJhcF9sb29rX3VwOiBrcj0xMTAyIiwibGlmZWN5Y2xlIjp7ImJvdW5kYXJ5Ijp7ImFuc3dlciI6InJlYWNoZWQiLCJiYXNpcyI6WyJwcm9ncmVzcyIsInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwicmVzdWx0Ijp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3VtbWFyeSI6ImNvbXBsZXRlZCJ9LCJvYnNlcnZlZF9wYXRoIjpudWxsLCJvdXRjb21lIjoibG9va3VwX2ZhaWxlZCIsInJjIjoxLCJyZXF1ZXN0ZWRfYWN0aW9uIjoiYm9vdHN0cmFwX2xvb2tfdXAiLCJyZXF1ZXN0ZWRfa2luZCI6Im1hY2hfbG9va3VwIiwicmVxdWVzdGVkX3BhdGgiOiJjb20uZXhhbXBsZS5wb2xpY3l3aXRuZXNzLmludmFsaWQiLCJyZXN1bHRfc291cmNlIjoid29ya2VyIn0sImNvbXBhcmlzb24iOnsibGltaXRhdGlvbnMiOltdLCJvYnNlcnZhdGlvbiI6Im90aGVyX2ZhaWx1cmUiLCJvYnNlcnZhdGlvbl9iYXNpcyI6ImNvbXBsZXRlZF93b3JrZXJfc3RhdHVzIiwib3BlcmF0aW9uX3JlbGF0aW9uIjoibWF0Y2hlZCIsIm9yZGVyIjoicXVlcnlfZmlyc3QiLCJ0YXJnZXRfcmVsYXRpb24iOiJzYW1lX3N1Ym1pdHRlZCJ9LCJwaGFzZV9pZCI6Im1haW4iLCJzYW5kYm94X2NoZWNrIjp7ImVycm5vIjowLCJlcnJvciI6bnVsbCwiZmlsdGVyX2tpbmQiOiJnbG9iYWxfbmFtZSIsImZpbHRlcl90eXBlX2lkIjoyLCJmaWx0ZXJfdmFsdWUiOiJjb20uZXhhbXBsZS5wb2xpY3l3aXRuZXNzLmludmFsaWQiLCJuYXRpdmVfcmMiOjAsIm9wZXJhdGlvbiI6Im1hY2gtbG9va3VwIiwib3V0Y29tZSI6ImFsbG93IiwicGlkIjo2MjYzMywicmMiOjAsInJlc3VsdF9zb3VyY2UiOiJ2YWxpZGF0b3IifSwic3RlcF9pZCI6Im1hY2hfbG9va3VwX2ludmFsaWQifSx7ImF0dGVtcHQiOnsiZXJybm8iOm51bGwsImxpZmVjeWNsZSI6eyJib3VuZGFyeSI6eyJhbnN3ZXIiOiJyZWFjaGVkIiwiYmFzaXMiOlsicHJvZ3Jlc3MiLCJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInJlc3VsdCI6eyJhbnN3ZXIiOiJwdWJsaXNoZWQiLCJiYXNpcyI6WyJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN1bW1hcnkiOiJjb21wbGV0ZWQifSwib2JzZXJ2ZWRfcGF0aCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguTHBjOEFhXC9hbGxvdy1yZWFkXC9leGlzdGluZy50eHQiLCJvdXRjb21lIjoib2siLCJwYXRoX2RpYWdub3N0aWNzIjp7ImlucHV0IjoiXC9wcml2YXRlXC90bXBcL3B3LWJieC5McGM4QWFcL2FsbG93LXJlYWRcL2V4aXN0aW5nLnR4dCIsIm9ic2VydmVyIjoicnVubmVyX2hvc3QiLCJzYW1lX2FzX2lucHV0IjpbInJlYWxwYXRoX3Jlc29sdmVkIiwicGFyZW50X3JlYWxwYXRoX3Jlc29sdmVkIl0sInN0YWdlIjoiYWZ0ZXJfb3JjaGVzdHJhdGlvbiJ9LCJyYyI6MCwicmVxdWVzdGVkX2FjdGlvbiI6Im9wZW5fcmVhZCIsInJlcXVlc3RlZF9raW5kIjoiZmlsZSIsInJlcXVlc3RlZF9wYXRoIjoiXC9wcml2YXRlXC90bXBcL3B3LWJieC5McGM4QWFcL2FsbG93LXJlYWRcL2V4aXN0aW5nLnR4dCIsInJlc3VsdF9zb3VyY2UiOiJ3b3JrZXIifSwiY29tcGFyaXNvbiI6eyJsaW1pdGF0aW9ucyI6W10sIm9ic2VydmF0aW9uIjoic3VjY2VlZGVkIiwib2JzZXJ2YXRpb25fYmFzaXMiOiJjb21wbGV0ZWRfd29ya2VyX3N0YXR1cyIsIm9wZXJhdGlvbl9yZWxhdGlvbiI6Im1hdGNoZWQiLCJvcmRlciI6InF1ZXJ5X2ZpcnN0IiwidGFyZ2V0X3JlbGF0aW9uIjoic2FtZV9zdWJtaXR0ZWQifSwicGhhc2VfaWQiOiJtYWluIiwic2FuZGJveF9jaGVjayI6eyJlcnJubyI6MCwiZXJyb3IiOm51bGwsImZpbHRlcl9raW5kIjoicGF0aCIsImZpbHRlcl90eXBlX2lkIjoxLCJmaWx0ZXJfdmFsdWUiOiJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4LkxwYzhBYVwvYWxsb3ctcmVhZFwvZXhpc3RpbmcudHh0IiwibmF0aXZlX3JjIjowLCJvcGVyYXRpb24iOiJmaWxlLXJlYWQtZGF0YSIsIm91dGNvbWUiOiJhbGxvdyIsInBhdGhfZGlhZ25vc3RpY3MiOnsiZmlybWxpbmtfcmVzb2x2ZWQiOiJcL1N5c3RlbVwvVm9sdW1lc1wvRGF0YVwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguTHBjOEFhXC9hbGxvdy1yZWFkXC9leGlzdGluZy50eHQiLCJpbnB1dCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguTHBjOEFhXC9hbGxvdy1yZWFkXC9leGlzdGluZy50eHQiLCJvYnNlcnZlciI6InJ1bm5lcl9ob3N0Iiwic2FtZV9hc19pbnB1dCI6WyJyZWFscGF0aF9yZXNvbHZlZCJdLCJzdGFnZSI6ImFmdGVyX29yY2hlc3RyYXRpb24ifSwicGlkIjo2MjYzMywicmMiOjAsInJlc3VsdF9zb3VyY2UiOiJ2YWxpZGF0b3IifSwic3RlcF9pZCI6ImZzX3JlYWRfYWxsb3dlZCJ9XX0=",
+          "truncated": false
+        },
+        "started_continuous_ns": 1986153720915125,
+        "submission": {
+          "invoked_elapsed_ms": 17,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null
     },
     "runner_result": {
       "bundle_id": "com.policywitness.policy-witness.PWRunner",
@@ -75,7 +120,7 @@
             ],
             "ordinal": 1,
             "phase_id": "main",
-            "pid": 66097,
+            "pid": 62634,
             "probe_bytes_expected": 292,
             "probe_bytes_written": 292,
             "reaped": true,
@@ -95,10 +140,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-bbx.TGvysh/allow-read/existing.txt",
+                "filter_value": "/private/tmp/pw-bbx.Lpc8Aa/allow-read/existing.txt",
                 "operation": "file-read-data",
                 "outcome": "allow",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_read_allowed\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.TGvysh/allow-read/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_read_allowed\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.Lpc8Aa/allow-read/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
                 "rc": 0,
                 "step_id": "fs_read_allowed"
               }
@@ -109,7 +154,7 @@
           }
         }
       ],
-      "pid": 66096,
+      "pid": 62633,
       "policy_format": "sbpl",
       "policy_sha256": "cc62de644e7d1a9524ca536a2b040597918c0de536c96add0a8cd15b9c161eeb",
       "rc": 0,
@@ -284,7 +329,7 @@
         "exit_requested": true,
         "grace_end": "reaped_during_grace",
         "partial_steps": false,
-        "pid": 66096,
+        "pid": 62633,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "ready_wait": {
@@ -303,7 +348,7 @@
         },
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "944121356b57319eb7442c1d67b4841f96bd41f4be040d1751902a1230831593",
+          "abi_identity": "86df53a3a899259bc529c8f819a54da08c33b90b679166770c43f6f5afed7d18",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -355,7 +400,7 @@
             "observed_path": null,
             "outcome": "open_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.TGvysh/does-not-exist.txt",
+              "input": "/private/tmp/pw-bbx.Lpc8Aa/does-not-exist.txt",
               "observer": "runner_host",
               "realpath_resolved": null,
               "same_as_input": [
@@ -366,7 +411,7 @@
             "rc": 1,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.TGvysh/does-not-exist.txt",
+            "requested_path": "/private/tmp/pw-bbx.Lpc8Aa/does-not-exist.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -382,23 +427,23 @@
           "phase_id": "main",
           "sandbox_check": {
             "errno": null,
-            "error": "target path /private/tmp/pw-bbx.TGvysh/does-not-exist.txt did not resolve on the host when the query was planned",
+            "error": "target path /private/tmp/pw-bbx.Lpc8Aa/does-not-exist.txt did not resolve on the host when the query was planned",
             "filter_kind": "path",
             "filter_type_id": null,
-            "filter_value": "/private/tmp/pw-bbx.TGvysh/does-not-exist.txt",
+            "filter_value": "/private/tmp/pw-bbx.Lpc8Aa/does-not-exist.txt",
             "missing_reason": "query_not_requested",
             "native_rc": null,
             "operation": "file-read-data",
             "outcome": "prediction_unavailable",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.TGvysh/does-not-exist.txt",
-              "input": "/private/tmp/pw-bbx.TGvysh/does-not-exist.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.Lpc8Aa/does-not-exist.txt",
+              "input": "/private/tmp/pw-bbx.Lpc8Aa/does-not-exist.txt",
               "observer": "runner_host",
               "realpath_resolved": null,
               "same_as_input": [],
               "stage": "after_orchestration"
             },
-            "pid": 66096,
+            "pid": 62633,
             "rc": -1,
             "result_source": "synthetic"
           },
@@ -454,7 +499,7 @@
             "native_rc": 0,
             "operation": "mach-lookup",
             "outcome": "allow",
-            "pid": 66096,
+            "pid": 62633,
             "rc": 0,
             "result_source": "validator"
           },
@@ -483,10 +528,10 @@
               },
               "summary": "completed"
             },
-            "observed_path": "/private/tmp/pw-bbx.TGvysh/allow-read/existing.txt",
+            "observed_path": "/private/tmp/pw-bbx.Lpc8Aa/allow-read/existing.txt",
             "outcome": "ok",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.TGvysh/allow-read/existing.txt",
+              "input": "/private/tmp/pw-bbx.Lpc8Aa/allow-read/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -497,7 +542,7 @@
             "rc": 0,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.TGvysh/allow-read/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.Lpc8Aa/allow-read/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -514,20 +559,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.TGvysh/allow-read/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.Lpc8Aa/allow-read/existing.txt",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.TGvysh/allow-read/existing.txt",
-              "input": "/private/tmp/pw-bbx.TGvysh/allow-read/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.Lpc8Aa/allow-read/existing.txt",
+              "input": "/private/tmp/pw-bbx.Lpc8Aa/allow-read/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 66096,
+            "pid": 62633,
             "rc": 0,
             "result_source": "validator"
           },
@@ -576,7 +621,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-e2-captures-01/suites/blackbox_e2e/BBX-002/artifacts/specimen.rendered.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/f2-reservation-harvest-01/suites/blackbox_e2e/BBX-002/artifacts/specimen.rendered.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -616,7 +661,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1793310926481,
+  "generated_at_unix_ms": 1793323797995,
   "kind": "run",
   "result": {
     "errno": null,
@@ -628,5 +673,5 @@
     "stderr": null,
     "stdout": null
   },
-  "schema_version": 8
+  "schema_version": 9
 }

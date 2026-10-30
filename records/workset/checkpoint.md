@@ -6,10 +6,14 @@ completion remain unaccepted. Required BYOXPC verification failed twice (F2).
 F1 remains unresolved at the user's explicit request. The bounded F2
 investigation is complete. The user accepted reservation, authorized continuation
 and allowed schema changes. The concrete mandatory-protocol repair design is
-committed at `60010034`. Production, readers, controls and documentation are
-implemented for protocol 2/envelope 9 and under final review. Generator refresh,
-compilation, untouched live fixture refresh and signed acceptance verification
-remain. No build or dispatcher is running. Neither finding is a waiver.
+committed at `60010034`, implemented at `34496c0f`, and built as signed
+v0.3.3 build 1012. Preparation and live fixture harvest runs are pinned and
+recorded in f2-reservation-design.md. Current envelope-9 fixtures are untouched
+captures from the successful owning cases. The new live apparatus hit Desktop
+permission prompts with its independently compiled driver; the user refused.
+All nine arrangements verified cleanup. Runtime staging is corrected to owned
+`/private/tmp`; focused rerun and combined acceptance remain. No build or
+dispatcher is running. Neither finding is a waiver.
 
 ## Current source and evidence
 

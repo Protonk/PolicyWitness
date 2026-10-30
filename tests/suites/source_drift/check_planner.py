@@ -294,17 +294,17 @@ def meson_scenarios(repo):
     decoy = ('\nif false\n' + host_declaration.replace('pwrunner = ', 'pwrunner_decoy = ').rstrip() + '\nendif\n')
     worker_line = "  files('controller/tools/pw_probe_runner/pw_probe_runner.c'),"
     assert original.count(worker_line) == 1
-    client_line = "    pwrunner_contract, files('runner/Clients/PWRunnerClient/main.swift'),"
+    client_line = "    pwrunner_contract, files('runner/Clients/PWRunnerClient/main.swift', 'runner/Clients/PWRunnerClient/PWRunnerClientSession.swift'),"
     assert original.count(client_line) == 1, 'fixture requires the explicit client contract boundary'
     client_without_coding = [
-        'PWRunnerAPI', 'PWRunnerRequest', 'PWRunnerExtension',
+        'PWRunnerAPI', 'PWRunnerTransport', 'PWRunnerRequest', 'PWRunnerExtension',
         'PWRunnerPathEvidence', 'PWRunnerAttemptEvidence', 'PWRunnerPredictionEvidence',
         'PWRunnerStepEvidence', 'PWRunnerLifecycleEvidence', 'PWRunnerDisposition',
         'PWRunnerProfileCapture', 'PWRunnerReply',
     ]
     client_without_coding_line = '    files(' + ', '.join(
         repr('runner/Sources/PWRunnerCore/' + name + '.swift') for name in client_without_coding
-    ) + ", 'runner/Clients/PWRunnerClient/main.swift'),"
+    ) + ", 'runner/Clients/PWRunnerClient/main.swift', 'runner/Clients/PWRunnerClient/PWRunnerClientSession.swift'),"
     rows = [
         ('meson-core-file-dropped', original.replace(core_line, ''),
          ["  meson.build: PWRunner lacks 'runner/Sources/PWRunnerCore/PathUtils.swift' which is in the tree"]),
@@ -314,7 +314,7 @@ def meson_scenarios(repo):
             client_without_coding_line),
          ["  meson.build: pw-runner-client lacks 'runner/Sources/PWRunnerCore/PWRunnerCoding.swift' which is in the tree"]),
         ('meson-client-host-file-added', original.replace(client_line,
-            "    pwrunner_contract, files('runner/Sources/PWRunnerCore/CWorkerDisposition.swift', 'runner/Clients/PWRunnerClient/main.swift'),"),
+            "    pwrunner_contract, files('runner/Sources/PWRunnerCore/CWorkerDisposition.swift', 'runner/Clients/PWRunnerClient/main.swift', 'runner/Clients/PWRunnerClient/PWRunnerClientSession.swift'),"),
          ["  meson.build: pw-runner-client has 'runner/Sources/PWRunnerCore/CWorkerDisposition.swift' which the tree does not expect"]),
         ('meson-host-target-missing', original.replace("executable('PWRunner',", "executable('PWRunnerRenamed',"),
          ["  meson.build: unexpected target 'PWRunnerRenamed'", "  meson.build: no 'PWRunner' target"]),

@@ -184,6 +184,13 @@
       "reason": "F2 protocol-2 preparation at first signed candidate: 488 Swift assertions and actual client/mutation controls pass; metadata and pending envelope golden cause nine case failures. Preserves generated envelope-9 candidate and first live captures; not acceptance.",
       "source": "34496c0f9741234820505eab67365a16944ea7ca",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/f2-reservation-harvest-01",
+      "run_id": "20261030T012829Z_a810b0bf",
+      "reason": "F2 envelope-9 live fixture harvest at signed build1012: five owning captures and Rust unit pass. New no-replay controls pass for lost grant/execution/helper capture and old control; independent-driver arrangements incomplete amid user-denied Desktop prompts. All nine cleanups verified. Source-list mutation anchor also fails; not acceptance.",
+      "source": "74c7ec5604216e75eef8d2dca95baf8b2b76ddbd",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

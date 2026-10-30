@@ -86,5 +86,8 @@ worker completion and capture publication. The C helper reads SDK-defined
 process generation fields. Gates operate outside the admission lock. Traces
 exclude reservation credentials, extension tokens, policy text and reply bodies.
 Independent effects and process exits remain separate from client receipt.
+Compiler products stay in case scratch; the driver, runtime app and request
+files execute from the arrangement's owned `/private/tmp` directory so caller
+authentication does not need access to code under Desktop or Documents.
 The shared arrangement and cleanup equipment lives in `retirement_controls.py`;
 its earlier protocol-specific experiment is not a current executable case.

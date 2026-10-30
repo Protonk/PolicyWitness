@@ -148,7 +148,9 @@ def build_host(scratch, out):
 
 
 def custom_app(source, host, scratch, out, identity, trace, gates, client=None):
-    app = scratch / out.name / 'PolicyWitness.app'
+    # Executed code lives with durable resource ownership, outside protected
+    # Desktop/Documents paths. Compiler products remain in case scratch.
+    app = trace.parent / 'PolicyWitness.app'
     command(out / 'copy-app', ['/usr/bin/ditto', source, app])
     assert inventory(app) == inventory(source), 'initial app copy differs'
     shutil.copy2(host, app / HOST)
@@ -240,12 +242,16 @@ class Driver:
         self.arrangement = arrangement
         self.folder = arrangement.out / 'driver'; self.folder.mkdir()
         self.commands = []
+        runtime = arrangement.resource / 'reservation-driver'
+        shutil.copy2(executable, runtime)
+        assert digest(runtime) == digest(executable), 'runtime driver differs from compiled signed bytes'
         with (self.folder / 'stdout').open('wb') as stdout, (self.folder / 'stderr').open('wb') as stderr:
-            self.process = subprocess.Popen([str(executable), arrangement.service], stdin=subprocess.PIPE,
+            self.process = subprocess.Popen([str(runtime), arrangement.service], stdin=subprocess.PIPE,
                 stdout=stdout, stderr=stderr, start_new_session=True)
         arrangement.processes.append(self.process)
-        save(self.folder / 'process.json', dict(argv=[str(executable), arrangement.service],
-            process=process_identity(self.process.pid), executable_sha256=digest(executable)))
+        save(self.folder / 'process.json', dict(argv=[str(runtime), arrangement.service],
+            compiled_executable=str(executable), process=process_identity(self.process.pid),
+            executable_sha256=digest(executable), runtime_sha256=digest(runtime)))
 
     def send(self, operation, tag, connection='owner', **fields):
         value = dict(operation=operation, tag=tag, connection=connection, **fields)
@@ -299,7 +305,11 @@ class ReservationArrangement(Arrangement):
         spec = specimen(name, target)
         if public:
             spec['runner'] = dict(mode='byoxpc', service=self.service)
-        path = folder / 'specimen.json'; save(path, spec)
+        retained = folder / 'specimen.json'; save(retained, spec)
+        runtime = self.resource / 'specimens'; runtime.mkdir(exist_ok=True)
+        path = runtime / (name + '.json')
+        shutil.copy2(retained, path)
+        assert digest(path) == digest(retained), 'runtime specimen differs from retained request'
         return folder, target, path
 
     def launch(self, name, *, effect=True, public=True, copied_client=False, timeout=30000):

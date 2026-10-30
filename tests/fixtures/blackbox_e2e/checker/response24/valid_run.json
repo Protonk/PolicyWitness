@@ -1,41 +1,86 @@
 {
   "build": {
-    "commit": "7426fc0920381d233eef90a1de06035af2a6d3c8",
-    "describe": "v0.3.3-124-g7426fc0",
-    "number": "977",
+    "commit": "34496c0f9741234820505eab67365a16944ea7ca",
+    "describe": "v0.3.3-159-g34496c0f",
+    "number": "1012",
     "version": "0.3.3"
   },
   "data": {
     "policy_check": null,
-    "runner_acquisition": [],
     "runner_client": {
       "argv": [
         "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
         "run",
         "--timeout-ms",
         "240000",
+        "--deadline-ticks",
+        "47673442536667",
         "--request",
         "-",
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1793310926221,
+      "ended_at_unix_ms": 1793323797726,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 1857,
         "error": null
       },
-      "started_at_unix_ms": 1793310926179,
+      "runner_reply_error": null,
+      "started_at_unix_ms": 1793323797675,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
       "stderr_truncated": false,
-      "stdout_bytes_received": 9576,
-      "stdout_bytes_retained": 9576,
+      "stdout_bytes_received": 13608,
+      "stdout_bytes_retained": 13608,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
       "stdout_raw": null,
-      "stdout_truncated": false
+      "stdout_truncated": false,
+      "submission": "invoked",
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "43D12409-B2C3-4BB0-8401-3F794D64121B",
+            "control": {
+              "bytes_received": 237,
+              "host_instance": "E13B997A-15A9-4284-BE15-32FEC583F34D",
+              "host_pid": 62575,
+              "lease_ms": 5000,
+              "sha256": "1a36d38b42c8cba85df2d0be90153cb676d55c86bcf641f419781dfb2a14f9fc",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 22,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 62574,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "deadline_continuous_ns": 1986393439027791,
+        "ended_continuous_ns": 1986153488865333,
+        "kind": "runner_client_capture",
+        "protocol_version": 2,
+        "runner_reply": {
+          "bytes_received": 9575,
+          "bytes_retained": 9575,
+          "data_base64": "eyJidW5kbGVfaWQiOiJjb20ucG9saWN5d2l0bmVzcy5wb2xpY3ktd2l0bmVzcy5QV1J1bm5lciIsIm5vcm1hbGl6ZWRfb3V0Y29tZSI6Im9rIiwicGhhc2VzIjpbeyJhY3Rpb25faWRzIjpbImZzX3dyaXRlX2FsbG93ZWQiLCJmc193cml0ZV9kZW5pZWQiLCJtYWNoX2xvb2t1cF9kZW5pZWQiXSwiYXJyaXZhbF9vYnNlcnZlZCI6dHJ1ZSwiY29sbGVjdGlvbl9zdGF0dXMiOiJjb2xsZWN0ZWQiLCJjb21wbGV0aW9uX29ic2VydmVkIjp0cnVlLCJvcmRlcmluZyI6eyJjb2xsZWN0aW9uX2Nsb3NlZF9iZWZvcmVfcHJvY2VlZCI6dHJ1ZSwicHJvY2VlZF9vYnNlcnZlZCI6dHJ1ZSwicHJvY2VlZF9zZXQiOnRydWUsInByb3RvY29sX3Zpb2xhdGlvbnMiOltdLCJ2YWxpZGF0b3JfZGlzcG9zaXRpb24iOiJyZWFwZWQiLCJ3b3JrZXJfbGlmZXRpbWVfZXN0YWJsaXNoZWQiOnRydWV9LCJvcmRpbmFsIjoxLCJwaGFzZV9pZCI6Im1haW4iLCJ2YWxpZGF0b3Jfc3VicHJvY2VzcyI6eyJhc3NvY2lhdGlvbl9pc3N1ZXMiOltdLCJleGl0X2NvZGUiOjAsImV4aXRfZ3JhY2Vfd2FpdCI6eyJidWRnZXRfbXMiOjEwMDAsImNsb2NrX2ZhdWx0IjpmYWxzZSwiZWxhcHNlZF9tcyI6MCwic3RvcCI6InJlYXBlZCJ9LCJleHBlY3RlZF9zdGVwX2lkcyI6WyJmc193cml0ZV9hbGxvd2VkIiwiZnNfd3JpdGVfZGVuaWVkIiwibWFjaF9sb29rdXBfZGVuaWVkIl0sIm9yZGluYWwiOjEsInBoYXNlX2lkIjoibWFpbiIsInBpZCI6NjI1NzcsInByb2JlX2J5dGVzX2V4cGVjdGVkIjo0NDQsInByb2JlX2J5dGVzX3dyaXR0ZW4iOjQ0NCwicmVhcGVkIjp0cnVlLCJyZWNvcmRzIjpbeyJlcnJubyI6MCwiZmlsdGVyX3R5cGUiOiJQQVRIIiwiZmlsdGVyX3R5cGVfaWQiOjEsImZpbHRlcl92YWx1ZSI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguS3lkMFRlXC9hbGxvdy13cml0ZVwvZXhpc3RpbmcudHh0Iiwib3BlcmF0aW9uIjoiZmlsZS13cml0ZS1kYXRhIiwib3V0Y29tZSI6ImFsbG93IiwicmF3X2xpbmUiOiJ7XCJraW5kXCI6XCJzYl9hcGlfdmFsaWRhdG9yX3ZlcmRpY3RcIixcInNjaGVtYV92ZXJzaW9uXCI6MSxcInN0ZXBfaWRcIjpcImZzX3dyaXRlX2FsbG93ZWRcIixcIm9wZXJhdGlvblwiOlwiZmlsZS13cml0ZS1kYXRhXCIsXCJmaWx0ZXJfdHlwZVwiOlwiUEFUSFwiLFwiZmlsdGVyX3R5cGVfaWRcIjoxLFwiZmlsdGVyX3ZhbHVlXCI6XCJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4Lkt5ZDBUZVwvYWxsb3ctd3JpdGVcL2V4aXN0aW5nLnR4dFwiLFwicmNcIjowLFwiZXJybm9cIjowLFwib3V0Y29tZVwiOlwiYWxsb3dcIixcImVycm9yXCI6bnVsbH0iLCJyYyI6MCwic3RlcF9pZCI6ImZzX3dyaXRlX2FsbG93ZWQifSx7ImVycm5vIjowLCJmaWx0ZXJfdHlwZSI6IlBBVEgiLCJmaWx0ZXJfdHlwZV9pZCI6MSwiZmlsdGVyX3ZhbHVlIjoiXC9wcml2YXRlXC90bXBcL3B3LWJieC5LeWQwVGVcL2Rlbnktd3JpdGVcL2V4aXN0aW5nLnR4dCIsIm9wZXJhdGlvbiI6ImZpbGUtd3JpdGUtZGF0YSIsIm91dGNvbWUiOiJkZW55IiwicmF3X2xpbmUiOiJ7XCJraW5kXCI6XCJzYl9hcGlfdmFsaWRhdG9yX3ZlcmRpY3RcIixcInNjaGVtYV92ZXJzaW9uXCI6MSxcInN0ZXBfaWRcIjpcImZzX3dyaXRlX2RlbmllZFwiLFwib3BlcmF0aW9uXCI6XCJmaWxlLXdyaXRlLWRhdGFcIixcImZpbHRlcl90eXBlXCI6XCJQQVRIXCIsXCJmaWx0ZXJfdHlwZV9pZFwiOjEsXCJmaWx0ZXJfdmFsdWVcIjpcIlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguS3lkMFRlXC9kZW55LXdyaXRlXC9leGlzdGluZy50eHRcIixcInJjXCI6MSxcImVycm5vXCI6MCxcIm91dGNvbWVcIjpcImRlbnlcIixcImVycm9yXCI6bnVsbH0iLCJyYyI6MSwic3RlcF9pZCI6ImZzX3dyaXRlX2RlbmllZCJ9LHsiZXJybm8iOjAsImZpbHRlcl90eXBlIjoiR0xPQkFMX05BTUUiLCJmaWx0ZXJfdHlwZV9pZCI6MiwiZmlsdGVyX3ZhbHVlIjoiY29tLmFwcGxlLmNmcHJlZnNkLnhwYy5kYWVtb24iLCJvcGVyYXRpb24iOiJtYWNoLWxvb2t1cCIsIm91dGNvbWUiOiJkZW55IiwicmF3X2xpbmUiOiJ7XCJraW5kXCI6XCJzYl9hcGlfdmFsaWRhdG9yX3ZlcmRpY3RcIixcInNjaGVtYV92ZXJzaW9uXCI6MSxcInN0ZXBfaWRcIjpcIm1hY2hfbG9va3VwX2RlbmllZFwiLFwib3BlcmF0aW9uXCI6XCJtYWNoLWxvb2t1cFwiLFwiZmlsdGVyX3R5cGVcIjpcIkdMT0JBTF9OQU1FXCIsXCJmaWx0ZXJfdHlwZV9pZFwiOjIsXCJmaWx0ZXJfdmFsdWVcIjpcImNvbS5hcHBsZS5jZnByZWZzZC54cGMuZGFlbW9uXCIsXCJyY1wiOjEsXCJlcnJub1wiOjAsXCJvdXRjb21lXCI6XCJkZW55XCIsXCJlcnJvclwiOm51bGx9IiwicmMiOjEsInN0ZXBfaWQiOiJtYWNoX2xvb2t1cF9kZW5pZWQifV0sInN0ZG91dF9ieXRlc19yZWNlaXZlZCI6NzkyLCJzdGRvdXRfY29sbGVjdGlvbl9zdG9wIjoiZW9mIiwid2FpdF9lcnJvcnMiOltdfX1dLCJwaWQiOjYyNTc2LCJwb2xpY3lfZm9ybWF0Ijoic2JwbCIsInBvbGljeV9zaGEyNTYiOiJjZWRlOGRiNDVlNmUyZWMzNDIyNzdjMDJmZjdiNzAwNjRmYTNhYWFiMDVmN2I4ZjA4YTAzMjA3MDM2MTgxMGY4IiwicmMiOjAsInJ1bm5lcl9zdWJwcm9jZXNzIjp7ImNsZWFudXBfdHJpZ2dlciI6ImNvbXBsZXRpb24iLCJjb2xsZWN0aW9uX2Jhc2lzIjoiYWZ0ZXJfY29uZmlybWVkX3JlYXAiLCJkaXNwb3NpdGlvbiI6eyJpc3N1ZXMiOltdLCJxdWVzdGlvbnMiOnsiY2xlYW51cF90cmlnZ2VyIjp7ImFuc3dlciI6ImNvbXBsZXRpb24iLCJiYXNpcyI6WyJjbGVhbnVwX3RyaWdnZXIiLCJleGl0X3JlcXVlc3RlZCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJjb2xsZWN0aW9uX2Jhc2lzIjp7ImFuc3dlciI6ImFmdGVyX2NvbmZpcm1lZF9yZWFwIiwiYmFzaXMiOlsiY29sbGVjdGlvbl9iYXNpcyJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJmaW5hbF9zdGF0dXMiOnsiYW5zd2VyIjoiZXhpdF9jb2RlIiwiYmFzaXMiOlsicmVhcGVkIiwiZXhpdF9jb2RlIl0sInN0YXRlIjoic3VwcG9ydGVkIiwidmFsdWUiOjB9LCJncmFjZV9lbmQiOnsiYW5zd2VyIjoicmVhcGVkX2R1cmluZ19ncmFjZSIsImJhc2lzIjpbImdyYWNlX2VuZCIsImV4aXRfcmVxdWVzdGVkIl0sInN0YXRlIjoic3VwcG9ydGVkIn0sImtpbGxfcmVxdWVzdF9hbmRfcmVzdWx0Ijp7ImFuc3dlciI6Im5vbmUiLCJiYXNpcyI6WyJ0ZXJtaW5hdGlvbl9yZXF1ZXN0IiwiZXhpdF9yZXF1ZXN0ZWQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwicHJvZ3Jlc3NfYXNzb2NpYXRpb24iOnsiYW5zd2VyIjoibm9uZSIsImJhc2lzIjpbInByb2dyZXNzIl0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN0b3BfcmVhc29uIjp7ImFuc3dlciI6ImRvbmUiLCJiYXNpcyI6WyJwb2xsX3N0b3BfcmVhc29uIl0sInN0YXRlIjoic3VwcG9ydGVkIn19LCJzdGVwcyI6W3siYXR0ZW1wdF9zdXBwb3J0Ijoic3VwcG9ydGVkIiwiaW5kZXgiOjAsInF1ZXN0aW9ucyI6eyJzdGVwX2JvdW5kYXJ5X3JlYWNoZWQiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdGVwX3JlcXVlc3RlZF9vcGVyYXRpb25fYXBwbGljYWJpbGl0eSI6eyJhbnN3ZXIiOiJzdXBwb3J0ZWQiLCJiYXNpcyI6WyJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXN1bHRfcHVibGlzaGVkIjp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifX0sInNsb3QiOiJjb21wbGV0ZWQiLCJzdGVwX2lkIjoiZnNfd3JpdGVfYWxsb3dlZCJ9LHsiYXR0ZW1wdF9zdXBwb3J0Ijoic3VwcG9ydGVkIiwiaW5kZXgiOjEsInF1ZXN0aW9ucyI6eyJzdGVwX2JvdW5kYXJ5X3JlYWNoZWQiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdGVwX3JlcXVlc3RlZF9vcGVyYXRpb25fYXBwbGljYWJpbGl0eSI6eyJhbnN3ZXIiOiJzdXBwb3J0ZWQiLCJiYXNpcyI6WyJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXN1bHRfcHVibGlzaGVkIjp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifX0sInNsb3QiOiJjb21wbGV0ZWQiLCJzdGVwX2lkIjoiZnNfd3JpdGVfZGVuaWVkIn0seyJhdHRlbXB0X3N1cHBvcnQiOiJzdXBwb3J0ZWQiLCJpbmRleCI6MiwicXVlc3Rpb25zIjp7InN0ZXBfYm91bmRhcnlfcmVhY2hlZCI6eyJhbnN3ZXIiOiJyZWFjaGVkIiwiYmFzaXMiOlsicHJvZ3Jlc3MiLCJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN0ZXBfcmVxdWVzdGVkX29wZXJhdGlvbl9hcHBsaWNhYmlsaXR5Ijp7ImFuc3dlciI6InN1cHBvcnRlZCIsImJhc2lzIjpbImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdGVwX3Jlc3VsdF9wdWJsaXNoZWQiOnsiYW5zd2VyIjoicHVibGlzaGVkIiwiYmFzaXMiOlsic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9fSwic2xvdCI6ImNvbXBsZXRlZCIsInN0ZXBfaWQiOiJtYWNoX2xvb2t1cF9kZW5pZWQifV19LCJkb25lX29ic2VydmVkIjp0cnVlLCJleGl0X2NvZGUiOjAsImV4aXRfZ3JhY2Vfd2FpdCI6eyJidWRnZXRfbXMiOjEwMDAsImNsb2NrX2ZhdWx0IjpmYWxzZSwiZWxhcHNlZF9tcyI6MCwic3RvcCI6InJlYXBlZF9kdXJpbmdfZ3JhY2UifSwiZXhpdF9yZXF1ZXN0ZWQiOnRydWUsImdyYWNlX2VuZCI6InJlYXBlZF9kdXJpbmdfZ3JhY2UiLCJwYXJ0aWFsX3N0ZXBzIjpmYWxzZSwicGlkIjo2MjU3NiwicG9sbF9zdG9wX3JlYXNvbiI6ImRvbmUiLCJyZWFkeV9ieXRlX3JlY2VpdmVkIjp0cnVlLCJyZWFkeV93YWl0Ijp7ImJ1ZGdldF9tcyI6MTAwMCwiY2xvY2tfZmF1bHQiOmZhbHNlLCJlbGFwc2VkX21zIjoxMiwic3RvcCI6InJlY2VpdmVkIn0sInJlYXBlZCI6dHJ1ZSwic2VudGluZWxfd2FpdCI6eyJidWRnZXRfbXMiOjEyMDAwMCwiY2xvY2tfZmF1bHQiOmZhbHNlLCJlbGFwc2VkX21zIjo0LCJleGNsdWRlZF9tcyI6Miwic3RvcCI6ImRvbmUifSwid2FpdF9lcnJvcnMiOltdLCJ3b3JrZXJfZXZpZGVuY2UiOnsiYWJpX2lkZW50aXR5IjoiODZkZjUzYTNhODk5MjU5YmM1MjljOGY4MTlhNTRkYTA4YzMzYjkwYjY3OTE2Njc3MGM0M2Y2ZjVhZmVkN2QxOCIsImRpYWdub3N0aWMiOnsic3RhdGUiOjAsInN0YXR1cyI6ImFic2VudCJ9LCJmYWlsdXJlX3B1YmxpY2F0aW9uIjowLCJmYWlsdXJlX3N0YXRlIjoiYWJzZW50IiwicG9saWN5X3JlYWQiOnsiYnl0ZXNfZXhwZWN0ZWQiOjM0OCwiYnl0ZXNfcmVjZWl2ZWQiOjM0OH0sInByb2dyZXNzIjp7Im9wZXJhdGlvbiI6MTAsInJhdyI6MTY5ODY5MzEyLCJzdGFnZSI6Mn0sInJlYWRpbmVzcyI6eyJyYyI6MH19fSwic2FuZGJveGVkX2FmdGVyX2FwcGx5Ijp0cnVlLCJzY2hlbWFfdmVyc2lvbiI6MjQsInNwZWNpbWVuX2lkIjoiQkJYLTAwMSIsInN0ZXBzIjpbeyJhdHRlbXB0Ijp7ImVycm5vIjpudWxsLCJsaWZlY3ljbGUiOnsiYm91bmRhcnkiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJyZXN1bHQiOnsiYW5zd2VyIjoicHVibGlzaGVkIiwiYmFzaXMiOlsic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdW1tYXJ5IjoiY29tcGxldGVkIn0sIm9ic2VydmVkX3BhdGgiOiJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4Lkt5ZDBUZVwvYWxsb3ctd3JpdGVcL2V4aXN0aW5nLnR4dCIsIm91dGNvbWUiOiJvayIsInBhdGhfZGlhZ25vc3RpY3MiOnsiaW5wdXQiOiJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4Lkt5ZDBUZVwvYWxsb3ctd3JpdGVcL2V4aXN0aW5nLnR4dCIsIm9ic2VydmVyIjoicnVubmVyX2hvc3QiLCJzYW1lX2FzX2lucHV0IjpbInJlYWxwYXRoX3Jlc29sdmVkIiwicGFyZW50X3JlYWxwYXRoX3Jlc29sdmVkIl0sInN0YWdlIjoiYWZ0ZXJfb3JjaGVzdHJhdGlvbiJ9LCJyYyI6MCwicmVxdWVzdGVkX2FjdGlvbiI6Im9wZW5fd3JpdGUiLCJyZXF1ZXN0ZWRfa2luZCI6ImZpbGUiLCJyZXF1ZXN0ZWRfcGF0aCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguS3lkMFRlXC9hbGxvdy13cml0ZVwvZXhpc3RpbmcudHh0IiwicmVzdWx0X3NvdXJjZSI6IndvcmtlciJ9LCJjb21wYXJpc29uIjp7ImxpbWl0YXRpb25zIjpbXSwib2JzZXJ2YXRpb24iOiJzdWNjZWVkZWQiLCJvYnNlcnZhdGlvbl9iYXNpcyI6ImNvbXBsZXRlZF93b3JrZXJfc3RhdHVzIiwib3BlcmF0aW9uX3JlbGF0aW9uIjoibWF0Y2hlZCIsIm9yZGVyIjoicXVlcnlfZmlyc3QiLCJ0YXJnZXRfcmVsYXRpb24iOiJzYW1lX3N1Ym1pdHRlZCJ9LCJwaGFzZV9pZCI6Im1haW4iLCJzYW5kYm94X2NoZWNrIjp7ImVycm5vIjowLCJlcnJvciI6bnVsbCwiZmlsdGVyX2tpbmQiOiJwYXRoIiwiZmlsdGVyX3R5cGVfaWQiOjEsImZpbHRlcl92YWx1ZSI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguS3lkMFRlXC9hbGxvdy13cml0ZVwvZXhpc3RpbmcudHh0IiwibmF0aXZlX3JjIjowLCJvcGVyYXRpb24iOiJmaWxlLXdyaXRlLWRhdGEiLCJvdXRjb21lIjoiYWxsb3ciLCJwYXRoX2RpYWdub3N0aWNzIjp7ImZpcm1saW5rX3Jlc29sdmVkIjoiXC9TeXN0ZW1cL1ZvbHVtZXNcL0RhdGFcL3ByaXZhdGVcL3RtcFwvcHctYmJ4Lkt5ZDBUZVwvYWxsb3ctd3JpdGVcL2V4aXN0aW5nLnR4dCIsImlucHV0IjoiXC9wcml2YXRlXC90bXBcL3B3LWJieC5LeWQwVGVcL2FsbG93LXdyaXRlXC9leGlzdGluZy50eHQiLCJvYnNlcnZlciI6InJ1bm5lcl9ob3N0Iiwic2FtZV9hc19pbnB1dCI6WyJyZWFscGF0aF9yZXNvbHZlZCJdLCJzdGFnZSI6ImFmdGVyX29yY2hlc3RyYXRpb24ifSwicGlkIjo2MjU3NiwicmMiOjAsInJlc3VsdF9zb3VyY2UiOiJ2YWxpZGF0b3IifSwic3RlcF9pZCI6ImZzX3dyaXRlX2FsbG93ZWQifSx7ImF0dGVtcHQiOnsiZXJybm8iOjEsImVycm9yIjoib3BlbihPX1dST05MWXxPX1RSVU5DKTogT3BlcmF0aW9uIG5vdCBwZXJtaXR0ZWQiLCJsaWZlY3ljbGUiOnsiYm91bmRhcnkiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJyZXN1bHQiOnsiYW5zd2VyIjoicHVibGlzaGVkIiwiYmFzaXMiOlsic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdW1tYXJ5IjoiY29tcGxldGVkIn0sIm9ic2VydmVkX3BhdGgiOm51bGwsIm91dGNvbWUiOiJvcGVuX2ZhaWxlZCIsInBhdGhfZGlhZ25vc3RpY3MiOnsiaW5wdXQiOiJcL3ByaXZhdGVcL3RtcFwvcHctYmJ4Lkt5ZDBUZVwvZGVueS13cml0ZVwvZXhpc3RpbmcudHh0Iiwib2JzZXJ2ZXIiOiJydW5uZXJfaG9zdCIsInNhbWVfYXNfaW5wdXQiOlsicmVhbHBhdGhfcmVzb2x2ZWQiLCJwYXJlbnRfcmVhbHBhdGhfcmVzb2x2ZWQiXSwic3RhZ2UiOiJhZnRlcl9vcmNoZXN0cmF0aW9uIn0sInJjIjoxLCJyZXF1ZXN0ZWRfYWN0aW9uIjoib3Blbl93cml0ZSIsInJlcXVlc3RlZF9raW5kIjoiZmlsZSIsInJlcXVlc3RlZF9wYXRoIjoiXC9wcml2YXRlXC90bXBcL3B3LWJieC5LeWQwVGVcL2Rlbnktd3JpdGVcL2V4aXN0aW5nLnR4dCIsInJlc3VsdF9zb3VyY2UiOiJ3b3JrZXIifSwiY29tcGFyaXNvbiI6eyJsaW1pdGF0aW9ucyI6W10sIm9ic2VydmF0aW9uIjoicGVybWlzc2lvbl9mYWlsdXJlIiwib2JzZXJ2YXRpb25fYmFzaXMiOiJwZXJtaXNzaW9uX2Vycm5vIiwib3BlcmF0aW9uX3JlbGF0aW9uIjoibWF0Y2hlZCIsIm9yZGVyIjoicXVlcnlfZmlyc3QiLCJ0YXJnZXRfcmVsYXRpb24iOiJzYW1lX3N1Ym1pdHRlZCJ9LCJwaGFzZV9pZCI6Im1haW4iLCJzYW5kYm94X2NoZWNrIjp7ImVycm5vIjowLCJlcnJvciI6bnVsbCwiZmlsdGVyX2tpbmQiOiJwYXRoIiwiZmlsdGVyX3R5cGVfaWQiOjEsImZpbHRlcl92YWx1ZSI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1iYnguS3lkMFRlXC9kZW55LXdyaXRlXC9leGlzdGluZy50eHQiLCJuYXRpdmVfcmMiOjEsIm9wZXJhdGlvbiI6ImZpbGUtd3JpdGUtZGF0YSIsIm91dGNvbWUiOiJkZW55IiwicGF0aF9kaWFnbm9zdGljcyI6eyJmaXJtbGlua19yZXNvbHZlZCI6IlwvU3lzdGVtXC9Wb2x1bWVzXC9EYXRhXC9wcml2YXRlXC90bXBcL3B3LWJieC5LeWQwVGVcL2Rlbnktd3JpdGVcL2V4aXN0aW5nLnR4dCIsImlucHV0IjoiXC9wcml2YXRlXC90bXBcL3B3LWJieC5LeWQwVGVcL2Rlbnktd3JpdGVcL2V4aXN0aW5nLnR4dCIsIm9ic2VydmVyIjoicnVubmVyX2hvc3QiLCJzYW1lX2FzX2lucHV0IjpbInJlYWxwYXRoX3Jlc29sdmVkIl0sInN0YWdlIjoiYWZ0ZXJfb3JjaGVzdHJhdGlvbiJ9LCJwaWQiOjYyNTc2LCJyYyI6MSwicmVzdWx0X3NvdXJjZSI6InZhbGlkYXRvciJ9LCJzdGVwX2lkIjoiZnNfd3JpdGVfZGVuaWVkIn0seyJhdHRlbXB0Ijp7ImVycm5vIjpudWxsLCJlcnJvciI6ImJvb3RzdHJhcF9sb29rX3VwOiBrcj0xMTAwIiwibGlmZWN5Y2xlIjp7ImJvdW5kYXJ5Ijp7ImFuc3dlciI6InJlYWNoZWQiLCJiYXNpcyI6WyJwcm9ncmVzcyIsInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwicmVzdWx0Ijp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3VtbWFyeSI6ImNvbXBsZXRlZCJ9LCJvYnNlcnZlZF9wYXRoIjpudWxsLCJvdXRjb21lIjoibG9va3VwX2ZhaWxlZCIsInJjIjoxLCJyZXF1ZXN0ZWRfYWN0aW9uIjoiYm9vdHN0cmFwX2xvb2tfdXAiLCJyZXF1ZXN0ZWRfa2luZCI6Im1hY2hfbG9va3VwIiwicmVxdWVzdGVkX3BhdGgiOiJjb20uYXBwbGUuY2ZwcmVmc2QueHBjLmRhZW1vbiIsInJlc3VsdF9zb3VyY2UiOiJ3b3JrZXIifSwiY29tcGFyaXNvbiI6eyJsaW1pdGF0aW9ucyI6W10sIm9ic2VydmF0aW9uIjoicGVybWlzc2lvbl9mYWlsdXJlIiwib2JzZXJ2YXRpb25fYmFzaXMiOiJib290c3RyYXBfcGVybWlzc2lvbl9yZXN1bHQiLCJvcGVyYXRpb25fcmVsYXRpb24iOiJtYXRjaGVkIiwib3JkZXIiOiJxdWVyeV9maXJzdCIsInRhcmdldF9yZWxhdGlvbiI6InNhbWVfc3VibWl0dGVkIn0sInBoYXNlX2lkIjoibWFpbiIsInNhbmRib3hfY2hlY2siOnsiZXJybm8iOjAsImVycm9yIjpudWxsLCJmaWx0ZXJfa2luZCI6Imdsb2JhbF9uYW1lIiwiZmlsdGVyX3R5cGVfaWQiOjIsImZpbHRlcl92YWx1ZSI6ImNvbS5hcHBsZS5jZnByZWZzZC54cGMuZGFlbW9uIiwibmF0aXZlX3JjIjoxLCJvcGVyYXRpb24iOiJtYWNoLWxvb2t1cCIsIm91dGNvbWUiOiJkZW55IiwicGlkIjo2MjU3NiwicmMiOjEsInJlc3VsdF9zb3VyY2UiOiJ2YWxpZGF0b3IifSwic3RlcF9pZCI6Im1hY2hfbG9va3VwX2RlbmllZCJ9XX0=",
+          "truncated": false
+        },
+        "started_continuous_ns": 1986153442741833,
+        "submission": {
+          "invoked_elapsed_ms": 23,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null
     },
     "runner_result": {
       "bundle_id": "com.policywitness.policy-witness.PWRunner",
@@ -76,7 +121,7 @@
             ],
             "ordinal": 1,
             "phase_id": "main",
-            "pid": 66038,
+            "pid": 62577,
             "probe_bytes_expected": 444,
             "probe_bytes_written": 444,
             "reaped": true,
@@ -85,10 +130,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+                "filter_value": "/private/tmp/pw-bbx.Kyd0Te/allow-write/existing.txt",
                 "operation": "file-write-data",
                 "outcome": "allow",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_allowed\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_allowed\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.Kyd0Te/allow-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
                 "rc": 0,
                 "step_id": "fs_write_allowed"
               },
@@ -96,10 +141,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+                "filter_value": "/private/tmp/pw-bbx.Kyd0Te/deny-write/existing.txt",
                 "operation": "file-write-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_denied\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_denied\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.Kyd0Te/deny-write/existing.txt\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "fs_write_denied"
               },
@@ -121,7 +166,7 @@
           }
         }
       ],
-      "pid": 66037,
+      "pid": 62576,
       "policy_format": "sbpl",
       "policy_sha256": "cede8db45e6e2ec342277c02ff7b70064fa3aaab05f7b8f08a032070361810f8",
       "rc": 0,
@@ -296,7 +341,7 @@
         "exit_requested": true,
         "grace_end": "reaped_during_grace",
         "partial_steps": false,
-        "pid": 66037,
+        "pid": 62576,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "ready_wait": {
@@ -310,12 +355,12 @@
           "budget_ms": 120000,
           "clock_fault": false,
           "elapsed_ms": 4,
-          "excluded_ms": 1,
+          "excluded_ms": 2,
           "stop": "done"
         },
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "944121356b57319eb7442c1d67b4841f96bd41f4be040d1751902a1230831593",
+          "abi_identity": "86df53a3a899259bc529c8f819a54da08c33b90b679166770c43f6f5afed7d18",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -363,10 +408,10 @@
               },
               "summary": "completed"
             },
-            "observed_path": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+            "observed_path": "/private/tmp/pw-bbx.Kyd0Te/allow-write/existing.txt",
             "outcome": "ok",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.Kyd0Te/allow-write/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -377,7 +422,7 @@
             "rc": 0,
             "requested_action": "open_write",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.Kyd0Te/allow-write/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -394,20 +439,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.Kyd0Te/allow-write/existing.txt",
             "native_rc": 0,
             "operation": "file-write-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
-              "input": "/private/tmp/pw-bbx.g43ewQ/allow-write/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.Kyd0Te/allow-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.Kyd0Te/allow-write/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 66037,
+            "pid": 62576,
             "rc": 0,
             "result_source": "validator"
           },
@@ -440,7 +485,7 @@
             "observed_path": null,
             "outcome": "open_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.Kyd0Te/deny-write/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -451,7 +496,7 @@
             "rc": 1,
             "requested_action": "open_write",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.Kyd0Te/deny-write/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -468,20 +513,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.Kyd0Te/deny-write/existing.txt",
             "native_rc": 1,
             "operation": "file-write-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
-              "input": "/private/tmp/pw-bbx.g43ewQ/deny-write/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.Kyd0Te/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.Kyd0Te/deny-write/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 66037,
+            "pid": 62576,
             "rc": 1,
             "result_source": "validator"
           },
@@ -537,7 +582,7 @@
             "native_rc": 1,
             "operation": "mach-lookup",
             "outcome": "deny",
-            "pid": 66037,
+            "pid": 62576,
             "rc": 1,
             "result_source": "validator"
           },
@@ -586,7 +631,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-e2-captures-01/suites/blackbox_e2e/BBX-001/artifacts/specimen.rendered.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/f2-reservation-harvest-01/suites/blackbox_e2e/BBX-001/artifacts/specimen.rendered.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -626,7 +671,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1793310926222,
+  "generated_at_unix_ms": 1793323797726,
   "kind": "run",
   "result": {
     "errno": null,
@@ -638,5 +683,5 @@
     "stderr": null,
     "stdout": null
   },
-  "schema_version": 8
+  "schema_version": 9
 }

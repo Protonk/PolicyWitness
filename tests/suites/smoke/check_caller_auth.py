@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
 import contract
 from blackbox import validate_step
+from runner_client_capture import validate_capture, host_reply
 
 
 def call(fixture, work, label, *, authorized=False, service=None):
@@ -21,7 +22,7 @@ def call(fixture, work, label, *, authorized=False, service=None):
     seed = secrets.token_bytes(64)
     target.write_bytes(seed)
     (out / 'before.bin').write_bytes(seed)
-    spec = {'schema_version': 5, 'specimen_id': secrets.token_hex(16),
+    spec = {'schema_version': contract.REQUEST_SCHEMA, 'specimen_id': secrets.token_hex(16),
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'probe_plan': [{'step_id': secrets.token_hex(16),
                            'sandbox_check': {'operation': 'file-write-data',
@@ -35,13 +36,14 @@ def call(fixture, work, label, *, authorized=False, service=None):
                    service or fixture['service'], request], timeout=10, check=False)
     after = target.read_bytes()
     (out / 'after.bin').write_bytes(after)
-    result = json.loads((out / 'client/stdout').read_text())
-    # Both actual XPC replies and the client's locally generated error replies
-    # carry the current response schema and validate as current documents; no
-    # process status is invented on rejection.
-    assert result['schema_version'] == contract.RESPONSE_SCHEMA, result
-    assert not consumer.validate(result), consumer.validate(result)
-    observation = {'command': meta, 'result': result, 'specimen': spec,
+    capture = json.loads((out / 'client/stdout').read_text())
+    assert not validate_capture(capture), validate_capture(capture)
+    # Client transport observations carry no synthetic host result. Only exact
+    # received host bytes are admitted under the response schema.
+    result = host_reply(capture) if capture['terminal'] == 'runner_reply' else None
+    if capture['terminal'] == 'runner_reply':
+        assert not consumer.validate(result), consumer.validate(result)
+    observation = {'command': meta, 'capture': capture, 'result': result, 'specimen': spec,
                    'service': service or fixture['service'], 'changed': after != seed,
                    'nonempty': bool(after), 'client_sha256': digest(client)}
     save(out / 'observation.json', observation)
@@ -50,7 +52,9 @@ def call(fixture, work, label, *, authorized=False, service=None):
 
 def accepted(observation):
     result, spec = observation['result'], observation['specimen']
+    capture = observation['capture']
     assert observation['command']['returncode'] == 0, observation
+    assert capture['terminal'] == 'runner_reply' and capture['submission']['state'] == 'invoked', capture
     assert observation['changed'] and observation['nonempty'], 'accepted request left no file effect'
     assert result['normalized_outcome'] == 'ok' and result['rc'] == 0, result
     assert result['specimen_id'] == spec['specimen_id'] and result['bundle_id'] == observation['service'], result
@@ -65,25 +69,43 @@ def accepted(observation):
 def rejection_errors(observation):
     """A transport failure alone is not proof; the live paired controls are required too."""
     errors = []
-    result, meta = observation['result'], observation['command']
-    if meta['returncode'] == 0 or result.get('normalized_outcome') == 'ok':
+    result, meta, capture = observation['result'], observation['command'], observation['capture']
+    if meta['returncode'] == 0 or capture['terminal'] == 'runner_reply':
         errors.append('request_completed')
     if observation['changed']:
         errors.append('file_changed')
     if 'request_completed' in errors:
         return errors
-    if meta['returncode'] != 1 or result.get('normalized_outcome') != 'xpc_error':
-        errors.append('equipment: expected bounded XPC invalidation, not crash or timeout')
-    error = result.get('error') or ''
+    if (meta['returncode'] != 1 or meta['harness_timeout'] or capture['terminal'] != 'xpc_timeout'
+            or capture['acquisition_stop'] != 'overall_deadline' or capture['timeout_ms'] != 5000):
+        errors.append('equipment: expected bounded acquisition deadline after XPC rejection')
+    if (capture['submission']['state'] != 'not_invoked' or result is not None
+            or capture.get('runner_reply') is not None or capture.get('submission_refusal') is not None):
+        errors.append('equipment: unexpected submission or host reply')
+    attempts = capture['attempts']
+    if (not attempts or any(attempt['outcome'] not in ('transport_error', 'timeout')
+                            or attempt.get('control') is not None for attempt in attempts)):
+        errors.append('equipment: unexpected acquisition or admitted control')
+    native_errors = [attempt['error'] for attempt in attempts if isinstance(attempt.get('error'), dict)]
     # Cocoa reports rejected connections as interrupted (4097) or invalidated
-    # (4099). Neither code establishes authorization without the paired calls.
-    if (not any(f'NSCocoaErrorDomain:{code} ' in error for code in (4097, 4099))
-            or observation['service'] not in error or 'lookup' in error.lower()
-            or 'Sandbox restriction' in error or 'No such process' in error):
+    # (4099). The terminal observation is now the overall deadline; native
+    # diagnostics remain in the acquisition attempts. Neither a code nor a
+    # deadline establishes authorization without the paired live calls.
+    def complete_route(error):
+        return (error.get('stage') == 'acquisition'
+                and error.get('domain') == 'NSCocoaErrorDomain' and error.get('code') in (4097, 4099)
+                and error.get('domain_truncated') is False and error.get('message_truncated') is False
+                and observation['service'] in error.get('message', ''))
+
+    def excluded_route(error):
+        message = error.get('message', '').lower()
+        return (error.get('domain_truncated') is True or error.get('message_truncated') is True
+                or any(text in message for text in ('lookup', 'sandbox restriction', 'no such process')))
+
+    if not any(complete_route(error) for error in native_errors) or any(excluded_route(error) for error in native_errors):
         errors.append('equipment: connection did not establish a rejection-capable route')
-    if (meta['elapsed_seconds'] >= 5 or result.get('steps') != [] or result.get('rc') != 1
-            or result.get('runner_subprocess') is not None):
-        errors.append('equipment: late response or unexpected attempt evidence')
+    # validate_capture checks the continuous-clock deadline evidence. The
+    # subprocess watchdog bounds collection; consuming five seconds is expected.
     return errors
 
 
@@ -162,9 +184,13 @@ def main():
                     accepted(call(restricted, work, 'authorized-after-rejection', authorized=True))
                 missing = call(fixtures['original'], work, 'missing-service',
                                service='com.policywitness.test.missing.s' + secrets.token_hex(12))
-                assert missing['result']['normalized_outcome'] == 'xpc_error' and not missing['changed'], missing
+                assert (missing['capture']['terminal'] == 'xpc_timeout'
+                        and missing['capture']['acquisition_stop'] == 'overall_deadline'
+                        and missing['capture']['submission']['state'] == 'not_invoked'
+                        and missing['result'] is None and not missing['changed']), missing
                 controls['missing-service-as-rejected'] = rejection_errors(missing)
-                assert any(e.startswith('equipment:') for e in controls['missing-service-as-rejected']), controls
+                assert ('equipment: connection did not establish a rejection-capable route'
+                        in controls['missing-service-as-rejected']), controls
                 save(out / 'controls.json', controls)
             finally:
                 cleanup_processes(work, out)

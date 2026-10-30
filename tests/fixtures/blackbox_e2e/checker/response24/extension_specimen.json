@@ -8,7 +8,7 @@
   "extensions": [
     {
       "token_ref": "token",
-      "target": "/private/tmp/pw-extension-targets-er27w9vb/extension-target"
+      "target": "/private/tmp/pw-extension-targets-l8a8yns_/extension-target"
     }
   ],
   "phases": [
@@ -21,13 +21,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-er27w9vb/extension-target"
+              "value": "/private/tmp/pw-extension-targets-l8a8yns_/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-er27w9vb/extension-target"
+            "target": "/private/tmp/pw-extension-targets-l8a8yns_/extension-target"
           }
         },
         {
@@ -49,13 +49,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-er27w9vb/extension-target"
+              "value": "/private/tmp/pw-extension-targets-l8a8yns_/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-er27w9vb/extension-target"
+            "target": "/private/tmp/pw-extension-targets-l8a8yns_/extension-target"
           }
         },
         {
@@ -76,13 +76,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-er27w9vb/extension-target"
+              "value": "/private/tmp/pw-extension-targets-l8a8yns_/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-er27w9vb/extension-target"
+            "target": "/private/tmp/pw-extension-targets-l8a8yns_/extension-target"
           }
         }
       ]

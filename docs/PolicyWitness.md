@@ -1015,8 +1015,8 @@ received host bytes, rather than manufacturing host results for client errors.
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
 fresh batch validator for each eligible phase. Worker identity for
-correlation comes only from `runner_subprocess.pid`; top-level `pid` may name
-the host or client when no worker metadata exists.
+correlation comes only from `runner_subprocess.pid`; the host reply's top-level
+`pid` names the host. The separate capture's `client_pid` names the helper.
 
 `runner_subprocess` retains PID, exit/signal and partial-step status, plus
 `ready_byte_received`, `done_observed`, `poll_stop_reason`, `exit_requested`,

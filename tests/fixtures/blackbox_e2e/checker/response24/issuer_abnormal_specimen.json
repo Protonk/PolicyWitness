@@ -8,7 +8,7 @@
   "extensions": [
     {
       "token_ref": "token",
-      "target": "/private/tmp/pw-extension-control-6pwdr2m2/target"
+      "target": "/private/tmp/pw-extension-control-tdsighy5/target"
     }
   ],
   "phases": [
@@ -21,13 +21,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-6pwdr2m2/target"
+              "value": "/private/tmp/pw-extension-control-tdsighy5/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-6pwdr2m2/target"
+            "target": "/private/tmp/pw-extension-control-tdsighy5/target"
           }
         },
         {
@@ -49,13 +49,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-6pwdr2m2/target"
+              "value": "/private/tmp/pw-extension-control-tdsighy5/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-6pwdr2m2/target"
+            "target": "/private/tmp/pw-extension-control-tdsighy5/target"
           }
         },
         {
@@ -76,20 +76,20 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-6pwdr2m2/target"
+              "value": "/private/tmp/pw-extension-control-tdsighy5/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-6pwdr2m2/target"
+            "target": "/private/tmp/pw-extension-control-tdsighy5/target"
           }
         }
       ]
     }
   ],
   "_test_overrides": {
-    "issuer_executable_path": "/private/tmp/pw-extension-control-6pwdr2m2/issuer",
-    "worker_executable_path": "/private/tmp/pw-extension-control-6pwdr2m2/worker"
+    "issuer_executable_path": "/private/tmp/pw-extension-control-tdsighy5/issuer",
+    "worker_executable_path": "/private/tmp/pw-extension-control-tdsighy5/worker"
   }
 }
