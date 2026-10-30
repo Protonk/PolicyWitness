@@ -673,7 +673,7 @@ If no command process comes to exist — a spawn error, the owner's refusal of a
 unauthorized release or changed context, a lost release gate, or a failure to
 start the owner itself — the party that could have released it removes its
 endpoint and publishes a never-launched settlement carrying the launch error.
-Group members still present one second after the command's own exit are killed,
+Group members that outlast a short grace after the command's own exit are killed,
 and the settlement records `group_signalled_after_leader_exit`. The engine credits
 neither result: like a timeout or cancellation, the item fails with the receipt
 named.
