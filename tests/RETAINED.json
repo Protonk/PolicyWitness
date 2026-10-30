@@ -156,6 +156,27 @@
       "reason": "F2 investigation at harness edf2c561 against accepted Stage1 2de5b1c7/build999. Preserve complete observations and cleanup; passing bounded observations or a baseline workload does not resolve the prior current-app failures.",
       "source": "edf2c5612aca7c2a7a94ef645ec2933227290abb",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/f2-controls-01",
+      "run_id": "20261030T001924Z_3e1b5c4c",
+      "reason": "F2 fixture compilation failure before installation: preserve ambiguous Swift Int initializer diagnostic and unchanged app inventory. No runtime control credited.",
+      "source": "aa45aa487c52690805b619fc6214e24ef09a5419",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/f2-controls-02",
+      "run_id": "20261030T001949Z_1c855119",
+      "reason": "F2 copied-source instrumentation against fd90eee/build1000: observed a lost refusal in the ungated trace and delivered-refusal, lost-refusal and lost-execution-reply controls. All arrangements completed and cleaned up. Historical failures remain unattributed; no production reliability acceptance.",
+      "source": "7d3b57a5acb0d36b4c1f6164e81bb3a4866ae3d4",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/f2-equipment-checks-01",
+      "run_id": "20261030T002304Z_ad94e234",
+      "reason": "F2 investigation equipment: source membership/registry and generator/prose-link controls pass. No production behavior changed.",
+      "source": "7d3b57a5acb0d36b4c1f6164e81bb3a4866ae3d4",
+      "app_inventory": null
     }
   ]
 }

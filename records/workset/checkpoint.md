@@ -3,9 +3,10 @@
 Current state: independent authorized implementation and documentation work is
 complete, but Swift Stage 2, the combined refactor seal and whole-workset
 completion remain unaccepted. Required BYOXPC verification failed twice (F2).
-F1 remains unresolved at the user's explicit request. F2 investigation is now authorized and in progress. No build or dispatcher is
-running at this checkpoint; a controlled fixture is being prepared outside the
-working tree. Do not treat either finding as an accepted waiver.
+F1 remains unresolved at the user's explicit request. The bounded F2
+investigation is complete; the user accepted separate acquisition/reservation
+as the repair direction, but no production repair has been designed or applied.
+No build or dispatcher is running. Do not treat either finding as a waiver.
 
 ## Current source and evidence
 
@@ -17,7 +18,8 @@ working tree. Do not treat either finding as an accepted waiver.
 - Citation corrections: refactor `81f5d260`, D2 follow-up `590c5e42`.
   These do not change production, test sources, generated constants/identity,
   contract/limits/build manifests or app bytes. The latter is the current
-  verified documentation source; later commits record results/retirement only.
+  verified documentation source; subsequent F2 commits add investigative
+  fixtures and their documentation, without changing production sources.
 - `workset-r2-final-01`, `20261029T231443Z_9c34b030`: all 201 defaults plus
   six applicable opt-ins completed, 205 pass / 2 fail. No sleep, skips, unrun
   cases or app changes. Two suite-exit errors correspond to the two failures.
@@ -38,14 +40,15 @@ user chose to keep this unresolved for later discussion. Do not change the
 guarantee or implement the repair. Evidence is in D2's absorbed finding and
 original D1 history.
 
-F2: BYOXPC produces intermittent NSCocoaErrorDomain 4097 without a host/worker
-receipt. The first failing consume-only subcase passed on rerun; the second
-failure used allow-default without extensions. Cause is unassigned. The
-unchanged service-retirement/acquisition interval suggests a hypothesis only.
-The exact observations, affected case, source and cleanup are in
-byoxpc-failure.md. Do not repair by changing retry/expectation policy or call
-this an automation-sandbox failure. Further lifecycle investigation and any
-behavioral repair belong in the user's defect discussion. Required BYOXPC
+F2: the original two BYOXPC 4097 failures remain unattributed. The new ungated,
+instrumented public trace establishes a lost refusal: the prior owner's exit
+overtook a request whose admission claim had failed. Separate controls produced
+4097 with no execution and with a completed effect. Generic retry is unsafe.
+The agreed repair direction is an effect-free reservation before submission,
+with bounded retry only before execution is sent and no replay after submission.
+The concrete protocol, reservation lifecycle, evidence and legacy compatibility
+design are next. Exact observations and limits are in f2-investigation.md;
+original failures and cleanup remain in byoxpc-failure.md. Required BYOXPC
 verification remains unmet, so do not seal or retire the Swift plan.
 
 Once these decisions are made, complete the affected investigation/authorized
@@ -55,7 +58,8 @@ counterfactual evaluation or trial belongs in this workset.
 
 ## Resources and retention
 
-Both BYOXPC services have verified removal. Default registry/reconcile are
+The original and new investigative BYOXPC services have verified removal.
+Default registry/reconcile are
 empty, including pending cleanup and inspection errors. The second directory
 fixture remains at `/private/tmp/pw-extension-directory-uge3532e`; its
 ownership.json and the pinned rerun's directory cleanup/ownership records
@@ -63,7 +67,8 @@ identify the one unwitnessed worker execution. Preserve it until that worker's
 absence/exit is established; service removal is not a worker-exit receipt.
 
 All credited native, E2, R1, R2, D2 and retirement runs remain pinned in
-tests/RETAINED.json, as do both failed R2 runs and three historical D1 cost
+tests/RETAINED.json, as do all six F2 investigation runs, both failed R2 runs
+and three historical D1 cost
 inputs. Their source IDs and purposes are reconciled there. The dirty historical
 D1 run keeps null source and its attached source.json/working.diff; never
 relabel it as a clean commit. Existing release pins are unchanged. Earlier
@@ -99,11 +104,16 @@ cleanup record was released. The C plan is recoverable at `6dab4430` under
 records/distribution/C-RUNNER-MODULARIZATION-PLAN.md.
 
 F2 investigation: fixed harness `edf2c561` ran 48 ordinary requests each on
-current build1000 and Stage1 build999, all ok with47 acquisitions each. The
-original BYOXPC workload also passed once on Stage1. These do not reproduce or
-resolve F2. All three runs are pinned. Baseline worktree/app remain at
-/private/tmp/pw-f2-stage1; its build log is attached to the baseline observation
-run. Controlled fixture preparation is under /private/tmp/pw-f2-controlled-prep.
-Next: review and execute trace-only plus delivered/lost refusal and lost
-execution-reply arrangements, preserving production behavior; then report a
-concrete repair proposal. See f2-investigation.md for exact run IDs and limits.
+current build 1000 and Stage 1 build 999, all ok with 47 acquisitions each. The
+original BYOXPC workload also passed once on Stage 1. These do not reproduce or
+resolve the original failures. Controlled equipment `aa45aa48` failed to compile;
+fixture correction `7d3b57a5` completed all four arrangements and reproduced
+the lost-refusal mechanism. Its source/registry and generator checks both pass.
+All six runs are pinned, preserving the compile failure. Baseline worktree/app
+remain at /private/tmp/pw-f2-stage1; its build log and comparison are attached
+to the baseline observation run. Controlled fixture preparation remains under
+/private/tmp/pw-f2-controlled-prep; accepted equipment is committed in tests/.
+Production sources and the inspected app are unchanged. See f2-investigation.md
+for exact identities, evidence, proposal and acceptance controls. Next: concrete
+reservation protocol and compatibility design, followed by authorized repair
+and the still-required integrated verification.

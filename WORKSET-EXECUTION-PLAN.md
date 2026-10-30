@@ -32,7 +32,7 @@ temporary workset material and retire together after final acceptance.
   required verification still unmet, exact cleanup ownership and decision boundary.
 
 - [F2 investigation](records/workset/f2-investigation.md): fixed baseline comparison,
-  controlled lifecycle observations and eventual repair proposal.
+  controlled lifecycle observations and agreed repair direction.
 
 Further records are added here when produced. The counterfactual is frozen
 in its own commit; subsequent corrections are separate attributable records.
