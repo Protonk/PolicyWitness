@@ -49,3 +49,29 @@ retain input/output hashes for the comparisons and bookkeeping, check the old
 retention index and accepted artifact, and review that only this plan and its
 new record package changed. Do not rerun the unchanged demonstration as a
 substitute for maintenance evidence.
+
+Completed: source comparison and retained evidence support ending this leg
+without another experiment. The accepted harness remains the recommendation.
+Review material is confined to this plan's package:
+
+- [Decision and recoverable run/source identities](pytest-maintenance/decision.md).
+- [Responsibility owners, removable machinery and maintenance comparison](pytest-maintenance/comparison.md).
+- [Early prototype recovery bookkeeping supplement](pytest-maintenance/resource-recovery.md).
+- [Read-only preservation manifest](pytest-maintenance/preservation.json) and
+  [its collection/verification equipment](pytest-maintenance/snapshot.py).
+
+The read-only check covers frozen source, the twelve material retained runs,
+the fifty retention entries, the accepted application and protected-path
+identity. Reproduce it with
+`/private/tmp/pw-pytest-boundary-venv/bin/python -B -I records/pytest-maintenance/snapshot.py --verify`
+from the comparison worktree while the recorded local evidence remains in place.
+Its first draft mistakenly required the historical C0.2 path in the current
+tree and stopped with FileNotFoundError before writing a manifest. It was
+corrected to verify the historical blob against its prior recorded hash; no
+test ran and no prior evidence changed. This equipment correction changes no
+experimental finding.
+
+No new managed test output was produced; no new pins or pruning were needed.
+This plan and its package await acceptance review and can then be retired
+together under CONTRIBUTING.md's planning convention. No permanent index or
+behavior document links to these records; previous records/pins stay in place.
