@@ -10,7 +10,7 @@ import sys
 import time
 
 import checkout_lock
-from pytest_resources import transition
+from pytest_resources import command_context, command_environment, transition
 from pytest_support import read, write
 
 
@@ -40,8 +40,9 @@ def main(path, gate_fd, lock_fd):
             raise ValueError('command release has no durable authorization')
         artifact = Path(record['artifacts'])
         artifact.mkdir(parents=True, exist_ok=True)
-        environment = {k:v for k,v in os.environ.items() if not k.startswith(('PYTEST', 'PYTHON', 'PW_CHECKOUT'))}
-        environment['PYTHONCOERCECLOCALE'] = '0'
+        environment = command_environment()
+        if record['context'] != command_context(record['root'], environment):
+            raise ValueError('command execution context differs from registered intent')
         started = time.monotonic()
         with (artifact / 'stdout').open('wb') as stdout, (artifact / 'stderr').open('wb') as stderr:
             command = subprocess.Popen(record['argv'], cwd=record['root'], env=environment,
@@ -114,7 +115,7 @@ def main(path, gate_fd, lock_fd):
                    returncode=code, timed_out=timed_out, cancelled=cancelled, parent_exit_events=sorted(gone))
     transition(path, 'quiescent_retained' if group_absent else 'unresolved', settlement=receipt)
     if command:
-        write(Path(record['artifacts']) / 'command.json', dict(argv=record['argv'], **receipt))
+        write(Path(record['artifacts']) / 'command.json', dict(argv=record['argv'], context=record['context'], **receipt))
     if recovery_peer:
         recovery_peer.close()
     gate.close()

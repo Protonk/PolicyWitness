@@ -192,3 +192,13 @@ groups the eight explicitly identified baseline setup errors. Raw phase and pyte
 diagnostics remain complete; unrelated setup failures are never collapsed. The
 control now inspects prominence, eight blocked bodies and preserved detailed
 reports. This correction is confined to diagnosis, not native expectations.
+
+Source `74ef845f`: pinned `pytest-exec-acceptance-04` passes all eight selected
+source/startup, diagnostic and family checks. The grouped explanation is now
+verified from emitted reports. Final contract review completed a bookkeeping
+detail from the plan: command argv/root were retained, but no explicit environment
+identity accompanied registration. Each reservation now records cwd and a digest
+of the filtered inherited environment; the owner checks it before launch and
+carries it into its receipt. Inherited values are not published. The existing
+native descriptor/capture control also observes cwd/locale and independently
+checks the recorded digest. This changes experimental accounting only.

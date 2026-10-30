@@ -17,7 +17,7 @@ import sys
 import time
 import uuid
 
-from pytest_support import append, contained, digest, read, write
+from pytest_support import append, contained, digest, read, value_digest, write
 
 RUN = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}')
 
@@ -108,6 +108,18 @@ def guard(root, *, purpose='execution', target=None):
                              '; closure requires settlement and revoked launch authority')
 
 
+def command_environment():
+    environment = {k:v for k,v in os.environ.items() if not k.startswith(('PYTEST', 'PYTHON', 'PW_CHECKOUT'))}
+    environment['PYTHONCOERCECLOCALE'] = '0'
+    return environment
+
+
+def command_context(root, environment):
+    # Record identity, not inherited values that may contain credentials.
+    return dict(cwd=str(root), environment_sha256=value_digest(environment),
+                environment_policy='exclude PYTEST/PYTHON/PW_CHECKOUT; PYTHONCOERCECLOCALE=0')
+
+
 def reserve(root, out, run_id, family, item, command, artifacts, timeout, scope, engine_pid):
     op = uuid.uuid4().hex
     folder = base(root) / run_id / op
@@ -116,7 +128,8 @@ def reserve(root, out, run_id, family, item, command, artifacts, timeout, scope,
                   item=item, operation_id=op, state='reserved', token=uuid.uuid4().hex,
                   nonce=scope.nonce, lock_identity=list(scope.identity), engine_pid=engine_pid,
                   controller_pid=os.getpid(), argv=list(map(str, command)), artifacts=str(artifacts),
-                  timeout=timeout, socket_dir='/private/tmp/pwpx-' + uuid.uuid4().hex)
+                  timeout=timeout, context=command_context(root, command_environment()),
+                  socket_dir='/private/tmp/pwpx-' + uuid.uuid4().hex)
     write(folder / 'record.json', record)
     return folder / 'record.json'
 
@@ -264,4 +277,4 @@ class Command:
             raise ValueError('command ownership unresolved: ' + str(self.path))
         record = close_record(self.path)
         return dict(operation_id=record['operation_id'], record=str(self.path),
-                    artifacts=record['artifacts'], **record['settlement'])
+                    artifacts=record['artifacts'], context=record['context'], **record['settlement'])

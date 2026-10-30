@@ -59,15 +59,19 @@ class Controls:
         root, out = self.fixture('ownership')
         with checkout_lock.owned(root, env={}) as scope:
             argv = [sys.executable, '-B', '-S', '-P', '-c',
-                    'import os,sys; print("native stdout"); print("native stderr",file=sys.stderr); print(os.fstat(int(sys.argv[1])).st_ino)', str(scope.fd)]
+                    'import os,sys; print("native stdout"); print("native stderr",file=sys.stderr); print(os.fstat(int(sys.argv[1])).st_ino); print(os.getcwd()); print(os.environ["PYTHONCOERCECLOCALE"])', str(scope.fd)]
             command = resources.Command(root, out, 'normal', 'fixture/family', 'fixture/family::one',
                                         argv, out / 'captured', 5, scope, os.getpid())
             held = os.fstat(scope.fd)
             receipt = command.finish()
             require(receipt['returncode'] == 0, 'normal command failed')
-            require((out / 'captured/stdout').read_text() == f'native stdout\n{held.st_ino}\n', 'native fd capture/lock inheritance wrong')
+            require((out / 'captured/stdout').read_text() == f'native stdout\n{held.st_ino}\n{root}\n0\n', 'native fd capture/lock inheritance wrong')
             require((out / 'captured/stderr').read_text() == 'native stderr\n', 'native stderr capture lost')
             require(resources.snapshot(root, 'normal')['closed'], 'normal ownership not closed')
+            expected_env={k:v for k,v in os.environ.items() if not k.startswith(('PYTEST','PYTHON','PW_CHECKOUT'))}
+            expected_env['PYTHONCOERCECLOCALE']='0'
+            require(receipt['context']['cwd']==str(root) and receipt['context']['environment_sha256']==value_digest(expected_env),'command intent context missing or changed')
+            require(read(out/'captured/command.json')['context']==receipt['context'],'native receipt lost registered context')
             self.note('native capture and actual lock inode inherited', inode=held.st_ino)
             # A reservation alone has no successful result. Deliberately unknown
             # authorization retains the checkout even when the lock is available.

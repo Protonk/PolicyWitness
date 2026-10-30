@@ -661,7 +661,9 @@ includes incomplete families; the explicit accompanying states distinguish them.
 
 The durable registry is `tests/out/pytest-owners/<run-id>/<operation-id>/record.json`,
 outside disposable run directories. It registers each real compiler/native
-command before launch. An independent command owner holds the actual checkout
+command before launch, including argv, working directory and a digest of its
+filtered environment (inherited values are not published). The owner verifies
+that context before launch. An independent command owner holds the actual checkout
 lock descriptor, captures stdout/stderr, watches engine/supervisor exit and
 settles the command's process group. Fixture cleanup removes ordinary Python
 state; it does not establish exit or authorize deletion of external resources.
