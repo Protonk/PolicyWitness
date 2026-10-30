@@ -194,5 +194,13 @@ if __name__ == '__main__':
     from pytest_integration import Integration
     integration = Integration(control.out, control.note)
     integration.all()
-    from pytest_receipts import exercise
-    exercise(control, integration)
+    import pytest_availability
+    import pytest_receipts
+    failed = []
+    for group in (pytest_receipts, pytest_availability):
+        try:
+            group.exercise(control, integration)
+        except AssertionError as exc:
+            failed.append(str(exc))
+    if failed:
+        raise AssertionError('; '.join(failed))
