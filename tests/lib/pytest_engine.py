@@ -41,6 +41,12 @@ class Equipment:
         self.observe([reply['result']['operation_id']])
         if reply['result']['timed_out'] or reply['result']['cancelled']:
             raise AssertionError('native command timed out or was cancelled; receipt: ' + reply['result']['record'])
+        if reply['result'].get('never_launched'):
+            raise AssertionError('native command was not launched: ' + str(reply['result'].get('launch_error'))
+                                 + '; receipt: ' + reply['result']['record'])
+        if reply['result'].get('group_signalled_after_leader_exit'):
+            raise AssertionError('PW signalled process-group members that remained after the native command exited; receipt: '
+                                 + reply['result']['record'])
         return reply['result']
 
     def observe(self, operations):

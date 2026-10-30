@@ -96,8 +96,9 @@ class Observation:
                 expected = json.loads((self.inputs / 'exec_call_policy.json').read_text())
                 assert expected['attempts'] == observed, 'native call order/count/value policy changed; compare retained expected and observed ledgers'
                 result.update(ok=True, attempts=len(observed))
-            except (AssertionError, OSError, ValueError) as exc:
-                result['error'] = str(exc)
+            except Exception as exc:
+                # Any failure is the one shared result; a retry would re-enter production.
+                result['error'] = str(exc) if isinstance(exc, AssertionError) else f'{type(exc).__name__}: {exc}'
             result['operations'] = self.equipment.completed_operations[initial:]
             self.baseline_result = result
             self.equipment.publish('baseline.json', result)

@@ -499,6 +499,13 @@
       "reason": "Bounded coherence pass: release contract repair, five sampled relationships and independent refusal/crash/reader controls; nested ambiguous ownership fixtures remain protected.",
       "source": "6b35e27a0baa9cc673a6e50784968ffe5f2e9767",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/repair-prefix-01",
+      "run_id": "20261030T223754Z_4478add4",
+      "reason": "Candidate review: eight new receipt controls fail against the unrepaired candidate (unsettled launch failures, unrecoverable holds blocking the legacy sentinel, unreported survivor kill credited, misattributed shared baseline). Nested unresolved fixture records remain protected.",
+      "source": "881ad3b18d4152bc0be27911a13fd472fd77beef",
+      "app_inventory": null
     }
   ]
 }

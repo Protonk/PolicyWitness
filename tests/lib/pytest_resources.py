@@ -147,6 +147,17 @@ def transition(path, state, **fields):
     return record
 
 
+def settle_unlaunched(path, error):
+    """Affirmative no-launch receipt from the only party that could have released the command."""
+    record = read(path)
+    if record.get('command_pid') is not None:
+        raise ValueError('a start receipt exists; launch cannot be excluded')
+    return transition(path, 'quiescent_retained', settlement=dict(
+        token=record['token'], authority_revoked=True, group_absent=True, never_launched=True,
+        command_pid=None, returncode=None, timed_out=False, cancelled=False,
+        group_signalled_after_leader_exit=False, launch_error=error))
+
+
 def close_record(path):
     record = read(path)
     if not settled(record):
@@ -258,9 +269,15 @@ class Command:
                 raise ValueError('command owner did not become ready')
             transition(self.path, 'command_release_authorized')
             self.gate.sendall(b'g')
-        except BaseException:
+        except BaseException as exc:
             child.close()
             self.gate.close()
+            if not hasattr(self, 'process') and isinstance(exc, (OSError, subprocess.SubprocessError)):
+                # The owner never started, so nothing exists that could release a command.
+                for log in self.logs:
+                    log.close()
+                settle_unlaunched(self.path, f'command owner could not be started: {type(exc).__name__}: {exc}')
+                close_record(self.path)
             raise
 
     def cancel(self):

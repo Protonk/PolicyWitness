@@ -10,17 +10,35 @@ import sys
 import time
 
 import checkout_lock
-from pytest_resources import command_context, command_environment, transition
+from pytest_resources import command_context, command_environment, settle_unlaunched, transition
 from pytest_support import read, write
 
 
 def main(path, gate_fd, lock_fd):
+    launch = dict(endpoint=None, command=None)
+    try:
+        return own(path, gate_fd, lock_fd, launch)
+    except Exception as exc:
+        # A refusal, spawn error or lost release gate before any command process
+        # exists is affirmative: nothing ran and this owner can no longer release it.
+        if launch['command'] is not None:
+            raise
+        error = f'{type(exc).__name__}: {exc}'
+        if launch['endpoint'] is not None and launch['endpoint'].exists():
+            launch['endpoint'].unlink()
+        settle_unlaunched(path, error)
+        print('command not launched: ' + error, file=sys.stderr, flush=True)
+        return 0
+
+
+def own(path, gate_fd, lock_fd, launch):
     record = read(path)
     gate = socket.socket(fileno=gate_fd)
     directory = Path(record['socket_dir'])
     directory.mkdir(mode=0o700)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     listener.bind(str(directory / 'recover'))
+    launch['endpoint'] = directory / 'recover'
     listener.listen(1)
     queue = select.kqueue()
     gone = set()
@@ -34,7 +52,7 @@ def main(path, gate_fd, lock_fd):
     released = gate.recv(1) == b'g'
     record = read(path)
     command, code, timed_out, cancelled, group_absent = None, None, False, False, True
-    recovery_peer = None
+    recovery_peer, signalled_after_exit = None, False
     if released:
         if record['state'] != 'command_release_authorized':
             raise ValueError('command release has no durable authorization')
@@ -48,6 +66,7 @@ def main(path, gate_fd, lock_fd):
             command = subprocess.Popen(record['argv'], cwd=record['root'], env=environment,
                                        stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr,
                                        pass_fds=(lock_fd,), start_new_session=True)
+            launch['command'] = command
             transition(path, 'command_started', command_pid=command.pid, command_pgid=command.pid)
             stopping = None
             while True:
@@ -96,6 +115,8 @@ def main(path, gate_fd, lock_fd):
                 time.sleep(0.01)
             group_absent = checkout_lock.group_finished(command.pid, 1, command)
             if not group_absent:
+                # Members outlived the leader's exit; this signal is PW's, not the command's.
+                signalled_after_exit = True
                 try:
                     os.killpg(command.pid, signal.SIGKILL)
                 except (ProcessLookupError, PermissionError):
@@ -112,7 +133,8 @@ def main(path, gate_fd, lock_fd):
     (directory / 'recover').unlink()
     receipt = dict(token=record['token'], authority_revoked=True, group_absent=group_absent,
                    never_launched=command is None, command_pid=command.pid if command else None,
-                   returncode=code, timed_out=timed_out, cancelled=cancelled, parent_exit_events=sorted(gone))
+                   returncode=code, timed_out=timed_out, cancelled=cancelled, parent_exit_events=sorted(gone),
+                   group_signalled_after_leader_exit=signalled_after_exit, launch_error=None)
     transition(path, 'quiescent_retained' if group_absent else 'unresolved', settlement=receipt)
     if command:
         write(Path(record['artifacts']) / 'command.json', dict(argv=record['argv'], context=record['context'], **receipt))

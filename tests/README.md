@@ -669,6 +669,15 @@ settles the command's process group. Fixture cleanup removes ordinary Python
 state; it does not establish exit or authorize deletion of external resources.
 This family does not launch processes that intentionally escape that group.
 
+If no command process comes to exist — a spawn error, the owner's refusal of an
+unauthorized release or changed context, a lost release gate, or a failure to
+start the owner itself — the party that could have released it removes its
+endpoint and publishes a never-launched settlement carrying the launch error.
+Group members still present one second after the command's own exit are killed,
+and the settlement records `group_signalled_after_leader_exit`. The engine credits
+neither result: like a timeout or cancellation, the item fails with the receipt
+named.
+
 When execution refuses admission, inspect with
 `tests/run.sh --recover-ownership RUN_ID`; use the same command with `--apply`
 for justified recovery. Preview changes nothing. Apply can authenticate a live
