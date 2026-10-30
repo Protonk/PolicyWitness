@@ -527,6 +527,13 @@
       "reason": "Candidate review: 19 of 20 readers, admission, release and drift cases pass with the repaired candidate; the real family passes 9/9 with 16 closed commands and no PW group signal against the unchanged accepted app. source_drift/generator_contract fails on a G9 literal in the new README sentence.",
       "source": "33104cd1fad5c83c54ca0733ca9e8b069e36c407",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/repair-drift-01",
+      "run_id": "20261030T225319Z_8314e456",
+      "reason": "Candidate review: all eight default source_drift cases pass after the README wording correction.",
+      "source": "7e48461fef801de63a38bf7cbd3825f3982074a9",
+      "app_inventory": null
     }
   ]
 }

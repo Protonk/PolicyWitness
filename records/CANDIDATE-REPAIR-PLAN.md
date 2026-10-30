@@ -1,6 +1,7 @@
 # Candidate review and repair
 
-Status: selection committed; repairs and verification pending. Claude, 2026-10-30.
+Status: complete; three defects repaired and verified, one mixed-integration trace
+found no independent defect, no consequential choice outstanding. Claude, 2026-10-30.
 Starting revision `ecd3795dfd44bddc7f437a122340c0fb10a65644` (tip of
 `review/pytest-coherence` at `/private/tmp/pw-coherence-20261030`, left unchanged).
 It descends directly from adoption baseline `809ef178f7a9ce2628f13fb137f1456452a49b85`
@@ -10,8 +11,12 @@ coherence repair and tested source of pinned run `coherence-01`. Repairs are on
 No accepted-checkout merge, additional family adoption, CHECK.md work or cosmetic
 standardization is authorized.
 
-Associated material: [selection, hypotheses and eliminated checks](candidate-repair/selection.md).
-Later files in `candidate-repair/` record findings, evidence and recovery. These
+Associated material: [selection, hypotheses and eliminated checks](candidate-repair/selection.md),
+[findings, repairs, verification and judgment](candidate-repair/findings.md),
+[recovery entry point](candidate-repair/recovery.md),
+[run identities and hashes](candidate-repair/evidence-index.json),
+[ownership records index](candidate-repair/recovery-index.json) and its read-only
+[enumerator](candidate-repair/holds.py). These
 records and this plan are review material retired together; retirement does not
 release pins or resources.
 
