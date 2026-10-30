@@ -298,6 +298,10 @@ def rosetta_probe():
 def requirements(case, config, env, root, cache, probes=None):
     missing = []
     for name in case['requires']:
+        if name == 'pytest' and case.get('engine') == 'pytest' and 'items' not in case:
+            # A family runs only in the engine collected with its plan; this plan has none.
+            missing.append(name)
+            continue
         if name not in cache:
             if name == 'pytest':
                 import pytest_packages
@@ -485,8 +489,11 @@ def execute(root, out, run_id, started, plan, config, scope, collectors=None):
                     ownership_hold = str(exc)
             if interrupted or missing or failed_deps or ownership_hold:
                 item['state'] = 'blocked'
+                unavailable = f'missing prerequisites: {missing}'
+                if 'pytest' in missing and group[0].get('engine_unavailable'):
+                    unavailable += '; no pytest engine was collected with this plan: ' + group[0]['engine_unavailable']
                 reason = ('interrupted' if interrupted else ownership_hold if ownership_hold else
-                          f'missing prerequisites: {missing}' if missing else f'dependencies did not pass: {failed_deps}')
+                          unavailable if missing else f'dependencies did not pass: {failed_deps}')
                 item['blocked_reason'] = reason
                 problem(item, 'not_run', reason)
             else:

@@ -534,6 +534,13 @@
       "reason": "Candidate review: all eight default source_drift cases pass after the README wording correction.",
       "source": "7e48461fef801de63a38bf7cbd3825f3982074a9",
       "app_inventory": null
+    },
+    {
+      "path": "runs/repair-h2-prefix-01",
+      "run_id": "20261030T230715Z_92147082",
+      "reason": "Candidate review H2: packages provisioned between plan collection and the prerequisite check crash the dispatcher with KeyError before run.json and suppress the legacy sentinel; the reverse transition is already accounted. Nested unresolved fixture records remain protected.",
+      "source": "1713bb06de4386d9885968f5a220d94fc8203cae",
+      "app_inventory": null
     }
   ]
 }

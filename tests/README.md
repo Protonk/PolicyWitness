@@ -650,8 +650,10 @@ pytest plugins and ambient pytest/Python settings are excluded.
 
 `--list` collects the family without acquiring native equipment or replacing
 output. In execution, that same collected engine waits until ordinary admission
-allows it to proceed. Missing packages leave the family `not_started/unavailable`;
-missing or truncated engine reports leave `started/incomplete` when start was
+allows it to proceed. Missing packages leave the family `not_started/unavailable`.
+Availability is decided when the plan is collected: packages provisioned later
+serve a later run, and the unrun family's reason names the collection-time error.
+Missing or truncated engine reports leave `started/incomplete` when start was
 observed, and `unknown/incomplete` otherwise. The legacy parent `unrun` count
 includes incomplete families; the explicit accompanying states distinguish them.
 `run.json.counts` and `reports` cover legacy reports only (`counts_scope` says so);

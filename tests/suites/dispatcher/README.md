@@ -240,4 +240,7 @@ sentinel legacy case must still run after the integrated failure. A same-group
 child that outlives an ordinary leader exit is identified by its own socket peer
 and kernel exit event; its forced exit must be recorded and, with the real native
 ledger, refused. A producer close of an uncreated descriptor must leave one cached
-baseline failure naming the ledger error.
+baseline failure naming the ledger error. Availability controls move the package
+target between plan collection and the prerequisite check in each direction; the
+run must still finish with a named `not_started/unavailable` family, a running
+legacy sentinel and a free checkout.
