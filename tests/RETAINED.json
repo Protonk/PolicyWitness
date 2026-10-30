@@ -541,6 +541,13 @@
       "reason": "Candidate review H2: packages provisioned between plan collection and the prerequisite check crash the dispatcher with KeyError before run.json and suppress the legacy sentinel; the reverse transition is already accounted. Nested unresolved fixture records remain protected.",
       "source": "1713bb06de4386d9885968f5a220d94fc8203cae",
       "app_inventory": null
+    },
+    {
+      "path": "runs/repair-h2-controls-01",
+      "run_id": "20261030T230950Z_7ebb880d",
+      "reason": "Candidate review H2: dispatcher/pytest_controls passes after the correction, 54 observations; both availability transitions end with a terminal account, a named not_started/unavailable family, the legacy sentinel passing and a free checkout; receipt controls unchanged. Nested unresolved fixture records remain protected.",
+      "source": "da4699933f0461046c020e354efac153267ffe5d",
+      "app_inventory": null
     }
   ]
 }

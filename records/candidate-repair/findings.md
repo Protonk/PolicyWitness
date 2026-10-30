@@ -13,6 +13,9 @@ Claude, 2026-10-30. Selection is in [selection.md](selection.md); it was committ
 | `e624b7f9` | Repairs (owner, supervisor, engine, shared baseline), documentation, pin of the unrepaired run. |
 | `33104cd1` | Control correction: survivor stimulus ledger read from raw native stdout; per-control exceptions recorded. |
 | `7e48461f` | README sentence restated without the duration literal refused by G9; pins. |
+| `c8c6b56c` | Review records and recovery index (no executable change). |
+| `1713bb06` | H2 availability-transition controls, committed before the correction. |
+| `da469993` | H2 correction in `suite_run.py`, documentation, pin of the uncorrected run. |
 
 | Run (`tests/out/runs/`) | Run ID | Source | Result |
 | --- | --- | --- | --- |
@@ -21,6 +24,22 @@ Claude, 2026-10-30. Selection is in [selection.md](selection.md); it was committ
 | `repair-controls-02` | `20261030T224502Z_f6603edf` | `33104cd1` | `dispatcher/pytest_controls` passes: 52 observations, eight new controls, no failures. Pinned. |
 | `repair-verify-01` | `20261030T224720Z_91f1fd36` | `33104cd1` | 19/20 pass: the family against the unchanged accepted app, five dispatcher controls, six preflight build-entry/provenance/release cases, seven drift cases. `generator_contract` refused my README literal (G9). Pinned. |
 | `repair-drift-01` | `20261030T225319Z_8314e456` | `7e48461f` | `--suite source_drift`: 8/8 pass. Pinned. |
+| `repair-h2-prefix-01` | `20261030T230715Z_92147082` | `1713bb06` (uncorrected) | Receipt controls pass; `provisioned_after_collection` fails with no terminal run record; the reverse transition passes. Pinned. |
+| `repair-h2-controls-01` | `20261030T230950Z_7ebb880d` | `da469993` | `dispatcher/pytest_controls` passes: 54 observations, ten review controls. Pinned. |
+
+Reconciliation: `repair-verify-01` and `repair-controls-02` executed `33104cd1`.
+Executable changes after them are `pytest_availability.py`/`check_pytest.py`
+(covered by `repair-h2-controls-01`) and `suite_run.py` (`da469993`, the dispatcher
+of every case). `tests/README.md`, `tests/suites/dispatcher/README.md`, records and
+`RETAINED.json` pin entries are documentation or data. Because the dispatcher
+changed after the broad branch runs, those runs do not cover the final tree.
+Integration verification on `main` reruns the default battery and the owning
+control case at the integrated revision.
+
+`generator_contract`: it failed in `repair-verify-01` (G9: the duration literal
+"one second" in the new README sentence). `7e48461f` restated the sentence;
+`repair-drift-01` passed the whole drift suite. The H2 README addition contains no
+literal value, and the integrated battery reruns the drift suite.
 
 ## H1 — failure before launch left an unrecoverable checkout hold (repaired)
 
@@ -63,17 +82,41 @@ and unreleased commands' `touch` markers are absent. A repair that merely labell
 the record closed would fail the endpoint, recovery-idempotence and
 integrated-diagnostic checks.
 
-## H2 — mixed pytest/legacy integration (no independent defect)
+## H2 — mixed pytest/legacy integration (availability disagreement repaired)
 
-See selection H2 for the paths inspected. The only cross-boundary defect found is
-H1's: a family-internal launch failure became a hold that blocked the next legacy
-case and all later execution. The integrated control now pairs the failure with
-the legacy sentinel and requires it to run.
+See selection H2 for the paths inspected. A family-internal launch failure became
+a hold blocking later legacy work (H1). The integrated control now requires the
+legacy sentinel to run after that failure.
 
-Noted, not repaired: `test_cli.main` decides pytest availability before taking the
-checkout lock; `suite_run.requirements` decides it again later. If provisioning
-completes in between, `collectors[...]` raises an uncaught `KeyError` and the run
-ends without `run.json`. The result is visible unfinished output, never success.
+Second defect, first noted unrepaired and repaired in the closeout: `test_cli.main`
+decides pytest availability when it collects the plan, before the checkout lock;
+`suite_run.requirements` decides it again for the `pytest` prerequisite. Only one
+direction disagreed. When packages appear in between, the second check passed for
+a family with no collected engine. `execute` then raised `KeyError` on
+`collectors[...]`: no `run.json`, an unfinished run, and every later case lost.
+The reverse (collected, then removed) was already blocked as `not_started/unavailable`.
+
+Contract applied: README "that same collected engine waits until ordinary
+admission allows it to proceed"; the release reader requires the executed
+selection to equal the plan's collected items. A family without a collected
+engine therefore lacks its engine equipment for this run, whatever the packages
+look like later. Correction (`da469993`): `requirements` reports `pytest` missing
+for an engine case whose plan has no `items`. The blocked reason appends the
+plan's recorded `engine_unavailable` error, already durable in `plan.json`. No new
+availability policy. Non-family reasons, including the exact rosetta reason
+`check_selection` asserts, are unchanged.
+
+Controls (`1713bb06`, `pytest_availability.py`) rename a verified target, the
+final step provisioning performs, at a fixed point between plan collection and
+the lock. Unrepaired (`repair-h2-prefix-01`): the provisioned direction left
+`owner.json`, `plan.json` and `dispatch.json` with no `run.json` and a
+`KeyError` traceback; the sentinel never ran. Repaired (`repair-h2-controls-01`):
+both directions end terminal with the family `unrun`, `not_started/unavailable`,
+completion 1 completed / 1 unrun, a `not_run` diagnostic, the sentinel passing,
+no registry and a free checkout. The reason reads `missing prerequisites:
+['pytest']; no pytest engine was collected with this plan: expected regular
+evidence file: …/installed.json`. A later run in the same fixture executes the
+family with the provisioned packages.
 
 ## H3 — shared baseline cause misattributed (repaired)
 
