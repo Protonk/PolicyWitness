@@ -115,3 +115,13 @@ disposition table. These are isolated copies of the same owner code, with extern
 observed peers and kernel exits, not production fault switches. It also checks the
 shared build lock front end refuses the same pending records and that the family
 summary selection agrees with the already-fixed parent collection manifest.
+
+Source `298624d6`: pinned `pytest-exec-windows-01` passes the earlier controls and
+all release readers, including clang/app refusal and shared build-front-end
+ownership refusal. The first real crash-window observer failed with ENOTCONN
+before identifying the engine peer. Inspection found the instrumentation kept
+that socket only in a collection-hook local; return closed it while the engine
+continued. This is an observer defect, not a candidate recovery result. The
+correction keeps the observer socket on the plugin instance for the engine
+lifetime. The failed nested fixture's reservation and any missing exit evidence
+remain retained; no historical PID is signalled or reservation force-cleared.

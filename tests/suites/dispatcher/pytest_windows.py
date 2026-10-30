@@ -25,7 +25,7 @@ def exercise(control):
         def patch(relative,before,after):
             p=root/relative;s=p.read_text();require(s.count(before)==1,mode+' fault anchor '+before);p.write_text(s.replace(before,after))
         # The engine's independent peer is established before any fixture work.
-        patch('tests/lib/pytest_engine.py',"        send(PEER, dict(kind='started'))",mark('engine','        ')+"        send(PEER, dict(kind='started'))")
+        patch('tests/lib/pytest_engine.py',"        send(PEER, dict(kind='started'))",mark('engine','        ').replace('_observe','self._observe')+"        send(PEER, dict(kind='started'))")
         native="import os,socket,sys,time,signal; s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'command'); s.recv(1); signal.signal(signal.SIGINT,signal.SIG_IGN); time.sleep(60)"
         if mode=='after-return':
             native="import os,socket,sys,time,signal; child=os.fork(); s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); s.sendall(b'child' if child==0 else b'command'); s.recv(1); signal.signal(signal.SIGINT,signal.SIG_IGN); time.sleep(60) if child==0 else None"
