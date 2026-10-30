@@ -1,7 +1,9 @@
 # Bounded pytest adoption: native exec evidence controls
 
-Status: family and ownership split supported in review; recovery, compatibility
-and diagnostic refinements incorporated below. This revision is planning only.
+Status: implementation authorized in an isolated candidate worktree. Authorization
+includes dependency provisioning, integration, controls, ordinary correction of
+defects introduced by this work, documentation/citation updates and the planned
+verification. The accepted checkout is not an integration target for this leg.
 Prepared by Codex, 2026-10-30. Planning branch `plan/pytest-exec-family` starts
 at `5dbcf4d8255ca24a186e97488104772df9cb53d6`; accepted production/test source
 remains `77eb987554eef10ffa3371ffb21b235097562a78`. The planning worktree is
@@ -11,8 +13,11 @@ The objective is better ordinary diagnosis and organization for **one family**,
 with fewer repeated selection/setup/report declarations. Keeping operational
 and evidence machinery outside pytest is intentional. Fewer total lines and
 eventual replacement of the entire harness are not acceptance requirements.
-No production, fixture, expectation, dependency, harness or permanent guide is
-changed by this plan. CHECK.md remains outside scope.
+Preserve accepted application bytes, native production behavior, independently
+authored oracles and protected evidence. Changes to the candidate harness,
+dependencies and their current guides are authorized within this family.
+CHECK.md, merging into the accepted checkout and expansion to another family
+remain outside scope.
 
 Associated records: [source and consumer investigation](pytest-exec-adoption/source-notes.md)
 and [planning-state identities](pytest-exec-adoption/state.json). They distinguish
@@ -496,11 +501,28 @@ Consumer changes are explicit:
 | Dispatcher/source-drift controls and documentation | Teach engine routes as catalog commands without exempting missing/duplicate paths. Update Python startup/dependency declarations, suite/output documentation and fixture-input inventories. |
 | Architecture citations | Move `exec_control_states` citations from the retired shell block to the new owning test/helper in `docs/architecture.json`; regenerate `docs/ARCHITECTURE.md`/`docs/WORKER.md` through their owner. The native observation and its limits stay the same. |
 
-## 6. Implementation stages after review
+## 6. Authorized implementation stages
 
 Each stage has a fixed source commit before observation. Use separate candidate
 and accepted-comparison worktrees and fresh output, never the frozen investigations.
 No actor changes sources, expectations or shared equipment during another run.
+
+Stage reviews are internal execution checkpoints, not requests for another
+conversation or permission. Commit, inspect and verify the recovery state machine
+and evidence contract before enabling their shared dependencies. Resolve routine
+choices and correct candidate defects autonomously; retain consequential failed
+observations before correction. Continue through setup, passing runs, checkpoints
+and ordinary intermediate failures until the endpoint below.
+
+The endpoint is completion of all implementation stages, the acceptance matrix,
+the emitted-report walkthrough, evidence retention and the final disposition for
+this family. Deliver a committed candidate, a supported acceptance or abandonment
+recommendation, and a usable recovery index locating decisive runs and any owned
+resources. Keep this plan and its records current. No merge or wider adoption is
+authorized. Return early only for a production behavior/oracle change requiring
+the user's participation, an ownership boundary that cannot satisfy this contract
+within scope, or an external blocker that cannot be resolved; preserve localized
+evidence and present a concrete decision in that case.
 
 The candidate's ordinary family command remains concrete and public (use a new
 run name each time; the app is inspected, never repaired by this command):
@@ -552,8 +574,8 @@ tests/run.sh --case runner_c_worker_harness/exec_control_states
    abandon the candidate route and retain its evidence. Acceptance does not depend
    on a global harness-replacement argument or an agent-time productivity claim.
 
-Permanent implementation locations are proposals for the later change, not
-files added by this plan. Update `tests/README.md`, the owning suite/fixture
+The proposed source locations guide the authorized implementation. Update
+`tests/README.md`, the owning suite/fixture
 READMEs, `docs/DEPENDENCIES.md`, `tests/AGENTS.md` where engine-owned items require
 clarification, applicable verification guidance, and the source-drift rules and
 their independent rejection controls together. Keep “every case is registered”
@@ -703,9 +725,10 @@ they preserve the **one-family** boundary. Proposed defaults are fixed:
 retain app/worker admission and default membership; use whole-family public
 selection; retain nine complete native variants; keep operational ownership
 outside pytest. There is no unresolved family-selection choice requiring another
-investigation. Implementation needs subsequent authorization. A compiler/resource
-boundary that cannot meet the proposed contract, or a production behavior/oracle
-change, requires the user's participation rather than unbounded extension.
+investigation or routine reauthorization. A compiler/resource boundary that cannot
+meet the contract within scope, a production behavior/oracle change, or an external
+blocker that cannot be resolved requires the user's participation with localized
+evidence and a concrete decision, rather than unbounded extension.
 
 Planning records and this plan are temporary acceptance material and are retired
 together under CONTRIBUTING.md. No permanent index links to them. Original
