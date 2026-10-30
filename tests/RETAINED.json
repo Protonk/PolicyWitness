@@ -310,6 +310,20 @@
       "reason": "Unchanged dispatcher selection/accounting/cancellation/retention reference controls passed outside automation sandbox; records-only concurrent additions do not affect these owners.",
       "source": "e93753101667a6255eed2439bb407996121aa555",
       "app_inventory": null
+    },
+    {
+      "path": "runs/pytest-boundary-replay-old-01",
+      "run_id": "pytest-boundary-replay-old-01",
+      "source": "0085bd545d1c941ad1298f6e0874542568ff71b3",
+      "app_inventory": null,
+      "reason": "Exposed C extraction replay: old adapter, native ledger and independent rejection observations."
+    },
+    {
+      "path": "runs/pytest-boundary-replay-stale-01",
+      "run_id": "pytest-boundary-replay-stale-01",
+      "source": "0085bd545d1c941ad1298f6e0874542568ff71b3",
+      "app_inventory": null,
+      "reason": "Exposed C extraction replay: stale adapter, native ledger and independent rejection observations."
     }
   ]
 }

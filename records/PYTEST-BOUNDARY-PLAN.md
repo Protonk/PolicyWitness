@@ -60,3 +60,9 @@ case commands. The selected obligations survived. This warrants the one exposed
 C extraction replay, not migration or a claim of net savings. Durability here
 means process death with fsync-backed records, not power loss; the external
 resource adapter is one bounded file/child kind, not launchd.
+
+The exposed replay uses the [native adapter](pytest-boundary/native_adapter.py),
+[pytest cases](pytest-boundary/test_native.py) and
+[outside replay observer](pytest-boundary/observe_replay.py). The pre-extraction
+adapter remains recoverable at `0085bd54`; its actual adaptation is the next
+source commit, so the comparison need not be reconstructed from prose.

@@ -1,4 +1,4 @@
-"""Pre-extraction native adapter for the exposed historical replay."""
+"""Extracted-owner native adapter for the exposed historical replay."""
 import hashlib
 import json
 import os
@@ -28,22 +28,28 @@ def command(argv, artifact, name):
     return result
 
 
-def build_run(inputs, artifact, scratch, mutation=None):
+def build_run(inputs, artifact, scratch, mutation=None, missing_owner=None):
     artifact.mkdir(parents=True)
     scratch.mkdir(parents=True)
-    source = (inputs / 'pw_probe_runner.c').read_text()
+    source = (inputs / 'pw_worker_exec.h').read_text()
     if mutation is not None:
         marker = '    slot->exec_valid = 1;'
         assert source.count(marker) == 1, 'exec assembly boundary changed: mutation was not formed'
         source = source.replace(marker, '    '+mutation+'\n'+marker)
-    (artifact / 'pw_probe_runner.c').write_text(source)
+    shutil.copy2(inputs / 'pw_probe_runner.c', artifact / 'pw_probe_runner.c')
     for header in inputs.glob('*.h'):
         shutil.copy2(header, artifact / header.name)
+    # Write the mutant after copying the closure, so the copy cannot erase it.
+    (artifact / 'pw_worker_exec.h').write_text(source)
+    if missing_owner is not None:
+        (artifact / missing_owner).unlink()
     shutil.copy2(inputs / 'exec_control.c', artifact / 'exec_control.c')
     (artifact / 'source-sha256.json').write_text(json.dumps(inventory(artifact),indent=2)+'\n')
     binary = scratch / 'exec-control'
     argv = ['/usr/bin/xcrun','--sdk','macosx','clang','-Wall','-Wextra','-Werror','-O2','-std=c11',
             '-I',str(artifact),str(artifact/'exec_control.c'),'-lsandbox','-o',str(binary)]
     build = command(argv,artifact,'build')
+    if missing_owner is not None:
+        return build
     assert build.returncode == 0, 'compile failed: '+build.stderr.decode()
     return command([str(binary)],artifact,'run')

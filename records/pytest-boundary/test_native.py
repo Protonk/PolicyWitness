@@ -50,9 +50,15 @@ def native_inputs(request):
     scratch.parent.rmdir()
 
 
-@pytest.mark.parametrize('variant', ['production', *MUTATIONS])
+@pytest.mark.parametrize('variant', ['production', *MUTATIONS, 'missing-pw_worker_timing.h', 'missing-pw_worker_exec.h'])
 def test_control(native_inputs, variant):
     inputs, artifacts, scratch = native_inputs
+    if variant.startswith('missing-'):
+        owner = variant.removeprefix('missing-')
+        result = build_run(inputs, artifacts/variant, scratch/variant, missing_owner=owner)
+        assert result.returncode != 0 and f"'{owner}' file not found" in result.stderr.decode(), (
+            'missing owner compiled or failed outside its include boundary: '+result.stderr.decode())
+        return
     mutation = MUTATIONS.get(variant)
     result = build_run(inputs, artifacts/variant, scratch/variant, mutation[0] if mutation else None)
     if variant == 'production':

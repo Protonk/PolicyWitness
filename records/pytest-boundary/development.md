@@ -57,3 +57,18 @@ reports and failed publication did not become successful completion. Candidate
 cleanup and outside safety cleanup remain separately recorded. The supervisor
 does not dispatch individual items. The bounded architecture remains credible;
 the next step is the single exposed C extraction replay specified prospectively.
+
+Replay equipment `0085bd54`: `pytest-boundary-replay-old-01` passed seven
+pytest items against `f8f3c24f`, including the 58-attempt golden ledger and all
+six intended native assertion rejections. The unchanged adapter against
+`341f9441`, `pytest-boundary-replay-stale-01`, produced one pass and six failures.
+The production ledger still matched, but each mutation failed its unique-anchor
+formation assertion before compilation. The outside observer accepted that
+expected negative control; the candidate run itself remains failed.
+
+The exposed adaptation copies the new entry source and full local header set,
+then writes the mutation into `pw_worker_exec.h` after copying, and adds the two
+missing-owner compilation cases. The native fixture, golden ledger, mutation
+values and intended rejection assertions remain unchanged. This is the same
+source-binding obligation as the historical change, with pytest owning the
+individual variant reports rather than a handwritten variant execution loop.
