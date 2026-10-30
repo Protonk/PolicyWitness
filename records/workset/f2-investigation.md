@@ -114,3 +114,9 @@ Preparation checked Python/shell syntax, Swift parsing, C syntax and exact
 replacement anchors. Compilation, signed installation and execution still need
 the dispatcher. Command: `tests/run.sh --case runner_byoxpc/retirement_controls`
 with a fresh F2 output directory and the unchanged current app.
+
+The first controlled candidate `aa45aa48` failed compilation before installing
+any service: Swift could not select the overloaded Int initializer supplied to
+Optional.map in the trace's client-PID field. `f2-controls-01` preserves the
+compiler diagnostic; no runtime control was credited. The fixture-only repair
+uses an explicit conversion closure. Parsing alone had not resolved this type.

@@ -60,7 +60,7 @@ enum F2Trace {
             value["specimen_id"] = request.specimen
             value["request_sha256"] = request.requestHash
             value["request_bytes"] = request.requestBytes
-            value["client_pid"] = request.clientPID.map(Int.init) as Any? ?? NSNull()
+            value["client_pid"] = request.clientPID.map { Int($0) } as Any? ?? NSNull()
         }
         do {
             let bytes = try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys])
