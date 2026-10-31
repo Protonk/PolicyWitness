@@ -503,15 +503,27 @@ compiler validation or proof of runtime class recognition in this predicate.
 The native call still requests read, and C4 tests the policy's treatment of the
 different string. C5 uses another existing target, not a path-existence failure.
 
-The maintainer reports that all matrix policy forms compile on this host, as do
-class-only and path-only filters, Chromium's `subpath "/"`, Firefox's vnode guard
-and WebKit's extension-based path predicate. The same preflight accepted
-`com.apple.app-sandbox.bogus` while rejecting a misspelled filter name as an
-unbound variable. These are reported syntax checks, not native issuance evidence
-or validation of class strings and rule precedence. Retain their supplied inputs
-and raw receipts with the report where available; do not invent missing
-provenance or repeat/extend that syntax survey under this pilot. The additional
-forms do not add matrix rows or activate deferred questions.
+The reviewing agent's session preflight used fourteen request JSON inputs with
+the 0.3.4 app bundle's Developer ID `sbpl-check`. It reported compile acceptance
+for the issuer constructions C1–C5, recipient variants with and without the
+extension predicate, class-only and path-only filters, Chromium's `subpath "/"`,
+Firefox's vnode guard and WebKit's extension-based path predicate. The recipient
+inputs also included `(deny file-write*)`; they were not the recipient prefix
+specified above. That prefix retains the registered feasibility fixture's
+policy, whose host-run evidence is discussed below. The C-row inputs used
+placeholder paths under `/private/tmp/pw-pilot/`, not canonical paths of real
+targets. Their acceptance covers `literal` syntax with those strings, not the
+escaped bytes substituted for A and B in a trial.
+
+The same preflight accepted `com.apple.app-sandbox.bogus` while rejecting a
+misspelled filter name as an unbound variable. This supports a syntax observation,
+not validation of class strings, rule precedence or native issuance. No raw
+receipts were saved. The fourteen original requests exist only in the reviewing
+session's scratchpad; forms reconstructed from this account are not retained
+original inputs. These session observations supply planning context, not
+acceptance evidence. Compilation and retention of each trial's exact expanded
+policies remain part of its preparation; no repeated or extended syntax survey
+is added. The additional forms do not add rows or activate deferred questions.
 No read-write issue call, symlink, directory, flag variant, process-bound token,
 self-consumption or release comparison is part of this matrix. After the final
 read, erase owned token buffers and reap the children; omission of release is
@@ -595,13 +607,16 @@ binary or transport surface in this pilot.
 
 Make exactly the `NONE` and `PATH(A)` queries for `file-issue-extension`, with
 no-report, against the live issuer paused before issuance in each row. Resolve
-`sandbox_check` and the exported `SANDBOX_CHECK_NO_REPORT` value in the supervisor,
-following the native fixture. Record lookup success/failure and the resolving
-library image, the numeric flag value read, filter IDs (`NONE=0`, `PATH=1`), and
-the full type argument actually passed. Record macOS build and Darwin release.
-If either symbol is unavailable, mark Q2 unavailable and continue Q1; do not
-substitute a literal flag or an unflagged call. This reads the query flag, not
-the three deferred issuance flags in Q9.
+`sandbox_check` and `SANDBOX_CHECK_NO_REPORT` through `dlsym` in the supervisor,
+and dereference the exported flag as an `int`, as the native fixture does.
+The fixture does not record the flag value or resolving image and exits with
+code 3 if either symbol is missing. The pilot adds those records and changes
+that failure handling: record lookup success/failure and the resolving library
+image, the numeric flag value read, filter IDs (`NONE=0`, `PATH=1`), and the full
+type argument actually passed. Record macOS build and Darwin release. If either
+symbol is unavailable, mark Q2 unavailable and continue Q1; do not substitute a
+literal flag or an unflagged call. This reads the query flag, not the three
+deferred issuance flags in Q9.
 
 The production validator's fallback is `0x40000000`; its comment describes a
 Darwin 23.6 check of verdict invariance with and without the flag. The
@@ -613,22 +628,36 @@ does not add a flagged/unflagged comparison.
 
 Preserve caller and target PIDs, all arguments, raw return and errno, and
 collection/release ordering. Clear errno immediately before each call and save
-it immediately afterward. Interpret `rc == 0` as a native allow answer, and
-`rc == 1 && errno == 0` as a native deny answer.
-Negative returns and other unexpected return/errno combinations are query errors,
-with `EINVAL` retained as an error diagnostic, not translated into denial. The
-reader does not use the per-probe validator's `denied: true` convention for every
-nonzero return. Batch mode distinguishes errors, but is also not invoked. Add
+it immediately afterward. Lead the report with these raw pairs. Any derived
+allow/deny labels use the convention implemented in the validator's batch
+classifier: `rc == 0` maps to allow and `rc == 1 && errno == 0` maps to deny.
+This is an interpretation convention, not a calibrated native contract for
+`file-issue-extension`. Negative returns are query errors; other unexpected
+return/errno combinations remain unclassified. Retain `EINVAL` as a diagnostic,
+not a denial. The reader does not use the per-probe validator's `denied: true`
+convention for every nonzero return. Neither validator mode is invoked. Use
 constructed reader controls for a negative return and an unexpected return/errno
-pair so neither can be counted as a denial.
+pair so neither can be counted as a denial; those controls establish reader
+behavior, not the native meaning of the pairs.
 
-The maintainer's host preflight returned `0` with zero errno for both query forms
-against an unsandboxed process, while an invented operation returned `EINVAL`.
-This supports recognition of the operation string on that host. C0 is expected
-to repeat a trivial allow answer; it does not calibrate class/path discrimination
-or establish usable issuance. Preserve any different result without making the
-expected answer a continuation requirement. These reported observations retain
-the same provenance limits as the syntax preflight above.
+There is prior direct-call errno evidence: the retained
+[`lifecycle-plain` record](tests/out/runs/workset-native-crossed-01/suites/sandbox_extensions_native/feasibility/artifacts/lifecycle-plain/native.json)
+contains query returns of both 0 and 1 with `errno_after_zeroing: 0`. That record
+is gitignored and available only in this checkout. Its queries were for
+`file-read-data`, not issuance; it does not calibrate the new operation.
+
+The reviewing agent's query preflight used the ad hoc
+`builddir/sb_api_validator` in per-probe mode against a same-uid unsandboxed
+`sleep` child. Its type arguments used the validator's literal flag
+(`NONE`: `0x40000000`; `PATH`: `0x40000001`), not an exported value. That surface
+reported `rc == 0` and zero errno for both issuance-query forms, and `EINVAL`
+for an invented operation; no raw receipts were saved. This session observation
+supports an expectation of operation-string recognition and a trivial allow
+answer in C0, not calibration of the pilot's caller, exported flag or class/path
+discrimination. The pilot supplies the first direct supervisor return/errno
+observations for these issuance queries. Preserve any different result without
+making the expected answer a continuation requirement; a query answer does not
+establish usable issuance.
 
 Missing query capability or a native query failure does not prevent Q1. The
 recipient is not the query target. Do not add filter-ID searches, alternate query
