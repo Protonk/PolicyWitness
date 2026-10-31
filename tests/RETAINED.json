@@ -2,22 +2,6 @@
   "schema_version": 1,
   "runs": [
     {
-      "path": "release-acceptance/run-54d51e0ad1cc46e1bbeeba9182358569",
-      "run_id": "accept-4bbfb70ce2a245499ccc63834699f283",
-      "reason": "PolicyWitness 0.3.3 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.3.3.",
-      "source": "1bf0341cd06c48122af1635e8aa8cac77517d9e1",
-      "app_inventory": "before.json",
-      "release": "v0.3.3"
-    },
-    {
-      "path": "runs/release-0.3.3-default",
-      "run_id": "20261024T022603Z_daf88977",
-      "reason": "PolicyWitness 0.3.3 release validation: the default battery passed against the final stapled app with no skips, unrun cases or harness errors and an unchanged app; archived as v0.3.3.",
-      "source": "1bf0341cd06c48122af1635e8aa8cac77517d9e1",
-      "app_inventory": "artifact-integrity/before.json",
-      "release": "v0.3.3"
-    },
-    {
       "path": "runs/drift-plan-investigation-20261027-02",
       "run_id": "20261027T175448Z_a3635ceb",
       "reason": "Retained historical D1 cost/input evidence used in the accepted investigation. Source comes from its established earlier retention entry; preserved as historical observations, not current verification. D1 plan retirement does not release this pin.",
@@ -562,6 +546,14 @@
       "reason": "Pytest exec-family integration: all eight default source_drift cases pass after the review packages were retired and the retained-resources record added.",
       "source": "821fd66b37f8fff314cf7b31b70005fe0cac5c24",
       "app_inventory": null
+    },
+    {
+      "path": "release-acceptance/run-3ab7e31af74345dfa87d1948c56ecb27",
+      "run_id": "accept-e7d8e84cb38b4a84a35ce99309e0a601",
+      "reason": "PolicyWitness 0.3.4 release ZIP acceptance: signatures, staple, Gatekeeper, the default battery against the extracted app with no skips, unrun cases or harness errors, and unchanged archive and extracted app; archived as v0.3.4.",
+      "source": "0289d9ae8a78be59f9727e6fc2118b3c9b24bcc1",
+      "app_inventory": "before.json",
+      "release": "v0.3.4"
     }
   ]
 }
