@@ -43,9 +43,11 @@ survive in each run's `ownership.json`.
 2026-10-06 boot when inspected on 2026-10-30, consistent with `/private/tmp`
 being cleared at restart. Everything below in `/private/tmp` — six worktrees,
 38 socket directories, the prototype lease, the unknown-worker directory and
-the F2 controlled-preparation staging — is therefore not durable. Whether to
-archive or move it is an open decision; until it is made, nothing here is to be
-relocated or removed.
+the F2 controlled-preparation staging — is therefore not durable. The user
+decided on 2026-10-30 that the worktrees may be kept but are no longer needed:
+they are not archived or relocated, and their loss at restart is accepted.
+Keeping them grants no closure; a recorded unresolved item that disappears is
+lost, not settled.
 
 ## Worktrees kept
 
