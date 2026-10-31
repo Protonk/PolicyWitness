@@ -1,14 +1,12 @@
 # macOS browser sandbox sources: selection and boundaries
 
-**Source packet dated October 31, 2026.** This report identifies a bounded set of source materials from Chromium, Firefox, WebKit and Ladybird, together with Chromium's Mac Sandbox V2 design document. The retained files are the inputs, not the results, of a comparative investigation. There is no proposed comparative procedure, experimental fixture, browser ranking, or PolicyWitness change in this packet.
+**Source packet dated October 31, 2026.** This report identifies a bounded set of source materials from Chromium, Firefox, WebKit and Ladybird, together with Chromium's Mac Sandbox V2 design document.
 
 ## What is here
 
 The archive contains **25 complete upstream files**: 22 implementation, policy or build-source files; the V2 design document; and two repository license files. The original repository-relative paths are preserved beneath `sources/<project>/`. Every retained upstream file has been checked against its recorded Git blob identity. The [source catalog](SOURCE-CATALOG.md) explains the individual selections and links each to its pinned upstream location; [MANIFEST.json](MANIFEST.json) records the complete commit, path, size and hash identities.
 
-This is a curated reading corpus, **not four complete repositories, a buildable source distribution, or four complete browser sandboxes**. In particular, a complete file may contain only one fragment of a policy, or refer to inputs not included here. Completeness of each retained file and completeness of the surrounding system are different claims. Both the useful coverage and the missing context are identified below.
-
-Nothing was taken from PAWL. No installed browser was inspected, and no browser installation is needed to read these materials. No profile was extracted, compiled, expanded, decompiled or applied. The files preserve source-level conditions rather than resolving them for an imagined host or release.
+This is a curated reading corpus, **not four complete repositories, a buildable source distribution, or four complete browser sandboxes**. In particular, a complete file may contain only one fragment of a policy, or refer to inputs not included here. 
 
 ## Snapshot identity and product names
 
