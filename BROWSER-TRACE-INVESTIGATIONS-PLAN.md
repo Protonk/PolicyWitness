@@ -76,7 +76,7 @@ Read current behavior from these sources rather than from this summary.
 | Issuer implementation | [`pw_extension_issuer.c`](controller/tools/pw_probe_runner/pw_extension_issuer.c): `dlopen` of libsandbox, `sandbox_extension_issue_file` with flags `0`, class chosen by the `authority` field; [`pw_extension_channel.h`](controller/tools/pw_probe_runner/pw_extension_channel.h) |
 | Worker side | [`prepare_extension`](controller/tools/pw_probe_runner/pw_probe_runner.c) resolves consume/release symbols before apply and validates the channel before apply; [`attempt_extension`](controller/tools/pw_probe_runner/pw_probe_runner.c) treats only `-1` as a failed consume and keeps one static handle |
 | Host session | [`ExtensionIssuer.swift`](runner/Sources/PWRunnerCore/ExtensionIssuer.swift): `realpath` and `fstatat` before issuance, issuer spawned and reaped before the worker exists |
-| Query side | [`sb_api_validator.c`](controller/tools/sb_api_validator/sb_api_validator.c): `NONE` or one filter value, including `PATH`, `GLOBAL_NAME` and `LOCAL_NAME`; queries use the no-report flag; no class-plus-path argument representation |
+| Query side | [`sb_api_validator.c`](controller/tools/sb_api_validator/sb_api_validator.c): `NONE` or one filter value, including `PATH`, `GLOBAL_NAME` and `LOCAL_NAME`; no class-plus-path representation. Batch outcomes separate query errors from denials; per-probe JSON marks every nonzero return as `denied`. The no-report fallback is `0x40000000`. The independent native fixture instead calls from its supervisor and resolves the exported flag. |
 | Native fixture and its controls | [suite README](tests/suites/sandbox_extensions_native/README.md); [fixture README](tests/fixtures/sandbox_extensions/README.md); host, issuer and worker as three processes; file and directory scenarios |
 | Production extension controls | [native extension boundaries](tests/suites/witness_contract/README.md#native-extension-boundaries) and the `check_extension*.py` checkers beside it |
 | Evidence contract | [native extension evidence](tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence); [native sandbox extensions](tests/CHANGE-VERIFICATION.md#native-sandbox-extensions) |
@@ -378,8 +378,10 @@ expanded policies and inputs for every row; source and binary hashes; signature
 and entitlement read-backs; OS, SDK and compiler facts; each trial's token-free
 observation record with its block, position, apparatus revision and wait/reap
 results; the chosen block sequences and scheduling notes; checker-control inputs
-and results; and cleanup records. These are text records measured in kilobytes
-per trial. Comparable retained runs of the existing native suite occupy under
+and results; and cleanup records. Query records include the supervisor's caller
+identity, resolved API/flag provenance, numeric filter and flag values, the full
+type argument passed, and raw return/errno pairs. These are text records measured
+in kilobytes per trial. Comparable retained runs of the existing native suite occupy under
 two megabytes for 23 experiments, including a source snapshot and the signed
 binary. A committed record larger than a few megabytes needs a stated reason in
 the report; this machine has other duties and there is no standing reason to
@@ -433,11 +435,50 @@ requests `com.apple.app-sandbox.read` for A. B is another existing owned regular
 file used only as the nonmatching policy path. Keep the issuer's ordinary data
 and metadata read rules permissive in this first investigation; whether issuance
 can exceed the issuer's own read access is not answered by these contrasts.
-All sandboxed issuer policies share a file-write restriction, while only their
-issuance allowance changes. Store the exact expanded policies, not just row names.
+All sandboxed issuer policies use this exact common prefix, in this order:
 
-The recipient's fixed policy denies ordinary `file-read-data` and permits it
-through the read extension predicate. The no-predicate row omits that exception.
+```scheme
+(version 1)
+(allow default)
+(deny file-write*)
+(deny file-issue-extension)
+```
+
+The file-write restriction guards against unintended issuer writes; it is fixed
+equipment policy, not a variable in the issuance-filter contrasts. Independent
+target observations, rather than that rule's presence, establish preserved bytes.
+C0 omits application of the whole C1 profile, so C0/C1 cannot isolate application
+itself from the write restriction or the issuance-rule composition.
+
+C1 appends `(allow file-issue-extension)` to the prefix. C2 appends:
+
+```scheme
+(allow file-issue-extension
+  (require-all
+    (extension-class "com.apple.app-sandbox.read")
+    (literal "<canonical A>")))
+```
+
+C3 appends nothing. C4 changes only C2's predicate string to
+`com.apple.app-sandbox.read-write`; C5 changes only its literal to canonical B.
+C6/C7 use C2's issuer policy. Substitute the actual escaped canonical paths for
+the placeholders before compilation and retain the exact expanded bytes. Thus
+C1 and C2 share the issuance denial and differ only in the allow clause's filter.
+
+These are policy constructions to test, not an established rule that a later
+allow overrides an earlier deny. The
+[allow/deny consistency suite](tests/suites/sbpl_allowdeny_consistency/README.md)
+tests reversed parameter bindings, not textual deny-then-allow precedence for
+one operation. C1/C3 and C2–C5 can show effects of the chosen compositions in this
+context; the matrix has no reversed-order trial and cannot establish a general
+ordering rule. Failure of the intended exception remains an observation, not a
+reason to rearrange clauses during the pilot.
+
+The recipient's fixed prefix is `(version 1) (allow default)
+(deny file-read-data)`, followed by
+`(allow file-read-data (extension "com.apple.app-sandbox.read"))` except in C7.
+The intended exception is access through that predicate; runtime observations
+establish whether it operates in these trials.
 No descriptor spans the two access attempts. The supervisor independently checks
 target identity and bytes before and after the trial. A pre-consume successful
 read is retained but prevents claiming that the later read demonstrates newly
@@ -447,24 +488,37 @@ siblings so that the recipient does not inherit an issuer's applied policy.
 | Row | Issuer arrangement | Recipient intervention | Purpose |
 | --- | --- | --- | --- |
 | C0 | Ordinary-authority issuer, no applied profile | Consume if delivery permits | Context baseline for this binary, class, target, OS and recipient path |
-| C1 | Applied common policy with unrestricted `file-issue-extension` allowance | Consume if delivery permits | Matched positive control for restricting issuance by class and path |
-| C2 | Applied common policy; issuance denied except read class at literal A | Consume if delivery permits | Matching restricted delegation |
-| C3 | Same common policy; explicit issuance denial, no exception | Consume if delivery permits | Absence of the issuance allowance |
-| C4 | Same as C2, but policy exception names the known read-write class | Consume if delivery permits | Class mismatch with the native call still requesting read |
-| C5 | Same as C2, but policy exception names literal B | Consume if delivery permits | Path mismatch with the native call still targeting A |
+| C1 | Common prefix plus unfiltered issuance allow | Consume if delivery permits | Candidate matched positive control for restricting issuance by class and path |
+| C2 | Common prefix plus allow filtered by read class and literal A | Consume if delivery permits | Matching restricted delegation |
+| C3 | Common prefix only, retaining its issuance denial | Consume if delivery permits | Absence of the issuance allowance |
+| C4 | Same as C2, but allow predicate names the read-write string | Consume if delivery permits | Different class string from the native call's read class; runtime discrimination remains to be observed |
+| C5 | Same as C2, but allow predicate names literal B | Consume if delivery permits | Path mismatch with the native call still targeting A |
 | C6 | Same as C2 | Accept transfer but omit consumption | Separate delivered bytes from consumed authority |
 | C7 | Same as C2 | Consume if delivery permits; omit recipient extension predicate | Separate consumption from access allowed through that predicate |
 
-Make the absent-allowance row an actual issuance restriction: deleting an allow
-clause from `allow default` alone does not do so. The mismatch rows change policy
-filters rather than inventing an invalid native class or nonexistent target.
+The absent-allowance row retains the explicit issuance denial; deleting an allow
+clause from `allow default` alone would not supply it. C4 uses a read-write
+spelling present in the browser sources and native fixture, but that is not
+compiler validation or proof of runtime class recognition in this predicate.
+The native call still requests read, and C4 tests the policy's treatment of the
+different string. C5 uses another existing target, not a path-existence failure.
+
+The maintainer reports that all matrix policy forms compile on this host, as do
+class-only and path-only filters, Chromium's `subpath "/"`, Firefox's vnode guard
+and WebKit's extension-based path predicate. The same preflight accepted
+`com.apple.app-sandbox.bogus` while rejecting a misspelled filter name as an
+unbound variable. These are reported syntax checks, not native issuance evidence
+or validation of class strings and rule precedence. Retain their supplied inputs
+and raw receipts with the report where available; do not invent missing
+provenance or repeat/extend that syntax survey under this pilot. The additional
+forms do not add matrix rows or activate deferred questions.
 No read-write issue call, symlink, directory, flag variant, process-bound token,
 self-consumption or release comparison is part of this matrix. After the final
 read, erase owned token buffers and reap the children; omission of release is
 fixed across rows and supports no claim about exit-time revocation.
 
-C1 is the smallest matched positive control for the filter contrasts: the same
-sandboxed native setup can issue without the class/path restriction. A usable
+C1 is the candidate matched positive control for the filter contrasts: it tests
+the same sandboxed native setup with an unfiltered allow clause. A usable
 delegation control additionally needs accepted transfer, a consume result and
 known bytes obtained by a fresh recipient read, alongside its before-consume
 observation. Nonnull issuance alone is only a positive control for token production.
@@ -482,13 +536,16 @@ nearest evidence, from an ancestor of the tag with fixture and suite sources
 identical to the tag's, and its `lifecycle` row has C0's shape. Cite both as
 context for this host, OS and identity. Neither replaces C0: the inference from
 C0 to C1 needs the pilot's own binary, signing read-back, credentials, path
-preparation, policies and recipient, and a C0 failure against that prior
-concerns the pilot's apparatus rather than the host. Referenced evidence keeps
-its managed ownership and is not copied into these records.
+preparation, policies and recipient. A C0 failure makes differences from that
+working apparatus and recorded host context the first diagnostic focus; the
+prior alone does not establish the cause of a new failure. Referenced evidence
+keeps its managed ownership and is not copied into these records.
 
-If C0 works but C1 does not, the limitation concerns the applied-sandbox setup;
-it does not isolate a class/path restriction. If C1 works but C2 does not, the
-narrow allowance or its representation remains at issue. If C2 works while
+If C0 works but C1 does not, the difference concerns applying the entire C1
+profile, including the fixed write denial and combined issuance rules; it does
+not isolate a class/path restriction or establish that sandbox application alone
+prevents issuance. If C1 works but C2 does not, their shared prefix leaves the
+filtered allow clause or its runtime interpretation at issue. If C2 works while
 C3–C5 differ, those matched contrasts support a finding scoped to the changed
 rules and recorded environment, not an errno-based claim about kernel cause.
 If issuance works but delivery, consumption or fresh access does not, report each
@@ -528,13 +585,54 @@ Transfer evidence includes framing/length validation and a transient equality
 check between issued and received bytes. Retain only the check result, never
 tokens, token hashes, token-bearing diagnostics or core files.
 
-For Q2, make exactly the `NONE` and `PATH(A)` queries for
-`file-issue-extension`, with no-report, against the live issuer paused before
-issuance in each row. Preserve target PID, arguments, raw return, errno and
-collection/release ordering. Missing query capability or a native query failure
-is recorded and does not prevent the issuer from attempting Q1. The recipient
-is not the query target. Do not add filter-ID searches, alternate query APIs or
-recipient before/after query experiments from Q18.
+For Q2, the supervisor calls `sandbox_check` directly, as the existing
+[`native.c`](tests/fixtures/sandbox_extensions/native.c) does. It launches neither
+the ad hoc validator in `builddir` nor the Developer ID validator in the app.
+The caller is the supervisor role of the same signed pilot executable; retain
+its PID, credentials, executable path/hash, signature and entitlement read-backs
+alongside those for the issuer and recipient. There is no separate validator
+binary or transport surface in this pilot.
+
+Make exactly the `NONE` and `PATH(A)` queries for `file-issue-extension`, with
+no-report, against the live issuer paused before issuance in each row. Resolve
+`sandbox_check` and the exported `SANDBOX_CHECK_NO_REPORT` value in the supervisor,
+following the native fixture. Record lookup success/failure and the resolving
+library image, the numeric flag value read, filter IDs (`NONE=0`, `PATH=1`), and
+the full type argument actually passed. Record macOS build and Darwin release.
+If either symbol is unavailable, mark Q2 unavailable and continue Q1; do not
+substitute a literal flag or an unflagged call. This reads the query flag, not
+the three deferred issuance flags in Q9.
+
+The production validator's fallback is `0x40000000`; its comment describes a
+Darwin 23.6 check of verdict invariance with and without the flag. The
+[no-report control](tests/suites/validator_batch_mode/README.md#predictions_do_not_report)
+checks the argument bit through a replacement function, not live suppression.
+Reading the export on the pilot host supplies current value provenance; it does
+not demonstrate log suppression or verdict invariance on Darwin 25. This pilot
+does not add a flagged/unflagged comparison.
+
+Preserve caller and target PIDs, all arguments, raw return and errno, and
+collection/release ordering. Clear errno immediately before each call and save
+it immediately afterward. Interpret `rc == 0` as a native allow answer, and
+`rc == 1 && errno == 0` as a native deny answer.
+Negative returns and other unexpected return/errno combinations are query errors,
+with `EINVAL` retained as an error diagnostic, not translated into denial. The
+reader does not use the per-probe validator's `denied: true` convention for every
+nonzero return. Batch mode distinguishes errors, but is also not invoked. Add
+constructed reader controls for a negative return and an unexpected return/errno
+pair so neither can be counted as a denial.
+
+The maintainer's host preflight returned `0` with zero errno for both query forms
+against an unsandboxed process, while an invented operation returned `EINVAL`.
+This supports recognition of the operation string on that host. C0 is expected
+to repeat a trivial allow answer; it does not calibrate class/path discrimination
+or establish usable issuance. Preserve any different result without making the
+expected answer a continuation requirement. These reported observations retain
+the same provenance limits as the syntax preflight above.
+
+Missing query capability or a native query failure does not prevent Q1. The
+recipient is not the query target. Do not add filter-ID searches, alternate query
+APIs or recipient before/after query experiments from Q18.
 
 The [validator implementation](controller/tools/sb_api_validator/sb_api_validator.c)
 passes no class alongside a path. A `RAW` filter ID does not add that argument.
@@ -542,6 +640,15 @@ Record query availability and observed patterns separately from representational
 adequacy. These sources do not establish a native way to query the complete
 class-and-path issuance condition; a returned verdict does not supply the missing
 context. The pilot's ordering evidence is not PW's `comparison.order=query_first`.
+
+Unified-log collection is deliberately outside this pilot. The validator source
+explains the no-report flag as avoiding query-denial lines attributed to the
+queried PID; here that PID belongs to the issuer, whose issuance refusal could
+produce a similar line. Request suppression, but do not claim to have verified
+it or treat presence/absence of incidental log lines as evidence of issuance or
+its cause. Issuer return/errno, stage publications and independent recipient
+access are the retained observations. Investigating log attribution would need
+separate review and is not a prerequisite for completing Q1/Q2.
 
 The report reader checks evidence completeness and consistency separately from
 whether delegation occurred. Use small constructed report controls to reject
