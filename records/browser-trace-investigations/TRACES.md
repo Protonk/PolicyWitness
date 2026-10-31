@@ -1,23 +1,5 @@
 # Browser sandbox source traces
 
-Source readings behind the questions in
-[BROWSER-TRACE-INVESTIGATIONS-PLAN.md](../../BROWSER-TRACE-INVESTIGATIONS-PLAN.md).
-
-## The packet
-
-[records/browser-sandbox-sources](../browser-sandbox-sources/README.md)
-holds 25 complete upstream files at fixed commits of Chromium, Firefox, WebKit
-and Ladybird. Its [report](../browser-sandbox-sources/REPORT.md) explains
-the selection and what is missing; its
-[catalog](../browser-sandbox-sources/SOURCE-CATALOG.md) identifies every
-file and links its pinned upstream location; `MANIFEST.json` and `SHA256SUMS`
-carry the identities, and `python3 VERIFY.py` checks them offline. Line numbers
-below refer to the unmodified files under `sources/`. The report's coverage
-limits apply to every trace: a retained policy fragment may depend on inputs that
-are not in the packet.
-
-### Files by trace
-
 Seventeen of the packet's files are cited by a trace.
 
 | File | Traces |

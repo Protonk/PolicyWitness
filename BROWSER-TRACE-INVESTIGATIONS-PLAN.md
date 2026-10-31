@@ -60,8 +60,7 @@ accepting a string does not establish a useful native prediction for it.
 source traces T1–T7 and the description of the source packet at
 [records/browser-sandbox-sources](records/browser-sandbox-sources/README.md).
 Each trace names a source, states what it shows, states what PolicyWitness does
-at the same point, and names the questions it raises. The traces are reference
-material; executing the investigation below does not require them.
+at the same point, and names the questions it raises.
 
 ## What we want to learn
 
