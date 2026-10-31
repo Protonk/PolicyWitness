@@ -8,17 +8,14 @@ whether issuance, consumption or access succeeds or fails. It authorizes no
 production change or promotion into a registered fixture or test suite.
 
 Seven browser source traces supply the motivation and a deferred question
-inventory. They remain useful beyond this first investigation. A later result
-could justify a structural change to PolicyWitness, but the native question
-does not require implementing a general multiprocess PolicyWitness capability.
+inventory. The native question does not require implementing a general
+multiprocess PolicyWitness capability.
 
 The plan follows [planning a change](CONTRIBUTING.md#planning-a-change). It is
 the associated plan permitted to link to the source packet at
 [records/browser-sandbox-sources](records/browser-sandbox-sources/README.md),
 per [records/AGENTS.md](records/AGENTS.md). The packet persists in `records/`
-while this plan lives. The investigation report and its supporting evidence are
-retained before review; they need not result in product work. Retirement of the
-plan and its records is a later closeout decision, not the pilot's stopping rule.
+while this plan lives.
 
 ## Boundary
 
@@ -41,9 +38,7 @@ Every experiment under this plan respects these limits.
   sandboxed processes, explicit preparation, separate supervision and reporting,
   observations supporting effects, and no unsupported causal attribution apply
   to the pilot. Q2 queries precede issuance through the fixture's own observed
-  barrier. Production wait, release and eligibility rules remain unchanged; a
-  later change to them requires the
-  [order-barrier mutation control](tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls).
+  barrier.
 - **Token confinement stays.** Raw tokens never enter a request, reply, report
   or retained artifact. The erasure discipline in
   [supplied extension authority](docs/WORKER.md#supplied-extension-authority)
@@ -81,185 +76,14 @@ Production PW has no post-apply issuance action. Query operation
 strings remain OS queries under [request admission](docs/REQUEST-GRAMMAR.md);
 accepting a string does not establish a useful native prediction for it.
 
-## The packet
+## Traces and the packet
 
-[records/browser-sandbox-sources](records/browser-sandbox-sources/README.md)
-holds 25 complete upstream files at fixed commits of Chromium, Firefox, WebKit
-and Ladybird. Its [report](records/browser-sandbox-sources/REPORT.md) explains
-the selection and what is missing; its
-[catalog](records/browser-sandbox-sources/SOURCE-CATALOG.md) identifies every
-file and links its pinned upstream location; `MANIFEST.json` and `SHA256SUMS`
-carry the identities, and `python3 VERIFY.py` checks them offline. Line numbers
-below refer to the unmodified files under `sources/`. The report's coverage
-limits apply to every trace: a retained policy fragment may depend on inputs that
-are not in the packet.
-
-## Traces
-
-Each trace names the source, states literally what it shows, states what
-PolicyWitness does at the same point, and ends in the questions it raises. The
-questions are collected below. The traces identify source relationships; the
-first investigation separately fixes its design and controls.
-
-### T1. Issuance allowed inside a sandboxed process
-
-All four source selections construct `file-issue-extension` allowances for
-processes intended to run sandboxed. Their presence does not establish native
-issuance or usable delegation in a running process.
-
-- Chromium [gpu.sb](records/browser-sandbox-sources/sources/chromium/sandbox/policy/mac/gpu.sb)
-  lines 115–121 allow the read class for `(subpath "/")`, with a comment
-  attributing the issuance to Metal on behalf of a compiler service whose Mach
-  lookup is allowed at line 40. [common.sb](records/browser-sandbox-sources/sources/chromium/sandbox/policy/mac/common.sb)
-  lines 108–142 define read-write issuance for two cache subdirectories. The GPU
-  caller at line 123 uses `maybe-allow-metal-shader-cache-access`: its gate at
-  common.sb lines 140–142 requires `disable-metal-shader-cache` not to be true,
-  and the inner call requires a defined helper bundle identifier parameter.
-- Firefox [SandboxPolicyGPU.h](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h)
-  lines 159–171 allow the read-write class for two cache subdirectories, exclude
-  symlink vnodes, and guard the whole rule with a version predicate (see T7).
-- WebKit [Shared/Sandbox/common.sb](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Sandbox/common.sb)
-  lines 63–74 define helpers that pair a `file-read*` or `file-write*` rule with
-  a `file-issue-extension` rule of the matching class over the same path filter.
-  [com.apple.WebProcess.sb.in](records/browser-sandbox-sources/sources/webkit/Source/WebKit/WebProcess/com.apple.WebProcess.sb.in)
-  lines 636–640 define a directory variant and lines 733–746 use them. Line 744
-  passes `(extension "com.apple.app-sandbox.read")` as the path filter itself,
-  coupling the issuance rule to an extension predicate; lines 745–746 use the
-  read-write predicate with report and telemetry modifiers. Whether those
-  constructions permit effective re-delegation is a runtime question.
-- Ladybird [Sandbox.cpp](records/browser-sandbox-sources/sources/ladybird/Libraries/LibSandbox/Sandbox.cpp)
-  lines 256–280 generate one `file-issue-extension` clause per configured path
-  and class, called at lines 737–738. The compositor caller
-  [SandboxMacOS.cpp](records/browser-sandbox-sources/sources/ladybird/Services/Compositor/SandboxMacOS.cpp)
-  lines 54–60 creates a cache directory and adds it as read-write before the
-  generator runs.
-
-PolicyWitness's production issuer runs under ordinary authority outside the
-worker's sandbox. There is no worker issuance action or established query
-coverage for `file-issue-extension`. Raises Q1–Q4.
-
-### T2. The consumer-side extension filter
-
-- Firefox [SandboxPolicyContent.h](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyContent.h)
-  lines 338–348 and [SandboxPolicyGPU.h](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h)
-  lines 229–240 attach `(extension "com.apple.app-sandbox.read")` to a
-  `file-read*` rule. The comment says the extensions are issued by the font
-  server; that issuer is Apple's, not Firefox's, and not in the packet.
-- Chromium [seatbelt_extension.h](records/browser-sandbox-sources/sources/chromium/sandbox/mac/seatbelt_extension.h)
-  lines 27–32 state the policy each wrapper type requires in the consumer.
-- WebKit line 744 of the WebProcess template, as in T1.
-
-PolicyWitness's examples already use `(allow file-read-data (extension ...))`,
-and the fixture's no-predicate control removes it. The traces attach the filter
-to `file-read*`, a family, not to one operation. Raises Q17 and Q18.
-
-### T3. Wrapper lifecycle semantics
-
-- Chromium [seatbelt_extension.cc](records/browser-sandbox-sources/sources/chromium/sandbox/mac/seatbelt_extension.cc)
-  lines 52–55 treat a consume result greater than zero as success; lines 57–62
-  consume then drop both handle and token without a release; lines 64–69 treat a
-  zero release return as success. The header's lines 60–72 say a consuming
-  process may revoke at any time and that a revoked extension can be re-acquired
-  by constructing a new object from the same token. The implementation's lines
-  75–79 describe token internals; that is a Chromium comment, not a macOS fact.
-- WebKit [SandboxExtensionCocoa.mm](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm)
-  lines 61–73 treat only `-1` as a failed consume; lines 75–78 release with the
-  handle exchanged to zero; lines 55–59 zero the token on destruction; lines
-  366–430 count uses so that only the last revoke calls release, and provide
-  consume-permanently variants that never release.
-
-PolicyWitness treats only `-1` as failure, admits one consume and one release
-per specimen, publishes the release result without interpreting it, and makes
-no exit-time release. The two engines' wrappers disagree about what a zero
-consume result means. Raises Q5–Q8.
-
-### T4. Flags and path preparation
-
-- WebKit [SandboxExtensionCocoa.mm](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm)
-  lines 86–120 map a no-report option to `SANDBOX_EXTENSION_NO_REPORT` and an
-  option named do-not-canonicalize to `SANDBOX_EXTENSION_CANONICAL`, and add
-  `SANDBOX_EXTENSION_USER_INTENT` on the Mac for the process-bound read type.
-  Lines 154–203 resolve symlinks with `realpath` and then issue with the
-  canonical flag set. The directory helper at lines 162–172, called from
-  lines 228–234, creates a directory before resolving it. Lines 236–265 issue
-  for a temporary-directory path that need not exist yet.
-  [SandboxSPI.h](records/browser-sandbox-sources/sources/webkit/Source/WTF/wtf/spi/darwin/SandboxSPI.h)
-  lines 73–75 declare the three flags as external constants; their values are
-  not in the source.
-- Firefox GPU line 167 excludes symlink vnodes from issuance in the policy.
-- Ladybird [Sandbox.cpp](records/browser-sandbox-sources/sources/ladybird/Libraries/LibSandbox/Sandbox.cpp)
-  lines 123–152 `stat` then `realpath` each path and silently skip paths that do
-  not exist.
-
-PolicyWitness resolves with `realpath` and records metadata before issuance,
-passes flags `0`, admits symlinks and any owner or file type, and documents the
-replacement hazard. Raises Q9–Q12.
-
-### T5. Process-bound issuance
-
-- [SandboxSPI.h](records/browser-sandbox-sources/sources/webkit/Source/WTF/wtf/spi/darwin/SandboxSPI.h)
-  lines 79, 80 and 96 declare issue variants that take an `audit_token_t`; line
-  83 declares a query variant that takes one too.
-- WebKit [SandboxExtensionCocoa.mm](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm)
-  lines 110–116 refuse to issue the process-bound read type without an audit
-  token and add the user-intent flag on the Mac; lines 323–333 are its caller;
-  lines 99–108 choose the bound variant for Mach and IOKit whenever a token is
-  supplied. [DarwinExtras.h](records/browser-sandbox-sources/sources/webkit/Source/WTF/wtf/darwin/DarwinExtras.h)
-  lines 55–92 are the thin wrappers.
-- Chromium's wrapper never uses the bound variants. Firefox and Ladybird issue
-  nothing natively in the retained files.
-
-PolicyWitness issues unbound tokens, and issuance completes before the worker
-exists. The host knows the worker's PID only after spawn, and the worker is a
-posix_spawn child with no Mach channel to the host. Raises Q13–Q16.
-
-### T6. Non-file extension classes (boundary, not a starting point)
-
-WebKit has native issuance wrappers and consumer-side policy predicates for
-Mach, IOKit and generic extensions: the WebProcess template lines
-748–753 and the `com.apple.webkit.extension.mach` filters from line 797 on,
-[webcontent-defines.sb](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Sandbox/macOS/webcontent-defines.sb)
-lines 94–245 for `com.apple.webkit.extension.iokit`, and
-[SandboxExtensionCocoa.mm](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm)
-lines 267–364 for the handle constructors. Chromium's header line 34 leaves
-these as a TODO. PolicyWitness admits two file classes. This trace is retained
-for a later plan; see [boundaries owned elsewhere](#boundaries-owned-elsewhere).
-
-### T7. Context-only traces
-
-These inform interpretation and preparation without adding separate experiments
-to the first investigation.
-
-- **Apply before loading frameworks.** The Chromium
-  [design document](records/browser-sandbox-sources/sources/chromium/sandbox/mac/seatbelt_sandbox_design.md)
-  lines 79–96 and [chrome_exe_main_mac.cc](records/browser-sandbox-sources/sources/chromium/chrome/app/chrome_exe_main_mac.cc)
-  lines 165–177 and 211–214 apply the sandbox before `dlopen` of the main
-  framework so that static initializers cannot acquire resources outside it. The
-  document says nothing about extensions. PolicyWitness's C worker resolves
-  extension symbols and prepares reporting and token mappings before apply; see
-  [starting authority](docs/WORKER.md#starting-authority-and-ambient-context).
-  That account leaves loader internals and some inherited state unobserved.
-  This trace informs the pilot's preparation boundary; comparing framework
-  initialization strategies is deferred.
-- **Firefox's version predicate.** [SandboxPolicyGPU.h](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h)
-  lines 159–171 guard issuance with `(<= macosVersion 1500)` while the comment
-  speaks of macOS 14 and earlier; [Sandbox.mm](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/Sandbox.mm)
-  lines 292–297 encode the version as major times one hundred plus minor. On this
-  host a value encoding macOS 26 would not select that branch. A synthetic
-  parameter could select it, but would not reproduce Firefox on an older OS.
-  The packet report records the discrepancy without judging it; so does this plan.
-- **Third-party issuers.** Firefox's font comments (T2) and Chromium's Metal
-  comments (T1) describe Apple-owned issuance paths, with different issuer and
-  recipient roles. The packet does not contain those implementations. This
-  fixture does not observe them, and a policy allowance is not evidence that
-  they issue.
-- **Policy application entry point.** Firefox ([Sandbox.mm](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/Sandbox.mm)
-  line 562) and Ladybird ([Sandbox.cpp](records/browser-sandbox-sources/sources/ladybird/Libraries/LibSandbox/Sandbox.cpp)
-  line 748) apply through `sandbox_init_with_parameters`; PolicyWitness compiles
-  and applies separately. The pilot uses the existing native fixture's separate
-  compile/apply path; comparing entry points would require later review.
-- **Ladybird's macOS 27 branch** at lines 686–688 concerns a syscall, not
-  extensions.
+[TRACES.md](records/browser-trace-investigations/TRACES.md) holds the seven
+source traces T1–T7 and the description of the source packet at
+[records/browser-sandbox-sources](records/browser-sandbox-sources/README.md).
+Each trace names a source, states what it shows, states what PolicyWitness does
+at the same point, and names the questions it raises. The traces are reference
+material; executing the investigation below does not require them.
 
 ## What we want to learn
 
@@ -358,9 +182,7 @@ the registered fixture, suite checkers or test catalog to conduct it.
 ### Records and retention
 
 The first step, before any build, is to add a `.gitignore` rule for
-`records/browser-trace-investigations/local/` and commit it. The ignored
-`records/performance/runs/` directory is the existing precedent for local-only
-evidence under `records/`. Everything else under
+`records/browser-trace-investigations/local/` and commit it. Everything else under
 `records/browser-trace-investigations/` is committed for the life of this plan
 and is disposed of or dispersed at retirement together with the ignore rule.
 
@@ -419,7 +241,8 @@ reference that record rather than duplicating it.
 
 The first result concerns issuance after application with a prepared native
 runtime. It does not claim issuance before any initialization, or reproduce
-Chromium's framework startup. T7 explains why the boundary must be explicit.
+Chromium's framework startup. [T7](records/browser-trace-investigations/TRACES.md#t7-context-only-traces)
+explains why the boundary must be explicit.
 
 | Stage | Operations and evidence |
 | --- | --- |
@@ -432,9 +255,7 @@ Use the minimal C/libsystem/libsandbox setup of the existing native fixture;
 do not add application frameworks or optional allocation instrumentation. Symbol
 resolution before apply avoids confusing a loader failure with issuance refusal.
 The supervisor's path preparation supplies names and metadata, not open-file
-authority to the children. All native extension calls in the sandboxed issuer
-and recipient occur after their respective application boundaries. The existing
-fixture's pre-policy target-read baseline moves to the supervisor for this pilot.
+authority to the children.
 
 Inspect the retained source and linked/loaded-image inventory for pre-apply
 acquisitions. Collect descriptor snapshots at the exact boundaries specified in
@@ -511,11 +332,9 @@ self-consumption or release comparison is part of this matrix. After the final
 read, erase owned token buffers and reap the children; omission of release is
 fixed across rows and supports no claim about exit-time revocation.
 
-C1 is the candidate matched positive control for the filter contrasts: it tests
-the same sandboxed native setup with an unfiltered allow clause. A usable
+Nonnull issuance alone is only a positive control for token production; a usable
 delegation control additionally needs accepted transfer, a consume result and
-known bytes obtained by a fresh recipient read, alongside its before-consume
-observation. Nonnull issuance alone is only a positive control for token production.
+known bytes from a fresh recipient read beside its before-consume observation.
 
 The host-level prior for C0 is already pinned. The 0.3.4 release acceptance in
 `tests/RETAINED.json` ran at the commit `v0.3.4` resolves to, and its battery
@@ -607,10 +426,8 @@ Missing query capability or a native query failure does not prevent Q1. The
 recipient is not the query target. Do not add filter-ID searches, alternate query
 APIs or recipient before/after query experiments from Q18.
 
-These query forms pass no class alongside the path. Record availability and
-observed patterns separately from representational adequacy; a returned verdict
-does not supply the missing class context. The pilot's ordering evidence is not
-PW's `comparison.order=query_first`.
+Record availability and observed patterns separately from representational
+adequacy. The pilot's ordering evidence is not PW's `comparison.order=query_first`.
 
 Unified-log collection is outside this pilot: query and issuance denials can be
 attributed to the same issuer PID. Request suppression, but do not claim to have
@@ -685,8 +502,8 @@ If absence is unconfirmed, mark cleanup pending in the durable trial record,
 retain the owned paths and stop launching trials. Recovery must revalidate
 process start identities and resource ownership; historical PIDs or a pathname
 prefix alone do not authorize termination or removal. Keep unresolved ownership
-in the incomplete report for review. Do not place these records in `.tmp/` or
-pass investigation output to the test-run pruner.
+in the incomplete report for review. Do not pass investigation output to the
+test-run pruner.
 
 ### Repetitions and troubleshooting
 
@@ -701,9 +518,8 @@ scheduling rationale, alongside every trial's observations.
 Deliberately vary positions across blocks: do not consistently put C0, C1 and C2
 first or repeat the same adjacency relationships among positive and negative
 controls. Sensible positional variation is sufficient; formal randomization is
-not required. Three repetitions describe this small sample, not a universal or
-statistically stable pattern. Scheduling discretion does not permit changing the
-arrangements or their contrasts after seeing results.
+not required. Scheduling discretion does not permit changing the arrangements or
+their contrasts after seeing results.
 
 Use explicit equipment-readiness checkpoints. An early checkpoint after the
 planned C0/C1 trials in the first block is reasonable, as are checkpoints between
@@ -711,10 +527,8 @@ blocks; these review planned trials rather than adding control runs. Record
 whether process control, evidence collection and cleanup remain functional, and
 any diagnosed fault. Distinguish broken apparatus or missing required evidence
 from a correctly executed native call returning an unexpected result, including
-dependent stages honestly recorded as unavailable. Successful issuance,
-consumption or access is never a prerequisite for continuing. When equipment
-remains functional, execute all 24 planned trials. Do not add, replace, omit or
-selectively repeat arrangements based on favorable or unfavorable native outcomes.
+dependent stages honestly recorded as unavailable. When equipment remains
+functional, execute all 24 planned trials.
 
 Allow at most two documented equipment/instrumentation correction-and-retry
 cycles and 60 minutes of cumulative troubleshooting across the pilot.
@@ -733,10 +547,8 @@ including any invalidated evidence. A block spanning revisions is not a complete
 set of matched contrasts, even if all eight positions were executed. Report only
 contrasts supported within one revision and identify the missing comparisons as
 coverage gaps. A cycle's diagnostic rerun does not repair or restart
-that block, and no earlier arrangement is backfilled. Subsequent blocks still
-contain C0–C7 once each; all remaining planned positions run if equipment functions.
-Execution of a planned position and valid evidence for a contrast are separate
-counts in the report.
+that block, and no earlier arrangement is backfilled. Execution of a planned
+position and valid evidence for a contrast are separate counts in the report.
 
 If equipment prevents further execution within the troubleshooting allowance,
 report the remaining positions as unrun rather than starting another battery.
@@ -780,15 +592,14 @@ Possible recommendations for maintainer review after the report:
   identity regeneration.
 - **Worker or runner structure.** A future production issuance action or
   process-binding capability could change the authority account, process
-  topology or token channel. A live binding target must exist before issuance.
-  Whether issuance before that target applies its policy yields a usable token
-  remains untested; the packet does not establish the target's sandbox state.
-  Validation timing is a later design decision dependent on that evidence.
-  Any proposal would identify affected implementation, contracts and checks:
+  topology or token channel. Process-binding timing relative to the target's
+  apply is untested (Q13–Q16). Any proposal would identify affected
+  implementation, contracts and checks:
   [architecture.json](docs/architecture.json) for topology changes, C/Swift layout
-  agreement when layout changes, and the order-barrier mutation control when
-  wait, release or eligibility changes. The independent pilot does not require
-  retiring PW's ordinary-authority issuer.
+  agreement when layout changes, and the
+  [order-barrier mutation control](tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls)
+  when wait, release or eligibility changes. The independent pilot does not
+  require retiring PW's ordinary-authority issuer.
 
 ## Boundaries owned elsewhere
 
@@ -797,7 +608,9 @@ Possible recommendations for maintainer review after the report:
   that production PW does not have. A later proposal would own it. Q1's fixed
   native issuer/recipient experiment establishes no general product capability;
   Q14's process-binding control remains deferred.
-- **Mach, IOKit and generic classes** (T6). Each needs a new issuer entry point,
+- **Mach, IOKit and generic classes**
+  ([T6](records/browser-trace-investigations/TRACES.md#t6-non-file-extension-classes-boundary-not-a-starting-point)).
+  Each needs a new issuer entry point,
   an attempt kind and a class vocabulary decision. A later plan.
 - **Browsers as products**, installed-profile evidence, and anything the packet
   report lists as outside the sources.
@@ -824,10 +637,3 @@ These preserve possible directions from the traces without expanding Q1/Q2.
   before apply is a candidate arrangement for later testing, not established
   bound-token behavior. Any claimed confinement benefit would need its own
   observations and would not replace token erasure.
-- **Consume success conditions differ.** Chromium uses `> 0`; WebKit and PW use
-  `!= -1`. Q5 records values and associated behavior if selected later. No zero
-  result means this difference remains untested; one occurrence would not specify
-  all native consume behavior.
-- **Flag mappings are source facts.** WebKit's `DoNotCanonicalize` sets
-  `SANDBOX_EXTENSION_CANONICAL`. That mapping alone does not establish the
-  installed flag's semantics; Q9/Q10 remain deferred.
