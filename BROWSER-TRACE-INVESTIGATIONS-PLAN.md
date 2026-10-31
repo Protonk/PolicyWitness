@@ -487,20 +487,42 @@ positive outcomes as this investigation's completion criteria.
 
 ### Repetitions, troubleshooting and endpoint
 
-Run three repetitions of the eight rows (24 planned trials), each with fresh
-processes and targets. Record the row order before execution and retain every
-trial, including contrary or variable observations. Three repetitions describe
-this small sample; they do not establish a universal or statistically stable
-pattern. Use a 20-second trial deadline as in the native fixture, with bounded
+Run the 24 planned trials in three blocks of eight. Each block contains exactly
+one trial of every arrangement C0–C7, with fresh processes and targets for each
+trial and all existing evidence requirements. Choose and record each block's
+sequence before starting that block. Blocks two and three may be ordered after
+reviewing earlier observations and equipment behavior. Retain the chosen
+sequences, each trial's block and chronological positions, and any relevant
+scheduling rationale, alongside every trial's observations.
+
+Deliberately vary positions across blocks: do not consistently put C0, C1 and C2
+first or repeat the same adjacency relationships among positive and negative
+controls. Sensible positional variation is sufficient; formal randomization is
+not required. Three repetitions describe this small sample, not a universal or
+statistically stable pattern. Scheduling discretion does not permit changing the
+arrangements or their contrasts after seeing results.
+
+Use explicit equipment-readiness checkpoints. An early checkpoint after the
+planned C0/C1 trials in the first block is reasonable, as are checkpoints between
+blocks; these review planned trials rather than adding control runs. Record
+whether process control, evidence collection and cleanup remain functional, and
+any diagnosed fault. Distinguish broken apparatus or missing required evidence
+from a correctly executed native call returning an unexpected result, including
+dependent stages honestly recorded as unavailable. Successful issuance,
+consumption or access is never a prerequisite for continuing. When equipment
+remains functional, execute all 24 planned trials. Do not add, replace, omit or
+selectively repeat arrangements based on favorable or unfavorable native outcomes.
+
+Use a 20-second trial deadline as in the native fixture, with bounded
 termination/reaping and retained cleanup ownership if absence is unconfirmed.
-Do not retry a native refusal or unexpected access result to obtain a preferred
-outcome.
 
 Allow at most two documented equipment/instrumentation correction-and-retry
-cycles and 60 minutes of cumulative troubleshooting across the pilot, stopping
-at whichever limit is reached first. Each cycle permits at most one affected
-trial rerun. The required unchanged-artifact unsandboxed diagnostic retry counts
-toward this budget. Retain the original failures and any source changes; never combine
+cycles and 60 minutes of cumulative troubleshooting across the pilot.
+Troubleshooting ends at whichever limit is reached first. Each cycle permits at
+most one affected trial rerun. Record these reruns separately from the 24 planned
+positions; they do not replace the original observations. The required
+unchanged-artifact unsandboxed diagnostic retry counts toward this budget.
+Retain the original failures and any source changes; never combine
 results from different apparatus revisions as matched contrasts. If a correction
 invalidates earlier trials or equipment prevents the matrix from completing,
 report that coverage gap rather than starting another battery. Necessary cleanup
@@ -517,9 +539,10 @@ keeps its managed ownership and is not moved into scratch or these records.
 
 The report distinguishes attempted and unrun rows, observations and inference,
 control failures, preparation limits, query limits, variable outcomes and
-recommendations. Stop after the specified trials or exhausted troubleshooting
-budget, retain the report even if delegation was never observed, and return to
-the maintainer. Neither a useful native query, successful issuance nor a feature
+recommendations. Finish after all 24 planned trials, or with an incomplete report
+when equipment prevents further execution within the troubleshooting allowance.
+Retain the report even if delegation was never observed and return to the
+maintainer. Neither a useful native query, successful issuance nor a feature
 proposal is a condition of completion. Recommendations do not authorize follow-up
 experiments, fixture promotion or production changes.
 
