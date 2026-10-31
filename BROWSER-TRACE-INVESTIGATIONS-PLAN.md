@@ -119,8 +119,10 @@ issuance or usable delegation in a running process.
   lines 115–121 allow the read class for `(subpath "/")`, with a comment
   attributing the issuance to Metal on behalf of a compiler service whose Mach
   lookup is allowed at line 40. [common.sb](records/browser-sandbox-sources/sources/chromium/sandbox/policy/mac/common.sb)
-  lines 108–142 allow the read-write class for two cache subdirectories, and only
-  when a helper bundle identifier parameter is defined.
+  lines 108–142 define read-write issuance for two cache subdirectories. The GPU
+  caller at line 123 uses `maybe-allow-metal-shader-cache-access`: its gate at
+  common.sb lines 140–142 requires `disable-metal-shader-cache` not to be true,
+  and the inner call requires a defined helper bundle identifier parameter.
 - Firefox [SandboxPolicyGPU.h](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h)
   lines 159–171 allow the read-write class for two cache subdirectories, exclude
   symlink vnodes, and guard the whole rule with a version predicate (see T7).
@@ -152,7 +154,7 @@ coverage for `file-issue-extension`. Raises Q1–Q4.
   `file-read*` rule. The comment says the extensions are issued by the font
   server; that issuer is Apple's, not Firefox's, and not in the packet.
 - Chromium [seatbelt_extension.h](records/browser-sandbox-sources/sources/chromium/sandbox/mac/seatbelt_extension.h)
-  lines 24–31 state the policy each wrapper type requires in the consumer.
+  lines 27–32 state the policy each wrapper type requires in the consumer.
 - WebKit line 744 of the WebProcess template, as in T1.
 
 PolicyWitness's examples already use `(allow file-read-data (extension ...))`,
@@ -167,7 +169,7 @@ to `file-read*`, a family, not to one operation. Raises Q17 and Q18.
   zero release return as success. The header's lines 60–72 say a consuming
   process may revoke at any time and that a revoked extension can be re-acquired
   by constructing a new object from the same token. The implementation's lines
-  74–78 describe token internals; that is a Chromium comment, not a macOS fact.
+  75–79 describe token internals; that is a Chromium comment, not a macOS fact.
 - WebKit [SandboxExtensionCocoa.mm](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm)
   lines 61–73 treat only `-1` as a failed consume; lines 75–78 release with the
   handle exchanged to zero; lines 55–59 zero the token on destruction; lines
@@ -186,8 +188,9 @@ consume result means. Raises Q5–Q8.
   option named do-not-canonicalize to `SANDBOX_EXTENSION_CANONICAL`, and add
   `SANDBOX_EXTENSION_USER_INTENT` on the Mac for the process-bound read type.
   Lines 154–203 resolve symlinks with `realpath` and then issue with the
-  canonical flag set, lines 228–234 create a directory before resolving it, and
-  lines 236–265 issue for a temporary-directory path that need not exist yet.
+  canonical flag set. The directory helper at lines 162–172, called from
+  lines 228–234, creates a directory before resolving it. Lines 236–265 issue
+  for a temporary-directory path that need not exist yet.
   [SandboxSPI.h](records/browser-sandbox-sources/sources/webkit/Source/WTF/wtf/spi/darwin/SandboxSPI.h)
   lines 73–75 declare the three flags as external constants; their values are
   not in the source.
@@ -355,8 +358,9 @@ not commitments or automatic follow-ups to an unexpected result.
 Use an investigation-local adaptation of
 [`tests/fixtures/sandbox_extensions/native.c`](tests/fixtures/sandbox_extensions/native.c).
 Its existing host/issuer/worker split, separate token storage and explicit
-descriptor passing are useful equipment. Its unsandboxed issuer, pre-policy
-worker read and fixed success assertions are not the design of this pilot.
+descriptor passing are useful equipment. Its unsandboxed issuer and pre-policy
+worker read change for this pilot. The suite's checker owns acceptance criteria;
+the native fixture's early exits gate equipment and execution.
 Retain the adapted source with the investigation; do not edit production code,
 the registered fixture, suite checkers or test catalog to conduct it.
 
@@ -449,6 +453,23 @@ require a working baseline. A usable restricted result remains evidence even if
 another control is unavailable, with the inconsistency made explicit. No control's
 success is required for closeout.
 
+For recipient access, compare C2 with C6 and C7 using valid observations from
+the same apparatus revision. If C2 and C6 both accept delivery and their
+pre-consume fresh reads fail, but C2 obtains known bytes through a fresh read
+after a non-sentinel consume result while C6's fresh read still fails, the
+contrast supports consumption-dependent delegation in this setup. Delivery alone
+did not produce that access in C6.
+
+For C2/C7, require accepted delivery, failed pre-consume fresh reads and
+non-sentinel consume results in both rows before interpreting the access contrast.
+If C2 gains fresh access while C7's read still fails, the contrast supports a role
+for the recipient's extension predicate and shows why the consume result alone
+does not establish access. Failed delivery or consumption leaves a contrast
+requiring that stage unestablished. Pre-consume access, access in C6/C7 despite
+the omission, or no access gain in C2 likewise does not support the proposed
+separation; retain those observations and their limits without requiring another
+trial or a successful delegation result.
+
 ### Ordering, query scope and evidence checks
 
 Both children publish their preparation and application state before issuance.
@@ -520,14 +541,27 @@ Allow at most two documented equipment/instrumentation correction-and-retry
 cycles and 60 minutes of cumulative troubleshooting across the pilot.
 Troubleshooting ends at whichever limit is reached first. Each cycle permits at
 most one affected trial rerun. Record these reruns separately from the 24 planned
-positions; they do not replace the original observations. The required
-unchanged-artifact unsandboxed diagnostic retry counts toward this budget.
-Retain the original failures and any source changes; never combine
-results from different apparatus revisions as matched contrasts. If a correction
-invalidates earlier trials or equipment prevents the matrix from completing,
-report that coverage gap rather than starting another battery. Necessary cleanup
-still follows its ownership rules. A larger redesign, changed signing context,
-extra contrasts or further retries require review.
+positions; they do not replace the original observations. Retain the original
+failures and any source changes; never combine results from different apparatus
+revisions as matched contrasts.
+
+After a source-level correction, keep the existing block sequence and continue
+its remaining planned positions on the corrected revision if equipment functions.
+Those trials count toward the 24 planned positions; record the apparatus revision
+for every trial. Earlier positions remain recorded on their original revision,
+including any invalidated evidence. A block spanning revisions is not a complete
+set of matched contrasts, even if all eight positions were executed. Report only
+contrasts supported within one revision and identify the missing comparisons as
+coverage gaps. The single permitted diagnostic rerun does not repair or restart
+that block, and no earlier arrangement is backfilled. Subsequent blocks still
+contain C0–C7 once each; all remaining planned positions run if equipment functions.
+Execution of a planned position and valid evidence for a contrast are separate
+counts in the report.
+
+If equipment prevents further execution within the troubleshooting allowance,
+report the remaining positions as unrun rather than starting another battery.
+Necessary cleanup still follows its ownership rules. A larger redesign, changed
+signing context, extra contrasts or further retries require review.
 
 Retain the report at `records/browser-trace-investigations/REPORT.md`, with the
 pilot source, exact policies and inputs, build commands and source/binary hashes,
@@ -569,8 +603,10 @@ by this investigation.
   identity regeneration.
 - **Worker or runner structure.** A future production issuance action or
   process-binding capability could change the authority account, process
-  topology or token channel. A live binding target must exist before issuance;
-  it need not have applied its policy, so validation need not move past apply.
+  topology or token channel. A live binding target must exist before issuance.
+  Whether issuance before that target applies its policy yields a usable token
+  remains untested; the packet does not establish the target's sandbox state.
+  Validation timing is a later design decision dependent on that evidence.
   Any proposal would identify affected implementation, contracts and checks:
   [architecture.json](docs/architecture.json) for topology changes, C/Swift layout
   agreement when layout changes, and the order-barrier mutation control when
@@ -607,9 +643,10 @@ These preserve possible directions from the traces without expanding Q1/Q2.
   strategies or additional ambient restrictions would change that premise and
   needs another bounded question, not an automatic response to refusal.
 - **Binding creates choices, not a prescribed topology.** Q15 concerns obtaining
-  a child's audit token and accounting for the resources used. Issuance could
-  occur while a recipient waits before apply. Any claimed confinement benefit
-  would need its own observations and would not replace token erasure.
+  a child's audit token and accounting for the resources used. A recipient waiting
+  before apply is a candidate arrangement for later testing, not established
+  bound-token behavior. Any claimed confinement benefit would need its own
+  observations and would not replace token erasure.
 - **Consume success conditions differ.** Chromium uses `> 0`; WebKit and PW use
   `!= -1`. Q5 records values and associated behavior if selected later. No zero
   result means this difference remains untested; one occurrence would not specify
