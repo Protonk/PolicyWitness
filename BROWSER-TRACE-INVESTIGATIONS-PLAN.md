@@ -478,6 +478,21 @@ results beside the trial records. The controls must:
 - Accept honestly recorded native refusal, failed consumption, unavailable
   queries and missing dependent stages, without requiring positive outcomes.
 
+Constructed inputs establish reader behavior on inputs the reader's author
+shaped. They do not establish that the reader is connected to the evidence the
+experiment actually produces. So, once a planned trial has produced a record
+that the reader accepts as a complete delegation sequence, make a disposable
+copy of that record and remove or corrupt exactly one essential link in its
+execution chain, for example delete the issuer's issuance publication while
+leaving the recipient's acceptance, consume return and fresh-read observations
+intact. Run the reader on the copy. It must no longer accept the copy as
+evidence of the complete sequence: the recipient observations it still holds
+may be genuine, but the inference connecting them to issuance is now
+unsupported. Retain the copy, the single change made to it and the reader's
+output beside the constructed controls, named as a control derived from the
+trial it came from so it cannot be read as a trial record. The original record
+is never modified. This needs no additional native trial.
+
 ### Deadlines and cleanup
 
 Use one 20-second monotonic execution deadline, starting immediately before the
@@ -521,11 +536,24 @@ controls. Sensible positional variation is sufficient; formal randomization is
 not required. Scheduling discretion does not permit changing the arrangements or
 their contrasts after seeing results.
 
-Use explicit equipment-readiness checkpoints. An early checkpoint after the
-planned C0/C1 trials in the first block is reasonable, as are checkpoints between
-blocks; these review planned trials rather than adding control runs. Record
-whether process control, evidence collection and cleanup remain functional, and
-any diagnosed fault. Distinguish broken apparatus or missing required evidence
+Use explicit equipment-readiness checkpoints. The first is required: once the
+first block's C0 and C1 trials have both run, use their records to show that the
+apparatus is connected end to end. The showing comes from those two records, not
+from inspection of the apparatus: the issuer reached its issue call and its raw
+return and errno are in the record; the token publication, framing result and
+recipient acceptance are in the record; the recipient reached its consume call
+and each fresh read, and every result is in the record; the queries were
+collected and released at their marked points. Where an earlier stage failed,
+the stages that depend on it are recorded as unavailable with that reason, not
+absent. A call that was made and published a failure is evidence. A function
+that was resolved but never invoked,
+or invoked with a result that never reached the record, is a disconnected
+apparatus, and goes to the troubleshooting allowance below as a diagnosed
+fault. Successful issuance is not required, and this checkpoint adds no trial
+and no approval step. Checkpoints between blocks review planned trials in the
+same way rather than adding control runs. At every checkpoint record whether
+process control, evidence collection and cleanup remain functional, and any
+diagnosed fault. Distinguish broken apparatus or missing required evidence
 from a correctly executed native call returning an unexpected result, including
 dependent stages honestly recorded as unavailable. When equipment remains
 functional, execute all 24 planned trials.
