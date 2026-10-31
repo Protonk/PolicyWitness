@@ -4,18 +4,11 @@ This plan investigates under what restrictions an already sandboxed issuer can
 delegate usable file authority to another sandboxed process. Q1 and its bounded
 query companion Q2 are the only active questions. The first investigation uses
 an independent native fixture and ends in a durable report for maintainer review,
-whether issuance, consumption or access succeeds or fails. It authorizes no
-production change or promotion into a registered fixture or test suite.
+whether issuance, consumption or access succeeds or fails.
 
-Seven browser source traces supply the motivation and a deferred question
-inventory. The native question does not require implementing a general
-multiprocess PolicyWitness capability.
-
-The plan follows [planning a change](CONTRIBUTING.md#planning-a-change). It is
-the associated plan permitted to link to the source packet at
-[records/browser-sandbox-sources](records/browser-sandbox-sources/README.md),
-per [records/AGENTS.md](records/AGENTS.md). The packet persists in `records/`
-while this plan lives.
+The plan is linked to a source packet at
+[records/browser-sandbox-sources](records/browser-sandbox-sources/README.md). 
+The packet persists in `records/` while this plan lives.
 
 ## Boundary
 
@@ -24,22 +17,11 @@ Every experiment under this plan respects these limits.
 - **Independent process roles.** Production PolicyWitness applies one policy
   once to one disposable worker. This pilot instead uses a fresh supervisor,
   issuer and recipient per trial. The issuer and recipient each apply their own
-  policy once, except for the explicitly unsandboxed issuer baseline. The native
-  fixture records OS, SDK, compiler, signing and process facts. Its observations
-  are not production envelopes or evidence of PW's production phase protocol.
-- **Sources can be named.** Reports may identify Chromium, Firefox, WebKit and
+  policy once, except for the explicitly unsandboxed issuer baseline.
+- **Sources nor browsers.** Reports may identify Chromium, Firefox, WebKit and
   Ladybird as motivating sources. Runtime findings describe the fixture and its
-  recorded environment, not an installed browser. Source comments are not
-  established macOS facts. The packet's
-  [report](records/browser-sandbox-sources/REPORT.md) states the same boundary
-  for the sources themselves: source relationships are inspectable, runtime
-  behavior is not.
-- **The core ideas in [AGENTS.md](AGENTS.md#core-ideas) hold.** Disposable
-  sandboxed processes, explicit preparation, separate supervision and reporting,
-  observations supporting effects, and no unsupported causal attribution apply
-  to the pilot. Q2 queries precede issuance through the fixture's own observed
-  barrier.
-- **Token confinement stays.** Raw tokens never enter a request, reply, report
+  recorded environment, not an installed browser.
+- **Token confinement.** Raw tokens never enter a request, reply, report
   or retained artifact. The erasure discipline in
   [supplied extension authority](docs/WORKER.md#supplied-extension-authority)
   applies to any new issuer, channel or consumer the experiments introduce.
@@ -49,10 +31,6 @@ Every experiment under this plan respects these limits.
   that boundary. Their controlled contrast can support a bounded delegation
   finding; they do not reveal private kernel state or establish general
   permissions, revocation or the cause of a permission-shaped failure.
-- **Operating constraints.** Native and opt-in work needs the Developer ID
-  Application identity in the login keychain, a run outside any automation
-  sandbox, and the checkout lock. The [equipment setup](#equipment-setup)
-  specifies signing, execution and output locations. No release work is in scope.
 
 ## Where PolicyWitness stands
 
