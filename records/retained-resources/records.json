@@ -1,0 +1,1371 @@
+{
+ "generated": "2026-10-30",
+ "reader": "pytest_resources.inspect from the main checkout; read-only",
+ "worktrees": {
+  "/private/tmp/pw-candidate-repair-20261030": {
+   "actual_records": 16,
+   "actual_unresolved": [],
+   "nested_unresolved": [
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/b5a714a7008841bca058a254c1c524e6/record.json",
+     "run": "repair-controls-01",
+     "socket_dir": "/private/tmp/pwpx-a5a9859ee2564503907431d5e7aca79a",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/79830bc8ec5143eb8cb2ea2bcfd5a5e0/record.json",
+     "run": "repair-controls-01",
+     "socket_dir": "/private/tmp/pwpx-3b0a8ede61fc4c44853433acddeaecee",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/d3b1359098834b4ba6f7b8737d3e13f6/record.json",
+     "run": "repair-controls-01",
+     "socket_dir": "/private/tmp/pwpx-836f2ec19a4d4498af9397a60a8e8b18",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/149a785acb114b3eb54fc2831111961b/record.json",
+     "run": "repair-controls-01",
+     "socket_dir": "/private/tmp/pwpx-1417053d86744089b845596af91ec0ab",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/f256def230374e2fab0e13ceac61ad0b/record.json",
+     "run": "repair-controls-01",
+     "socket_dir": "/private/tmp/pwpx-4d73f64aea6d4a6d9c6112cc5ac416d8",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T224335Z_41bb4fb2/414ffb814ba7404193ba4e8385b2d247/record.json",
+     "run": "repair-controls-01",
+     "socket_dir": "/private/tmp/pwpx-5f2c864d1b3147ee8d1b3476f95f4cfd",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T224333Z_1f84f020/27e93089dc1a4ea4903a90b9a19a2606/record.json",
+     "run": "repair-controls-01",
+     "socket_dir": "/private/tmp/pwpx-5094ac9958314c70bae1dd288b9b036c",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T224334Z_a4e3f891/2796810f315e45939828e84ab3bf2639/record.json",
+     "run": "repair-controls-01",
+     "socket_dir": "/private/tmp/pwpx-0a9981370a12476da50a5223c787f8e3",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/163c0fa5429a4e53bfa740e406960df6/record.json",
+     "run": "repair-controls-02",
+     "socket_dir": "/private/tmp/pwpx-bcfae4c997f846f5a69d86920195b256",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/dc536c15981a4a77822abeab697062b6/record.json",
+     "run": "repair-controls-02",
+     "socket_dir": "/private/tmp/pwpx-04f3796c13934f409f9747c54e62273d",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/c995837e04f4410a83f1cb8cd11aa59e/record.json",
+     "run": "repair-controls-02",
+     "socket_dir": "/private/tmp/pwpx-1c3e75651b4247d9affbb0b8f9a36bb8",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/b3182e54b36f4048a6706e27882a0ca4/record.json",
+     "run": "repair-controls-02",
+     "socket_dir": "/private/tmp/pwpx-57b66f47c00544819ebd57351bc36d67",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/ae1c6b5dfb25416e805aa66a4605b69b/record.json",
+     "run": "repair-controls-02",
+     "socket_dir": "/private/tmp/pwpx-394c918483374ed48d6a58b729c3c1bd",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T224621Z_8564c6cb/a3a90c1a00dd49aea4722c103eac7d83/record.json",
+     "run": "repair-controls-02",
+     "socket_dir": "/private/tmp/pwpx-c5b259be2a5e45f7b99df6cf9ffeab56",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T224619Z_dfa81a6f/09e9c320d9d64ec195340de405ded35b/record.json",
+     "run": "repair-controls-02",
+     "socket_dir": "/private/tmp/pwpx-c70f63470d0443c9a5540e65cdf40e27",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-controls-02/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T224620Z_b85cf74f/3740f876b2e24fa99432a6ac62dd75d5/record.json",
+     "run": "repair-controls-02",
+     "socket_dir": "/private/tmp/pwpx-3eb755e7f577420e93a11f09ef3f9f53",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/5f4e91400a1c4e82a28e7bd68846e2ec/record.json",
+     "run": "repair-h2-controls-01",
+     "socket_dir": "/private/tmp/pwpx-25b8ad120b0347c994243bfc470bbc1e",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/50dda9a6d7ea4991a5701643ca5719dc/record.json",
+     "run": "repair-h2-controls-01",
+     "socket_dir": "/private/tmp/pwpx-521ff24ef68e456c83f2500234f8e714",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/b9f794ae99274780a5f0b168d0318cc4/record.json",
+     "run": "repair-h2-controls-01",
+     "socket_dir": "/private/tmp/pwpx-2f1195b1e3ab4789a3231a982941656e",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/8f5e8104c0b441dea1669f47ec7cf71c/record.json",
+     "run": "repair-h2-controls-01",
+     "socket_dir": "/private/tmp/pwpx-7426b82a3ddb42518d5af3e56cb2227a",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/e358e0c2f6bb465891bfbe9a85bbf4db/record.json",
+     "run": "repair-h2-controls-01",
+     "socket_dir": "/private/tmp/pwpx-9f8fd6c21dce44b394408b7ae96e78fb",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T231110Z_b381c8b2/c771fadf121f4258b18e9211735a181b/record.json",
+     "run": "repair-h2-controls-01",
+     "socket_dir": "/private/tmp/pwpx-bce959253bac436d9afdd4e086fc6224",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T231107Z_fc20ce75/07c32c2dd8474a30b3c73dde1cc30eff/record.json",
+     "run": "repair-h2-controls-01",
+     "socket_dir": "/private/tmp/pwpx-3a34b109a1ae4f109f0ce3002d047535",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-controls-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T231109Z_66d0b3c3/e684f0343ace41458aada0fbf71b8ed6/record.json",
+     "run": "repair-h2-controls-01",
+     "socket_dir": "/private/tmp/pwpx-1db7de24310a48a999ce38d04a6c15f5",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/8e972211a2c0429f95fbc490ae8d6118/record.json",
+     "run": "repair-h2-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-70117cf1c47d4bdf97043fb25e7ae9e2",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/ed47083bab79411c8e142aff263b7882/record.json",
+     "run": "repair-h2-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-8e48bc2e7ef2458689bc080715c61b2b",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/b03bc9d8e77c403eacc74973c7c7c7fc/record.json",
+     "run": "repair-h2-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-b4518348ece74a008ca9f397112207af",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/32ddb877218f40148a9edd5e29739202/record.json",
+     "run": "repair-h2-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-16c2857c920147a1ac9a10f59982dd0b",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/14f01ddb688d4afebbaef6c8b00fcfc6/record.json",
+     "run": "repair-h2-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-7a08c6b62573499f9fdad4c9ed5f83ae",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T230834Z_e7e437f4/578b5f369e204ca2b421c59d60ce7485/record.json",
+     "run": "repair-h2-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-c10e1de4d0cc4b4fa338277c5c51fa8e",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T230831Z_21bebaf1/519978c05c9443bea9c834414b7b5148/record.json",
+     "run": "repair-h2-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-6290338d8e994d049c025d243a557e40",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-h2-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T230833Z_ec51ec6e/c0ac94af25614b959602a23100a09256/record.json",
+     "run": "repair-h2-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-f3261493fd5640b6997e3a0d175a75c0",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-context-refusal/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-context-refusal/repo/tests/out/pytest-owners/context/a9de6da1de764b259a15c8101576d589/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-a2f97ece2eff41f5934cc6738dd3c9c5",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-integrated/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-integrated/repo/tests/out/pytest-owners/20261030T223920Z_78d781d0/db6108f732a049a8b000e818ecdc37e1/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-1c97a7e99ed642b0ba3270b173bc092c",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-owner-unstarted/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-owner-unstarted/repo/tests/out/pytest-owners/owner/8a9fda091b4a41e18021dc9a33282924/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-0903fbcb452647b3a5d36c8b2d7b57f3",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-readiness-lost/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-readiness-lost/repo/tests/out/pytest-owners/ready/1aac7bd8dc024e45944ae5ea7960f5ce/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-f073ae64cc4143d883efe6dcf66179a6",
+     "socket_dir_present": true,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-spawn-failure/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/launch-spawn-failure/repo/tests/out/pytest-owners/spawn/ffc06e811ec1453aa87843750e5c156b/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-a8da0c9824c44080b19ea03617d56abf",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/447a8d73c075497fb3306faa2d475e70/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-2af8e3c89bb5401e9868f96394319b9a",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/cedd507baaff43d598962c5f3ab2a0d0/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-a8786f105bcb486b96deed958d8f4a66",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/c608c6be389d4333a0e184b3ffcad1d0/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-895edee1b23544ffb1fe97d83a43e279",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/9526d750740a4a2ea8636b9fa158ea9e/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-5bc38e2be484424ab69cd7005e18fe39",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/86bebac00e7e4e81822c4ff010d06c78/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-2455b59bd115458681ae60adb401976f",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T223910Z_35de46e0/870c90964e4f45bdb1dcea0f175b42ef/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-65e319d528704eedb4e0ee5814c31487",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T223907Z_b205918c/e4a9403883a74298b57b3dfebbb72a1d/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-52a91264fc374e6a939404af33ec4485",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-candidate-repair-20261030/tests/out/runs/repair-prefix-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T223909Z_dfa2f0b0/60c0358619f34988bd4e71e83d1043b0/record.json",
+     "run": "repair-prefix-01",
+     "socket_dir": "/private/tmp/pwpx-05ae578de0a3475da34b3210fd638d82",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    }
+   ]
+  },
+  "/private/tmp/pw-coherence-20261030": {
+   "actual_records": 16,
+   "actual_unresolved": [],
+   "nested_unresolved": [
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/bcf2ed3632734412ad9920fb428d3bcf/record.json",
+     "run": "coherence-01",
+     "socket_dir": "/private/tmp/pwpx-7f44cbdb782045a989d41a7862f87d7c",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/813ae5b2f96c4510ace58d6860e66623/record.json",
+     "run": "coherence-01",
+     "socket_dir": "/private/tmp/pwpx-13ee85cf6b654c05b99689978e891fb8",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/0d079857a26b477dacd2fd6d993e6b87/record.json",
+     "run": "coherence-01",
+     "socket_dir": "/private/tmp/pwpx-081430984f694bce8e8464df79c0304d",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/c2c21da866ba4d809db347ab724f6305/record.json",
+     "run": "coherence-01",
+     "socket_dir": "/private/tmp/pwpx-65d26f1e87a54764ae2917e886a86ea4",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/2c997ca8dadd4dc29c30bc042b5ab9f3/record.json",
+     "run": "coherence-01",
+     "socket_dir": "/private/tmp/pwpx-0747bd046af24e61aecfed8675524975",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T214825Z_c28271ca/f3822415013d4f8db525613850d5f4dd/record.json",
+     "run": "coherence-01",
+     "socket_dir": "/private/tmp/pwpx-b9e280c0d63f40c693c23357dfa83200",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T214823Z_3dc981cf/017b254ef9a84805a5ab75a0f599800e/record.json",
+     "run": "coherence-01",
+     "socket_dir": "/private/tmp/pwpx-58c4783eb28641dfba7951c78c87a867",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-coherence-20261030/tests/out/runs/coherence-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T214824Z_3b32ca94/119e1641010e4d05815701c7b686b4bf/record.json",
+     "run": "coherence-01",
+     "socket_dir": "/private/tmp/pwpx-d3ec56f71bf54047b2632db5ca8cabc7",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    }
+   ]
+  },
+  "/private/tmp/pw-pytest-boundary-20261030": {
+   "actual_records": 0,
+   "actual_unresolved": [],
+   "nested_unresolved": []
+  },
+  "/private/tmp/pw-pytest-exec-build-check-20261030": {
+   "actual_records": 0,
+   "actual_unresolved": [],
+   "nested_unresolved": []
+  },
+  "/private/tmp/pw-pytest-exec-candidate-20261030": {
+   "actual_records": 176,
+   "actual_unresolved": [],
+   "nested_unresolved": [
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/f0391aca13e94d4c9d3e8eaf50051d46/record.json",
+     "run": "pytest-exec-acceptance-01",
+     "socket_dir": "/private/tmp/pwpx-3d139bdf86f84e33b824184f5b949c72",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/abc12627a0164457bdff329ea9eaf8c0/record.json",
+     "run": "pytest-exec-acceptance-01",
+     "socket_dir": "/private/tmp/pwpx-47c8b82eab8e48bb86d86297f3280454",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/846202f669dc4ef284e62cc9f60316e4/record.json",
+     "run": "pytest-exec-acceptance-01",
+     "socket_dir": "/private/tmp/pwpx-b160af8ebf1b43e59282104640398435",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/aeff98f29953408784eede91945ceae5/record.json",
+     "run": "pytest-exec-acceptance-01",
+     "socket_dir": "/private/tmp/pwpx-f45f4de9ca07409badedfe560cac5a3d",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/b71f241d4afb4444a930ac0b96a494fc/record.json",
+     "run": "pytest-exec-acceptance-01",
+     "socket_dir": "/private/tmp/pwpx-1d6f1eef93b04b169c0390e1ec2fffa9",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T184040Z_2b9a2021/126a064ea6a44c4ca51f6e1f4dd6b072/record.json",
+     "run": "pytest-exec-acceptance-01",
+     "socket_dir": "/private/tmp/pwpx-d3d5f301d9a349358208dcee13eca642",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T184037Z_00ca6e38/33c3d5ec68754863b007dd71371572dd/record.json",
+     "run": "pytest-exec-acceptance-01",
+     "socket_dir": "/private/tmp/pwpx-2d2bcd4fd0764852acf8c4638a9a2385",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-01/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T184039Z_ebd9a682/ca14fd0b039e43f9b292b3790e9b9f1b/record.json",
+     "run": "pytest-exec-acceptance-01",
+     "socket_dir": "/private/tmp/pwpx-56e3e5cdbee1411c9462b54fdec2e8b3",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/f7cc6ee3c40645c6b2dc093a240653b5/record.json",
+     "run": "pytest-exec-acceptance-02",
+     "socket_dir": "/private/tmp/pwpx-1119a45dab9b463dbd2445d3b6e5ed1b",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/55a472ffe1cd4dd7abf0155017fb68fc/record.json",
+     "run": "pytest-exec-acceptance-02",
+     "socket_dir": "/private/tmp/pwpx-96be550557fc45d3a2a11716b8ea45fb",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/4318bbd9004547aab7d325f064f2fbee/record.json",
+     "run": "pytest-exec-acceptance-02",
+     "socket_dir": "/private/tmp/pwpx-a54c43acce2b4a83aea17db1ee71a20b",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/e82bfa9bd4ac4153aa07bc919c73fe01/record.json",
+     "run": "pytest-exec-acceptance-02",
+     "socket_dir": "/private/tmp/pwpx-1f2b392f207a4ffc877801c92a9b30af",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/64b18f43d91c4724a92ad88235163d6f/record.json",
+     "run": "pytest-exec-acceptance-02",
+     "socket_dir": "/private/tmp/pwpx-6a07601b83114421ad19634700bbb578",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T184828Z_7b2362ec/80f718b2b4664fbeb9631ebd8c4b69e2/record.json",
+     "run": "pytest-exec-acceptance-02",
+     "socket_dir": "/private/tmp/pwpx-1651f69a93c448c5b6b3573b54db0622",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T184824Z_f4563bac/3ec35dd73fd84c49b4c9dd1f544321bf/record.json",
+     "run": "pytest-exec-acceptance-02",
+     "socket_dir": "/private/tmp/pwpx-beb72fba16304c3fbbb5f377b650836e",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-02/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T184826Z_b6bd1474/aa50ba4109134c80898a22f57c91df78/record.json",
+     "run": "pytest-exec-acceptance-02",
+     "socket_dir": "/private/tmp/pwpx-c48a8ddae4f24ac6b0f8976e5d031e97",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/9a81a791b88b43e5940cca9438749e8d/record.json",
+     "run": "pytest-exec-acceptance-03",
+     "socket_dir": "/private/tmp/pwpx-9188e060700c446b82a3b5132e586ad4",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/922c314b4c92470e8d522353a671fa70/record.json",
+     "run": "pytest-exec-acceptance-03",
+     "socket_dir": "/private/tmp/pwpx-913c5bd0516549989121d8f1f8f6c91a",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/712b00820ab34cd691d100e8d96b9c47/record.json",
+     "run": "pytest-exec-acceptance-03",
+     "socket_dir": "/private/tmp/pwpx-d9a8e70c45c14f0e84a65eea1767a26b",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/7bb75c6380c84352ac9bdcf2cbb64120/record.json",
+     "run": "pytest-exec-acceptance-03",
+     "socket_dir": "/private/tmp/pwpx-ac419d5fda0a494695ec0b4df8bb9406",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/1948c707807a484aaf1c3d38203d381c/record.json",
+     "run": "pytest-exec-acceptance-03",
+     "socket_dir": "/private/tmp/pwpx-be643d3f62df4e02bf1b8f0fbcb2a583",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T185458Z_c1d94ca5/5b36537cbbcc41b99645f3c043e7e39b/record.json",
+     "run": "pytest-exec-acceptance-03",
+     "socket_dir": "/private/tmp/pwpx-e21156f90746401380409819f0c9ce65",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T185455Z_1c01bec2/20d29da2266e4a2f94ab8f3e64a5199f/record.json",
+     "run": "pytest-exec-acceptance-03",
+     "socket_dir": "/private/tmp/pwpx-aad318e0f7d94f878b16989812195701",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-03/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T185457Z_7958cf35/e6a4aa692acd470798c5a6f36c51bbf8/record.json",
+     "run": "pytest-exec-acceptance-03",
+     "socket_dir": "/private/tmp/pwpx-782ec79ec791458d9ec01d5425bca159",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/92c66f2ca3f34535a995191a247c5a38/record.json",
+     "run": "pytest-exec-acceptance-04",
+     "socket_dir": "/private/tmp/pwpx-ef7ff9bcaeaf45f18d7ccc06dff921d9",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/35e2ccbc74c44df7a19a5dd666fd2934/record.json",
+     "run": "pytest-exec-acceptance-04",
+     "socket_dir": "/private/tmp/pwpx-33dba1e4082f42f1a05eb41a50c6e898",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/aa110e4aa1d44269a3d48df7056cfb8a/record.json",
+     "run": "pytest-exec-acceptance-04",
+     "socket_dir": "/private/tmp/pwpx-953ed331ee1042a4ae8e56634b70587b",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/f78378a71086404ba415b017cb43ccc0/record.json",
+     "run": "pytest-exec-acceptance-04",
+     "socket_dir": "/private/tmp/pwpx-6a32bd5a9de841cb886b302a7d4f9869",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/cdd1512e619c414aac05166a0471644b/record.json",
+     "run": "pytest-exec-acceptance-04",
+     "socket_dir": "/private/tmp/pwpx-c4fe1ef0ece140c28b66a5e5647d8886",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T190749Z_2ac0868e/72f14528d0004f248eb7cf10c13b784e/record.json",
+     "run": "pytest-exec-acceptance-04",
+     "socket_dir": "/private/tmp/pwpx-82448c26029946ef93c46fa8bf858c80",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T190746Z_e953b563/5523ed93609a4fa8921a9616f34bc307/record.json",
+     "run": "pytest-exec-acceptance-04",
+     "socket_dir": "/private/tmp/pwpx-a4dd25bbd783428496a4055c8312893f",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-04/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T190748Z_88f68c31/5c4575c171184777b453fce27402413c/record.json",
+     "run": "pytest-exec-acceptance-04",
+     "socket_dir": "/private/tmp/pwpx-1f2ddd20b8974d138d4727b7668b7a0e",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/17de7295132c4603a4434d663904f7c2/record.json",
+     "run": "pytest-exec-acceptance-05",
+     "socket_dir": "/private/tmp/pwpx-69062a731c354bb78b6147a3e94591ed",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/5b11421d7f064a0fad2fdb08deb9e9dd/record.json",
+     "run": "pytest-exec-acceptance-05",
+     "socket_dir": "/private/tmp/pwpx-3339dda4d3964ae68f6527683c9723bc",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/ebafaea8a02a4780b50a4e02c4815da1/record.json",
+     "run": "pytest-exec-acceptance-05",
+     "socket_dir": "/private/tmp/pwpx-6f7af80ec0ba4858b471540a3e853b68",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/53d4afe3021348acb89f5b1ff8f6369b/record.json",
+     "run": "pytest-exec-acceptance-05",
+     "socket_dir": "/private/tmp/pwpx-945d14c8e0b74b89a53594aa734caaf2",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/15c57761483e46238575963ea899568b/record.json",
+     "run": "pytest-exec-acceptance-05",
+     "socket_dir": "/private/tmp/pwpx-2b56dee249a44275a3b24535c6e1a854",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T191042Z_ce4ba254/6bd6531650e845538508aa0df2e35641/record.json",
+     "run": "pytest-exec-acceptance-05",
+     "socket_dir": "/private/tmp/pwpx-730dbe3fa6414179971626b33936ec82",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T191040Z_1dea97f7/1ab24c504db34d65a1d342b7b41a34a4/record.json",
+     "run": "pytest-exec-acceptance-05",
+     "socket_dir": "/private/tmp/pwpx-5efef72e265d473089ab36d6c5c4b65e",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-05/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T191041Z_64ae4f99/f131469bc82e416aae959b21025c8c17/record.json",
+     "run": "pytest-exec-acceptance-05",
+     "socket_dir": "/private/tmp/pwpx-f35da87a74cc4d71905bb14de5bed03d",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/8e77f48e9df8461ea6f2c77579b0451f/record.json",
+     "run": "pytest-exec-acceptance-06",
+     "socket_dir": "/private/tmp/pwpx-131313283c2b41caaadf1243292d9aff",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/73a290de17134c70b2cd1c332179a46d/record.json",
+     "run": "pytest-exec-acceptance-06",
+     "socket_dir": "/private/tmp/pwpx-f891b48c85f8466884af3fc7b7a3ceca",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/da47743620914ff6b9fa78b9c49915ac/record.json",
+     "run": "pytest-exec-acceptance-06",
+     "socket_dir": "/private/tmp/pwpx-64341362649e4474af35672ff6f75d60",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/608162c8aa70448fa2a73780158e0b4d/record.json",
+     "run": "pytest-exec-acceptance-06",
+     "socket_dir": "/private/tmp/pwpx-a1bc974886994d489ba809512b829e7d",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/8e4e7483a17541d9a24029ebb88671f4/record.json",
+     "run": "pytest-exec-acceptance-06",
+     "socket_dir": "/private/tmp/pwpx-d8f28ec70f33434bb59bbe9557b31535",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T191918Z_806b7b2c/abf9e787f04347ce87965270872b0b7d/record.json",
+     "run": "pytest-exec-acceptance-06",
+     "socket_dir": "/private/tmp/pwpx-77e3d8d9df1d49baaa97338bd282b58b",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T191915Z_2b2cdd7b/560ebbc64e2a4be7a39c926ad8342d2c/record.json",
+     "run": "pytest-exec-acceptance-06",
+     "socket_dir": "/private/tmp/pwpx-e37585383ece4dd6a76da822fef9a203",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-06/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T191917Z_83b9f3dd/f6f0cba14e5c4662a643f64f0414ce79/record.json",
+     "run": "pytest-exec-acceptance-06",
+     "socket_dir": "/private/tmp/pwpx-e53bf7cf890f4c4c88a88f7af5b23ff8",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/334da9a611a74b96801b720d20d413fb/record.json",
+     "run": "pytest-exec-acceptance-07",
+     "socket_dir": "/private/tmp/pwpx-9b8f9f9553b44dc4ab450330c42e15a4",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/642c8a4976634e9082a5a6cdebc4c31d/record.json",
+     "run": "pytest-exec-acceptance-07",
+     "socket_dir": "/private/tmp/pwpx-caab11cd5eed4ac4b9fe2b8be3227cc3",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/27082a988db746d780e02a8d846f4014/record.json",
+     "run": "pytest-exec-acceptance-07",
+     "socket_dir": "/private/tmp/pwpx-3ddd35c526854c09a66afef6fb85ab4e",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/8d10069c193a4a04ae25de3667cea83c/record.json",
+     "run": "pytest-exec-acceptance-07",
+     "socket_dir": "/private/tmp/pwpx-9dc79acad5dc41ecb062861c45b21e55",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/997e378a7649427b8daebd3c40f9122d/record.json",
+     "run": "pytest-exec-acceptance-07",
+     "socket_dir": "/private/tmp/pwpx-d828632422ca4eec9b1d176bbaf745b0",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T192124Z_8100f2e1/8a4de0b6f027400b91fe0362bb38e6b1/record.json",
+     "run": "pytest-exec-acceptance-07",
+     "socket_dir": "/private/tmp/pwpx-f638f8732db441e2ade2f9a9c36c9edf",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T192120Z_de968225/8ff2849a82b645d781ea14246af9cb16/record.json",
+     "run": "pytest-exec-acceptance-07",
+     "socket_dir": "/private/tmp/pwpx-05f141b94d04496c86967cccc3cb05ff",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-07/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T192123Z_0cc6512d/c42ff5148b8d42d7878ea1899c07758e/record.json",
+     "run": "pytest-exec-acceptance-07",
+     "socket_dir": "/private/tmp/pwpx-55d5663f76784fa79dcc8f3ae403ff84",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/422321a5742b499c8751baf272fe1844/record.json",
+     "run": "pytest-exec-acceptance-08",
+     "socket_dir": "/private/tmp/pwpx-c2f54540a4024095b5d9222417fc34b1",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/eb182d0048ac4144b37492c18d4d8957/record.json",
+     "run": "pytest-exec-acceptance-08",
+     "socket_dir": "/private/tmp/pwpx-eb13c8c149cd4d8bb76b6bdee4439473",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/12c9c9ac148445d1acbc7df1215065dd/record.json",
+     "run": "pytest-exec-acceptance-08",
+     "socket_dir": "/private/tmp/pwpx-6458865a5c824958b16060a176e4b80b",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/badc5d666e7341eb8ee50fb2e7b0c5ff/record.json",
+     "run": "pytest-exec-acceptance-08",
+     "socket_dir": "/private/tmp/pwpx-dc01802649254dd7b049cdbb53cd5ac4",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/29c6c5fd7767471b90ba460041bec6e7/record.json",
+     "run": "pytest-exec-acceptance-08",
+     "socket_dir": "/private/tmp/pwpx-de591e362e164b70b06d223bf7b0b38e",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T193116Z_e865b9cc/73f701be974544fc9537ac2b257771d5/record.json",
+     "run": "pytest-exec-acceptance-08",
+     "socket_dir": "/private/tmp/pwpx-9769c927ec274ecd9496febbe96b722e",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T193113Z_d36c25ef/3bcbde1ec4984a3c9c1a340a97cb7b2f/record.json",
+     "run": "pytest-exec-acceptance-08",
+     "socket_dir": "/private/tmp/pwpx-60d00d730cc14a86a10e30efbd68185e",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-acceptance-08/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T193115Z_678df8ef/382785506ec34036afa4b10948d49977/record.json",
+     "run": "pytest-exec-acceptance-08",
+     "socket_dir": "/private/tmp/pwpx-f7fa9e6f3a4b4ee989d94d61be714add",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-closure-control-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-closure-control-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/0687545b71f144a182b4cac93bd63b2d/record.json",
+     "run": "pytest-exec-closure-control-01",
+     "socket_dir": "/private/tmp/pwpx-b656bbf30f2e4e3c890eb4dc22c3a831",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/22b7e33d01db45c495502a44c2566070/record.json",
+     "run": "pytest-exec-final-controls-01",
+     "socket_dir": "/private/tmp/pwpx-6100f0359dbf4e45971cbc318b12ce52",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/b65623f9a7934c54898e338ac41076e8/record.json",
+     "run": "pytest-exec-final-controls-01",
+     "socket_dir": "/private/tmp/pwpx-efb3d85cd7b64e1089ade146da614619",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/1322cb12651a4e26b71921cd98789e7b/record.json",
+     "run": "pytest-exec-final-controls-01",
+     "socket_dir": "/private/tmp/pwpx-30f8433c1a5444d0934bb977ab6df391",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/0500bd172da242089d87efcc2b8c0354/record.json",
+     "run": "pytest-exec-final-controls-01",
+     "socket_dir": "/private/tmp/pwpx-f655742ac0c24042922768ca522cc884",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-final-controls-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/db6da412697143e9be26623aeb76896d/record.json",
+     "run": "pytest-exec-final-controls-01",
+     "socket_dir": "/private/tmp/pwpx-65f84e54801d434bb199f92e3e21160e",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/569d901e46e542959c2da7d44bb71825/record.json",
+     "run": "pytest-exec-integration-01",
+     "socket_dir": "/private/tmp/pwpx-52f2e4bc13a343efa332811474462056",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/ee4d9e36f8c8475fbd37c548f9513275/record.json",
+     "run": "pytest-exec-integration-02",
+     "socket_dir": "/private/tmp/pwpx-d7d78c52029947fdb9476a7005958c70",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/7d35b0f0abc847498eade7caf1dc5882/record.json",
+     "run": "pytest-exec-integration-02",
+     "socket_dir": "/private/tmp/pwpx-2c1ee05a86e442b59e31db39a0af8e70",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/cd4877efe7cb491cb50f6625458c42a7/record.json",
+     "run": "pytest-exec-integration-02",
+     "socket_dir": "/private/tmp/pwpx-861cec929926455c937fc158979cb989",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/8bb80ab99c884fc7a4c360ec43aa7f45/record.json",
+     "run": "pytest-exec-integration-02",
+     "socket_dir": "/private/tmp/pwpx-15f3e1df9bcd4d50820c230646361276",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-integration-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/875066e652404be19b40a9ca33501383/record.json",
+     "run": "pytest-exec-integration-02",
+     "socket_dir": "/private/tmp/pwpx-73ed7d27837b4e16ae68fcd25a5495b0",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-01/suites/dispatcher/pytest_controls/artifacts/detached/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-01/suites/dispatcher/pytest_controls/artifacts/detached/repo/tests/out/pytest-owners/detached/e86432afbb1844ee975a49669b67d410/record.json",
+     "run": "pytest-exec-ownership-01",
+     "socket_dir": "/private/tmp/pwpx-45d8f407bd7645b9bfaf9648a1bf63c0",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/a6740721daea428ea717e0f6124b2068/record.json",
+     "run": "pytest-exec-ownership-01",
+     "socket_dir": "/private/tmp/pwpx-bec29b6a807649c48074ceab6231df03",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-02/suites/dispatcher/pytest_controls/artifacts/detached/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-02/suites/dispatcher/pytest_controls/artifacts/detached/repo/tests/out/pytest-owners/detached/9fbc469db52147b59808034b74bf2974/record.json",
+     "run": "pytest-exec-ownership-02",
+     "socket_dir": "/private/tmp/pwpx-eb5425a63457454285ff3845c7f880af",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/2b67a168576343ecb2081e80322cf4b1/record.json",
+     "run": "pytest-exec-ownership-02",
+     "socket_dir": "/private/tmp/pwpx-bb699bcf706f4dd6adc7db39973ead68",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-03/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-ownership-03/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/6f422ef4f4be450b9b6e918a32af1908/record.json",
+     "run": "pytest-exec-ownership-03",
+     "socket_dir": "/private/tmp/pwpx-4e018cc1115041eeb39591cc1c71cd31",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-timeout-control-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-timeout-control-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/ebf5d401de9d4064bac4057536457da8/record.json",
+     "run": "pytest-exec-timeout-control-01",
+     "socket_dir": "/private/tmp/pwpx-904d4976add249f39c007b774391342e",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/437f2640fa4f4c7791f3866650958d3e/record.json",
+     "run": "pytest-exec-windows-01",
+     "socket_dir": "/private/tmp/pwpx-f8085f1111534ec4b0df33863042bbb0",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/d613597aeadb44fbad71501f81c33235/record.json",
+     "run": "pytest-exec-windows-01",
+     "socket_dir": "/private/tmp/pwpx-a18175c5693d4892b284fbf0b504794c",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/08f8eeab34cd420dac9152e60320e134/record.json",
+     "run": "pytest-exec-windows-01",
+     "socket_dir": "/private/tmp/pwpx-d995f62510f34db78c1f3ebb21f15222",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/a985e6f8b84f4fe1b4e221aae0909c43/record.json",
+     "run": "pytest-exec-windows-01",
+     "socket_dir": "/private/tmp/pwpx-8ce569c4a566439191f428c6140ee5c5",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-01/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/7eb6adffeaf640ec9ea330dd1aeefef2/record.json",
+     "run": "pytest-exec-windows-01",
+     "socket_dir": "/private/tmp/pwpx-5625313ac6c24ba2bb305c75730d7b13",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/ownership/repo/tests/out/pytest-owners/ambiguous/5b29fbfec84e41b3b16b844df7c1a777/record.json",
+     "run": "pytest-exec-windows-02",
+     "socket_dir": "/private/tmp/pwpx-107f45c6ba1d402685863f222a1b263b",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_release_authorized/repo/tests/out/pytest-owners/command_release_authorized/f634f482b09e49eb83e24f4a564758d9/record.json",
+     "run": "pytest-exec-windows-02",
+     "socket_dir": "/private/tmp/pwpx-77f57ac84df146e3bc35ecf384bf2412",
+     "socket_dir_present": false,
+     "state": "command_release_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/recovery-command_started/repo/tests/out/pytest-owners/command_started/ce7b2555f1e44dd49a50b119a3053dbb/record.json",
+     "run": "pytest-exec-windows-02",
+     "socket_dir": "/private/tmp/pwpx-9c2a7a6a14604ac9a956bf49f9600cd3",
+     "socket_dir_present": false,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_bound/repo/tests/out/pytest-owners/owner_bound/61f6d19202034eb49da52535bd6c9ed6/record.json",
+     "run": "pytest-exec-windows-02",
+     "socket_dir": "/private/tmp/pwpx-3fc804f3f6244166a3a874c809697698",
+     "socket_dir_present": false,
+     "state": "owner_bound"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/recovery-owner_launch_authorized/repo/tests/out/pytest-owners/owner_launch_authorized/4292186cc20a4a23a48a66d0a557bd5d/record.json",
+     "run": "pytest-exec-windows-02",
+     "socket_dir": "/private/tmp/pwpx-c9fca1d15eff4dc3ad9d77d0dfd06bd5",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/window-after-return/repo/tests/out/pytest-owners/20261030T183331Z_c9b28cdf/3d777a64ee5249e981e0b8fef61e7962/record.json",
+     "run": "pytest-exec-windows-02",
+     "socket_dir": "/private/tmp/pwpx-1d3e9e4b4f5845fd9b3d032543d949d7",
+     "socket_dir_present": true,
+     "state": "command_started"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/window-before-owner/repo/tests/out/pytest-owners/20261030T183326Z_3f1fce58/6a7bd297c5b24459b09a8126dbb2739c/record.json",
+     "run": "pytest-exec-windows-02",
+     "socket_dir": "/private/tmp/pwpx-cbe463b165324c11b5ac2b5c632a9434",
+     "socket_dir_present": false,
+     "state": "owner_launch_authorized"
+    },
+    {
+     "blocking": "checkout",
+     "fixture_root": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo",
+     "record": "/private/tmp/pw-pytest-exec-candidate-20261030/tests/out/runs/pytest-exec-windows-02/suites/dispatcher/pytest_controls/artifacts/window-before-start-publication/repo/tests/out/pytest-owners/20261030T183329Z_3a454f46/2b964c5724aa44b29a109c40c48bde7d/record.json",
+     "run": "pytest-exec-windows-02",
+     "socket_dir": "/private/tmp/pwpx-50e14915db434ffbaa04550ab36e9470",
+     "socket_dir_present": true,
+     "state": "command_release_authorized"
+    }
+   ]
+  },
+  "/private/tmp/pw-pytest-exec-comparison-20261030": {
+   "actual_records": 0,
+   "actual_unresolved": [],
+   "nested_unresolved": []
+  }
+ }
+}

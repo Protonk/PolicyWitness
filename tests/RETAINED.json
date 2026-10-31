@@ -548,6 +548,13 @@
       "reason": "Candidate review H2: dispatcher/pytest_controls passes after the correction, 54 observations; both availability transitions end with a terminal account, a named not_started/unavailable family, the legacy sentinel passing and a free checkout; receipt controls unchanged. Nested unresolved fixture records remain protected.",
       "source": "da4699933f0461046c020e354efac153267ffe5d",
       "app_inventory": null
+    },
+    {
+      "path": "runs/integration-default-01",
+      "run_id": "20261030T231522Z_2f76036f",
+      "reason": "Pytest exec-family integration: the default battery passes 202/202 on main after merging reviewed candidate f80815fa, with no skips, unrun cases or harness errors, the family 9/9 with 16 closed commands and the accepted app valid and unchanged. Three dispatcher cases overlapped a machine sleep and passed.",
+      "source": "b3536d1a44c9581f971216b8ae3b809c44ec4a56",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

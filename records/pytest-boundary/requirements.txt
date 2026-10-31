@@ -1,5 +1,0 @@
-pytest==9.0.2
-pluggy==1.7.0
-iniconfig==2.3.1
-packaging==26.3
-pygments==2.21.0
