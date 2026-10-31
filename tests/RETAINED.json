@@ -555,6 +555,13 @@
       "reason": "Pytest exec-family integration: the default battery passes 202/202 on main after merging reviewed candidate f80815fa, with no skips, unrun cases or harness errors, the family 9/9 with 16 closed commands and the accepted app valid and unchanged. Three dispatcher cases overlapped a machine sleep and passed.",
       "source": "b3536d1a44c9581f971216b8ae3b809c44ec4a56",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/integration-drift-01",
+      "run_id": "20261031T001837Z_a4aa1969",
+      "reason": "Pytest exec-family integration: all eight default source_drift cases pass after the review packages were retired and the retained-resources record added.",
+      "source": "821fd66b37f8fff314cf7b31b70005fe0cac5c24",
+      "app_inventory": null
     }
   ]
 }
