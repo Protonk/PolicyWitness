@@ -364,6 +364,37 @@ the native fixture's early exits gate equipment and execution.
 Retain the adapted source with the investigation; do not edit production code,
 the registered fixture, suite checkers or test catalog to conduct it.
 
+### Records and retention
+
+The first step, before any build, is to add a `.gitignore` rule for
+`records/browser-trace-investigations/local/` and commit it. The ignored
+`records/performance/runs/` directory is the existing precedent for local-only
+evidence under `records/`. Everything else under
+`records/browser-trace-investigations/` is committed for the life of this plan
+and is disposed of or dispersed at retirement together with the ignore rule.
+
+Commit beside `REPORT.md`: the pilot source and build commands; the exact
+expanded policies and inputs for every row; source and binary hashes; signature
+and entitlement read-backs; OS, SDK and compiler facts; each trial's token-free
+observation record with its block, position, apparatus revision and wait/reap
+results; the chosen block sequences and scheduling notes; checker-control inputs
+and results; and cleanup records. These are text records measured in kilobytes
+per trial. Comparable retained runs of the existing native suite occupy under
+two megabytes for 23 experiments, including a source snapshot and the signed
+binary. A committed record larger than a few megabytes needs a stated reason in
+the report; this machine has other duties and there is no standing reason to
+save bulk data.
+
+Leave in `local/`: compiled executables and objects, the signed binary itself,
+and any copy of a regenerable artifact kept for re-verification. The committed
+hashes and read-backs identify them. The report must be readable without
+`local/`; where it cites an item there, it says the item is gitignored and
+available only in the local checkout, per
+[records guidance](records/AGENTS.md). Core dumps are disabled, and tokens,
+token hashes and token-bearing diagnostics are never written to either
+location. Scratch under [`.tmp/`](.tmp/AGENTS.md) holds build intermediates
+only, never a sole copy.
+
 ### Preparation and application boundary
 
 The first result concerns issuance after application with a prepared native
@@ -439,6 +470,21 @@ known bytes obtained by a fresh recipient read, alongside its before-consume
 observation. Nonnull issuance alone is only a positive control for token production.
 C0 is one additional diagnostic baseline, not a search over identities or
 entitlements. It tests the same path with issuer application omitted.
+
+The host-level prior for C0 is already pinned. The 0.3.4 release acceptance in
+`tests/RETAINED.json` ran at the commit `v0.3.4` resolves to, and its battery
+passed the four production extension cases in `witness_contract` (`extensions`,
+`extension_boundaries`, `extension_combinations`, `extension_directory`): the
+app's signed issuer under ordinary authority, the app's signed worker consuming
+after apply, and fresh reads through the predicate. The opt-in native suite did
+not run in that acceptance; the retained run `workset-native-crossed-01` is its
+nearest evidence, from an ancestor of the tag with fixture and suite sources
+identical to the tag's, and its `lifecycle` row has C0's shape. Cite both as
+context for this host, OS and identity. Neither replaces C0: the inference from
+C0 to C1 needs the pilot's own binary, signing read-back, credentials, path
+preparation, policies and recipient, and a C0 failure against that prior
+concerns the pilot's apparatus rather than the host. Referenced evidence keeps
+its managed ownership and is not copied into these records.
 
 If C0 works but C1 does not, the limitation concerns the applied-sandbox setup;
 it does not isolate a class/path restriction. If C1 works but C2 does not, the
@@ -563,13 +609,12 @@ report the remaining positions as unrun rather than starting another battery.
 Necessary cleanup still follows its ownership rules. A larger redesign, changed
 signing context, extra contrasts or further retries require review.
 
-Retain the report at `records/browser-trace-investigations/REPORT.md`, with the
-pilot source, exact policies and inputs, build commands and source/binary hashes,
-signature and entitlement read-backs, OS/SDK/compiler facts, raw token-free
-observations, checker controls and cleanup records alongside it. This is an
-investigation record associated with this plan under [records guidance](records/AGENTS.md),
-not a replacement plan or promoted test. Existing suite evidence, if referenced,
-keeps its managed ownership and is not moved into scratch or these records.
+Retain the report at `records/browser-trace-investigations/REPORT.md` with the
+committed evidence listed under [records and retention](#records-and-retention).
+This is an investigation record associated with this plan under
+[records guidance](records/AGENTS.md), not a replacement plan or promoted test.
+Existing suite evidence, if referenced, keeps its managed ownership and is not
+moved into scratch or these records.
 
 The report distinguishes attempted and unrun rows, observations and inference,
 control failures, preparation limits, query limits, variable outcomes and
