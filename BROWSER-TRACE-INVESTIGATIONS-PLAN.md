@@ -56,13 +56,8 @@ Every experiment under this plan respects these limits.
   permissions, revocation or the cause of a permission-shaped failure.
 - **Operating constraints.** Native and opt-in work needs the Developer ID
   Application identity in the login keychain, a run outside any automation
-  sandbox, and the checkout lock; see
-  [tests/AGENTS.md](tests/AGENTS.md#sandboxed-automation-harnesses) and
-  [tests/suites/sandbox_extensions_native/README.md](tests/suites/sandbox_extensions_native/README.md).
-  Use the existing fixture's Developer ID signing and empty-entitlement context;
-  retain its read-back rather than seeking different entitlements on failure.
-  Scratch build outputs may live under [`.tmp/`](.tmp/AGENTS.md); sole copies of
-  sources, evidence and reports may not. No release work is in scope.
+  sandbox, and the checkout lock. The [equipment setup](#equipment-setup)
+  specifies signing, execution and output locations. No release work is in scope.
 
 ## Where PolicyWitness stands
 
@@ -76,16 +71,13 @@ Read current behavior from these sources rather than from this summary.
 | Issuer implementation | [`pw_extension_issuer.c`](controller/tools/pw_probe_runner/pw_extension_issuer.c): `dlopen` of libsandbox, `sandbox_extension_issue_file` with flags `0`, class chosen by the `authority` field; [`pw_extension_channel.h`](controller/tools/pw_probe_runner/pw_extension_channel.h) |
 | Worker side | [`prepare_extension`](controller/tools/pw_probe_runner/pw_probe_runner.c) resolves consume/release symbols before apply and validates the channel before apply; [`attempt_extension`](controller/tools/pw_probe_runner/pw_probe_runner.c) treats only `-1` as a failed consume and keeps one static handle |
 | Host session | [`ExtensionIssuer.swift`](runner/Sources/PWRunnerCore/ExtensionIssuer.swift): `realpath` and `fstatat` before issuance, issuer spawned and reaped before the worker exists |
-| Query side | [`sb_api_validator.c`](controller/tools/sb_api_validator/sb_api_validator.c): `NONE` or one filter value, including `PATH`, `GLOBAL_NAME` and `LOCAL_NAME`; no class-plus-path representation. Batch outcomes separate query errors from denials; per-probe JSON marks every nonzero return as `denied`. The no-report fallback is `0x40000000`. The independent native fixture instead calls from its supervisor and resolves the exported flag. |
+| Query side | [`sb_api_validator.c`](controller/tools/sb_api_validator/sb_api_validator.c): query arguments, no-report flag and result classification; `NONE` or one filter value, with no class-plus-path representation |
 | Native fixture and its controls | [suite README](tests/suites/sandbox_extensions_native/README.md); [fixture README](tests/fixtures/sandbox_extensions/README.md); host, issuer and worker as three processes; file and directory scenarios |
 | Production extension controls | [native extension boundaries](tests/suites/witness_contract/README.md#native-extension-boundaries) and the `check_extension*.py` checkers beside it |
 | Evidence contract | [native extension evidence](tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence); [native sandbox extensions](tests/CHANGE-VERIFICATION.md#native-sandbox-extensions) |
 | Process topology and architecture account | [process topology](docs/ARCHITECTURE.md#process-topology); [docs/architecture.json](docs/architecture.json) and its generator |
 
-In one sentence: the issuer runs outside the sandbox under ordinary authority,
-issues one of two file classes with zero flags for a host-resolved path, is
-reaped before the worker is spawned, and the worker admits at most one consume
-and one release. Production PW has no post-apply issuance action. Query operation
+Production PW has no post-apply issuance action. Query operation
 strings remain OS queries under [request admission](docs/REQUEST-GRAMMAR.md);
 accepting a string does not establish a useful native prediction for it.
 
@@ -359,8 +351,7 @@ Use an investigation-local adaptation of
 [`tests/fixtures/sandbox_extensions/native.c`](tests/fixtures/sandbox_extensions/native.c).
 Its existing host/issuer/worker split, separate token storage and explicit
 descriptor passing are useful equipment. Its unsandboxed issuer and pre-policy
-worker read change for this pilot. The suite's checker owns acceptance criteria;
-the native fixture's early exits gate equipment and execution.
+worker read change for this pilot.
 Retain the adapted source with the investigation; do not edit production code,
 the registered fixture, suite checkers or test catalog to conduct it.
 
@@ -373,29 +364,56 @@ evidence under `records/`. Everything else under
 `records/browser-trace-investigations/` is committed for the life of this plan
 and is disposed of or dispersed at retirement together with the ignore rule.
 
-Commit beside `REPORT.md`: the pilot source and build commands; the exact
-expanded policies and inputs for every row; source and binary hashes; signature
-and entitlement read-backs; OS, SDK and compiler facts; each trial's token-free
-observation record with its block, position, apparatus revision and wait/reap
-results; the chosen block sequences and scheduling notes; checker-control inputs
-and results; and cleanup records. Query records include the supervisor's caller
-identity, resolved API/flag provenance, numeric filter and flag values, the full
-type argument passed, and raw return/errno pairs. These are text records measured
-in kilobytes per trial. Comparable retained runs of the existing native suite occupy under
-two megabytes for 23 experiments, including a source snapshot and the signed
-binary. A committed record larger than a few megabytes needs a stated reason in
-the report; this machine has other duties and there is no standing reason to
-save bulk data.
+Commit the pilot source, driver and reader beside `REPORT.md`, with the text
+evidence specified below. A committed record larger than a few megabytes needs
+a stated reason in the report.
 
-Leave in `local/`: compiled executables and objects, the signed binary itself,
-and any copy of a regenerable artifact kept for re-verification. The committed
-hashes and read-backs identify them. The report must be readable without
-`local/`; where it cites an item there, it says the item is gitignored and
-available only in the local checkout, per
+Build directly in `local/<apparatus-revision>/`: executables, objects, debug
+symbols and other regenerable build products stay there. Do not use `.tmp/`
+for this pilot. The committed hashes and read-backs identify the local products.
+The report must be readable without `local/`; where it cites an item there, it
+says the item is gitignored and available only in the local checkout, per
 [records guidance](records/AGENTS.md). Core dumps are disabled, and tokens,
-token hashes and token-bearing diagnostics are never written to either
-location. Scratch under [`.tmp/`](.tmp/AGENTS.md) holds build intermediates
-only, never a sole copy.
+token hashes and token-bearing diagnostics are never written to either location.
+
+### Equipment setup
+
+Use an investigation-local driver at `records/browser-trace-investigations/run.sh`.
+From the repository root, outside any automation sandbox, invoke it through:
+
+```sh
+tests/lib/checkout_lock.sh -- /bin/sh records/browser-trace-investigations/run.sh
+```
+
+The driver owns build/signing commands, block execution, cleanup accounting and
+evidence finalization under that lock. Separate block invocations use the same
+wrapper. Honor a busy-lock refusal; never unlink `tests/.checkout.lock`. Preserve
+the inherited lock descriptors through intermediate launchers as required by
+the [lock contract](tests/README.md#retention-ownership-and-execution-locking).
+
+Adapt the native fixture's [build command](tests/fixtures/sandbox_extensions/build.sh)
+to the pilot source and the revision's `local/` output directory. Select
+`pilot_identity` from `PW_BYOXPC_IDENTITY`, falling back to `IDENTITY`; require
+an explicit `Developer ID Application: ...` identity. Set `pilot_binary` to the
+new executable and run the fixture's signing and read-back sequence:
+
+```sh
+/usr/bin/codesign --force --options runtime --timestamp -s "$pilot_identity" "$pilot_binary"
+/usr/bin/codesign --verify --strict --verbose=4 "$pilot_binary"
+/usr/bin/codesign -dvvv "$pilot_binary"
+/usr/bin/codesign -d --entitlements :- "$pilot_binary"
+```
+
+Require successful verification, the selected authority and runtime flag in the
+signature read-back, and absent or empty entitlements. Do not seek another
+signing context on failure. All three roles exec this same signed binary; child
+environments are `PATH=/usr/bin:/bin` and `LC_ALL=C`.
+
+Retain one equipment record per apparatus revision: source commit/status and
+source hashes; build/signing/read-back command arguments, results and output;
+executable path and post-signing hash; selected identity and entitlement result;
+macOS build, Darwin release, architecture, SDK and compiler facts. Trial records
+reference that record rather than duplicating it.
 
 ### Preparation and application boundary
 
@@ -405,9 +423,9 @@ Chromium's framework startup. T7 explains why the boundary must be explicit.
 
 | Stage | Operations and evidence |
 | --- | --- |
-| Supervisor before child launch | Create owned regular files A and B with known bytes under a fresh temporary directory outside privacy-protected user folders. Resolve their canonical absolute paths, record metadata and ordinary fresh-read baselines, and close target descriptors. Prepare exact policies and separate evidence/token channels; the token channels start empty. Pass strings and apparatus descriptors, never a target descriptor or pre-issued token. |
-| Each child before apply | Record role, PID, credentials and the inherited descriptor inventory. Map the explicit channels, close their mapping descriptors, disable core dumps, resolve the needed libsandbox entry points, initialize fixed reporting storage, and compile the policy. Record preparation results and an inventory of loaded images. No target open, target `stat`/`realpath`, extension issue/consume/release, or extension warm-up occurs in either child before apply. |
-| Application | Each sandboxed child applies its policy once and publishes the native result before advancing. Failure withholds dependent actions and remains evidence. The ordinary-authority issuer baseline follows C1's preparation but explicitly omits application. Source order and supervisor gates associate the application and later call publications with the same owned process. |
+| Supervisor before child launch | Create owned regular files A and B with known bytes in the driver's fresh trial directory. Resolve their canonical absolute paths, record metadata and ordinary fresh-read baselines, and close target descriptors. Prepare exact policies and separate evidence/token channels; the token channels start empty. Pass strings and apparatus descriptors, never a target descriptor or pre-issued token. |
+| Each child before apply | Map the explicit channels, close their mapping descriptors, disable core dumps, resolve the needed libsandbox entry points, initialize fixed reporting storage, and compile the row's policy. No target open, target `stat`/`realpath`, extension issue/consume/release, or extension warm-up occurs in either child before apply. |
+| Application | Each sandboxed child applies its policy once and publishes the native result before advancing, with C0's omission specified in the matrix. Failure withholds dependent actions and remains evidence. Source order and supervisor gates associate the application and later call publications with the same owned process. |
 | After apply | The recipient opens, reads, identifies and closes A before token consumption. The supervisor completes Q2 against the waiting issuer, then releases its first issuance call. Native path processing within that call therefore occurs under the issuer's policy. The recipient validates the subsequent transfer, optionally consumes, and makes another fresh open/read/identity/close attempt. Record unavailable stages explicitly when issuance or transfer fails. |
 
 Use the minimal C/libsystem/libsandbox setup of the existing native fixture;
@@ -419,13 +437,12 @@ and recipient occur after their respective application boundaries. The existing
 fixture's pre-policy target-read baseline moves to the supervisor for this pilot.
 
 Inspect the retained source and linked/loaded-image inventory for pre-apply
-acquisitions, and record descriptor inventories immediately before apply and
-before target access or issuance. A target descriptor already present invalidates
-a fresh-acquisition inference. Retain application results, per-process ordered
-markers, supervisor acknowledgements and independent wait/reap observations.
-These establish the explicit preparation and observed order, not a complete
-census of transient resources, Mach rights or private library initialization.
-A comparison of pre- versus post-apply framework loading is later work.
+acquisitions. Collect descriptor snapshots at the exact boundaries specified in
+the [trial record](#trial-record-and-reader-checks). A target descriptor already
+present invalidates a fresh-acquisition inference. The recorded preparation and
+order are not a complete census of transient resources, Mach rights or private
+library initialization. A comparison of pre- versus post-apply framework loading
+is later work.
 
 ### Fixed contrasts and positive controls
 
@@ -447,8 +464,6 @@ All sandboxed issuer policies use this exact common prefix, in this order:
 The file-write restriction guards against unintended issuer writes; it is fixed
 equipment policy, not a variable in the issuance-filter contrasts. Independent
 target observations, rather than that rule's presence, establish preserved bytes.
-C0 omits application of the whole C1 profile, so C0/C1 cannot isolate application
-itself from the write restriction or the issuance-rule composition.
 
 C1 appends `(allow file-issue-extension)` to the prefix. C2 appends:
 
@@ -462,17 +477,12 @@ C1 appends `(allow file-issue-extension)` to the prefix. C2 appends:
 C3 appends nothing. C4 changes only C2's predicate string to
 `com.apple.app-sandbox.read-write`; C5 changes only its literal to canonical B.
 C6/C7 use C2's issuer policy. Substitute the actual escaped canonical paths for
-the placeholders before compilation and retain the exact expanded bytes. Thus
-C1 and C2 share the issuance denial and differ only in the allow clause's filter.
+the placeholders before compilation. C1 and C2 share the issuance denial and
+differ only in the allow clause's filter.
 
-These are policy constructions to test, not an established rule that a later
-allow overrides an earlier deny. The
-[allow/deny consistency suite](tests/suites/sbpl_allowdeny_consistency/README.md)
-tests reversed parameter bindings, not textual deny-then-allow precedence for
-one operation. C1/C3 and C2–C5 can show effects of the chosen compositions in this
-context; the matrix has no reversed-order trial and cannot establish a general
-ordering rule. Failure of the intended exception remains an observation, not a
-reason to rearrange clauses during the pilot.
+Keep this clause order fixed. Failure of an intended exception is an observation,
+not a reason to rearrange clauses during the pilot or infer a general precedence
+rule from these compositions.
 
 The recipient's fixed prefix is `(version 1) (allow default)
 (deny file-read-data)`, followed by
@@ -487,7 +497,7 @@ siblings so that the recipient does not inherit an issuer's applied policy.
 
 | Row | Issuer arrangement | Recipient intervention | Purpose |
 | --- | --- | --- | --- |
-| C0 | Ordinary-authority issuer, no applied profile | Consume if delivery permits | Context baseline for this binary, class, target, OS and recipient path |
+| C0 | C1's preparation, including compilation of its policy; omit only application | Consume if delivery permits | Ordinary-authority baseline for this binary, class, target, OS and recipient path |
 | C1 | Common prefix plus unfiltered issuance allow | Consume if delivery permits | Candidate matched positive control for restricting issuance by class and path |
 | C2 | Common prefix plus allow filtered by read class and literal A | Consume if delivery permits | Matching restricted delegation |
 | C3 | Common prefix only, retaining its issuance denial | Consume if delivery permits | Absence of the issuance allowance |
@@ -496,34 +506,6 @@ siblings so that the recipient does not inherit an issuer's applied policy.
 | C6 | Same as C2 | Accept transfer but omit consumption | Separate delivered bytes from consumed authority |
 | C7 | Same as C2 | Consume if delivery permits; omit recipient extension predicate | Separate consumption from access allowed through that predicate |
 
-The absent-allowance row retains the explicit issuance denial; deleting an allow
-clause from `allow default` alone would not supply it. C4 uses a read-write
-spelling present in the browser sources and native fixture, but that is not
-compiler validation or proof of runtime class recognition in this predicate.
-The native call still requests read, and C4 tests the policy's treatment of the
-different string. C5 uses another existing target, not a path-existence failure.
-
-The reviewing agent's session preflight used fourteen request JSON inputs with
-the 0.3.4 app bundle's Developer ID `sbpl-check`. It reported compile acceptance
-for the issuer constructions C1–C5, recipient variants with and without the
-extension predicate, class-only and path-only filters, Chromium's `subpath "/"`,
-Firefox's vnode guard and WebKit's extension-based path predicate. The recipient
-inputs also included `(deny file-write*)`; they were not the recipient prefix
-specified above. That prefix retains the registered feasibility fixture's
-policy, whose host-run evidence is discussed below. The C-row inputs used
-placeholder paths under `/private/tmp/pw-pilot/`, not canonical paths of real
-targets. Their acceptance covers `literal` syntax with those strings, not the
-escaped bytes substituted for A and B in a trial.
-
-The same preflight accepted `com.apple.app-sandbox.bogus` while rejecting a
-misspelled filter name as an unbound variable. This supports a syntax observation,
-not validation of class strings, rule precedence or native issuance. No raw
-receipts were saved. The fourteen original requests exist only in the reviewing
-session's scratchpad; forms reconstructed from this account are not retained
-original inputs. These session observations supply planning context, not
-acceptance evidence. Compilation and retention of each trial's exact expanded
-policies remain part of its preparation; no repeated or extended syntax survey
-is added. The additional forms do not add rows or activate deferred questions.
 No read-write issue call, symlink, directory, flag variant, process-bound token,
 self-consumption or release comparison is part of this matrix. After the final
 read, erase owned token buffers and reap the children; omission of release is
@@ -534,8 +516,6 @@ the same sandboxed native setup with an unfiltered allow clause. A usable
 delegation control additionally needs accepted transfer, a consume result and
 known bytes obtained by a fresh recipient read, alongside its before-consume
 observation. Nonnull issuance alone is only a positive control for token production.
-C0 is one additional diagnostic baseline, not a search over identities or
-entitlements. It tests the same path with issuer application omitted.
 
 The host-level prior for C0 is already pinned. The 0.3.4 release acceptance in
 `tests/RETAINED.json` ran at the commit `v0.3.4` resolves to, and its battery
@@ -568,24 +548,31 @@ require a working baseline. A usable restricted result remains evidence even if
 another control is unavailable, with the inconsistency made explicit. No control's
 success is required for closeout.
 
+For the pilot's bookkeeping, the consume sentinel is the signed 64-bit value
+`-1`, following the native fixture's convention. Other values, including zero,
+are candidate handles rather than proof of success. Always retain the raw value
+and attempt the second fresh read, including after `-1` or omitted consumption.
+This convention does not settle the wrapper disagreement in Q5; access evidence
+is necessary for every delegation inference below.
+
 For recipient access, compare C2 with C6 and C7 using valid observations from
 the same apparatus revision. If C2 and C6 both accept delivery and their
 pre-consume fresh reads fail, but C2 obtains known bytes through a fresh read
-after a non-sentinel consume result while C6's fresh read still fails, the
+after a consume result other than `-1` while C6's fresh read still fails, the
 contrast supports consumption-dependent delegation in this setup. Delivery alone
 did not produce that access in C6.
 
 For C2/C7, require accepted delivery, failed pre-consume fresh reads and
-non-sentinel consume results in both rows before interpreting the access contrast.
-If C2 gains fresh access while C7's read still fails, the contrast supports a role
-for the recipient's extension predicate and shows why the consume result alone
-does not establish access. Failed delivery or consumption leaves a contrast
-requiring that stage unestablished. Pre-consume access, access in C6/C7 despite
+consume results other than `-1` in both rows before interpreting the access
+contrast. If C2 gains fresh access while C7's read still fails, the contrast
+supports a role for the recipient's extension predicate and shows why the consume
+result alone does not establish access. Failed delivery or consumption leaves a
+contrast requiring that stage unestablished. Pre-consume access, access in C6/C7 despite
 the omission, or no access gain in C2 likewise does not support the proposed
 separation; retain those observations and their limits without requiring another
 trial or a successful delegation result.
 
-### Ordering, query scope and evidence checks
+### Ordering and query protocol
 
 Both children publish their preparation and application state before issuance.
 The recipient's first fresh access precedes consumption, and its second follows
@@ -597,98 +584,111 @@ Transfer evidence includes framing/length validation and a transient equality
 check between issued and received bytes. Retain only the check result, never
 tokens, token hashes, token-bearing diagnostics or core files.
 
-For Q2, the supervisor calls `sandbox_check` directly, as the existing
-[`native.c`](tests/fixtures/sandbox_extensions/native.c) does. It launches neither
-the ad hoc validator in `builddir` nor the Developer ID validator in the app.
-The caller is the supervisor role of the same signed pilot executable; retain
-its PID, credentials, executable path/hash, signature and entitlement read-backs
-alongside those for the issuer and recipient. There is no separate validator
-binary or transport surface in this pilot.
-
-Make exactly the `NONE` and `PATH(A)` queries for `file-issue-extension`, with
-no-report, against the live issuer paused before issuance in each row. Resolve
+For Q2, the supervisor calls `sandbox_check` directly from the signed pilot
+executable. Make exactly the `NONE` and `PATH(A)` queries for
+`file-issue-extension` against the live issuer paused before issuance in each row.
+Use filter IDs `NONE=0` and `PATH=1`, OR'd with the no-report value. Resolve
 `sandbox_check` and `SANDBOX_CHECK_NO_REPORT` through `dlsym` in the supervisor,
-and dereference the exported flag as an `int`, as the native fixture does.
-The fixture does not record the flag value or resolving image and exits with
-code 3 if either symbol is missing. The pilot adds those records and changes
-that failure handling: record lookup success/failure and the resolving library
-image, the numeric flag value read, filter IDs (`NONE=0`, `PATH=1`), and the full
-type argument actually passed. Record macOS build and Darwin release. If either
-symbol is unavailable, mark Q2 unavailable and continue Q1; do not substitute a
-literal flag or an unflagged call. This reads the query flag, not the three
-deferred issuance flags in Q9.
+and dereference the exported flag as an `int`. If either symbol is unavailable,
+mark Q2 unavailable and continue Q1; do not substitute a literal flag or an
+unflagged call.
 
-The production validator's fallback is `0x40000000`; its comment describes a
-Darwin 23.6 check of verdict invariance with and without the flag. The
-[no-report control](tests/suites/validator_batch_mode/README.md#predictions_do_not_report)
-checks the argument bit through a replacement function, not live suppression.
-Reading the export on the pilot host supplies current value provenance; it does
-not demonstrate log suppression or verdict invariance on Darwin 25. This pilot
-does not add a flagged/unflagged comparison.
-
-Preserve caller and target PIDs, all arguments, raw return and errno, and
-collection/release ordering. Clear errno immediately before each call and save
-it immediately afterward. Lead the report with these raw pairs. Any derived
-allow/deny labels use the convention implemented in the validator's batch
-classifier: `rc == 0` maps to allow and `rc == 1 && errno == 0` maps to deny.
+Any derived allow/deny labels use the convention in the
+[validator's batch classifier](controller/tools/sb_api_validator/sb_api_validator.c):
+`rc == 0` maps to allow and `rc == 1 && errno == 0` maps to deny.
 This is an interpretation convention, not a calibrated native contract for
 `file-issue-extension`. Negative returns are query errors; other unexpected
 return/errno combinations remain unclassified. Retain `EINVAL` as a diagnostic,
-not a denial. The reader does not use the per-probe validator's `denied: true`
-convention for every nonzero return. Neither validator mode is invoked. Use
-constructed reader controls for a negative return and an unexpected return/errno
-pair so neither can be counted as a denial; those controls establish reader
-behavior, not the native meaning of the pairs.
-
-There is prior direct-call errno evidence: the retained
-[`lifecycle-plain` record](tests/out/runs/workset-native-crossed-01/suites/sandbox_extensions_native/feasibility/artifacts/lifecycle-plain/native.json)
-contains query returns of both 0 and 1 with `errno_after_zeroing: 0`. That record
-is gitignored and available only in this checkout. Its queries were for
-`file-read-data`, not issuance; it does not calibrate the new operation.
-
-The reviewing agent's query preflight used the ad hoc
-`builddir/sb_api_validator` in per-probe mode against a same-uid unsandboxed
-`sleep` child. Its type arguments used the validator's literal flag
-(`NONE`: `0x40000000`; `PATH`: `0x40000001`), not an exported value. That surface
-reported `rc == 0` and zero errno for both issuance-query forms, and `EINVAL`
-for an invented operation; no raw receipts were saved. This session observation
-supports an expectation of operation-string recognition and a trivial allow
-answer in C0, not calibration of the pilot's caller, exported flag or class/path
-discrimination. The pilot supplies the first direct supervisor return/errno
-observations for these issuance queries. Preserve any different result without
-making the expected answer a continuation requirement; a query answer does not
-establish usable issuance.
+not a denial. Expect a trivial allow answer in C0, but preserve any other result
+without making that expectation a continuation requirement. A query answer does
+not establish usable issuance.
 
 Missing query capability or a native query failure does not prevent Q1. The
 recipient is not the query target. Do not add filter-ID searches, alternate query
 APIs or recipient before/after query experiments from Q18.
 
-The [validator implementation](controller/tools/sb_api_validator/sb_api_validator.c)
-passes no class alongside a path. A `RAW` filter ID does not add that argument.
-Record query availability and observed patterns separately from representational
-adequacy. These sources do not establish a native way to query the complete
-class-and-path issuance condition; a returned verdict does not supply the missing
-context. The pilot's ordering evidence is not PW's `comparison.order=query_first`.
+These query forms pass no class alongside the path. Record availability and
+observed patterns separately from representational adequacy; a returned verdict
+does not supply the missing class context. The pilot's ordering evidence is not
+PW's `comparison.order=query_first`.
 
-Unified-log collection is deliberately outside this pilot. The validator source
-explains the no-report flag as avoiding query-denial lines attributed to the
-queried PID; here that PID belongs to the issuer, whose issuance refusal could
-produce a similar line. Request suppression, but do not claim to have verified
-it or treat presence/absence of incidental log lines as evidence of issuance or
-its cause. Issuer return/errno, stage publications and independent recipient
-access are the retained observations. Investigating log attribution would need
-separate review and is not a prerequisite for completing Q1/Q2.
+Unified-log collection is outside this pilot: query and issuance denials can be
+attributed to the same issuer PID. Request suppression, but do not claim to have
+verified it or verdict invariance, or treat incidental log lines as issuance
+evidence. No flagged/unflagged comparison is added.
+
+### Trial record and reader checks
+
+Retain one token-free record for every planned position and diagnostic rerun.
+The following is the complete observation checklist; shared equipment and
+block-schedule records may be referenced by identity. For every operation,
+distinguish attempted with a published result, omitted by design, unavailable
+with a reason, and interrupted without a published result. Clear errno before
+native calls and save it immediately afterward; it is diagnostic alongside the
+call's raw return, not an independent failure on a successful call.
+
+| Record group | Required contents |
+| --- | --- |
+| Trial and equipment | Arrangement C0–C7; block, position within block and chronological position; chosen sequence and scheduling-rationale reference; apparatus revision and equipment-record reference. For a diagnostic rerun, original trial identity and correction-cycle number, outside the planned positions. |
+| Processes and ownership | Supervisor, issuer and recipient roles, PIDs, process start identities, credentials and executable identity; environment; parent/child and process-group membership; owned temporary paths and channel identities. Record each launch as it occurs so cleanup ownership survives partial execution. |
+| Inputs and targets | Exact expanded issuer and recipient policy bytes and compilation results; class and flags; canonical A/B paths, expected identities and known bytes; supervisor fresh-read/identity baselines before child launch and independent identity/content checks after the trial. |
+| Preparation and application | Per-role symbol-resolution and preparation results, linked/loaded-image inventory, descriptor snapshots at the boundaries below; application count and raw result/errno, or C0's explicit omission. |
+| Ordering | Per-process ordered stage publications, supervisor acknowledgements and query collection/release markers linking preparation, application, each access, issuance, transfer and consumption to the same owned processes. |
+| Issuance and transfer | Issue attempted/unavailable, null/non-null return and errno; bounded publication, framing/length validation, transfer readiness and recipient acceptance; transient issued/received-byte equality result. Retain no token or token hash. |
+| Consumption and access | Raw signed 64-bit consume return and errno or omission/unavailability; for each recipient fresh read, separate open, descriptor-identity, read and close attempts/results/errno, descriptor number, observed identity and obtained bytes. These establish the known-byte match and descriptor closure independently of the consume label. |
+| Queries | Caller and target PIDs; API/flag lookup outcomes and resolving library images; numeric exported flag, filter ID/value and complete type argument; operation string and raw return/errno pair or unavailability. Keep derived labels separate. |
+| Completion and cleanup | Token-buffer erasure observations; elapsed times and any deadline reached; child exit publications and independent wait/reap results; signals sent and results, supervisor exit and process-group absence observations; temporary-resource removal results and any pending cleanup ownership. |
+
+Descriptor snapshots have fixed points. For the issuer, take three: on entry
+before preparation, immediately before the application boundary (also in C0),
+and immediately before issuance. For the recipient, take four: on entry before
+preparation, immediately before apply, immediately before the first target open,
+and immediately before the second target open. Each snapshot lists descriptor
+numbers, types and available identities, including apparatus descriptors and
+any match to A/B; record inspection failures. Mark snapshots unavailable if their
+boundary is not reached. Source inspection accounts for acquisitions between
+snapshots; the snapshots do not claim to observe transient acquisitions.
 
 The report reader checks evidence completeness and consistency separately from
-whether delegation occurred. Use small constructed report controls to reject
-missing/reordered application or transfer evidence, a target descriptor inherited
-or held across access boundaries, and claimed read success without matching
-identity and bytes. Reuse of a descriptor number alone is not retention. Also
-accept honestly recorded native refusal, failed consumption, unavailable queries
-and missing dependent stages. Do not import the existing suite's mandatory
-positive outcomes as this investigation's completion criteria.
+whether delegation occurred. Retain its command, constructed control inputs and
+results beside the trial records. The controls must:
 
-### Repetitions, troubleshooting and endpoint
+- Reject missing/reordered application or transfer evidence, a target descriptor
+  inherited or held across access boundaries, and claimed read success without
+  matching identity and bytes. Descriptor-number reuse alone is not retention.
+- Keep a negative query return and an unexpected return/errno pair out of the
+  denial count. These checks establish reader behavior, not native semantics.
+- Accept honestly recorded native refusal, failed consumption, unavailable
+  queries and missing dependent stages, without requiring positive outcomes.
+
+### Deadlines and cleanup
+
+Use one 20-second monotonic execution deadline, starting immediately before the
+supervisor's first child spawn and shared by all stage waits and normal reaping.
+Do not restart it at each gate. On expiry or equipment failure, preserve partial
+evidence, send `SIGKILL` to still-live owned children and allow at most two
+additional seconds per child for reaping. Erase owned token buffers during
+cleanup and record any erasure that could not be confirmed.
+
+The driver creates a fresh trial directory under `/private/tmp`, records its
+ownership, and starts each supervisor in a new process group; issuer and
+recipient remain in that group. It imposes a separate 30-second outer deadline
+from supervisor launch. On expiry or cancellation, it sends
+`SIGKILL` to that owned group and waits at most five seconds for supervisor exit
+and group absence. A reaped supervisor alone does not establish child absence.
+These are equipment bounds, not native refusal results.
+
+The driver owns the group and temporary trial directory; the supervisor owns its
+direct children and channels. Remove trial targets and temporary resources only
+after process absence is confirmed and the final observations are retained.
+If absence is unconfirmed, mark cleanup pending in the durable trial record,
+retain the owned paths and stop launching trials. Recovery must revalidate
+process start identities and resource ownership; historical PIDs or a pathname
+prefix alone do not authorize termination or removal. Keep unresolved ownership
+in the incomplete report for review. Do not place these records in `.tmp/` or
+pass investigation output to the test-run pruner.
+
+### Repetitions and troubleshooting
 
 Run the 24 planned trials in three blocks of eight. Each block contains exactly
 one trial of every arrangement C0–C7, with fresh processes and targets for each
@@ -716,15 +716,13 @@ consumption or access is never a prerequisite for continuing. When equipment
 remains functional, execute all 24 planned trials. Do not add, replace, omit or
 selectively repeat arrangements based on favorable or unfavorable native outcomes.
 
-Use a 20-second trial deadline as in the native fixture, with bounded
-termination/reaping and retained cleanup ownership if absence is unconfirmed.
-
 Allow at most two documented equipment/instrumentation correction-and-retry
 cycles and 60 minutes of cumulative troubleshooting across the pilot.
 Troubleshooting ends at whichever limit is reached first. Each cycle permits at
-most one affected trial rerun. Record these reruns separately from the 24 planned
-positions; they do not replace the original observations. Retain the original
-failures and any source changes; never combine results from different apparatus
+most one affected trial rerun, for at most two diagnostic reruns in total.
+Record these reruns separately from the 24 planned positions; they do not replace
+the original observations. Retain the original failures and any source changes;
+never combine results from different apparatus
 revisions as matched contrasts.
 
 After a source-level correction, keep the existing block sequence and continue
@@ -734,7 +732,7 @@ for every trial. Earlier positions remain recorded on their original revision,
 including any invalidated evidence. A block spanning revisions is not a complete
 set of matched contrasts, even if all eight positions were executed. Report only
 contrasts supported within one revision and identify the missing comparisons as
-coverage gaps. The single permitted diagnostic rerun does not repair or restart
+coverage gaps. A cycle's diagnostic rerun does not repair or restart
 that block, and no earlier arrangement is backfilled. Subsequent blocks still
 contain C0–C7 once each; all remaining planned positions run if equipment functions.
 Execution of a planned position and valid evidence for a contrast are separate
@@ -742,29 +740,27 @@ counts in the report.
 
 If equipment prevents further execution within the troubleshooting allowance,
 report the remaining positions as unrun rather than starting another battery.
-Necessary cleanup still follows its ownership rules. A larger redesign, changed
-signing context, extra contrasts or further retries require review.
+Necessary cleanup still follows [deadlines and cleanup](#deadlines-and-cleanup).
+A larger redesign, changed signing context, extra contrasts or further retries
+require review.
 
-Retain the report at `records/browser-trace-investigations/REPORT.md` with the
-committed evidence listed under [records and retention](#records-and-retention).
-This is an investigation record associated with this plan under
-[records guidance](records/AGENTS.md), not a replacement plan or promoted test.
-Existing suite evidence, if referenced, keeps its managed ownership and is not
-moved into scratch or these records.
+### Report and stopping point
 
-The report distinguishes attempted and unrun rows, observations and inference,
-control failures, preparation limits, query limits, variable outcomes and
-recommendations. Finish after all 24 planned trials, or with an incomplete report
-when equipment prevents further execution within the troubleshooting allowance.
-Retain the report even if delegation was never observed and return to the
-maintainer. Neither a useful native query, successful issuance nor a feature
-proposal is a condition of completion. Recommendations do not authorize follow-up
-experiments, fixture promotion or production changes.
+Write `records/browser-trace-investigations/REPORT.md`. Present the stage
+observations, including raw query return/errno pairs, before derived labels and
+inference. Distinguish attempted and unrun positions, valid contrast coverage,
+control failures, preparation and query limits, variable outcomes, pending
+cleanup and recommendations. Link the committed evidence; referenced existing
+suite evidence keeps its managed ownership and location.
+
+Finish after all 24 planned trials, or with an incomplete report when equipment
+prevents further execution within the troubleshooting allowance. Retain the
+report and return to the maintainer regardless of whether delegation was
+observed, queries proved useful or a feature seems warranted.
 
 ## Where later outcomes could land
 
-These are options for maintainer review after the report, not work authorized
-by this investigation.
+Possible recommendations for maintainer review after the report:
 
 - **Report only.** Observations, including failures or inconclusive controls,
   can close the investigation without any product change.
