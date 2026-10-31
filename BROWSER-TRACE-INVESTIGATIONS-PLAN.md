@@ -1,58 +1,68 @@
 # Browser trace investigations: starting points for sandbox-extension experiments
 
-This plan gives an agent working with the maintainer well-anchored starting
-points for experiments on macOS sandbox extensions. It does not hand over a set
-of experiments. It names traces in four browser engines' source, lists what we
-want to learn, points at what PolicyWitness does today, and maps where an
-outcome could land. The agent constructs each experiment and decides what change,
-if any, its outcome motivates. A structural change to the worker or runner is a
-legitimate landing, not an overreach.
+This plan investigates under what restrictions an already sandboxed issuer can
+delegate usable file authority to another sandboxed process. Q1 and its bounded
+query companion Q2 are the only active questions. The first investigation uses
+an independent native fixture and ends in a durable report for maintainer review,
+whether issuance, consumption or access succeeds or fails. It authorizes no
+production change or promotion into a registered fixture or test suite.
+
+Seven browser source traces supply the motivation and a deferred question
+inventory. They remain useful beyond this first investigation. A later result
+could justify a structural change to PolicyWitness, but the native question
+does not require implementing a general multiprocess PolicyWitness capability.
 
 The plan follows [planning a change](CONTRIBUTING.md#planning-a-change). It is
-the one permitted inbound link to the source packet at
+the associated plan permitted to link to the source packet at
 [records/browser-sandbox-sources](records/browser-sandbox-sources/README.md),
 per [records/AGENTS.md](records/AGENTS.md). The packet persists in `records/`
-while this plan lives. At closeout the plan is deleted; what the experiments
-changed lives on in tests, documentation and application code, and the rest
-remains in git history.
+while this plan lives. The investigation report and its supporting evidence are
+retained before review; they need not result in product work. Retirement of the
+plan and its records is a later closeout decision, not the pilot's stopping rule.
 
 ## Boundary
 
 Every experiment under this plan respects these limits.
 
-- **PolicyWitness witnesses one process on this host.** Results describe the
-  recorded host (macOS 26, Apple Silicon), one policy applied once to one
-  disposable worker, predictions collected before attempts, and observations
-  recorded without interpretation. The native fixture records OS, SDK and
-  compiler facts for the same reason.
-- **No result is a claim about a browser.** The traces below are motivation and
-  citation. An envelope, fixture report or document produced under this plan
-  never names Chrome, Firefox, Safari, Ladybird or their engines as its subject,
-  never says what a shipping browser can do, and never treats a source comment
-  as an established macOS fact. The packet's
+- **Independent process roles.** Production PolicyWitness applies one policy
+  once to one disposable worker. This pilot instead uses a fresh supervisor,
+  issuer and recipient per trial. The issuer and recipient each apply their own
+  policy once, except for the explicitly unsandboxed issuer baseline. The native
+  fixture records OS, SDK, compiler, signing and process facts. Its observations
+  are not production envelopes or evidence of PW's production phase protocol.
+- **Sources can be named.** Reports may identify Chromium, Firefox, WebKit and
+  Ladybird as motivating sources. Runtime findings describe the fixture and its
+  recorded environment, not an installed browser. Source comments are not
+  established macOS facts. The packet's
   [report](records/browser-sandbox-sources/REPORT.md) states the same boundary
   for the sources themselves: source relationships are inspectable, runtime
   behavior is not.
-- **The core ideas in [AGENTS.md](AGENTS.md#core-ideas) hold.** One-way sandbox
-  per process; host/worker split; witness over interpretation; predictions
-  precede attempts; no dishonest attribution; runner simplicity. Any change to
-  the wait, release store or eligibility rule reruns the
+- **The core ideas in [AGENTS.md](AGENTS.md#core-ideas) hold.** Disposable
+  sandboxed processes, explicit preparation, separate supervision and reporting,
+  observations supporting effects, and no unsupported causal attribution apply
+  to the pilot. Q2 queries precede issuance through the fixture's own observed
+  barrier. Production wait, release and eligibility rules remain unchanged; a
+  later change to them requires the
   [order-barrier mutation control](tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls).
 - **Token confinement stays.** Raw tokens never enter a request, reply, report
   or retained artifact. The erasure discipline in
   [supplied extension authority](docs/WORKER.md#supplied-extension-authority)
   applies to any new issuer, channel or consumer the experiments introduce.
-- **A native result is not an effect.** A nonnull token, a non-sentinel handle
-  or a zero release return establishes that the call returned that value. Fresh
-  descriptor observations establish access. Neither establishes kernel extension
-  state, effective permission, revocation or cause.
+- **Keep the observations distinct.** A nonnull issue result, accepted transfer,
+  consume return and fresh read establish different facts. Known bytes read
+  through a newly opened descriptor establish that access in that process at
+  that boundary. Their controlled contrast can support a bounded delegation
+  finding; they do not reveal private kernel state or establish general
+  permissions, revocation or the cause of a permission-shaped failure.
 - **Operating constraints.** Native and opt-in work needs the Developer ID
   Application identity in the login keychain, a run outside any automation
   sandbox, and the checkout lock; see
   [tests/AGENTS.md](tests/AGENTS.md#sandboxed-automation-harnesses) and
   [tests/suites/sandbox_extensions_native/README.md](tests/suites/sandbox_extensions_native/README.md).
-  Signing and any release step stay with the maintainer. Pilots that are not
-  tests live under [`.tmp/`](.tmp/AGENTS.md) with a recorded report.
+  Use the existing fixture's Developer ID signing and empty-entitlement context;
+  retain its read-back rather than seeking different entitlements on failure.
+  Scratch build outputs may live under [`.tmp/`](.tmp/AGENTS.md); sole copies of
+  sources, evidence and reports may not. No release work is in scope.
 
 ## Where PolicyWitness stands
 
@@ -66,7 +76,7 @@ Read current behavior from these sources rather than from this summary.
 | Issuer implementation | [`pw_extension_issuer.c`](controller/tools/pw_probe_runner/pw_extension_issuer.c): `dlopen` of libsandbox, `sandbox_extension_issue_file` with flags `0`, class chosen by the `authority` field; [`pw_extension_channel.h`](controller/tools/pw_probe_runner/pw_extension_channel.h) |
 | Worker side | [`prepare_extension`](controller/tools/pw_probe_runner/pw_probe_runner.c) resolves consume/release symbols before apply and validates the channel before apply; [`attempt_extension`](controller/tools/pw_probe_runner/pw_probe_runner.c) treats only `-1` as a failed consume and keeps one static handle |
 | Host session | [`ExtensionIssuer.swift`](runner/Sources/PWRunnerCore/ExtensionIssuer.swift): `realpath` and `fstatat` before issuance, issuer spawned and reaped before the worker exists |
-| Query side | [`sb_api_validator.c`](controller/tools/sb_api_validator/sb_api_validator.c): one filter per query, `PATH`, `GLOBAL_NAME` and `LOCAL_NAME` recognized, queries made with the no-report flag |
+| Query side | [`sb_api_validator.c`](controller/tools/sb_api_validator/sb_api_validator.c): `NONE` or one filter value, including `PATH`, `GLOBAL_NAME` and `LOCAL_NAME`; queries use the no-report flag; no class-plus-path argument representation |
 | Native fixture and its controls | [suite README](tests/suites/sandbox_extensions_native/README.md); [fixture README](tests/fixtures/sandbox_extensions/README.md); host, issuer and worker as three processes; file and directory scenarios |
 | Production extension controls | [native extension boundaries](tests/suites/witness_contract/README.md#native-extension-boundaries) and the `check_extension*.py` checkers beside it |
 | Evidence contract | [native extension evidence](tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence); [native sandbox extensions](tests/CHANGE-VERIFICATION.md#native-sandbox-extensions) |
@@ -74,9 +84,10 @@ Read current behavior from these sources rather than from this summary.
 
 In one sentence: the issuer runs outside the sandbox under ordinary authority,
 issues one of two file classes with zero flags for a host-resolved path, is
-reaped before the worker is spawned, and the worker consumes once and releases
-once; the `file-issue-extension` operation has never been a PolicyWitness query
-or attempt inside a sandbox.
+reaped before the worker is spawned, and the worker admits at most one consume
+and one release. Production PW has no post-apply issuance action. Query operation
+strings remain OS queries under [request admission](docs/REQUEST-GRAMMAR.md);
+accepting a string does not establish a useful native prediction for it.
 
 ## The packet
 
@@ -95,13 +106,14 @@ are not in the packet.
 
 Each trace names the source, states literally what it shows, states what
 PolicyWitness does at the same point, and ends in the questions it raises. The
-questions are collected in the next section. Nothing here prescribes an
-experiment's design, controls or expected outcome.
+questions are collected below. The traces identify source relationships; the
+first investigation separately fixes its design and controls.
 
 ### T1. Issuance allowed inside a sandboxed process
 
-All four engines allow `file-issue-extension` in a process that is itself
-sandboxed.
+All four source selections construct `file-issue-extension` allowances for
+processes intended to run sandboxed. Their presence does not establish native
+issuance or usable delegation in a running process.
 
 - Chromium [gpu.sb](records/browser-sandbox-sources/sources/chromium/sandbox/policy/mac/gpu.sb)
   lines 115–121 allow the read class for `(subpath "/")`, with a comment
@@ -117,9 +129,10 @@ sandboxed.
   a `file-issue-extension` rule of the matching class over the same path filter.
   [com.apple.WebProcess.sb.in](records/browser-sandbox-sources/sources/webkit/Source/WebKit/WebProcess/com.apple.WebProcess.sb.in)
   lines 636–640 define a directory variant and lines 733–746 use them. Line 744
-  passes `(extension "com.apple.app-sandbox.read")` as the path filter itself, so
-  issuance is allowed for whatever a consumed read extension covers; lines
-  745–746 do the same for read-write with report and telemetry modifiers.
+  passes `(extension "com.apple.app-sandbox.read")` as the path filter itself,
+  coupling the issuance rule to an extension predicate; lines 745–746 use the
+  read-write predicate with report and telemetry modifiers. Whether those
+  constructions permit effective re-delegation is a runtime question.
 - Ladybird [Sandbox.cpp](records/browser-sandbox-sources/sources/ladybird/Libraries/LibSandbox/Sandbox.cpp)
   lines 256–280 generate one `file-issue-extension` clause per configured path
   and class, called at lines 737–738. The compositor caller
@@ -127,9 +140,9 @@ sandboxed.
   lines 54–60 creates a cache directory and adds it as read-write before the
   generator runs.
 
-PolicyWitness never issues inside the sandbox. Its issuer is an unsandboxed
-sibling, and no PolicyWitness query or attempt has ever named the
-`file-issue-extension` operation. Raises Q1–Q4.
+PolicyWitness's production issuer runs under ordinary authority outside the
+worker's sandbox. There is no worker issuance action or established query
+coverage for `file-issue-extension`. Raises Q1–Q4.
 
 ### T2. The consumer-side extension filter
 
@@ -153,8 +166,8 @@ to `file-read*`, a family, not to one operation. Raises Q17 and Q18.
   consume then drop both handle and token without a release; lines 64–69 treat a
   zero release return as success. The header's lines 60–72 say a consuming
   process may revoke at any time and that a revoked extension can be re-acquired
-  by constructing a new object from the same token. Lines 74–78 describe token
-  internals; that is a Chromium comment, not a macOS fact.
+  by constructing a new object from the same token. The implementation's lines
+  74–78 describe token internals; that is a Chromium comment, not a macOS fact.
 - WebKit [SandboxExtensionCocoa.mm](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm)
   lines 61–73 treat only `-1` as a failed consume; lines 75–78 release with the
   handle exchanged to zero; lines 55–59 zero the token on destruction; lines
@@ -207,7 +220,8 @@ posix_spawn child with no Mach channel to the host. Raises Q13–Q16.
 
 ### T6. Non-file extension classes (boundary, not a starting point)
 
-WebKit issues Mach, IOKit and generic extensions: the WebProcess template lines
+WebKit has native issuance wrappers and consumer-side policy predicates for
+Mach, IOKit and generic extensions: the WebProcess template lines
 748–753 and the `com.apple.webkit.extension.mach` filters from line 797 on,
 [webcontent-defines.sb](records/browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Sandbox/macOS/webcontent-defines.sb)
 lines 94–245 for `com.apple.webkit.extension.iokit`, and
@@ -218,52 +232,61 @@ for a later plan; see [boundaries owned elsewhere](#boundaries-owned-elsewhere).
 
 ### T7. Context-only traces
 
-These are retained as traces. They raise no experiment under this plan, for the
-reasons given.
+These inform interpretation and preparation without adding separate experiments
+to the first investigation.
 
 - **Apply before loading frameworks.** The Chromium
   [design document](records/browser-sandbox-sources/sources/chromium/sandbox/mac/seatbelt_sandbox_design.md)
   lines 79–96 and [chrome_exe_main_mac.cc](records/browser-sandbox-sources/sources/chromium/chrome/app/chrome_exe_main_mac.cc)
   lines 165–177 and 211–214 apply the sandbox before `dlopen` of the main
   framework so that static initializers cannot acquire resources outside it. The
-  document says nothing about extensions. PolicyWitness's C worker already
-  resolves its symbols before apply and acquires nothing hidden; see
+  document says nothing about extensions. PolicyWitness's C worker resolves
+  extension symbols and prepares reporting and token mappings before apply; see
   [starting authority](docs/WORKER.md#starting-authority-and-ambient-context).
-  Nothing new to witness.
+  That account leaves loader internals and some inherited state unobserved.
+  This trace informs the pilot's preparation boundary; comparing framework
+  initialization strategies is deferred.
 - **Firefox's version predicate.** [SandboxPolicyGPU.h](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h)
   lines 159–171 guard issuance with `(<= macosVersion 1500)` while the comment
   speaks of macOS 14 and earlier; [Sandbox.mm](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/Sandbox.mm)
   lines 292–297 encode the version as major times one hundred plus minor. On this
-  host the branch is off and cannot be exercised. The packet report records the
-  discrepancy without judging it; so does this plan.
+  host a value encoding macOS 26 would not select that branch. A synthetic
+  parameter could select it, but would not reproduce Firefox on an older OS.
+  The packet report records the discrepancy without judging it; so does this plan.
 - **Third-party issuers.** Firefox's font comments (T2) and Chromium's Metal
-  comments (T1) rely on Apple framework code issuing tokens to Apple services.
-  PolicyWitness cannot witness those issuers, and a policy allowance is not
-  evidence that they issue.
+  comments (T1) describe Apple-owned issuance paths, with different issuer and
+  recipient roles. The packet does not contain those implementations. This
+  fixture does not observe them, and a policy allowance is not evidence that
+  they issue.
 - **Policy application entry point.** Firefox ([Sandbox.mm](records/browser-sandbox-sources/sources/firefox/security/sandbox/mac/Sandbox.mm)
   line 562) and Ladybird ([Sandbox.cpp](records/browser-sandbox-sources/sources/ladybird/Libraries/LibSandbox/Sandbox.cpp)
   line 748) apply through `sandbox_init_with_parameters`; PolicyWitness compiles
-  and applies separately. No extension question depends on this unless an
-  experiment produces a difference it cannot otherwise explain.
+  and applies separately. The pilot uses the existing native fixture's separate
+  compile/apply path; comparing entry points would require later review.
 - **Ladybird's macOS 27 branch** at lines 686–688 concerns a syscall, not
   extensions.
 
 ## What we want to learn
 
-Each item is phrased as something an envelope or fixture report could contain.
-Q1 is the lead; the rest are unordered. An experiment may answer one, several,
-or add one.
+Only Q1 and Q2 are active. Q3–Q18 remain an unordered inventory for later review,
+not commitments or automatic follow-ups to an unexpected result.
 
 **Issuance inside the sandbox (T1)**
 
-- **Q1 (lead).** Whether a worker under a policy that allows
-  `file-issue-extension` for a class and path obtains a nonnull token from the
-  issue call after apply, and what result and errno it obtains when the
-  allowance is absent, the class differs, or the path lies outside the filter.
-- **Q2.** Whether the native query can address `file-issue-extension` at all
-  with a filter the validator can pass, and whether its verdict tracks the
-  allowance. This decides whether T1 experiments carry PolicyWitness's central
-  prediction-before-attempt comparison or only attempts.
+- **Q1 (active lead).** Under the specified issuance restrictions, whether an
+  already sandboxed issuer produces a token that a separately sandboxed
+  recipient accepts and consumes, and whether that recipient's fresh access
+  changes from before to after consumption. Record issuance, transfer,
+  consumption and access independently, including failures and unavailable
+  stages. Compare matching, absent, wrong-class and wrong-path allowances with
+  the controls specified below. The issuer never consumes its own token.
+- **Q2 (active companion).** What `file-issue-extension` queries using `NONE`
+  and `PATH` return against the live, paused issuer before issuance, and what
+  part of the native call's context those queries represent. The current
+  validator passes no extension class alongside a path. A returned verdict or
+  a pattern across policies does not establish a class-specific issuance
+  prediction or prediction/enforcement agreement. Query inadequacy does not
+  prevent Q1 or require a new query API or production comparison.
 - **Q3.** Whether a token the worker issued and then consumed itself widens that
   worker's own access, observed as fresh reads before consume, after consume and
   after release, under policies with and without the consumer-side filter.
@@ -275,14 +298,19 @@ or add one.
 
 - **Q5.** What values consume returns on this host: whether zero ever appears,
   and whether repeated consumption of one token in one process returns equal or
-  different values. Equality is an observation, not an identity claim.
+  different values. Equality is an observation, not an identity claim. If zero
+  is not observed, the Chromium/WebKit success-condition difference remains
+  untested; if it is, access observations still matter.
 - **Q6.** Whether the same token consumes again after a release, and what fresh
   access looks like afterward.
 - **Q7.** What release returns for a handle already released, a handle never
   obtained, and a value that was never a handle.
-- **Q8.** Whether fresh access after consume differs when the worker releases
-  versus when it exits without releasing, as far as a later observer in the same
-  specimen can see.
+- **Q8.** What access or persistent effects distinguish explicit release from
+  omission and process exit. A live worker can compare fresh access after
+  release with omission (the native suite already has `no_release`). After
+  exit, another observer can inspect filesystem effects or its own authority,
+  not the exited worker's fresh access. A further exit experiment needs a
+  specified surviving observer and observable before it can be selected.
 
 **Flags and paths (T4)**
 
@@ -295,19 +323,22 @@ or add one.
 - **Q11.** Issuance for a path that does not exist yet, then creation, then
   fresh access; and issuance for a path whose parent does not exist.
 - **Q12.** Whether a token for a directory issued before a descendant exists
-  covers that descendant. The directory case in the native suite already covers
-  part of this; the open part is the before-and-after of the descendant's
-  creation relative to issuance.
+  covers that descendant. The native directory case already records absence
+  before issuance and tests subsequent exclusive creation with controls. Retain
+  that coverage; any follow-up must identify an additional distinction, such as
+  fresh reading of a descendant created by a different process, before selection.
 
 **Process binding (T5)**
 
 - **Q13.** Whether a token issued to the worker's audit token consumes in the
   worker.
 - **Q14.** Whether the same token consumes in a sibling process, with result and
-  errno. This is the one two-process experiment this plan admits, in the native
-  fixture only.
-- **Q15.** How the host can obtain a posix_spawn child's audit token without
-  handing the worker a resource before apply.
+  errno. This is a deferred process-binding control, separate from Q1's unbound
+  delegation between a sandboxed issuer and recipient.
+- **Q15.** How a supervisor can obtain a posix_spawn child's audit token, with
+  the acquisition mechanism, any supplied resource and its lifetime explicit.
+  A pre-apply reporting resource is not automatically disqualifying; its
+  authority and effect on the proposed observation must be accounted for.
 - **Q16.** What the bound issue call returns when the target process has
   already exited.
 
@@ -319,12 +350,186 @@ or add one.
   after-consume and after-release. The existing checks accept any pattern; a
   stable one would be a learning, not a requirement.
 
-## Where outcomes could land
+## First investigation: Q1 and Q2
 
-The agent decides. The map says what each landing entails.
+Use an investigation-local adaptation of
+[`tests/fixtures/sandbox_extensions/native.c`](tests/fixtures/sandbox_extensions/native.c).
+Its existing host/issuer/worker split, separate token storage and explicit
+descriptor passing are useful equipment. Its unsandboxed issuer, pre-policy
+worker read and fixed success assertions are not the design of this pilot.
+Retain the adapted source with the investigation; do not edit production code,
+the registered fixture, suite checkers or test catalog to conduct it.
 
-- **Nowhere.** An observation that confirms documented behavior is recorded in
-  the pilot's report and closed.
+### Preparation and application boundary
+
+The first result concerns issuance after application with a prepared native
+runtime. It does not claim issuance before any initialization, or reproduce
+Chromium's framework startup. T7 explains why the boundary must be explicit.
+
+| Stage | Operations and evidence |
+| --- | --- |
+| Supervisor before child launch | Create owned regular files A and B with known bytes under a fresh temporary directory outside privacy-protected user folders. Resolve their canonical absolute paths, record metadata and ordinary fresh-read baselines, and close target descriptors. Prepare exact policies and separate evidence/token channels; the token channels start empty. Pass strings and apparatus descriptors, never a target descriptor or pre-issued token. |
+| Each child before apply | Record role, PID, credentials and the inherited descriptor inventory. Map the explicit channels, close their mapping descriptors, disable core dumps, resolve the needed libsandbox entry points, initialize fixed reporting storage, and compile the policy. Record preparation results and an inventory of loaded images. No target open, target `stat`/`realpath`, extension issue/consume/release, or extension warm-up occurs in either child before apply. |
+| Application | Each sandboxed child applies its policy once and publishes the native result before advancing. Failure withholds dependent actions and remains evidence. The ordinary-authority issuer baseline follows C1's preparation but explicitly omits application. Source order and supervisor gates associate the application and later call publications with the same owned process. |
+| After apply | The recipient opens, reads, identifies and closes A before token consumption. The supervisor completes Q2 against the waiting issuer, then releases its first issuance call. Native path processing within that call therefore occurs under the issuer's policy. The recipient validates the subsequent transfer, optionally consumes, and makes another fresh open/read/identity/close attempt. Record unavailable stages explicitly when issuance or transfer fails. |
+
+Use the minimal C/libsystem/libsandbox setup of the existing native fixture;
+do not add application frameworks or optional allocation instrumentation. Symbol
+resolution before apply avoids confusing a loader failure with issuance refusal.
+The supervisor's path preparation supplies names and metadata, not open-file
+authority to the children. All native extension calls in the sandboxed issuer
+and recipient occur after their respective application boundaries. The existing
+fixture's pre-policy target-read baseline moves to the supervisor for this pilot.
+
+Inspect the retained source and linked/loaded-image inventory for pre-apply
+acquisitions, and record descriptor inventories immediately before apply and
+before target access or issuance. A target descriptor already present invalidates
+a fresh-acquisition inference. Retain application results, per-process ordered
+markers, supervisor acknowledgements and independent wait/reap observations.
+These establish the explicit preparation and observed order, not a complete
+census of transient resources, Mach rights or private library initialization.
+A comparison of pre- versus post-apply framework loading is later work.
+
+### Fixed contrasts and positive controls
+
+Use one signed executable with empty entitlements for all roles, identical
+credentials, environment, path preparation and flags `0`. Every native issue call
+requests `com.apple.app-sandbox.read` for A. B is another existing owned regular
+file used only as the nonmatching policy path. Keep the issuer's ordinary data
+and metadata read rules permissive in this first investigation; whether issuance
+can exceed the issuer's own read access is not answered by these contrasts.
+All sandboxed issuer policies share a file-write restriction, while only their
+issuance allowance changes. Store the exact expanded policies, not just row names.
+
+The recipient's fixed policy denies ordinary `file-read-data` and permits it
+through the read extension predicate. The no-predicate row omits that exception.
+No descriptor spans the two access attempts. The supervisor independently checks
+target identity and bytes before and after the trial. A pre-consume successful
+read is retained but prevents claiming that the later read demonstrates newly
+delegated access. Neither child spawns the other; the supervisor execs fresh
+siblings so that the recipient does not inherit an issuer's applied policy.
+
+| Row | Issuer arrangement | Recipient intervention | Purpose |
+| --- | --- | --- | --- |
+| C0 | Ordinary-authority issuer, no applied profile | Consume if delivery permits | Context baseline for this binary, class, target, OS and recipient path |
+| C1 | Applied common policy with unrestricted `file-issue-extension` allowance | Consume if delivery permits | Matched positive control for restricting issuance by class and path |
+| C2 | Applied common policy; issuance denied except read class at literal A | Consume if delivery permits | Matching restricted delegation |
+| C3 | Same common policy; explicit issuance denial, no exception | Consume if delivery permits | Absence of the issuance allowance |
+| C4 | Same as C2, but policy exception names the known read-write class | Consume if delivery permits | Class mismatch with the native call still requesting read |
+| C5 | Same as C2, but policy exception names literal B | Consume if delivery permits | Path mismatch with the native call still targeting A |
+| C6 | Same as C2 | Accept transfer but omit consumption | Separate delivered bytes from consumed authority |
+| C7 | Same as C2 | Consume if delivery permits; omit recipient extension predicate | Separate consumption from access allowed through that predicate |
+
+Make the absent-allowance row an actual issuance restriction: deleting an allow
+clause from `allow default` alone does not do so. The mismatch rows change policy
+filters rather than inventing an invalid native class or nonexistent target.
+No read-write issue call, symlink, directory, flag variant, process-bound token,
+self-consumption or release comparison is part of this matrix. After the final
+read, erase owned token buffers and reap the children; omission of release is
+fixed across rows and supports no claim about exit-time revocation.
+
+C1 is the smallest matched positive control for the filter contrasts: the same
+sandboxed native setup can issue without the class/path restriction. A usable
+delegation control additionally needs accepted transfer, a consume result and
+known bytes obtained by a fresh recipient read, alongside its before-consume
+observation. Nonnull issuance alone is only a positive control for token production.
+C0 is one additional diagnostic baseline, not a search over identities or
+entitlements. It tests the same path with issuer application omitted.
+
+If C0 works but C1 does not, the limitation concerns the applied-sandbox setup;
+it does not isolate a class/path restriction. If C1 works but C2 does not, the
+narrow allowance or its representation remains at issue. If C2 works while
+C3–C5 differ, those matched contrasts support a finding scoped to the changed
+rules and recorded environment, not an errno-based claim about kernel cause.
+If issuance works but delivery, consumption or fresh access does not, report each
+stage's observations; do not collapse them into issuance refusal. If C0 and C1
+both fail at a stage, neither designated baseline establishes feasibility there.
+Preserve the results and withhold restriction-specific negative conclusions that
+require a working baseline. A usable restricted result remains evidence even if
+another control is unavailable, with the inconsistency made explicit. No control's
+success is required for closeout.
+
+### Ordering, query scope and evidence checks
+
+Both children publish their preparation and application state before issuance.
+The recipient's first fresh access precedes consumption, and its second follows
+the consume result or recorded omission/unavailability. Keep issuance return,
+bounded token publication, transfer readiness, recipient acceptance, consume
+return and read results as separate publications. Preserve partial evidence when
+a process dies between a native call and publication; never invent its return.
+Transfer evidence includes framing/length validation and a transient equality
+check between issued and received bytes. Retain only the check result, never
+tokens, token hashes, token-bearing diagnostics or core files.
+
+For Q2, make exactly the `NONE` and `PATH(A)` queries for
+`file-issue-extension`, with no-report, against the live issuer paused before
+issuance in each row. Preserve target PID, arguments, raw return, errno and
+collection/release ordering. Missing query capability or a native query failure
+is recorded and does not prevent the issuer from attempting Q1. The recipient
+is not the query target. Do not add filter-ID searches, alternate query APIs or
+recipient before/after query experiments from Q18.
+
+The [validator implementation](controller/tools/sb_api_validator/sb_api_validator.c)
+passes no class alongside a path. A `RAW` filter ID does not add that argument.
+Record query availability and observed patterns separately from representational
+adequacy. These sources do not establish a native way to query the complete
+class-and-path issuance condition; a returned verdict does not supply the missing
+context. The pilot's ordering evidence is not PW's `comparison.order=query_first`.
+
+The report reader checks evidence completeness and consistency separately from
+whether delegation occurred. Use small constructed report controls to reject
+missing/reordered application or transfer evidence, a target descriptor inherited
+or held across access boundaries, and claimed read success without matching
+identity and bytes. Reuse of a descriptor number alone is not retention. Also
+accept honestly recorded native refusal, failed consumption, unavailable queries
+and missing dependent stages. Do not import the existing suite's mandatory
+positive outcomes as this investigation's completion criteria.
+
+### Repetitions, troubleshooting and endpoint
+
+Run three repetitions of the eight rows (24 planned trials), each with fresh
+processes and targets. Record the row order before execution and retain every
+trial, including contrary or variable observations. Three repetitions describe
+this small sample; they do not establish a universal or statistically stable
+pattern. Use a 20-second trial deadline as in the native fixture, with bounded
+termination/reaping and retained cleanup ownership if absence is unconfirmed.
+Do not retry a native refusal or unexpected access result to obtain a preferred
+outcome.
+
+Allow at most two documented equipment/instrumentation correction-and-retry
+cycles and 60 minutes of cumulative troubleshooting across the pilot, stopping
+at whichever limit is reached first. Each cycle permits at most one affected
+trial rerun. The required unchanged-artifact unsandboxed diagnostic retry counts
+toward this budget. Retain the original failures and any source changes; never combine
+results from different apparatus revisions as matched contrasts. If a correction
+invalidates earlier trials or equipment prevents the matrix from completing,
+report that coverage gap rather than starting another battery. Necessary cleanup
+still follows its ownership rules. A larger redesign, changed signing context,
+extra contrasts or further retries require review.
+
+Retain the report at `records/browser-trace-investigations/REPORT.md`, with the
+pilot source, exact policies and inputs, build commands and source/binary hashes,
+signature and entitlement read-backs, OS/SDK/compiler facts, raw token-free
+observations, checker controls and cleanup records alongside it. This is an
+investigation record associated with this plan under [records guidance](records/AGENTS.md),
+not a replacement plan or promoted test. Existing suite evidence, if referenced,
+keeps its managed ownership and is not moved into scratch or these records.
+
+The report distinguishes attempted and unrun rows, observations and inference,
+control failures, preparation limits, query limits, variable outcomes and
+recommendations. Stop after the specified trials or exhausted troubleshooting
+budget, retain the report even if delegation was never observed, and return to
+the maintainer. Neither a useful native query, successful issuance nor a feature
+proposal is a condition of completion. Recommendations do not authorize follow-up
+experiments, fixture promotion or production changes.
+
+## Where later outcomes could land
+
+These are options for maintainer review after the report, not work authorized
+by this investigation.
+
+- **Report only.** Observations, including failures or inconclusive controls,
+  can close the investigation without any product change.
 - **Documentation.** Narrowing or restating the known gap in
   [WORKER.md](docs/WORKER.md#known-gaps), the FAQ answer in
   [QUESTIONS.md](docs/QUESTIONS.md), or a premise in
@@ -339,59 +544,53 @@ The agent decides. The map says what each landing entails.
   version decision, [REQUEST-GRAMMAR.md](docs/REQUEST-GRAMMAR.md), the limits
   manifest and its regenerated document, the admission corpus, and worker
   identity regeneration.
-- **Worker or runner structure.** Issuance inside the worker changes the
-  authority story and may retire or re-purpose the issuer process. Bound
-  issuance inverts the issue-before-spawn order and moves channel validation
-  past apply. Either may change `pw_probe_runner`, the Swift host, or the
-  process topology, which means [architecture.json](docs/architecture.json) and
-  its regenerated account, the layout golden, and the order-barrier mutation
-  rerun. This landing is legitimate and should be weighed on the same terms as
-  the others.
+- **Worker or runner structure.** A future production issuance action or
+  process-binding capability could change the authority account, process
+  topology or token channel. A live binding target must exist before issuance;
+  it need not have applied its policy, so validation need not move past apply.
+  Any proposal would identify affected implementation, contracts and checks:
+  [architecture.json](docs/architecture.json) for topology changes, C/Swift layout
+  agreement when layout changes, and the order-barrier mutation control when
+  wait, release or eligibility changes. The independent pilot does not require
+  retiring PW's ordinary-authority issuer.
 
 ## Boundaries owned elsewhere
 
 - **Faithful cross-process delivery.** Issue in one sandboxed process and
   consume in another as a product capability needs a model of a second process
-  that this project does not have. A separate plan owns it. Q14's sibling is a
-  negative control in the fixture, not a start on that model.
+  that production PW does not have. A later proposal would own it. Q1's fixed
+  native issuer/recipient experiment establishes no general product capability;
+  Q14's process-binding control remains deferred.
 - **Mach, IOKit and generic classes** (T6). Each needs a new issuer entry point,
   an attempt kind and a class vocabulary decision. A later plan.
 - **Browsers as products**, installed-profile evidence, and anything the packet
   report lists as outside the sources.
 
-## Planning observations
+## Considerations for later review
 
-These are leanings formed while preparing the plan. The agent may discard any
-of them. They are not decisions.
+These preserve possible directions from the traces without expanding Q1/Q2.
 
-- **The lead question is really about self-widening.** In the engines, a
-  sandboxed process issues because Apple framework code inside it hands tokens to
-  a helper. A worker that issues and consumes its own token asks whether an
-  issuance allowance plus a consumer-side filter lets a process widen its own
-  sandbox. Stating Q1 and Q3 that way sharpens the policy-authoring lesson and
-  suggests the controls, but it also moves issuance authority into the worker,
-  which rewrites the authority section of WORKER.md.
-- **The cheapest home for Q1 is the native fixture.** The production worker has
-  no issue action, and admission refuses caller-selected classes, so a product
-  path to Q1 is a request-grammar change before any observation.
-- **Two tiers of rigor.** Pilots under `.tmp/` with a recorded report, and
-  promotion to opt-in suite cases with constructed checker controls only for
-  observations worth retaining. The stance against tolerated flakes applies to
-  both tiers; the tiering is about checker construction, not about accepting
-  unstable results.
-- **Binding is a design pressure as much as an experiment.** Today the issuer is
-  reaped before the worker exists and the worker validates the channel before
-  apply. A bound token needs the worker first, so issuance moves inside the
-  worker's lifetime, the channel fills late, and validation moves or waits. Q15
-  is the question to settle first. The confinement gain is defense in depth and
-  does not retire erasure, because a bound token is live while the worker is.
-- **Two sentinels disagree.** Chromium treats a zero consume result as failure;
-  WebKit and PolicyWitness treat only `-1` so. Q5 is cheap and settles which
-  reading this host supports.
-- **WebKit's flag naming is inverted.** Its do-not-canonicalize option sets the
-  constant named canonical. Read the code, not the name, when designing Q9 and
-  Q10.
-- **A well-formed experiment** under this plan cites a trace, answers or adds a
-  listed question, respects the boundary section, records host facts, keeps
-  tokens out of evidence, and names where its outcome could land. That is the
-  check the maintainer and agent apply when they talk about results.
+- **Self-consumption is distinct from delegation.** Q3 asks whether an issuer
+  can widen its own access; Q4 asks about issuing under an extension predicate.
+  Neither is needed to observe Q1. The Chromium Metal comments motivate a helper
+  recipient, while other retained constructions have different or unspecified
+  callers. They do not supply one common browser runtime story.
+- **Native equipment and product integration are separate.** Production has no
+  issue action and admits a bounded authority vocabulary. The independent fixture
+  can investigate native calls without first changing that grammar. Promotion
+  would require a separate decision about useful coverage and maintained checks.
+- **Preparation remains part of the result.** The initial issuer has permissive
+  read rules and pre-resolved symbols. Testing tighter ordinary access, loading
+  strategies or additional ambient restrictions would change that premise and
+  needs another bounded question, not an automatic response to refusal.
+- **Binding creates choices, not a prescribed topology.** Q15 concerns obtaining
+  a child's audit token and accounting for the resources used. Issuance could
+  occur while a recipient waits before apply. Any claimed confinement benefit
+  would need its own observations and would not replace token erasure.
+- **Consume success conditions differ.** Chromium uses `> 0`; WebKit and PW use
+  `!= -1`. Q5 records values and associated behavior if selected later. No zero
+  result means this difference remains untested; one occurrence would not specify
+  all native consume behavior.
+- **Flag mappings are source facts.** WebKit's `DoNotCanonicalize` sets
+  `SANDBOX_EXTENSION_CANONICAL`. That mapping alone does not establish the
+  installed flag's semantics; Q9/Q10 remain deferred.
