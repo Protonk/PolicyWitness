@@ -65,6 +65,8 @@ static void populate_exec_inheritance(pw_shm_slot_t *slots) {
         s->attempt_kind = PW_ATTEMPT_EXEC_SPAWN;
         snprintf(s->target, sizeof(s->target), "%s", exec_helper);
         s->argv_count = 5;
+        /* As the host does, argv[0] holds a bounded copy; the worker spawns
+         * from target and passes it as the child's argv[0]. */
         snprintf(s->argv[0], sizeof(s->argv[0]), "%s", exec_helper);
         snprintf(s->argv[1], sizeof(s->argv[1]), "--inspect");
         snprintf(s->argv[2], sizeof(s->argv[2]), "%s-%u", exec_nonce, i);
@@ -561,10 +563,10 @@ int main(int argc, char **argv) {
 
     if (argc == 6 && strcmp(argv[2], "exec_inheritance") == 0) {
         exec_helper = argv[3]; exec_nonce = argv[4]; exec_canary_fd = argv[5];
-        if (strlen(exec_helper) >= PW_SHM_ARGV_BYTES || strlen(exec_nonce) > 64) {
-            fprintf(stderr, "harness: exec_inheritance helper path is %zu bytes and the worker's argv entry holds"
+        if (strlen(exec_helper) >= PW_SHM_TARGET_MAX || strlen(exec_nonce) > 64) {
+            fprintf(stderr, "harness: exec_inheritance helper path is %zu bytes and the worker's target holds"
                             " at most %u; use a shorter checkout or output path (nonce %zu bytes, at most 64)\n",
-                    strlen(exec_helper), PW_SHM_ARGV_BYTES - 1u, strlen(exec_nonce));
+                    strlen(exec_helper), PW_SHM_TARGET_MAX - 1u, strlen(exec_nonce));
             return 2;
         }
     } else if (argc != 3 || strcmp(argv[2], "exec_inheritance") == 0) {

@@ -17,7 +17,7 @@ fi
 
 inheritance_setup() {
 [[ -x "${PW_BIN}" && -x "${WORKER}" ]] || test_fail "built app/worker missing"
-# Keep the helper path below the worker argv[0] bound for the direct ABI adapter.
+# Keep the helper path below the worker target bound for the direct ABI adapter.
 HELPER="${PW_TEST_OUT_DIR}/inheritance/helper"
 HARNESS="${PW_TEST_OUT_DIR}/inheritance/worker-harness"
 test_step build "compile shared observer and existing worker harness"
