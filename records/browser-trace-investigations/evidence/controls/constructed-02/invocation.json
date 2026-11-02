@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/reader_controls.py",
+    "--out",
+    "records/browser-trace-investigations/evidence/controls/constructed-02"
+  ],
+  "kind": "reader_control_execution",
+  "native_trials": 0,
+  "source_sha256": {
+    "read.py": "4621deb75da7388940fe57a7a65289ee5b568e5c9b6740ef843a35a7f3801e17",
+    "reader_controls.py": "bacecf191cedc89bde1411e72bd21e0fc29658b5ac43451fafe82a70eccf1ea2"
+  }
+}

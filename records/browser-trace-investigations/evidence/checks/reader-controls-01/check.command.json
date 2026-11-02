@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+    "-B",
+    "-S",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/reader_controls.py",
+    "--out",
+    "records/browser-trace-investigations/evidence/controls/constructed-01"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.814301332924515,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:47:05.111315+00:00",
+  "stderr": "evidence/checks/reader-controls-01/check.stderr.txt",
+  "stdout": "evidence/checks/reader-controls-01/check.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

@@ -1,0 +1,2229 @@
+{
+  "driver": {
+    "cleanup": {
+      "group_observations": [
+        {
+          "absent": true,
+          "kill_zero_errno": 3,
+          "kill_zero_rc": -1,
+          "list_complete": true,
+          "members": [],
+          "pgid": 9000
+        }
+      ],
+      "observations": [
+        {
+          "removed": true
+        }
+      ],
+      "pending": false,
+      "process_group_absent": true,
+      "resources_removed": true,
+      "signals": [],
+      "supervisor_reaped": true
+    },
+    "execution": {
+      "cancel_signal": null,
+      "command": [
+        "/constructed/pilot",
+        "supervise",
+        "C2"
+      ],
+      "deadline_reached": false,
+      "elapsed_seconds": 0.1,
+      "environment": {
+        "LC_ALL": "C",
+        "PATH": "/usr/bin:/bin"
+      },
+      "returncode": 0,
+      "start_utc": "constructed",
+      "stream_errors": []
+    },
+    "ownership": {
+      "supervisor": {
+        "executable": "/constructed/pilot",
+        "pgid": 9000,
+        "pid": 9000,
+        "start_identity": {
+          "microseconds": 9000,
+          "seconds": 1700000000
+        }
+      },
+      "temporary_directory": {
+        "device": 7,
+        "inode": 1000,
+        "mode": 16832,
+        "path": "/private/tmp/pw-reader-constructed",
+        "uid": 501
+      }
+    }
+  },
+  "events": [
+    {
+      "details": {
+        "arrangement": "C2",
+        "core_limit": {
+          "errno": 0,
+          "rc": 0
+        },
+        "environment": {
+          "LC_ALL": "C",
+          "PATH": "/usr/bin:/bin"
+        },
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 777,
+            "mode": 33152,
+            "size": 100,
+            "uid": 501
+          },
+          "executable_path": "/constructed/pilot",
+          "executable_rc": 18,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 9000,
+          "pid": 9000,
+          "ppid": 8999,
+          "start_identity": {
+            "microseconds": 9000,
+            "seconds": 1700000000
+          },
+          "uid": 501
+        },
+        "trial_id": "constructed-reference"
+      },
+      "monotonic_ns": 1000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 1,
+      "stage": "supervisor_start",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "a": {
+          "baseline": {
+            "claimed_known_bytes": true,
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "content_hex": "4142430a",
+            "descriptor": 6,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 1001,
+              "mode": 33152,
+              "size": 4,
+              "uid": 501
+            },
+            "identity_check": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 6,
+              "status": "attempted"
+            },
+            "path": "/private/tmp/pw-reader-constructed/A",
+            "read": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            }
+          },
+          "identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 1001,
+            "mode": 33152,
+            "size": 4,
+            "uid": 501
+          },
+          "known_content_hex": "4142430a",
+          "path": "/private/tmp/pw-reader-constructed/A"
+        },
+        "b": {
+          "baseline": {
+            "claimed_known_bytes": true,
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "content_hex": "4445460a",
+            "descriptor": 6,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 1002,
+              "mode": 33152,
+              "size": 4,
+              "uid": 501
+            },
+            "identity_check": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 6,
+              "status": "attempted"
+            },
+            "path": "/private/tmp/pw-reader-constructed/B",
+            "read": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            }
+          },
+          "identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 1002,
+            "mode": 33152,
+            "size": 4,
+            "uid": 501
+          },
+          "known_content_hex": "4445460a",
+          "path": "/private/tmp/pw-reader-constructed/B"
+        },
+        "extension_class": "com.apple.app-sandbox.read",
+        "flags": 0,
+        "issuer_policy": "(version 1) (allow default) (deny file-write*) (deny file-issue-extension) (allow file-issue-extension (require-all (extension-class \"com.apple.app-sandbox.read\") (literal \"/private/tmp/pw-reader-constructed/A\")))",
+        "recipient_policy": "(version 1) (allow default) (deny file-read-data) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+      },
+      "monotonic_ns": 2000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 2,
+      "stage": "targets_prepared",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "evidence",
+        "cleanup_pending": false,
+        "created_exclusively": true,
+        "descriptor": 9,
+        "name": "/constructed-evidence",
+        "owner_pid": 9000,
+        "unlink_errno": 0,
+        "unlink_rc": 0
+      },
+      "monotonic_ns": 3000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 3,
+      "stage": "channel_resource",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "issued_token",
+        "cleanup_pending": false,
+        "created_exclusively": true,
+        "descriptor": 9,
+        "name": "/constructed-issued_token",
+        "owner_pid": 9000,
+        "unlink_errno": 0,
+        "unlink_rc": 0
+      },
+      "monotonic_ns": 4000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 4,
+      "stage": "channel_resource",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "delivered_token",
+        "cleanup_pending": false,
+        "created_exclusively": true,
+        "descriptor": 9,
+        "name": "/constructed-delivered_token",
+        "owner_pid": 9000,
+        "unlink_errno": 0,
+        "unlink_rc": 0
+      },
+      "monotonic_ns": 5000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 5,
+      "stage": "channel_resource",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "delivered_initial_zero": true,
+        "delivered_token": {
+          "descriptor": 5,
+          "identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 3002,
+            "mode": 33152,
+            "size": 16384,
+            "uid": 501
+          },
+          "size": 16384
+        },
+        "evidence": {
+          "descriptor": 3,
+          "identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 3000,
+            "mode": 33152,
+            "size": 65536,
+            "uid": 501
+          },
+          "size": 65536
+        },
+        "issued_initial_zero": true,
+        "issued_token": {
+          "descriptor": 4,
+          "identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 3001,
+            "mode": 33152,
+            "size": 16384,
+            "uid": 501
+          },
+          "size": 16384
+        }
+      },
+      "monotonic_ns": 6000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 6,
+      "stage": "channel_setup",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "errno": 0,
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 777,
+            "mode": 33152,
+            "size": 100,
+            "uid": 501
+          },
+          "executable_path": "/constructed/pilot",
+          "executable_rc": 18,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 9000,
+          "pid": 9001,
+          "ppid": 9000,
+          "start_identity": {
+            "microseconds": 9001,
+            "seconds": 1700000000
+          },
+          "uid": 501
+        },
+        "rc": 0
+      },
+      "monotonic_ns": 7000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 7,
+      "stage": "child_launch",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "core_limit": {
+          "errno": 0,
+          "rc": 0
+        },
+        "environment": {
+          "LC_ALL": "C",
+          "PATH": "/usr/bin:/bin"
+        },
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 777,
+            "mode": 33152,
+            "size": 100,
+            "uid": 501
+          },
+          "executable_path": "/constructed/pilot",
+          "executable_rc": 18,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 9000,
+          "pid": 9001,
+          "ppid": 9000,
+          "start_identity": {
+            "microseconds": 9001,
+            "seconds": 1700000000
+          },
+          "uid": 501
+        }
+      },
+      "monotonic_ns": 8000,
+      "pid": 9001,
+      "producer_seq": 1,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 8,
+      "stage": "process_entry",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "process_entry",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 1
+      },
+      "monotonic_ns": 9000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 9,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "entry",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 3,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 3000,
+              "mode": 33152,
+              "size": 65536,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 4,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 3001,
+              "mode": 33152,
+              "size": 16384,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "scan_limit": 1024
+      },
+      "monotonic_ns": 10000,
+      "pid": 9001,
+      "producer_seq": 2,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 10,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 2
+      },
+      "monotonic_ns": 11000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 11,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "evidence": {
+          "close": {
+            "errno": 0,
+            "rc": 0
+          },
+          "descriptor": 3,
+          "map_succeeded": true
+        },
+        "token": {
+          "close": {
+            "errno": 0,
+            "rc": 0
+          },
+          "descriptor": 4,
+          "map_succeeded": true
+        }
+      },
+      "monotonic_ns": 12000,
+      "pid": 9001,
+      "producer_seq": 3,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 12,
+      "stage": "channel_mapped",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "channel_mapped",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 3
+      },
+      "monotonic_ns": 13000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 13,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "apply": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "compile": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "consume": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "issue": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        }
+      },
+      "monotonic_ns": 14000,
+      "pid": 9001,
+      "producer_seq": 4,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 14,
+      "stage": "symbols",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "symbols",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 4
+      },
+      "monotonic_ns": 15000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 15,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "count": 2,
+        "loaded_images": [
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libsandbox.1.dylib"
+        ]
+      },
+      "monotonic_ns": 16000,
+      "pid": 9001,
+      "producer_seq": 5,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 16,
+      "stage": "images",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "images",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 5
+      },
+      "monotonic_ns": 17000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 17,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "errno": 0,
+        "nonnull": true,
+        "policy": "(version 1) (allow default) (deny file-write*) (deny file-issue-extension) (allow file-issue-extension (require-all (extension-class \"com.apple.app-sandbox.read\") (literal \"/private/tmp/pw-reader-constructed/A\")))"
+      },
+      "monotonic_ns": 18000,
+      "pid": 9001,
+      "producer_seq": 6,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 18,
+      "stage": "policy_compile",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "policy_compile",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 6
+      },
+      "monotonic_ns": 19000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 19,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_apply",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          }
+        ],
+        "inspection_complete": true,
+        "scan_limit": 1024
+      },
+      "monotonic_ns": 20000,
+      "pid": 9001,
+      "producer_seq": 7,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 20,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 7
+      },
+      "monotonic_ns": 21000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 21,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "application_count": 1,
+        "errno": 0,
+        "rc": 0
+      },
+      "monotonic_ns": 22000,
+      "pid": 9001,
+      "producer_seq": 8,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 22,
+      "stage": "apply",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "apply",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 8
+      },
+      "monotonic_ns": 23000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 23,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "errno": 0,
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 777,
+            "mode": 33152,
+            "size": 100,
+            "uid": 501
+          },
+          "executable_path": "/constructed/pilot",
+          "executable_rc": 18,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 9000,
+          "pid": 9002,
+          "ppid": 9000,
+          "start_identity": {
+            "microseconds": 9002,
+            "seconds": 1700000000
+          },
+          "uid": 501
+        },
+        "rc": 0
+      },
+      "monotonic_ns": 24000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 24,
+      "stage": "child_launch",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "core_limit": {
+          "errno": 0,
+          "rc": 0
+        },
+        "environment": {
+          "LC_ALL": "C",
+          "PATH": "/usr/bin:/bin"
+        },
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 7,
+            "gid": 20,
+            "inode": 777,
+            "mode": 33152,
+            "size": 100,
+            "uid": 501
+          },
+          "executable_path": "/constructed/pilot",
+          "executable_rc": 18,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 9000,
+          "pid": 9002,
+          "ppid": 9000,
+          "start_identity": {
+            "microseconds": 9002,
+            "seconds": 1700000000
+          },
+          "uid": 501
+        }
+      },
+      "monotonic_ns": 25000,
+      "pid": 9002,
+      "producer_seq": 1,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 25,
+      "stage": "process_entry",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "process_entry",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 1
+      },
+      "monotonic_ns": 26000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 26,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "entry",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 3,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 3000,
+              "mode": 33152,
+              "size": 65536,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 4,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 3002,
+              "mode": 33152,
+              "size": 16384,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "scan_limit": 1024
+      },
+      "monotonic_ns": 27000,
+      "pid": 9002,
+      "producer_seq": 2,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 27,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 2
+      },
+      "monotonic_ns": 28000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 28,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "evidence": {
+          "close": {
+            "errno": 0,
+            "rc": 0
+          },
+          "descriptor": 3,
+          "map_succeeded": true
+        },
+        "token": {
+          "close": {
+            "errno": 0,
+            "rc": 0
+          },
+          "descriptor": 4,
+          "map_succeeded": true
+        }
+      },
+      "monotonic_ns": 29000,
+      "pid": 9002,
+      "producer_seq": 3,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 29,
+      "stage": "channel_mapped",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "channel_mapped",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 3
+      },
+      "monotonic_ns": 30000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 30,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "apply": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "compile": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "consume": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "issue": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        }
+      },
+      "monotonic_ns": 31000,
+      "pid": 9002,
+      "producer_seq": 4,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 31,
+      "stage": "symbols",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "symbols",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 4
+      },
+      "monotonic_ns": 32000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 32,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "count": 2,
+        "loaded_images": [
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libsandbox.1.dylib"
+        ]
+      },
+      "monotonic_ns": 33000,
+      "pid": 9002,
+      "producer_seq": 5,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 33,
+      "stage": "images",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "images",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 5
+      },
+      "monotonic_ns": 34000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 34,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "errno": 0,
+        "nonnull": true,
+        "policy": "(version 1) (allow default) (deny file-read-data) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+      },
+      "monotonic_ns": 35000,
+      "pid": 9002,
+      "producer_seq": 6,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 35,
+      "stage": "policy_compile",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "policy_compile",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 6
+      },
+      "monotonic_ns": 36000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 36,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_apply",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          }
+        ],
+        "inspection_complete": true,
+        "scan_limit": 1024
+      },
+      "monotonic_ns": 37000,
+      "pid": 9002,
+      "producer_seq": 7,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 37,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 7
+      },
+      "monotonic_ns": 38000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 38,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "application_count": 1,
+        "errno": 0,
+        "rc": 0
+      },
+      "monotonic_ns": 39000,
+      "pid": 9002,
+      "producer_seq": 8,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 39,
+      "stage": "apply",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "apply",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 8
+      },
+      "monotonic_ns": 40000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 40,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_read_before",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          }
+        ],
+        "inspection_complete": true,
+        "scan_limit": 1024
+      },
+      "monotonic_ns": 41000,
+      "pid": 9002,
+      "producer_seq": 9,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 41,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 9
+      },
+      "monotonic_ns": 42000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 42,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "claimed_known_bytes": false,
+        "close": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        },
+        "content_hex": "",
+        "descriptor": null,
+        "identity": null,
+        "identity_check": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        },
+        "open": {
+          "errno": 1,
+          "rc": -1,
+          "status": "attempted"
+        },
+        "path": "/private/tmp/pw-reader-constructed/A",
+        "read": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        }
+      },
+      "monotonic_ns": 43000,
+      "pid": 9002,
+      "producer_seq": 10,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 43,
+      "stage": "read_before",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "read_before",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 10
+      },
+      "monotonic_ns": 44000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 44,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "api": {
+          "available": true,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "flag": {
+          "available": true,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "no_report_flag": 16
+      },
+      "monotonic_ns": 45000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 45,
+      "stage": "query_capability",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "count": 2,
+        "loaded_images": [
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/libsandbox.1.dylib"
+        ]
+      },
+      "monotonic_ns": 46000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 46,
+      "stage": "images",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "caller_pid": 9000,
+        "errno": 0,
+        "filter_id": 0,
+        "filter_value": null,
+        "no_report_flag": 16,
+        "operation": "file-issue-extension",
+        "rc": 0,
+        "target_pid": 9001,
+        "type_argument": 16
+      },
+      "monotonic_ns": 47000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 47,
+      "stage": "query",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "caller_pid": 9000,
+        "errno": 0,
+        "filter_id": 1,
+        "filter_value": "/private/tmp/pw-reader-constructed/A",
+        "no_report_flag": 16,
+        "operation": "file-issue-extension",
+        "rc": 0,
+        "target_pid": 9001,
+        "type_argument": 17
+      },
+      "monotonic_ns": 48000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 48,
+      "stage": "query",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "issuer_pid": 9001,
+        "queries_collected": 2,
+        "recipient_pid": 9002
+      },
+      "monotonic_ns": 49000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 49,
+      "stage": "issue_release",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_issue",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          }
+        ],
+        "inspection_complete": true,
+        "scan_limit": 1024
+      },
+      "monotonic_ns": 50000,
+      "pid": 9001,
+      "producer_seq": 9,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 50,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 9
+      },
+      "monotonic_ns": 51000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 51,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "extension_class": "com.apple.app-sandbox.read",
+        "flags": 0,
+        "path": "/private/tmp/pw-reader-constructed/A"
+      },
+      "monotonic_ns": 52000,
+      "pid": 9001,
+      "producer_seq": 10,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 52,
+      "stage": "issue_begin",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "issue_begin",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 10
+      },
+      "monotonic_ns": 53000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 53,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "errno": 0,
+        "nonnull": true
+      },
+      "monotonic_ns": 54000,
+      "pid": 9001,
+      "producer_seq": 11,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 54,
+      "stage": "issue_result",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "issue_result",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 11
+      },
+      "monotonic_ns": 55000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 55,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "allocation_extent_observed": true,
+        "erased_bytes": 121,
+        "inspected_bytes": 120,
+        "zero_confirmed": true
+      },
+      "monotonic_ns": 56000,
+      "pid": 9001,
+      "producer_seq": 12,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 56,
+      "stage": "raw_token_erasure",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "raw_token_erasure",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 12
+      },
+      "monotonic_ns": 57000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 57,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "embedded_nul_absent": true,
+        "length": 120,
+        "length_valid": true,
+        "published": true,
+        "terminator_valid": true
+      },
+      "monotonic_ns": 58000,
+      "pid": 9001,
+      "producer_seq": 13,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 58,
+      "stage": "token_publication",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "token_publication",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 13
+      },
+      "monotonic_ns": 59000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 59,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "embedded_nul_absent": true,
+        "header_valid": true,
+        "issuer_publication_producer_seq": 13,
+        "length": 120,
+        "length_valid": true,
+        "ready": true,
+        "terminator_valid": true
+      },
+      "monotonic_ns": 60000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 60,
+      "stage": "transfer_ready",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "accepted": true,
+        "embedded_nul_absent": true,
+        "header_valid": true,
+        "length": 120,
+        "length_valid": true,
+        "terminator_valid": true
+      },
+      "monotonic_ns": 61000,
+      "pid": 9002,
+      "producer_seq": 11,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 61,
+      "stage": "transfer_acceptance",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "transfer_acceptance",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 11
+      },
+      "monotonic_ns": 62000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 62,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "equal": true,
+        "length": 120
+      },
+      "monotonic_ns": 63000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 63,
+      "stage": "transfer_equality",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "accepted": true,
+        "equality_confirmed": true,
+        "recipient_pid": 9002
+      },
+      "monotonic_ns": 64000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 64,
+      "stage": "consume_release",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "length": 120
+      },
+      "monotonic_ns": 65000,
+      "pid": 9002,
+      "producer_seq": 12,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 65,
+      "stage": "consume_begin",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "consume_begin",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 12
+      },
+      "monotonic_ns": 66000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 66,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "errno": 22,
+        "rc": -1
+      },
+      "monotonic_ns": 67000,
+      "pid": 9002,
+      "producer_seq": 13,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 67,
+      "stage": "consume_result",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "consume_result",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 13
+      },
+      "monotonic_ns": 68000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 68,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_read_after",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 8000,
+              "mode": 8576,
+              "size": 4,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          }
+        ],
+        "inspection_complete": true,
+        "scan_limit": 1024
+      },
+      "monotonic_ns": 69000,
+      "pid": 9002,
+      "producer_seq": 14,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 69,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 14
+      },
+      "monotonic_ns": 70000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 70,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "read_after",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 15
+      },
+      "monotonic_ns": 72000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 72,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "buffer": "delivered",
+        "capacity": 16384,
+        "zero_confirmed": true
+      },
+      "monotonic_ns": 73000,
+      "pid": 9002,
+      "producer_seq": 16,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 73,
+      "stage": "token_erasure",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "token_erasure",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 16
+      },
+      "monotonic_ns": 74000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 74,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "exit_code": 0
+      },
+      "monotonic_ns": 75000,
+      "pid": 9002,
+      "producer_seq": 17,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 75,
+      "stage": "child_exit",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "child_exit",
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "producer_seq": 17
+      },
+      "monotonic_ns": 76000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 76,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_pid": 9002,
+        "child_role": "recipient",
+        "errno": 0,
+        "exit_code": 0,
+        "rc": 9002,
+        "reaped": true,
+        "term_signal": null,
+        "wait_status": 0
+      },
+      "monotonic_ns": 77000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 77,
+      "stage": "child_reap",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "buffer": "issued",
+        "capacity": 16384,
+        "zero_confirmed": true
+      },
+      "monotonic_ns": 78000,
+      "pid": 9001,
+      "producer_seq": 14,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 78,
+      "stage": "token_erasure",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "token_erasure",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 14
+      },
+      "monotonic_ns": 79000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 79,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "exit_code": 0
+      },
+      "monotonic_ns": 80000,
+      "pid": 9001,
+      "producer_seq": 15,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 80,
+      "stage": "child_exit",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "child_exit",
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "producer_seq": 15
+      },
+      "monotonic_ns": 81000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 81,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_pid": 9001,
+        "child_role": "issuer",
+        "errno": 0,
+        "exit_code": 0,
+        "rc": 9001,
+        "reaped": true,
+        "term_signal": null,
+        "wait_status": 0
+      },
+      "monotonic_ns": 82000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 82,
+      "stage": "child_reap",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "a": {
+          "path": "/private/tmp/pw-reader-constructed/A",
+          "read": {
+            "claimed_known_bytes": true,
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "content_hex": "4142430a",
+            "descriptor": 6,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 1001,
+              "mode": 33152,
+              "size": 4,
+              "uid": 501
+            },
+            "identity_check": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 6,
+              "status": "attempted"
+            },
+            "path": "/private/tmp/pw-reader-constructed/A",
+            "read": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            }
+          }
+        },
+        "b": {
+          "path": "/private/tmp/pw-reader-constructed/B",
+          "read": {
+            "claimed_known_bytes": true,
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "content_hex": "4445460a",
+            "descriptor": 6,
+            "identity": {
+              "device": 7,
+              "gid": 20,
+              "inode": 1002,
+              "mode": 33152,
+              "size": 4,
+              "uid": 501
+            },
+            "identity_check": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 6,
+              "status": "attempted"
+            },
+            "path": "/private/tmp/pw-reader-constructed/B",
+            "read": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            }
+          }
+        }
+      },
+      "monotonic_ns": 83000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 83,
+      "stage": "targets_after",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "children_absent": true,
+        "delivered": {
+          "capacity": 16384,
+          "zero_confirmed": true
+        },
+        "issued": {
+          "capacity": 16384,
+          "zero_confirmed": true
+        }
+      },
+      "monotonic_ns": 84000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 84,
+      "stage": "supervisor_token_erasure",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "all_children_reaped": true,
+        "deadline_reached": false,
+        "elapsed_seconds": 0.1,
+        "equipment_failure": false,
+        "issuer_reaped": true,
+        "issuer_wait_status": 0,
+        "output_failed": false,
+        "reason": "completed",
+        "recipient_reaped": true,
+        "recipient_wait_status": 0
+      },
+      "monotonic_ns": 85000,
+      "pid": 9000,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 85,
+      "stage": "supervisor_complete",
+      "status": "attempted"
+    }
+  ],
+  "schema_version": 1,
+  "trial": {
+    "arrangement": "C2",
+    "block": 1,
+    "chronological_position": 3,
+    "diagnostic": false,
+    "equipment_ref": "constructed-equipment-not-native",
+    "id": "constructed-reference",
+    "planned_position": 3,
+    "position": 3,
+    "revision": "constructed-only",
+    "schedule_ref": "constructed-schedule-not-native"
+  }
+}
