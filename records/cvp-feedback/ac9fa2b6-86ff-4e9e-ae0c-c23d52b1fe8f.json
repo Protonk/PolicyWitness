@@ -49,6 +49,16 @@
     "final_stop_reason": "stop_sequence",
     "review_delivered": false
   },
+  "feedback_filed": {
+    "client_command": "/feedback",
+    "timestamp": "2026-11-02T16:45:44.959Z",
+    "text_submitted": "Overactive refusal on defensive work covered in the CVP.",
+    "request_id_cited": null,
+    "local_record": "~/.claude/history.jsonl",
+    "local_record_note": "The prompt-history entry holds the command line as typed, the project path, the session identifier and a millisecond timestamp. Any further material the client attached to the submission is not stored locally.",
+    "submission_identifier": null,
+    "submission_identifier_note": "No confirmation or ticket identifier is returned to the client or stored locally. The session and request identifiers in this file are the only local correlation keys."
+  },
   "transcript": {
     "path": "~/.claude/projects/-Users-raccoon-Desktop-Security-PolicyWitness/ac9fa2b6-86ff-4e9e-ae0c-c23d52b1fe8f.jsonl",
     "availability": "Outside this repository, in the local Claude Code state directory; not retained here."
