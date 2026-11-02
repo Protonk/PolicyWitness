@@ -57,94 +57,20 @@ accepting a string does not establish a useful native prediction for it.
 ## Traces and the packet
 
 [TRACES.md](records/browser-trace-investigations/TRACES.md) holds the seven
-source traces T1–T7 and the description of the source packet at
+source traces T1–T7, the questions Q1–Q18 they raise, and the description of
+the source packet at
 [records/browser-sandbox-sources](records/browser-sandbox-sources/README.md).
 Each trace names a source, states what it shows, states what PolicyWitness does
 at the same point, and names the questions it raises.
 
 ## What we want to learn
 
-Only Q1 and Q2 are active. Q3–Q18 remain an unordered inventory for later review,
+The questions are stated once, in
+[TRACES.md](records/browser-trace-investigations/TRACES.md#questions), each with
+its observable, what it needs beyond this investigation's apparatus, and what an
+answer does not establish. This plan refers to them by number only. Q1 and Q2
+are the active questions; Q3–Q18 remain an unordered inventory for later review,
 not commitments or automatic follow-ups to an unexpected result.
-
-**Issuance inside the sandbox (T1)**
-
-- **Q1 (active lead).** Under the specified issuance restrictions, whether an
-  already sandboxed issuer produces a token that a separately sandboxed
-  recipient accepts and consumes, and whether that recipient's fresh access
-  changes from before to after consumption. Record issuance, transfer,
-  consumption and access independently, including failures and unavailable
-  stages. Compare matching, absent, wrong-class and wrong-path allowances with
-  the controls specified below. The issuer never consumes its own token.
-- **Q2 (active companion).** What `file-issue-extension` queries using `NONE`
-  and `PATH` return against the live, paused issuer before issuance, and what
-  part of the native call's context those queries represent. The current
-  validator passes no extension class alongside a path. A returned verdict or
-  a pattern across policies does not establish a class-specific issuance
-  prediction or prediction/enforcement agreement. Query inadequacy does not
-  prevent Q1 or require a new query API or production comparison.
-- **Q3.** Whether a token the worker issued and then consumed itself widens that
-  worker's own access, observed as fresh reads before consume, after consume and
-  after release, under policies with and without the consumer-side filter.
-- **Q4.** Whether an issuance allowance whose path filter is itself
-  `(extension ...)` permits issuing for a path the process reaches only through a
-  consumed extension, in the same process.
-
-**Lifecycle (T3)**
-
-- **Q5.** What values consume returns on this host: whether zero ever appears,
-  and whether repeated consumption of one token in one process returns equal or
-  different values. Equality is an observation, not an identity claim. If zero
-  is not observed, the Chromium/WebKit success-condition difference remains
-  untested; if it is, access observations still matter.
-- **Q6.** Whether the same token consumes again after a release, and what fresh
-  access looks like afterward.
-- **Q7.** What release returns for a handle already released, a handle never
-  obtained, and a value that was never a handle.
-- **Q8.** What access or persistent effects distinguish explicit release from
-  omission and process exit. A live worker can compare fresh access after
-  release with omission (the native suite already has `no_release`). After
-  exit, another observer can inspect filesystem effects or its own authority,
-  not the exited worker's fresh access. A further exit experiment needs a
-  specified surviving observer and observable before it can be selected.
-
-**Flags and paths (T4)**
-
-- **Q9.** What values libsandbox exports on this host for the three flag
-  constants, and whether issuance, consumption or fresh access differ for the
-  same target under each.
-- **Q10.** For a symlink target: issuance for the link path with and without the
-  canonical flag, then fresh reads through the link and through the resolved
-  path.
-- **Q11.** Issuance for a path that does not exist yet, then creation, then
-  fresh access; and issuance for a path whose parent does not exist.
-- **Q12.** Whether a token for a directory issued before a descendant exists
-  covers that descendant. The native directory case already records absence
-  before issuance and tests subsequent exclusive creation with controls. Retain
-  that coverage; any follow-up must identify an additional distinction, such as
-  fresh reading of a descendant created by a different process, before selection.
-
-**Process binding (T5)**
-
-- **Q13.** Whether a token issued to the worker's audit token consumes in the
-  worker.
-- **Q14.** Whether the same token consumes in a sibling process, with result and
-  errno. This is a deferred process-binding control, separate from Q1's unbound
-  delegation between a sandboxed issuer and recipient.
-- **Q15.** How a supervisor can obtain a posix_spawn child's audit token, with
-  the acquisition mechanism, any supplied resource and its lifetime explicit.
-  A pre-apply reporting resource is not automatically disqualifying; its
-  authority and effect on the proposed observation must be accounted for.
-- **Q16.** What the bound issue call returns when the target process has
-  already exited.
-
-**Consumer-side filter (T2)**
-
-- **Q17.** Which members of the `file-read*` family a consumed read extension
-  widens when the filter is attached to each operation separately.
-- **Q18.** Whether query verdicts for the target change across before-consume,
-  after-consume and after-release. The existing checks accept any pattern; a
-  stable one would be a learning, not a requirement.
 
 ## First investigation: Q1 and Q2
 
@@ -329,21 +255,6 @@ working apparatus and recorded host context the first diagnostic focus; the
 prior alone does not establish the cause of a new failure. Referenced evidence
 keeps its managed ownership and is not copied into these records.
 
-If C0 works but C1 does not, the difference concerns applying the entire C1
-profile, including the fixed write denial and combined issuance rules; it does
-not isolate a class/path restriction or establish that sandbox application alone
-prevents issuance. If C1 works but C2 does not, their shared prefix leaves the
-filtered allow clause or its runtime interpretation at issue. If C2 works while
-C3–C5 differ, those matched contrasts support a finding scoped to the changed
-rules and recorded environment, not an errno-based claim about kernel cause.
-If issuance works but delivery, consumption or fresh access does not, report each
-stage's observations; do not collapse them into issuance refusal. If C0 and C1
-both fail at a stage, neither designated baseline establishes feasibility there.
-Preserve the results and withhold restriction-specific negative conclusions that
-require a working baseline. A usable restricted result remains evidence even if
-another control is unavailable, with the inconsistency made explicit. No control's
-success is required for closeout.
-
 For the pilot's bookkeeping, the consume sentinel is the signed 64-bit value
 `-1`, following the native fixture's convention. Other values, including zero,
 are candidate handles rather than proof of success. Always retain the raw value
@@ -351,22 +262,26 @@ and attempt the second fresh read, including after `-1` or omitted consumption.
 This convention does not settle the wrapper disagreement in Q5; access evidence
 is necessary for every delegation inference below.
 
-For recipient access, compare C2 with C6 and C7 using valid observations from
-the same apparatus revision. If C2 and C6 both accept delivery and their
-pre-consume fresh reads fail, but C2 obtains known bytes through a fresh read
-after a consume result other than `-1` while C6's fresh read still fails, the
-contrast supports consumption-dependent delegation in this setup. Delivery alone
-did not produce that access in C6.
+Read the matrix through the following table. Each row names the Q1 part it
+serves (see the question's parts (a)–(e)), a condition on valid observations
+from one apparatus revision, what that condition supports, and what it
+withholds. "Nonnull" and "null" are the raw issue return; "accepted" is the
+recipient's transfer acceptance; "fails" for a fresh read means no known bytes
+with matching identity. A row's withheld column applies even when its
+supported column is empty. No control's success is required for closeout.
 
-For C2/C7, require accepted delivery, failed pre-consume fresh reads and
-consume results other than `-1` in both rows before interpreting the access
-contrast. If C2 gains fresh access while C7's read still fails, the contrast
-supports a role for the recipient's extension predicate and shows why the consume
-result alone does not establish access. Failed delivery or consumption leaves a
-contrast requiring that stage unestablished. Pre-consume access, access in C6/C7 despite
-the omission, or no access gain in C2 likewise does not support the proposed
-separation; retain those observations and their limits without requiring another
-trial or a successful delegation result.
+| Part | Condition | Supports | Withholds |
+| --- | --- | --- | --- |
+| (a) | C0 nonnull, C1 null | The difference concerns applying the entire C1 profile, including the fixed write denial and the combined issuance rules | Isolating a class/path restriction; that sandbox application alone prevents issuance |
+| (a) | C1 nonnull, C2 null | With the prefix shared, the filtered allow clause or its runtime interpretation is at issue | Any claim about the prefix itself |
+| (a), (e) | C2 nonnull; C3, C4 or C5 null | A finding scoped to that row's single changed rule and the recorded environment | An errno-based claim about kernel cause |
+| (a) | C0 and C1 both fail at one stage | Preservation of the results; neither designated baseline establishes feasibility at that stage | Restriction-specific negative conclusions that need a working baseline |
+| (b)–(d) | Issuance nonnull; delivery, consumption or fresh access fails | Each stage's own observation, reported separately | Collapsing the later stages into issuance refusal |
+| (d), (e) | C2 and C6 both accepted; both pre-consume reads fail; C2 reads known bytes after a consume return other than `-1`; C6's second read fails | Consumption-dependent delegation in this setup; delivery alone produced no access in C6 | A general consumption claim beyond this apparatus |
+| (d), (e) | C2 and C7 both accepted; both pre-consume reads fail; both consume returns other than `-1`; C2 reads known bytes; C7's second read fails | A role for the recipient's extension predicate; the consume return alone does not establish access | A general predicate claim beyond this apparatus |
+| (d), (e) | Delivery or consumption fails in C2, C6 or C7 | The stage observations | Every contrast that requires the failed stage |
+| (d), (e) | Pre-consume access in any row; access in C6 or C7 despite the omission; or no access gain in C2 | Those observations and their limits, without another trial | The proposed consumption/predicate separation |
+| any | A usable restricted result while another control is unavailable | The result as evidence, with the inconsistency explicit | Any contrast that needs the unavailable control |
 
 ### Ordering and query protocol
 
@@ -563,12 +478,31 @@ require review.
 
 ### Report and stopping point
 
-Write `records/browser-trace-investigations/REPORT.md`. Present the stage
-observations, including raw query return/errno pairs, before derived labels and
-inference. Distinguish attempted and unrun positions, valid contrast coverage,
-control failures, preparation and query limits, variable outcomes, pending
-cleanup and recommendations. Link the committed evidence; referenced existing
-suite evidence keeps its managed ownership and location.
+Write `records/browser-trace-investigations/REPORT.md`. Its first section is a
+per-question status table; equipment, coverage, control failures, preparation
+and query limits, variable outcomes, pending cleanup and recommendations follow
+it. Link the committed evidence; referenced existing suite evidence keeps its
+managed ownership and location. Answers land under these rules:
+
+- **One answer per question part.** Q1 is answered per part (a)–(e), never as
+  one verdict. Q2 is answered as (a) observed and (b) representation. Q3–Q18
+  receive no answers from this investigation.
+- **Every answer carries one status:** answered within contrasts; partially
+  answered, naming the valid contrasts; unanswered because of equipment; or not
+  attempted. The status mirrors the trial record's stage vocabulary: attempted
+  with a published result, omitted by design, unavailable with a reason,
+  interrupted.
+- **Observations before labels.** An answer cites trial identities and raw
+  values, including raw query return/errno pairs, then the decision-table row it
+  rests on, then that row's supported finding in the row's words, then its
+  withheld column verbatim. Nothing is supported that the table does not name.
+- **Contrasts are valid only within one apparatus revision.** An answer that
+  spans revisions reports the covered contrasts and lists the missing ones as
+  coverage gaps, with attempted and unrun positions distinguished.
+- **Incidental observations are filed, not pursued.** Anything the planned
+  trials show about an inventory question, such as every consume return value
+  for Q5, is recorded under that number as incidental, with no added trial. It
+  is not an answer.
 
 Finish after all 24 planned trials, or with an incomplete report when equipment
 prevents further execution within the troubleshooting allowance. Retain the

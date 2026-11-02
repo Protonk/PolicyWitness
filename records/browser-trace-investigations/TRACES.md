@@ -42,7 +42,8 @@ no extension rules or calls of their own:
 
 Each trace names the source, states literally what it shows, describes what
 PolicyWitness does at the same point, names the existing PolicyWitness test
-equipment that already touches that point, and ends in the questions it raises.
+equipment that already touches that point, and ends in the numbers of the
+questions it raises. The questions themselves are listed after the traces.
 The traces identify source relationships; the first investigation separately
 fixes its design and controls.
 
@@ -271,25 +272,137 @@ to the first investigation.
   second call, so every existing case uses that two-step path. Comparing entry
   points would require later review.
 
-## Questions by trace
+## Questions
 
-| Question | Trace | Subject |
-| --- | --- | --- |
-| Q1 | T1 | Delegation from a sandboxed issuer to a sandboxed recipient |
-| Q2 | T1 | What `file-issue-extension` queries return |
-| Q3 | T1 | A worker consuming its own token |
-| Q4 | T1 | An issuance rule whose path filter is itself an extension predicate |
-| Q5 | T3 | Consume return values, including zero and repeats |
-| Q6 | T3 | Consuming again after release |
-| Q7 | T3 | Release of released, never-obtained and non-handle values |
-| Q8 | T3 | Release against omission and process exit |
-| Q9 | T4 | Values and effects of the three flag constants |
-| Q10 | T4 | Symlink targets with and without the canonical flag |
-| Q11 | T4 | Paths that do not exist at issuance |
-| Q12 | T4 | Directory tokens and later-created descendants |
-| Q13 | T5 | A bound token consumed in the worker |
-| Q14 | T5 | A bound token consumed in a sibling |
-| Q15 | T5 | Obtaining a posix_spawn child's audit token |
-| Q16 | T5 | A bound issue call against an exited target |
-| Q17 | T2 | Which `file-read*` members a read extension widens |
-| Q18 | T2 | Query verdicts across consume and release |
+This list is the only copy of the questions; the plan refers to them by number
+and never restates them. Each question gives the observable, what it needs
+beyond the first investigation's apparatus (a supervisor, a sandboxed issuer
+and a sandboxed recipient, two owned files, the read class, flags `0`, no
+release, no self-consumption), and what an answer does not establish. Only
+Q1 and Q2 are active; Q3–Q18 are an unordered inventory for later review, not
+commitments or automatic follow-ups to an unexpected result.
+
+**Issuance inside the sandbox (T1)**
+
+- **Q1 (active lead).** Under the specified issuance restrictions, whether an
+  already sandboxed issuer produces a token that a separately sandboxed
+  recipient accepts and consumes, and whether that recipient's fresh access
+  changes from before to after consumption. The parts are recorded
+  independently, including failures and unavailable stages: (a) issuance, the
+  raw issue return under each issuer arrangement; (b) transfer, framing and
+  recipient acceptance; (c) consumption, the raw consume return; (d) access, the
+  recipient's fresh reads before and after consumption; (e) contrast, the
+  matching arrangement against absent, wrong-class and wrong-path allowances,
+  omitted consumption and omitted recipient predicate. The issuer never consumes
+  its own token. *Needs:* the first investigation as specified in the plan.
+  *Does not establish:* private kernel state, general permissions, revocation,
+  or the cause of a permission-shaped failure.
+- **Q2 (active companion).** Two parts. (a) Observed: what `file-issue-extension`
+  queries using `NONE` and `PATH` return, as raw return/errno pairs, against the
+  live, paused issuer before issuance in each row. (b) Representation: what part
+  of the native call's context those two filters carry, answered from the
+  validator source, the complete type argument and the recorded exported flag
+  value, not from trials. The current validator passes no extension class
+  alongside a path. *Needs:* nothing beyond the first investigation for (a);
+  source inspection for (b). *Does not establish:* usable issuance, a
+  class-specific issuance prediction, prediction/enforcement agreement, a need
+  for a new query API, or a production comparison. Query inadequacy does not
+  prevent Q1.
+- **Q3.** Whether a token the worker issued and then consumed itself widens that
+  worker's own access, observed as fresh reads before consume, after consume and
+  after release, under policies with and without the consumer-side filter.
+  *Needs:* one sandboxed process that issues, consumes, reads and releases; no
+  recipient. *Does not establish:* general self-delegation, revocation, or
+  access beyond the read operation and target observed.
+- **Q4.** Whether an issuance allowance whose path filter is itself
+  `(extension ...)` permits issuing for a path the process reaches only through a
+  consumed extension, in the same process. *Needs:* a first token from an
+  outside issuer, a process that consumes it and then issues under the
+  extension-filtered allowance, and a recipient that shows the second token
+  usable. *Does not establish:* WebKit's re-delegation behavior; a nonnull second
+  issue return alone is not usable delegation.
+
+**Lifecycle (T3)**
+
+- **Q5.** What values consume returns on this host: whether zero ever appears,
+  and whether repeated consumption of one token in one process returns equal or
+  different values. *Needs:* repeated consume calls on one token in one process
+  with every raw value retained. *Does not establish:* equality as an identity
+  claim; absence of zero across the trials run as absence in general; a
+  resolution of the Chromium/WebKit success-condition difference. If zero is
+  observed, access observations still matter.
+- **Q6.** Whether the same token consumes again after a release, and what fresh
+  access looks like afterward. *Needs:* a release followed by a second consume,
+  with a fresh read after each. *Does not establish:* general revocation
+  semantics; the path-replacement hazard still applies to each read.
+- **Q7.** What release returns for a handle already released, a handle never
+  obtained, and a value that was never a handle. *Needs:* release calls with
+  prepared values and a process whose death would itself be the observation.
+  *Does not establish:* a reading of the returned numbers or any memory-safety
+  claim.
+- **Q8.** What access or persistent effects distinguish explicit release from
+  omission and process exit. A live worker can compare fresh access after
+  release with omission (the native suite already has `no_release`). After
+  exit, another observer can inspect filesystem effects or its own authority,
+  not the exited worker's fresh access. *Needs:* a specified surviving observer
+  and observable before an exit experiment can be selected. *Does not
+  establish:* exit-time revocation from filesystem effects alone.
+
+**Flags and paths (T4)**
+
+- **Q9.** What values libsandbox exports on this host for the three flag
+  constants, and whether issuance, consumption or fresh access differ for the
+  same target under each. *Needs:* `dlsym` of the three constants with their
+  numeric values recorded, then one issue call per value. *Does not establish:*
+  values or meanings on another host or OS; any meaning beyond the observed
+  differences.
+- **Q10.** For a symlink target: issuance for the link path with and without the
+  canonical flag, then fresh reads through the link and through the resolved
+  path. *Needs:* an owned symlink to A, issuance for the link path, and two
+  separate fresh reads. *Does not establish:* general symlink semantics; the
+  replacement hazard applies to both paths.
+- **Q11.** Issuance for a path that does not exist yet, then creation, then
+  fresh access; and issuance for a path whose parent does not exist. *Needs:* a
+  stated creator for the path and its authority, with creation after issuance.
+  *Does not establish:* creation authority as delegated read; a nonnull return
+  for an absent path as usable delegation.
+- **Q12.** Whether a token for a directory issued before a descendant exists
+  covers that descendant. The native directory case already records absence
+  before issuance and tests subsequent exclusive creation with controls.
+  *Needs:* an additional distinction, such as fresh reading of a descendant
+  created by a different process, before selection; the existing coverage is
+  retained. *Does not establish:* anything the directory case already answers.
+
+**Process binding (T5)**
+
+- **Q13.** Whether a token issued to the worker's audit token consumes in the
+  worker. *Needs:* Q15's acquisition, a recipient alive before issuance, and
+  the bound issue variant resolved. *Does not establish:* binding behavior at
+  other timings relative to the target's apply, or a confinement benefit.
+- **Q14.** Whether the same token consumes in a sibling process, with result and
+  errno. This is a deferred process-binding control, separate from Q1's unbound
+  delegation. *Needs:* Q13's apparatus plus a second recipient. *Does not
+  establish:* a kernel-cause claim from errno.
+- **Q15.** How a supervisor can obtain a posix_spawn child's audit token, with
+  the acquisition mechanism, any supplied resource and its lifetime explicit.
+  *Needs:* a chosen mechanism, the resource it supplies to the child and the
+  authority and effect of that resource on the proposed observation; a pre-apply
+  reporting resource is not automatically disqualifying. *Does not establish:*
+  a PolicyWitness topology; a recipient waiting before apply is a candidate
+  arrangement, not established behavior.
+- **Q16.** What the bound issue call returns when the target process has
+  already exited. *Needs:* Q13's apparatus with the target reaped before
+  issuance. *Does not establish:* a general liveness check.
+
+**Consumer-side filter (T2)**
+
+- **Q17.** Which members of the `file-read*` family a consumed read extension
+  widens when the filter is attached to each operation separately. *Needs:*
+  recipient policies that deny the family and allow one member back through the
+  predicate per trial, with a separate fresh operation per member. *Does not
+  establish:* members not tried, or browser behavior.
+- **Q18.** Whether query verdicts for the target change across before-consume,
+  after-consume and after-release. The existing checks accept any pattern.
+  *Needs:* queries against the recipient at the three boundaries; the first
+  investigation queries only the issuer. *Does not establish:* a stable pattern
+  as a requirement rather than a learning; prediction/enforcement agreement.
