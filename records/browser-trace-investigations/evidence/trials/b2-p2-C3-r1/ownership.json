@@ -1,0 +1,57 @@
+{
+  "created_utc": "2026-11-02T15:57:12.682005+00:00",
+  "driver": {
+    "api": "proc_pidinfo/PROC_PIDTBSDINFO",
+    "available": true,
+    "errno": 0,
+    "executable": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+    "executable_errno": 0,
+    "executable_rc": 124,
+    "gid": 20,
+    "pgid": 90459,
+    "pid": 90459,
+    "ppid": 90449,
+    "rc": 136,
+    "rgid": 20,
+    "ruid": 501,
+    "start_identity": {
+      "microseconds": 565212,
+      "seconds": 1793635032
+    },
+    "uid": 501
+  },
+  "nonce": "b122c2c146724b13a72dc84544c98c58",
+  "supervisor": {
+    "api": "proc_pidinfo/PROC_PIDTBSDINFO",
+    "available": true,
+    "created_process_group": 90478,
+    "errno": 0,
+    "executable": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+    "executable_errno": 0,
+    "executable_rc": 97,
+    "gid": 20,
+    "launched_executable": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+    "owned_child_pid": 90478,
+    "pgid": 90478,
+    "pid": 90478,
+    "ppid": 90459,
+    "rc": 136,
+    "rgid": 20,
+    "ruid": 501,
+    "start_identity": {
+      "microseconds": 682730,
+      "seconds": 1793635032
+    },
+    "uid": 501
+  },
+  "temporary_directory": {
+    "device": 16777233,
+    "gid": 0,
+    "inode": 149888871,
+    "mode": 16832,
+    "path": "/private/tmp/pw-browser-trace-5gw_ih6k",
+    "size": 64,
+    "uid": 501
+  },
+  "trial_id": "b2-p2-C3-r1"
+}

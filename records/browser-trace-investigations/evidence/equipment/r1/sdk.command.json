@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/usr/bin/xcrun",
+    "--sdk",
+    "macosx",
+    "--show-sdk-path"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.004317875020205975,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:53:31.936157+00:00",
+  "stderr": "evidence/equipment/r1/sdk.stderr.txt",
+  "stdout": "evidence/equipment/r1/sdk.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

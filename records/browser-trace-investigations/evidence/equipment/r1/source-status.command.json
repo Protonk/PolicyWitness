@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/usr/bin/git",
+    "status",
+    "--porcelain=v1",
+    "--untracked-files=all"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.015992709202691913,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:53:31.903487+00:00",
+  "stderr": "evidence/equipment/r1/source-status.stderr.txt",
+  "stdout": "evidence/equipment/r1/source-status.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

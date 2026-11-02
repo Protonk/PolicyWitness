@@ -1,0 +1,6 @@
+?? records/browser-trace-investigations/evidence/equipment/r1/equipment.json
+?? records/browser-trace-investigations/evidence/equipment/r1/source-commit.command.json
+?? records/browser-trace-investigations/evidence/equipment/r1/source-commit.stderr.txt
+?? records/browser-trace-investigations/evidence/equipment/r1/source-commit.stdout.txt
+?? records/browser-trace-investigations/evidence/equipment/r1/source-status.command.json
+?? records/browser-trace-investigations/evidence/state.json

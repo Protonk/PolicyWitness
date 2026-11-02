@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/usr/bin/otool",
+    "-l",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.010393666103482246,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:53:33.070831+00:00",
+  "stderr": "evidence/equipment/r1/load-commands.stderr.txt",
+  "stdout": "evidence/equipment/r1/load-commands.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

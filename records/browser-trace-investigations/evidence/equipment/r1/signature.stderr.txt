@@ -1,0 +1,21 @@
+Executable=/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot
+Identifier=pilot
+Format=Mach-O thin (arm64)
+CodeDirectory v=20500 size=337 flags=0x10000(runtime) hashes=5+2 location=embedded
+Hash type=sha256 size=32
+CandidateCDHash sha256=653e8638ddfcc30e54653850dfe5a2a0c58da0dc
+CandidateCDHashFull sha256=653e8638ddfcc30e54653850dfe5a2a0c58da0dc4cb26cbd117db5ac50b1fda7
+Hash choices=sha256
+CMSDigest=653e8638ddfcc30e54653850dfe5a2a0c58da0dc4cb26cbd117db5ac50b1fda7
+CMSDigestType=2
+CDHash=653e8638ddfcc30e54653850dfe5a2a0c58da0dc
+Signature size=9042
+Authority=Developer ID Application: Adam Hyland (42D369QV8E)
+Authority=Developer ID Certification Authority
+Authority=Apple Root CA
+Timestamp=Nov 2, 2026 at 7:53:33 AM
+Info.plist=not bound
+TeamIdentifier=42D369QV8E
+Runtime Version=27.2.0
+Sealed Resources=none
+Internal requirements count=1 size=168

@@ -1,0 +1,6 @@
+{
+  "input": "derived-from-b1-p1-C0-r1-missing-issuance.json",
+  "kind": "actual_trial_derived_control",
+  "ok": true,
+  "source_trial_id": "b1-p1-C0-r1"
+}

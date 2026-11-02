@@ -1,0 +1,29 @@
+{
+  "evidence_refs": [
+    "evidence/checks/read-b3-p1-C6-r1/check.stdout.txt",
+    "evidence/checks/read-b3-p2-C4-r1/check.stdout.txt",
+    "evidence/checks/read-b3-p3-C1-r1/check.stdout.txt",
+    "evidence/checks/read-b3-p4-C5-r1/check.stdout.txt",
+    "evidence/checks/read-b3-p5-C7-r1/check.stdout.txt",
+    "evidence/checks/read-b3-p6-C2-r1/check.stdout.txt",
+    "evidence/checks/read-b3-p7-C3-r1/check.stdout.txt",
+    "evidence/checks/read-b3-p8-C0-r1/check.stdout.txt"
+  ],
+  "functional": true,
+  "name": "block-3-complete",
+  "notes": "All eight final-block records on r1 contain complete connected evidence with no reader errors, inspection limits or integrity findings. Raw issue/transfer/consume/access/query patterns repeat the corresponding arrangements in blocks one and two. Direct raw-record audits confirm all24 trials,2112 events,168 complete descriptor snapshots without target matches,72 distinct process start identities,48 successful compilations and45 successful applications plus3 C0 omissions. All children exited and reaped normally; all24 supervisor groups are independently absent and owned paths removed. No deadline, signal, pending cleanup, diagnosed equipment fault, correction cycle or diagnostic rerun. The planned native execution is finished.",
+  "planned_trial_ids": [
+    "b3-p1-C6-r1",
+    "b3-p2-C4-r1",
+    "b3-p3-C1-r1",
+    "b3-p4-C5-r1",
+    "b3-p5-C7-r1",
+    "b3-p6-C2-r1",
+    "b3-p7-C3-r1",
+    "b3-p8-C0-r1"
+  ],
+  "previous_review": null,
+  "reviewed_utc": "2026-11-02T16:05:06.834214+00:00",
+  "schema_version": 1,
+  "success_of_native_calls_required": false
+}

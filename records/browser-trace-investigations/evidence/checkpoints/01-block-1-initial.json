@@ -1,0 +1,20 @@
+{
+  "evidence_refs": [
+    "evidence/trials/b1-p1-C0-r1/trial.json",
+    "evidence/trials/b1-p2-C1-r1/trial.json",
+    "evidence/checks/read-b1-p1-C0-r1/check.stdout.txt",
+    "evidence/checks/read-b1-p2-C1-r1/check.stdout.txt",
+    "evidence/controls/derived-from-b1-p1-C0-r1/summary.json"
+  ],
+  "functional": true,
+  "name": "block-1-initial",
+  "notes": "Both planned records contain issue nonnull/errno0, bounded publication and valid framing, accepted equal transfer, consume1/errno0, pre-consume open-1/errno1 and post-consume open3/read37/close0 with matching identity and bytes. Both NONE and PATH queries return0/errno0 before issue release. Each has88 ordered events, native clean reaps, independently absent groups and removed owned resources. Reader accepts complete evidence and sequence; the one-link deletion from C0 loses sequence acceptance. Process control, evidence collection and cleanup are functional; no equipment fault diagnosed.",
+  "planned_trial_ids": [
+    "b1-p1-C0-r1",
+    "b1-p2-C1-r1"
+  ],
+  "previous_review": null,
+  "reviewed_utc": "2026-11-02T15:55:38.349300+00:00",
+  "schema_version": 1,
+  "success_of_native_calls_required": false
+}

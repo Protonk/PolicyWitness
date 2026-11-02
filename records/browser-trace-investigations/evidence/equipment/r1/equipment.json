@@ -1,0 +1,250 @@
+{
+  "binary": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+  "binary_is_gitignored": true,
+  "binary_sha256": "67cef267c01dae2002a333ab2a5ddfbeff9f4574e8bc7bd52c3055404b0d017c",
+  "build_environment": {
+    "CLANG_MODULE_CACHE_PATH": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/module-cache",
+    "CPATH": null,
+    "DEVELOPER_DIR": null,
+    "LIBRARY_PATH": null,
+    "MACOSX_DEPLOYMENT_TARGET": null,
+    "PATH": "/Users/raccoon/.codex/packages/app-server-daemon/releases/0.166.0-aarch64-apple-darwin/codex-path:/Users/raccoon/.local/bin:/opt/homebrew/opt/rustup/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/opt/homebrew/bin:/Users/raccoon/.codex/tmp/arg0-macos/codex-arg0nCGRko:/Users/raccoon/.codex/packages/app-server-daemon/releases/0.166.0-aarch64-apple-darwin/codex-path:/Users/raccoon/.codex/tmp/arg0-macos/codex-arg0Q90UfS:/Users/raccoon/.codex/packages/app-server-daemon/releases/0.165.0-aarch64-apple-darwin/codex-path:/Users/raccoon/.codex/tmp/arg0-macos/codex-arg0qLB8Ro:/Users/raccoon/.codex/packages/app-server-daemon/releases/0.164.0-aarch64-apple-darwin/codex-path:/Users/raccoon/.codex/tmp/arg0-macos/codex-arg0D1lF36:/Users/raccoon/.codex/packages/app-server-daemon/releases/0.163.0-aarch64-apple-darwin/codex-path:/Users/raccoon/.codex/tmp/arg0/codex-arg0kYCtA3:/Users/raccoon/.codex/packages/app-server-daemon/releases/0.162.1-aarch64-apple-darwin/codex-path:/Users/raccoon/.codex/tmp/arg0/codex-arg0XWuZ7s:/Users/raccoon/.codex/packages/app-server-daemon/releases/0.162.0-aarch64-apple-darwin/codex-path:/Users/raccoon/.codex/tmp/arg0/codex-arg07KmTc5:/Users/raccoon/.codex/packages/app-server-daemon/releases/0.161.0-aarch64-apple-darwin/codex-path:/Users/raccoon/.codex/tmp/arg0/codex-arg0BMOPry:/Users/raccoon/.codex/packages/app-server-daemon/releases/0.160.1-aarch64-apple-darwin/codex-path:/Users/raccoon/.codex/tmp/arg0/codex-arg0ZcAlHM:/Users/raccoon/.codex/packages/standalone/releases/0.160.1-aarch64-apple-darwin/codex-path:/Users/raccoon/.local/bin:/opt/homebrew/sbin",
+    "SDKROOT": null,
+    "TMPDIR": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/tmp"
+  },
+  "commands": [
+    {
+      "command": [
+        "/usr/bin/sw_vers"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.009684541029855609,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:31.922985+00:00",
+      "stderr": "evidence/equipment/r1/os.stderr.txt",
+      "stdout": "evidence/equipment/r1/os.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/uname",
+        "-smr"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.002412084024399519,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:31.933230+00:00",
+      "stderr": "evidence/equipment/r1/darwin.stderr.txt",
+      "stdout": "evidence/equipment/r1/darwin.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/xcrun",
+        "--sdk",
+        "macosx",
+        "--show-sdk-path"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.004317875020205975,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:31.936157+00:00",
+      "stderr": "evidence/equipment/r1/sdk.stderr.txt",
+      "stdout": "evidence/equipment/r1/sdk.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/xcrun",
+        "--sdk",
+        "macosx",
+        "--show-sdk-version"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.003563833888620138,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:31.940950+00:00",
+      "stderr": "evidence/equipment/r1/sdk-version.stderr.txt",
+      "stdout": "evidence/equipment/r1/sdk-version.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/xcrun",
+        "--sdk",
+        "macosx",
+        "clang",
+        "--version"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.0679075000807643,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:31.944931+00:00",
+      "stderr": "evidence/equipment/r1/compiler.stderr.txt",
+      "stdout": "evidence/equipment/r1/compiler.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/xcrun",
+        "--sdk",
+        "macosx",
+        "clang",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-O2",
+        "-g",
+        "-std=c11",
+        "-fno-builtin-malloc",
+        "-fno-builtin-free",
+        "-mmacosx-version-min=26.0",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/pilot.c",
+        "-lsandbox",
+        "-o",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.38213512510992587,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:32.013423+00:00",
+      "stderr": "evidence/equipment/r1/build.stderr.txt",
+      "stdout": "evidence/equipment/r1/build.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/codesign",
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp",
+        "-s",
+        "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.5989714169409126,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:32.396052+00:00",
+      "stderr": "evidence/equipment/r1/sign.stderr.txt",
+      "stdout": "evidence/equipment/r1/sign.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--verbose=4",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.023609708063304424,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:32.996726+00:00",
+      "stderr": "evidence/equipment/r1/verify.stderr.txt",
+      "stdout": "evidence/equipment/r1/verify.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/codesign",
+        "-dvvv",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.019231915939599276,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:33.021653+00:00",
+      "stderr": "evidence/equipment/r1/signature.stderr.txt",
+      "stdout": "evidence/equipment/r1/signature.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/codesign",
+        "-d",
+        "--entitlements",
+        ":-",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.014038542052730918,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:33.041797+00:00",
+      "stderr": "evidence/equipment/r1/entitlements.stderr.txt",
+      "stdout": "evidence/equipment/r1/entitlements.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/otool",
+        "-L",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.013901208993047476,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:33.056421+00:00",
+      "stderr": "evidence/equipment/r1/linked-images.stderr.txt",
+      "stdout": "evidence/equipment/r1/linked-images.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    },
+    {
+      "command": [
+        "/usr/bin/otool",
+        "-l",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+      ],
+      "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+      "elapsed_seconds": 0.010393666103482246,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:53:33.070831+00:00",
+      "stderr": "evidence/equipment/r1/load-commands.stderr.txt",
+      "stdout": "evidence/equipment/r1/load-commands.stdout.txt",
+      "timed_out": false,
+      "timeout_seconds": 180
+    }
+  ],
+  "completed_utc": "2026-11-02T15:53:33.082166+00:00",
+  "entitlements": {
+    "status": "absent",
+    "value": null
+  },
+  "revision": "r1",
+  "schema_version": 1,
+  "selected_identity": "Developer ID Application: Adam Hyland (42D369QV8E)",
+  "source": {
+    "commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb",
+    "hashes": {
+      "BROWSER-TRACE-INVESTIGATIONS-PLAN.md": "a8be1371d71b5199c1de5b4419747bf41dd2c9051b92ce314178fed0405b856a",
+      "records/browser-trace-investigations/NATIVE-PROTOCOL.md": "b6325b52313d86ca274ff900101b0938ea97e4f2668d2488ecb0d6017e77b340",
+      "records/browser-trace-investigations/driver.py": "e3f68b1236829912ec70c5d7afa40d76e916d0496f1ba84e1b2bb1ef2b972c56",
+      "records/browser-trace-investigations/pilot.c": "282b5f12c937c910d7b094c6c9d9b9793e819942d7a50c88207e74e158add769",
+      "records/browser-trace-investigations/read.py": "4621deb75da7388940fe57a7a65289ee5b568e5c9b6740ef843a35a7f3801e17",
+      "records/browser-trace-investigations/reader_controls.py": "bacecf191cedc89bde1411e72bd21e0fc29658b5ac43451fafe82a70eccf1ea2",
+      "records/browser-trace-investigations/run.sh": "977ccbab82962bf118406655de897f6fcdf9016c5d98a245e89b5adc9e413710",
+      "tests/lib/checkout_lock.py": "3e4037bf71612721fd1f895580ad608939d0856303bca8a905ae4ab0e11f7a8e",
+      "tests/lib/checkout_lock.sh": "5979446ece6e4912fdf1a33723153de7b5116f2042fce71ac3f959366a8e4f54",
+      "tests/lib/python.sh": "26e9cd52f1f90bc6cfc1422b41282927417fd42cf9422a93909b28ebd5ebb92d",
+      "tests/lib/python_start.sh": "af3119ffadc74ccfd951522088386d0275c2e19bc98249c9e3861240777399c9",
+      "tests/lib/sdk_guard.sh": "cf8e3698c36c974523c93e12b2263e3fadbab1ba4292eef8f03a633426788f2a"
+    },
+    "snapshot_root": "evidence/equipment/r1/source",
+    "status": "?? records/browser-trace-investigations/evidence/equipment/r1/equipment.json\n?? records/browser-trace-investigations/evidence/equipment/r1/source-commit.command.json\n?? records/browser-trace-investigations/evidence/equipment/r1/source-commit.stderr.txt\n?? records/browser-trace-investigations/evidence/equipment/r1/source-commit.stdout.txt\n?? records/browser-trace-investigations/evidence/equipment/r1/source-status.command.json\n?? records/browser-trace-investigations/evidence/state.json\n"
+  },
+  "started_utc": "2026-11-02T15:53:31.892672+00:00",
+  "status": "ready"
+}

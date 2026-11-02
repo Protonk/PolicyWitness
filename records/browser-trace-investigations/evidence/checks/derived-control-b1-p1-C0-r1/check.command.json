@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.9/bin/python3.14",
+    "-B",
+    "-S",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/reader_controls.py",
+    "--out",
+    "records/browser-trace-investigations/evidence/controls/derived-from-b1-p1-C0-r1",
+    "--derive-from",
+    "records/browser-trace-investigations/evidence/trials/b1-p1-C0-r1/trial.json"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.09672475000843406,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:55:10.564633+00:00",
+  "stderr": "evidence/checks/derived-control-b1-p1-C0-r1/check.stderr.txt",
+  "stdout": "evidence/checks/derived-control-b1-p1-C0-r1/check.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

@@ -1,0 +1,3051 @@
+{
+  "driver": {
+    "cleanup": {
+      "group_observations": [
+        {
+          "absent": true,
+          "kill_zero_errno": 3,
+          "kill_zero_rc": -1,
+          "list_complete": true,
+          "list_errno": 0,
+          "list_rc": 0,
+          "members": [],
+          "monotonic_ns": 1233508320841333,
+          "observed_utc": "2026-11-02T15:55:40.810438+00:00",
+          "pgid": 90189
+        },
+        {
+          "absent": true,
+          "kill_zero_errno": 3,
+          "kill_zero_rc": -1,
+          "list_complete": true,
+          "list_errno": 0,
+          "list_rc": 0,
+          "members": [],
+          "monotonic_ns": 1233508322328208,
+          "observed_utc": "2026-11-02T15:55:40.811931+00:00",
+          "pgid": 90189
+        }
+      ],
+      "native_cleanup_pending": false,
+      "native_pending_resources": [],
+      "pending": false,
+      "process_group_absent": true,
+      "resource_observations": [
+        {
+          "identity": {
+            "device": 16777233,
+            "gid": 0,
+            "inode": 149887764,
+            "mode": 33152,
+            "size": 37,
+            "uid": 501
+          },
+          "name": "A"
+        },
+        {
+          "identity": {
+            "device": 16777233,
+            "gid": 0,
+            "inode": 149887765,
+            "mode": 33152,
+            "size": 37,
+            "uid": 501
+          },
+          "name": "B"
+        },
+        {
+          "name": "A",
+          "unlink_rc": 0
+        },
+        {
+          "name": "B",
+          "unlink_rc": 0
+        },
+        {
+          "name": ".owner.json",
+          "unlink_rc": 0
+        },
+        {
+          "path": "/private/tmp/pw-browser-trace-f71buym6",
+          "rmdir_rc": 0
+        }
+      ],
+      "resource_reason": null,
+      "resources_removed": true,
+      "signals": [],
+      "supervisor_reaped": true
+    },
+    "execution": {
+      "cancel_signal": null,
+      "command": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+        "supervise",
+        "C5",
+        "b1-p8-C5-r1",
+        "/private/tmp/pw-browser-trace-f71buym6",
+        "3,5,7"
+      ],
+      "deadline_reached": false,
+      "elapsed_seconds": 0.05788649991154671,
+      "environment": {
+        "LC_ALL": "C",
+        "PATH": "/usr/bin:/bin"
+      },
+      "finished_utc": "2026-11-02T15:55:40.811930+00:00",
+      "kill_grace_seconds": 5,
+      "outer_deadline_seconds": 30,
+      "returncode": 0,
+      "started_utc": "2026-11-02T15:55:40.753740+00:00",
+      "stream_errors": []
+    },
+    "ownership": {
+      "created_utc": "2026-11-02T15:55:40.753413+00:00",
+      "driver": {
+        "api": "proc_pidinfo/PROC_PIDTBSDINFO",
+        "available": true,
+        "errno": 0,
+        "executable": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+        "executable_errno": 0,
+        "executable_rc": 124,
+        "gid": 20,
+        "pgid": 90152,
+        "pid": 90152,
+        "ppid": 90142,
+        "rc": 136,
+        "rgid": 20,
+        "ruid": 501,
+        "start_identity": {
+          "microseconds": 438303,
+          "seconds": 1793634940
+        },
+        "uid": 501
+      },
+      "nonce": "488b5f3dbefe4dffa4e9090526b5f0dc",
+      "supervisor": {
+        "api": "proc_pidinfo/PROC_PIDTBSDINFO",
+        "available": true,
+        "created_process_group": 90189,
+        "errno": 0,
+        "executable": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+        "executable_errno": 0,
+        "executable_rc": 97,
+        "gid": 20,
+        "launched_executable": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+        "owned_child_pid": 90189,
+        "pgid": 90189,
+        "pid": 90189,
+        "ppid": 90152,
+        "rc": 136,
+        "rgid": 20,
+        "ruid": 501,
+        "start_identity": {
+          "microseconds": 754131,
+          "seconds": 1793634940
+        },
+        "uid": 501
+      },
+      "temporary_directory": {
+        "device": 16777233,
+        "gid": 0,
+        "inode": 149887755,
+        "mode": 16832,
+        "path": "/private/tmp/pw-browser-trace-f71buym6",
+        "size": 64,
+        "uid": 501
+      },
+      "trial_id": "b1-p8-C5-r1"
+    }
+  },
+  "events": [
+    {
+      "details": {
+        "arrangement": "C5",
+        "core_limit": {
+          "errno": 0,
+          "rc": 0
+        },
+        "environment": [
+          "PATH=/usr/bin:/bin",
+          "LC_ALL=C"
+        ],
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 16777233,
+            "gid": 20,
+            "inode": 149887227,
+            "mode": 33261,
+            "size": 91440,
+            "uid": 501
+          },
+          "executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+          "executable_rc": 97,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 90189,
+          "pid": 90189,
+          "ppid": 90152,
+          "start_identity": {
+            "microseconds": 754131,
+            "seconds": 1793634940
+          },
+          "uid": 501
+        },
+        "trial_id": "b1-p8-C5-r1"
+      },
+      "monotonic_ns": 2297293684997000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 1,
+      "stage": "supervisor_start",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "evidence",
+        "cleanup_pending": false,
+        "created_exclusively": true,
+        "descriptor": 4,
+        "name": "/pw-browser-90189-4e18f857",
+        "owner_pid": 90189,
+        "unlink_errno": 0,
+        "unlink_rc": 0
+      },
+      "monotonic_ns": 2297293685009000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 2,
+      "stage": "channel_resource",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "evidence",
+        "cleanup_pending": false,
+        "preparation": {
+          "close": {
+            "errno": 0,
+            "rc": 0,
+            "status": "attempted"
+          },
+          "duplicate": {
+            "errno": 0,
+            "rc": 64,
+            "status": "attempted"
+          },
+          "ftruncate": {
+            "errno": 0,
+            "rc": 0,
+            "status": "attempted"
+          },
+          "mmap": {
+            "errno": 0,
+            "status": "attempted",
+            "succeeded": true
+          }
+        }
+      },
+      "monotonic_ns": 2297293685323000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 3,
+      "stage": "channel_preparation",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "issued_token",
+        "cleanup_pending": false,
+        "created_exclusively": true,
+        "descriptor": 4,
+        "name": "/pw-browser-90189-8514357a",
+        "owner_pid": 90189,
+        "unlink_errno": 0,
+        "unlink_rc": 0
+      },
+      "monotonic_ns": 2297293685328000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 4,
+      "stage": "channel_resource",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "issued_token",
+        "cleanup_pending": false,
+        "preparation": {
+          "close": {
+            "errno": 0,
+            "rc": 0,
+            "status": "attempted"
+          },
+          "duplicate": {
+            "errno": 0,
+            "rc": 65,
+            "status": "attempted"
+          },
+          "ftruncate": {
+            "errno": 0,
+            "rc": 0,
+            "status": "attempted"
+          },
+          "mmap": {
+            "errno": 0,
+            "status": "attempted",
+            "succeeded": true
+          }
+        }
+      },
+      "monotonic_ns": 2297293685334000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 5,
+      "stage": "channel_preparation",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "delivered_token",
+        "cleanup_pending": false,
+        "created_exclusively": true,
+        "descriptor": 4,
+        "name": "/pw-browser-90189-831f4357",
+        "owner_pid": 90189,
+        "unlink_errno": 0,
+        "unlink_rc": 0
+      },
+      "monotonic_ns": 2297293685338000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 6,
+      "stage": "channel_resource",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "channel": "delivered_token",
+        "cleanup_pending": false,
+        "preparation": {
+          "close": {
+            "errno": 0,
+            "rc": 0,
+            "status": "attempted"
+          },
+          "duplicate": {
+            "errno": 0,
+            "rc": 66,
+            "status": "attempted"
+          },
+          "ftruncate": {
+            "errno": 0,
+            "rc": 0,
+            "status": "attempted"
+          },
+          "mmap": {
+            "errno": 0,
+            "status": "attempted",
+            "succeeded": true
+          }
+        }
+      },
+      "monotonic_ns": 2297293685344000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 7,
+      "stage": "channel_preparation",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "a": {
+          "baseline": {
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "content_hex": "506f6c6963795769746e6573732062726f777365722070696c6f742074617267657420410a",
+            "descriptor": 4,
+            "identity": {
+              "device": 16777233,
+              "gid": 0,
+              "inode": 149887764,
+              "mode": 33152,
+              "size": 37,
+              "uid": 501
+            },
+            "identity_check": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            },
+            "path": "/private/tmp/pw-browser-trace-f71buym6/A",
+            "read": {
+              "errno": 0,
+              "rc": 37,
+              "status": "attempted"
+            }
+          },
+          "creation": {
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            },
+            "write": {
+              "errno": 0,
+              "rc": 37,
+              "status": "attempted"
+            }
+          },
+          "identity": {
+            "device": 16777233,
+            "gid": 0,
+            "inode": 149887764,
+            "mode": 33152,
+            "size": 37,
+            "uid": 501
+          },
+          "known_content_hex": "506f6c6963795769746e6573732062726f777365722070696c6f742074617267657420410a",
+          "path": "/private/tmp/pw-browser-trace-f71buym6/A"
+        },
+        "b": {
+          "baseline": {
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "content_hex": "506f6c6963795769746e6573732062726f777365722070696c6f742074617267657420420a",
+            "descriptor": 4,
+            "identity": {
+              "device": 16777233,
+              "gid": 0,
+              "inode": 149887765,
+              "mode": 33152,
+              "size": 37,
+              "uid": 501
+            },
+            "identity_check": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            },
+            "path": "/private/tmp/pw-browser-trace-f71buym6/B",
+            "read": {
+              "errno": 0,
+              "rc": 37,
+              "status": "attempted"
+            }
+          },
+          "creation": {
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            },
+            "write": {
+              "errno": 0,
+              "rc": 37,
+              "status": "attempted"
+            }
+          },
+          "identity": {
+            "device": 16777233,
+            "gid": 0,
+            "inode": 149887765,
+            "mode": 33152,
+            "size": 37,
+            "uid": 501
+          },
+          "known_content_hex": "506f6c6963795769746e6573732062726f777365722070696c6f742074617267657420420a",
+          "path": "/private/tmp/pw-browser-trace-f71buym6/B"
+        },
+        "canonical_a": true,
+        "canonical_b": true,
+        "extension_class": "com.apple.app-sandbox.read",
+        "flags": 0,
+        "issuer_policy": "(version 1)\n(allow default)\n(deny file-write*)\n(deny file-issue-extension)\n(allow file-issue-extension\n  (require-all\n    (extension-class \"com.apple.app-sandbox.read\")\n    (literal \"/private/tmp/pw-browser-trace-f71buym6/B\")))\n",
+        "preparation_ok": true,
+        "recipient_policy": "(version 1)\n(allow default)\n(deny file-read-data)\n(allow file-read-data (extension \"com.apple.app-sandbox.read\"))\n"
+      },
+      "monotonic_ns": 2297293685513000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 8,
+      "stage": "targets_prepared",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_lock_descriptors": [
+          32,
+          33,
+          34
+        ],
+        "delivered_initial_zero": true,
+        "delivered_token": {
+          "descriptor": 66,
+          "identity": {
+            "device": 0,
+            "gid": 20,
+            "inode": 0,
+            "mode": 384,
+            "size": 32768,
+            "uid": 501
+          },
+          "identity_errno": 0,
+          "identity_rc": 0,
+          "size": 16392
+        },
+        "evidence": {
+          "descriptor": 64,
+          "identity": {
+            "device": 0,
+            "gid": 20,
+            "inode": 0,
+            "mode": 384,
+            "size": 6307840,
+            "uid": 501
+          },
+          "identity_errno": 0,
+          "identity_rc": 0,
+          "size": 6307168
+        },
+        "issued_initial_zero": true,
+        "issued_token": {
+          "descriptor": 65,
+          "identity": {
+            "device": 0,
+            "gid": 20,
+            "inode": 0,
+            "mode": 384,
+            "size": 32768,
+            "uid": 501
+          },
+          "identity_errno": 0,
+          "identity_rc": 0,
+          "size": 16392
+        }
+      },
+      "monotonic_ns": 2297293685528000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 9,
+      "stage": "channel_setup",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "api": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/system/libsystem_sandbox.dylib"
+        },
+        "flag": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/system/libsystem_sandbox.dylib"
+        },
+        "library_opened": true,
+        "no_report_flag": 1073741824,
+        "requested_library": "/usr/lib/libsandbox.dylib"
+      },
+      "monotonic_ns": 2297293685545000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 10,
+      "stage": "query_capability",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "count": 47,
+        "loaded_images": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+          "/usr/lib/libsandbox.1.dylib",
+          "/usr/lib/libMatch.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/system/libcache.dylib",
+          "/usr/lib/system/libcommonCrypto.dylib",
+          "/usr/lib/system/libcompiler_rt.dylib",
+          "/usr/lib/system/libcopyfile.dylib",
+          "/usr/lib/system/libcorecrypto.dylib",
+          "/usr/lib/system/libdispatch.dylib",
+          "/usr/lib/system/libdyld.dylib",
+          "/usr/lib/system/libkeymgr.dylib",
+          "/usr/lib/system/libmacho.dylib",
+          "/usr/lib/system/libquarantine.dylib",
+          "/usr/lib/system/libremovefile.dylib",
+          "/usr/lib/system/libsystem_asl.dylib",
+          "/usr/lib/system/libsystem_blocks.dylib",
+          "/usr/lib/system/libsystem_c.dylib",
+          "/usr/lib/system/libsystem_collections.dylib",
+          "/usr/lib/system/libsystem_configuration.dylib",
+          "/usr/lib/system/libsystem_containermanager.dylib",
+          "/usr/lib/system/libsystem_coreservices.dylib",
+          "/usr/lib/system/libsystem_darwin.dylib",
+          "/usr/lib/system/libsystem_darwindirectory.dylib",
+          "/usr/lib/system/libsystem_dnssd.dylib",
+          "/usr/lib/system/libsystem_eligibility.dylib",
+          "/usr/lib/system/libsystem_featureflags.dylib",
+          "/usr/lib/system/libsystem_info.dylib",
+          "/usr/lib/system/libsystem_m.dylib",
+          "/usr/lib/system/libsystem_malloc.dylib",
+          "/usr/lib/system/libsystem_networkextension.dylib",
+          "/usr/lib/system/libsystem_notify.dylib",
+          "/usr/lib/system/libsystem_sandbox.dylib",
+          "/usr/lib/system/libsystem_sanitizers.dylib",
+          "/usr/lib/system/libsystem_secinit.dylib",
+          "/usr/lib/system/libsystem_kernel.dylib",
+          "/usr/lib/system/libsystem_platform.dylib",
+          "/usr/lib/system/libsystem_pthread.dylib",
+          "/usr/lib/system/libsystem_symptoms.dylib",
+          "/usr/lib/system/libsystem_trace.dylib",
+          "/usr/lib/system/libsystem_trial.dylib",
+          "/usr/lib/system/libunwind.dylib",
+          "/usr/lib/system/libxpc.dylib",
+          "/usr/lib/libobjc.A.dylib",
+          "/usr/lib/libc++abi.dylib",
+          "/usr/lib/libRosetta.dylib",
+          "/usr/lib/libc++.1.dylib"
+        ]
+      },
+      "monotonic_ns": 2297293685598000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 11,
+      "stage": "images",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "errno": 0,
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 16777233,
+            "gid": 20,
+            "inode": 149887227,
+            "mode": 33261,
+            "size": 91440,
+            "uid": 501
+          },
+          "executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+          "executable_rc": 97,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 90189,
+          "pid": 90190,
+          "ppid": 90189,
+          "start_identity": {
+            "microseconds": 756820,
+            "seconds": 1793634940
+          },
+          "uid": 501
+        },
+        "rc": 0
+      },
+      "monotonic_ns": 2297293685741000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 12,
+      "stage": "child_launch",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "errno": 0,
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 16777233,
+            "gid": 20,
+            "inode": 149887227,
+            "mode": 33261,
+            "size": 91440,
+            "uid": 501
+          },
+          "executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+          "executable_rc": 97,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 90189,
+          "pid": 90191,
+          "ppid": 90189,
+          "start_identity": {
+            "microseconds": 756954,
+            "seconds": 1793634940
+          },
+          "uid": 501
+        },
+        "rc": 0
+      },
+      "monotonic_ns": 2297293685865000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 13,
+      "stage": "child_launch",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "core_limit": {
+          "errno": 0,
+          "rc": 0
+        },
+        "environment": [
+          "PATH=/usr/bin:/bin",
+          "LC_ALL=C"
+        ],
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 16777233,
+            "gid": 20,
+            "inode": 149887227,
+            "mode": 33261,
+            "size": 91440,
+            "uid": 501
+          },
+          "executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+          "executable_rc": 97,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 90189,
+          "pid": 90190,
+          "ppid": 90189,
+          "start_identity": {
+            "microseconds": 756820,
+            "seconds": 1793634940
+          },
+          "uid": 501
+        }
+      },
+      "monotonic_ns": 2297293686770000,
+      "pid": 90190,
+      "producer_seq": 1,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 14,
+      "stage": "process_entry",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "process_entry",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 1
+      },
+      "monotonic_ns": 2297293687127000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 15,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "core_limit": {
+          "errno": 0,
+          "rc": 0
+        },
+        "environment": [
+          "PATH=/usr/bin:/bin",
+          "LC_ALL=C"
+        ],
+        "process": {
+          "egid": 20,
+          "euid": 501,
+          "executable_errno": 0,
+          "executable_identity": {
+            "device": 16777233,
+            "gid": 20,
+            "inode": 149887227,
+            "mode": 33261,
+            "size": 91440,
+            "uid": 501
+          },
+          "executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+          "executable_rc": 97,
+          "executable_stat_errno": 0,
+          "executable_stat_rc": 0,
+          "gid": 20,
+          "identity_errno": 0,
+          "identity_rc": 136,
+          "pgid": 90189,
+          "pid": 90191,
+          "ppid": 90189,
+          "start_identity": {
+            "microseconds": 756954,
+            "seconds": 1793634940
+          },
+          "uid": 501
+        }
+      },
+      "monotonic_ns": 2297293686895000,
+      "pid": 90191,
+      "producer_seq": 1,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 16,
+      "stage": "process_entry",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "process_entry",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 1
+      },
+      "monotonic_ns": 2297293687132000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 17,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "entry",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 3,
+            "identity": {
+              "device": 0,
+              "gid": 20,
+              "inode": 0,
+              "mode": 384,
+              "size": 6307840,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 3,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "other"
+          },
+          {
+            "fd": 4,
+            "identity": {
+              "device": 0,
+              "gid": 20,
+              "inode": 0,
+              "mode": 384,
+              "size": 32768,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 3,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "other"
+          },
+          {
+            "fd": 32,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 33,
+            "identity": {
+              "device": 4294967295,
+              "gid": 20,
+              "inode": 285017,
+              "mode": 49590,
+              "size": 0,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 2,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "socket"
+          },
+          {
+            "fd": 34,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "inventory_errno": 0,
+        "inventory_rc": 64,
+        "scan_limit": 4096
+      },
+      "monotonic_ns": 2297293688033000,
+      "pid": 90190,
+      "producer_seq": 2,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 18,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 2
+      },
+      "monotonic_ns": 2297293688395000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 19,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "entry",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 3,
+            "identity": {
+              "device": 0,
+              "gid": 20,
+              "inode": 0,
+              "mode": 384,
+              "size": 6307840,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 3,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "other"
+          },
+          {
+            "fd": 4,
+            "identity": {
+              "device": 0,
+              "gid": 20,
+              "inode": 0,
+              "mode": 384,
+              "size": 32768,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 3,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "other"
+          },
+          {
+            "fd": 32,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 33,
+            "identity": {
+              "device": 4294967295,
+              "gid": 20,
+              "inode": 285017,
+              "mode": 49590,
+              "size": 0,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 2,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "socket"
+          },
+          {
+            "fd": 34,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "inventory_errno": 0,
+        "inventory_rc": 64,
+        "scan_limit": 4096
+      },
+      "monotonic_ns": 2297293688158000,
+      "pid": 90191,
+      "producer_seq": 2,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 20,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 2
+      },
+      "monotonic_ns": 2297293688400000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 21,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "evidence": {
+          "close": {
+            "errno": 0,
+            "rc": 0
+          },
+          "descriptor": 3,
+          "map_errno": 0,
+          "map_succeeded": true
+        },
+        "initial_token_zero": true,
+        "token": {
+          "close": {
+            "errno": 0,
+            "rc": 0
+          },
+          "descriptor": 4,
+          "map_errno": 0,
+          "map_succeeded": true
+        }
+      },
+      "monotonic_ns": 2297293689293000,
+      "pid": 90190,
+      "producer_seq": 3,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 22,
+      "stage": "channel_mapped",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "channel_mapped",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 3
+      },
+      "monotonic_ns": 2297293689657000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 23,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "evidence": {
+          "close": {
+            "errno": 0,
+            "rc": 0
+          },
+          "descriptor": 3,
+          "map_errno": 0,
+          "map_succeeded": true
+        },
+        "initial_token_zero": true,
+        "token": {
+          "close": {
+            "errno": 0,
+            "rc": 0
+          },
+          "descriptor": 4,
+          "map_errno": 0,
+          "map_succeeded": true
+        }
+      },
+      "monotonic_ns": 2297293689419000,
+      "pid": 90191,
+      "producer_seq": 3,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 24,
+      "stage": "channel_mapped",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "channel_mapped",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 3
+      },
+      "monotonic_ns": 2297293689661000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 25,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "apply": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "compile": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "consume": {
+          "reason": "issuer_role",
+          "status": "omitted"
+        },
+        "issue": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/system/libsystem_sandbox.dylib"
+        },
+        "library_opened": true,
+        "requested_library": "/usr/lib/libsandbox.dylib"
+      },
+      "monotonic_ns": 2297293690559000,
+      "pid": 90190,
+      "producer_seq": 4,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 26,
+      "stage": "symbols",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "symbols",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 4
+      },
+      "monotonic_ns": 2297293690676000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 27,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "apply": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "compile": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/libsandbox.1.dylib"
+        },
+        "consume": {
+          "available": true,
+          "dladdr_rc": 1,
+          "image": "/usr/lib/system/libsystem_sandbox.dylib"
+        },
+        "issue": {
+          "reason": "recipient_role",
+          "status": "omitted"
+        },
+        "library_opened": true,
+        "requested_library": "/usr/lib/libsandbox.dylib"
+      },
+      "monotonic_ns": 2297293690684000,
+      "pid": 90191,
+      "producer_seq": 4,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 28,
+      "stage": "symbols",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "symbols",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 4
+      },
+      "monotonic_ns": 2297293691818000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 29,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "count": 47,
+        "loaded_images": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+          "/usr/lib/libsandbox.1.dylib",
+          "/usr/lib/libMatch.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/system/libcache.dylib",
+          "/usr/lib/system/libcommonCrypto.dylib",
+          "/usr/lib/system/libcompiler_rt.dylib",
+          "/usr/lib/system/libcopyfile.dylib",
+          "/usr/lib/system/libcorecrypto.dylib",
+          "/usr/lib/system/libdispatch.dylib",
+          "/usr/lib/system/libdyld.dylib",
+          "/usr/lib/system/libkeymgr.dylib",
+          "/usr/lib/system/libmacho.dylib",
+          "/usr/lib/system/libquarantine.dylib",
+          "/usr/lib/system/libremovefile.dylib",
+          "/usr/lib/system/libsystem_asl.dylib",
+          "/usr/lib/system/libsystem_blocks.dylib",
+          "/usr/lib/system/libsystem_c.dylib",
+          "/usr/lib/system/libsystem_collections.dylib",
+          "/usr/lib/system/libsystem_configuration.dylib",
+          "/usr/lib/system/libsystem_containermanager.dylib",
+          "/usr/lib/system/libsystem_coreservices.dylib",
+          "/usr/lib/system/libsystem_darwin.dylib",
+          "/usr/lib/system/libsystem_darwindirectory.dylib",
+          "/usr/lib/system/libsystem_dnssd.dylib",
+          "/usr/lib/system/libsystem_eligibility.dylib",
+          "/usr/lib/system/libsystem_featureflags.dylib",
+          "/usr/lib/system/libsystem_info.dylib",
+          "/usr/lib/system/libsystem_m.dylib",
+          "/usr/lib/system/libsystem_malloc.dylib",
+          "/usr/lib/system/libsystem_networkextension.dylib",
+          "/usr/lib/system/libsystem_notify.dylib",
+          "/usr/lib/system/libsystem_sandbox.dylib",
+          "/usr/lib/system/libsystem_sanitizers.dylib",
+          "/usr/lib/system/libsystem_secinit.dylib",
+          "/usr/lib/system/libsystem_kernel.dylib",
+          "/usr/lib/system/libsystem_platform.dylib",
+          "/usr/lib/system/libsystem_pthread.dylib",
+          "/usr/lib/system/libsystem_symptoms.dylib",
+          "/usr/lib/system/libsystem_trace.dylib",
+          "/usr/lib/system/libsystem_trial.dylib",
+          "/usr/lib/system/libunwind.dylib",
+          "/usr/lib/system/libxpc.dylib",
+          "/usr/lib/libobjc.A.dylib",
+          "/usr/lib/libc++abi.dylib",
+          "/usr/lib/libRosetta.dylib",
+          "/usr/lib/libc++.1.dylib"
+        ]
+      },
+      "monotonic_ns": 2297293691860000,
+      "pid": 90190,
+      "producer_seq": 5,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 30,
+      "stage": "images",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "images",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 5
+      },
+      "monotonic_ns": 2297293693076000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 31,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "count": 47,
+        "loaded_images": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot",
+          "/usr/lib/libsandbox.1.dylib",
+          "/usr/lib/libMatch.1.dylib",
+          "/usr/lib/libSystem.B.dylib",
+          "/usr/lib/system/libcache.dylib",
+          "/usr/lib/system/libcommonCrypto.dylib",
+          "/usr/lib/system/libcompiler_rt.dylib",
+          "/usr/lib/system/libcopyfile.dylib",
+          "/usr/lib/system/libcorecrypto.dylib",
+          "/usr/lib/system/libdispatch.dylib",
+          "/usr/lib/system/libdyld.dylib",
+          "/usr/lib/system/libkeymgr.dylib",
+          "/usr/lib/system/libmacho.dylib",
+          "/usr/lib/system/libquarantine.dylib",
+          "/usr/lib/system/libremovefile.dylib",
+          "/usr/lib/system/libsystem_asl.dylib",
+          "/usr/lib/system/libsystem_blocks.dylib",
+          "/usr/lib/system/libsystem_c.dylib",
+          "/usr/lib/system/libsystem_collections.dylib",
+          "/usr/lib/system/libsystem_configuration.dylib",
+          "/usr/lib/system/libsystem_containermanager.dylib",
+          "/usr/lib/system/libsystem_coreservices.dylib",
+          "/usr/lib/system/libsystem_darwin.dylib",
+          "/usr/lib/system/libsystem_darwindirectory.dylib",
+          "/usr/lib/system/libsystem_dnssd.dylib",
+          "/usr/lib/system/libsystem_eligibility.dylib",
+          "/usr/lib/system/libsystem_featureflags.dylib",
+          "/usr/lib/system/libsystem_info.dylib",
+          "/usr/lib/system/libsystem_m.dylib",
+          "/usr/lib/system/libsystem_malloc.dylib",
+          "/usr/lib/system/libsystem_networkextension.dylib",
+          "/usr/lib/system/libsystem_notify.dylib",
+          "/usr/lib/system/libsystem_sandbox.dylib",
+          "/usr/lib/system/libsystem_sanitizers.dylib",
+          "/usr/lib/system/libsystem_secinit.dylib",
+          "/usr/lib/system/libsystem_kernel.dylib",
+          "/usr/lib/system/libsystem_platform.dylib",
+          "/usr/lib/system/libsystem_pthread.dylib",
+          "/usr/lib/system/libsystem_symptoms.dylib",
+          "/usr/lib/system/libsystem_trace.dylib",
+          "/usr/lib/system/libsystem_trial.dylib",
+          "/usr/lib/system/libunwind.dylib",
+          "/usr/lib/system/libxpc.dylib",
+          "/usr/lib/libobjc.A.dylib",
+          "/usr/lib/libc++abi.dylib",
+          "/usr/lib/libRosetta.dylib",
+          "/usr/lib/libc++.1.dylib"
+        ]
+      },
+      "monotonic_ns": 2297293691982000,
+      "pid": 90191,
+      "producer_seq": 5,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 32,
+      "stage": "images",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "images",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 5
+      },
+      "monotonic_ns": 2297293693080000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 33,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "errno": 0,
+        "nonnull": true,
+        "policy": "(version 1)\n(allow default)\n(deny file-write*)\n(deny file-issue-extension)\n(allow file-issue-extension\n  (require-all\n    (extension-class \"com.apple.app-sandbox.read\")\n    (literal \"/private/tmp/pw-browser-trace-f71buym6/B\")))\n"
+      },
+      "monotonic_ns": 2297293696651000,
+      "pid": 90190,
+      "producer_seq": 6,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 34,
+      "stage": "policy_compile",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "policy_compile",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 6
+      },
+      "monotonic_ns": 2297293696854000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 35,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "errno": 0,
+        "nonnull": true,
+        "policy": "(version 1)\n(allow default)\n(deny file-read-data)\n(allow file-read-data (extension \"com.apple.app-sandbox.read\"))\n"
+      },
+      "monotonic_ns": 2297293696721000,
+      "pid": 90191,
+      "producer_seq": 6,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 36,
+      "stage": "policy_compile",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "policy_compile",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 6
+      },
+      "monotonic_ns": 2297293696861000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 37,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_apply",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 32,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 33,
+            "identity": {
+              "device": 4294967295,
+              "gid": 20,
+              "inode": 285017,
+              "mode": 49590,
+              "size": 0,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 2,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "socket"
+          },
+          {
+            "fd": 34,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "inventory_errno": 0,
+        "inventory_rc": 48,
+        "scan_limit": 4096
+      },
+      "monotonic_ns": 2297293697914000,
+      "pid": 90190,
+      "producer_seq": 7,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 38,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 7
+      },
+      "monotonic_ns": 2297293698117000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 39,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_apply",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 32,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 33,
+            "identity": {
+              "device": 4294967295,
+              "gid": 20,
+              "inode": 285017,
+              "mode": 49590,
+              "size": 0,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 2,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "socket"
+          },
+          {
+            "fd": 34,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "inventory_errno": 0,
+        "inventory_rc": 48,
+        "scan_limit": 4096
+      },
+      "monotonic_ns": 2297293697989000,
+      "pid": 90191,
+      "producer_seq": 7,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 40,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 7
+      },
+      "monotonic_ns": 2297293698121000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 41,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "application_count": 1,
+        "errno": 0,
+        "rc": 0
+      },
+      "monotonic_ns": 2297293699217000,
+      "pid": 90190,
+      "producer_seq": 8,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 42,
+      "stage": "apply",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "apply",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 8
+      },
+      "monotonic_ns": 2297293700449000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 43,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "application_count": 1,
+        "errno": 0,
+        "rc": 0
+      },
+      "monotonic_ns": 2297293699259000,
+      "pid": 90191,
+      "producer_seq": 8,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 44,
+      "stage": "apply",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "apply",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 8
+      },
+      "monotonic_ns": 2297293700466000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 45,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_read_before",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 32,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 33,
+            "identity": {
+              "device": 4294967295,
+              "gid": 20,
+              "inode": 285017,
+              "mode": 49590,
+              "size": 0,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 2,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "socket"
+          },
+          {
+            "fd": 34,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "inventory_errno": 0,
+        "inventory_rc": 48,
+        "scan_limit": 4096
+      },
+      "monotonic_ns": 2297293701711000,
+      "pid": 90191,
+      "producer_seq": 9,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 46,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 9
+      },
+      "monotonic_ns": 2297293701730000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 47,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "close": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        },
+        "content_hex": "",
+        "descriptor": null,
+        "identity": null,
+        "identity_check": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        },
+        "open": {
+          "errno": 1,
+          "rc": -1,
+          "status": "attempted"
+        },
+        "path": "/private/tmp/pw-browser-trace-f71buym6/A",
+        "read": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        }
+      },
+      "monotonic_ns": 2297293702988000,
+      "pid": 90191,
+      "producer_seq": 10,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 48,
+      "stage": "read_before",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "read_before",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 10
+      },
+      "monotonic_ns": 2297293704229000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 49,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "caller_pid": 90189,
+        "errno": 0,
+        "filter_id": 0,
+        "filter_value": null,
+        "no_report_flag": 1073741824,
+        "operation": "file-issue-extension",
+        "rc": 1,
+        "target_pid": 90190,
+        "type_argument": 1073741824
+      },
+      "monotonic_ns": 2297293705484000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 50,
+      "stage": "query",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "caller_pid": 90189,
+        "errno": 0,
+        "filter_id": 1,
+        "filter_value": "/private/tmp/pw-browser-trace-f71buym6/A",
+        "no_report_flag": 1073741824,
+        "operation": "file-issue-extension",
+        "rc": 1,
+        "target_pid": 90190,
+        "type_argument": 1073741825
+      },
+      "monotonic_ns": 2297293705494000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 51,
+      "stage": "query",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "issuer_pid": 90190,
+        "issuer_ready": true,
+        "queries_collected": 2,
+        "recipient_pid": 90191,
+        "recipient_ready": true
+      },
+      "monotonic_ns": 2297293705496000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 52,
+      "stage": "issue_release",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_issue",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 32,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 33,
+            "identity": {
+              "device": 4294967295,
+              "gid": 20,
+              "inode": 285017,
+              "mode": 49590,
+              "size": 0,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 2,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "socket"
+          },
+          {
+            "fd": 34,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "inventory_errno": 0,
+        "inventory_rc": 48,
+        "scan_limit": 4096
+      },
+      "monotonic_ns": 2297293706739000,
+      "pid": 90190,
+      "producer_seq": 9,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 53,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 9
+      },
+      "monotonic_ns": 2297293706753000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 54,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "call_boundary_published": true,
+        "extension_class": "com.apple.app-sandbox.read",
+        "flags": 0,
+        "path": "/private/tmp/pw-browser-trace-f71buym6/A"
+      },
+      "monotonic_ns": 2297293707995000,
+      "pid": 90190,
+      "producer_seq": 10,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 55,
+      "stage": "issue_begin",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "issue_begin",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 10
+      },
+      "monotonic_ns": 2297293709253000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 56,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "errno": 1,
+        "nonnull": false
+      },
+      "monotonic_ns": 2297293710517000,
+      "pid": 90190,
+      "producer_seq": 11,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 57,
+      "stage": "issue_result",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "issue_result",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 11
+      },
+      "monotonic_ns": 2297293711782000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 58,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "reason": "native_issue_null"
+      },
+      "monotonic_ns": 2297293713029000,
+      "pid": 90190,
+      "producer_seq": 12,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 59,
+      "stage": "raw_token_erasure",
+      "status": "omitted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "raw_token_erasure",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 12
+      },
+      "monotonic_ns": 2297293713054000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 60,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "embedded_nul_absent": false,
+        "length": 0,
+        "length_valid": false,
+        "published": false,
+        "reason": "native_token_absent_or_empty",
+        "terminator_valid": false
+      },
+      "monotonic_ns": 2297293714283000,
+      "pid": 90190,
+      "producer_seq": 13,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 61,
+      "stage": "token_publication",
+      "status": "unavailable"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "token_publication",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 13
+      },
+      "monotonic_ns": 2297293715550000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 62,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "embedded_nul_absent": false,
+        "header_valid": false,
+        "issuer_publication_producer_seq": 13,
+        "length": 0,
+        "length_valid": false,
+        "ready": false,
+        "reason": "bounded_token_publication_unavailable",
+        "terminator_valid": false
+      },
+      "monotonic_ns": 2297293716812000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 63,
+      "stage": "transfer_ready",
+      "status": "unavailable"
+    },
+    {
+      "details": {
+        "reason": "token_delivery_unavailable"
+      },
+      "monotonic_ns": 2297293718050000,
+      "pid": 90191,
+      "producer_seq": 11,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 64,
+      "stage": "transfer_acceptance",
+      "status": "unavailable"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "transfer_acceptance",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 11
+      },
+      "monotonic_ns": 2297293718070000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 65,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "reason": "accepted_transfer_unavailable"
+      },
+      "monotonic_ns": 2297293720560000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 66,
+      "stage": "transfer_equality",
+      "status": "unavailable"
+    },
+    {
+      "details": {
+        "accepted": false,
+        "equality_confirmed": false,
+        "recipient_pid": 90191
+      },
+      "monotonic_ns": 2297293720565000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 67,
+      "stage": "consume_release",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "reason": "transfer_not_accepted"
+      },
+      "monotonic_ns": 2297293721813000,
+      "pid": 90191,
+      "producer_seq": 12,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 68,
+      "stage": "consume_begin",
+      "status": "unavailable"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "consume_begin",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 12
+      },
+      "monotonic_ns": 2297293721824000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 69,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "reason": "transfer_not_accepted"
+      },
+      "monotonic_ns": 2297293723069000,
+      "pid": 90191,
+      "producer_seq": 13,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 70,
+      "stage": "consume_result",
+      "status": "unavailable"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "consume_result",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 13
+      },
+      "monotonic_ns": 2297293723081000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 71,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "boundary": "before_read_after",
+        "descriptors": [
+          {
+            "fd": 0,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 1,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 2,
+            "identity": {
+              "device": 336406550,
+              "gid": 0,
+              "inode": 336,
+              "mode": 8630,
+              "size": 0,
+              "uid": 0
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "character"
+          },
+          {
+            "fd": 32,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          },
+          {
+            "fd": 33,
+            "identity": {
+              "device": 4294967295,
+              "gid": 20,
+              "inode": 285017,
+              "mode": 49590,
+              "size": 0,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 2,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "socket"
+          },
+          {
+            "fd": 34,
+            "identity": {
+              "device": 16777233,
+              "gid": 20,
+              "inode": 1644822,
+              "mode": 33152,
+              "size": 141,
+              "uid": 501
+            },
+            "matches_a": false,
+            "matches_b": false,
+            "native_type": 1,
+            "stat_errno": 0,
+            "stat_rc": 0,
+            "type": "regular"
+          }
+        ],
+        "inspection_complete": true,
+        "inventory_errno": 0,
+        "inventory_rc": 48,
+        "scan_limit": 4096
+      },
+      "monotonic_ns": 2297293724333000,
+      "pid": 90191,
+      "producer_seq": 14,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 72,
+      "stage": "fd_snapshot",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "fd_snapshot",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 14
+      },
+      "monotonic_ns": 2297293725584000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 73,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "close": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        },
+        "content_hex": "",
+        "descriptor": null,
+        "identity": null,
+        "identity_check": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        },
+        "open": {
+          "errno": 1,
+          "rc": -1,
+          "status": "attempted"
+        },
+        "path": "/private/tmp/pw-browser-trace-f71buym6/A",
+        "read": {
+          "reason": "open_failed",
+          "status": "unavailable"
+        }
+      },
+      "monotonic_ns": 2297293726848000,
+      "pid": 90191,
+      "producer_seq": 15,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 74,
+      "stage": "read_after",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "read_after",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 15
+      },
+      "monotonic_ns": 2297293728110000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 75,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "buffer": "delivered",
+        "capacity": 16392,
+        "zero_confirmed": true
+      },
+      "monotonic_ns": 2297293729356000,
+      "pid": 90191,
+      "producer_seq": 16,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 76,
+      "stage": "token_erasure",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "token_erasure",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 16
+      },
+      "monotonic_ns": 2297293729373000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 77,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "exit_code": 0,
+        "ordinary_finish": true
+      },
+      "monotonic_ns": 2297293730613000,
+      "pid": 90191,
+      "producer_seq": 17,
+      "role": "recipient",
+      "schema_version": 1,
+      "seq": 78,
+      "stage": "child_exit",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "child_exit",
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "producer_seq": 17
+      },
+      "monotonic_ns": 2297293730619000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 79,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_pid": 90191,
+        "child_role": "recipient",
+        "errno": 0,
+        "exit_code": 0,
+        "rc": 90191,
+        "reaped": true,
+        "term_signal": null,
+        "wait_status": 0
+      },
+      "monotonic_ns": 2297293733139000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 80,
+      "stage": "child_reap",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "buffer": "issued",
+        "capacity": 16392,
+        "zero_confirmed": true
+      },
+      "monotonic_ns": 2297293733145000,
+      "pid": 90190,
+      "producer_seq": 14,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 81,
+      "stage": "token_erasure",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "token_erasure",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 14
+      },
+      "monotonic_ns": 2297293734400000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 82,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "exit_code": 0,
+        "ordinary_finish": true
+      },
+      "monotonic_ns": 2297293734404000,
+      "pid": 90190,
+      "producer_seq": 15,
+      "role": "issuer",
+      "schema_version": 1,
+      "seq": 83,
+      "stage": "child_exit",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "acknowledged_stage": "child_exit",
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "producer_seq": 15
+      },
+      "monotonic_ns": 2297293735657000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 84,
+      "stage": "publication_ack",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "child_pid": 90190,
+        "child_role": "issuer",
+        "errno": 0,
+        "exit_code": 0,
+        "rc": 90190,
+        "reaped": true,
+        "term_signal": null,
+        "wait_status": 0
+      },
+      "monotonic_ns": 2297293737950000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 85,
+      "stage": "child_reap",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "a": {
+          "path": "/private/tmp/pw-browser-trace-f71buym6/A",
+          "read": {
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "content_hex": "506f6c6963795769746e6573732062726f777365722070696c6f742074617267657420410a",
+            "descriptor": 4,
+            "identity": {
+              "device": 16777233,
+              "gid": 0,
+              "inode": 149887764,
+              "mode": 33152,
+              "size": 37,
+              "uid": 501
+            },
+            "identity_check": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            },
+            "path": "/private/tmp/pw-browser-trace-f71buym6/A",
+            "read": {
+              "errno": 0,
+              "rc": 37,
+              "status": "attempted"
+            }
+          }
+        },
+        "b": {
+          "path": "/private/tmp/pw-browser-trace-f71buym6/B",
+          "read": {
+            "close": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "content_hex": "506f6c6963795769746e6573732062726f777365722070696c6f742074617267657420420a",
+            "descriptor": 4,
+            "identity": {
+              "device": 16777233,
+              "gid": 0,
+              "inode": 149887765,
+              "mode": 33152,
+              "size": 37,
+              "uid": 501
+            },
+            "identity_check": {
+              "errno": 0,
+              "rc": 0,
+              "status": "attempted"
+            },
+            "open": {
+              "errno": 0,
+              "rc": 4,
+              "status": "attempted"
+            },
+            "path": "/private/tmp/pw-browser-trace-f71buym6/B",
+            "read": {
+              "errno": 0,
+              "rc": 37,
+              "status": "attempted"
+            }
+          }
+        }
+      },
+      "monotonic_ns": 2297293738041000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 86,
+      "stage": "targets_after",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "children_absent": true,
+        "delivered": {
+          "capacity": 16392,
+          "zero_confirmed": true
+        },
+        "issued": {
+          "capacity": 16392,
+          "zero_confirmed": true
+        }
+      },
+      "monotonic_ns": 2297293738059000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 87,
+      "stage": "supervisor_token_erasure",
+      "status": "attempted"
+    },
+    {
+      "details": {
+        "all_children_reaped": true,
+        "deadline_reached": false,
+        "elapsed_seconds": 0.052461,
+        "equipment_failure": false,
+        "issuer_reaped": true,
+        "issuer_wait_status": 0,
+        "output_failed": false,
+        "reason": null,
+        "recipient_reaped": true,
+        "recipient_wait_status": 0
+      },
+      "monotonic_ns": 2297293738073000,
+      "pid": 90189,
+      "role": "supervisor",
+      "schema_version": 1,
+      "seq": 88,
+      "stage": "supervisor_complete",
+      "status": "attempted"
+    }
+  ],
+  "schema_version": 1,
+  "trial": {
+    "arrangement": "C5",
+    "block": 1,
+    "chronological_position": 8,
+    "correction_cycle": null,
+    "diagnostic": false,
+    "equipment_ref": "evidence/equipment/r1/equipment.json",
+    "id": "b1-p8-C5-r1",
+    "original_trial_id": null,
+    "planned_position": 8,
+    "position": 8,
+    "revision": "r1",
+    "schedule_ref": "evidence/schedules/block-1.json"
+  }
+}

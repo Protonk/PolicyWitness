@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/usr/bin/uname",
+    "-smr"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.002412084024399519,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:53:31.933230+00:00",
+  "stderr": "evidence/equipment/r1/darwin.stderr.txt",
+  "stdout": "evidence/equipment/r1/darwin.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

@@ -1,0 +1,2 @@
+Executable=/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot
+warning: Specifying ':' in the path is deprecated and will not work in a future release

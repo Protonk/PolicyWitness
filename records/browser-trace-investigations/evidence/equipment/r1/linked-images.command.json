@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/usr/bin/otool",
+    "-L",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.013901208993047476,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:53:33.056421+00:00",
+  "stderr": "evidence/equipment/r1/linked-images.stderr.txt",
+  "stdout": "evidence/equipment/r1/linked-images.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

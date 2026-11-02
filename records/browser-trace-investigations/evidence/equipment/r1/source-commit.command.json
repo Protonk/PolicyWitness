@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/usr/bin/git",
+    "rev-parse",
+    "HEAD"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.009916208917275071,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:53:31.893074+00:00",
+  "stderr": "evidence/equipment/r1/source-commit.stderr.txt",
+  "stdout": "evidence/equipment/r1/source-commit.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

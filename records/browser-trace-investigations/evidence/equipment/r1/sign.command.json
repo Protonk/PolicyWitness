@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/usr/bin/codesign",
+    "--force",
+    "--options",
+    "runtime",
+    "--timestamp",
+    "-s",
+    "Developer ID Application: Adam Hyland (42D369QV8E)",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/browser-trace-investigations/local/r1/pilot"
+  ],
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "elapsed_seconds": 0.5989714169409126,
+  "returncode": 0,
+  "started_utc": "2026-11-02T15:53:32.396052+00:00",
+  "stderr": "evidence/equipment/r1/sign.stderr.txt",
+  "stdout": "evidence/equipment/r1/sign.stdout.txt",
+  "timed_out": false,
+  "timeout_seconds": 180
+}

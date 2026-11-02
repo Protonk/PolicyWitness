@@ -1,0 +1,29 @@
+{
+  "evidence_refs": [
+    "evidence/checks/read-b2-p1-C7-r1/check.stdout.txt",
+    "evidence/checks/read-b2-p2-C3-r1/check.stdout.txt",
+    "evidence/checks/read-b2-p3-C0-r1/check.stdout.txt",
+    "evidence/checks/read-b2-p4-C5-r1/check.stdout.txt",
+    "evidence/checks/read-b2-p5-C2-r1/check.stdout.txt",
+    "evidence/checks/read-b2-p6-C1-r1/check.stdout.txt",
+    "evidence/checks/read-b2-p7-C4-r1/check.stdout.txt",
+    "evidence/checks/read-b2-p8-C6-r1/check.stdout.txt"
+  ],
+  "functional": true,
+  "name": "block-2-complete",
+  "notes": "All eight block-two records on unchanged r1 are accepted as complete connected evidence with no errors, inspection limits or integrity findings. The issue, consume, second-read and two-query observations repeat the corresponding block-one patterns. Native calls are connected to result publications, and dependencies are explicit when issuance returns null or consumption is omitted. Native reaps, independent group absence, owned-resource removal and erasure observations remain complete. No equipment fault diagnosed; no correction cycle or diagnostic rerun used.",
+  "planned_trial_ids": [
+    "b2-p1-C7-r1",
+    "b2-p2-C3-r1",
+    "b2-p3-C0-r1",
+    "b2-p4-C5-r1",
+    "b2-p5-C2-r1",
+    "b2-p6-C1-r1",
+    "b2-p7-C4-r1",
+    "b2-p8-C6-r1"
+  ],
+  "previous_review": null,
+  "reviewed_utc": "2026-11-02T15:58:39.694625+00:00",
+  "schema_version": 1,
+  "success_of_native_calls_required": false
+}
