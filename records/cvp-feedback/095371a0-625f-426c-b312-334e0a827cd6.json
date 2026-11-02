@@ -1,0 +1,55 @@
+{
+  "format_version": 1,
+  "session_id": "095371a0-625f-426c-b312-334e0a827cd6",
+  "collected_on": "2026-11-02",
+  "request_ids": [
+    {
+      "id": "req_011CgeSrthWwCJ32MkSKywzp",
+      "timestamp": "2026-11-02T16:51:00.859Z",
+      "model": "claude-fable-5-1",
+      "assistant_message_id": "msg_011CgeSru4r6DqU26GPTXc3p",
+      "stop_reason": "refusal"
+    },
+    {
+      "id": "req_011CgeSsD1r1N1Rm6znXUgZR",
+      "timestamp": "2026-11-02T16:51:10.134Z",
+      "model": "<synthetic>",
+      "stop_reason": "refusal",
+      "note": "Client-synthesized turn carrying the API error text; not a model response."
+    }
+  ],
+  "span": {
+    "first_event": "2026-11-02T16:50:58.741Z",
+    "last_event": "2026-11-02T16:51:40.673Z",
+    "duration_seconds": 42
+  },
+  "client": {
+    "product": "Claude Code",
+    "version": "2.1.316",
+    "entrypoint": "cli",
+    "model_selected": "claude-fable-5-1"
+  },
+  "repository": {
+    "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+    "git_branch": "main",
+    "head_commit": "1de523c8",
+    "head_commit_note": "Most recent commit at 2026-11-02T16:15:21Z, before this session; no commits were made during it."
+  },
+  "prompts": {
+    "human_turn_count": 1,
+    "first_prompt_timestamp": "2026-11-02T16:50:58.741Z",
+    "subject": "Request for an acceptance review of the completed PolicyWitness sandbox-extension investigation, delivered as a pasted brief."
+  },
+  "observed_outcome": {
+    "classifier_stop": true,
+    "first_stop_timestamp": "2026-11-02T16:51:00.859Z",
+    "stopped_content": "An opening orientation sentence stating the intent to read the plan, trace notes and report before examining the apparatus and retained trial records. Tool calls in that response did not run.",
+    "client_meta_notice": "Your response above was stopped by a safety classifier - this is not a tool or API error. The rest of it was withheld, and tool calls in it that had not finished did not run. Do not produce that content again, even reworded.",
+    "terminal_error": "API Error: Fable 5.1's safeguards flagged this message (https://www.anthropic.com/legal/aup). Our intentionally broad safeguards allow us to deliver more capabilities faster, but can sometimes flag legitimate coding and cybersecurity tasks. Claude Code can't respond to this message with Fable 5.1.",
+    "review_delivered": false
+  },
+  "transcript": {
+    "path": "~/.claude/projects/-Users-raccoon-Desktop-Security-PolicyWitness/095371a0-625f-426c-b312-334e0a827cd6.jsonl",
+    "availability": "Outside this repository, in the local Claude Code state directory; not retained here."
+  }
+}
