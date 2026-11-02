@@ -29,7 +29,7 @@ new PolicyWitness capability as an outcome.
 
 ## Evidence examined
 
-The review examined the [agreed plan](../../BROWSER-TRACE-INVESTIGATIONS-PLAN.md),
+The review examined the [agreed plan](PLAN.md),
 [source traces](TRACES.md), report, native program, driver, reader, control
 program, event protocol, source review, and relevant repository guidance and
 implementation sources. It inspected the motivating pinned source selections,

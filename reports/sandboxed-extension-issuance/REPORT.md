@@ -12,7 +12,7 @@
 | Q2(a): observed queries | Answered within contrasts | Both forms returned `(0,0)` in C0/C1 and `(1,0)` in C2–C7, without variation across blocks. |
 | Q2(b): representation | Answered within contrasts | The recorded flag/type arguments and validator source establish NONE versus path-only arguments, with no extension class alongside the path. |
 
-This report closes the [plan](../../BROWSER-TRACE-INVESTIGATIONS-PLAN.md) after
+This report closes the [plan](PLAN.md) after
 **24 planned trials on one apparatus revision, r1**. There were no diagnostic
 native reruns, correction cycles, unrun positions or pending cleanup. The
 [closed state](evidence/state.json) retains the accounting. Questions are defined
@@ -121,7 +121,7 @@ or filled with invented returns.
 
 ## Q1 answers and decision-table limits
 
-These answers use the [plan's decision table](../../BROWSER-TRACE-INVESTIGATIONS-PLAN.md#fixed-contrasts-and-positive-controls).
+These answers use the [plan's decision table](PLAN.md#fixed-contrasts-and-positive-controls).
 Supported and withheld wording is reproduced verbatim. The first-block examples
 below have the same values in the two other repetitions linked above.
 
@@ -223,7 +223,7 @@ each. Across three blocks there are 12 `(0,0)` pairs and 36 `(1,0)` pairs, with
 no errors, unclassified pairs or unavailable queries.
 
 The Q1 decision table has no Q2 row. This answer follows the
-[query protocol](../../BROWSER-TRACE-INVESTIGATIONS-PLAN.md#ordering-and-query-protocol).
+[query protocol](PLAN.md#ordering-and-query-protocol).
 Its convention labels these pairs allow and deny respectively. The `(1,0)`
 pattern occurred both where issuance was nonnull (C2/C6/C7) and where it was
 null (C3/C4/C5); it did not distinguish those results in these records. This
@@ -240,7 +240,7 @@ filter value. Recorded caller/target PIDs identify the supervisor and its live
 waiting issuer. Collection and release markers precede the issuer's call.
 
 These observations, [retained native source](evidence/equipment/r1/source/records/browser-trace-investigations/pilot.c)
-and [validator source](../../controller/tools/sb_api_validator/sb_api_validator.c)
+and [validator source](pw-context/controller/tools/sb_api_validator/sb_api_validator.c)
 show PID, operation, type and either no additional argument or one path. Neither
 representation carries the extension class alongside the path. The native issue
 call instead receives class, path and flags 0. This is an argument-representation
@@ -310,10 +310,10 @@ observations and independently inspectable read-backs.
 
 ## Prior evidence and applicability
 
-The retained [v0.3.4 acceptance](../../tests/out/release-acceptance/run-3ab7e31af74345dfa87d1948c56ecb27/)
+The retained [v0.3.4 acceptance](../../tests/out/release-acceptance/run-3ab7e31af74345dfa87d1948c56ecb27)
 at `0289d9ae8a78be59f9727e6fc2118b3c9b24bcc1` passed 201 cases, including
 the four production extension cases cited by the plan. It did not run the
-opt-in native suite. Retained [native feasibility artifacts](../../tests/out/runs/workset-native-crossed-01/suites/sandbox_extensions_native/feasibility/artifacts/)
+opt-in native suite. Retained [native feasibility artifacts](../../tests/out/runs/workset-native-crossed-01/suites/sandbox_extensions_native/feasibility/artifacts)
 include `lifecycle-plain`: nonnull issue/errno 0, consume `(1,0)`, failed
 pre-consume opening, then 33 known bytes with matching identity. Its fixture
 and suite sources at `8aa74027e78f0b7ab4c859c1ffa85f2b41a8a288` are identical

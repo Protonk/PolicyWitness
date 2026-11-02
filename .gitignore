@@ -34,5 +34,5 @@ docs/__pycache__/
 /records/performance/runs/
 /records/archive/performance/runs/
 
-# Regenerable products for the browser-trace pilot; evidence remains tracked.
-/records/browser-trace-investigations/local/
+# Optional local equipment for the archived issuance experiment; evidence stays tracked.
+/reports/sandboxed-extension-issuance/local/

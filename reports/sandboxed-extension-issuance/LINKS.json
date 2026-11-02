@@ -1,0 +1,1562 @@
+{
+  "schema_version": 1,
+  "policy": "Archive navigation links resolve internally. Frozen source snapshots and upstream source links retain original contexts; separately managed historical runs may be absent outside PW. No network verification.",
+  "relative_links": [
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "REPORT.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "REVIEW.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "PLAN.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "TRACES.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "evidence/trials/b1-p4-C2-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "evidence/trials/b1-p6-C3-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "evidence/trials/b1-p3-C4-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "evidence/trials/b1-p8-C5-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "evidence/trials/b1-p5-C6-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "evidence/trials/b1-p7-C7-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "evidence/controls/constructed-02/summary.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "ACCEPTANCE.md",
+      "target": "evidence/controls/derived-from-b1-p1-C0-r1/mutation.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "browser-sandbox-sources/README.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "pw-context/controller/tools/sb_api_validator/sb_api_validator.c",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "TRACES.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "browser-sandbox-sources/README.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "TRACES.md#questions",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "TRACES.md#t7-context-only-traces",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "#trial-record-and-reader-checks",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "pw-context/controller/tools/sb_api_validator/sb_api_validator.c",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "#deadlines-and-cleanup",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PLAN.md",
+      "target": "TRACES.md#t6-non-file-extension-classes-boundary-not-a-starting-point",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PRESERVATION.md",
+      "target": "ACCEPTANCE.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PRESERVATION.md",
+      "target": "MIGRATION.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PRESERVATION.md",
+      "target": "LINKS.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "PRESERVATION.md",
+      "target": "VERIFY.py",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "READER.md",
+      "target": "NATIVE-PROTOCOL.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "REPORT.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "ACCEPTANCE.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "PLAN.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "TRACES.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "browser-sandbox-sources/README.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "REPORT.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "PLAN.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "TRACES.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "ACCEPTANCE.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "REVIEW.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "NATIVE-PROTOCOL.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "READER.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "pilot.c",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "run.sh",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "driver.py",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "read.py",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "reader_controls.py",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "evidence/",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "browser-sandbox-sources/",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "pw-context/README.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "LINKS.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "PLAN.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "browser-sandbox-sources/",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "ARCHIVE.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "MIGRATION.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "README.md",
+      "target": "PRESERVATION.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "PLAN.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/state.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "TRACES.md#questions",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/equipment/r1/equipment.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/equipment/r1/verify.stderr.txt",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/equipment/r1/signature.stderr.txt",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/equipment/r1/entitlements.stdout.txt",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/equipment/r1/linked-images.stdout.txt",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "pilot.c",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "run.sh",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "driver.py",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "NATIVE-PROTOCOL.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "read.py",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "reader_controls.py",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "REVIEW.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/schedules/block-1.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/schedules/block-2.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/schedules/block-3.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p1-C0-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b2-p3-C0-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b3-p8-C0-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p2-C1-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b2-p6-C1-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b3-p3-C1-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p4-C2-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b2-p5-C2-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b3-p6-C2-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p6-C3-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b2-p2-C3-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b3-p7-C3-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p3-C4-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b2-p7-C4-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b3-p2-C4-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p8-C5-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b2-p4-C5-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b3-p4-C5-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p5-C6-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b2-p8-C6-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b3-p1-C6-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p7-C7-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b2-p1-C7-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b3-p5-C7-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "PLAN.md#fixed-contrasts-and-positive-controls",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p4-C2-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p6-C3-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p3-C4-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p8-C5-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p7-C7-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p7-C7-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p4-C2-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p5-C6-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p4-C2-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p7-C7-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p1-C0-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p2-C1-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p4-C2-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "PLAN.md#ordering-and-query-protocol",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/equipment/r1/source/records/browser-trace-investigations/pilot.c",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "pw-context/controller/tools/sb_api_validator/sb_api_validator.c",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/controls/constructed-02/summary.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/controls/constructed-01/summary.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "REVIEW.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/trials/b1-p1-C0-r1/trial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/controls/derived-from-b1-p1-C0-r1/mutation.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/controls/derived-from-b1-p1-C0-r1/mutated-reader.stdout",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/checkpoints/01-block-1-initial.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/checkpoints/02-block-1-complete.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/checkpoints/03-block-2-complete.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/checkpoints/04-block-3-complete.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "evidence/state.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REVIEW.md",
+      "target": "evidence/controls/constructed-02/summary.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "REVIEW.md",
+      "target": "evidence/controls/constructed-01/summary.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/chromium/sandbox/policy/mac/gpu.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/chromium/sandbox/policy/mac/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Sandbox/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WebKit/WebProcess/com.apple.WebProcess.sb.in",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/ladybird/Libraries/LibSandbox/Sandbox.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/ladybird/Services/Compositor/SandboxMacOS.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyContent.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/chromium/sandbox/mac/seatbelt_extension.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/chromium/sandbox/mac/seatbelt_extension.cc",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WTF/wtf/spi/darwin/SandboxSPI.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/ladybird/Libraries/LibSandbox/Sandbox.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WTF/wtf/spi/darwin/SandboxSPI.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WTF/wtf/darwin/DarwinExtras.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Sandbox/macOS/webcontent-defines.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "PLAN.md#boundaries-owned-elsewhere",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/chromium/sandbox/mac/seatbelt_sandbox_design.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/chromium/chrome/app/chrome_exe_main_mac.cc",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/firefox/security/sandbox/mac/Sandbox.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/firefox/security/sandbox/mac/Sandbox.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "TRACES.md",
+      "target": "browser-sandbox-sources/sources/ladybird/Libraries/LibSandbox/Sandbox.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/README.md",
+      "target": "REPORT.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/README.md",
+      "target": "SOURCE-CATALOG.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "SOURCE-CATALOG.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "MANIFEST.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/chrome/app/chrome_exe_main_mac.cc",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/mac/seatbelt_sandbox_design.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/chrome/app/chrome_exe_main_mac.cc",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/mac/seatbelt_sandbox_design.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/chrome/app/chrome_exe_main_mac.cc",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/policy/mac/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/policy/mac/gpu.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/policy/mac/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/policy/mac/gpu.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/mac/seatbelt_extension.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/mac/seatbelt_extension.cc",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/chromium/sandbox/mac/seatbelt_sandbox_design.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/SandboxPolicyContent.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/Sandbox.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/Sandbox.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/moz.build",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/SandboxPolicyContent.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/Sandbox.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/moz.build",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/firefox/security/sandbox/mac/Sandbox.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/WebProcess/com.apple.WebProcess.sb.in",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/macOS/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/macOS/webcontent-defines.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/preferences.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/WebProcess/com.apple.WebProcess.sb.in",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/macOS/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/WebProcess/com.apple.WebProcess.sb.in",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WTF/wtf/darwin/DarwinExtras.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WTF/wtf/spi/darwin/SandboxSPI.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WTF/wtf/darwin/DarwinExtras.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WTF/wtf/spi/darwin/SandboxSPI.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/macOS/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/webkit/Source/WebKit/WebProcess/com.apple.WebProcess.sb.in",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Libraries/LibSandbox/Sandbox.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Libraries/LibSandbox/Sandbox.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Libraries/LibSandbox/Sandbox.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Libraries/LibSandbox/Sandbox.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Services/RendererSandboxMacOS.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Services/Compositor/SandboxMacOS.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Services/RendererSandboxMacOS.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Services/Compositor/SandboxMacOS.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "sources/ladybird/Libraries/LibSandbox/Sandbox.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/REPORT.md",
+      "target": "NOTICES.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/chromium/LICENSE",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/chromium/chrome/app/chrome_exe_main_mac.cc",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/chromium/sandbox/mac/seatbelt_extension.cc",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/chromium/sandbox/mac/seatbelt_extension.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/chromium/sandbox/mac/seatbelt_sandbox_design.md",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/chromium/sandbox/policy/mac/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/chromium/sandbox/policy/mac/gpu.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/firefox/security/sandbox/mac/Sandbox.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/firefox/security/sandbox/mac/Sandbox.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/firefox/security/sandbox/mac/SandboxPolicyContent.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/firefox/security/sandbox/mac/SandboxPolicyGPU.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/firefox/security/sandbox/mac/moz.build",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/webkit/Source/WTF/wtf/darwin/DarwinExtras.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/webkit/Source/WTF/wtf/spi/darwin/SandboxSPI.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Cocoa/SandboxExtensionCocoa.mm",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/macOS/common.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/macOS/webcontent-defines.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/webkit/Source/WebKit/Shared/Sandbox/preferences.sb",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/webkit/Source/WebKit/WebProcess/com.apple.WebProcess.sb.in",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/ladybird/LICENSE",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/ladybird/Libraries/LibSandbox/Sandbox.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/ladybird/Libraries/LibSandbox/Sandbox.h",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/ladybird/Services/Compositor/SandboxMacOS.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "browser-sandbox-sources/SOURCE-CATALOG.md",
+      "target": "sources/ladybird/Services/RendererSandboxMacOS.cpp",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "pw-context/README.md",
+      "target": "controller/tools/sb_api_validator/sb_api_validator.c",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "pw-context/README.md",
+      "target": "LICENSE",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "pw-context/README.md",
+      "target": "../ARCHIVE.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "pw-context/README.md",
+      "target": "PW-REFERENCES.json",
+      "classification": "archive_relative"
+    },
+    {
+      "document": "pw-context/README.md",
+      "target": "../README.md#historical-context",
+      "classification": "archive_relative"
+    }
+  ],
+  "historical_exceptions": [
+    {
+      "document": "README.md",
+      "target": "../../tests/out/release-acceptance/run-3ab7e31af74345dfa87d1948c56ecb27/",
+      "classification": "checkout_local_historical_context"
+    },
+    {
+      "document": "README.md",
+      "target": "../../tests/out/runs/workset-native-crossed-01/suites/sandbox_extensions_native/feasibility/artifacts/",
+      "classification": "checkout_local_historical_context"
+    },
+    {
+      "document": "README.md",
+      "target": "../../dist/archive/v0.3.4/evidence/provenance.json",
+      "classification": "checkout_local_historical_context"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "../../tests/out/release-acceptance/run-3ab7e31af74345dfa87d1948c56ecb27",
+      "classification": "checkout_local_historical_context"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "../../tests/out/runs/workset-native-crossed-01/suites/sandbox_extensions_native/feasibility/artifacts",
+      "classification": "checkout_local_historical_context"
+    },
+    {
+      "document": "REPORT.md",
+      "target": "../../dist/archive/v0.3.4/evidence/provenance.json",
+      "classification": "checkout_local_historical_context"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "records/browser-sandbox-sources/README.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "records/browser-sandbox-sources/README.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/WORKER.md#supplied-extension-authority",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/WORKER.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/PolicyWitness.md#sandbox-extensions",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/PolicyWitness.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/PolicyWitness.md#extension-and-fresh-read-output",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/PolicyWitness.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/QUESTIONS.md#can-policywitness-test-sandbox-extension-behavior",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/QUESTIONS.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/WORKER.md#supplied-extension-authority",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/WORKER.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/WORKER.md#known-gaps",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/WORKER.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/LIMITS.md#specimen-admission",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/LIMITS.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/LIMITS.md#interactions-that-matter",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/LIMITS.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "controller/tools/sb_api_validator/sb_api_validator.c",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "controller/tools/sb_api_validator/sb_api_validator.c",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/suites/sandbox_extensions_native/README.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/suites/sandbox_extensions_native/README.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/fixtures/sandbox_extensions/README.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/fixtures/sandbox_extensions/README.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/suites/witness_contract/README.md#native-extension-boundaries",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/suites/witness_contract/README.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/FAILURE-PROPAGATION-CONTRACT.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/CHANGE-VERIFICATION.md#native-sandbox-extensions",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/CHANGE-VERIFICATION.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/ARCHITECTURE.md#process-topology",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/ARCHITECTURE.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/architecture.json",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/architecture.json",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/REQUEST-GRAMMAR.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/REQUEST-GRAMMAR.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "records/browser-trace-investigations/TRACES.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "records/browser-trace-investigations/TRACES.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "records/browser-sandbox-sources/README.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "records/browser-sandbox-sources/README.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "records/browser-trace-investigations/TRACES.md#questions",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "records/browser-trace-investigations/TRACES.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/fixtures/sandbox_extensions/native.c",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/fixtures/sandbox_extensions/native.c",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "records/AGENTS.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "records/AGENTS.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/README.md#retention-ownership-and-execution-locking",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/README.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/fixtures/sandbox_extensions/build.sh",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/fixtures/sandbox_extensions/build.sh",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "records/browser-trace-investigations/TRACES.md#t7-context-only-traces",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "records/browser-trace-investigations/TRACES.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "#trial-record-and-reader-checks",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "controller/tools/sb_api_validator/sb_api_validator.c",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "controller/tools/sb_api_validator/sb_api_validator.c",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "#deadlines-and-cleanup",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/WORKER.md#known-gaps",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/WORKER.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/QUESTIONS.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/QUESTIONS.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/LIMITS.md#premises-behind-the-interactions",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/LIMITS.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/AGENTS.md#add-or-change-tests",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/AGENTS.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/CONTRACT.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/CONTRACT.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/REQUEST-GRAMMAR.md",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/REQUEST-GRAMMAR.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "docs/architecture.json",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "docs/architecture.json",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "tests/CHANGE-VERIFICATION.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    },
+    {
+      "document": "evidence/equipment/r1/source/BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "target": "records/browser-trace-investigations/TRACES.md#t6-non-file-extension-classes-boundary-not-a-starting-point",
+      "classification": "historical_source_snapshot",
+      "original_document_path": "BROWSER-TRACE-INVESTIGATIONS-PLAN.md",
+      "original_target_path": "records/browser-trace-investigations/TRACES.md",
+      "source_commit": "6ea196363dd5007f3d98d72424e0ffd044524ddb"
+    }
+  ]
+}

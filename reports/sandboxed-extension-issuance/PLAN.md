@@ -7,7 +7,7 @@ an independent native fixture and ends in a durable report for maintainer review
 whether issuance, consumption or access succeeds or fails.
 
 The plan is linked to a source packet at
-[records/browser-sandbox-sources](records/browser-sandbox-sources/README.md). 
+[records/browser-sandbox-sources](browser-sandbox-sources/README.md).
 The packet persists in `records/` while this plan lives.
 
 ## Boundary
@@ -23,7 +23,7 @@ Every experiment under this plan respects these limits.
   recorded environment, not an installed browser.
 - **Token confinement.** Raw tokens never enter a request, reply, report
   or retained artifact. The erasure discipline in
-  [supplied extension authority](docs/WORKER.md#supplied-extension-authority)
+  [supplied extension authority](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/WORKER.md#supplied-extension-authority)
   applies to any new issuer, channel or consumer the experiments introduce.
 - **Keep the observations distinct.** A nonnull issue result, accepted transfer,
   consume return and fresh read establish different facts. Known bytes read
@@ -38,35 +38,35 @@ Read current behavior from these sources rather than from this summary.
 
 | Topic | Where |
 | --- | --- |
-| Request shape, two classes, one declaration, one consume, one release | [Sandbox extensions](docs/PolicyWitness.md#sandbox-extensions); [extension output](docs/PolicyWitness.md#extension-and-fresh-read-output); [QUESTIONS.md](docs/QUESTIONS.md#can-policywitness-test-sandbox-extension-behavior) |
-| Issuer, channel, worker preparation, lifecycle calls, erasure, known gap | [Supplied extension authority](docs/WORKER.md#supplied-extension-authority); [known gaps](docs/WORKER.md#known-gaps) |
-| Limits and the issue-before-spawn ordering | [Specimen admission](docs/LIMITS.md#specimen-admission) rows `extension_*`; [interactions that matter](docs/LIMITS.md#interactions-that-matter) |
-| Issuer implementation | [`pw_extension_issuer.c`](controller/tools/pw_probe_runner/pw_extension_issuer.c): `dlopen` of libsandbox, `sandbox_extension_issue_file` with flags `0`, class chosen by the `authority` field; [`pw_extension_channel.h`](controller/tools/pw_probe_runner/pw_extension_channel.h) |
-| Worker side | [`prepare_extension`](controller/tools/pw_probe_runner/pw_probe_runner.c) resolves consume/release symbols before apply and validates the channel before apply; [`attempt_extension`](controller/tools/pw_probe_runner/pw_probe_runner.c) treats only `-1` as a failed consume and keeps one static handle |
-| Host session | [`ExtensionIssuer.swift`](runner/Sources/PWRunnerCore/ExtensionIssuer.swift): `realpath` and `fstatat` before issuance, issuer spawned and reaped before the worker exists |
-| Query side | [`sb_api_validator.c`](controller/tools/sb_api_validator/sb_api_validator.c): query arguments, no-report flag and result classification; `NONE` or one filter value, with no class-plus-path representation |
-| Native fixture and its controls | [suite README](tests/suites/sandbox_extensions_native/README.md); [fixture README](tests/fixtures/sandbox_extensions/README.md); host, issuer and worker as three processes; file and directory scenarios |
-| Production extension controls | [native extension boundaries](tests/suites/witness_contract/README.md#native-extension-boundaries) and the `check_extension*.py` checkers beside it |
-| Evidence contract | [native extension evidence](tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence); [native sandbox extensions](tests/CHANGE-VERIFICATION.md#native-sandbox-extensions) |
-| Process topology and architecture account | [process topology](docs/ARCHITECTURE.md#process-topology); [docs/architecture.json](docs/architecture.json) and its generator |
+| Request shape, two classes, one declaration, one consume, one release | [Sandbox extensions](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/PolicyWitness.md#sandbox-extensions); [extension output](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/PolicyWitness.md#extension-and-fresh-read-output); [QUESTIONS.md](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/QUESTIONS.md#can-policywitness-test-sandbox-extension-behavior) |
+| Issuer, channel, worker preparation, lifecycle calls, erasure, known gap | [Supplied extension authority](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/WORKER.md#supplied-extension-authority); [known gaps](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/WORKER.md#known-gaps) |
+| Limits and the issue-before-spawn ordering | [Specimen admission](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/LIMITS.md#specimen-admission) rows `extension_*`; [interactions that matter](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/LIMITS.md#interactions-that-matter) |
+| Issuer implementation | [`pw_extension_issuer.c`](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/controller/tools/pw_probe_runner/pw_extension_issuer.c): `dlopen` of libsandbox, `sandbox_extension_issue_file` with flags `0`, class chosen by the `authority` field; [`pw_extension_channel.h`](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/controller/tools/pw_probe_runner/pw_extension_channel.h) |
+| Worker side | [`prepare_extension`](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/controller/tools/pw_probe_runner/pw_probe_runner.c) resolves consume/release symbols before apply and validates the channel before apply; [`attempt_extension`](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/controller/tools/pw_probe_runner/pw_probe_runner.c) treats only `-1` as a failed consume and keeps one static handle |
+| Host session | [`ExtensionIssuer.swift`](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/runner/Sources/PWRunnerCore/ExtensionIssuer.swift): `realpath` and `fstatat` before issuance, issuer spawned and reaped before the worker exists |
+| Query side | [`sb_api_validator.c`](pw-context/controller/tools/sb_api_validator/sb_api_validator.c): query arguments, no-report flag and result classification; `NONE` or one filter value, with no class-plus-path representation |
+| Native fixture and its controls | [suite README](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/suites/sandbox_extensions_native/README.md); [fixture README](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/fixtures/sandbox_extensions/README.md); host, issuer and worker as three processes; file and directory scenarios |
+| Production extension controls | [native extension boundaries](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/suites/witness_contract/README.md#native-extension-boundaries) and the `check_extension*.py` checkers beside it |
+| Evidence contract | [native extension evidence](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence); [native sandbox extensions](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/CHANGE-VERIFICATION.md#native-sandbox-extensions) |
+| Process topology and architecture account | [process topology](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/ARCHITECTURE.md#process-topology); [docs/architecture.json](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/architecture.json) and its generator |
 
 Production PW has no post-apply issuance action. Query operation
-strings remain OS queries under [request admission](docs/REQUEST-GRAMMAR.md);
+strings remain OS queries under [request admission](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/REQUEST-GRAMMAR.md);
 accepting a string does not establish a useful native prediction for it.
 
 ## Traces and the packet
 
-[TRACES.md](records/browser-trace-investigations/TRACES.md) holds the seven
+[TRACES.md](TRACES.md) holds the seven
 source traces T1–T7, the questions Q1–Q18 they raise, and the description of
 the source packet at
-[records/browser-sandbox-sources](records/browser-sandbox-sources/README.md).
+[records/browser-sandbox-sources](browser-sandbox-sources/README.md).
 Each trace names a source, states what it shows, states what PolicyWitness does
 at the same point, and names the questions it raises.
 
 ## What we want to learn
 
 The questions are stated once, in
-[TRACES.md](records/browser-trace-investigations/TRACES.md#questions), each with
+[TRACES.md](TRACES.md#questions), each with
 its observable, what it needs beyond this investigation's apparatus, and what an
 answer does not establish. This plan refers to them by number only. Q1 and Q2
 are the active questions; Q3–Q18 remain an unordered inventory for later review,
@@ -75,7 +75,7 @@ not commitments or automatic follow-ups to an unexpected result.
 ## First investigation: Q1 and Q2
 
 Use an investigation-local adaptation of
-[`tests/fixtures/sandbox_extensions/native.c`](tests/fixtures/sandbox_extensions/native.c).
+[`tests/fixtures/sandbox_extensions/native.c`](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/fixtures/sandbox_extensions/native.c).
 Its existing host/issuer/worker split, separate token storage and explicit
 descriptor passing are useful equipment. Its unsandboxed issuer and pre-policy
 worker read change for this pilot.
@@ -98,7 +98,7 @@ symbols and other regenerable build products stay there. Do not use `.tmp/`
 for this pilot. The committed hashes and read-backs identify the local products.
 The report must be readable without `local/`; where it cites an item there, it
 says the item is gitignored and available only in the local checkout, per
-[records guidance](records/AGENTS.md). Core dumps are disabled, and tokens,
+[records guidance](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/records/AGENTS.md). Core dumps are disabled, and tokens,
 token hashes and token-bearing diagnostics are never written to either location.
 
 ### Equipment setup
@@ -114,9 +114,9 @@ The driver owns build/signing commands, block execution, cleanup accounting and
 evidence finalization under that lock. Separate block invocations use the same
 wrapper. Honor a busy-lock refusal; never unlink `tests/.checkout.lock`. Preserve
 the inherited lock descriptors through intermediate launchers as required by
-the [lock contract](tests/README.md#retention-ownership-and-execution-locking).
+the [lock contract](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/README.md#retention-ownership-and-execution-locking).
 
-Adapt the native fixture's [build command](tests/fixtures/sandbox_extensions/build.sh)
+Adapt the native fixture's [build command](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/fixtures/sandbox_extensions/build.sh)
 to the pilot source and the revision's `local/` output directory. Select
 `pilot_identity` from `PW_BYOXPC_IDENTITY`, falling back to `IDENTITY`; require
 an explicit `Developer ID Application: ...` identity. Set `pilot_binary` to the
@@ -144,7 +144,7 @@ reference that record rather than duplicating it.
 
 The first result concerns issuance after application with a prepared native
 runtime. It does not claim issuance before any initialization, or reproduce
-Chromium's framework startup. [T7](records/browser-trace-investigations/TRACES.md#t7-context-only-traces)
+Chromium's framework startup. [T7](TRACES.md#t7-context-only-traces)
 explains why the boundary must be explicit.
 
 | Stage | Operations and evidence |
@@ -305,7 +305,7 @@ mark Q2 unavailable and continue Q1; do not substitute a literal flag or an
 unflagged call.
 
 Any derived allow/deny labels use the convention in the
-[validator's batch classifier](controller/tools/sb_api_validator/sb_api_validator.c):
+[validator's batch classifier](pw-context/controller/tools/sb_api_validator/sb_api_validator.c):
 `rc == 0` maps to allow and `rc == 1 && errno == 0` maps to deny.
 This is an interpretation convention, not a calibrated native contract for
 `file-issue-extension`. Negative returns are query errors; other unexpected
@@ -516,17 +516,17 @@ Possible recommendations for maintainer review after the report:
 - **Report only.** Observations, including failures or inconclusive controls,
   can close the investigation without any product change.
 - **Documentation.** Narrowing or restating the known gap in
-  [WORKER.md](docs/WORKER.md#known-gaps), the FAQ answer in
-  [QUESTIONS.md](docs/QUESTIONS.md), or a premise in
-  [LIMITS.md](docs/LIMITS.md#premises-behind-the-interactions). Documentation
+  [WORKER.md](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/WORKER.md#known-gaps), the FAQ answer in
+  [QUESTIONS.md](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/QUESTIONS.md), or a premise in
+  [LIMITS.md](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/LIMITS.md#premises-behind-the-interactions). Documentation
   describes current behavior only; no change history.
 - **Fixture cases.** New opt-in cases in `sandbox_extensions_native` with
   constructed checker controls, under
-  [add or change tests](tests/AGENTS.md#add-or-change-tests) and the suite's
+  [add or change tests](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/AGENTS.md#add-or-change-tests) and the suite's
   evidence rules.
 - **Request grammar and admission.** A new lifecycle action, new `authority`
-  values, flags or classes touch [the wire contract](docs/CONTRACT.md) and its
-  version decision, [REQUEST-GRAMMAR.md](docs/REQUEST-GRAMMAR.md), the limits
+  values, flags or classes touch [the wire contract](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/CONTRACT.md) and its
+  version decision, [REQUEST-GRAMMAR.md](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/REQUEST-GRAMMAR.md), the limits
   manifest and its regenerated document, the admission corpus, and worker
   identity regeneration.
 - **Worker or runner structure.** A future production issuance action or
@@ -534,9 +534,9 @@ Possible recommendations for maintainer review after the report:
   topology or token channel. Process-binding timing relative to the target's
   apply is untested (Q13–Q16). Any proposal would identify affected
   implementation, contracts and checks:
-  [architecture.json](docs/architecture.json) for topology changes, C/Swift layout
+  [architecture.json](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/docs/architecture.json) for topology changes, C/Swift layout
   agreement when layout changes, and the
-  [order-barrier mutation control](tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls)
+  [order-barrier mutation control](https://github.com/Protonk/PolicyWitness/blob/6ea196363dd5007f3d98d72424e0ffd044524ddb/tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls)
   when wait, release or eligibility changes. The independent pilot does not
   require retiring PW's ordinary-authority issuer.
 
@@ -548,7 +548,7 @@ Possible recommendations for maintainer review after the report:
   native issuer/recipient experiment establishes no general product capability;
   Q14's process-binding control remains deferred.
 - **Mach, IOKit and generic classes**
-  ([T6](records/browser-trace-investigations/TRACES.md#t6-non-file-extension-classes-boundary-not-a-starting-point)).
+  ([T6](TRACES.md#t6-non-file-extension-classes-boundary-not-a-starting-point)).
   Each needs a new issuer entry point,
   an attempt kind and a class vocabulary decision. A later plan.
 - **Browsers as products**, installed-profile evidence, and anything the packet
