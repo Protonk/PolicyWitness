@@ -778,8 +778,10 @@ committing substantial work to the end-to-end acceptance case.
 
 The [test scouting report](records/sandbox-extension-issuance/TEST-SCOUTING-REPORT.md)
 maps existing test dependencies, fixture owners and proposed equipment to these
-gates. Keep its detailed inventory in the supporting record; the requirements
-below govern integration. Its source survey is not executed acceptance evidence.
+gates. The [documentation scouting report](records/sandbox-extension-issuance/DOCS-SCOUTING-REPORT.md)
+maps document sections, generation ownership and staging checks to the same work.
+Keep their detailed inventories in the supporting records; the requirements
+below govern integration. These source surveys are not executed acceptance evidence.
 
 ### Integration boundary
 
@@ -833,7 +835,8 @@ is authorized merely because the remaining work is blocked on equipment.
    planning; public actor forms are still refused before children; existing
    request meanings and public versions remain unchanged; encoded size models
    cover the proposed data. Null singular projections must not disable per-actor
-   policy and application validation.
+   policy and application validation. Keep public accepted-input documentation
+   accurate for the closed grammar; describe draft models as internal support.
 2. **Owned actor sessions and schedule.** Factor the worker driver without changing
    legacy execution, then add per-actor preparation, unapplied mode, parking,
    supervision, timing and phase barriers. Gate: two different policies actually
@@ -843,13 +846,17 @@ is authorized merely because the remaining work is blocked on equipment.
    independent observations, not just the reply's actor labels. Adapt cleanup
    witnesses before the first live actor case and review the source-mutation
    controls below as their boundaries change. No extension success is needed
-   to establish these connections.
+   to establish these connections. Update affected architecture/worker accounts,
+   seam documentation and generated copies with the session code and its checks,
+   identifying internal machinery separately from the still-closed public path.
 3. **Explicit file authority path.** Implement native issue, host custody, explicit
    transfer, recipient acceptance, consume/release tables and erasure. Connect
    them to the ordinary schedule and production evidence readers. Wire the
    complete actor form into public admission and make the coordinated contract
-   bump on the branch. Gate: valid public specimens exercise multiple
-   resources/handles and re-delegation end to end; invalid forms create no
+   bump on the branch. Update the public grammar, actor limit inventory, scoped
+   status tables and evidence documentation together; prepare EXTENSIONS.md and
+   its shared-coverage copier and controls. Gate: valid public specimens exercise
+   multiple resources/handles and re-delegation end to end; invalid forms create no
    children; native refusal and interruptions remain independently legible;
    independent native-call and fresh-access observations detect skipped calls,
    wrong associations and premature consumption while parked. Exercise repeated
@@ -861,8 +868,9 @@ is authorized merely because the remaining work is blocked on equipment.
    signed candidate, qualify the actor timing profile, review retained
    evidence/provenance, refresh the live capture baselines and complete the
    inherited-restriction, helper-dependency and unsupported-response controls
-   below. Update coverage and operator documentation, and only then change the
-   FAQ and integrate the accepted result. Acceptance covers the complete
+   below. Complete the documentation semantics review, qualified-limit account
+   and standalone-guide verification, then change the FAQ and integrate only
+   after all required acceptance passes. Acceptance covers the complete
    capability and compatibility adapter, not the staged code in isolation.
 
 ### Principal public-interface acceptance
@@ -1057,13 +1065,26 @@ controls and constructed results separately from native observations.
 
 ## Documentation and completion
 
+Keep documentation coupled to implementation throughout the branch. Update
+affected manifest facts, cited source/check definitions and generated outputs
+in the same buildable change; a test definition and its figure may land together.
+Citation checks establish presence and definitions, not execution or coverage.
+Retain honest assertion scopes and permitted source-only worker facts. Suite
+accounts follow their cases as they are added. Stages 1–2 must not present draft
+actor forms as publicly admitted; document any internal bounds with that scope.
+Public actor admission rows and examples arrive with stage 3. Stage 4 completes
+qualification and review rather than beginning this documentation work.
+
 Create `docs/EXTENSIONS.md` during implementation as the durable coverage and
 semantics document: accepted old/new forms, actors, operations/families, exact
 native calls and limits, lifecycle/reference rules, transient transport, missing
 evidence, process/timing/cleanup limits, example re-delegation and refusal
 outcomes, and what each observation establishes. The supported-family table
-initially contains file read/read-write only. Add future concrete families there when implemented; do not
-describe a promise of universal macOS extension coverage.
+initially contains file read/read-write only. Add future concrete families there
+when implemented; do not describe a promise of universal macOS extension coverage.
+Keep the legacy form supported, without introducing deprecation. Describe scope
+and explicit limits in normal coverage sections; no new mandatory gaps index is
+needed for this document.
 
 Update the request grammar, contract, limits, architecture/worker tours, runner
 and controller references, user guide, repository orientation and tests' coverage
@@ -1072,20 +1093,51 @@ worker per actor while preserving one-way application, native C boundaries and
 witnessing rules. Explain the per-actor exec restriction and shared runner
 entitlement choice as current coverage.
 
-Only after functionality and acceptance warrant it, put this answer in the FAQ:
+Keep the failure contract as the source of status meanings and reading rules.
+At stage 3, add actor-specific tables and completeness/interpretation controls
+with producers and independent readers while preserving the legacy issuance and
+delivery enumeration checks. Distinguish native issue results, publication,
+custody, transfer and recipient acceptance; actor issuance does not inherit the
+helper's spawn/reap status vocabulary. Shape goldens establish fields and types,
+not their lifecycle semantics.
+
+After all required acceptance passes, put this answer in the FAQ:
 
 ```text
 Yes. See [EXTENSIONS.md](EXTENSIONS.md) for supported extension operations and authority types.
 ```
 
 That future link is relative to `docs/QUESTIONS.md`, not this plan. Make
-`docs/EXTENSIONS.md` the source for the extension coverage prose copied into the
-guide's `sandbox-extensions` section. Extend the shared-question generator with
-an explicit rebasing rule from `EXTENSIONS.md` to that internal guide anchor,
-and update shared-link guidance and generator/staging checks together. Preserve
-the failure contract's ownership of its generated status/reading tables. The
-standalone guide must contain the coverage defining the answer; do not ship a
-broken sibling-file link or edit generated copies by hand.
+`docs/EXTENSIONS.md` the single authored source for coverage copied into the
+guide's `sandbox-extensions` section. Implement this through the existing limits
+and shared-question generator:
+
+- Give coverage its own shared source region and copied guide region, separate
+  from failure-contract status/reading copies. Register EXTENSIONS.md as an input
+  and as a span document for owned bounds; render source spans before copying.
+  Keep repository-specific citations outside the shared region while preserving
+  all coverage needed to understand the shipped capability inside it.
+- Rebase the exact bare FAQ target `EXTENSIONS.md` to `#sandbox-extensions`.
+  Support used fragments only when they resolve to exposed copied headings;
+  preserve the existing `PolicyWitness.md#...` rule. Check heading nesting and
+  collisions in the complete guide, preserving labels, examples and other prose.
+  Keep the existing historical-question link exception in its current scope.
+- Register the new markers with guide validation, explicit generator-region
+  ownership and fixture input discovery. Update the document graph and shared
+  content guidance together. No generated copy is edited by hand.
+- Extend stale-copy, marker, no-write-on-invalid-input, idempotence and
+  outside-region preservation controls. Exercise the bare FAQ link, any used
+  fragments, missing/colliding anchors, unsupported sibling dependencies and
+  unchanged example literals. Verify the staged guide without companion files.
+
+The copier and its tests may be prepared before acceptance; the affirmative FAQ
+remains gated on the complete capability. Finish with a semantics review across
+examples, diagrams, request grammar, evidence paths and operator guidance:
+actors still require phases; delivery acknowledgements may occur while parked;
+consumption waits for phase release; references retain their owners; native issue or
+consume success alone does not establish access. Mechanical freshness cannot
+establish these claims. Preserve historical observations and their original
+scope, using new implementation evidence for new behavior.
 
 Completion requires the integrated public re-delegation specimen, calibrated
 native path, refusal and interruption handling, independent association controls,
