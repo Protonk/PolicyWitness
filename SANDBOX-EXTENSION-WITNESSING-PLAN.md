@@ -351,6 +351,9 @@ an implementation detail subject to these checks; replacing polling with a
 blocking primitive changes the apparatus and needs an explicit resource,
 policy-dependency and failure-evidence account. Do not claim a scheduling or
 real-time guarantee from polling.
+The inherited timing numbers have not been qualified for these concurrent
+runnable wait loops. The [actor timing qualification](#actor-timing-qualification)
+below determines the final actor-form budgets before acceptance.
 
 ### Bounded transient authority channels
 
@@ -496,9 +499,13 @@ counts. Query retention remains bounded by actual submitted queries (at most
 Keep other ordinary action/scalar bounds, refusal-path limits and output-loss
 semantics. Test exact, over-limit, multibyte and combined maximum cases.
 
-Retain the old single-worker timing profile. Introduce a documented actor timing
-profile with these defaults, rather than starting the old 60-second phase wait
-in every parked actor at spawn:
+Retain the old single-worker timing profile. The following actor-form values are
+provisional starting budgets, not measurements or accepted multi-actor defaults.
+In particular, the inherited 30,000 ms collection, 120,000 ms execution and
+60,000 ms release allowances have not been re-derived for parked actors. Keep
+actor-form settings distinct from legacy settings even where their initial
+numbers agree. Qualify and, where needed, revise the complete actor profile as
+described below; do not start a fresh release allowance in every actor at spawn.
 
 - One aggregate setup allowance of 10,000 ms from first actor launch, capping
   each existing 5,000 ms policy-delivery and 1,000 ms readiness allowance by the
@@ -506,12 +513,12 @@ in every parked actor at spawn:
   known. Setup failure in one actor need not suppress an independent actor.
 - One 120,000 ms host execution/publication allowance for the schedule, excluding
   measured validator collection, not one allowance per actor. Validator planning
-  and collection share the existing 30,000 ms aggregate allowance across actors.
+  and collection initially share a 30,000 ms aggregate allowance across actors.
 - A 60,000 ms release wait starts only after the selected actor's phase arrival.
   Delivery/custody exchanges each have a 5,000 ms cap and also spend the global
   execution budget. Waiting actors must service transport without spending a
   fresh full execution budget each time they are activated.
-- A fixed 180,000 ms actor-form lifetime cutoff, measured from before the first
+- An initial 180,000 ms actor-form lifetime cutoff, measured from before the first
   launch on a validated shared continuous clock basis, bounds parked/control
   waits and caps all of the above. It includes sleep and collection; it cannot be
   extended by acknowledgements or heartbeats. Give each actor the same absolute
@@ -523,7 +530,11 @@ in every parked actor at spawn:
 The outer cutoff is an execution/wait policy, not an end-to-end real-time guarantee
 over native blocking calls, scheduler delay, termination or reap. Cleanup remains
 observable even after expiry. Keep the 240,000 ms default client RPC allowance
-and its independent uncertainty semantics; do not claim it guarantees a reply.
+as the compatibility target and preserve its independent uncertainty semantics;
+do not claim it guarantees a reply. Changes to actor budgets must leave room
+within that target for acquisition, setup, cleanup and reply assembly. Changing
+the shared client default or legacy timing is a separate compatibility decision,
+not an automatic consequence of increasing an actor budget.
 Implement deterministic clock, oversleep, regression, exact-exhaustion and combined
 budget controls before relying on live timing checks. Production-duration value
 checks and shortened controls must remain separately described.
@@ -535,6 +546,72 @@ size policies. Adjust their manifest-owned transport capacities together if the
 new bound exceeds existing retention; never silently truncate admitted evidence
 or multiply today's whole-reply allowance by eight. This calculation is an
 implementation check with a deterministic acceptance gate, not a native unknown.
+
+### Actor timing qualification
+
+Measure the signed candidate with the actual polling implementation, all actors
+launched/applied before the first phase, and the host and validator doing normal
+work. Do not suspend parked actors, lower their priority or omit validators to
+make qualification pass. Record the acceptance hardware's observed CPU topology
+(including performance/efficiency core counts where available), OS, power/load
+conditions and harness sleep accounting. Core counts alone do not establish
+available execution capacity or scheduling fairness.
+
+Use registered cases and managed evidence, not a separate performance project:
+
+- Run three matched rounds of one-, three- and eight-actor specimens on the same
+  candidate and hardware; all three use the actor form, not the legacy adapter.
+  Keep the aggregate finite local query/file workload constant while distributing
+  phases across the actors. Include a workload at
+  the admitted aggregate action/query and phase limits. Change only actor count
+  and phase ownership where possible, recording unavoidable differences.
+- Exercise the principal re-delegation and positive calibration paths with their
+  ordinary three actors, and with five additional live actors servicing bounded
+  ordinary phases within the existing caps. The eight-actor executions must
+  retain the same authority chain and positive calibration assertions. Ordinary
+  policies and test-owned resources keep this separate from injected hangs or
+  intentional timeout controls.
+- Retain per-run setup, collection, phase-arrival-to-release, custody/delivery,
+  execution and total elapsed intervals, remaining allowances, cleanup results
+  and available external process CPU observations. Where test equipment records
+  call-boundary-to-result intervals, identify the publication/scheduling costs
+  they include; do not present them as kernel call latency. Missing required
+  timing observations leave qualification incomplete.
+
+For these finite, uninjected qualification workloads, require completion without
+budget exhaustion and at least 25 percent of each effective actor-form allowance
+remaining at the largest observed charged interval, after enclosing-budget caps.
+Compare each measurement
+with its own accounting scope, including aggregate collection and the absolute
+lifetime cutoff; do not charge collection twice. The margin is an engineering
+acceptance criterion, not a statistical latency bound or a promise about every
+admitted workload. Deliberately slow, hung or oversized-in-time specimens still
+need accurate bounded failure; they are not expected to meet this margin.
+
+| Observed qualification result | Required disposition |
+| --- | --- |
+| All finite workloads complete with the stated margin, correct associations and required native effects | Credit the measured actor profile on the recorded equipment, alongside deterministic deadline controls. |
+| An uninjected workload exhausts an allowance or lacks the margin as actor count grows | Timing qualification fails, even if PW reports the timeout/unavailability accurately. Diagnose the limiting interval and reconsider the actor budgets or scheduling cost; do not weaken the workload's completion assertions. |
+| Wrong actor/order, lost publication, invalid clock handling or other execution defect | Fix the defect. Increasing budgets cannot substitute for correct synchronization or evidence. |
+| A deliberate deadline/cancellation control reports the specified failure and cleanup | Credit that failure path; it neither disproves nor qualifies the normal-workload budgets. |
+| Sleep or independently established unrelated equipment interference invalidates a run | Retain it and repeat the affected case under the repository's evidence rules; unexplained delay is not grounds to discard a result. |
+
+For contention-limited failures, the executor may revise the actor-form budgets
+with the measurements and rationale retained. Re-derive their relationships as
+one profile: setup plus charged execution plus excluded aggregate collection and
+coordination margin must fit the absolute actor cutoff; local release/exchange
+caps must fit their enclosing waits; cleanup and reply collection need practical
+room before the client target. Do not independently multiply every timeout by
+actor count, or extend an already-running wait after observing delay.
+
+If eight actors cannot qualify within that envelope, reconsider the actor cap or
+wait design explicitly while preserving the three-actor objective. A lower cap
+requires matching admission, documentation and maximum-capacity controls; simply
+testing fewer actors does not qualify an eight-actor product. A different wait
+primitive requires the resource/policy-dependency account specified above.
+Retain failed runs, update manifest-owned limits and their independent controls,
+and rerun affected qualification and acceptance checks after a revision. Final
+budgets and the measured scope must be recorded before stage 4 can close.
 
 ## Evidence and interpretation
 
@@ -638,7 +715,7 @@ It may share low-level file-native functions and session machinery; it must not
 be silently translated into a new unapplied actor with different signing or
 lifetime semantics. This adapter is the only retained pre-issuance special case.
 
-Bump response 24 to 25 and envelope 9 to 10 when implementing the actor contract:
+Bump response 24 to 25 and envelope 9 to 10 for the integrated actor contract:
 readers need new actor associations and policy dossier rules. Use the next values
 instead if another accepted change has already advanced the manifest. Keep XPC
 runner protocol 2 if its reservation/opaque request and reply transport is
@@ -650,6 +727,8 @@ An older installed host's response remains explicitly unsupported by the new
 strict reader, including for an old-form request; preserving request semantics
 does not promise cross-version reply interoperability. Document the required
 external-runner refresh and test the unsupported-response path without replay.
+Make this one public contract transition at integration, following the branch
+and acceptance gates below, rather than publishing stage-specific reply schemas.
 
 Implementation boundaries and coupled work:
 
@@ -697,12 +776,55 @@ At implementation entry, perform the narrow principal-policy qualification
 specified under [readiness](#readiness-and-reconsideration-triggers), before
 committing substantial work to the end-to-end acceptance case.
 
+### Integration boundary
+
+Hold the whole implementation series off `main` on a dedicated branch and
+isolated worktree until stage 4 acceptance. The stages below are development
+dependencies, not independently landable production releases. Use a single
+integration commit for the accepted result so `main` has no intermediate actor
+implementation. This rule concerns implementation, not edits to this plan.
+Retain the accepted candidate's source/equipment identities when integrating;
+do not relabel branch-built evidence as a build of the integration commit.
+
+Between stages 1 and 3 there is therefore no admitted actor-form request on
+`main`: its existing closed grammar still refuses `actors` before child creation.
+Do not publish a temporary execution-side `actor_unavailable` refusal, a feature
+flag, a new refusal corpus family or reader rules for unfinished support.
+
+On the implementation branch, keep draft actor codecs, reference planning,
+dossiers and evidence builders reachable through their unit/harness tests while
+public CLI/XPC admission remains unchanged. Valid draft forms can be normalized
+and checked there without reaching the production service dispatch. Stage 2
+session tests exercise the actual scheduler through maintained test equipment.
+Wire actor admission into both production entry points only with the complete
+stage 3 scheduler, native authority path and evidence readers. Retain an entry
+point control showing that actor forms cannot reach children before that wiring;
+after wiring, require public valid execution and pre-launch invalid-form refusal.
+
+Design the response/envelope change in stage 1, but defer the manifest version
+bump, final generated contracts and encoded shape goldens to the integrated
+stage 3 candidate. Stages 1–2 keep the old public wire contract. Do not treat
+draft DTO fixtures as public responses or retain developmental output as accepted
+evidence for a later schema. The candidate then supplies the complete public
+interface for stage 4 acceptance before any merge to `main`.
+
+Synchronize with intervening `main` changes before final signed acceptance;
+reconcile version allocations, generated identities and evidence applicability
+against the actual integration tree. If main advances afterwards, reassess the
+affected evidence before integration. Missing calibration, policy qualification,
+timing qualification or other required acceptance keeps the branch unmerged,
+the affirmative FAQ change unpublished and this plan active. No partial landing
+is authorized merely because the remaining work is blocked on equipment.
+
+### Implementation sequence
+
 1. **Contract and bounded execution model.** Implement the tagged actor form,
    normalization, reference/lifecycle rules, per-actor policy dossiers, proposed
-   bounds and response/envelope changes together. Add shared CLI/direct-XPC
-   request corpus cases and encoder/consumer fixtures. Gate: all existing accepted
-   requests still have their prior meanings/refusals; invalid actor forms create
-   no children; maximal encoded evidence fits derived transport bounds.
+   bounds and draft response/envelope model together on the branch. Prepare the
+   shared CLI/direct-XPC corpus and encoder/consumer fixtures. Gate: draft valid
+   forms normalize with correct ownership; invalid forms fail planning; public
+   actor forms are still refused before children; existing request meanings and
+   public versions remain unchanged; encoded size models cover the proposed data.
 2. **Owned actor sessions and schedule.** Factor the worker driver without changing
    legacy execution, then add per-actor preparation, unapplied mode, parking,
    supervision, timing and phase barriers. Gate: two different policies actually
@@ -711,13 +833,17 @@ committing substantial work to the end-to-end acceptance case.
    evidence. No extension success is needed to establish these connections.
 3. **Explicit file authority path.** Implement native issue, host custody, explicit
    transfer, recipient acceptance, consume/release tables and erasure. Connect
-   them to the ordinary schedule and production evidence readers. Gate: public
-   specimens exercise multiple resources/handles and re-delegation end to end;
-   native refusal and interruptions remain independently legible. Do not wait
+   them to the ordinary schedule and production evidence readers. Wire the
+   complete actor form into public admission and make the coordinated contract
+   bump on the branch. Gate: valid public specimens exercise multiple
+   resources/handles and re-delegation end to end; invalid forms create no
+   children; native refusal and interruptions remain independently legible;
+   final maximal encoded evidence fits derived transport bounds. Do not wait
    for a second family to ship this stage.
 4. **Integrated acceptance and documentation.** Complete the tests below on the
-   signed candidate, review retained evidence/provenance, update coverage and
-   operator documentation, and only then change the FAQ. Acceptance covers the
+   signed candidate, qualify the actor timing profile, review retained
+   evidence/provenance, update coverage and operator documentation, and only then
+   change the FAQ and integrate the accepted result. Acceptance covers the
    complete capability and compatibility adapter, not the staged code in isolation.
 
 ### Principal public-interface acceptance
@@ -880,9 +1006,10 @@ broken sibling-file link or edit generated copies by hand.
 
 Completion requires the integrated public re-delegation specimen, calibrated
 native path, refusal and interruption handling, independent association controls,
-legacy compatibility, ABI/transport bounds, verified process/resource cleanup and
-documentation above. Record acceptance and retire this active plan under the
-repository's planning/records guidance when the implementation is accepted.
+qualified actor timing budgets, legacy compatibility, ABI/transport bounds,
+verified process/resource cleanup and documentation above. Record acceptance
+and retire this active plan under the repository's planning/records guidance
+when the implementation is accepted.
 
 ## Readiness and reconsideration triggers
 
@@ -910,6 +1037,11 @@ cannot be established, reconsider the principal acceptance requirement explicitl
 do not silently weaken the predicate or count calibration as the principal case.
 That unresolved prerequisite must remain visible even if the rest of the
 implementation is ready.
+
+The actor timing profile also remains provisional until measured with the
+implemented scheduler and parked actors. This is an implementation qualification
+gate, not a claim that the single-worker budgets already cover eight actors.
+Failure to meet it keeps acceptance and integration open as specified above.
 
 Reconsider only on concrete evidence that affects a chosen boundary: for example,
 the proposed fixed mapped delivery protocol cannot be serviced after application
