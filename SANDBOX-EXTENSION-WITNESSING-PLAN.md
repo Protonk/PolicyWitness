@@ -9,9 +9,9 @@ and the [test discipline](tests/AGENTS.md) when executing this plan.
 Make extension issuance, transfer, consumption and release ordinary specimen
 operations. A specimen can name independently restricted actors, retain their
 policies for their entire lifetimes, and order operations across them. The
-principal acceptance specimen is [Q4](reports/sandboxed-extension-issuance/TRACES.md#questions):
-an initial issuer supplies authority to B; B consumes it and explicitly attempts
-file issuance under an extension-dependent issuance rule; C receives the second
+principal acceptance specimen is three-actor re-delegation: an initial issuer A
+supplies authority to B; B consumes it and explicitly attempts file issuance
+under an extension-dependent issuance rule; C receives the second
 token, attempts consumption and performs a fresh access. B applies its policy
 once. C is a different process. No caller intervention between phases is needed.
 
@@ -23,16 +23,16 @@ Neither issuance nor consumption alone establishes access.
 
 Implement the existing file read and read-write authority types and flags zero.
 Provide a concrete place to add another native family, without implementing Mach,
-IOKit, process-bound tokens, arbitrary classes/flags, arbitrary native signatures,
-or the archived Q3–Q18 research agenda. No library interception, function hooking,
-replacement in production, implicit warm-up issuance, retry issuance or calls
+IOKit, process-bound tokens, arbitrary classes/flags or arbitrary native signatures.
+No library interception, function hooking, replacement in production, implicit
+warm-up issuance, retry issuance or calls
 made solely to observe another call. PW witnesses operations it instructs its own
 actors to perform; it does not observe private issuance inside arbitrary libraries.
 
-Retain the accepted investigation unchanged. Its apparatus informs engineering
-and test design; production must not import or execute anything under `reports/`.
-Completion does not depend on demonstrating a general macOS security property,
-reproducing browser behavior, or obtaining a positive Q4 result on every host.
+Existing retained evidence stays unchanged; production must not import or execute
+anything under `reports/`. Completion requires accurate witnessing of the
+specified operations, including native refusal. It does not depend on a general
+macOS security property or usable re-delegation on every host.
 
 ## Grounding and consequential choices
 
@@ -48,27 +48,69 @@ The current implementation is deliberately narrower than the required specimen:
 | Supervision/order | [CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), [CWorkerOrchestrator.swift](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift): synchronous single-child run, per-phase query/release barrier | Extract an owned child session that the host can service incrementally; schedule several such sessions without concurrent specimen actions. |
 | Evidence | [worker account](docs/WORKER.md), [contract](docs/CONTRACT.md), [failure propagation](tests/FAILURE-PROPAGATION-CONTRACT.md) | Retain publication and lifetime distinctions; make associations actor-specific and preserve partial results across actors. |
 
-The [accepted report](reports/sandboxed-extension-issuance/REPORT.md) supports
-post-apply explicit file issuance under the tested restrictions. C2 versus C3–C5
-distinguishes recorded issuance results; C2 versus C6 and C7 separates delivery,
-consumption and fresh access. Its Q2 results and
-[pinned validator context](reports/sandboxed-extension-issuance/pw-context/README.md)
-show why a path query cannot supply a class-specific issuance prediction. The
-report does **not** establish Q4. Use its native signature, publication separation,
-transient equality checks and descriptor observations as equipment examples, not
-as evidence that the new implementation works.
+### Native interface and empirical basis
+
+The existing C issuer calls `sandbox_extension_issue_file` through the signature
+`char *(const char *extension_class, const char *path, uint32_t flags)`, maps
+`read` to `com.apple.app-sandbox.read` and `read_write` to
+`com.apple.app-sandbox.read-write`, and passes flags zero. The existing C worker
+resolves `sandbox_extension_consume` as
+`int64_t (const char *)` and `sandbox_extension_release` as `int (int64_t)`.
+These implementation sources, linked above, own the immediate native interface.
+
+Retained native evidence covers 24 trials: eight arrangements repeated in three
+blocks on one apparatus revision, r1, on macOS 26.7.1 arm64. The
+[equipment record](reports/sandboxed-extension-issuance/evidence/equipment/r1/equipment.json)
+pins the executed source/build and environment; the
+[trial accounting](reports/sandboxed-extension-issuance/evidence/state.json)
+identifies the complete set. The relevant bounded findings are summarized below;
+pairs are raw native `(return, errno)` observations.
+
+| Arrangement and recorded observation | Consequence for this plan |
+| --- | --- |
+| An already sandboxed issuer had a matching class-and-literal-path issuance allowance. Issuance was nonnull, transfer was accepted with transient byte equality, consume returned `(1,0)`, and a separately sandboxed recipient read 37 matching bytes after its initial fresh open had failed. [Native record](reports/sandboxed-extension-issuance/evidence/trials/b1-p4-C2-r1/trial.json). | Explicit post-apply issuance can be useful under the tested restrictions; it belongs in the worker's native operation vocabulary. |
+| Removing the issuance allowance, changing its class, or changing its literal path produced NULL with errno 1; dependent transfer/consume were unavailable, and a later fresh open still ran and failed. [No allowance](reports/sandboxed-extension-issuance/evidence/trials/b1-p6-C3-r1/trial.json), [different class](reports/sandboxed-extension-issuance/evidence/trials/b1-p3-C4-r1/trial.json), [different path](reports/sandboxed-extension-issuance/evidence/trials/b1-p8-C5-r1/trial.json). | Admission, native refusal, dependent unavailability and subsequent access are separate observations. Errno alone does not establish sandbox cause. |
+| With successful issuance and accepted transfer, omitting consumption left the later fresh open failing. [Native record](reports/sandboxed-extension-issuance/evidence/trials/b1-p5-C6-r1/trial.json). | Delivery must not be reported as consumption or usable access. |
+| With successful issuance, accepted transfer and consume `(1,0)`, omitting the recipient's extension predicate left the later fresh open failing. [Native record](reports/sandboxed-extension-issuance/evidence/trials/b1-p7-C7-r1/trial.json). | A candidate handle does not establish access; resource operations need independent evidence. |
+
+The linked examples are from the first block; each arrangement's pattern repeated
+in the other two. These findings are bounded by the recorded policies, operations
+and environment. The issuer retained ordinary read access and did not first
+consume authority supplied by another issuer. Consequently, these observations
+do **not** establish effective three-actor re-delegation or issuance enabled by a
+previously consumed extension. Those are outcomes the new specimen must witness.
+
+For the matching and changed-allowance arrangements above, both `NONE` and `PATH`
+queries for `file-issue-extension` returned `(1,0)`, despite different native
+issuance results. The query results did not distinguish those outcomes. For these
+query forms, the
+[validator implementation](controller/tools/sb_api_validator/sb_api_validator.c)
+passes PID, operation, type and either no filter value or one path; it does not
+pass an extension class alongside the path. The
+[pinned validator source](reports/sandboxed-extension-issuance/pw-context/controller/tools/sb_api_validator/sb_api_validator.c)
+preserves the implementation examined with the retained evidence. This is a
+representation limit, not a class-specific issuance prediction or a claim of
+prediction/enforcement agreement. Extension events therefore remain outside the
+ordinary query/attempt comparison channel.
+
+These records support the selected native interface and separation of
+observations; they do not verify the proposed actor implementation. Its own
+integrated tests must establish the requested policy, process, native-call,
+authority-transfer and access connections. Fixed publication slots, transient
+byte-equality checks and descriptor observations supply useful equipment methods.
+
+### Actor topology and schedule
 
 Use the existing C worker rather than a second sandboxed issuer implementation:
 consumption, issuance and access must occur in B's same process and policy. A
 special issuer child would answer a different question. Keep Swift outside all
 native sandbox operations. Use fresh sibling workers supervised by the existing
 fresh XPC host rather than having B create C: actor creation and reporting must
-not depend on B's policy permitting spawn or IPC setup. The archived supervisor,
-issuer and recipient topology is not copied into the product.
+not depend on B's policy permitting spawn or IPC setup.
 
 Choose a serial schedule of actor phases instead of a general dependency DAG or
-concurrent actor language. Q4 needs durable independent actors and explicit
-cross-process dependencies, not concurrent attempts. A serial schedule makes
+concurrent actor language. Re-delegation needs durable independent actors and
+explicit cross-process dependencies, not concurrent attempts. A serial schedule makes
 admission, capacity accounting and established ordering reviewable. Actors remain
 alive between visits. This is a restriction on scheduling, not on the number of
 issuances, transfers or handles within the stated capacities.
@@ -137,9 +179,9 @@ does not make the admitted request malformed.
 A token belongs to its issuing actor. A transfer refers to that token and creates
 a delivery owned by its recipient. A recipient cannot transfer somebody else's
 token by guessing its reference; it can explicitly issue its own token, as B does
-in Q4. Multiple transfers of a produced token are allowed, each with a fresh
-delivery reference. A delivery can be consumed more than once with distinct
-handle references; every call has its own result. Release is admitted at most
+in the principal specimen. Multiple transfers of a produced token are allowed,
+each with a fresh delivery reference. A delivery can be consumed more than once
+with distinct handle references; every call has its own result. Release is admitted at most
 once per handle reference and only in its consuming actor. Do not accept raw
 integer handles. A failed consume leaves its later release unavailable.
 
@@ -162,7 +204,7 @@ this avoids generation reuse being mistaken for a previous token or handle.
 This proposed complete JSON example illustrates the interface to implement. It
 is not admitted by today's build and is not a claim about the kernel's result.
 The test harness creates a fresh owned file and substitutes its absolute path
-for `/private/tmp/pw-q4/A`; no raw authority comes from the request.
+for `/private/tmp/pw-redelegation/A`; no raw authority comes from the request.
 
 ```json
 {
@@ -181,28 +223,28 @@ for `/private/tmp/pw-q4/A`; no raw authority comes from the request.
   ],
   "phases": [
     {"phase_id": "b_before", "actor_id": "B", "actions": [
-      {"step_id": "b_read_before", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/private/tmp/pw-q4/A"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "/private/tmp/pw-q4/A"}}
+      {"step_id": "b_read_before", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/private/tmp/pw-redelegation/A"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "/private/tmp/pw-redelegation/A"}}
     ]},
     {"phase_id": "c_before", "actor_id": "C", "actions": [
-      {"step_id": "c_read_before", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/private/tmp/pw-q4/A"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "/private/tmp/pw-q4/A"}}
+      {"step_id": "c_read_before", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/private/tmp/pw-redelegation/A"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "/private/tmp/pw-redelegation/A"}}
     ]},
     {"phase_id": "initial_supply", "actor_id": "A", "actions": [
-      {"step_id": "a_issue", "extension": {"operation": "issue", "family": "file", "authority": "read", "target": "/private/tmp/pw-q4/A", "token_ref": "ta"}},
+      {"step_id": "a_issue", "extension": {"operation": "issue", "family": "file", "authority": "read", "target": "/private/tmp/pw-redelegation/A", "token_ref": "ta"}},
       {"step_id": "a_to_b", "extension": {"operation": "transfer", "token_ref": "ta", "recipient": "B", "delivery_ref": "db"}}
     ]},
     {"phase_id": "b_consume", "actor_id": "B", "actions": [
       {"step_id": "b_consume_first", "extension": {"operation": "consume", "delivery_ref": "db", "handle_ref": "hb"}}
     ]},
     {"phase_id": "b_redelegate", "actor_id": "B", "actions": [
-      {"step_id": "b_read_after", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/private/tmp/pw-q4/A"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "/private/tmp/pw-q4/A"}},
-      {"step_id": "b_issue", "extension": {"operation": "issue", "family": "file", "authority": "read", "target": "/private/tmp/pw-q4/A", "token_ref": "tb"}},
+      {"step_id": "b_read_after", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/private/tmp/pw-redelegation/A"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "/private/tmp/pw-redelegation/A"}},
+      {"step_id": "b_issue", "extension": {"operation": "issue", "family": "file", "authority": "read", "target": "/private/tmp/pw-redelegation/A", "token_ref": "tb"}},
       {"step_id": "b_to_c", "extension": {"operation": "transfer", "token_ref": "tb", "recipient": "C", "delivery_ref": "dc"}}
     ]},
     {"phase_id": "c_consume", "actor_id": "C", "actions": [
       {"step_id": "c_consume_second", "extension": {"operation": "consume", "delivery_ref": "dc", "handle_ref": "hc"}}
     ]},
     {"phase_id": "c_effect", "actor_id": "C", "actions": [
-      {"step_id": "c_read_after", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/private/tmp/pw-q4/A"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "/private/tmp/pw-q4/A"}},
+      {"step_id": "c_read_after", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/private/tmp/pw-redelegation/A"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "/private/tmp/pw-redelegation/A"}},
       {"step_id": "c_release", "extension": {"operation": "release", "handle_ref": "hc"}}
     ]},
     {"phase_id": "b_cleanup", "actor_id": "B", "actions": [
@@ -346,7 +388,7 @@ extensions cannot also `exec/spawn` in this first delivery. Other actors can use
 existing exec operations and descendant supervision. This bounds raw-authority
 exposure and inherited-authority interpretation without banning unrelated work
 specimen-wide. Supporting extension-participating exec actors would need explicit
-inheritance/descendant semantics; it is not needed to complete Q4.
+inheritance/descendant semantics; it is not needed for three-actor re-delegation.
 
 Keep actors alive through the scheduled work, then request termination and
 independently observe exit/reap. On any failure preserve every complete immutable
@@ -400,7 +442,8 @@ actor-form capacities, recorded and verified through [limits.json](docs/limits.j
 
 The resource caps overlap with, and do not increase, the total action cap.
 They are engineering budgets, not native macOS maxima: they cover the three-actor
-Q4 specimen and multiple independent resources without unbounded scheduling.
+re-delegation specimen and multiple independent resources without unbounded
+scheduling.
 Allocate only admitted resources, with checked aggregate arithmetic and explicit
 worst-case allocation accounting including outbound scratch, host custody and
 recipient copies. Per-actor tables cannot independently multiply global reference
@@ -485,7 +528,8 @@ Native NULL is not transport refusal; transport refusal is not native NULL;
 consume success is not access; release success is not general revocation. Error
 numbers do not identify sandbox cause. Keep comparison eligibility limited to
 ordinary query/attempt pairs, with the current submission-scope and ordering
-rules. Q2 supplies no exception for extension issuance.
+rules. The query representation limit above supplies no exception for extension
+issuance.
 
 Resolve each actor's disposition from raw evidence using the existing approach
 in [CWorkerDisposition.swift](runner/Sources/PWRunnerCore/CWorkerDisposition.swift).
@@ -534,9 +578,9 @@ native argument and lifecycle implementation, relevant binding/admission rules,
 ABI representation, family-specific evidence checks and documentation/tests. It
 reuses actor supervision, transport, references, ordering and publication. If it
 requires a genuinely different native lifecycle, extend that tagged lifecycle
-contract explicitly. It need not reproduce a standalone research pilot, and
-this plan does not invent an interface for mechanisms whose requirements are
-unknown.
+contract explicitly. Adding a family does not inherently require a separate
+experimental program. This plan does not invent an interface for mechanisms
+whose requirements are unknown.
 
 ## Compatibility and implementation owners
 
@@ -604,7 +648,7 @@ Implementation boundaries and coupled work:
 
 These stages lead to one capability. Do not close the work after adding an issue
 opcode or a handcrafted fixture. Do not advertise actor support before the public
-Q4 path, readers and failure propagation are integrated.
+re-delegation path, readers and failure propagation are integrated.
 
 1. **Contract and bounded execution model.** Implement the tagged actor form,
    normalization, reference/lifecycle rules, per-actor policy dossiers, proposed
@@ -621,9 +665,9 @@ Q4 path, readers and failure propagation are integrated.
 3. **Explicit file authority path.** Implement native issue, host custody, explicit
    transfer, recipient acceptance, consume/release tables and erasure. Connect
    them to the ordinary schedule and production evidence readers. Gate: public
-   specimens exercise multiple resources/handles and Q4 end to end; native refusal
-   and interruptions remain independently legible. Do not wait for a second
-   family to ship this stage.
+   specimens exercise multiple resources/handles and re-delegation end to end;
+   native refusal and interruptions remain independently legible. Do not wait
+   for a second family to ship this stage.
 4. **Integrated acceptance and documentation.** Complete the tests below on the
    signed candidate, review retained evidence/provenance, update coverage and
    operator documentation, and only then change the FAQ. Acceptance covers the
@@ -631,9 +675,9 @@ Q4 path, readers and failure propagation are integrated.
 
 ### Principal public-interface acceptance
 
-Add a `witness_contract` Q4 case through the public CLI with ordinary specimens,
-registered in [catalog.json](tests/catalog.json). Use normal test-owned fresh
-resources and record input, source/build identity, exact command, envelope,
+Add `witness_contract/extension_redelegation` through the public CLI with ordinary
+specimens, registered in [catalog.json](tests/catalog.json). Use normal test-owned
+fresh resources and record input, source/build identity, exact command, envelope,
 independent file identities/known contents and cleanup. The case must establish:
 
 - A, B and C are distinct fresh processes from the selected equipment, B and C
@@ -662,26 +706,27 @@ Pair it with a positive-capability calibration specimen using a simple supported
 file allowance and separately with native refusal/dependency-unavailability
 cases. Require calibration to exercise real issuance, transfer, consumption and
 fresh access on the acceptance host; if it cannot, report that coverage missing
-rather than accepting an all-unavailable implementation. If Q4 itself refuses
-issuance, this does not block shipping accurate witnessing: retain the refusal,
-and establish its unvisited later plumbing with the calibration and controls.
+rather than accepting an all-unavailable implementation. If the re-delegation
+case refuses issuance, this does not block shipping accurate witnessing: retain
+the refusal, and establish its unvisited later plumbing with the calibration and controls.
 If a required native symbol is absent, the product must report it correctly, but
 that host cannot supply complete native acceptance coverage for the feature.
 
 Use narrow public-specimen contrasts: omit B's consume, remove B's issuance
 allowance, change its class/path restriction where applicable, omit C's consume,
 and omit C's extension predicate. These are controls on association and claims;
-do not force every host to reproduce an archived return value. The checker must
-preserve actual observations and identify which comparisons were possible.
-These production tests do not modify or rerun the archived 24-trial battery.
+do not force every host to reproduce a particular native return value. The
+checker must preserve actual observations and identify which comparisons were
+possible.
+These are integrated production tests, with their own retained evidence.
 
 ### Misleading-pass and failure controls
 
 Extend existing native boundary equipment and independent checker mutations. Test
 fixtures may substitute functions at compile time with separate provenance as
 today; production must not. Substitutes establish boundary handling, not native
-policy effects. Reuse the archive's useful methods through maintained test code,
-with explicit attribution if code is adapted, not an import of its apparatus.
+policy effects. Implement publication, transient equality and descriptor controls
+in maintained test equipment; preserve attribution if adapting existing code.
 
 | Fault/control | Required rejection or retained distinction |
 | --- | --- |
@@ -698,7 +743,8 @@ with explicit attribution if code is adapted, not an import of its apparatus.
 | Maximum actors/references/phases, overflow, combined limits, malformed/mixed forms | Bounded refusal before launch or valid bounded evidence, never partially admitted plans. |
 
 Mutation checkers need passing controls and single/combined rejected controls,
-including a mutation derived from an actual integrated Q4/calibration envelope.
+including a mutation derived from an actual integrated re-delegation or calibration
+envelope.
 Deleting one event must not make another failure disappear; moving an event must
 not invent a native result. An independent reader must validate against the
 submitted plan and retained native/process evidence rather than merely trusting
@@ -736,9 +782,9 @@ controls and constructed results separately from native observations.
 Create `docs/EXTENSIONS.md` during implementation as the durable coverage and
 semantics document: accepted old/new forms, actors, operations/families, exact
 native calls and limits, lifecycle/reference rules, transient transport, missing
-evidence, process/timing/cleanup limits, example Q4 and refusal outcomes, and what
-each observation establishes. The supported-family table initially contains file
-read/read-write only. Add future concrete families there when implemented; do not
+evidence, process/timing/cleanup limits, example re-delegation and refusal
+outcomes, and what each observation establishes. The supported-family table
+initially contains file read/read-write only. Add future concrete families there when implemented; do not
 describe a promise of universal macOS extension coverage.
 
 Update the request grammar, contract, limits, architecture/worker tours, runner
@@ -746,8 +792,7 @@ and controller references, user guide, repository orientation and tests' coverag
 accounts together. Update the root guidance's one-worker wording to one fresh
 worker per actor while preserving one-way application, native C boundaries and
 witnessing rules. Explain the per-actor exec restriction and shared runner
-entitlement choice as current coverage. Keep the accepted report linked as
-historical evidence, with no altered observations or runtime dependency.
+entitlement choice as current coverage.
 
 Only after functionality and acceptance warrant it, put this answer in the FAQ:
 
@@ -764,25 +809,25 @@ the failure contract's ownership of its generated status/reading tables. The
 standalone guide must contain the coverage defining the answer; do not ship a
 broken sibling-file link or edit generated copies by hand.
 
-Completion requires the integrated public Q4 specimen, calibrated native path,
-refusal and interruption handling, independent association controls, legacy
-compatibility, ABI/transport bounds, verified process/resource cleanup and
+Completion requires the integrated public re-delegation specimen, calibrated
+native path, refusal and interruption handling, independent association controls,
+legacy compatibility, ABI/transport bounds, verified process/resource cleanup and
 documentation above. Record acceptance and retire this active plan under the
 repository's planning/records guidance when the implementation is accepted.
 
 ## Readiness and reconsideration triggers
 
-No unresolved native question blocks starting this implementation. The accepted
-investigation and current native implementation establish the immediate file
-call interface; Q4's effective authority is a result to witness, not a prerequisite
-for the design. Admission must permit its well-formed refusal case.
+No unresolved native question blocks starting this implementation. The native
+interface and bounded empirical findings above support the immediate file
+operations. Effective re-delegation is a result to witness, not a prerequisite
+for the design. Admission must permit the well-formed refusal case.
 
 Reconsider only on concrete evidence that affects a chosen boundary: for example,
 the proposed fixed mapped delivery protocol cannot be serviced after application
 under the intended policies, or a native family requires an unmodeled recipient
 binding. For the former, retain the failing native/setup observations and test
 that precise transport boundary through the existing harness before changing the
-design; do not begin another standalone browser-trace program. For an additional
-family, establish its exact signature and binding/lifetime requirements when
-adding that family. Neither question postpones the specified file implementation
+design. For an additional family, establish its exact signature and
+binding/lifetime requirements when adding that family. Neither question postpones
+the specified file implementation
 without such evidence.
