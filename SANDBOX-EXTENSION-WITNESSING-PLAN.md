@@ -776,6 +776,11 @@ At implementation entry, perform the narrow principal-policy qualification
 specified under [readiness](#readiness-and-reconsideration-triggers), before
 committing substantial work to the end-to-end acceptance case.
 
+The [test scouting report](records/sandbox-extension-issuance/TEST-SCOUTING-REPORT.md)
+maps existing test dependencies, fixture owners and proposed equipment to these
+gates. Keep its detailed inventory in the supporting record; the requirements
+below govern integration. Its source survey is not executed acceptance evidence.
+
 ### Integration boundary
 
 Hold the whole implementation series off `main` on a dedicated branch and
@@ -821,16 +826,24 @@ is authorized merely because the remaining work is blocked on equipment.
 1. **Contract and bounded execution model.** Implement the tagged actor form,
    normalization, reference/lifecycle rules, per-actor policy dossiers, proposed
    bounds and draft response/envelope model together on the branch. Prepare the
-   shared CLI/direct-XPC corpus and encoder/consumer fixtures. Gate: draft valid
-   forms normalize with correct ownership; invalid forms fail planning; public
-   actor forms are still refused before children; existing request meanings and
-   public versions remain unchanged; encoded size models cover the proposed data.
+   shared CLI/direct-XPC corpus and actor-scoped encoder/consumer, policy-dossier
+   and lifecycle controls. Define the complete process/resource ownership roster
+   for cleanup and identify capture, constructed-control and shape-golden owners.
+   Gate: draft valid forms normalize with correct ownership; invalid forms fail
+   planning; public actor forms are still refused before children; existing
+   request meanings and public versions remain unchanged; encoded size models
+   cover the proposed data. Null singular projections must not disable per-actor
+   policy and application validation.
 2. **Owned actor sessions and schedule.** Factor the worker driver without changing
    legacy execution, then add per-actor preparation, unapplied mode, parking,
    supervision, timing and phase barriers. Gate: two different policies actually
    reach two identified processes, each applies once; repeated visits preserve
    those identities; failed setup, death and validator loss preserve other actors'
-   evidence. No extension success is needed to establish these connections.
+   evidence. Establish process/policy identity and parked phase quiescence with
+   independent observations, not just the reply's actor labels. Adapt cleanup
+   witnesses before the first live actor case and review the source-mutation
+   controls below as their boundaries change. No extension success is needed
+   to establish these connections.
 3. **Explicit file authority path.** Implement native issue, host custody, explicit
    transfer, recipient acceptance, consume/release tables and erasure. Connect
    them to the ordinary schedule and production evidence readers. Wire the
@@ -838,13 +851,19 @@ is authorized merely because the remaining work is blocked on equipment.
    bump on the branch. Gate: valid public specimens exercise multiple
    resources/handles and re-delegation end to end; invalid forms create no
    children; native refusal and interruptions remain independently legible;
-   final maximal encoded evidence fits derived transport bounds. Do not wait
-   for a second family to ship this stage.
+   independent native-call and fresh-access observations detect skipped calls,
+   wrong associations and premature consumption while parked. Exercise repeated
+   consume, fanout/self-transfer, custody faults and byte-confinement sensitivity
+   without treating equal native handles as equal lifecycle references. Final
+   maximal encoded evidence must fit derived transport bounds. Do not wait for
+   a second family to ship this stage.
 4. **Integrated acceptance and documentation.** Complete the tests below on the
    signed candidate, qualify the actor timing profile, review retained
-   evidence/provenance, update coverage and operator documentation, and only then
-   change the FAQ and integrate the accepted result. Acceptance covers the
-   complete capability and compatibility adapter, not the staged code in isolation.
+   evidence/provenance, refresh the live capture baselines and complete the
+   inherited-restriction, helper-dependency and unsupported-response controls
+   below. Update coverage and operator documentation, and only then change the
+   FAQ and integrate the accepted result. Acceptance covers the complete
+   capability and compatibility adapter, not the staged code in isolation.
 
 ### Principal public-interface acceptance
 
@@ -929,11 +948,11 @@ in maintained test equipment; preserve attribution if adapting existing code.
 | Stop before call, after boundary, after return before result publication, after result before custody, after copy before acceptance | Distinct unresolved/publication/transport states; no completion synthesized from exit or bytes alone. |
 | Lose transfer ack after recipient acceptance | Accepted recipient observation survives; sender completion remains unresolved. |
 | Omit consume; consume wrong delivery; release wrong actor's handle; equal raw handles | Correct producer/owner joins; no inferred consumption or handle identity. |
-| Stale/future phase release; wrong actor ack; validator queried wrong PID; copied query result from another visit | Withhold `query_first` and affected associations without discarding independent raw evidence. |
+| Stale/future phase release; wrong actor ack; query targets a sibling actor; copied query result from another visit | Bind `sandbox_check.pid` to the phase's actor, not the validator subprocess PID; withhold `query_first` and affected associations without discarding raw evidence. |
 | Open target before apply or inherit its descriptor; replace target between observations | Fresh-open provenance and independent identity checks prevent credit for the wrong descriptor/resource. |
 | NULL/oversized/empty/interior-NUL token; missing symbols; corrupt length/family/session/index | Native result survives where valid; no delivery/consume from invalid bytes; bounded diagnostic only. |
 | Setup/map/close/unlink failures, simultaneous native failure and cleanup failure | Both primary and cleanup facts survive; no created-process or erasure claims from intentions. |
-| Actor death during each stage, host cancellation, timeout, missing reap, client loss | Published prefix retained; later independent actions handled explicitly; no replay or false cleanup completion. |
+| Actor death during each stage, host death/cancellation, timeout, missing reap, client loss | Published prefix retained where recoverable; later independent actions handled explicitly; no replay or false cleanup completion. |
 | Erasure shortened, omitted, or before final declared use; raw token accidentally serialized | Transient independent inspection rejects the control; tokens never enter retained fixtures. |
 | Maximum actors/references/phases, overflow, combined limits, malformed/mixed forms | Bounded refusal before launch or valid bounded evidence, never partially admitted plans. |
 
@@ -944,6 +963,25 @@ Deleting one event must not make another failure disappear; moving an event must
 not invent a native result. An independent reader must validate against the
 submitted plan and retained native/process evidence rather than merely trusting
 the production aggregate status. No checker parses SBPL to invent enforcement.
+
+Separate reader sensitivity from execution observations. A reader cannot infer
+an unreported consume or hidden inherited descriptor from otherwise consistent
+JSON. Use controlled native-call receipts and independent descriptor/resource
+observations to detect those misleading passes, retaining instrumented-equipment
+provenance separately from ordinary public specimens. For parked delivery, hold
+the schedule in A's phase after its explicit transfer to B, observe B's delivery
+acknowledgement without consumption, then release the same B and observe its
+operation. The early-consume mutant must be detected even if it never publishes.
+Do not transfer during a collection hold that forbids the sender's actions.
+
+Bind actor launch receipts to external PID/start/parent observations and
+distinguishable policy queries without requiring exec in an extension actor.
+Synthetic unavailable query records preserve their actor target but do not prove
+a validator ran. Actual host-death coverage needs an owned live-host control
+with independent child-lifetime observations; modelled failure and a killed
+host's missing reply cannot establish cleanup. Byte-leak controls inspect every
+issuance result in memory before writing captures, including degraded output;
+deliberately leaked bytes must not enter retained artifacts.
 
 ### Repository verification work
 
@@ -957,10 +995,55 @@ to every new tagged header, slot and resource table, including offset/width and
 overflow checks; update exact source-identity rejection controls. Add maximal
 reply and degraded-serialization controls with multi-actor failures.
 
+Review `runner_unit/launch_descriptor_controls`,
+`runner_unit/host_setup_oracle_sensitivity`, `runner_unit/exec_reader_mutations`
+and `runner_unit/reaped_ack_mutation` alongside the order-barrier mutations when
+factoring sessions. Re-anchor and run each where its changed boundary applies,
+with a passing baseline and rejected mutant; cover both forms when they use
+that boundary. Exec controls apply to actors where exec is admitted. If native
+sources split, update fixture include/link closures and receipts as well as the
+production build. Retain distinct C wait/clock, host scheduler, native boundary
+and public live oracles rather than replacing them with one shared driver.
+
+Before live actor tests, extend `tests/lib/worker_exit_witness.py` and cleanup
+owners to account for every launched actor and other owned processes/resources.
+Require positive exit evidence for launched actors; explicit never-launched
+state needs no fictitious reap. Missing roster entries or replies retain staging
+for recovery. An aggregate completion flag cannot replace those witnesses.
+
 Run existing legacy extension, directory, combinations and interruption controls
 to show their semantics survived. Include the independent `blackbox_e2e` reader
 and controls for the new contract, plus the BYOXPC extension/phase witness for
 the common selected-worker entitlement context and preserved helper distinction.
+Add these targeted compatibility controls using existing owned BYOXPC equipment:
+
+- Establish inherited restrictions on an unapplied actor with an actually
+  restricted signed worker, an independently observed baseline and an
+  available-access control. The current `entitlement_transfer` fixture tests
+  an applied SBPL `require-entitlement` rule; it does not establish an App Sandbox
+  restriction that survives omitting PW application. Signing keys and errno
+  alone do not establish the claimed effect.
+- Contrast legacy helper dependence with actor execution that launches no issuer
+  helper. Reuse missing-issuer equipment where applicable, preserving restoration
+  and invalid-installation diagnostics. Do not weaken validation to run a damaged
+  bundle; if it prevents the live contrast, establish the dependency at the
+  owned host launch boundary and retain that equipment limitation.
+- Extend live reservation controls to alter only the outgoing response-schema
+  marker after one real execution under the current XPC protocol. Require
+  `unsupported_runner_response`, preserved opaque reply and independent evidence
+  of one execution without replay. Pre-submission rejection of an old XPC
+  protocol is a different case. This control needs no historical signed runner
+  and makes no claim of complete historical-host interoperability.
+
+At the coordinated contract bump, update encoded shape goldens through their
+owners and extend hand-authored phase/evidence controls separately. Refresh
+checker and disposition captures from the final candidate as unmodified new
+capture/specimen pairs, preserving old evidence and producer identities. Add
+real actor captures for the principal outcome, positive calibration and native
+refusal; principal refusal may cover the last category. Constructed successes
+cannot supply missing native coverage, and historical version fields must not
+be edited to make old captures current.
+
 Run the normal signed candidate battery before acceptance; record canonical case
 IDs and dependency provenance for every credited run. Native counterfactuals are
 appropriate for changed signatures, allocation assumptions or lifetimes; use the
@@ -1021,11 +1104,13 @@ Effective re-delegation after successful application is still a result to witnes
 not a required positive outcome. Admission must permit the well-formed native
 issuance-refusal case without confusing it with failed policy application.
 
-At implementation entry, use the existing supported
+At implementation entry, register `witness_contract/extension_policy_qualification`
+with the actual prerequisites and managed evidence. Use the existing supported
 [`sbpl-check` helper](controller/src/bin/sbpl-check.rs) to compile B's exact policy,
 then the existing single-worker run path with that policy and an ordinary
 baseline access to establish application. Retain source bytes/hash, command,
 equipment/environment, compiler diagnostics and worker application observations.
+Tie those exact qualified policy bytes to the principal specimen's policy.
 These are narrow policy-qualification checks, not a new standalone experiment
 or a substitute for the later integrated actor case. A helper compile success
 alone does not establish application or extension-dependent issuance.
