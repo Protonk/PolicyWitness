@@ -79,6 +79,10 @@ and environment. The issuer retained ordinary read access and did not first
 consume authority supplied by another issuer. Consequently, these observations
 do **not** establish effective three-actor re-delegation or issuance enabled by a
 previously consumed extension. Those are outcomes the new specimen must witness.
+In particular, these records do not establish that `extension` is an accepted
+filter on `file-issue-extension`: that combination was not compiled or applied
+in the retained trials. Successful compilation of a literal-path allowance
+does not establish successful compilation of the proposed allowance below.
 
 For the matching and changed-allowance arrangements above, both `NONE` and `PATH`
 queries for `file-issue-extension` returned `(1,0)`, despite different native
@@ -205,6 +209,9 @@ This proposed complete JSON example illustrates the interface to implement. It
 is not admitted by today's build and is not a claim about the kernel's result.
 The test harness creates a fresh owned file and substitutes its absolute path
 for `/private/tmp/pw-redelegation/A`; no raw authority comes from the request.
+B's exact SBPL still needs the compile/apply qualification described under
+[readiness](#readiness-and-reconsideration-triggers). The example is not a
+record of successful policy compilation.
 
 ```json
 {
@@ -307,6 +314,43 @@ cannot supply it. Rerun and extend the order-barrier mutation controls.
 For an unapplied actor, the explicit declared-mode/setup publication replaces
 the apply prerequisite; it does not supply an apply result. An apply actor's
 failed or missing application cannot take that route to eligibility.
+
+### Actor wait primitive
+
+Use bounded atomic polling, following the existing worker's `wait_for_proceed`
+and `cpu_relax`, for activation, delivery, custody acknowledgement and phase
+release waits. A parked actor is inactive in the specimen schedule, not suspended
+by the OS. The host release-publishes a command; the actor discovers it on an
+acquire load when scheduled. There is no separate wake notification or inherited
+wait descriptor.
+
+Each polling iteration validates the continuous clock and applicable absolute
+deadline, checks cancellation, then inspects the bounded control/mailbox state.
+Preserve expiry-before-acceptance and sticky clock-fault handling. Validate the
+expected command identity/ordinal before servicing it, publish acknowledgement
+with release semantics, and return to the loop. A delivery serviced while parked
+does not activate specimen actions. Bound the amount of mailbox work between
+clock/cancellation checks; servicing one command cannot reset the wait deadline.
+
+Between empty polls, use the worker's existing bounded CPU-relax batch (currently
+1,000 ARM64 `yield` instructions). This is an instruction hint, not `sched_yield`
+or a timed sleep. Measure elapsed time through the existing validated
+[`mach_continuous_time` clock machinery](controller/tools/pw_probe_runner/pw_worker_timing.h),
+not by counting iterations or assuming a batch's duration. Keep its platform and
+sample-validation premises; the clock implementation is not promised to avoid
+kernel entry on every system. Do not add `nanosleep`, pipe reads, semaphore waits
+or an unbounded hardware wait as an implicit alternative. The unsandboxed host
+can continue using its own wait facilities.
+
+This choice avoids adding a post-apply blocking API or authority-bearing wait
+resource, at the cost of CPU consumption by parked actors. Record that apparatus
+cost in the worker account. Extend the existing deny-default wait and order
+controls to delivery, self-transfer, cancellation and expiry, and exercise the
+maximum actor count to expose starvation or missed deadlines. Batch tuning is
+an implementation detail subject to these checks; replacing polling with a
+blocking primitive changes the apparatus and needs an explicit resource,
+policy-dependency and failure-evidence account. Do not claim a scheduling or
+real-time guarantee from polling.
 
 ### Bounded transient authority channels
 
@@ -649,6 +693,9 @@ Implementation boundaries and coupled work:
 These stages lead to one capability. Do not close the work after adding an issue
 opcode or a handcrafted fixture. Do not advertise actor support before the public
 re-delegation path, readers and failure propagation are integrated.
+At implementation entry, perform the narrow principal-policy qualification
+specified under [readiness](#readiness-and-reconsideration-triggers), before
+committing substantial work to the end-to-end acceptance case.
 
 1. **Contract and bounded execution model.** Implement the tagged actor form,
    normalization, reference/lifecycle rules, per-actor policy dossiers, proposed
@@ -702,6 +749,19 @@ independent file identities/known contents and cleanup. The case must establish:
   A skipped native call, missing publication, invalid association, failed process
   setup or missing required test equipment cannot pass as such a refusal.
 
+B's successful compilation and one-way application of the consumed-extension
+issuance policy are prerequisites to crediting this principal case. A compiler
+rejection or apply failure remains correctly reported actor/runner failure; it
+can establish failure-propagation coverage but does not establish re-delegation
+coverage. The acceptable native refusal here is a reached issuance or later
+operation under the successfully applied policy, with its own published result.
+There is no sanctioned fallback to a bare allowance, a literal-path allowance,
+or ordinary read authority for B in the principal case. Those arrangements may
+calibrate the mechanism, but they remove the dependency this case must express.
+Any reformulation must retain that consumed-extension dependency and have its
+exact policy bytes, rationale and compile/apply evidence reviewed as part of
+the principal case; it cannot be substituted merely to obtain a passing result.
+
 Pair it with a positive-capability calibration specimen using a simple supported
 file allowance and separately with native refusal/dependency-unavailability
 cases. Require calibration to exercise real issuance, transfer, consumption and
@@ -711,6 +771,15 @@ case refuses issuance, this does not block shipping accurate witnessing: retain
 the refusal, and establish its unvisited later plumbing with the calibration and controls.
 If a required native symbol is absent, the product must report it correctly, but
 that host cannot supply complete native acceptance coverage for the feature.
+Missing positive calibration blocks acceptance of this capability, the FAQ's
+affirmative answer and retirement of this plan. Retain the result as missing
+coverage; implementation and other checks may proceed, but neither constructed
+successes nor an all-unavailable native run close this gate. Obtain applicable
+candidate-build evidence on a supported acceptance environment that supplies
+both principal-policy compile/apply coverage and the positive calibration path.
+Other environments can separately establish accurate refusal/unavailability;
+the capability need not succeed on every host. Record each environment and its
+credited cases using the existing evidence-applicability rules.
 
 Use narrow public-specimen contrasts: omit B's consume, remove B's issuance
 allowance, change its class/path restriction where applicable, omit C's consume,
@@ -817,10 +886,30 @@ repository's planning/records guidance when the implementation is accepted.
 
 ## Readiness and reconsideration triggers
 
-No unresolved native question blocks starting this implementation. The native
-interface and bounded empirical findings above support the immediate file
-operations. Effective re-delegation is a result to witness, not a prerequisite
-for the design. Admission must permit the well-formed refusal case.
+The native interface and bounded empirical findings above support starting the
+file-operation substrate. One narrow prerequisite to full acceptance remains
+unverified: whether the exact B policy using an `extension` predicate on
+`file-issue-extension` compiles and applies in the intended acceptance environment.
+Effective re-delegation after successful application is still a result to witness,
+not a required positive outcome. Admission must permit the well-formed native
+issuance-refusal case without confusing it with failed policy application.
+
+At implementation entry, use the existing supported
+[`sbpl-check` helper](controller/src/bin/sbpl-check.rs) to compile B's exact policy,
+then the existing single-worker run path with that policy and an ordinary
+baseline access to establish application. Retain source bytes/hash, command,
+equipment/environment, compiler diagnostics and worker application observations.
+These are narrow policy-qualification checks, not a new standalone experiment
+or a substitute for the later integrated actor case. A helper compile success
+alone does not establish application or extension-dependent issuance.
+
+If compilation or application fails, preserve the failure and keep principal
+acceptance open. Diagnose the exact failure before choosing another environment
+or considering a demonstrably equivalent policy spelling. If the construction
+cannot be established, reconsider the principal acceptance requirement explicitly;
+do not silently weaken the predicate or count calibration as the principal case.
+That unresolved prerequisite must remain visible even if the rest of the
+implementation is ready.
 
 Reconsider only on concrete evidence that affects a chosen boundary: for example,
 the proposed fixed mapped delivery protocol cannot be serviced after application
