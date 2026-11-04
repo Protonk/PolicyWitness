@@ -13,14 +13,24 @@ and include any limits the update has introduced or exposed. Shortening must
 preserve necessary explanations, qualifications and evidence distinctions;
 there is no word-count target.
 
+The working bias is that ARCHITECTURE and WORKER may carry too much explanatory
+weight, while LIMITS may have undiscovered or under-articulated constraints.
+Use that bias to direct attention, not to predetermine findings. Assess authored
+and script-generated prose as one account: a resolving citation may establish
+that a source exists without establishing the claim, and generated text still
+has to cohere for its reader.
+
 The initial review ends with an evidence-backed discussion between the user
 and the coordinator about whether fixes are needed and where they belong.
 Possible outcomes include documentation changes, implementation changes, coordinated
 simplification, retaining the current material, or further investigation.
 An unclear or inaccurate passage does not establish which of those is right.
-Do not implement proposed fixes during the initial review. After agreed changes
-have been implemented, a final reading pass with fresh, onboarded agents assesses
-whether each revised document communicates a coherent account to a hurried reader.
+Do not implement proposed fixes during the initial review. After any agreed
+documentation changes, a final reading pass assesses every candidate document,
+including unchanged ones, using a fresh reader followed by a skeptical assessor.
+The required outflow is one `READER-OUTFLOW-PLAN.md` at the repository root,
+recording decisions and separately assigned implementation work. Completing the
+lookback does not require completing every remedy it uncovers.
 
 This file is the execution plan. Writing it does not start the review.
 
@@ -31,22 +41,31 @@ fresh context (`fork_turns="none"`) and an explicit task packet, so readers do
 not inherit the coordinator's conclusions or another agent's investigation.
 Scoper, consistency and investigator packets include the applicable repository
 guidance, baseline, assigned scope, allowed sources, questions and return format.
-Stage 2 document readers and stage 5 readers instead receive materials and tasks
-in the sequence below. Keep the same agent and its task history throughout that
-sequence; a fresh context is required at the start of the role, not between its
-onramp, document use and questioning.
+Stage 2 document readers and the first reader in each stage 5 pair instead
+receive materials and tasks in the sequence below. Keep the same agent and its
+task history throughout that sequence; a fresh context is required at the start
+of the role, not between its onramp, document use and questioning. The second
+stage 5 reader receives the first reader's report and the document as specified
+there; its assessment is deliberately informed by that report.
 
 The coordinator owns scope decisions, handoff review, onramp preparation, work
 tasks, prodding questions, finding consolidation, investigation assignments and
-the final presentation. Agents return findings to the coordinator; they do not
-edit the reviewed documents or shared source
-files. Region markers are references in a report, not inserted annotations.
+the final presentation. An Astra supervisor handling dispatch may also assess
+claims, inspect evidence, question findings and raise issues with the user. If
+dispatch is delegated, the main session relays that supervisor's substantive
+questions and judgments. Keep the user involved in consequential uncertainty,
+verification tradeoffs and decisions to stop unproductive lines of inquiry;
+routine choices remain with the supervisor.
 
-Use the available concurrency without weakening the handoff gates. With three
-subagent slots, start the ARCHITECTURE scoper, WORKER scoper and LIMITS reader
-together. As reviewed scopes become ready, start fresh ARCHITECTURE and WORKER
-readers. Run later investigations in batches of up to three independent tasks.
-Do not hold an unused slot while an unrelated task can proceed.
+Agents return findings to the coordinator; they do not edit the reviewed
+documents or shared source files. Region markers are references in a report,
+not inserted annotations.
+
+Use the available concurrency without weakening the handoff gates. Start the
+ARCHITECTURE scoper, WORKER scoper and LIMITS reader as capacity permits. As
+reviewed scopes become ready, start fresh ARCHITECTURE and WORKER readers.
+Batch independent investigations within the available slots, accounting for
+any slot occupied by a separate supervisor.
 
 Read [README](../README.md), [root guidance](../AGENTS.md),
 [planning guidance](../CONTRIBUTING.md#planning-a-change) and
@@ -78,12 +97,12 @@ source inspection should not be necessary to understand its operational account.
 Give readers the general role and background. Keep specific expected takeaways
 in the coordinator's assessment notes rather than in their task prompts.
 
-Represent familiarity through a short work history. This is a best-effort proxy
-for an arriving reader, not a claim that onboarding reproduces human reading or
-establishes a particular latent familiarization mechanism. The coordinator picks
-the concrete tasks and questions; no fixed question bank or comparison experiment
-is required. Use read-only tasks and existing examples or observations. Onboarding
-does not authorize native trials, implementation changes or additional equipment.
+Use a short work history to acclimate readers to PW's setting and vocabulary.
+This is practical preparation, not a controlled experiment in comprehension.
+The coordinator chooses the tasks, questions and amount of assistance; no fixed
+question bank, scoring rubric or prompt-count threshold is required. Use
+read-only tasks and existing examples or observations. Onboarding does not
+authorize native trials, implementation changes or additional equipment.
 
 ### Prepare the reader's work
 
@@ -113,8 +132,8 @@ These are task shapes, not prescribed prompts or instructions to implement them.
 2. **Need checkpoint.** Give the consequential work task and ask for its tentative
    approach and missing information before supplying the document. Permit an
    explicit inability to answer. If the onramp already supplied the whole answer,
-   record that the task offers little evidence about the document's contribution
-   and choose a more informative task before proceeding.
+   record that overlap and adjust the task if useful. Do not build a succession
+   of onboarding exercises merely to isolate the document's contribution.
 3. **Document use.** Supply the target document and let the agent use it to do the
    work. Initially withhold the scope map and location-specific questions. Capture
    its work result and initial understanding before directing attention to the
@@ -132,14 +151,18 @@ These are task shapes, not prescribed prompts or instructions to implement them.
    Stage 2's full coverage obligations remain; success on one task does not
    establish that every selected unit communicates successfully.
 
-The normal intervention point is after the first work result. If useful prodding
-is needed during document use, preserve the current answer or work in progress
-first and mark subsequent responses as prompted. Record each question, the region
-or finding it addresses, its answer, and any new location cue, premise or correction
-the supervisor supplied. Keep these compact records with the review ledgers.
-Treat corrections as teaching; a later correct answer cannot retroactively show
-that the document communicated the point without that help. A reader's own account
-of what taught it something is evidence to examine alongside the recorded sequence.
+Usually capture the first work result before prodding, but assist during document
+use when useful. Keep the same agent and preserve enough of the initial answer
+and consequential interventions to distinguish initial, prompted and taught
+understanding. The interaction history is the record; summarize only what bears
+on a finding rather than maintaining a separate entry for every ordinary cue.
+
+Understanding reached with assistance is acceptable review evidence, and needing
+a prompt is not itself a documentation defect. The supervisor judges whether the
+reader needed ordinary orientation or a reference detail, or whether the document
+obscured a distinction essential to its job. An explicit correction cannot show
+that the document communicated the point unaided. Use that distinction to assess
+material confusion, without making unassisted performance a pass/fail gate.
 
 ## 0. Establish a shared baseline
 
@@ -319,10 +342,21 @@ even where the first reader reported no apparent problem.
 
 ## 3. Investigate with evidence
 
-Assign Astra investigators by consolidated question or closely related group
-of questions. Every problem receives an investigation; grouping reduces
-duplicate work without dropping findings. Assign a separate coverage task for
-potential undocumented limits if it does not fit the existing groups.
+The supervisor chooses the depth of factual verification for ARCHITECTURE and
+WORKER. There is no requirement to independently verify every factual claim or
+to commission an investigation for every reader objection. Prioritize claims
+whose uncertainty could change the reader's understanding, an experimental
+conclusion or the remedy, including claims the readers accepted too readily.
+The supervisor may inspect evidence directly, group related questions, dismiss
+minor concerns with a reason, or dispatch Astra investigators for deeper work.
+
+Keep a brief account of what was checked, what was relied on and what remains
+uncertain; do not imply comprehensive verification where it was not performed.
+Raise consequential gaps or expanding investigations with the user. The supervisor
+and user may stop a blind alley or repeated reconsideration of a minor point
+without forcing agent consensus. LIMITS retains comprehensive grounding of its
+current entries and a separate search for missing limits. Assign that coverage
+work to investigators even where the initial reader raised no objection.
 
 Each task packet states the baseline, exact passages, open question, related
 findings and what evidence would resolve the uncertainty. Avoid framing it as
@@ -393,7 +427,9 @@ Recheck cross-document consistency in light of the established facts and remedy
 options. If a proposed deletion or relocation removes an explanation another
 document needs, bring that dependency into the same decision.
 
-Present a concise decision packet, with detailed ledgers available behind it:
+Start the root `READER-OUTFLOW-PLAN.md` as the single decision and follow-up
+plan, then update it with the final reader pass. Present a concise account, with
+supporting review records and evidence referenced where needed:
 
 - Accepted scopes, baseline and any scope changes made during review.
 - Findings grouped by the decision needed, with exact locations and evidence.
@@ -407,7 +443,18 @@ Present a concise decision packet, with detailed ledgers available behind it:
   fixes cannot be mistaken for lack of review.
 
 The user and coordinator decide together whether fixes are warranted and where
-they belong. Implementation follows as separately agreed work.
+they belong, including which documentation changes to make before stage 5.
+Keep implementation repairs as separately assigned work in the outflow plan,
+including consequential defects. Review closure does not depend on completing
+that work. Record the user's accepted deferral, the current behavior and its
+effect on the documentation, the owner, the proposed work and its acceptance
+checks. Do not silently turn an implementation defect into a documentation fix
+or imply that closing the review validates defective behavior.
+
+Accepted documentation must accurately and usefully describe the current system,
+including relevant limitations. If an unresolved defect prevents that, keep the
+affected document's acceptance open and state what must be resolved. Distinguish
+the completion of the review from document acceptance and implementation follow-up.
 
 The initial review is ready for that discussion when every selected ARCHITECTURE
 and WORKER unit has a recorded disposition, every LIMITS entry has an evidence
@@ -415,20 +462,24 @@ assessment, the missing-limit search and consistency pass are complete, and
 every investigation is either resolved or explicitly bounded by what remains
 unknown. Do not present an unresolved item as a verified claim or a required fix.
 
-## 5. Read the revised documents with fresh onboarded readers
+## 5. Read the candidate documents with paired readers
 
-Run this pass near the end, after the substantial agreed changes and their
-validation, before accepting the revised documentation. It evaluates whole
-documents, including material excluded from the earlier detailed review.
-Assign one fresh Astra agent per document; none may have participated in the
-earlier review. Use the same staged onramp and work-task approach, with materials
-checked against the revised baseline. These agents act as readers and workers,
-not editors or implementation auditors. They do not produce line-by-line
-judgments or replacement prose.
+Run this pass for all three documents, even if the initial review recommends
+no documentation changes. Run it after stage 4 and any agreed documentation
+changes and validation; if none are needed, proceed directly from stage 4.
+It covers whole documents, including material excluded from the detailed review.
+
+Allocate two Astra readers per document. The first starts fresh from earlier
+review conclusions and uses the staged onramp and work task. The second starts
+in a separate context, reads the same document and the first reader's report,
+and assesses that report skeptically in either direction. Neither participates
+in the earlier review. These are whole-document readings, not line-by-line
+audits or assignments to rewrite the prose. Run each pair sequentially; different
+documents' pairs may progress concurrently as slots permit.
 
 ### Prepare a faithful, isolated artifact
 
-The coordinator records the revised source state and prepares one complete
+The coordinator records the candidate source state and prepares one complete
 artifact for each document, after any required regeneration. Use flat Markdown
 when it preserves the reading experience; use a self-contained rendered PDF
 when figures or layout are needed to understand the account. Preserve headings,
@@ -442,16 +493,17 @@ beyond what the document itself already tells its readers. Keep visible links,
 but readers may not follow them outside the artifact. Internal navigation is
 allowed. Record the artifact's format and hash alongside the source state.
 
-After its recorded onramp and need checkpoint, give each agent its artifact and
-work task. Beyond the bounded onboarding packet, do not supply the repository,
+After its recorded onramp and need checkpoint, give the first reader its artifact
+and work task. Beyond the bounded onboarding packet, do not supply the repository,
 other documents, scope maps, change brief, prior findings, generator inputs or
-intended answers. Readers may inspect their artifact and retained task history
-but may not consult external sources. Isolation here means controlled materials
-and no inherited investigation conclusions, not an absence of prior task context.
+intended answers. The first reader may inspect its artifact and retained task
+history but may not consult external sources. Isolation here means controlled
+materials and no inherited investigation conclusions, not an absence of prior
+task context.
 The coordinator keeps a short account of the essential takeaways established by
 the earlier review, written before seeing these reports and withheld from readers.
 
-### Calibrate the reading task
+### First reader: use the document and explain its account
 
 Use the primary role, background and task history defined above. Ask for a
 natural reading with limited attention, without reconstructing missing premises
@@ -486,9 +538,9 @@ invariants. Evaluate coherence, progression, emphasis and the visibility of
 qualifications. A linked reference can appropriately supply detail; flag a
 dependency when it prevents understanding the document's central account.
 
-### Return and assess the reader's model
+### First reader's report
 
-Each reader returns a short report containing:
+The first reader returns a short report containing:
 
 - Their initial and settled understanding, with uncertainty stated explicitly.
 - Their work result, the onramp's contribution and changes following specific
@@ -502,18 +554,66 @@ Each reader returns a short report containing:
 - Any essential outside knowledge they needed but the isolated document did
   not provide. Separate this from optional detail they would seek elsewhere.
 
-The coordinator compares these reports and recorded task answers with the
-withheld takeaways and verified behavior. Classify issues as document-level
-confusion, appropriate prerequisites, onboarding or task-design problems,
-artifact-conversion defects, or unsupported reader inferences;
-cite the reason rather than treating every reader complaint as a required edit.
-Treat these reads as evidence of possible confusion, not a measured rate of
-human misunderstanding or another factual verification pass.
+### Second reader: assess the first report skeptically
 
-Bring consequential findings to the user with evidence and remedy options.
-Decide together which warrant changes. If those changes materially alter a
-document's explanation, repeat its staged read with a new agent and a recorded
-onramp; an agent already taught the intended account cannot supply a fresh first
-impression of that explanation. Reuse the unaffected documents' results.
-The final review packet records each document's
-reader outcome, any follow-up changes and the disposition of remaining issues.
+Give a separate Astra reader the same artifact, the first report, and enough of
+the original task and intervention history to assess its claims fairly. Keep
+earlier investigation conclusions and the supervisor's intended answers out of
+this packet. The second reader may inspect those supplied materials, with the
+same restriction on outside sources. It does not repeat the onramp or represent
+an independent fresh-reader result; exposure to the first report is deliberate.
+
+Ask whether the first reader's account and concerns are supported by the document.
+Skepticism works in both directions: it may reject an alleged ambiguity, confirm
+that a problem matters, expose an overlooked limitation, or challenge an
+unwarranted assurance that the document is clear. Look for charitable readings
+and contrary passages as well as evidence of real confusion. Do not require
+disagreement, a quota of findings, or defense of the existing prose.
+
+Return a short assessment of the material claims, with document locations,
+reasons for agreement or disagreement, and the likely consequence for the
+reader's job. Identify minor or unsupported concerns that merit no further work.
+
+### Supervisor assessment
+
+The supervisor compares both reports with the task history and available evidence,
+and may question either reader. It can resolve or dismiss points directly, ask
+for a focused investigation, or discuss consequential uncertainty with the user.
+Agreement between readers is not proof; disagreement does not require repeated
+rounds until they converge. Stop unproductive or disproportionate follow-ups with
+a brief reason. Distinguish document problems from task design, artifact conversion,
+ordinary prerequisites and unsupported reader inferences.
+
+Treat the pair as evidence about possible confusion and the strength of the first
+report, not a measured rate of human misunderstanding or comprehensive factual
+verification. Keep question content and the depth of follow-up with the supervisor.
+
+Bring consequential findings to the user with evidence and remedy options, then
+decide together which warrant changes. The supervisor chooses whether a material
+change needs another reading; minor edits do not automatically restart the pair.
+When a fresh first impression is needed, use a new reader and a recorded onramp.
+Keep any assessment by an already informed reader labeled as such. Reuse the
+unaffected documents' results and record remaining uncertainty in the outflow plan.
+
+## 6. Finish the single outflow plan
+
+Complete `READER-OUTFLOW-PLAN.md` at the repository root. It is the review's
+required handoff, even if no documentation changes are recommended. Incorporate
+the stage 4 decisions and both readers' material findings rather than creating
+separate action plans for individual agents or documents.
+
+Keep it usable by someone who did not take part in the review. Include the
+reviewed baseline and scope, documentation changes made or still proposed,
+the rationale and evidence for accepted decisions, dismissed concerns that
+matter to those decisions, and unresolved questions. Summarize the actual
+verification coverage for ARCHITECTURE and WORKER and the comprehensive LIMITS
+assessment without implying that citation checks established behavior.
+
+For each accepted implementation follow-up, name the owner, current defect,
+affected documentation or observations, proposed approach, dependencies and
+acceptance checks. Record the user's agreement to defer it. Distinguish review
+completion, each document's acceptance and outstanding implementation work.
+Supporting reader records and managed test evidence remain evidence referenced
+by this one plan. The review may close with accurately documented limitations
+and assigned implementation work; it must not silently discard consequential
+findings or describe deferred repairs as complete.
