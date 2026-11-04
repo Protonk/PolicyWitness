@@ -1,0 +1,59 @@
+[
+  {
+    "content_hex": "5057206469726563746f727920636f6e74656e7473206265666f72652074686520617474656d70740a",
+    "exists": true,
+    "identity": {
+      "device": 16777233,
+      "gid": 0,
+      "inode": 142398529,
+      "mode": 33152,
+      "uid": 501
+    },
+    "path": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/before-existing",
+    "regular": true,
+    "size": 41
+  },
+  {
+    "errno": 2,
+    "exists": false,
+    "path": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/before-child"
+  },
+  {
+    "content_hex": "5057206469726563746f727920636f6e74656e7473206265666f72652074686520617474656d70740a",
+    "exists": true,
+    "identity": {
+      "device": 16777233,
+      "gid": 0,
+      "inode": 142398530,
+      "mode": 33152,
+      "uid": 501
+    },
+    "path": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/during-existing",
+    "regular": true,
+    "size": 41
+  },
+  {
+    "errno": 2,
+    "exists": false,
+    "path": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/during-child"
+  },
+  {
+    "content_hex": "5057206469726563746f727920636f6e74656e7473206265666f72652074686520617474656d70740a",
+    "exists": true,
+    "identity": {
+      "device": 16777233,
+      "gid": 0,
+      "inode": 142398531,
+      "mode": 33152,
+      "uid": 501
+    },
+    "path": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/after-existing",
+    "regular": true,
+    "size": 41
+  },
+  {
+    "errno": 2,
+    "exists": false,
+    "path": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/after-child"
+  }
+]

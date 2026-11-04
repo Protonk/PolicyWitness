@@ -1,0 +1,37 @@
+{
+  "artifacts": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory",
+  "attempts": [
+    {
+      "capture": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/read_write-baseline",
+      "case": "read_write-baseline",
+      "witness": "host reaped worker pid 23727",
+      "worker_exit_witnessed": true
+    },
+    {
+      "capture": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/read_write",
+      "case": "read_write",
+      "witness": "host reaped worker pid 23734",
+      "worker_exit_witnessed": true
+    },
+    {
+      "capture": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_consume-baseline",
+      "case": "no_consume-baseline",
+      "witness": "host reaped worker pid 23742",
+      "worker_exit_witnessed": true
+    },
+    {
+      "capture": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_consume",
+      "case": "no_consume",
+      "witness": "host reaped worker pid 23749",
+      "worker_exit_witnessed": true
+    },
+    {
+      "capture": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_predicate-baseline",
+      "case": "no_predicate-baseline",
+      "witness": "no runner_subprocess record beside normalized_outcome 'xpc_error'; worker spawn and exit unknown",
+      "worker_exit_witnessed": false
+    }
+  ],
+  "removed": false,
+  "staging": "/private/tmp/pw-extension-directory-uge3532e"
+}

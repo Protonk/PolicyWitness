@@ -13,9 +13,9 @@ four defects: unrecoverable holds from failures before launch, uncredited but
 unreported group intervention, a misattributed shared baseline cause, and an
 uncollected family crashing the dispatcher when packages appeared late. The
 review's account is `f80815fa:records/candidate-repair/findings.md`.
-On `main` at `b3536d1a`, the pinned default battery `integration-default-01`
+On `main` at `b3536d1a`, the then-pinned default battery `integration-default-01`
 (run `20261030T231522Z_2f76036f`) passed 202/202 against the accepted app with
-no harness error and an unchanged app.
+no harness error and an unchanged app. Its full main-checkout run is now retired.
 
 Reviewed exceptions:
 - `dispatcher/pytest_controls` is credited from `repair-h2-controls-01` at
@@ -63,6 +63,28 @@ Resources outside worktrees created by this work:
   identifier); it is the retained diagnosis for the bundle requirement and
   can be deleted.
 
+## Main-checkout retention (2026-11-04)
+
+At the user's direction, superseded main-checkout test runs are retired and
+`tests/RETAINED.json` is reduced from 89 entries to two current verification
+runs and the existing release-managed acceptance entry. The previous index is
+recoverable at `a54da012:tests/RETAINED.json`. Release archives and the foreign
+worktrees below are untouched; their own indexes remain authoritative for their
+local output. Removing their duplicate main-checkout pins does not settle any
+resource obligation.
+
+The current runs are `actor-passes-default-02` and
+`actor-passes-final-controls-02`. The former's `review/` contains the review,
+exact source snapshots, selected original failure records and the pruning
+receipt. These are gitignored, checkout-local materials. Full superseded runs
+are not relocated into another directory.
+
+Before retiring `workset-r2-byoxpc-02`, seven unchanged recovery files
+(20,628 bytes) were copied to
+`records/retained-resources/extension-directory-uge3532e/`. Its `manifest.json`
+records original paths, hashes, run identity and the prior retention entry.
+These are historical recovery observations, not relocated active ownership.
+
 ## Why these stay where they are
 
 Retained runs are bound to their absolute location: `retention.valid_owner`
@@ -87,7 +109,7 @@ lost, not settled.
 
 | Worktree | Branch / HEAD | Retained content | Detailed index |
 | --- | --- | --- | --- |
-| `/private/tmp/pw-pytest-exec-candidate-20261030` | `adoption/pytest-exec-family` `809ef178` (in `main`) | 20 pinned runs (pins also in `main`'s index); 95 deliberately unresolved nested fixture records; 176 closed actual records | `809ef178:records/pytest-exec-adoption/recovery-index.json` and `recovery.md` |
+| `/private/tmp/pw-pytest-exec-candidate-20261030` | `adoption/pytest-exec-family` `809ef178` (in `main`) | 20 pinned runs in that worktree's index; 95 deliberately unresolved nested fixture records; 176 closed actual records | `809ef178:records/pytest-exec-adoption/recovery-index.json` and `recovery.md` |
 | `/private/tmp/pw-pytest-exec-comparison-20261030` | `comparison/pytest-exec-family` `d03cc67f` (**not in `main`**) | 2 pinned runs, pinned only in this branch's index | `809ef178:records/pytest-exec-adoption/evidence-index.json` |
 | `/private/tmp/pw-pytest-exec-build-check-20261030` | `verification/pytest-exec-build` `4ff5eee0` (**not in `main`**) | 3 pinned runs (build refusals, 202-case default battery, mutation continuations), pinned only in this branch's index | same |
 | `/private/tmp/pw-pytest-boundary-20261030` | `investigation/pytest-boundary` `9e46c7b9` (in `main`) | 12 pinned runs, including `pytest-boundary-demo-01` with the prototype's acquired lease, its `owned` file and socket directory `/private/tmp/pw-py-res-6e703d57e50848888c7d8b19e46202f9` | `5dbcf4d8:records/pytest-maintenance/resource-recovery.md` |
@@ -117,9 +139,12 @@ external exit observations do not settle them.
   exited with `FileNotFoundError` from `Popen` before any command existed;
   the record still has no settlement, and none is created after the fact.
 - `/private/tmp/pw-extension-directory-uge3532e`: the BYOXPC extension
-  experiment's unknown-worker directory. Its own `ownership.json` identifies the
-  `no_predicate-baseline` request with unknown worker spawn/exit; public runner
-  list/reconcile were empty on 2026-10-30. Preserve until a worker exit witness exists.
+  experiment's unknown-worker directory. On 2026-11-04 the directory still
+  existed but its in-place `ownership.json` was absent. The unchanged historical
+  records preserved above identify the `no_predicate-baseline` request with
+  unknown worker spawn/exit; public runner list/reconcile were empty on
+  2026-10-30. Preserve the directory until a worker exit witness exists. The
+  evidence copy and retirement of the old run establish no such witness.
 - `/private/tmp/pw-f2-controlled-prep`: F2 controlled fixture preparation;
   accepted equipment is committed under `tests/`. Not a worktree; untouched.
 
@@ -130,9 +155,10 @@ external exit observations do not settle them.
   (`investigation/pytest-maintenance` `5dbcf4d8`): no runs, registries or
   ignored content; both branch refs deleted, tips are ancestors of `main`.
 - `/private/tmp/pw-f2-stage1` (detached `2de5b1c7`, ancestor of `main`): no runs
-  or registry. Its Stage-1 app (build 999) was the subject of `main`'s pinned
+  or registry. Its Stage-1 app (build 999) was the subject of `main`'s then-pinned
   `f2-stage1-observe-01` and `f2-stage1-original-01`. Their
   `artifact-integrity/before.json` and `after.json` both equalled the app's full
   inventory immediately before removal (45 entries, digest of the sorted
   inventory JSON `1c52a5e70bdfedf594fe5c0946fa43666b84c9001b391d00b13a783eb421c933`).
-  The app bytes are gone; its identity remains in those runs.
+  The app bytes and those full runs are gone; the inventory digest above remains
+  as a historical identity statement.

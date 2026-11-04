@@ -1,0 +1,59 @@
+{
+  "purpose": "Unchanged historical recovery evidence; these copies do not relocate active ownership or settle the unknown worker. The original run is retired by explicit user direction.",
+  "resource": "/private/tmp/pw-extension-directory-uge3532e",
+  "observed_on": "2026-11-04",
+  "resource_exists": true,
+  "in_place_ownership_exists": false,
+  "run_id": "20261029T232845Z_044d37dc",
+  "original_retention_entry": {
+    "path": "runs/workset-r2-byoxpc-02",
+    "run_id": "20261029T232845Z_044d37dc",
+    "reason": "R2 Stage 2 verification at fd90eee / signed build 1000. Preserve original failed results and external-runner cleanup evidence; no full-stage acceptance. The second run repeats BYOXPC unchanged and retains directory staging after unknown worker cleanup.",
+    "source": "fd90eee66538cc02dc5d21b7a3fe8eca81a17403",
+    "app_inventory": "artifact-integrity/before.json"
+  },
+  "files": [
+    {
+      "original_path": "tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/ownership.json",
+      "copy": "ownership.json",
+      "bytes": 1898,
+      "sha256": "3ae035b22b9ba6140bd3bb6d033a8ced294fb1658c04febccfb968133034d092"
+    },
+    {
+      "original_path": "tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/cleanup.json",
+      "copy": "cleanup.json",
+      "bytes": 2004,
+      "sha256": "ce8292aae9d6eedf560da5cdca14d9ec74ca1e94fab325759ef66836c62ddc81"
+    },
+    {
+      "original_path": "tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_predicate-baseline/capture.json",
+      "copy": "no_predicate-baseline/capture.json",
+      "bytes": 681,
+      "sha256": "b6c2c9eb05a2f0ba22421783bd0e906994763fd57af7d65c67cc8c1683bcbf21"
+    },
+    {
+      "original_path": "tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_predicate-baseline/external-final.json",
+      "copy": "no_predicate-baseline/external-final.json",
+      "bytes": 1564,
+      "sha256": "375278bebc4292b0bf00e835a79ac880b026e5ac032bc20033569ced71a293ff"
+    },
+    {
+      "original_path": "tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_predicate-baseline/pw.stderr",
+      "copy": "no_predicate-baseline/pw.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "original_path": "tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_predicate-baseline/run.json",
+      "copy": "no_predicate-baseline/run.json",
+      "bytes": 10167,
+      "sha256": "3612e1faae8baf818497d8e87d6e6c7edb514e22d71cd639003073af377624e8"
+    },
+    {
+      "original_path": "tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_predicate-baseline/specimen.json",
+      "copy": "no_predicate-baseline/specimen.json",
+      "bytes": 4314,
+      "sha256": "b64a5add3d78cfc7da8f85eff02ef60394f63e057c264722b422661ff3e30e1a"
+    }
+  ]
+}

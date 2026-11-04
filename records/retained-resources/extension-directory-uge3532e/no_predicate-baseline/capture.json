@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "run",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/workset-r2-byoxpc-02/suites/witness_contract/extensions_byoxpc/artifacts/directory/no_predicate-baseline/specimen.json",
+    "--timeout-ms",
+    "20000"
+  ],
+  "state": "exited",
+  "pid": 23753,
+  "started_at_unix_ns": 1793316551271485000,
+  "elapsed_seconds": 0.04124137479811907,
+  "returncode": 1,
+  "exit_code": 1,
+  "term_signal": null,
+  "harness_timeout_seconds": null,
+  "cleanup_kill_requested": false,
+  "launch_error": null,
+  "json_error": null,
+  "cleanup_error": null
+}

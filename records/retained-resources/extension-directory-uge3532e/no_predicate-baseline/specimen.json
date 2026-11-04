@@ -1,0 +1,149 @@
+{
+  "schema_version": 5,
+  "specimen_id": "directory-baseline-no_predicate",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)(allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "before-read",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/before-existing"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "read_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/before-existing"
+      }
+    },
+    {
+      "step_id": "before-write",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/before-existing"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "write_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/before-existing"
+      }
+    },
+    {
+      "step_id": "before-create",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/before-child"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "create_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/before-child"
+      }
+    },
+    {
+      "step_id": "during-read",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/during-existing"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "read_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/during-existing"
+      }
+    },
+    {
+      "step_id": "during-write",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/during-existing"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "write_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/during-existing"
+      }
+    },
+    {
+      "step_id": "during-create",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/during-child"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "create_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/during-child"
+      }
+    },
+    {
+      "step_id": "after-read",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/after-existing"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "read_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/after-existing"
+      }
+    },
+    {
+      "step_id": "after-write",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/after-existing"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "write_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/after-existing"
+      }
+    },
+    {
+      "step_id": "after-create",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/after-child"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "create_fresh",
+        "target": "/private/tmp/pw-extension-directory-uge3532e/no_predicate/after-child"
+      }
+    }
+  ],
+  "runner": {
+    "mode": "byoxpc",
+    "service": "com.policywitness.test.byoxpc.sc9e8d53cfcbb42d7a0a64927"
+  }
+}

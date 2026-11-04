@@ -171,11 +171,22 @@ changed files is likewise a review aid, not proof that every retained case is
 unaffected. Acceptance summaries must distinguish mechanically checked facts
 from these applicability judgments.
 
-Keep original runs and snapshots intact. Record corrections and replacement
+Keep retained runs and snapshots intact. Record corrections and replacement
 credits explicitly, including the reason for each rerun; do not turn an earlier
-failure into a passing historical run.
+failure into a passing historical run. Superseded runs may be retired through
+the cleanup procedure below.
 
 ## Preserve and clean up output
+
+Keep non-release retention small: normally the current accepted default battery
+and one complementary targeted run, at most two non-release pins per checkout.
+Any additional pin needs a concrete ongoing dependency, not merely a completed
+iteration or historical interest. Remove superseded pins and prune eligible
+runs when closing work. Release-managed entries remain governed by release
+rotation. Before retiring a run, preserve any still-needed, unreplaced observation
+and unresolved resource-recovery receipts; a small identified copy may suffice.
+Such copies must retain original identities and hashes and must not imply
+relocated active ownership or process settlement.
 
 Follow the [retention and locking contract](README.md#retention-ownership-and-execution-locking).
 Never unlink `tests/.checkout.lock`: replacing its inode bypasses an existing
