@@ -484,6 +484,8 @@ extension PWRunnerRunResult {
                 guard let token = event.token_ref, validReference(token),
                       let record = resources.tokens.first(where: { $0.token_ref == token }), record.actor_id == actorID, record.step_id == event.step_id,
                       event.handle_ref == nil, event.delivery_ref == nil else { return "issue reference" }
+                if event.status == "returned" && (event.native_result != 0 && event.native_result != 1
+                    || event.native_nonnull != (event.native_result == 1)) { return "issue nonnull disagrees with native result" }
             case "transfer":
                 guard let token = event.token_ref, let delivery = event.delivery_ref, validReference(token), validReference(delivery),
                       let record = resources.deliveries.first(where: { $0.delivery_ref == delivery }), record.token_ref == token,
@@ -535,6 +537,47 @@ extension PWRunnerRunResult {
                   delivery.token_ref == transfer.token_ref, delivery.source_actor_id == transfer.source_actor_id,
                   delivery.recipient_actor_id == transfer.recipient_actor_id, delivery.step_id == transfer.step_id,
                   PWTransferAck.names.values.contains(transfer.status) else { return "transfer record association" }
+            if transfer.status == "delivered" && (!transfer.request_published || transfer.custody_status != "held"
+                || transfer.copy_status != "copied" || transfer.equality != "equal" || !transfer.recipient_acknowledged) {
+                return "delivered transfer lacks custody, copy or recipient acknowledgement"
+            }
+            if transfer.source_acknowledged && !events.contains(where: { $0.operation == "transfer" && $0.step_id == transfer.step_id
+                && $0.actor_id == transfer.source_actor_id && $0.result_published && $0.status == transfer.status }) {
+                return "source acknowledgement lacks matching publication"
+            }
+        }
+        for token in resources.tokens {
+            guard let event = events.first(where: { $0.operation == "issue" && $0.token_ref == token.token_ref }) else { return "token lacks issue event" }
+            if !event.result_published {
+                let status = event.lifecycle?.boundary.state == "supported" && event.lifecycle?.boundary.answer == "not_reached"
+                    && !event.call_boundary_observed ? "not_reached" : "unresolved"
+                if token.status != status { return "unpublished resource status contradicts lifecycle" }
+            } else if event.status == "unavailable" {
+                if token.status != "unavailable" { return "token status contradicts issue" }
+            } else if event.native_result == 0 {
+                if token.status != "null" { return "token status contradicts issue" }
+            } else if event.native_result == 1 {
+                if !["issued", "issued_uncustodied"].contains(token.status) { return "token status contradicts issue" }
+            }
+        }
+        for handle in resources.handles {
+            guard let event = events.first(where: { $0.operation == "consume" && $0.handle_ref == handle.handle_ref }) else { return "handle lacks consume event" }
+            let status: String
+            if !event.result_published {
+                status = event.lifecycle?.boundary.state == "supported" && event.lifecycle?.boundary.answer == "not_reached"
+                    && !event.call_boundary_observed ? "not_reached" : "unresolved"
+            } else { status = event.status == "unavailable" ? "unavailable" : event.native_result == -1 ? "consume_failed" : "produced" }
+            if handle.status != status || handle.native_handle != (status == "produced" ? event.native_result : nil) {
+                return "handle status or value contradicts consume"
+            }
+        }
+        for delivery in resources.deliveries where !transfers.contains(where: { $0.delivery_ref == delivery.delivery_ref }) {
+            guard let event = events.first(where: { $0.operation == "transfer" && $0.delivery_ref == delivery.delivery_ref }) else { return "delivery lacks transfer event" }
+            if !event.result_published {
+                let status = event.lifecycle?.boundary.state == "supported" && event.lifecycle?.boundary.answer == "not_reached"
+                    && !event.call_boundary_observed ? "not_reached" : "unresolved"
+                if delivery.status != status { return "unpublished resource status contradicts lifecycle" }
+            }
         }
         return nil
     }

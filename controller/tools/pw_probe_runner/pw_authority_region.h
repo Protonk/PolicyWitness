@@ -52,7 +52,7 @@ typedef struct {
     uint32_t magic;
     uint32_t family;
     uint32_t writer_actor;         /* outbound: the issuing actor; inbound: the host on the source's behalf (source index) */
-    uint32_t operation_index;      /* global action index of the issue (outbound) or the transfer (inbound) */
+    uint32_t operation_index;      /* source actor's slot index of the issue or transfer */
     uint32_t resource_index;       /* token index (outbound) or delivery index (inbound) */
     uint32_t token_length;         /* excludes the terminator; 1..PW_EXTENSION_TOKEN_BYTES-1 */
     _Atomic uint32_t committed;
@@ -66,9 +66,12 @@ _Static_assert(offsetof(pw_authority_slot_t, committed) == 24, "authority slot c
 _Static_assert(offsetof(pw_authority_slot_t, token) == PW_AUTHORITY_SLOT_HEADER_BYTES, "authority token offset");
 
 /* Region header. The host writes identity, nonce, actor index and inbound
- * count before spawn; the actor validates them against its evidence header
- * before any token byte is read. transfer_request names the source's transfer
- * action (global action index + 1); transfer_ack and transfer_detail answer it. */
+ * count before spawn; the actor validates identity and actor index against
+ * its evidence header before any token byte is read. The nonce is a host
+ * session label, not an independently checked authentication value.
+ * transfer_request names the source actor's slot index + 1; transfer_ack
+ * and transfer_detail answer it. Inbound writer/operation/resource fields
+ * are assigned before spawn and snapshotted privately by the recipient. */
 typedef struct {
     uint32_t magic;
     uint8_t identity[PW_AUTHORITY_IDENTITY_BYTES];  /* the worker source identity */

@@ -881,6 +881,12 @@
           "description": "Worker release barrier: max slots proceed"
         },
         {
+          "id": "authority_binding",
+          "description": "Recipient snapshots delivery ownership before application and rejects wrong source, action or resource before consumption",
+          "command": ["bash", "tests/suites/runner_c_worker_harness/authority_binding.sh"],
+          "requires": ["clang"]
+        },
+        {
           "id": "activation_named_ordinal",
           "description": "Worker activation barrier: the named ordinal activates a parked apply actor"
         },

@@ -243,7 +243,14 @@ its actor, that actor's phase, the resource table and the actor's disposition
 record; a release must follow a consume of the same handle in action order,
 and no event is credited without the acting actor's declared or applied setup
 and that phase's acknowledged release. Custody acceptance, delivery acceptance
-and native consumption remain three observations.
+and native consumption remain three observations. A source acknowledgement
+requires a completed transfer event with the same answer; request withdrawal
+alone also follows timeouts. `delivered` requires held custody, a copied slot,
+equal bytes and recipient acknowledgement. Resource `not_reached` requires a
+supported lifecycle claim; an interrupted or unknown producing action is
+`unresolved`. Token and handle status/value projections must agree with their
+producing events. Required authority setup failure is an apparatus failure,
+not native API unavailability.
 
 <!-- BEGIN SHARED EXTENSION STATUSES -->
 

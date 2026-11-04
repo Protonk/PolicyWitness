@@ -247,8 +247,8 @@ def prepare_variant(inputs, out, variant):
     worker = root / "runner/Sources/PWRunnerCore/ActorSession.swift"
     edits = {
         "wrong_ready_direction": (
-            "        posix_spawn_file_actions_adddup2(&fileActions, readyPipe[1], 4)\n",
-            "        posix_spawn_file_actions_adddup2(&fileActions, readyPipe[0], 4)\n"),
+            "        var launchSources = [policyPipe[0], shmFD, readyPipe[1]]\n",
+            "        var launchSources = [policyPipe[0], shmFD, readyPipe[0]]\n"),
         "wrong_shm_argv": ('            "--shm-fd", "3",\n', '            "--shm-fd", "4",\n'),
         "partial_unmap": ("        if let base { _ = munmap(base, PWShmLayout.regionBytes) }\n",
                           "        if let base { _ = munmap(base, Int(getpagesize())) }\n"),
@@ -331,11 +331,22 @@ def assert_scan(mapped, stage, start, length, expected_mapped):
 
 
 def assert_observations(variant, rows, results):
-    assert len(rows) == 22 and all(row["legacy_accepted"] for row in rows), rows
-    assert len([r for r in results if "case" in r]) == 22, results
+    assert len(rows) == 23 and all(row["legacy_accepted"] for row in rows), rows
+    assert len([r for r in results if "case" in r]) == 23, results
     assert len([r for r in results if "rejected_control" in r]) == 10, results
     for row in rows:
         mapped = row["mapping"]
+        if row["owner"] == "worker" and row["fault"] in ("unlink", "clear_cloexec"):
+            # These checked prerequisites now refuse before mmap. They must
+            # leave no acquisition, unmap or observer-cleanup claim behind.
+            assert all(mapped[key] == 0 for key in (
+                "capture_count", "mapping_address", "acquired_bytes", "unmap_bytes",
+                "legacy_maps_before_fixture_cleanup", "fixture_cleanup_attempted",
+                "query_count", "query_overflow")), row
+            assert mapped["owner_unmap_rc"] == mapped["owner_unmap_errno"] == -777, row
+            assert mapped["fixture_cleanup_rc"] == mapped["fixture_cleanup_errno"] == -777, row
+            assert not mapped["queries"] and all(not any(scan.values()) for scan in mapped["scans"]), row
+            continue
         assert mapped["capture_count"] == 1 and mapped["page_bytes"] > 0, row
         assert mapped["legacy_maps_before_fixture_cleanup"] == 0, row
         assert mapped["owner_unmap_rc"] == 0 and mapped["owner_unmap_errno"] == 0, row

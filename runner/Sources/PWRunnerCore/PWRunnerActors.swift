@@ -5,9 +5,8 @@ import Darwin
 // contract sources: these compile in the host and the client. Normalization,
 // scheduling and evidence assembly live beside the orchestrator.
 
-/// Actor-form capacities and provisional budgets. Distinct from the legacy
-/// single-worker settings even where the numbers agree; the timing values are
-/// starting budgets that the actor timing qualification confirms or revises.
+/// Actor-form capacities and qualified budgets. Distinct from the legacy
+/// single-worker settings even where the numbers agree.
 enum PWActorLimits {
     static let actors = 8
     static let phases = 16
@@ -82,7 +81,7 @@ struct PWRunnerActorLaunch: Codable, Equatable {
     var pid: Int
     var parent_pid: Int
     var environment: String = "empty"
-    var standard_streams: String = "null_device"
+    var standard_streams: String = "stdin_policy_pipe_stdout_stderr_null_device"
     var inherited_descriptors: [Int] = [0, 3, 4]
 }
 

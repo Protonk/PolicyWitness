@@ -176,23 +176,26 @@ is recorded. Public admission in
 [`extensionMeaningFailure`](../runner/Sources/PWRunnerCore/ProbeRunner.swift)
 refuses an exec attempt combined with extension use.
 
-Host launch setup leaves some native returns unchecked: file-action
-initialization and worker endpoint duplication, evidence unlink/descriptor
-flags, issuer handle initialization and copied-argument allocation, in
-[`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift),
-[`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) and
-[`withCStringArrayCopy`](../runner/Sources/PWRunnerCore/CWorker.swift). A
-successful normal launch observes one completed path. The
+Worker launch setup checks file-action initialization, endpoint duplication,
+evidence unlink and descriptor flags, and spawn attributes before dispatch in
+[`ActorSession`](../runner/Sources/PWRunnerCore/ActorSession.swift). The
 [host setup controls](../tests/suites/runner_unit/README.md#host-setup-failures-and-descriptor-collisions)
-inject these failures in disposable source copies with an independent child
-observer. Action-add failures let a child run with a wrong endpoint, failed
-argument copies allow empty or truncated argv, and unlink failures leave
-shared-memory names after owner teardown; checked worker pipe-flag and issuer
-action/attribute-flag failures prevent spawn in the exercised cases. Without
-injected failure, the low-descriptor fixture closes stdin and low unused
-descriptors first, so evidence is allocated at fd 0 and the policy action
-overwrites it: the child receives a policy pipe at fd 3, and a readiness source
-already at its destination stays close-on-exec, leaving fd 4 absent.
+inject failures in disposable source copies and observe refusal and cleanup.
+Copied-argument allocation in
+[`withCStringArrayCopy`](../runner/Sources/PWRunnerCore/CWorker.swift) remains
+unchecked; failed copies can produce empty or truncated argv. Issuer handle
+initialization in
+[`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) has
+fixture-contained invalid-handle use, so its no-spawn result is not proof of
+production handling of an invalid native handle. An injected unlink failure
+leaves an owned empty shared-memory name for the fixture to remove.
+
+The single-worker form retains its launch arrangement: the low-descriptor
+control can allocate evidence at fd 0, which a later policy duplication
+overwrites. Actor launches relocate sources above their destinations and use
+close-on-exec by default. A separate kernel descriptor inventory checks actual
+parked actors with a deliberately inheritable host descriptor and closed host
+stdin; their explicit endpoints survive and the unrequested descriptors do not.
 
 ### Launch observation L
 
@@ -230,11 +233,12 @@ Reuse for another implementation or environment requires an applicability
 review or a new observation; matching source hashes establish source identity,
 not that the relevant conditions were exercised.
 
-Known gap: the starting-state census is limited to L's two recorded launches.
-Live signal masks, resource limits, a complete Mach-right census and private
-runtime state remain unobserved; native inheritance and loader behavior
-therefore remain part of the instrument's received substrate, without a
-complete isolation or effective-authority census.
+Known gap: L covers two recorded launches, and the actor descriptor controls
+cover specified endpoints and injected descriptor contamination. Live signal
+masks, resource limits, a complete Mach-right census and private runtime state
+remain unobserved; native inheritance and loader behavior remain part of the
+instrument's received substrate, without a complete isolation or
+effective-authority census.
 
 ## Acquisitions inside attempts
 
@@ -308,7 +312,7 @@ call sites.
 
 ## Supplied extension authority
 
-An extension experiment supplies additional authority deliberately. The host
+The single-worker extension form supplies additional authority deliberately. The host
 resolves the target and records its metadata, then a fresh ordinary-authority
 issuer requests a native file token. The issuer and host have their own channel
 views, separate from worker evidence. Host delivery requires bounded accepted
@@ -353,8 +357,10 @@ defines the limits of native results and local publication.
 In the actor form, [`prepare_authority`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
 resolves the issue, consume and release entry points, lowers the core limit,
 maps the actor's authority region and validates its identity and index before
-application; a failure publishes a setup status and leaves the ordinary
-actions intact. [`attempt_extension_issue`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+application. Required channel setup failure prevents the scheduler from
+releasing that actor's phases; missing native symbols instead leave individual
+operations unavailable. The recipient snapshots each inbound slot's assigned
+source, action and delivery before application and checks them on publication. [`attempt_extension_issue`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
 calls `sandbox_extension_issue_file` once with the exact submitted bytes,
 publishes nonnull or NULL with the saved errno, copies a bounded token into the
 outbound slot, waits for the host's custody answer, erases the native
@@ -502,7 +508,7 @@ created files and references held by other processes have their own lifetimes.
 | Id | Node | Kind | Inventory ID | Acquired by | When | Held across | Release / teardown action | Authority | Reaches exec children | Role | Sources | Checks and assertion scope | Limits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | s1a | Evidence shared-memory object | reporting | S1a | H: pw_cworker_shm_open_create, ftruncate | Before compilation | Later phases; last mapping/reference may outlive worker | H requests immediate shm_unlink; injected failure leaves name after teardown | Shared writable input/publication storage | No explicit child reference; see S13b | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata. |  |
-| s1b | Host shmFD | reporting | S1b | H: pw_cworker_shm_open_create; requests FD_CLOEXEC clear without checking return | Before compilation | Through successful worker spawn; host mapping remains through collection | H setup/spawn-failure close, or ownership relinquished and close after transfer deadline starts on successful spawn | Can map/resize the evidence object | Worker receives it; later validators cannot inherit the closed host reference; exec child excludes worker evidence descriptors | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata.; [`check`](../tests/suites/runner_unit/launch_descriptor_controls.py) — Independent object, descriptor-number reuse and complete-mapping teardown controls; successful worker reporting and reap remain intact. |  |
+| s1b | Host shmFD | reporting | S1b | H: pw_cworker_shm_open_create; checks unlink and descriptor flags (clear in single-worker form, CLOEXEC in actor form) | Before compilation | Through successful worker spawn; host mapping remains through collection | H setup/spawn-failure close, or ownership relinquished and close after transfer deadline starts on successful spawn | Can map/resize the evidence object | Worker receives it; later validators cannot inherit the closed host reference; exec child excludes worker evidence descriptors | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata.; [`check`](../tests/suites/runner_unit/launch_descriptor_controls.py) — Independent object, descriptor-number reuse and complete-mapping teardown controls; successful worker reporting and reap remain intact. |  |
 | s2 | Host evidence base mapping | reporting | S2 | H: mmap, zero/populate/page-touch | Before compilation | Beyond host descriptor close, through collection including after worker exit or unconfirmed cleanup | H defer munmap | Read worker publications; write input/release/exit request | No: exec replaces address space | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) — Controlled worker publications, ownership, acknowledgement reconciliation and confirmed reap; includes acknowledgement recovered after abnormal exit.; [`check`](../tests/suites/runner_unit/launch_descriptor_controls.py) — Independent object, descriptor-number reuse and complete-mapping teardown controls; successful worker reporting and reap remain intact. |  |
 | s3a | Host ready-pipe read end | reporting | S3a | H: pipe; FD_CLOEXEC | Before compilation | Readiness wait only | H after readiness wait or setup/spawn failure | Observe ready byte | No: close-on-exec | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata. |  |
 | s3b | Host ready-pipe write end | reporting | S3b | H: pipe; FD_CLOEXEC | Before compilation | Through worker spawn | H immediately after spawn or failure | Supply worker readiness endpoint | Worker fd 4; child excludes it | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata. |  |
@@ -525,10 +531,10 @@ created files and references held by other processes have their own lifetimes.
 | s13a | Worker policy fd 0 | reporting | S13a | H adddup2(policyPipe[0], 0); W default policy fd | Before compilation | Later attempts and phases, until exit | No W close; exit | Read remaining policy stream; normally EOF after source receipt | No: child addopen replaces stdin | P, retained after use | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`launch_inventory`](../tests/suites/runner_exec_inheritance/run.sh) — Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L. |  |
 | s13b | Worker evidence fd 3 | reporting | S13b | H requests adddup2(shmFD, 3); low-fd collision can substitute policy pipe | Before compilation | Later attempts and phases, until exit | No W close; exit | Map backing object separately from existing mapping | No: child CLOEXEC_DEFAULT | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`launch_inventory`](../tests/suites/runner_exec_inheritance/run.sh) — Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.; [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata. |  |
 | s13c | Worker ready fd 4 | reporting | S13c | H requests adddup2(readyPipe[1], 4); self-dup control leaves fd absent | Before compilation | Later attempts and phases, until exit | No W close; exit | Write readiness pipe; host later closes reader | No: child CLOEXEC_DEFAULT | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`launch_inventory`](../tests/suites/runner_exec_inheritance/run.sh) — Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L.; [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata. |  |
-| s13d | Worker token fd 5, if supplied | authority | S13d | H requests adddup2(tokenFD, 5); failed action can still spawn | Before compilation | Through extension preparation | prepare_extension closes once; early main refusals leave to exit | Map token channel | No admitted exec+extension plan; child flags would exclude it | A | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`extension_boundaries`](../tests/suites/witness_contract/extension_boundaries.sh) — Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only.; [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata. |  |
+| s13d | Worker token fd 5, if supplied | authority | S13d | H checks adddup2(tokenFD, 5) before spawn | Before compilation | Through extension preparation | prepare_extension closes once; early main refusals leave to exit | Map token channel | No admitted exec+extension plan; child flags would exclude it | A | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`extension_boundaries`](../tests/suites/witness_contract/extension_boundaries.sh) — Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only.; [`check`](../tests/suites/runner_unit/host_setup_controls.py) — Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata. |  |
 | s14a | Worker inherited stdout/stderr | mixed | S14a | H spawn, without replacement file actions | Before compilation | Until exit | Exit; no explicit W close | Whatever underlying endpoints allow; L saw read/write /dev/null | No: exec-child capture pipes replace 1/2 | none | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`launch_inventory`](../tests/suites/runner_exec_inheritance/run.sh) — Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L. |  |
 | s14b | Other inheritable ambient host descriptors | mixed | S14b | H spawn without CLOEXEC_DEFAULT | Before compilation | Until exit unless a file action overwrites number | No generic W sweep; exit | Depends on inherited objects | No: exec-child CLOEXEC_DEFAULT; IC/CLI test child isolation | none | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`contaminated_worker`](../tests/suites/runner_exec_inheritance/run.sh) — Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF. |  |
-| s14c | Possible original-number alias of evidence shmFD | reporting | S14c | H clears FD_CLOEXEC and duplicates to 3 without closing source | Before compilation | Until worker exit if original number survives file actions; closing the host descriptor does not remove this child reference | No generic W sweep; exit | Same evidence object as S13b, not a second object | No: exec-child CLOEXEC_DEFAULT | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | Source only; no assertion cited |  |
+| s14c | Possible original-number alias of evidence shmFD | reporting | S14c | Single-worker form: H clears FD_CLOEXEC and duplicates to 3 without closing the child source alias; actor form relocates and closes original aliases at exec | Before compilation | Until worker exit if original number survives file actions; closing the host descriptor does not remove this child reference | No generic W sweep; exit | Same evidence object as S13b, not a second object | No: exec-child CLOEXEC_DEFAULT | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | Source only; no assertion cited |  |
 | s15 | Worker environment vector | mixed | S15 | H posix_spawn(..., nil) | Before compilation | Until exit | Process teardown | No entries observed; potential environment-dependent behavior is source-scoped | No: explicit {NULL} child env; IC/CLI test this boundary | none | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`launch_inventory`](../tests/suites/runner_exec_inheritance/run.sh) — Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L. |  |
 | s16a | Credentials and signed worker entitlements, ambient policy context | mixed | S16a | Kernel/loader at H spawn; controller checks required keys | Before compilation | Until exit; SBPL/extension interventions alter effective access | Exit, not a PW reset | Starting access and restrictions; built-in manifest has empty entitlements | Credentials/policy inherit subject to exec semantics; child signature supplies own entitlements | Supplied entitlements plus ambient authority/restrictions; mixed starting substrate | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`enforce_required_entitlements`](../controller/src/runner_select.rs) | Source only; no assertion cited |  |
 | s16g | Working directory | mixed | S16g | Received at H spawn; no PW reset | Before compilation | Later attempts/phases, until exit | Exit | Relative file-target resolution | Yes, no chdir action | none | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`launch_inventory`](../tests/suites/runner_exec_inheritance/run.sh) — Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L. |  |
@@ -648,8 +654,8 @@ created files and references held by other processes have their own lifetimes.
 
 Notes:
 
-- `s5`: Setup controls observe a failed endpoint action followed by spawn.
-- `s6`: Setup controls observe later uses after failed file-action initialization/addition; fixture containment is not production refusal.
+- `s5`: Setup controls observe endpoint-action failure refusing spawn with cleanup.
+- `s6`: Worker setup controls observe failed file-action initialization/addition refusing spawn without use of an invalid handle.
 - `s12a`: Private issuance allocation internals remain unobserved.
 - `s14a`: L observed read/write null-device stdout and stderr.
 - `s14b`: L observed no additional numeric descriptor; the contaminated-worker control separately supplies a positive inheritance case.

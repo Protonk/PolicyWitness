@@ -564,6 +564,7 @@ typedef char *(*pw_issue_fn)(const char *, const char *, uint32_t);
 static pw_issue_fn extension_issue;
 static pw_authority_region_t *authority;
 static size_t authority_bytes;
+static struct { uint32_t writer, operation, resource; } inbound_assignment[PW_AUTHORITY_MAX_INBOUND];
 static pw_shm_header_t *g_hdr;
 static pw_shm_evidence_t *g_evidence;
 static int64_t handle_table[PW_AUTHORITY_MAX_HANDLES];
@@ -790,8 +791,13 @@ static void prepare_authority(pw_shm_header_t *hdr, int fd) {
         close(fd);
         goto publish;
     }
+    /* Darwin shm objects report a page-rounded length after ftruncate. Keep
+     * the logical slot bound below; permit only the final page's padding here. */
+    off_t page = getpagesize();
+    off_t maximum = (off_t)PW_AUTHORITY_REGION_BYTES(PW_AUTHORITY_MAX_INBOUND);
+    off_t rounded_maximum = page > 0 ? ((maximum + page - 1) / page) * page : maximum;
     if (metadata.st_size < (off_t)PW_AUTHORITY_REGION_BYTES(0)
-        || metadata.st_size > (off_t)PW_AUTHORITY_REGION_BYTES(PW_AUTHORITY_MAX_INBOUND)) {
+        || metadata.st_size > rounded_maximum) {
         status = PW_AUTHORITY_SETUP_REJECTED; detail = PW_DELIVERY_STAGE_CHANNEL_SIZE;
         close(fd);
         goto publish;
@@ -820,6 +826,11 @@ static void prepare_authority(pw_shm_header_t *hdr, int fd) {
     }
     authority = region;
     authority_bytes = bytes;
+    for (uint32_t i = 0; i < region->inbound_count; i++) {
+        inbound_assignment[i].writer = region->inbound[i].writer_actor;
+        inbound_assignment[i].operation = region->inbound[i].operation_index;
+        inbound_assignment[i].resource = region->inbound[i].resource_index;
+    }
     status = PW_AUTHORITY_SETUP_MAPPED;
 publish:
     hdr->authority_status = status;
@@ -835,7 +846,8 @@ static void service_inbound_once(void) {
         pw_authority_slot_t *slot = &authority->inbound[i];
         if (atomic_load_explicit(&slot->committed, memory_order_acquire) != 1u) continue;
         if (atomic_load_explicit(&slot->acknowledged, memory_order_acquire) != PW_AUTHORITY_ACK_NONE) continue;
-        uint32_t problem = pw_authority_frame_problem(slot, PW_AUTHORITY_FAMILY_FILE);
+        uint32_t problem = pw_authority_slot_problem(slot, PW_AUTHORITY_FAMILY_FILE,
+            inbound_assignment[i].writer, inbound_assignment[i].operation, inbound_assignment[i].resource);
         slot->reject_detail = problem;
         atomic_store_explicit(&slot->acknowledged,
                               problem ? PW_AUTHORITY_ACK_REJECTED : PW_AUTHORITY_ACK_ACCEPTED, memory_order_release);

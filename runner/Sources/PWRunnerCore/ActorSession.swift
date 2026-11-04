@@ -9,8 +9,8 @@ import Foundation
  * never decides what a phase means or classifies anything.
  *
  * Setup runs in the initializer, in the order the legacy driver used:
- *   1. shm_open + ftruncate + mmap a PWShmLayout.regionBytes region; clear
- *      FD_CLOEXEC so the child inherits the FD.
+ *   1. shm_open, unlink, ftruncate and mmap an evidence region. Only the
+ *      explicit dup2 destination is inherited by an actor.
  *   2. Zero the header, write identity, counts, actor fields, slots, params,
  *      phase partitions (with each visit's global phase), touch pages.
  *   3. Release-store `prepared = 1`.
@@ -34,6 +34,8 @@ final class ActorSession {
     private var tokenFD: Int32 = -1
     private var fileActions: posix_spawn_file_actions_t? = nil
     private var actionsInitialized = false
+    private var spawnAttributes: posix_spawnattr_t? = nil
+    private var attributesInitialized = false
     private var tornDown = false
     let policyBytes: [UInt8]
     private(set) var transferTimeout: PWWorkerPolicyTransferTimeout?
@@ -52,7 +54,7 @@ final class ActorSession {
     private static let placeholder = UnsafeMutablePointer<UInt8>.allocate(capacity: 1)
 
     init(_ input: CWorkerInput, processCalls: ChildProcessCalls = ChildProcessCalls(),
-         transferCalls: PolicyTransferCalls = PolicyTransferCalls()) {
+         transferCalls: PolicyTransferCalls = PolicyTransferCalls(), setupRemainingMs: (() -> Int)? = nil) {
         self.input = input
         self.calls = processCalls
         self.policyBytes = Array(input.policy.utf8)
@@ -87,9 +89,16 @@ final class ActorSession {
             failure = .shmSetupFailed("shm_open: \(String(cString: strerror(errno)))"); return
         }
         // Unlink immediately; the FD survives and the region is anonymous-ish.
-        _ = shmName.withCString { Darwin.shm_unlink($0) }
-        // Clear FD_CLOEXEC so posix_spawn's adddup2 can land on FD 3 in the child.
-        _ = fcntl(shmFD, F_SETFD, 0)
+        guard shmName.withCString({ Darwin.shm_unlink($0) }) == 0 else {
+            let error = errno
+            close(shmFD); shmFD = -1
+            failure = .shmSetupFailed("shm_unlink \(shmName): \(String(cString: strerror(error)))"); return
+        }
+        guard fcntl(shmFD, F_SETFD, input.actorMode == 0 ? 0 : FD_CLOEXEC) == 0 else {
+            let error = errno
+            close(shmFD); shmFD = -1
+            failure = .shmSetupFailed("evidence descriptor flags: \(String(cString: strerror(error)))"); return
+        }
 
         if ftruncate(shmFD, off_t(PWShmLayout.regionBytes)) != 0 {
             let why = String(cString: strerror(errno))
@@ -259,18 +268,49 @@ final class ActorSession {
                 failure = .shmSetupFailed("extension descriptor duplication failed"); return
             }
         }
+        // Relocate all actor sources away from 0/3/4/5. Besides avoiding
+        // collisions, this ensures every adddup2 is an actual duplication:
+        // an already-CLOEXEC source at its destination must not disappear.
+        var launchSources = [policyPipe[0], shmFD, readyPipe[1]]
+        var relocated: [Int32] = []
+        defer { for fd in relocated { close(fd) } }
+        if input.actorMode != 0 {
+            for source in launchSources {
+                let fd = fcntl(source, F_DUPFD_CLOEXEC, 64)
+                guard fd >= 0 else {
+                    let error = errno
+                    for opened in readyPipe + policyPipe { close(opened) }
+                    failure = .spawnFailed("launch descriptor relocation: \(String(cString: strerror(error)))"); return
+                }
+                relocated.append(fd)
+            }
+            launchSources = relocated
+        }
         // ---- posix_spawn.
-        posix_spawn_file_actions_init(&fileActions)
+        func spawnSetup(_ rc: Int32, _ operation: String) -> Bool {
+            guard rc == 0 else {
+                for fd in readyPipe + policyPipe { close(fd) }
+                failure = .spawnFailed("\(operation): \(String(cString: strerror(rc)))")
+                return false
+            }
+            return true
+        }
+        guard spawnSetup(posix_spawn_file_actions_init(&fileActions), "file actions init") else { return }
         actionsInitialized = true
-        posix_spawn_file_actions_adddup2(&fileActions, policyPipe[0], 0)
-        posix_spawn_file_actions_adddup2(&fileActions, shmFD, 3)
-        posix_spawn_file_actions_adddup2(&fileActions, readyPipe[1], 4)
-        if tokenFD >= 0 { posix_spawn_file_actions_adddup2(&fileActions, tokenFD, 5) }
+        guard spawnSetup(posix_spawn_file_actions_adddup2(&fileActions, launchSources[0], 0), "policy dup2"),
+              spawnSetup(posix_spawn_file_actions_adddup2(&fileActions, launchSources[1], 3), "evidence dup2"),
+              spawnSetup(posix_spawn_file_actions_adddup2(&fileActions, launchSources[2], 4), "ready dup2") else { return }
+        if tokenFD >= 0 {
+            guard spawnSetup(posix_spawn_file_actions_adddup2(&fileActions, tokenFD, 5), "authority dup2") else { return }
+        }
         // Actor form: defined standard streams and an empty environment. The
         // legacy form keeps its inherited streams and environment unchanged.
+        guard spawnSetup(posix_spawnattr_init(&spawnAttributes), "attributes init") else { return }
+        attributesInitialized = true
         if input.actorMode != 0 {
-            posix_spawn_file_actions_addopen(&fileActions, 1, "/dev/null", O_WRONLY, 0)
-            posix_spawn_file_actions_addopen(&fileActions, 2, "/dev/null", O_WRONLY, 0)
+            guard spawnSetup(posix_spawn_file_actions_addopen(&fileActions, 1, "/dev/null", O_WRONLY, 0), "stdout open"),
+                  spawnSetup(posix_spawn_file_actions_addopen(&fileActions, 2, "/dev/null", O_WRONLY, 0), "stderr open") else { return }
+            guard spawnSetup(posix_spawnattr_setflags(&spawnAttributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT)), "close-on-exec default") else { return }
         }
 
         let stepCountStr = String(input.slots.count)
@@ -311,10 +351,12 @@ final class ActorSession {
         var child: pid_t = 0
         let spawnRC = withCStringArrayCopy(argv) { argvPtr in
             withCStringArrayCopy([]) { emptyEnvironment in
-                posix_spawn(&child, input.workerExecutablePath, &fileActions, nil, argvPtr,
+                posix_spawn(&child, input.workerExecutablePath, &fileActions, &spawnAttributes, argvPtr,
                             input.actorMode != 0 ? emptyEnvironment : nil)
             }
         }
+        for fd in relocated { close(fd) }
+        relocated.removeAll()
         if spawnRC != 0 {
             close(policyPipe[0]); close(policyPipe[1])
             close(readyPipe[0]); close(readyPipe[1])
@@ -325,7 +367,8 @@ final class ActorSession {
         // The transfer calls (clock, write, poll) are one injection point: the
         // deadline and the writer share the supplied clock, and production keeps
         // the Darwin defaults.
-        let transferDeadline = MonotonicDeadline(milliseconds: input.policyTransferTimeoutMs, clock: transferCalls.clock)
+        let transferBudgetMs = min(input.policyTransferTimeoutMs, setupRemainingMs?() ?? input.policyTransferTimeoutMs)
+        let transferDeadline = MonotonicDeadline(milliseconds: transferBudgetMs, clock: transferCalls.clock)
         // The child now owns its evidence endpoint. Retain only our mapping, so
         // later validators cannot inherit the host's writable descriptor. Retire
         // close ownership first: a reused number must never reach deferred close.
@@ -343,9 +386,9 @@ final class ActorSession {
         switch transfer.stop {
         case .complete: break
         case .timeout(let elapsed):
-            transferTimeout = PWWorkerPolicyTransferTimeout(budget_ms: input.policyTransferTimeoutMs,
+            transferTimeout = PWWorkerPolicyTransferTimeout(budget_ms: transferBudgetMs,
                 elapsed_ms: elapsed, bytes_written: transfer.written, bytes_expected: policyBytes.count)
-            transferFailure = .policyTransferTimedOut("exceeded \(input.policyTransferTimeoutMs) ms; wrote \(transfer.written) of \(policyBytes.count) bytes")
+            transferFailure = .policyTransferTimedOut("exceeded \(transferBudgetMs) ms; wrote \(transfer.written) of \(policyBytes.count) bytes")
         case .writeError(let error):
             transferError = PWWorkerPolicyTransferError(errno: error, bytes_written: transfer.written,
                 bytes_expected: policyBytes.count)
@@ -361,12 +404,13 @@ final class ActorSession {
         // unbounded wait, so a failed prerequisite is recorded and no wait runs.
         var readyByte: UInt8 = 0
         if transferFailure == nil {
+            let readyBudgetMs = min(input.readyByteTimeoutMs, setupRemainingMs?() ?? input.readyByteTimeoutMs)
             let flags = fcntl(readyPipe[0], F_GETFL, 0)
             if flags < 0 || fcntl(readyPipe[0], F_SETFL, flags | O_NONBLOCK) < 0 {
-                readyWait = PWHostWait(budget_ms: input.readyByteTimeoutMs, elapsed_ms: 0, stop: "setup_failed",
+                readyWait = PWHostWait(budget_ms: readyBudgetMs, elapsed_ms: 0, stop: "setup_failed",
                                        native_errno: errno, clock_fault: false)
             } else {
-                var clock = HostWaitClock(milliseconds: input.readyByteTimeoutMs, pollNs: 10_000_000, calls: processCalls)
+                var clock = HostWaitClock(milliseconds: readyBudgetMs, pollNs: 10_000_000, calls: processCalls)
                 var stop = "deadline"
                 var readErrno: Int32? = nil
                 while true {
@@ -397,6 +441,7 @@ final class ActorSession {
         ownsShmFD = false
         if tokenFD >= 0 { close(tokenFD); tokenFD = -1 }
         if actionsInitialized { posix_spawn_file_actions_destroy(&fileActions); actionsInitialized = false }
+        if attributesInitialized { posix_spawnattr_destroy(&spawnAttributes); attributesInitialized = false }
     }
 
     // MARK: - Publication primitives
@@ -410,6 +455,8 @@ final class ActorSession {
     var identityMatches: Bool { workerIdentityMatches(rawBase) }
     /// The worker's setup publication: 1 applied, 2 unapplied declared, 0 none.
     var actorSetup: UInt32 { loadAcquire(rawBase, offset: PWShmLayout.actorSetupOffset) }
+    var authorityStatus: UInt32 { UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.authorityStatusOffset)) }
+    var authorityDetail: UInt32 { UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.authorityDetailOffset)) }
     var activationObserved: UInt32 { loadAcquire(rawBase, offset: PWShmLayout.activationObservedOffset) }
     /// Slots this worker has published as completed; an acquire sample.
     var completedSlotCount: Int {

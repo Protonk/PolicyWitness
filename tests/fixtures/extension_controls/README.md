@@ -74,3 +74,11 @@ short writes without an invented errno, combined failures and diagnostic
 pre-open metadata. These controls do not issue or consume extensions and make
 no kernel policy claim. The `runner_c_worker_harness/fresh_write` case owns
 compilation and execution; public directory witnesses own real file effects.
+
+`authority_binding.c` exercises production recipient preparation and service
+with synthetic token bytes and a counted consume replacement. The host view
+changes one assigned source/action/delivery field after preparation. Rejected
+frames must never reach the consume boundary; the matched control must reach it.
+
+The authority binding control also maps a maximum-inbound POSIX shared-memory
+object with its actual page-rounded length and verifies recipient preparation.

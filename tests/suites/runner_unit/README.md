@@ -350,3 +350,12 @@ The controls retain copied sources and hashes, actual compiler/run commands,
 logs and exact designated failures. The native fixture is compiled against the
 same copied ABI identity and owns no exec descendants. These controls establish
 host interpretation, not sandbox behavior or successful process cleanup.
+
+Actor review controls check the kernel descriptor inventory of launched actors,
+including a deliberately inheritable host descriptor; a real authority-name
+collision before any launch; zero execution allowance before activation; and
+an actual native issue interrupted before result publication. The retained
+replies run through the Rust and independent Python readers with mutations
+of nonnull results, resource statuses, handles and transfer acknowledgements.
+Source acknowledgement controls distinguish completed matching publications
+from withdrawal, timeout and duplicate request samples.

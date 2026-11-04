@@ -75,9 +75,57 @@ private func verdicts(pid: pid_t, validator: String = equipment("sb_api_validato
 private func denied(_ slot: CWorkerSlotResult) -> Bool { slot.completed && slot.rc != 0 && [EPERM, EACCES].contains(slot.errnoVal) }
 private func readOK(_ slot: CWorkerSlotResult) -> Bool { slot.completed && slot.rc == 0 }
 
+@_silgen_name("proc_pidinfo")
+private func actorProcInfo(_ pid: Int32, _ flavor: Int32, _ arg: UInt64, _ buffer: UnsafeMutableRawPointer, _ size: Int32) -> Int32
+
+private func actorDescriptors(_ pid: pid_t) throws -> Set<Int32> {
+    // PROC_PIDLISTFDS = 1; each proc_fdinfo is int32 fd + uint32 fdtype.
+    var entries = [Int32](repeating: -1, count: 1024)
+    let bytes = entries.withUnsafeMutableBytes { actorProcInfo(pid, 1, 0, $0.baseAddress!, Int32($0.count)) }
+    guard bytes > 0, bytes < entries.count * 4, bytes % 8 == 0 else { throw TestFailure(message: "proc_pidinfo fd inventory failed: \(bytes), errno \(errno)") }
+    return Set(stride(from: 0, to: Int(bytes) / 4, by: 2).map { entries[$0] })
+}
+
 func runActorSchedulerTests(_ tk: TestKit) {
     let workerPresent = FileManager.default.isExecutableFile(atPath: equipment("pw-probe-runner"))
     tk.group("actor scheduler: owned sessions and the serial schedule") {
+        tk.run("actor launch excludes an inheritable host descriptor and original evidence endpoints") {
+            let fd = open("/dev/null", O_RDONLY)
+            try expectTrue(fd >= 0)
+            defer { close(fd) }
+            let sentinel = fcntl(fd, F_DUPFD, 97)
+            try expectTrue(sentinel >= 97)
+            defer { close(sentinel) }
+            try expectEqual(fcntl(sentinel, F_SETFD, 0), 0)
+            // Force an acquisition into a standard-stream position as well.
+            // Launch must preserve source identity despite its dup2 targets.
+            let savedStdin = fcntl(STDIN_FILENO, F_DUPFD_CLOEXEC, 100)
+            try expectTrue(savedStdin >= 0)
+            close(STDIN_FILENO)
+            defer { _ = dup2(savedStdin, STDIN_FILENO); close(savedStdin) }
+            let inputs = [actorInput(policy: allowAll, visits: [(0, [read("a", hosts)])]),
+                          actorInput(policy: allowAll, visits: [(1, [read("b", hosts)])])]
+            var inventories: [Set<Int32>] = []
+            var failure: Error?
+            let result = ActorScheduler.run(ActorScheduleInput(actors: inputs, applies: [true, true], schedule: schedule([[0], [1]]))) { _, _, pid in
+                do { inventories.append(try actorDescriptors(pid)) } catch { failure = error }
+            }
+            if let failure { throw failure }
+            try expectEqual(result.visits.map { $0.endReason }, ["completed", "completed"])
+            try expectEqual(inventories, [Set<Int32>(0...4), Set<Int32>(0...4)])
+        }
+        tk.run("an exhausted execution allowance never activates an already prepared actor") {
+            var input = ActorScheduleInput(actors: [actorInput(policy: allowAll, visits: [(0, [read("a", hosts)])])],
+                applies: [false], schedule: schedule([[0]]))
+            input.executionAllowanceMs = 0
+            var collected = false
+            let result = ActorScheduler.run(input) { _, _, _ in collected = true }
+            try expectFalse(collected)
+            try expectEqual(result.cancelled, "execution_allowance_exhausted")
+            try expectFalse(result.visits[0].activationStored)
+            try expectEqual(result.actors[0].output?.slots[0].completed, false)
+            try expectEqual(result.actors[0].quiescence, "reaped")
+        }
         tk.run("two policies reach two identified processes, each applied once, across repeated visits") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let both = [read("hosts", hosts), read("passwd", passwd)]

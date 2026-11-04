@@ -1,7 +1,7 @@
 # Host setup controls
 
 The `runner_unit/host_setup_controls` case copies the production Swift package,
-renames selected native call sites in `CWorker.swift` and `ExtensionIssuer.swift`,
+renames selected native call sites in `ActorSession.swift`, `CWorker.swift` and `ExtensionIssuer.swift`,
 and adds `SetupControls.swift` only to that copy. Exact substitution counts and
 source/instrumented hashes are retained. Production control flow is unchanged;
 the signed app is never modified. `shim.c` exposes a fixed-argument shared-memory
@@ -29,8 +29,9 @@ invalid use and return EINVAL instead of passing nil into libc; an attempted
 spawn with such a handle is likewise contained. Those observations establish
 continued host control flow, not libc's behavior on an invalid handle. Issuer
 no-spawn results after failed initialization depend on that fixture containment.
-Action-add and argument-copy failures otherwise reach real native spawn when the
-host permits it; the receipt establishes whether a child ran and what it received.
+Worker initialization, action-add, evidence unlink and descriptor-flag failures
+refuse before spawn without invalid-handle use. Argument-copy failures can
+still reach real native spawn when the host permits it; the receipt establishes whether a child ran and what it received.
 
 Cleanup is observed before independent fixture cleanup: descriptor closure,
 successful unmapping/destruction, released copied strings, name lookup and child

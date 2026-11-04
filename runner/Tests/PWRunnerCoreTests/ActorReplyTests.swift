@@ -39,9 +39,58 @@ private func freshEffect() throws -> String {
     return String(cString: resolved)
 }
 
+private func retainActorReply(_ reply: PWRunnerRunResult, _ name: String) throws {
+    guard let fixture = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"] else {
+        throw TestFailure(message: "runner_unit receipt directory required")
+    }
+    try pwRunnerEncodeJSON(reply).write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent()
+        .appendingPathComponent("actor-review-\(name).json"))
+}
+
 func runActorReplyTests(_ tk: TestKit) {
     let workerPresent = FileManager.default.isExecutableFile(atPath: equipment("pw-probe-runner"))
     tk.group("actor reply: the principal request through the production orchestrator") {
+        tk.run("authority setup failure refuses launch and remains an apparatus failure in the encoded reply") {
+            // Occupy the exact authority name with a test-owned empty object.
+            // O_EXCL at the real allocation boundary must fail before any actor
+            // launches; the scheduler must not unlink this unrelated object.
+            let name = "/pw_au_\(getpid())_0"
+            let fd = name.withCString { pw_cworker_shm_open_create($0, 0o600) }
+            try expectTrue(fd >= 0, "could not create owned collision")
+            defer { close(fd); name.withCString { _ = shm_unlink($0) } }
+            let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
+            let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: "", bundleId: "test",
+                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"))
+            try expectTrue(reply.rc != 0)
+            try expectTrue(reply.error?.contains("authority setup") == true, reply.error ?? "")
+            try expectTrue(reply.actors!.allSatisfy { $0.launch == nil && $0.subprocess == nil && $0.setup_status == "launch_refused" })
+            try expectTrue(reply.extension_events!.allSatisfy { !$0.result_published && !$0.call_boundary_observed })
+            try expectTrue(reply.resources!.tokens.allSatisfy { $0.status == "unresolved" })
+            _ = try pwRunnerEncodeJSON(reply)
+            try retainActorReply(reply, "setup")
+        }
+        tk.run("native issue interrupted before result publication leaves the token unresolved") {
+            let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
+            guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "request refused") }
+            let translation = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: equipment("pw-probe-runner"))
+            var inputs = translation.inputs
+            inputs[0].killBeforePublishSlot = 0
+            let input = ActorScheduleInput(actors: inputs, applies: plan.actors.map { $0.applies },
+                schedule: plan.phases.map { ActorScheduleEntry(phaseIndex: $0.index, actorIndex: $0.actorIndex, visit: $0.visit - 1) },
+                authority: translation.authority)
+            let outcome = ActorScheduler.run(input) { _, _, _ in }
+            let reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+                queryPlans: plan.phases.map { _ in [] }, validatorResults: plan.phases.map { _ in nil },
+                collectionStatuses: outcome.visits.map { $0.collectionInvoked ? "not_needed" : "not_reached" }, bundleId: "test")
+            let event = reply.extension_events!.first { $0.step_id == "a_issue" }!
+            try expectTrue(event.call_boundary_observed)
+            try expectFalse(event.result_published)
+            try expectNil(event.native_result)
+            try expectEqual(reply.resources!.tokens[0].status, "unresolved")
+            try expectEqual(reply.actors![0].subprocess?.term_signal, Int(SIGKILL))
+            _ = try pwRunnerEncodeJSON(reply)
+            try retainActorReply(reply, "interrupted")
+        }
         tk.run("the corpus's principal request runs, assembles, encodes and decodes") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let effect = try freshEffect()
@@ -66,6 +115,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectEqual(actors.map { $0.applied }, [nil, true, true])
             try expectEqual(Set(actors.compactMap { $0.launch?.pid }).count, 3)
             try expectTrue(actors.allSatisfy { $0.launch?.parent_pid == Int(getpid()) })
+            try expectTrue(actors.allSatisfy { $0.launch?.inherited_descriptors == [0, 3, 4, 5] })
             for actor in actors.dropFirst() {
                 try expectEqual(actor.policy_sha256, try computePolicyHash(parsed.actors![actor.index].sandbox.policy!))
                 try expectEqual(actor.policy_received_sha256, actor.policy_sha256)
@@ -141,6 +191,19 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectNil(object["policy_sha256"])
             try expectNil(object["runner_subprocess"])
             try expectEqual(object["execution_form"] as? String, "actors")
+            try retainActorReply(reply, "complete")
+            var bad = reply
+            bad.extension_events![0].native_nonnull = false
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "issue nonnull disagrees with native result")
+            bad = reply
+            bad.resources!.tokens[0].status = "null"
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "token status contradicts issue")
+            bad = reply
+            bad.resources!.handles[0].native_handle = 999_999
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "handle status or value contradicts consume")
+            bad = reply
+            bad.transfers![0].recipient_acknowledged = false
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "delivered transfer lacks custody, copy or recipient acknowledgement")
         }
         tk.run("a bare deny-default actor and a failed setup are reported per actor without a singular projection") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }

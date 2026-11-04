@@ -562,3 +562,12 @@ attaches its failure to the last item's teardown; earlier body outcomes remain
 recorded. Changed shared inputs qualify applicability, so inspect per-variant
 source receipts. `ownership.json` separately reports command settlement and
 cleanup. Passing assertions cannot override incomplete accounting or ownership.
+
+`authority_binding` compiles the production recipient preparation and inbound
+service with a counted consume replacement. It snapshots assigned references,
+then commits a matched frame or changes its source, operation or delivery.
+Only the matched frame reaches consume. These controls use synthetic bytes
+and establish association checks, not native sandbox authority.
+
+The authority binding control also maps a maximum-inbound POSIX shared-memory
+object with its actual page-rounded length and verifies recipient preparation.

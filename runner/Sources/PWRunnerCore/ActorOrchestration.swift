@@ -205,6 +205,12 @@ private let unavailableReasons: [UInt32: String] = [1: "token_unavailable", 2: "
     4: "repeated_action", 5: "authority_channel_unavailable", 6: "delivery_unavailable"]
 private let custodyNames: [UInt32: String] = [0: "none", 1: "accepted", 2: "rejected", 3: "timeout", 4: "not_published", 5: "clock_fault"]
 
+private func unpublishedResourceStatus(_ step: PWDispositionStep?) -> String {
+    guard let boundary = step?.questions["step_boundary_reached"],
+          boundary.state == "supported", boundary.answer == "not_reached" else { return "unresolved" }
+    return "not_reached"
+}
+
 func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: ActorTranslation, outcome: ActorScheduleOutcome,
                         queryPlans: [[ValidatorQueryDecision]], validatorResults: [ValidatorClientResult?],
                         collectionStatuses: [String], bundleId: String?) -> PWRunnerRunResult {
@@ -323,7 +329,8 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
             setup_status: record.setupStatus.rawValue,
             applied: actor.applies ? output?.applied : nil,
             application_count: record.applicationCount,
-            launch: record.pid.map { PWRunnerActorLaunch(pid: Int($0), parent_pid: Int(record.parentPid)) },
+            launch: record.pid.map { PWRunnerActorLaunch(pid: Int($0), parent_pid: Int(record.parentPid),
+                inherited_descriptors: record.authorityRegion == "mapped" ? [0, 3, 4, 5] : [0, 3, 4]) },
             subprocess: output.map { buildWorkerSubprocess($0, disposition: dispositions[actor.index]) },
             compiled_profile: output?.profileCapture,
             visits: actor.visits.map { $0 + 1 })
@@ -346,7 +353,7 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
         let slot = slotResult(actor: token.actorIndex, step: token.stepID)
         let custody = outcome.custody.first { $0.tokenIndex == index }
         let status: String
-        if slot?.completed != true { status = "not_reached" }
+        if slot?.completed != true { status = unpublishedResourceStatus(dispositionStep(actor: token.actorIndex, step: token.stepID)) }
         else if let code = slot?.unavailableCode, code != 0 { status = "unavailable" }
         else if slot?.nativeResult == 1 { status = custody?.status == "accepted" ? "issued" : "issued_uncustodied" }
         else if slot?.nativeResult == 0 { status = "null" }
@@ -361,7 +368,7 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
         let status: String
         if let observation { status = PWTransferAck.names[observation.acknowledgement] ?? "invalid" }
         else if slot?.completed == true { status = unavailableReasons[slot?.unavailableCode ?? 0] ?? "unrequested" }
-        else { status = "not_reached" }
+        else { status = unpublishedResourceStatus(dispositionStep(actor: delivery.sourceActorIndex, step: delivery.stepID)) }
         let token = plan.tokens.firstIndex { $0.ref == delivery.tokenRef }
         return PWRunnerDeliveryRecord(delivery_ref: delivery.ref, token_ref: delivery.tokenRef,
             source_actor_id: plan.actors[delivery.sourceActorIndex].id, recipient_actor_id: plan.actors[delivery.recipientActorIndex].id,
@@ -372,7 +379,7 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
     let handleRecords: [PWRunnerHandleRecord] = plan.handles.map { handle in
         let slot = slotResult(actor: handle.actorIndex, step: handle.stepID)
         let status: String
-        if slot?.completed != true { status = "not_reached" }
+        if slot?.completed != true { status = unpublishedResourceStatus(dispositionStep(actor: handle.actorIndex, step: handle.stepID)) }
         else if let code = slot?.unavailableCode, code != 0 { status = "unavailable" }
         else if slot?.nativeResult == -1 { status = "consume_failed" }
         else if slot?.nativeResult != nil { status = "produced" }

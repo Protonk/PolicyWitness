@@ -36,15 +36,17 @@ def check(receipt, owner, fault):
     names = receipt["names_present_before_fixture_cleanup"]
     assert bool(names) == (fault == "unlink"), "unlink observation"
     assert receipt["fixture_names_removed"], "fixture cleanup"
-    guarded = fault == "nosigpipe" or (owner == "issuer" and fault in ("actions_init", "attrs_init", "dup2.3", "open.1", "flags"))
+    guarded = (owner.startswith("worker") and fault in ("actions_init", "attrs_init", "dup2.0", "dup2.3", "dup2.4", "dup2.5", "unlink", "clear_cloexec")) or fault == "nosigpipe" or (owner == "issuer" and fault in ("actions_init", "attrs_init", "dup2.3", "open.1", "flags"))
     if guarded:
         assert "spawn_reached" not in calls and receipt["spawn_pid"] == 0, "unexpected spawn dispatch"
         assert receipt["child"] is None, "unexpected child receipt"
-        if fault == "actions_init":
+        if owner == "issuer" and fault == "actions_init":
             assert "nil_actions_use" in calls and "nil_actions_destroy" in calls, "missing invalid-handle use"
-        if fault == "attrs_init":
+        if owner == "issuer" and fault == "attrs_init":
             assert "nil_attrs_use" in calls and "nil_attrs_destroy" in calls, "missing invalid-handle use"
-        return "no spawn; invalid-handle containment is fixture-owned" if fault.endswith("init") else "checked refusal, cleanup observed"
+        if owner.startswith("worker"):
+            assert not any(c.startswith("nil_actions_") or c.startswith("nil_attrs_") for c in calls), "failed handle used or destroyed"
+        return "no spawn; invalid-handle containment is fixture-owned" if owner == "issuer" and fault.endswith("init") else "checked refusal, cleanup observed"
     assert calls.count("spawn_reached") == 1, "missing dispatch observation"
     if fault == "actions_init":
         assert "fixture_refused_invalid_handle" in calls and "nil_actions_use" in calls, "missing fixture containment"
@@ -95,8 +97,9 @@ def run(out, scratch):
     manifest = []
     expected = {
         "ActorSession.swift": {"posix_spawn_file_actions_init": 1, "posix_spawn_file_actions_destroy": 1,
-            "posix_spawn_file_actions_adddup2": 4, "posix_spawn": 1,
-            "fcntl": 8, "pipe": 2, "mmap": 1, "munmap": 1, "shm_unlink": 1, "pw_cworker_shm_open_create": 1},
+            "posix_spawn_file_actions_adddup2": 4, "posix_spawn_file_actions_addopen": 2,
+            "posix_spawnattr_init": 1, "posix_spawnattr_destroy": 1, "posix_spawnattr_setflags": 1,
+            "posix_spawn": 1, "fcntl": 9, "pipe": 2, "mmap": 1, "munmap": 1, "shm_unlink": 1, "pw_cworker_shm_open_create": 1},
         "CWorker.swift": {"strdup": 1, "free": 1},
         "ExtensionIssuer.swift": {"posix_spawn_file_actions_init": 1, "posix_spawn_file_actions_destroy": 1,
             "posix_spawn_file_actions_adddup2": 1, "posix_spawn_file_actions_addopen": 1,
@@ -126,7 +129,7 @@ def run(out, scratch):
         subprocess.run(["clang", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter", f'-DRECEIPT_PATH="{child_path}"', str(FIXTURE / "observer.c"), "-o", str(observer)], check=True, stdout=log, stderr=log)
         subprocess.run([*SWIFT, "build", "--package-path", str(package), "--scratch-path", str(scratch), "--product", "PWRunnerCoreTests"], check=True, stdout=log, stderr=log, timeout=180)
     executable = record_build(package, out, scratch, "PWRunnerCoreTests", swift_command=SWIFT)
-    cases = [("worker", f) for f in ("baseline", "collision", "actions_init", "dup2.0", "dup2.3", "dup2.4", "strdup.0", "strdup.2", "unlink", "clear_cloexec", "nosigpipe")]
+    cases = [("worker", f) for f in ("baseline", "collision", "actions_init", "attrs_init", "dup2.0", "dup2.3", "dup2.4", "strdup.0", "strdup.2", "unlink", "clear_cloexec", "nosigpipe")]
     cases += [("worker_token", "baseline"), ("worker_token", "dup2.5")]
     cases += [("issuer", f) for f in ("baseline", "collision", "actions_init", "attrs_init", "dup2.3", "open.1", "flags", "strdup.0", "unlink")]
     results = []; receipts = {}

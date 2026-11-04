@@ -144,13 +144,14 @@ def run(out, scratch):
         original = original.replace(old,new)
         transformations.append(dict(old=old,new=new,count=count))
     replace('return pw_cworker_shm_open_create(cName, 0o600)', 'return probeShm(cName, 0o600)')
-    replace('close(shmFD)', '_ = probeClose(shmFD)', 5)
+    replace('close(shmFD)', '_ = probeClose(shmFD)', 7)
     replace('if ftruncate(shmFD,', 'if probeTruncate(shmFD,')
     replace('guard let base = mmap(', 'guard let base = probeMap(')
     replace('_ = munmap(base, PWShmLayout.regionBytes)', '_ = descriptorUnmap(base, PWShmLayout.regionBytes)')
     replace('if pipe(&', 'if probePipe(&', 2)
-    replace('fcntl(', 'probeFcntl(', 8)
-    replace('        _ = probeFcntl(shmFD, F_SETFD, 0)', '        if probeVariant != "no_clear" { _ = probeFcntl(shmFD, F_SETFD, 0) }')
+    replace('fcntl(', 'probeFcntl(', 9)
+    replace('probeFcntl(shmFD, F_SETFD, input.actorMode == 0 ? 0 : FD_CLOEXEC)',
+            '(probeVariant == "no_clear" ? 0 : probeFcntl(shmFD, F_SETFD, input.actorMode == 0 ? 0 : FD_CLOEXEC))')
     replace('        storeRelease(rawBase, offset: PWShmLayout.preparedOffset, 1)',
             '        storeRelease(rawBase, offset: PWShmLayout.preparedOffset, 1)\n        probePrepared(base)')
     replace('        ownsShmFD = false\n        _ = probeClose(shmFD)', """        probeChildSpawned(pid)

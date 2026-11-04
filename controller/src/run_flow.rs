@@ -1155,6 +1155,89 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
 
     #[test]
     #[ignore = "requires real Swift driver receipts; default runner_unit invokes this exact test"]
+    fn actor_driver_replies_cross_readers() {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+        let directory = std::env::var("PW_POLICY_TRANSFER_REPLIES").unwrap();
+        let mut controls = Vec::new();
+        for name in ["complete", "setup", "interrupted"] {
+            let reply: Value = serde_json::from_slice(
+                &std::fs::read(
+                    std::path::Path::new(&directory).join(format!("actor-review-{name}.json")),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            controls.push(json!({"name": name, "reply": reply, "accepted": true}));
+            let changes = match name {
+                "complete" => vec![
+                    ("/extension_events/0/native_nonnull", json!(false)),
+                    ("/resources/tokens/0/status", json!("null")),
+                    ("/resources/handles/0/native_handle", json!(999999)),
+                    ("/transfers/0/recipient_acknowledged", json!(false)),
+                    ("/transfers/0/equality", json!("unequal")),
+                    ("/transfers/0/status", json!("custody_unavailable")),
+                ],
+                _ => vec![("/resources/tokens/0/status", json!("not_reached"))],
+            };
+            for (pointer, value) in changes {
+                let mut changed = reply.clone();
+                *changed.pointer_mut(pointer).unwrap() = value;
+                controls.push(json!({"name": format!("{name}:{pointer}"), "reply": changed, "accepted": false}));
+            }
+        }
+        for control in &controls {
+            let diagnostics = crate::disposition::execution_diagnostics(Some(&control["reply"]));
+            assert_eq!(
+                diagnostics.disposition_integrity != Some("invalid"),
+                control["accepted"] == true,
+                "{}: {:?}",
+                control["name"],
+                diagnostics.disposition_issues
+            );
+        }
+        // Independently read the same actual publications and rejected variants.
+        // The Python oracle does not call the Swift or Rust classifiers.
+        let mut child = Command::new("/usr/bin/python3")
+            .args([
+                "-B",
+                "-c",
+                r#"
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from extension_evidence import validate_actor_extensions
+for control in json.load(sys.stdin):
+    errors = validate_actor_extensions(control['reply'])
+    assert (not errors) == control['accepted'], (control['name'], errors)
+"#,
+            ])
+            .arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(&serde_json::to_vec(&controls).unwrap())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        std::fs::write(
+            std::path::Path::new(&directory).join("actor-review-reader-controls.json"),
+            serde_json::to_vec_pretty(&controls).unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[ignore = "requires real Swift driver receipts; default runner_unit invokes this exact test"]
     fn worker_clock_driver_replies_cross_assembly_and_consumer() {
         use std::io::Write;
         use std::process::{Command, Stdio};

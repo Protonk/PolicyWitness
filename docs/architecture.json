@@ -1123,7 +1123,7 @@
           "from": "host",
           "to": "worker",
           "kind": "spawn",
-          "label": "actor form: posix_spawn with an empty environment and null standard streams; fd 5 the actor's own authority region; activation ordinal and shared lifetime cutoff in the evidence header",
+          "label": "actor form: posix_spawn with an empty environment, stdin policy pipe, null stdout/stderr and CLOEXEC_DEFAULT; fd 5 the actor's own authority region; activation ordinal and shared lifetime cutoff in the evidence header",
           "short": "actor launch; fd 5 authority region",
           "sources": [
             {
@@ -1198,7 +1198,7 @@
           "from": "host",
           "to": "worker",
           "kind": "channel",
-          "label": "delivery into the recipient's assigned inbound slot; the parked recipient validates framing and acknowledges without consuming",
+          "label": "delivery into the recipient's assigned inbound slot; the parked recipient validates framing and its preassigned source/action/delivery before acknowledging without consuming",
           "short": "delivery and acknowledgement",
           "sources": [
             {
@@ -1211,7 +1211,7 @@
             },
             {
               "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
-              "symbol": "pw_authority_frame_problem"
+              "symbol": "pw_authority_slot_problem"
             }
           ],
           "checks": [
@@ -6959,7 +6959,7 @@
           "kind": "reporting",
           "facts": {
             "Inventory ID": "S1b",
-            "Acquired by": "H: pw_cworker_shm_open_create; requests FD_CLOEXEC clear without checking return",
+            "Acquired by": "H: pw_cworker_shm_open_create; checks unlink and descriptor flags (clear in single-worker form, CLOEXEC in actor form)",
             "When": "Before compilation",
             "Held across": "Through successful worker spawn; host mapping remains through collection",
             "Release / teardown action": "H setup/spawn-failure close, or ownership relinquished and close after transfer deadline starts on successful spawn",
@@ -7167,7 +7167,7 @@
               "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ],
-          "note": "Setup controls observe a failed endpoint action followed by spawn."
+          "note": "Setup controls observe endpoint-action failure refusing spawn with cleanup."
         },
         {
           "id": "s6",
@@ -7197,7 +7197,7 @@
               "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ],
-          "note": "Setup controls observe later uses after failed file-action initialization/addition; fixture containment is not production refusal."
+          "note": "Worker setup controls observe failed file-action initialization/addition refusing spawn without use of an invalid handle."
         },
         {
           "id": "s7",
@@ -7679,7 +7679,7 @@
           "kind": "authority",
           "facts": {
             "Inventory ID": "S13d",
-            "Acquired by": "H requests adddup2(tokenFD, 5); failed action can still spawn",
+            "Acquired by": "H checks adddup2(tokenFD, 5) before spawn",
             "When": "Before compilation",
             "Held across": "Through extension preparation",
             "Release / teardown action": "prepare_extension closes once; early main refusals leave to exit",
@@ -7774,7 +7774,7 @@
           "kind": "reporting",
           "facts": {
             "Inventory ID": "S14c",
-            "Acquired by": "H clears FD_CLOEXEC and duplicates to 3 without closing source",
+            "Acquired by": "Single-worker form: H clears FD_CLOEXEC and duplicates to 3 without closing the child source alias; actor form relocates and closes original aliases at exec",
             "When": "Before compilation",
             "Held across": "Until worker exit if original number survives file actions; closing the host descriptor does not remove this child reference",
             "Release / teardown action": "No generic W sweep; exit",

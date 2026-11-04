@@ -673,28 +673,40 @@ fn validate_disposition(
             };
             if is_event {
                 let native = reply.get("native_result").and_then(Value::as_i64);
-                let valid = match reply["status"].as_str() {
-                    Some("returned") => {
-                        completed
-                            && reply["call_boundary_observed"] == true
-                            && native.is_some()
-                            && reply["errno"].as_i64().is_some()
-                            && reply["unavailable_reason"].is_null()
+                let valid = if reply["operation"] == "transfer" {
+                    reply["call_boundary_observed"] == false
+                        && native.is_none()
+                        && reply["errno"].is_null()
+                        && reply["unavailable_reason"].is_null()
+                        && if completed {
+                            actor_transfer_status(reply["status"].as_str().unwrap_or(""))
+                        } else {
+                            reply["status"] == "unresolved"
+                        }
+                } else {
+                    match reply["status"].as_str() {
+                        Some("returned") => {
+                            completed
+                                && reply["call_boundary_observed"] == true
+                                && native.is_some()
+                                && reply["errno"].as_i64().is_some()
+                                && reply["unavailable_reason"].is_null()
+                        }
+                        Some("unavailable") => {
+                            completed
+                                && reply["call_boundary_observed"] == false
+                                && native.is_none()
+                                && reply["errno"].is_null()
+                                && reply["unavailable_reason"].is_string()
+                        }
+                        Some("unresolved") => {
+                            !completed
+                                && native.is_none()
+                                && reply["errno"].is_null()
+                                && reply["unavailable_reason"].is_null()
+                        }
+                        _ => false,
                     }
-                    Some("unavailable") => {
-                        completed
-                            && reply["call_boundary_observed"] == false
-                            && native.is_none()
-                            && reply["errno"].is_null()
-                            && reply["unavailable_reason"].is_string()
-                    }
-                    Some("unresolved") => {
-                        !completed
-                            && native.is_none()
-                            && reply["errno"].is_null()
-                            && reply["unavailable_reason"].is_null()
-                    }
-                    _ => false,
                 };
                 if !valid {
                     issues.push(integrity_issue(
@@ -1242,6 +1254,22 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
 /// phases, references resolve in the resource tables to their owners,
 /// transfers carry no native result, and each status is published only by the
 /// shape it claims.
+fn actor_transfer_status(status: &str) -> bool {
+    matches!(
+        status,
+        "none"
+            | "delivered"
+            | "custody_unavailable"
+            | "recipient_rejected"
+            | "recipient_timeout"
+            | "recipient_unavailable"
+            | "request_invalid"
+            | "host_timeout"
+            | "clock_fault"
+            | "copy_mismatch"
+    )
+}
+
 fn actor_extension_issues(runner: &Value) -> Vec<Value> {
     let mut issues = Vec::new();
     let mut reject =
@@ -1343,6 +1371,12 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
                 if !ok {
                     reject("issue reference");
                 }
+                if status == "returned"
+                    && (!matches!(event["native_result"].as_i64(), Some(0 | 1))
+                        || event["native_nonnull"].as_bool() != Some(event["native_result"] == 1))
+                {
+                    reject("issue nonnull disagrees with native result");
+                }
             }
             Some("transfer") => {
                 let ok = reference(&event["token_ref"])
@@ -1368,7 +1402,6 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
                 if !status_ok {
                     reject("transfer status");
                 }
-                continue;
             }
             Some("consume") => {
                 let handle = event["handle_ref"].as_str().unwrap_or("").to_string();
@@ -1423,46 +1456,48 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
                 continue;
             }
         }
-        match status {
-            "returned" => {
-                if !published
-                    || !called
-                    || event["native_result"].is_null()
-                    || !event["errno"].as_i64().is_some_and(|e| e >= 0)
-                    || !event["unavailable_reason"].is_null()
-                {
-                    reject("native extension result lacks publication");
+        if event["operation"] != "transfer" {
+            match status {
+                "returned" => {
+                    if !published
+                        || !called
+                        || event["native_result"].is_null()
+                        || !event["errno"].as_i64().is_some_and(|e| e >= 0)
+                        || !event["unavailable_reason"].is_null()
+                    {
+                        reject("native extension result lacks publication");
+                    }
                 }
-            }
-            "unavailable" => {
-                let reason = event["unavailable_reason"].as_str().unwrap_or("");
-                if !published
-                    || called
-                    || !event["native_result"].is_null()
-                    || !event["errno"].is_null()
-                    || ![
-                        "token_unavailable",
-                        "handle_unavailable",
-                        "native_api_unavailable",
-                        "repeated_action",
-                        "authority_channel_unavailable",
-                        "delivery_unavailable",
-                    ]
-                    .contains(&reason)
-                {
-                    reject("unavailable extension action fabricates a call");
+                "unavailable" => {
+                    let reason = event["unavailable_reason"].as_str().unwrap_or("");
+                    if !published
+                        || called
+                        || !event["native_result"].is_null()
+                        || !event["errno"].is_null()
+                        || ![
+                            "token_unavailable",
+                            "handle_unavailable",
+                            "native_api_unavailable",
+                            "repeated_action",
+                            "authority_channel_unavailable",
+                            "delivery_unavailable",
+                        ]
+                        .contains(&reason)
+                    {
+                        reject("unavailable extension action fabricates a call");
+                    }
                 }
-            }
-            "unresolved" => {
-                if published
-                    || !event["native_result"].is_null()
-                    || !event["errno"].is_null()
-                    || !event["unavailable_reason"].is_null()
-                {
-                    reject("unpublished extension result must stay unresolved");
+                "unresolved" => {
+                    if published
+                        || !event["native_result"].is_null()
+                        || !event["errno"].is_null()
+                        || !event["unavailable_reason"].is_null()
+                    {
+                        reject("unpublished extension result must stay unresolved");
+                    }
                 }
+                _ => reject("invalid extension event status"),
             }
-            _ => reject("invalid extension event status"),
         }
         let record = actor["subprocess"]["disposition"]["steps"]
             .as_array()
@@ -1506,6 +1541,98 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
             .is_some_and(|s| transfer_statuses.contains(&s));
         if !ok {
             reject("transfer record association");
+        }
+    }
+    for transfer in transfers {
+        if transfer["status"] == "delivered"
+            && (transfer["request_published"] != true
+                || transfer["custody_status"] != "held"
+                || transfer["copy_status"] != "copied"
+                || transfer["equality"] != "equal"
+                || transfer["recipient_acknowledged"] != true)
+        {
+            reject("delivered transfer lacks custody, copy or recipient acknowledgement");
+        }
+        if transfer["source_acknowledged"] == true
+            && !events.iter().any(|e| {
+                e["operation"] == "transfer"
+                    && e["step_id"] == transfer["step_id"]
+                    && e["actor_id"] == transfer["source_actor_id"]
+                    && e["result_published"] == true
+                    && e["status"] == transfer["status"]
+            })
+        {
+            reject("source acknowledgement lacks matching publication");
+        }
+    }
+    for (table, operation, reference) in [
+        (tokens, "issue", "token_ref"),
+        (handles, "consume", "handle_ref"),
+        (deliveries, "transfer", "delivery_ref"),
+    ] {
+        for resource in table {
+            let matches: Vec<_> = events
+                .iter()
+                .filter(|e| e["operation"] == operation && e[reference] == resource[reference])
+                .collect();
+            if matches.len() != 1 {
+                reject("resource lacks unique producing event");
+                continue;
+            }
+            let event = matches[0];
+            if operation == "transfer"
+                && transfers
+                    .iter()
+                    .any(|t| t["delivery_ref"] == resource[reference])
+            {
+                continue;
+            }
+            if event["result_published"] != true {
+                let boundary = &event["lifecycle"]["boundary"];
+                let status = if boundary["state"] == "supported"
+                    && boundary["answer"] == "not_reached"
+                    && event["call_boundary_observed"] == false
+                {
+                    "not_reached"
+                } else {
+                    "unresolved"
+                };
+                if resource["status"] != status {
+                    reject("unpublished resource status contradicts lifecycle");
+                }
+            } else if operation == "issue" {
+                let valid = if event["status"] == "unavailable" {
+                    resource["status"] == "unavailable"
+                } else if event["native_result"] == 0 {
+                    resource["status"] == "null"
+                } else {
+                    resource["status"] == "issued" || resource["status"] == "issued_uncustodied"
+                };
+                if !valid {
+                    reject("token status contradicts issue");
+                }
+            } else if operation == "consume" {
+                let status = if event["status"] == "unavailable" {
+                    "unavailable"
+                } else if event["native_result"] == -1 {
+                    "consume_failed"
+                } else {
+                    "produced"
+                };
+                if resource["status"] != status {
+                    reject("handle status or value contradicts consume");
+                }
+            }
+            if operation == "consume"
+                && resource["native_handle"]
+                    != if resource["status"] == "produced" {
+                        event["native_result"].clone()
+                    } else {
+                        Value::Null
+                    }
+            {
+                reject("handle status or value contradicts consume");
+            }
         }
     }
     issues

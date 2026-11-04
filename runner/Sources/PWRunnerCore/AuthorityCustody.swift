@@ -128,8 +128,13 @@ final class ActorAuthorityRegion {
         let name = String("/pw_au_\(getpid())_\(actorIndex)".prefix(31))
         let fd = name.withCString { pw_cworker_shm_open_create($0, 0o600) }
         guard fd >= 0 else { failure = "shm_open: " + String(cString: strerror(errno)); return }
-        _ = name.withCString { shm_unlink($0) }
-        guard fcntl(fd, F_SETFD, FD_CLOEXEC) == 0, ftruncate(fd, off_t(bytes)) == 0 else {
+        guard name.withCString({ shm_unlink($0) }) == 0 else {
+            failure = "shm_unlink \(name): " + String(cString: strerror(errno)); close(fd); return
+        }
+        guard fcntl(fd, F_SETFD, FD_CLOEXEC) == 0 else {
+            failure = "FD_CLOEXEC: " + String(cString: strerror(errno)); close(fd); return
+        }
+        guard ftruncate(fd, off_t(bytes)) == 0 else {
             failure = "ftruncate: " + String(cString: strerror(errno)); close(fd); return
         }
         guard let mapped = mmap(nil, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0), mapped != MAP_FAILED else {
@@ -270,15 +275,35 @@ final class AuthorityCustody {
             inboundCounts[delivery.recipientActorIndex] += 1
         }
         inboundSlotOfDelivery = slotOfDelivery
-        // No region may carry a token while this host could dump core: without
-        // the limit no region is created and every actor launches without one.
+        // No region may carry a token while this host could dump core. Setup
+        // failure prevents the scheduler from launching this authority session.
         coreLimitFailure = coreLimited ? nil : "setrlimit(RLIMIT_CORE): " + String(cString: strerror(coreErrno))
         regions = coreLimited
             ? (0..<actorCount).map { ActorAuthorityRegion(actorIndex: $0, inboundCount: inboundCounts[$0], sessionNonce: nonce) }
             : []
         tokens = coreLimited ? plan.tokens.map { TokenCustody(tokenIndex: $0.index) } : []
+        // Before spawn, bind each inbound slot to its admitted delivery. The
+        // recipient snapshots these non-authority fields before application;
+        // a later committed frame must match that assignment.
+        for delivery in plan.deliveries where regions.indices.contains(delivery.recipientActorIndex) {
+            guard let slot = regions[delivery.recipientActorIndex].inbound(slotOfDelivery[delivery.index]) else { continue }
+            writeU32(slot, offset: PWAuthorityLayout.slotWriterActorOffset, UInt32(delivery.sourceActorIndex))
+            writeU32(slot, offset: PWAuthorityLayout.slotOperationIndexOffset, UInt32(delivery.slot))
+            writeU32(slot, offset: PWAuthorityLayout.slotResourceIndexOffset, UInt32(delivery.index))
+        }
     }
     private let coreLimitFailure: String?
+
+    var setupFailure: String? {
+        if let coreLimitFailure { return coreLimitFailure }
+        if let region = regions.first(where: { $0.failure != nil }) {
+            return "actor \(region.actorIndex) authority region: \(region.failure!)"
+        }
+        if let token = tokens.first(where: { !$0.available }) {
+            return "token \(token.tokenIndex) custody allocation failed"
+        }
+        return nil
+    }
 
     func regionStatus(for actor: Int) -> String {
         if let failure = coreLimitFailure { return "host_setup_failed: " + failure }
@@ -299,26 +324,30 @@ final class AuthorityCustody {
     // MARK: - Servicing
 
     /// One pass for the active actor: accept or reject a committed outbound
-    /// token, answer a transfer request, and note withdrawn requests.
-    func service(active: Int, phaseIndex: Int, recipientUsable: (Int) -> Bool) {
+    /// token and answer a transfer request exactly once.
+    func service(active: Int, phaseIndex: Int, waitAllowanceMs: Int = PWAuthorityLayout.exchangeWaitMs,
+                 recipientUsable: (Int) -> Bool) {
         guard !finished, coreLimitFailure == nil, regions.indices.contains(active), let base = regions[active].base else { return }
-        noteWithdrawnRequests()
         serviceOutbound(active: active, region: regions[active], phaseIndex: phaseIndex)
         let request = loadAcquire(base, offset: PWAuthorityLayout.transferRequestOffset)
-        if request != 0 && loadAcquire(base, offset: PWAuthorityLayout.transferAckOffset) == PWTransferAck.none {
+        if request != 0 && loadAcquire(base, offset: PWAuthorityLayout.transferAckOffset) == PWTransferAck.none
+            && !transfers.contains(where: { $0.sourceActorIndex == active && $0.slot == Int(request) - 1 }) {
             serviceTransfer(active: active, region: regions[active], slot: Int(request) - 1, phaseIndex: phaseIndex,
-                            recipientUsable: recipientUsable)
+                            waitAllowanceMs: waitAllowanceMs, recipientUsable: recipientUsable)
         }
-        noteWithdrawnRequests()
     }
 
-    /// A source that read the host's answer withdraws its request; that
-    /// withdrawal is the source's acknowledgement of the transfer outcome.
-    private func noteWithdrawnRequests() {
-        for i in transfers.indices where !transfers[i].sourceAcknowledged && transfers[i].acknowledgement != PWTransferAck.none {
-            let source = transfers[i].sourceActorIndex
-            guard regions.indices.contains(source), let base = regions[source].base else { continue }
-            if loadAcquire(base, offset: PWAuthorityLayout.transferRequestOffset) == 0 { transfers[i].sourceAcknowledged = true }
+    /// A withdrawn request can mean timeout, and a later request can replace
+    /// it before the host samples zero. Only the source's completed action
+    /// publication establishes which answer it actually observed.
+    func recordSourceAcknowledgements(_ outputs: [CWorkerOutput?]) {
+        for i in transfers.indices {
+            let transfer = transfers[i]
+            guard outputs.indices.contains(transfer.sourceActorIndex),
+                  let output = outputs[transfer.sourceActorIndex], output.slots.indices.contains(transfer.slot) else { continue }
+            let slot = output.slots[transfer.slot]
+            transfers[i].sourceAcknowledged = slot.completed && transfer.acknowledgement != PWTransferAck.none
+                && slot.extensionPublication?.transferStatus == transfer.acknowledgement
         }
     }
 
@@ -367,7 +396,7 @@ final class AuthorityCustody {
     }
 
     private func serviceTransfer(active: Int, region: ActorAuthorityRegion, slot: Int, phaseIndex: Int,
-                                 recipientUsable: (Int) -> Bool) {
+                                 waitAllowanceMs: Int, recipientUsable: (Int) -> Bool) {
         guard let base = region.base else { return }
         func answer(_ ack: UInt32, detail: UInt32) {
             writeU32(base, offset: PWAuthorityLayout.transferDetailOffset, detail)
@@ -383,7 +412,15 @@ final class AuthorityCustody {
         var observation = TransferObservation(deliveryIndex: delivery.index, tokenIndex: delivery.tokenIndex,
             sourceActorIndex: active, recipientActorIndex: delivery.recipientActorIndex, slot: slot, phaseIndex: phaseIndex,
             custodyStatus: "unavailable", copyStatus: "not_copied", equality: "not_compared", acknowledgement: PWTransferAck.none)
-        defer { transfers.append(observation) }
+        defer {
+            transfers.append(observation)
+            // Last use retires custody even when the recipient is unavailable.
+            if let token = plan.tokens.first(where: { $0.index == delivery.tokenIndex }), token.lastUseSlot == slot,
+               tokens.indices.contains(delivery.tokenIndex) {
+                tokens[delivery.tokenIndex].erase()
+                for i in custody.indices where custody[i].tokenIndex == delivery.tokenIndex { custody[i].erased = true }
+            }
+        }
         let custodyEntry = tokens.indices.contains(delivery.tokenIndex) ? tokens[delivery.tokenIndex] : nil
         guard let custodyEntry, custodyEntry.accepted, !custodyEntry.erased else {
             observation.acknowledgement = PWTransferAck.custodyUnavailable
@@ -417,7 +454,7 @@ final class AuthorityCustody {
         storeRelease(inbound, offset: PWAuthorityLayout.slotCommittedOffset, 1)
         // The recipient validates and acknowledges while parked or, for a
         // self-transfer, inside its own request wait.
-        var clock = HostWaitClock(milliseconds: PWAuthorityLayout.exchangeWaitMs, pollNs: 1_000_000, calls: calls)
+        var clock = HostWaitClock(milliseconds: min(PWAuthorityLayout.exchangeWaitMs, waitAllowanceMs), pollNs: 1_000_000, calls: calls)
         var ack = PWAuthorityAck.none
         var stop = "acknowledged"
         while true {
@@ -452,10 +489,6 @@ final class AuthorityCustody {
             withdraw(inbound)
             answer(observation.acknowledgement, detail: 0)
         }
-        if let token = plan.tokens.first(where: { $0.index == delivery.tokenIndex }), token.lastUseSlot == slot {
-            custodyEntry.erase()
-            for i in custody.indices where custody[i].tokenIndex == delivery.tokenIndex { custody[i].erased = true }
-        }
     }
 
     /// A delivery the recipient cannot consume: erase the bytes and drop the
@@ -483,7 +516,6 @@ final class AuthorityCustody {
     /// Erase every custody buffer and region after the workers have stopped.
     func finish() {
         if finished { return }
-        noteWithdrawnRequests()
         finished = true
         for token in tokens { token.erase() }
         for i in custody.indices { custody[i].erased = true }

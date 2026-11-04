@@ -244,6 +244,8 @@ def validate_actor_extensions(runner):
             if not _reference(token) or not owned(tokens, token_ref=token, actor_id=actor_id, step_id=sid) \
                     or handle is not None or delivery is not None:
                 errors.append('issue reference')
+            if status == 'returned' and (native not in (0, 1) or type(event.get('native_nonnull')) is not bool or event['native_nonnull'] != (native == 1)):
+                errors.append('issue nonnull disagrees with native result')
         elif operation == 'transfer':
             if not _reference(token) or not _reference(delivery) or handle is not None or not owned(
                     deliveries, delivery_ref=delivery, token_ref=token, source_actor_id=actor_id, step_id=sid):
@@ -252,7 +254,6 @@ def validate_actor_extensions(runner):
                 errors.append('transfer carries a native result')
             if (published is False) != (status == 'unresolved') or (status != 'unresolved' and status not in ACTOR_TRANSFER_STATUSES):
                 errors.append('transfer status')
-            continue
         elif operation == 'consume':
             if not _reference(delivery) or not _reference(handle) or token is not None or handle in consumed or not owned(
                     handles, handle_ref=handle, delivery_ref=delivery, actor_id=actor_id, step_id=sid):
@@ -271,19 +272,20 @@ def validate_actor_extensions(runner):
                 errors.append('release lacks an observed consume handle')
         else:
             errors.append('unknown extension operation'); continue
-        if status == 'returned':
-            if published is not True or called is not True or not _integer(native, -(1 << 63), (1 << 63) - 1) \
-                    or not _integer(errno, 0, (1 << 31) - 1) or event.get('unavailable_reason') is not None:
-                errors.append('native extension result lacks publication')
-        elif status == 'unavailable':
-            if published is not True or called is not False or native is not None or errno is not None \
-                    or event.get('unavailable_reason') not in ACTOR_UNAVAILABLE_REASONS:
-                errors.append('unavailable extension action fabricates a call')
-        elif status == 'unresolved':
-            if published is not False or native is not None or errno is not None or event.get('unavailable_reason') is not None:
-                errors.append('unpublished extension result must stay unresolved')
-        else:
-            errors.append('invalid extension event status')
+        if operation != 'transfer':
+            if status == 'returned':
+                if published is not True or called is not True or not _integer(native, -(1 << 63), (1 << 63) - 1) \
+                        or not _integer(errno, 0, (1 << 31) - 1) or event.get('unavailable_reason') is not None:
+                    errors.append('native extension result lacks publication')
+            elif status == 'unavailable':
+                if published is not True or called is not False or native is not None or errno is not None \
+                        or event.get('unavailable_reason') not in ACTOR_UNAVAILABLE_REASONS:
+                    errors.append('unavailable extension action fabricates a call')
+            elif status == 'unresolved':
+                if published is not False or native is not None or errno is not None or event.get('unavailable_reason') is not None:
+                    errors.append('unpublished extension result must stay unresolved')
+            else:
+                errors.append('invalid extension event status')
         sub = actor.get('subprocess')
         if isinstance(sub, dict):
             record = sub.get('disposition')
@@ -307,6 +309,46 @@ def validate_actor_extensions(runner):
                 source_actor_id=transfer.get('source_actor_id'), recipient_actor_id=transfer.get('recipient_actor_id'),
                 step_id=transfer.get('step_id')):
             errors.append('transfer record association')
+        if not isinstance(transfer, dict):
+            continue
+        if transfer.get('status') == 'delivered' and (transfer.get('request_published') is not True
+                or transfer.get('custody_status') != 'held' or transfer.get('copy_status') != 'copied'
+                or transfer.get('equality') != 'equal' or transfer.get('recipient_acknowledged') is not True):
+            errors.append('delivered transfer lacks custody, copy or recipient acknowledgement')
+        if transfer.get('source_acknowledged') is True and not any(isinstance(e, dict) and e.get('operation') == 'transfer'
+                and e.get('step_id') == transfer.get('step_id') and e.get('actor_id') == transfer.get('source_actor_id')
+                and e.get('result_published') is True and e.get('status') == transfer.get('status') for e in events):
+            errors.append('source acknowledgement lacks matching publication')
+
+    for table, operation, reference in ((tokens, 'issue', 'token_ref'), (handles, 'consume', 'handle_ref'),
+                                      (deliveries, 'transfer', 'delivery_ref')):
+        for resource in table:
+            if not isinstance(resource, dict):
+                errors.append('resource is not an object'); continue
+            matches = [e for e in events if isinstance(e, dict) and e.get('operation') == operation
+                       and e.get(reference) == resource.get(reference)]
+            if len(matches) != 1:
+                errors.append('resource lacks unique producing event'); continue
+            event = matches[0]
+            if operation == 'transfer' and any(isinstance(t, dict) and t.get('delivery_ref') == resource.get(reference) for t in transfers):
+                continue  # host observation can survive missing source publication
+            if event.get('result_published') is not True:
+                lifecycle = event.get('lifecycle')
+                boundary = lifecycle.get('boundary') if isinstance(lifecycle, dict) else None
+                boundary = boundary if isinstance(boundary, dict) else {}
+                status = 'not_reached' if boundary.get('state') == 'supported' and boundary.get('answer') == 'not_reached' and event.get('call_boundary_observed') is False else 'unresolved'
+                if resource.get('status') != status:
+                    errors.append('unpublished resource status contradicts lifecycle')
+            elif operation == 'issue':
+                statuses = ('unavailable',) if event.get('status') == 'unavailable' else ('null',) if event.get('native_result') == 0 else ('issued', 'issued_uncustodied')
+                if resource.get('status') not in statuses:
+                    errors.append('token status contradicts issue')
+            elif operation == 'consume':
+                status = 'unavailable' if event.get('status') == 'unavailable' else 'consume_failed' if event.get('native_result') == -1 else 'produced'
+                if resource.get('status') != status:
+                    errors.append('handle status or value contradicts consume')
+            if operation == 'consume' and resource.get('native_handle') != (event.get('native_result') if resource.get('status') == 'produced' else None):
+                errors.append('handle status or value contradicts consume')
     return errors
 
 

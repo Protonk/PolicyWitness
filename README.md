@@ -13,7 +13,7 @@ Even a well-arranged experiment does not make its results self-interpreting. An 
 
 ## The Experiment
 
-PolicyWitness operates on specimens: an SBPL policy and a plan of probes. Each specimen gets a fresh worker that applies the policy once. An unsandboxed host arranges for a separate validator to query the worker's live PID before releasing it to attempt the planned operations. The host collects observations through a reporting path outside the policy under test. A specimen can also contain ordered phases, allowing successive rounds of queries and attempts within the same worker.
+PolicyWitness operates on specimens: policies and ordered operations in fresh worker processes. A specimen can use one worker or name several actors, each applying its own policy once or declaring an unapplied starting state. A fresh host arranges for a separate validator to query the active worker's live PID before releasing its phase. Workers publish observations through prepared shared memory. Actors can issue, transfer, consume and release sandbox extensions through explicit operations; [extension coverage](docs/EXTENSIONS.md) defines the supported authority and evidence.
 
 The result is one JSON envelope containing the available predictions, attempts and their observed outcomes, together with evidence of their provenance and ordering. Comparison records relate those observations without declaring whether prediction and enforcement agree. Missing or incomplete observations remain visible rather than being turned into conclusions.
 

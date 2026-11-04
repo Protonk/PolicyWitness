@@ -14,7 +14,7 @@ import Foundation
  * launched process is exit-requested, graced, killed if needed and reaped at
  * the end, and each actor's output is collected from its own region.
  *
- * Stage 3 adds the authority mailboxes serviced while actors are parked.
+ * Authority mailboxes are serviced while actors are parked.
  */
 
 /// One scheduled visit: the global phase index (ordinal = index + 1), the
@@ -169,10 +169,18 @@ final class ActorScheduler {
             let custody = AuthorityCustody(plan: plan, actorCount: input.actors.count, calls: calls)
             self.custody = custody
             for index in input.actors.indices { records[index].authorityRegion = custody.regionStatus(for: index) }
+            if let failure = custody.setupFailure {
+                for index in input.actors.indices {
+                    records[index].setupStatus = .launchRefused
+                    records[index].launchFailure = .shmSetupFailed("authority setup: " + failure)
+                }
+                return clock.record(stop: "setup_failed")
+            }
         }
         var pending = Set<Int>()
         for index in input.actors.indices {
-            if clock.remainingNs() == 0 {
+            if cancelled != nil { break }
+            if (clock.remainingNs() ?? 0) < 1_000_000 {
                 records[index].setupStatus = .setupTimeout
                 continue
             }
@@ -181,7 +189,8 @@ final class ActorScheduler {
             actorInput.actorMode = input.applies[index] ? 1 : 2
             actorInput.lifetimeCutoffTicks = lifetimeCutoffTicks
             actorInput.authorityFD = custody?.descriptor(for: index)
-            let session = ActorSession(actorInput, processCalls: calls)
+            let session = ActorSession(actorInput, processCalls: calls,
+                setupRemainingMs: { Int((clock.remainingNs() ?? 0) / 1_000_000) })
             custody?.closeDescriptor(for: index)
             guard session.spawned else {
                 records[index].setupStatus = .launchRefused
@@ -206,7 +215,12 @@ final class ActorScheduler {
                 if let status = setupDisposition(session) {
                     records[index].setupStatus = status
                     if status == .applied { records[index].applicationCount = 1 }
-                    if !status.usable { stopActor(index, reason: status.rawValue) }
+                    if session.actorSetup != 0 && (session.authorityStatus >= 3
+                        || (session.input.authorityFD != nil && session.authorityStatus != 1)) {
+                        records[index].setupStatus = .setupFailed
+                        records[index].launchFailure = .shmSetupFailed("worker authority setup: status=\(session.authorityStatus) detail=\(session.authorityDetail)")
+                    }
+                    if !records[index].setupStatus.usable { stopActor(index, reason: records[index].setupStatus.rawValue) }
                     pending.remove(index)
                 }
             }
@@ -251,6 +265,12 @@ final class ActorScheduler {
             defer { visits.append(visit) }
             if let cancelled {
                 visit.endReason = "cancelled:" + cancelled
+                continue
+            }
+            if (clock.remainingNs() ?? 0) == 0 {
+                cancelled = "execution_allowance_exhausted"
+                stop = "deadline"
+                visit.endReason = "cancelled:execution_allowance_exhausted"
                 continue
             }
             guard let session = sessions[entry.actorIndex],
@@ -332,7 +352,8 @@ final class ActorScheduler {
             }
             if reason == nil {
                 // ---- Release: recheck ownership, arrival and order before the store.
-                if !session.doneObserved && session.arrived(index) && !session.acknowledged(index)
+                if (clock.remainingNs() ?? 0) == 0 { reason = "completion_timeout" }
+                else if !session.doneObserved && session.arrived(index) && !session.acknowledged(index)
                     && !session.completed(index) && (index == 0 || session.completed(index - 1))
                     && session.phaseOutputs[index].violations.isEmpty {
                     session.releaseVisit(index)
@@ -347,7 +368,10 @@ final class ActorScheduler {
                 session.observeAcknowledgement()
                 // The active actor may publish an issued token or a transfer
                 // request while it runs; the host services them here.
-                custody?.service(active: entry.actorIndex, phaseIndex: entry.phaseIndex, recipientUsable: recipientUsable)
+                let remainingMs = Int((clock.remainingNs() ?? 0) / 1_000_000)
+                if remainingMs == 0 { reason = "completion_timeout"; break }
+                custody?.service(active: entry.actorIndex, phaseIndex: entry.phaseIndex,
+                                 waitAllowanceMs: remainingMs, recipientUsable: recipientUsable)
                 if session.completed(index) { break }
                 if session.doneObserved { reason = "ended_before_completion"; break }
                 switch session.waitChild(stage: "schedule") {
@@ -394,6 +418,7 @@ final class ActorScheduler {
         session.requestExit()
         session.finishCleanup()
         records[index].quiescence = session.process.status != nil ? "reaped" : "unresolved"
+        if records[index].quiescence == "unresolved" { cancelled = "actor_quiescence_unresolved" }
     }
 
     /// Stop every remaining actor, collect each output and release host resources.
@@ -412,6 +437,7 @@ final class ActorScheduler {
         }
         // Workers are stopped and reaped (or recorded unresolved) before the host
         // erases its custody and unmaps every region.
+        custody?.recordSourceAcknowledgements(records.map { $0.output })
         custody?.finish()
     }
 }

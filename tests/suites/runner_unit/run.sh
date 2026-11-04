@@ -67,4 +67,10 @@ test_run_logged "${PW_TEST_ARTIFACTS}/clock-readers.log" "worker clock reader re
   --include-ignored --exact run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer
 if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/clock-readers.log"; then test_fail "worker clock replay did not run"; fi
 
+test_step actor_readers "read actual actor setup, interrupted issue and completed replies with rejected variants"
+test_run_logged "${PW_TEST_ARTIFACTS}/actor-readers.log" "actor reader replay failed" \
+  cargo test --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
+  --include-ignored --exact run_flow::tests::actor_driver_replies_cross_readers
+if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/actor-readers.log"; then test_fail "actor replay did not run"; fi
+
 test_pass "${SUMMARY}" "{\"log\":\"${RUN_LOG}\"}"

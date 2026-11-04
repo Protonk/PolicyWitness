@@ -103,6 +103,35 @@ private func readable(_ slot: CWorkerSlotResult?) -> Bool { slot?.completed == t
 func runActorAuthorityTests(_ tk: TestKit) {
     let workerPresent = FileManager.default.isExecutableFile(atPath: equipment("pw-probe-runner"))
     tk.group("actor authority: native issue, host custody, explicit transfer, consume and release") {
+        tk.run("withdrawal alone never acknowledges a source answer and a request is serviced once") {
+            let plan = AuthorityPlan(tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 1)],
+                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 1)])
+            let custody = AuthorityCustody(plan: plan, actorCount: 1, calls: ChildProcessCalls())
+            defer { custody.finish() }
+            try expectNil(custody.setupFailure)
+            let base = custody.regions[0].base!
+            storeRelease(base, offset: PWAuthorityLayout.transferRequestOffset, 2)
+            custody.service(active: 0, phaseIndex: 0) { _ in true }
+            try expectEqual(custody.transfers.count, 1)
+            // The worker clears ack before publishing its next request: a
+            // sample of the previous request during that window is not new.
+            storeRelease(base, offset: PWAuthorityLayout.transferAckOffset, 0)
+            custody.service(active: 0, phaseIndex: 0) { _ in true }
+            try expectEqual(custody.transfers.count, 1)
+            storeRelease(base, offset: PWAuthorityLayout.transferRequestOffset, 0)
+            var result = CWorkerSlotResult(stepId: "transfer", rc: 0, errnoVal: 0, observedPath: nil, error: nil, completed: false)
+            result.extensionPublication = CWorkerExtensionPublication(tokenLength: 0, custodyStatus: 0, transferStatus: PWTransferAck.custodyUnavailable)
+            var output = CWorkerOutput(workerPid: 0, readyByteReceived: true, applied: false, applyRC: 0, applyErrno: 0, done: false, slots: [result, result])
+            custody.recordSourceAcknowledgements([output])
+            try expectFalse(custody.transfers[0].sourceAcknowledged)
+            output.slots[1].completed = true
+            output.slots[1].extensionPublication?.transferStatus = PWTransferAck.hostTimeout
+            custody.recordSourceAcknowledgements([output])
+            try expectFalse(custody.transfers[0].sourceAcknowledged)
+            output.slots[1].extensionPublication?.transferStatus = PWTransferAck.custodyUnavailable
+            custody.recordSourceAcknowledgements([output])
+            try expectTrue(custody.transfers[0].sourceAcknowledged)
+        }
         tk.run("positive calibration: an unapplied issuer supplies a parked applied reader through host custody") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let target = try freshTarget("calibration")

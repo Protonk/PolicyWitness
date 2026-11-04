@@ -86,7 +86,8 @@ is visible to another actor or to a validator. An issued token is written once
 into the issuing actor's outbound slot, copied by the host into a fixed custody
 buffer after framing checks, and acknowledged. A transfer is a request the
 host answers: it copies the custody bytes into the recipient's assigned inbound
-slot, waits for the recipient to validate and acknowledge them, compares the
+slot, waits for the recipient to validate framing and its preassigned source,
+action and delivery references and acknowledge them, compares the
 two copies, and reports the outcome to the sender. The recipient accepts a
 delivery while parked between its visits; it consumes only in a later visit of
 its own, after that phase's queries were collected and the host released it.
@@ -94,9 +95,10 @@ The host erases custody at the token's last declared transfer and at teardown;
 each worker erases its slots at its last declared use and on every ordinary
 exit. Tokens never enter the request, the reply, logs or diagnostics.
 
-Every actor's worker is launched with an empty environment, null standard
-streams and only its policy pipe, evidence region, readiness pipe and authority
-region as inherited descriptors. The host disables core dumps before any token
+Every actor's worker is launched with an empty environment, a policy pipe on
+stdin, and stdout and stderr opened on the null device. Its other inherited
+endpoints are its evidence region, readiness pipe and, when needed, authority
+region. Other host descriptors are closed at exec. The host disables core dumps before any token
 can arrive, and so does each worker before mapping its region.
 
 ## What each observation establishes
@@ -111,22 +113,28 @@ can arrive, and so does each worker before mapping its region.
 | `consume` with `status: returned` and `native_result` other than the failure sentinel | That actor received a candidate handle for the delivery it named. | Effective permission for any operation. |
 | `release` with `status: returned` | The native release call returned the recorded value. | Revocation of access or undoing of earlier effects. |
 | `status: unavailable` with an `unavailable_reason` | The named operation was not called for the recorded reason (no delivery, no handle, missing native symbol, no authority channel, repeated action). | A native result of any kind. |
+| Resource status `not_reached` | Terminal lifecycle evidence establishes that the producing action was not reached. | Absence of a result alone is insufficient; interrupted or unknown producers remain `unresolved`. |
 | `status: unresolved` | The action's result was never published: the actor died, was stopped or never reached it. | That the call did not happen. |
 | A fresh read that succeeds after a consume | That process could open and read the file at that moment. | That the consumed extension caused it; compare with the actor's baseline read and its policy. |
 
 Native results, host custody facts, recipient acknowledgements and the
-validator's predictions are separate records with separate writers. The
+validator's predictions are separate records with separate writers. A source
+acknowledgement requires the source action's published matching answer; a
+withdrawn request alone can also mean a timeout. The
 `sandbox_check` query cannot represent an extension class beside a path, so
-`file-issue-extension` predictions do not distinguish issuance outcomes and
-extension events stay outside the query/attempt comparison.
+`file-issue-extension` queries cannot express that full issuance predicate and
+extension events stay outside the query/attempt comparison. This is a limit
+of the available query representation, not a prediction of every native
+issuance outcome.
 
 ## What can go wrong, and how it reads
 
 | Situation | Reading |
 | --- | --- |
+| Required authority-region or custody setup fails | The host refuses launch, or stops the affected worker before releasing a phase; the run records an apparatus failure. This is distinct from missing native symbols or a native refusal. |
 | An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are `actor_unavailable`; other actors' evidence stands. The run is `runner_failed`. |
 | An actor dies during a visit | The visit records how it ended; the scheduler establishes the actor is reaped before activating anyone else; later visits of that actor are unavailable. |
-| The shared lifetime cutoff expires | Each affected worker publishes a timing failure and exits; parked actors stop too. |
+| The shared lifetime cutoff expires | A worker that reaches a checked wait publishes a timing failure and exits. A blocked native call may prevent that check; host cleanup and missing publication remain separate observations. |
 | The issuing actor publishes a token the host rejects | `resources.tokens[].status` is `issued_uncustodied` and `transfers[]` of that token read `custody_unavailable`. |
 | A recipient rejects or does not acknowledge a delivery | The transfer reads `recipient_rejected`, `recipient_timeout` or `recipient_unavailable`; the recipient's later consume is `unavailable` for want of a delivery. |
 | Native symbols are missing in the worker | The affected operations are `unavailable` with `native_api_unavailable`; unrelated reads still run. |

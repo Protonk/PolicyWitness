@@ -28,6 +28,8 @@ from check_extensions import capture  # noqa: E402
 from contract import REQUEST_SCHEMA  # noqa: E402
 import extension_actors  # noqa: E402
 from worker_exit_witness import worker_exit_witness  # noqa: E402
+from consumer import validate  # noqa: E402
+from lifecycle_oracle import check_record  # noqa: E402
 
 pw, directory, *session_path = sys.argv[1:]
 # An optional BYOXPC session receipt routes every request through that owned
@@ -69,6 +71,8 @@ def read_outcome(runner, step_id, expected):
 
 def apparatus_complete(envelope, runner, spec, policies):
     """The witnessing assertions every run of this case must satisfy."""
+    assert validate(envelope) == [], validate(envelope)
+    assert check_record(envelope) == [], check_record(envelope)
     assert runner['execution_form'] == 'actors', runner.get('execution_form')
     witnessed, reason = worker_exit_witness(envelope)
     assert witnessed, reason
