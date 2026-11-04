@@ -100,25 +100,97 @@ private func denied(_ slot: CWorkerSlotResult?) -> Bool {
 }
 private func readable(_ slot: CWorkerSlotResult?) -> Bool { slot?.completed == true && slot?.rc == 0 }
 
+/// Also run alone by the disposable outbound-alias mutation control. Two
+/// distinct synthetic payloads expose a changed association even when both
+/// publications frame correctly. No native extension operation is involved.
+func runHandoffCopyBoundaryControl() throws {
+    let plan = AuthorityPlan(tokens: [
+        AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 2),
+        AuthorityPlanToken(index: 1, actorIndex: 0, slot: 1, lastUseSlot: 3)], deliveries: [
+        AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 2),
+        AuthorityPlanDelivery(index: 1, tokenIndex: 1, sourceActorIndex: 0, recipientActorIndex: 0, slot: 3)])
+    let custody = AuthorityCustody(plan: plan, actorCount: 1, calls: ChildProcessCalls())
+    defer { custody.finish() }
+    try expectNil(custody.setupFailure)
+    let payloads = [Array("first-owned-payload\0".utf8), Array("second-owned-payload\0".utf8)]
+    func publish(_ index: Int) {
+        let slot = custody.regions[0].outbound(index)!
+        writeU32(slot, offset: PWAuthorityLayout.slotMagicOffset, PWAuthorityLayout.magic)
+        writeU32(slot, offset: PWAuthorityLayout.slotFamilyOffset, PWAuthorityLayout.familyFile)
+        writeU32(slot, offset: PWAuthorityLayout.slotWriterActorOffset, 0)
+        writeU32(slot, offset: PWAuthorityLayout.slotOperationIndexOffset, UInt32(index))
+        writeU32(slot, offset: PWAuthorityLayout.slotResourceIndexOffset, UInt32(index))
+        writeU32(slot, offset: PWAuthorityLayout.slotTokenLengthOffset, UInt32(payloads[index].count - 1))
+        payloads[index].withUnsafeBufferPointer {
+            slot.advanced(by: PWAuthorityLayout.slotTokenOffset).update(from: $0.baseAddress!, count: $0.count)
+        }
+        storeRelease(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset, 0)
+        storeRelease(slot, offset: PWAuthorityLayout.slotCommittedOffset, 1)
+    }
+    publish(0)
+    var secondPublishedDuringFirstCopy = false
+    custody.beforeOutboundCopy = { index in
+        if index == 0 { publish(1); secondPublishedDuringFirstCopy = true }
+    }
+    custody.service(active: 0, phaseIndex: 0) { _ in true }
+    try expectTrue(secondPublishedDuringFirstCopy, "controlled second publication was not reached")
+    let firstMatches = payloads[0].withUnsafeBufferPointer { custody.tokens[0].equals($0.baseAddress!, length: $0.count - 1) }
+    try expectTrue(firstMatches, "handoff copy preserves first issue bytes")
+    let secondMatches = payloads[1].withUnsafeBufferPointer { custody.tokens[1].equals($0.baseAddress!, length: $0.count - 1) }
+    try expectTrue(secondMatches, "handoff copy preserves second issue bytes")
+    try expectEqual(custody.custody.map { $0.tokenIndex }, [0, 1])
+    for index in 0..<2 {
+        let slot = custody.regions[0].outbound(index)!
+        try expectEqual(loadAcquire(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset), PWAuthorityAck.accepted)
+        try expectTrue((0..<PWAuthorityLayout.tokenBytes).allSatisfy { slot[PWAuthorityLayout.slotTokenOffset + $0] == 0 },
+                       "host erased accepted outbound payload")
+    }
+}
+
 func runActorAuthorityTests(_ tk: TestKit) {
     let workerPresent = FileManager.default.isExecutableFile(atPath: equipment("pw-probe-runner"))
     tk.group("actor authority: native issue, host custody, explicit transfer, consume and release") {
-        tk.run("withdrawal alone never acknowledges a source answer and a request is serviced once") {
+        tk.run("a later publication cannot replace bytes during an earlier custody copy") {
+            try runHandoffCopyBoundaryControl()
+        }
+        tk.run("shared-region erasure requires known quiescence and unknown actors retain their bytes") {
+            for quiescent in [false, true] {
+                let plan = AuthorityPlan(tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 1)],
+                    deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 1)])
+                let custody = AuthorityCustody(plan: plan, actorCount: 1, calls: ChildProcessCalls())
+                try expectNil(custody.setupFailure)
+                let region = custody.regions[0]
+                guard let observed = mmap(nil, region.bytes, PROT_READ | PROT_WRITE, MAP_SHARED, region.descriptor, 0),
+                      observed != MAP_FAILED else { throw TestFailure(message: "independent authority observation mapping") }
+                defer { _ = munmap(observed, region.bytes) }
+                let raw = observed.assumingMemoryBound(to: UInt8.self)
+                let offsets = [PWAuthorityLayout.slotsOffset, PWAuthorityLayout.slotsOffset + PWAuthorityLayout.slotBytes]
+                for offset in offsets {
+                    memset(raw.advanced(by: offset + PWAuthorityLayout.slotTokenOffset), 0x5a, PWAuthorityLayout.tokenBytes)
+                }
+                custody.finish(quiescentActors: quiescent ? Set([0]) : Set())
+                custody.finish() // Idempotence must not turn unknown into an erase permission.
+                for offset in offsets {
+                    let start = offset + PWAuthorityLayout.slotTokenOffset
+                    try expectTrue((0..<PWAuthorityLayout.tokenBytes).allSatisfy { raw[start + $0] == (quiescent ? 0 : 0x5a) },
+                                   "shared payload erasure follows established quiescence")
+                }
+            }
+        }
+        tk.run("one-shot source answers require a matching publication and are serviced once") {
             let plan = AuthorityPlan(tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 1)],
                 deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 1)])
             let custody = AuthorityCustody(plan: plan, actorCount: 1, calls: ChildProcessCalls())
             defer { custody.finish() }
             try expectNil(custody.setupFailure)
-            let base = custody.regions[0].base!
-            storeRelease(base, offset: PWAuthorityLayout.transferRequestOffset, 2)
+            let cell = custody.regions[0].transfer(0)!
+            storeRelease(cell, offset: PWAuthorityLayout.transferRequestOffset, 1)
             custody.service(active: 0, phaseIndex: 0) { _ in true }
             try expectEqual(custody.transfers.count, 1)
-            // The worker clears ack before publishing its next request: a
-            // sample of the previous request during that window is not new.
-            storeRelease(base, offset: PWAuthorityLayout.transferAckOffset, 0)
+            // Even a malformed repeated request cannot service this cell twice.
+            storeRelease(cell, offset: PWAuthorityLayout.transferAckOffset, 0)
             custody.service(active: 0, phaseIndex: 0) { _ in true }
             try expectEqual(custody.transfers.count, 1)
-            storeRelease(base, offset: PWAuthorityLayout.transferRequestOffset, 0)
             var result = CWorkerSlotResult(stepId: "transfer", rc: 0, errnoVal: 0, observedPath: nil, error: nil, completed: false)
             result.extensionPublication = CWorkerExtensionPublication(tokenLength: 0, custodyStatus: 0, transferStatus: PWTransferAck.custodyUnavailable)
             var output = CWorkerOutput(workerPid: 0, readyByteReceived: true, applied: false, applyRC: 0, applyErrno: 0, done: false, slots: [result, result])

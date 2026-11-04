@@ -105,7 +105,10 @@ struct ActorTranslation {
             var phases: [CWorkerPhaseInput] = []
             for phaseIndex in actor.visits {
                 let phase = plan.phases[phaseIndex]
-                let first = local[phase.firstSlot]?.slot ?? phases.last?.endSlot ?? 0
+                // Empty visits have no global action of their own: firstSlot
+                // can name the next actor's action. Partition this actor's
+                // slots using its accumulated offset instead.
+                let first = phases.last?.endSlot ?? 0
                 let input = CWorkerPhaseInput(firstSlot: first, endSlot: first + phase.actions.count, globalPhase: phaseIndex + 1)
                 phases.append(input)
             }

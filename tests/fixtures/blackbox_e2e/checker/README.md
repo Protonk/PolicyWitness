@@ -20,7 +20,7 @@ produced it, and each `*_specimen.json` is the exact submitted request.
 
 ## Refresh
 
-A response or controller-envelope version bump makes the readers reject these
+A response, controller-envelope or runner-protocol version bump makes the readers reject these
 captures. Capture a new set, without editing its contents; the `responseNN/`
 directory names the runner response schema. Run the four cases above against the
 final candidate and copy from each case's `artifacts/` directory:

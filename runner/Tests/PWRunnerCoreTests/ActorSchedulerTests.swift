@@ -126,6 +126,99 @@ func runActorSchedulerTests(_ tk: TestKit) {
             try expectEqual(result.actors[0].output?.slots[0].completed, false)
             try expectEqual(result.actors[0].quiescence, "reaped")
         }
+        tk.run("setup expiry retains an application published during cleanup without making setup usable") {
+            var actor = actorInput(policy: allowAll, visits: [(0, [read("late", hosts)])])
+            actor.preReadyHangMs = 150
+            actor.exitGraceMs = 1_000
+            var input = ActorScheduleInput(actors: [actor], applies: [true], schedule: schedule([[0]]))
+            input.setupAllowanceMs = 40
+            var collected = false
+            let result = ActorScheduler.run(input) { _, _, _ in collected = true }
+            let record = result.actors[0]
+            try expectEqual(record.setupStatus, .setupTimeout)
+            try expectTrue(record.output?.applied == true, "native worker must finish its delayed apply during grace")
+            try expectEqual(record.applicationCount, 1, "final application publication must survive setup expiry")
+            try expectFalse(collected)
+            try expectFalse(result.visits[0].activationStored)
+            try expectEqual(record.output?.slots[0].completed, false)
+            try expectEqual(record.quiescence, "reaped")
+            try expectEqual(record.output?.readyWait?.stop, "deadline")
+            try expectTrue((record.output?.readyWait?.budget_ms ?? Int.max) <= 40)
+        }
+        tk.run("collection is excluded once but post-collection work can exhaust the release allowance") {
+            var offset: UInt64 = 0
+            var chargeAfterCollection = false
+            var charged = false
+            var calls = ChildProcessCalls()
+            calls.clock = { MonotonicDeadline.now().map { $0 + offset } }
+            calls.wait = { pid, status, options in
+                let rc = Darwin.waitpid(pid, status, options)
+                if chargeAfterCollection && !charged {
+                    offset += 400_000_000
+                    charged = true
+                }
+                return rc
+            }
+            var input = ActorScheduleInput(actors: [actorInput(policy: allowAll, visits: [(0, [read("held", hosts)])])],
+                applies: [true], schedule: schedule([[0]]))
+            input.executionAllowanceMs = 400
+            let result = ActorScheduler.run(input, processCalls: calls) { _, _, _ in
+                offset += 1_000_000_000
+                chargeAfterCollection = true
+            }
+            try expectTrue(charged)
+            try expectTrue(result.visits[0].collectionClosed)
+            try expectFalse(result.visits[0].releaseStored)
+            try expectEqual(result.cancelled, "execution_allowance_exhausted")
+            try expectEqual(result.actors[0].output?.slots[0].completed, false)
+            try expectTrue((result.executionWait?.excluded_ms ?? 0) >= 1_000)
+            let elapsed = result.executionWait?.elapsed_ms ?? 0
+            let excluded = result.executionWait?.excluded_ms ?? UInt64.max
+            try expectTrue(elapsed >= excluded && elapsed - excluded >= 400)
+        }
+        tk.run("lost ownership cancels later activations and never invents confirmed cleanup") {
+            var faultPid: pid_t?
+            var signalled: [pid_t] = []
+            var independentlyReaped = false
+            defer {
+                // The fault adapter withholds the native wait, so this fixture
+                // still owns the actual child and must settle it independently.
+                if let pid = faultPid, !independentlyReaped {
+                    _ = Darwin.kill(pid, SIGKILL)
+                    var status: Int32 = 0
+                    while Darwin.waitpid(pid, &status, 0) < 0 && errno == EINTR {}
+                }
+            }
+            var calls = ChildProcessCalls()
+            calls.wait = { pid, status, options in
+                if faultPid == pid { errno = ECHILD; return -1 }
+                return Darwin.waitpid(pid, status, options)
+            }
+            calls.kill = { pid, signal in signalled.append(pid); return Darwin.kill(pid, signal) }
+            let input = ActorScheduleInput(
+                actors: [actorInput(policy: allowAll, visits: [(0, [read("a", hosts)])]),
+                         actorInput(policy: allowAll, visits: [(1, [read("b", hosts)])])],
+                applies: [true, true], schedule: schedule([[0], [1]]))
+            var collections: [Int] = []
+            let result = ActorScheduler.run(input, processCalls: calls) { phase, _, pid in
+                collections.append(phase)
+                if phase == 0 { faultPid = pid }
+            }
+            try expectEqual(collections, [0])
+            try expectEqual(result.actors[0].quiescence, "unresolved")
+            try expectFalse(result.visits[0].releaseStored)
+            try expectFalse(result.visits[1].activationStored)
+            try expectTrue(result.cancelled != nil)
+            try expectEqual(result.actors[0].output?.collectionBasis, "execution_may_continue")
+            try expectFalse(signalled.contains(faultPid!))
+            try expectTrue(result.actors.allSatisfy { $0.output?.slots[0].completed == false })
+            var status: Int32 = 0
+            var rc: pid_t
+            repeat { rc = Darwin.waitpid(faultPid!, &status, 0) } while rc < 0 && errno == EINTR
+            independentlyReaped = rc == faultPid
+            try expectTrue(independentlyReaped, "fixture must independently reap the child hidden by ECHILD")
+            try expectEqual(result.actors[0].quiescence, "unresolved", "later fixture cleanup cannot upgrade the retained result")
+        }
         tk.run("two policies reach two identified processes, each applied once, across repeated visits") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let both = [read("hosts", hosts), read("passwd", passwd)]

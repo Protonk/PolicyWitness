@@ -471,7 +471,21 @@ extension PWRunnerRunResult {
         let actorIDs = Set(actors.map { $0.actor_id })
         guard actorIDs.count == actors.count, phases.allSatisfy({ $0.actor_id.map(actorIDs.contains) == true && ($0.actor_visit ?? 0) >= 1 }),
               steps.allSatisfy({ $0.actor_id.map(actorIDs.contains) == true }) else { return "actor association on phases or steps" }
+        for actor in actors {
+            guard [0, 1].contains(actor.application_count), (actor.application_count == 1) == (actor.applied == true),
+                  actor.setup_status != "applied" || actor.applied == true else { return "application count contradicts application publication" }
+        }
         let ids = phases.flatMap { $0.action_ids }
+        for references in [resources.tokens.map { $0.token_ref }, resources.deliveries.map { $0.delivery_ref },
+                           resources.handles.map { $0.handle_ref }, transfers.map { $0.delivery_ref }] {
+            guard references.allSatisfy(validReference), Set(references).count == references.count else {
+                return "resource and transfer references must be unique"
+            }
+        }
+        func before(_ first: String, _ second: String) -> Bool {
+            guard let a = ids.firstIndex(of: first), let b = ids.firstIndex(of: second) else { return false }
+            return a < b
+        }
         var consumed: [String: PWRunnerExtensionEvent] = [:]
         var released = Set<String>()
         for event in events {
@@ -490,6 +504,8 @@ extension PWRunnerRunResult {
                 guard let token = event.token_ref, let delivery = event.delivery_ref, validReference(token), validReference(delivery),
                       let record = resources.deliveries.first(where: { $0.delivery_ref == delivery }), record.token_ref == token,
                       record.source_actor_id == actorID, record.step_id == event.step_id, event.handle_ref == nil else { return "transfer reference" }
+                guard let source = resources.tokens.first(where: { $0.token_ref == token }),
+                      source.actor_id == actorID, before(source.step_id, event.step_id) else { return "transfer token owner/order" }
                 guard !event.call_boundary_observed, event.native_result == nil, event.errno == nil else { return "transfer carries a native result" }
                 guard event.status == "unresolved" ? !event.result_published
                       : event.result_published && PWTransferAck.names.values.contains(event.status) else { return "transfer status" }
@@ -497,6 +513,8 @@ extension PWRunnerRunResult {
                 guard let delivery = event.delivery_ref, let handle = event.handle_ref, validReference(delivery), validReference(handle),
                       let record = resources.handles.first(where: { $0.handle_ref == handle }), record.delivery_ref == delivery,
                       record.actor_id == actorID, record.step_id == event.step_id, event.token_ref == nil else { return "consume reference" }
+                guard let source = resources.deliveries.first(where: { $0.delivery_ref == delivery }),
+                      source.recipient_actor_id == actorID, before(source.step_id, event.step_id) else { return "consume delivery recipient/order" }
                 if consumed[handle] != nil { return "repeated consume handle" }
                 consumed[handle] = event
             case "release":
@@ -537,6 +555,8 @@ extension PWRunnerRunResult {
                   delivery.token_ref == transfer.token_ref, delivery.source_actor_id == transfer.source_actor_id,
                   delivery.recipient_actor_id == transfer.recipient_actor_id, delivery.step_id == transfer.step_id,
                   PWTransferAck.names.values.contains(transfer.status) else { return "transfer record association" }
+            guard let source = events.first(where: { $0.operation == "transfer" && $0.delivery_ref == transfer.delivery_ref }),
+                  transfer.phase_id == source.phase_id, transfer.lifecycle == source.lifecycle else { return "transfer source phase/lifecycle association" }
             if transfer.status == "delivered" && (!transfer.request_published || transfer.custody_status != "held"
                 || transfer.copy_status != "copied" || transfer.equality != "equal" || !transfer.recipient_acknowledged) {
                 return "delivered transfer lacks custody, copy or recipient acknowledgement"
@@ -559,6 +579,10 @@ extension PWRunnerRunResult {
             } else if event.native_result == 1 {
                 if !["issued", "issued_uncustodied"].contains(token.status) { return "token status contradicts issue" }
             }
+            if token.family != "file" || token.token_length != event.token_length
+                || (token.status == "issued" && !(1..<PWExtensionLimits.tokenBytes).contains(token.token_length ?? 0)) {
+                return "token metadata contradicts issue"
+            }
         }
         for handle in resources.handles {
             guard let event = events.first(where: { $0.operation == "consume" && $0.handle_ref == handle.handle_ref }) else { return "handle lacks consume event" }
@@ -570,9 +594,40 @@ extension PWRunnerRunResult {
             if handle.status != status || handle.native_handle != (status == "produced" ? event.native_result : nil) {
                 return "handle status or value contradicts consume"
             }
+            let release = events.first { $0.operation == "release" && $0.handle_ref == handle.handle_ref }
+            if handle.release_step_id != release?.step_id || handle.release_attempted != (release?.call_boundary_observed == true) {
+                return "handle release projection contradicts event"
+            }
+            let equal = resources.handles.filter { $0.handle_ref != handle.handle_ref && $0.actor_id == handle.actor_id
+                && handle.native_handle != nil && $0.native_handle == handle.native_handle }.map { $0.handle_ref }
+            if Set(handle.raw_equal_handles).count != handle.raw_equal_handles.count || Set(handle.raw_equal_handles) != Set(equal) {
+                return "handle equality projection contradicts native handles"
+            }
         }
-        for delivery in resources.deliveries where !transfers.contains(where: { $0.delivery_ref == delivery.delivery_ref }) {
+        for delivery in resources.deliveries {
             guard let event = events.first(where: { $0.operation == "transfer" && $0.delivery_ref == delivery.delivery_ref }) else { return "delivery lacks transfer event" }
+            guard actorIDs.contains(delivery.recipient_actor_id) else { return "delivery recipient does not exist" }
+            if let host = transfers.first(where: { $0.delivery_ref == delivery.delivery_ref }) {
+                // A host observation can survive missing source publication.
+                if delivery.status != host.status || delivery.equality != host.equality {
+                    return "delivery projection contradicts host transfer"
+                }
+                if host.status == "delivered" {
+                    guard let length = delivery.delivered_length, (1..<PWExtensionLimits.tokenBytes).contains(length) else {
+                        return "delivered length contradicts custody"
+                    }
+                    if let lengthFromIssue = resources.tokens.first(where: { $0.token_ref == delivery.token_ref })?.token_length,
+                       lengthFromIssue != length { return "delivered length contradicts custody" }
+                } else if delivery.delivered_length != nil { return "undelivered resource carries delivered length" }
+                continue
+            }
+            if delivery.equality != nil || delivery.delivered_length != nil
+                || !["none", "host_timeout", "clock_fault", "unresolved"].contains(event.status) {
+                return "delivery claims host observation without transfer"
+            }
+            if event.result_published && delivery.status != (event.unavailable_reason ?? "unrequested") {
+                return "unobserved delivery status contradicts source"
+            }
             if !event.result_published {
                 let status = event.lifecycle?.boundary.state == "supported" && event.lifecycle?.boundary.answer == "not_reached"
                     && !event.call_boundary_observed ? "not_reached" : "unresolved"

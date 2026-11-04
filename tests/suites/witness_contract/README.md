@@ -161,7 +161,20 @@ compilation and application on the recorded equipment only.
 
 ## Principal re-delegation acceptance
 
-`extension_redelegation` runs the plan's principal three-actor specimen through
+`actor_compositions` runs public specimens with distinct file contents and
+identities across multiple issuers, fan-out, repeated consumes, separate handles,
+self-transfer and empty revisits. A second request reverses actor declarations
+and consistently renames references. Exact request-to-reply inventories, full
+readers, policy hashes and per-process fresh observations must agree. The case
+also retains a recipient's compilation failure while unrelated actors continue.
+Optional per-actor compiled-profile receipts are checked against the requested
+nonce, process, source and captured bytecode; a failed application remains an
+unavailable capture. A changed producer context is rejected by the reader.
+The positive cases require issuance/consumption/access coverage; a native refusal is
+retained as missing coverage, never reclassified as sandbox enforcement failure.
+An intervening release is observed without assuming it revokes access.
+
+`extension_redelegation` runs the principal three-actor specimen through
 the public CLI against a test-owned file, then a positive calibration and four
 narrow contrasts. The witnessing assertions concern the apparatus: `A`, `B` and
 `C` are distinct fresh processes whose parent is the host; `B` and `C` applied

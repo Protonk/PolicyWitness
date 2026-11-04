@@ -8,7 +8,7 @@
   "extensions": [
     {
       "token_ref": "token",
-      "target": "/private/tmp/pw-extension-targets-br7prbxl/extension-target"
+      "target": "/private/tmp/pw-extension-targets-c9gjuaa0/extension-target"
     }
   ],
   "phases": [
@@ -21,13 +21,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-br7prbxl/extension-target"
+              "value": "/private/tmp/pw-extension-targets-c9gjuaa0/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-br7prbxl/extension-target"
+            "target": "/private/tmp/pw-extension-targets-c9gjuaa0/extension-target"
           }
         },
         {
@@ -49,13 +49,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-br7prbxl/extension-target"
+              "value": "/private/tmp/pw-extension-targets-c9gjuaa0/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-br7prbxl/extension-target"
+            "target": "/private/tmp/pw-extension-targets-c9gjuaa0/extension-target"
           }
         },
         {
@@ -76,13 +76,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-br7prbxl/extension-target"
+              "value": "/private/tmp/pw-extension-targets-c9gjuaa0/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-br7prbxl/extension-target"
+            "target": "/private/tmp/pw-extension-targets-c9gjuaa0/extension-target"
           }
         }
       ]

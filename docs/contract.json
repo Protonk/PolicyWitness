@@ -4,6 +4,6 @@
     "request_schema": 5,
     "response_schema": 25,
     "controller_envelope": 10,
-    "runner_protocol": 2
+    "runner_protocol": 3
   }
 }

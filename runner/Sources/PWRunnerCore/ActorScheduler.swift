@@ -432,12 +432,18 @@ final class ActorScheduler {
                 session.finishCleanup()
                 records[index].quiescence = session.process.status != nil ? "reaped" : "unresolved"
             }
-            records[index].output = session.collectOutput()
+            let output = session.collectOutput()
+            records[index].output = output
+            // A setup deadline controls eligibility, not whether a later
+            // application publication is an observed native fact.
+            records[index].applicationCount = output.applied ? 1 : 0
             session.tearDown()
         }
         // Workers are stopped and reaped (or recorded unresolved) before the host
         // erases its custody and unmaps every region.
         custody?.recordSourceAcknowledgements(records.map { $0.output })
-        custody?.finish()
+        custody?.finish(quiescentActors: Set(records.filter {
+            $0.quiescence == "reaped" || $0.pid == nil
+        }.map { $0.index }))
     }
 }

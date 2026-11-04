@@ -82,3 +82,10 @@ frames must never reach the consume boundary; the matched control must reach it.
 
 The authority binding control also maps a maximum-inbound POSIX shared-memory
 object with its actual page-rounded length and verifies recipient preparation.
+
+`operation_control.c` exercises the production actor issue, consume, release and
+fresh-read bodies with synthetic authority and independently counted calls. The
+`runner_c_worker_harness/actor_operations` case compiles the baseline and
+disposable source mutations and requires specific failed observations for
+omitted calls, crossed delivery bytes and reuse of an existing descriptor.
+It does not establish that synthetic tokens carry native sandbox authority.

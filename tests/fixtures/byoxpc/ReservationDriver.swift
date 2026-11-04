@@ -53,7 +53,7 @@ final class Driver {
             self.emit(tag, "rpc_error", ["domain": native.domain, "code": native.code])
         }
         if operation == "reserve" {
-            let request: [String: Any] = ["protocol_version": 2,
+            let request: [String: Any] = ["protocol_version": 3,
                 "attempt_id": UUID().uuidString, "lease_ms": value["lease_ms"] as? Int ?? 5000]
             let data = try JSONSerialization.data(withJSONObject: request)
             (proxy as! ReservationProtocol).reserveRunner(data) { bytes in

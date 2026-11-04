@@ -1306,6 +1306,14 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
         reject("actor extension record capacity");
         return issues;
     }
+    for actor in actors {
+        if !matches!(actor["application_count"].as_u64(), Some(0 | 1))
+            || (actor["application_count"] == 1) != (actor["applied"] == true)
+            || (actor["setup_status"] == "applied" && actor["applied"] != true)
+        {
+            reject("application count contradicts application publication");
+        }
+    }
     let reference = |v: &Value| {
         v.as_str()
             .is_some_and(|s| !s.is_empty() && s.len() <= 63 && !s.contains('\0'))
@@ -1315,6 +1323,24 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
         .iter()
         .flat_map(|p| p["action_ids"].as_array().into_iter().flatten())
         .collect();
+    for (table, key) in [
+        (tokens, "token_ref"),
+        (deliveries, "delivery_ref"),
+        (handles, "handle_ref"),
+        (transfers, "delivery_ref"),
+    ] {
+        let mut seen = std::collections::BTreeSet::new();
+        if table
+            .iter()
+            .any(|row| !reference(&row[key]) || !seen.insert(row[key].as_str().unwrap_or("")))
+        {
+            reject("resource and transfer references must be unique");
+        }
+    }
+    let before = |first: &Value, second: &Value| {
+        matches!((action_ids.iter().position(|id| **id == *first), action_ids.iter().position(|id| **id == *second)),
+                 (Some(a), Some(b)) if a < b)
+    };
     let transfer_statuses = [
         "none",
         "delivered",
@@ -1391,6 +1417,13 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
                 if !ok {
                     reject("transfer reference");
                 }
+                if !tokens.iter().any(|t| {
+                    t["token_ref"] == event["token_ref"]
+                        && t["actor_id"] == *actor_id
+                        && before(&t["step_id"], &event["step_id"])
+                }) {
+                    reject("transfer token owner/order");
+                }
                 if called || !event["native_result"].is_null() || !event["errno"].is_null() {
                     reject("transfer carries a native result");
                 }
@@ -1416,6 +1449,13 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
                     && event["token_ref"].is_null();
                 if !ok || consumed.contains_key(&handle) {
                     reject("consume reference");
+                }
+                if !deliveries.iter().any(|d| {
+                    d["delivery_ref"] == event["delivery_ref"]
+                        && d["recipient_actor_id"] == *actor_id
+                        && before(&d["step_id"], &event["step_id"])
+                }) {
+                    reject("consume delivery recipient/order");
                 }
                 consumed.insert(handle, event);
             }
@@ -1542,6 +1582,14 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
         if !ok {
             reject("transfer record association");
         }
+        if !events.iter().any(|e| {
+            e["operation"] == "transfer"
+                && e["delivery_ref"] == transfer["delivery_ref"]
+                && e["phase_id"] == transfer["phase_id"]
+                && e["lifecycle"] == transfer["lifecycle"]
+        }) {
+            reject("transfer source phase/lifecycle association");
+        }
     }
     for transfer in transfers {
         if transfer["status"] == "delivered"
@@ -1580,12 +1628,56 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
                 continue;
             }
             let event = matches[0];
-            if operation == "transfer"
-                && transfers
+            if operation == "transfer" {
+                if !actors
                     .iter()
-                    .any(|t| t["delivery_ref"] == resource[reference])
-            {
-                continue;
+                    .any(|a| a["actor_id"] == resource["recipient_actor_id"])
+                {
+                    reject("delivery recipient does not exist");
+                }
+                if let Some(host) = transfers
+                    .iter()
+                    .find(|t| t["delivery_ref"] == resource[reference])
+                {
+                    // The host's observation survives missing source publication.
+                    if resource["status"] != host["status"]
+                        || resource["equality"] != host["equality"]
+                    {
+                        reject("delivery projection contradicts host transfer");
+                    }
+                    if host["status"] == "delivered" {
+                        let length = resource["delivered_length"].as_u64();
+                        let token = tokens
+                            .iter()
+                            .find(|t| t["token_ref"] == resource["token_ref"]);
+                        if !length.is_some_and(|n| (1..16384).contains(&n))
+                            || token.is_some_and(|t| {
+                                !t["token_length"].is_null()
+                                    && t["token_length"] != resource["delivered_length"]
+                            })
+                        {
+                            reject("delivered length contradicts custody");
+                        }
+                    } else if !resource["delivered_length"].is_null() {
+                        reject("undelivered resource carries delivered length");
+                    }
+                    continue;
+                }
+                if !resource["equality"].is_null()
+                    || !resource["delivered_length"].is_null()
+                    || !["none", "host_timeout", "clock_fault", "unresolved"]
+                        .contains(&event["status"].as_str().unwrap_or(""))
+                {
+                    reject("delivery claims host observation without transfer");
+                }
+                if event["result_published"] == true
+                    && resource["status"]
+                        != event["unavailable_reason"]
+                            .as_str()
+                            .unwrap_or("unrequested")
+                {
+                    reject("unobserved delivery status contradicts source");
+                }
             }
             if event["result_published"] != true {
                 let boundary = &event["lifecycle"]["boundary"];
@@ -1632,6 +1724,47 @@ fn actor_extension_issues(runner: &Value) -> Vec<Value> {
                     }
             {
                 reject("handle status or value contradicts consume");
+            }
+            if operation == "issue"
+                && (resource["family"] != "file"
+                    || resource["token_length"] != event["token_length"]
+                    || (resource["status"] == "issued"
+                        && !resource["token_length"]
+                            .as_u64()
+                            .is_some_and(|n| (1..16384).contains(&n))))
+            {
+                reject("token metadata contradicts issue");
+            }
+            if operation == "consume" {
+                let release = events.iter().find(|e| {
+                    e["operation"] == "release" && e["handle_ref"] == resource[reference]
+                });
+                if &resource["release_step_id"]
+                    != release.map(|e| &e["step_id"]).unwrap_or(&Value::Null)
+                    || resource["release_attempted"].as_bool()
+                        != Some(release.is_some_and(|e| e["call_boundary_observed"] == true))
+                {
+                    reject("handle release projection contradicts event");
+                }
+                let equal: std::collections::BTreeSet<_> = handles
+                    .iter()
+                    .filter(|h| {
+                        h["handle_ref"] != resource[reference]
+                            && h["actor_id"] == resource["actor_id"]
+                            && !resource["native_handle"].is_null()
+                            && h["native_handle"] == resource["native_handle"]
+                    })
+                    .filter_map(|h| h["handle_ref"].as_str())
+                    .collect();
+                let observed = resource["raw_equal_handles"].as_array();
+                let unique: std::collections::BTreeSet<_> = observed
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .collect();
+                if observed.is_none_or(|a| a.len() != unique.len()) || unique != equal {
+                    reject("handle equality projection contradicts native handles");
+                }
             }
         }
     }

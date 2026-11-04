@@ -15,7 +15,7 @@ use crate::utils::{
     JsonOutputCapture, RequestDelivery, capture_json_output, now_unix_ms, run_with_stdin,
 };
 
-const REPLY_CAPTURE_BYTES: usize = 64 * 1024 * 1024;
+const REPLY_CAPTURE_BYTES: usize = 84 * 1024 * 1024;
 const CONTROL_BYTES: u64 = 64 * 1024;
 const ATTEMPT_LIMIT: usize = 256;
 
@@ -950,6 +950,35 @@ pub(crate) fn test_client_run(reply: Option<&Value>) -> RunnerClientRun {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reply_capture_limit_matches_documented_capacity() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
+        let limits = manifest["limits"].as_array().unwrap();
+        let value = |id: &str| {
+            limits.iter().find(|row| row["id"] == id).unwrap()["value"]
+                .as_u64()
+                .unwrap() as usize
+        };
+        let owned: std::collections::BTreeMap<&str, u64> = limits
+            .iter()
+            .filter(|row| {
+                row["checks"].as_array().unwrap().iter().any(|check| {
+                    check["path"] == "controller/src/runner_client.rs" && check["kind"] == "value"
+                })
+            })
+            .map(|row| (row["id"].as_str().unwrap(), row["value"].as_u64().unwrap()))
+            .collect();
+        assert_eq!(
+            owned,
+            std::collections::BTreeMap::from([(
+                "client_reply_retention",
+                REPLY_CAPTURE_BYTES as u64
+            )])
+        );
+        assert!(REPLY_CAPTURE_BYTES >= value("runner_reply_maximum"));
+    }
     use std::process::Stdio;
 
     #[test]

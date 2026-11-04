@@ -5,10 +5,11 @@ import json
 
 import contract
 from blackbox import envelope_skeleton
-from runner_client_capture import validate_capture, host_reply
+from runner_client_capture import validate_capture, host_reply, REPLY_BYTES
 
 
 def run_capture_controls(run):
+    assert REPLY_BYTES == 88_080_384, 'independent reader must admit the current retained-reply capacity'
     reply = {'schema_version': contract.RESPONSE_SCHEMA, 'normalized_outcome': 'bad_request',
              'rc': 1, 'error': 'constructed host reply', 'steps': [], 'phases': []}
     baseline = envelope_skeleton(reply, ok=False)
@@ -176,8 +177,8 @@ def run_capture_controls(run):
         rejected('version_' + str(version), opaque, 'unsupported')
     for name, value in [('array', []), ('string', 'retained'), ('boolean', False), ('number', 2),
                         ('version_boolean', {'protocol_version': True}),
-                        ('version_float', {'protocol_version': 2.0}),
-                        ('version_string', {'protocol_version': '2'}), ('version_missing', {})]:
+                        ('version_float', {'protocol_version': float(contract.RUNNER_PROTOCOL)}),
+                        ('version_string', {'protocol_version': str(contract.RUNNER_PROTOCOL)}), ('version_missing', {})]:
         rejected(name, value)
 
     faults = [

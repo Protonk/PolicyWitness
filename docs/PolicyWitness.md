@@ -472,18 +472,26 @@ can. The capacities are in the [limits](#limits).
 #### How authority moves
 
 Each actor has its own evidence region and its own authority region; neither
-is visible to another actor or to a validator. An issued token is written once
-into the issuing actor's outbound slot, copied by the host into a fixed custody
-buffer after framing checks, and acknowledged. A transfer is a request the
+is visible to another actor or to a validator. Each admitted issue has its own
+outbound slot, and each transfer has its own request and answer cell. An issued
+token is published once; its bytes remain immutable until the host copies or
+rejects them and erases that slot. A timeout cannot reuse the slot or consume
+another action's answer. A transfer is a request the
 host answers: it copies the custody bytes into the recipient's assigned inbound
 slot, waits for the recipient to validate framing and its preassigned source,
 action and delivery references and acknowledge them, compares the
-two copies, and reports the outcome to the sender. The recipient accepts a
+two copies, settles the delivery as usable or withdrawn, and reports the outcome
+to the sender. Consumption requires the host's usable settlement, so a
+self-transfer cannot consume or erase bytes while the host compares them.
+The recipient accepts a
 delivery while parked between its visits; it consumes only in a later visit of
 its own, after that phase's queries were collected and the host released it.
-The host erases custody at the token's last declared transfer and at teardown;
-each worker erases its slots at its last declared use and on every ordinary
-exit. Tokens never enter the request, the reply, logs or diagnostics.
+The host erases private custody at the token's last declared transfer and at
+teardown. The worker erases settled inbound slots at last use and ordinary exit;
+the host clears remaining shared slots after confirmed process exit. If worker
+termination remains unresolved, the host records that uncertainty and avoids
+erasing shared bytes that may still be in use. Tokens never enter the request,
+the reply, logs or diagnostics.
 
 Every actor's worker is launched with an empty environment, a policy pipe on
 stdin, and stdout and stderr opened on the null device. Its other inherited
@@ -510,7 +518,7 @@ can arrive, and so does each worker before mapping its region.
 Native results, host custody facts, recipient acknowledgements and the
 validator's predictions are separate records with separate writers. A source
 acknowledgement requires the source action's published matching answer; a
-withdrawn request alone can also mean a timeout. The
+pending request alone does not establish that the source observed an answer. The
 `sandbox_check` query cannot represent an extension class beside a path, so
 `file-issue-extension` queries cannot express that full issuance predicate and
 extension events stay outside the query/attempt comparison. This is a limit
@@ -523,6 +531,7 @@ issuance outcome.
 | --- | --- |
 | Required authority-region or custody setup fails | The host refuses launch, or stops the affected worker before releasing a phase; the run records an apparatus failure. This is distinct from missing native symbols or a native refusal. |
 | An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are `actor_unavailable`; other actors' evidence stands. The run is `runner_failed`. |
+| An application is published during cleanup after setup expires | Setup stays `setup_timeout` and its visits remain unavailable; `applied` and `application_count` retain the later observed application. |
 | An actor dies during a visit | The visit records how it ended; the scheduler establishes the actor is reaped before activating anyone else; later visits of that actor are unavailable. |
 | The shared lifetime cutoff expires | A worker that reaches a checked wait publishes a timing failure and exits. A blocked native call may prevent that check; host cleanup and missing publication remain separate observations. |
 | The issuing actor publishes a token the host rejects | `resources.tokens[].status` is `issued_uncustodied` and `transfers[]` of that token read `custody_unavailable`. |
@@ -1067,8 +1076,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 56,017,989 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
-| Runner client output (`controller_output`) | 171,966,464 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
+| Informative reply size bound (`runner_reply_maximum`) | 85,852,557 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Runner client output (`controller_output`) | 260,046,848 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
 | Validator reply frame (`validator_reply_frame`) | 8,192 bytes | UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain. | Fixed. |
@@ -1086,7 +1095,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Reservation control bytes (`reservation_control_bytes`) | 65,536 bytes | Encoded reservation request or control reply, before JSON decoding. Excess is a protocol failure. No oversized control can grant execution. | Fixed. |
 | Client error message (`client_error_message`) | 1,024 UTF-8 bytes | Retained error prose at a Unicode boundary. Excess is truncated with message_truncated; error stage, domain and native code remain separate observations. | Fixed. |
 | Client error domain (`client_error_domain`) | 128 UTF-8 bytes | Retained native error domain at a Unicode boundary. Excess is truncated with domain_truncated. No arbitrary userInfo dictionary is retained. | Fixed. |
-| Client host reply retention (`client_reply_retention`) | 67,108,864 bytes | Host result bytes retained before base64 encoding in the client capture. Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct. | Fixed; must cover the informative maximal reply. |
+| Client host reply retention (`client_reply_retention`) | 88,080,384 bytes | Host result bytes retained before base64 encoding in the client capture. Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct. | Fixed; must cover the informative maximal reply. |
 
 ### Evidence capture
 
@@ -1098,7 +1107,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Worker observed path (`observed_path`) | 1,023 bytes | Retained bytes in each worker-observed path. Path observation can be absent or bounded; a host-side path diagnostic is a separate observation. | Fixed. |
 | Worker attempt error text (`attempt_error`) | 255 bytes | Retained bytes in each worker attempt error message. Error text is bounded; structured result and status fields remain separate. | Fixed. |
 | Phase records per worker region (`phase_records`) | 16 items | Fixed phase records in each worker's shared header. The legacy form admits eight phases (`phase_count`); the remaining records are internal support for the actor form under development and no public request reaches them. A worker refuses a header naming more phases than its records before application. | Fixed. |
-| Authority slot storage (`authority_slot_bytes`) | 16,448 bytes | One token publication slot in an actor's authority region: a fixed header and the token buffer. A region holds one outbound slot and one inbound slot per admitted delivery to that actor; nothing in it enters the reply. | Fixed. |
+| Authority slot storage (`authority_slot_bytes`) | 16,448 bytes | One token publication slot in an actor's authority region: a fixed header and the token buffer. A region holds one outbound slot per admitted issue and one inbound slot per admitted delivery to that actor, with distinct bounded transfer answer cells; nothing in it enters the reply. | Fixed. |
 | Phase publication storage (`phase_publications`) | 512 bytes | Sixteen fixed 32-byte phase records within each shared header, one per visit an actor can be activated in; the legacy form uses the first eight. The legacy and actor-form phase caps prevent excess publication storage. | Fixed. |
 | Fresh file-read prefix (`fresh_read_bytes`) | 64 bytes | At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix. Longer files remain readable experiments; the bounded result does not claim complete file contents. | Fixed. |
 
@@ -1189,7 +1198,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner reply is the host's JSON: its `schema_version` is the response schema, and it

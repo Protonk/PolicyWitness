@@ -18,10 +18,12 @@ import Foundation
 // Checked against compiled C sizeof/offsetof by runner_abi_layout.
 enum PWAuthorityLayout {
     static let magic: UInt32 = 0x50574155
-    static let headerBytes: Int = 128
+    static let headerBytes: Int = 1152
     static let slotHeaderBytes: Int = 64
     static let slotBytes: Int = 16448
     static let maxInbound: Int = 64
+    static let maxOutbound: Int = 32
+    static let maxTransfers: Int = 64
     static let maxHandles: Int = 64
     static let identityBytes: Int = 32
     static let exchangeWaitMs: Int = 5000
@@ -32,10 +34,14 @@ enum PWAuthorityLayout {
     static let actorIndexOffset: Int = 36
     static let sessionNonceOffset: Int = 40
     static let inboundCountOffset: Int = 48
-    static let transferRequestOffset: Int = 52
-    static let transferAckOffset: Int = 56
-    static let transferDetailOffset: Int = 60
-    static let outboundOffset: Int = 128
+    static let outboundCountOffset: Int = 52
+    static let transferCellsOffset: Int = 128
+    static let transferCellBytes: Int = 16
+    static let transferOperationOffset: Int = 0
+    static let transferRequestOffset: Int = 4
+    static let transferAckOffset: Int = 8
+    static let transferDetailOffset: Int = 12
+    static let slotsOffset: Int = 1152
     static let slotMagicOffset: Int = 0
     static let slotFamilyOffset: Int = 4
     static let slotWriterActorOffset: Int = 8
@@ -45,6 +51,7 @@ enum PWAuthorityLayout {
     static let slotCommittedOffset: Int = 24
     static let slotAcknowledgedOffset: Int = 28
     static let slotRejectDetailOffset: Int = 32
+    static let slotSettledOffset: Int = 36
     static let slotTokenOffset: Int = 64
 }
 
@@ -116,15 +123,17 @@ private func pwAuthorityClear(_ bytes: UnsafeMutableRawPointer, _ length: Int)
 final class ActorAuthorityRegion {
     let actorIndex: Int
     let inboundCount: Int
+    let outboundCount: Int
     let bytes: Int
     private(set) var descriptor: Int32 = -1
     private(set) var base: UnsafeMutablePointer<UInt8>?
     private(set) var failure: String?
 
-    init(actorIndex: Int, inboundCount: Int, sessionNonce: UInt64) {
+    init(actorIndex: Int, inboundCount: Int, outboundCount: Int, sessionNonce: UInt64) {
         self.actorIndex = actorIndex
         self.inboundCount = inboundCount
-        bytes = PWAuthorityLayout.headerBytes + (inboundCount + 1) * PWAuthorityLayout.slotBytes
+        self.outboundCount = outboundCount
+        bytes = PWAuthorityLayout.headerBytes + (inboundCount + outboundCount) * PWAuthorityLayout.slotBytes
         let name = String("/pw_au_\(getpid())_\(actorIndex)".prefix(31))
         let fd = name.withCString { pw_cworker_shm_open_create($0, 0o600) }
         guard fd >= 0 else { failure = "shm_open: " + String(cString: strerror(errno)); return }
@@ -152,12 +161,20 @@ final class ActorAuthorityRegion {
         writeU32(raw, offset: PWAuthorityLayout.actorIndexOffset, UInt32(actorIndex))
         writeU64(raw, offset: PWAuthorityLayout.sessionNonceOffset, sessionNonce)
         writeU32(raw, offset: PWAuthorityLayout.inboundCountOffset, UInt32(inboundCount))
+        writeU32(raw, offset: PWAuthorityLayout.outboundCountOffset, UInt32(outboundCount))
     }
 
-    var outbound: UnsafeMutablePointer<UInt8>? { base?.advanced(by: PWAuthorityLayout.outboundOffset) }
+    func outbound(_ index: Int) -> UnsafeMutablePointer<UInt8>? {
+        guard index >= 0, index < outboundCount else { return nil }
+        return base?.advanced(by: PWAuthorityLayout.slotsOffset + index * PWAuthorityLayout.slotBytes)
+    }
     func inbound(_ index: Int) -> UnsafeMutablePointer<UInt8>? {
         guard index >= 0, index < inboundCount else { return nil }
-        return base?.advanced(by: PWAuthorityLayout.outboundOffset + (index + 1) * PWAuthorityLayout.slotBytes)
+        return base?.advanced(by: PWAuthorityLayout.slotsOffset + (outboundCount + index) * PWAuthorityLayout.slotBytes)
+    }
+    func transfer(_ index: Int) -> UnsafeMutablePointer<UInt8>? {
+        guard index >= 0, index < PWAuthorityLayout.maxTransfers else { return nil }
+        return base?.advanced(by: PWAuthorityLayout.transferCellsOffset + index * PWAuthorityLayout.transferCellBytes)
     }
 
     /// The host keeps its mapping; the descriptor is needed only until spawn.
@@ -167,14 +184,17 @@ final class ActorAuthorityRegion {
 
     func eraseAll() {
         guard let base else { return }
-        for i in 0...inboundCount {
-            let slot = base.advanced(by: PWAuthorityLayout.outboundOffset + i * PWAuthorityLayout.slotBytes)
+        for i in 0..<(outboundCount + inboundCount) {
+            let slot = base.advanced(by: PWAuthorityLayout.slotsOffset + i * PWAuthorityLayout.slotBytes)
             pwAuthorityClear(UnsafeMutableRawPointer(slot.advanced(by: PWAuthorityLayout.slotTokenOffset)), PWAuthorityLayout.tokenBytes)
         }
     }
 
-    func tearDown() {
-        eraseAll()
+    func tearDown(quiescent: Bool = true) {
+        // A live actor may still be writing an unpublished outbound slot or
+        // consuming its owned inbound bytes. Unknown termination grants no
+        // authority to erase that actor's shared memory under it.
+        if quiescent { eraseAll() }
         if let base { _ = munmap(UnsafeMutableRawPointer(base), bytes) }
         base = nil
         closeDescriptor()
@@ -254,6 +274,7 @@ final class AuthorityCustody {
     private(set) var tokens: [TokenCustody]
     /// Each delivery's inbound slot within its recipient's region.
     private(set) var inboundSlotOfDelivery: [Int]
+    private(set) var outboundSlotOfToken: [Int]
     private(set) var custody: [CustodyObservation] = []
     private(set) var transfers: [TransferObservation] = []
     private var finished = false
@@ -269,6 +290,13 @@ final class AuthorityCustody {
         let nonce = UInt64.random(in: UInt64.min...UInt64.max)
         sessionNonce = nonce
         var inboundCounts = Array(repeating: 0, count: actorCount)
+        var outboundCounts = Array(repeating: 0, count: actorCount)
+        var slotOfToken: [Int] = []
+        for token in plan.tokens {
+            slotOfToken.append(outboundCounts[token.actorIndex])
+            outboundCounts[token.actorIndex] += 1
+        }
+        outboundSlotOfToken = slotOfToken
         var slotOfDelivery: [Int] = []
         for delivery in plan.deliveries {
             slotOfDelivery.append(inboundCounts[delivery.recipientActorIndex])
@@ -279,9 +307,23 @@ final class AuthorityCustody {
         // failure prevents the scheduler from launching this authority session.
         coreLimitFailure = coreLimited ? nil : "setrlimit(RLIMIT_CORE): " + String(cString: strerror(coreErrno))
         regions = coreLimited
-            ? (0..<actorCount).map { ActorAuthorityRegion(actorIndex: $0, inboundCount: inboundCounts[$0], sessionNonce: nonce) }
+            ? (0..<actorCount).map { ActorAuthorityRegion(actorIndex: $0, inboundCount: inboundCounts[$0],
+                                                         outboundCount: outboundCounts[$0], sessionNonce: nonce) }
             : []
         tokens = coreLimited ? plan.tokens.map { TokenCustody(tokenIndex: $0.index) } : []
+        // Every issue and transfer has one immutable assignment and one
+        // publication cell for the entire specimen. A late answer therefore
+        // cannot become the answer to a later operation.
+        for token in plan.tokens where regions.indices.contains(token.actorIndex) {
+            guard let slot = regions[token.actorIndex].outbound(slotOfToken[token.index]) else { continue }
+            writeU32(slot, offset: PWAuthorityLayout.slotWriterActorOffset, UInt32(token.actorIndex))
+            writeU32(slot, offset: PWAuthorityLayout.slotOperationIndexOffset, UInt32(token.slot))
+            writeU32(slot, offset: PWAuthorityLayout.slotResourceIndexOffset, UInt32(token.index))
+        }
+        for delivery in plan.deliveries where regions.indices.contains(delivery.sourceActorIndex) {
+            guard let cell = regions[delivery.sourceActorIndex].transfer(delivery.index) else { continue }
+            writeU32(cell, offset: PWAuthorityLayout.transferOperationOffset, UInt32(delivery.slot + 1))
+        }
         // Before spawn, bind each inbound slot to its admitted delivery. The
         // recipient snapshots these non-authority fields before application;
         // a later committed frame must match that assignment.
@@ -327,19 +369,24 @@ final class AuthorityCustody {
     /// token and answer a transfer request exactly once.
     func service(active: Int, phaseIndex: Int, waitAllowanceMs: Int = PWAuthorityLayout.exchangeWaitMs,
                  recipientUsable: (Int) -> Bool) {
-        guard !finished, coreLimitFailure == nil, regions.indices.contains(active), let base = regions[active].base else { return }
+        guard !finished, coreLimitFailure == nil, regions.indices.contains(active), regions[active].base != nil else { return }
         serviceOutbound(active: active, region: regions[active], phaseIndex: phaseIndex)
-        let request = loadAcquire(base, offset: PWAuthorityLayout.transferRequestOffset)
-        if request != 0 && loadAcquire(base, offset: PWAuthorityLayout.transferAckOffset) == PWTransferAck.none
-            && !transfers.contains(where: { $0.sourceActorIndex == active && $0.slot == Int(request) - 1 }) {
-            serviceTransfer(active: active, region: regions[active], slot: Int(request) - 1, phaseIndex: phaseIndex,
+        // Bound one potentially waiting exchange per service pass. The
+        // scheduler supplies a fresh remaining allowance on the next pass.
+        for delivery in plan.deliveries where delivery.sourceActorIndex == active {
+            guard let cell = regions[active].transfer(delivery.index),
+                  loadAcquire(cell, offset: PWAuthorityLayout.transferRequestOffset) == 1,
+                  loadAcquire(cell, offset: PWAuthorityLayout.transferAckOffset) == PWTransferAck.none,
+                  !transfers.contains(where: { $0.deliveryIndex == delivery.index }) else { continue }
+            serviceTransfer(delivery: delivery, cell: cell, phaseIndex: phaseIndex,
                             waitAllowanceMs: waitAllowanceMs, recipientUsable: recipientUsable)
+            break
         }
     }
 
-    /// A withdrawn request can mean timeout, and a later request can replace
-    /// it before the host samples zero. Only the source's completed action
-    /// publication establishes which answer it actually observed.
+    /// A persistent request may outlive the source's wait. Only the source's
+    /// completed action publication establishes which answer it observed;
+    /// a late host answer cannot retroactively complete that publication.
     func recordSourceAcknowledgements(_ outputs: [CWorkerOutput?]) {
         for i in transfers.indices {
             let transfer = transfers[i]
@@ -351,63 +398,64 @@ final class AuthorityCustody {
         }
     }
 
+    // Internal observation boundary for deterministic copy/slot-lifetime tests.
+    // Production leaves this nil; it neither issues nor transforms authority.
+    var beforeOutboundCopy: ((Int) -> Void)?
+
     private func serviceOutbound(active: Int, region: ActorAuthorityRegion, phaseIndex: Int) {
-        guard let slot = region.outbound else { return }
-        guard loadAcquire(slot, offset: PWAuthorityLayout.slotCommittedOffset) == 1,
-              loadAcquire(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset) == PWAuthorityAck.none else { return }
-        let resource = Int(readU32(slot, offset: PWAuthorityLayout.slotResourceIndexOffset))
-        let operation = Int(readU32(slot, offset: PWAuthorityLayout.slotOperationIndexOffset))
-        let token = plan.tokens.indices.contains(resource) ? plan.tokens[resource] : nil
-        var observation = CustodyObservation(tokenIndex: resource, actorIndex: active, slot: operation, phaseIndex: phaseIndex,
-                                             status: "rejected", rejectDetail: nil, length: nil)
-        var problem = slotFramingProblem(slot)
-        if problem == nil {
-            if readU32(slot, offset: PWAuthorityLayout.slotWriterActorOffset) != UInt32(active) { problem = 3 }
-            else if token == nil || token!.actorIndex != active { problem = 8 }
-            else if token!.slot != operation { problem = 4 }
-            else if !tokens[resource].available { problem = 8 }
-        }
-        if problem == nil {
-            let length = Int(readU32(slot, offset: PWAuthorityLayout.slotTokenLengthOffset))
-            tokens[resource].accept(from: slot.advanced(by: PWAuthorityLayout.slotTokenOffset), length: length)
-            // The copy is credited only if the writer still stands behind it
-            // and the copied bytes frame one token on their own.
-            if loadAcquire(slot, offset: PWAuthorityLayout.slotCommittedOffset) != 1 || !tokens[resource].framingIntact {
-                tokens[resource].erase()
-                problem = 6
-            } else {
-                observation.status = "accepted"
-                observation.length = length
-                if token!.lastUseSlot == operation {
-                    tokens[resource].erase()
-                    observation.erased = true
+        for token in plan.tokens where token.actorIndex == active {
+            guard let slot = region.outbound(outboundSlotOfToken[token.index]),
+                  loadAcquire(slot, offset: PWAuthorityLayout.slotCommittedOffset) == 1,
+                  loadAcquire(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset) == PWAuthorityAck.none else { continue }
+            var observation = CustodyObservation(tokenIndex: token.index, actorIndex: active, slot: token.slot,
+                                                phaseIndex: phaseIndex, status: "rejected", rejectDetail: nil, length: nil)
+            var problem = slotFramingProblem(slot)
+            if problem == nil {
+                if readU32(slot, offset: PWAuthorityLayout.slotWriterActorOffset) != UInt32(active) { problem = 3 }
+                else if readU32(slot, offset: PWAuthorityLayout.slotOperationIndexOffset) != UInt32(token.slot) { problem = 4 }
+                else if readU32(slot, offset: PWAuthorityLayout.slotResourceIndexOffset) != UInt32(token.index) { problem = 8 }
+                else if !tokens[token.index].available { problem = 8 }
+            }
+            if problem == nil {
+                beforeOutboundCopy?(token.index)
+                let length = Int(readU32(slot, offset: PWAuthorityLayout.slotTokenLengthOffset))
+                tokens[token.index].accept(from: slot.advanced(by: PWAuthorityLayout.slotTokenOffset), length: length)
+                // Publication gives the host sole payload ownership. Neither
+                // a timeout nor worker exit can erase or reuse this slot.
+                if !tokens[token.index].framingIntact {
+                    tokens[token.index].erase()
+                    problem = 6
+                } else {
+                    observation.status = "accepted"
+                    observation.length = length
+                    if token.lastUseSlot == token.slot {
+                        tokens[token.index].erase()
+                        observation.erased = true
+                    }
                 }
             }
+            // The host's one-shot acknowledgement follows its last payload
+            // read and erasure. The worker never clears either publication.
+            pwAuthorityClear(UnsafeMutableRawPointer(slot.advanced(by: PWAuthorityLayout.slotTokenOffset)), PWAuthorityLayout.tokenBytes)
+            writeU32(slot, offset: PWAuthorityLayout.slotTokenLengthOffset, 0)
+            if let problem {
+                observation.status = "rejected:" + (PWAuthorityAck.rejectNames[problem] ?? String(problem))
+                observation.rejectDetail = problem
+                writeU32(slot, offset: PWAuthorityLayout.slotRejectDetailOffset, problem)
+                storeRelease(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset, PWAuthorityAck.rejected)
+            } else {
+                storeRelease(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset, PWAuthorityAck.accepted)
+            }
+            custody.append(observation)
         }
-        if let problem {
-            observation.status = "rejected:" + (PWAuthorityAck.rejectNames[problem] ?? String(problem))
-            observation.rejectDetail = problem
-            writeU32(slot, offset: PWAuthorityLayout.slotRejectDetailOffset, problem)
-            storeRelease(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset, PWAuthorityAck.rejected)
-        } else {
-            storeRelease(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset, PWAuthorityAck.accepted)
-        }
-        custody.append(observation)
     }
 
-    private func serviceTransfer(active: Int, region: ActorAuthorityRegion, slot: Int, phaseIndex: Int,
+    private func serviceTransfer(delivery: AuthorityPlanDelivery, cell: UnsafeMutablePointer<UInt8>, phaseIndex: Int,
                                  waitAllowanceMs: Int, recipientUsable: (Int) -> Bool) {
-        guard let base = region.base else { return }
+        let active = delivery.sourceActorIndex, slot = delivery.slot
         func answer(_ ack: UInt32, detail: UInt32) {
-            writeU32(base, offset: PWAuthorityLayout.transferDetailOffset, detail)
-            storeRelease(base, offset: PWAuthorityLayout.transferAckOffset, ack)
-        }
-        guard let delivery = plan.deliveries.first(where: { $0.slot == slot && $0.sourceActorIndex == active }) else {
-            transfers.append(TransferObservation(deliveryIndex: -1, tokenIndex: -1, sourceActorIndex: active, recipientActorIndex: -1,
-                slot: slot, phaseIndex: phaseIndex, custodyStatus: "unknown_request", copyStatus: "not_copied",
-                equality: "not_compared", acknowledgement: PWTransferAck.requestInvalid))
-            answer(PWTransferAck.requestInvalid, detail: 0)
-            return
+            writeU32(cell, offset: PWAuthorityLayout.transferDetailOffset, detail)
+            storeRelease(cell, offset: PWAuthorityLayout.transferAckOffset, ack)
         }
         var observation = TransferObservation(deliveryIndex: delivery.index, tokenIndex: delivery.tokenIndex,
             sourceActorIndex: active, recipientActorIndex: delivery.recipientActorIndex, slot: slot, phaseIndex: phaseIndex,
@@ -420,6 +468,11 @@ final class AuthorityCustody {
                 tokens[delivery.tokenIndex].erase()
                 for i in custody.indices where custody[i].tokenIndex == delivery.tokenIndex { custody[i].erased = true }
             }
+        }
+        guard readU32(cell, offset: PWAuthorityLayout.transferOperationOffset) == UInt32(slot + 1) else {
+            observation.acknowledgement = PWTransferAck.requestInvalid
+            answer(PWTransferAck.requestInvalid, detail: 0)
+            return
         }
         let custodyEntry = tokens.indices.contains(delivery.tokenIndex) ? tokens[delivery.tokenIndex] : nil
         guard let custodyEntry, custodyEntry.accepted, !custodyEntry.erased else {
@@ -471,6 +524,10 @@ final class AuthorityCustody {
             if custodyEntry.equals(inbound.advanced(by: PWAuthorityLayout.slotTokenOffset), length: length) {
                 observation.equality = "equal"
                 observation.acknowledgement = PWTransferAck.delivered
+                // This is the host's last payload read. Only now may the
+                // recipient consume or erase its own copy, including itself
+                // after a source-side timeout in a self-transfer.
+                storeRelease(inbound, offset: PWAuthorityLayout.slotSettledOffset, 1)
                 answer(PWTransferAck.delivered, detail: UInt32(delivery.index))
             } else {
                 observation.equality = "unequal"
@@ -491,12 +548,10 @@ final class AuthorityCustody {
         }
     }
 
-    /// A delivery the recipient cannot consume: erase the bytes and drop the
-    /// commit so no later consume finds an accepted slot.
+    /// Settle a failed delivery without writing under a framing reader. The
+    /// recipient owns subsequent erasure; final host cleanup requires reap.
     private func withdraw(_ inbound: UnsafeMutablePointer<UInt8>) {
-        pwAuthorityClear(UnsafeMutableRawPointer(inbound.advanced(by: PWAuthorityLayout.slotTokenOffset)), PWAuthorityLayout.tokenBytes)
-        writeU32(inbound, offset: PWAuthorityLayout.slotTokenLengthOffset, 0)
-        storeRelease(inbound, offset: PWAuthorityLayout.slotCommittedOffset, 0)
+        storeRelease(inbound, offset: PWAuthorityLayout.slotSettledOffset, 2)
     }
 
     /// Framing only: magic, family, bounded length, terminator, no interior NUL.
@@ -513,13 +568,15 @@ final class AuthorityCustody {
 
     // MARK: - Teardown
 
-    /// Erase every custody buffer and region after the workers have stopped.
-    func finish() {
+    /// Always erase private custody. Erase shared regions only for actors
+    /// whose termination is established; otherwise detach the host mapping.
+    /// The nil default is for isolated regions with no actor process owner.
+    func finish(quiescentActors: Set<Int>? = nil) {
         if finished { return }
         finished = true
         for token in tokens { token.erase() }
         for i in custody.indices { custody[i].erased = true }
-        for region in regions { region.tearDown() }
+        for region in regions { region.tearDown(quiescent: quiescentActors?.contains(region.actorIndex) ?? true) }
     }
 
     deinit { finish() }

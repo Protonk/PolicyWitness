@@ -82,18 +82,26 @@ can. The capacities are in the [limits](PolicyWitness.md#limits).
 ## How authority moves
 
 Each actor has its own evidence region and its own authority region; neither
-is visible to another actor or to a validator. An issued token is written once
-into the issuing actor's outbound slot, copied by the host into a fixed custody
-buffer after framing checks, and acknowledged. A transfer is a request the
+is visible to another actor or to a validator. Each admitted issue has its own
+outbound slot, and each transfer has its own request and answer cell. An issued
+token is published once; its bytes remain immutable until the host copies or
+rejects them and erases that slot. A timeout cannot reuse the slot or consume
+another action's answer. A transfer is a request the
 host answers: it copies the custody bytes into the recipient's assigned inbound
 slot, waits for the recipient to validate framing and its preassigned source,
 action and delivery references and acknowledge them, compares the
-two copies, and reports the outcome to the sender. The recipient accepts a
+two copies, settles the delivery as usable or withdrawn, and reports the outcome
+to the sender. Consumption requires the host's usable settlement, so a
+self-transfer cannot consume or erase bytes while the host compares them.
+The recipient accepts a
 delivery while parked between its visits; it consumes only in a later visit of
 its own, after that phase's queries were collected and the host released it.
-The host erases custody at the token's last declared transfer and at teardown;
-each worker erases its slots at its last declared use and on every ordinary
-exit. Tokens never enter the request, the reply, logs or diagnostics.
+The host erases private custody at the token's last declared transfer and at
+teardown. The worker erases settled inbound slots at last use and ordinary exit;
+the host clears remaining shared slots after confirmed process exit. If worker
+termination remains unresolved, the host records that uncertainty and avoids
+erasing shared bytes that may still be in use. Tokens never enter the request,
+the reply, logs or diagnostics.
 
 Every actor's worker is launched with an empty environment, a policy pipe on
 stdin, and stdout and stderr opened on the null device. Its other inherited
@@ -120,7 +128,7 @@ can arrive, and so does each worker before mapping its region.
 Native results, host custody facts, recipient acknowledgements and the
 validator's predictions are separate records with separate writers. A source
 acknowledgement requires the source action's published matching answer; a
-withdrawn request alone can also mean a timeout. The
+pending request alone does not establish that the source observed an answer. The
 `sandbox_check` query cannot represent an extension class beside a path, so
 `file-issue-extension` queries cannot express that full issuance predicate and
 extension events stay outside the query/attempt comparison. This is a limit
@@ -133,6 +141,7 @@ issuance outcome.
 | --- | --- |
 | Required authority-region or custody setup fails | The host refuses launch, or stops the affected worker before releasing a phase; the run records an apparatus failure. This is distinct from missing native symbols or a native refusal. |
 | An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are `actor_unavailable`; other actors' evidence stands. The run is `runner_failed`. |
+| An application is published during cleanup after setup expires | Setup stays `setup_timeout` and its visits remain unavailable; `applied` and `application_count` retain the later observed application. |
 | An actor dies during a visit | The visit records how it ended; the scheduler establishes the actor is reaped before activating anyone else; later visits of that actor are unavailable. |
 | The shared lifetime cutoff expires | A worker that reaches a checked wait publishes a timing failure and exits. A blocked native call may prevent that check; host cleanup and missing publication remain separate observations. |
 | The issuing actor publishes a token the host rejects | `resources.tokens[].status` is `issued_uncustodied` and `transfers[]` of that token read `custody_unavailable`. |

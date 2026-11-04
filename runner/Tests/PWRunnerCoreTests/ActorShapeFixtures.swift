@@ -6,8 +6,8 @@ import Foundation
  * reply model. The production translation and assembly run over constructed
  * scheduler outcomes (no process is launched), so every key the actor form
  * emits appears because the producer emitted it: a completed three-actor
- * re-delegation, and a run with a refused launch, a failed setup, an
- * unavailable consume and a refused transfer.
+ * re-delegation, setup and transfer failures, and actor-local interruption,
+ * unknown cleanup and contradictory publication accounts.
  */
 
 private func actorRequest(withOpenReads: Bool = true) -> String {
@@ -106,13 +106,13 @@ private func failedSetupOutput(_ input: CWorkerInput, index: Int) -> CWorkerOutp
     output.workerEvidence?.progress = shapeProgress(5, 2)
     output.workerEvidence?.failure_publication = 1
     output.workerEvidence?.failure_state = "published"
-    output.workerEvidence?.failure = PWWorkerFailure(operation: 5, code: 1, native_kind: 2, native_result: nil, errno: nil, index: nil, detail: 0)
+    output.workerEvidence?.failure = PWWorkerFailure(operation: 5, code: 1, native_kind: 2, native_result: 0, errno: nil, index: nil, detail: 0)
     output.workerEvidence?.diagnostic = PWWorkerDiagnostic(state: 1, status: "complete", length: 12, text: "syntax error")
     return output
 }
 
-/// The constructed documents: a completed re-delegation and a run with a
-/// refused launch (A), a failed setup (C) and an unavailable consume (B).
+/// Constructed scheduler outputs use the real actor assembler and disposition
+/// resolver. They establish encoded coverage, not native execution outcomes.
 func actorShapeDocuments() throws -> [[String: Any]] {
     let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(actorRequest().utf8))
     guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "shape request refused") }
@@ -134,20 +134,21 @@ func actorShapeDocuments() throws -> [[String: Any]] {
     func record(_ index: Int, status: ActorSetupStatus, output: CWorkerOutput?, failure: CWorkerRunError? = nil) -> ActorSessionRecord {
         var record = ActorSessionRecord(index: index)
         record.setupStatus = status
-        record.applicationCount = status == .applied ? 1 : 0
+        record.applicationCount = output?.applied == true ? 1 : 0
         record.pid = output.map { $0.workerPid }
         // A fixed widest parent PID keeps the derived reply maximum independent
         // of the test process's own PID.
         record.parentPid = pid_t.max
         record.output = output
         record.launchFailure = failure
-        record.quiescence = output == nil ? "never_launched" : "reaped"
+        record.quiescence = output == nil ? "never_launched" : output?.reaped == true ? "reaped" : "unresolved"
         record.authorityRegion = "mapped"
         record.stopReason = status.usable ? nil : status.rawValue
         return record
     }
     let local = { (step: String) -> Int in translation.local[plan.slotOfStep[step]!]!.slot }
-    let assemble = { (outcome: ActorScheduleOutcome) throws -> [String: Any] in
+    func assembleUsing(_ outcome: ActorScheduleOutcome, parsed: PWRunnerRunSpec,
+                       plan: ActorPlan, translation: ActorTranslation) throws -> [String: Any] {
         // The hook runs only for visits the schedule reached, and plans queries
         // the way the live host does.
         let queryPlans = plan.phases.map { planValidatorQueries($0.actions.compactMap { $0.probe }) }
@@ -159,6 +160,9 @@ func actorShapeDocuments() throws -> [[String: Any]] {
             queryPlans: queryPlans,
             validatorResults: plan.phases.map { _ in nil }, collectionStatuses: statuses, bundleId: "shape")
         return try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply)) as! [String: Any]
+    }
+    let assemble = { (outcome: ActorScheduleOutcome) throws -> [String: Any] in
+        try assembleUsing(outcome, parsed: parsed, plan: plan, translation: translation)
     }
 
     // ---- The completed re-delegation.
@@ -197,5 +201,151 @@ func actorShapeDocuments() throws -> [[String: Any]] {
     faulted.transfers = [TransferObservation(deliveryIndex: 1, tokenIndex: 1, sourceActorIndex: 1, recipientActorIndex: 2, slot: local("b_to_c"),
         phaseIndex: 4, custodyStatus: "unavailable", copyStatus: "not_copied", equality: "not_compared", acknowledgement: PWTransferAck.custodyUnavailable)]
     documents.append(try assemble(faulted))
+    // The same actor-local evidence type can carry an indexed native failure
+    // with errno. Populate those optional fields in a constructed account;
+    // their absence in a compile failure does not remove them from the wire.
+    var indexedFailure = faulted
+    var failedOutput = failedSetupOutput(translation.inputs[2], index: 2)
+    failedOutput.workerEvidence?.progress = shapeProgress(4, 2, index: 0)
+    failedOutput.workerEvidence?.failure = PWWorkerFailure(operation: 4, code: 1, native_kind: 1,
+        native_result: -1, errno: 22, index: 0, detail: 0)
+    failedOutput.workerEvidence?.diagnostic = PWWorkerDiagnostic(state: 1, status: "complete", length: 17, text: "parameter failure")
+    indexedFailure.actors[2].output = failedOutput
+    documents.append(try assemble(indexedFailure))
+
+    // ---- B dies during its final release, after the other actors' work.
+    // Earlier native publications remain present; the last slot does not.
+    let lastSlot = outputs[1].slots.count - 1
+    let lastPhase = plan.actors[1].visits.last!
+    var interruptedOutput = outputs[1]
+    interruptedOutput.slots[lastSlot] = CWorkerSlotResult(callBoundary: true,
+        stepId: translation.inputs[1].slots[lastSlot].stepId, rc: 0, errnoVal: 0, completed: false)
+    interruptedOutput.phases[interruptedOutput.phases.count - 1].completed = false
+    interruptedOutput.done = false
+    interruptedOutput.exitCode = nil
+    interruptedOutput.termSignal = 9
+    interruptedOutput.pollStopReason = "died_before_completion"
+    interruptedOutput.cleanupTrigger = "died_before_completion"
+    interruptedOutput.graceEnd = "not_entered"
+    interruptedOutput.graceWait = nil
+    interruptedOutput.workerEvidence?.progress = shapeProgress(9, 1, index: UInt32(lastSlot))
+    var interrupted = complete
+    interrupted.actors[1] = record(1, status: .applied, output: interruptedOutput)
+    interrupted.visits[lastPhase].completionObserved = false
+    interrupted.visits[lastPhase].endReason = "died_before_completion"
+    interrupted.visits[lastPhase].releaseToCompletionMs = nil
+    documents.append(try assemble(interrupted))
+
+    // A failed signal request and failed waits cannot establish termination.
+    // The unfinished last action stays unresolved under nonterminal collection.
+    var unknownOutput = interruptedOutput
+    unknownOutput.slots[lastSlot].callBoundary = false
+    unknownOutput.workerEvidence?.progress = shapeProgress(9, 1, index: UInt32(lastSlot - 1))
+    unknownOutput.termSignal = nil
+    unknownOutput.reaped = false
+    unknownOutput.pollStopReason = "wait_error"
+    unknownOutput.cleanupTrigger = "wait_error"
+    unknownOutput.graceEnd = "wait_error"
+    unknownOutput.graceWait = PWHostWait(budget_ms: 1000, elapsed_ms: 1, stop: "wait_error", native_errno: nil, clock_fault: false)
+    unknownOutput.terminationRequest = PWRunnerTerminationRequest(signal: 9, rc: -1, errno: 1)
+    unknownOutput.waitErrors = [PWRunnerWaitError(stage: "schedule", rc: -1, errno: 22),
+                               PWRunnerWaitError(stage: "after_termination", rc: -1, errno: 22)]
+    unknownOutput.collectionBasis = "execution_may_continue"
+    var unknown = interrupted
+    unknown.actors[1] = record(1, status: .applied, output: unknownOutput)
+    unknown.visits[lastPhase].endReason = "wait_error"
+    unknown.cancelled = "unresolved_termination"
+    documents.append(try assemble(unknown))
+
+    // A returned progress publication beside a missing result is a retained
+    // contradiction. The resolver supplies its issue and the step's issue index.
+    var conflictOutput = interruptedOutput
+    conflictOutput.workerEvidence?.progress = shapeProgress(9, 2, index: UInt32(lastSlot))
+    var conflict = interrupted
+    conflict.actors[1] = record(1, status: .applied, output: conflictOutput)
+    documents.append(try assemble(conflict))
+
+    // The host can collect a late application after setup's allowance expires.
+    // Activation-wait progress establishes no attempted action boundary.
+    var lateOutput = failedSetupOutput(translation.inputs[2], index: 2)
+    lateOutput.applied = true; lateOutput.applyRC = 0; lateOutput.actorSetup = 1
+    lateOutput.readyByteReceived = false; lateOutput.done = false
+    lateOutput.pollStopReason = "setup_timeout"; lateOutput.cleanupTrigger = "setup_timeout"
+    lateOutput.readyWait = PWHostWait(budget_ms: 40, elapsed_ms: 40, stop: "deadline", native_errno: nil, clock_fault: false)
+    lateOutput.workerEvidence?.progress = shapeProgress(13, 1, index: 0)
+    lateOutput.workerEvidence?.failure_publication = 0; lateOutput.workerEvidence?.failure_state = "absent"
+    lateOutput.workerEvidence?.failure = nil
+    lateOutput.workerEvidence?.diagnostic = PWWorkerDiagnostic(state: 0, status: "absent", length: 0, text: nil)
+    var late = faulted
+    late.actors[2] = record(2, status: .setupTimeout, output: lateOutput)
+    documents.append(try assemble(late))
+
+    // Transfer failures are host observations even when the worker publishes
+    // no policy receipt. Each record carries its own submitted byte count.
+    var transferOutput = failedSetupOutput(translation.inputs[2], index: 2)
+    transferOutput.applyRC = 0; transferOutput.readyByteReceived = false; transferOutput.done = false
+    transferOutput.exitCode = nil; transferOutput.termSignal = 9
+    transferOutput.terminationRequest = PWRunnerTerminationRequest(signal: 9, rc: 0, errno: nil)
+    transferOutput.workerEvidence = nil; transferOutput.policyReceivedSha256 = nil
+    transferOutput.readyWait = nil
+    transferOutput.graceEnd = "exhausted"
+    transferOutput.graceWait = PWHostWait(budget_ms: 1000, elapsed_ms: 1000, stop: "exhausted", native_errno: nil, clock_fault: false)
+    let policyBytes = translation.inputs[2].policy.utf8.count
+    transferOutput.policyTransferError = PWWorkerPolicyTransferError(errno: 32, bytes_written: policyBytes / 2, bytes_expected: policyBytes)
+    transferOutput.pollStopReason = "policy_write_error"; transferOutput.cleanupTrigger = "policy_write_error"
+    var transferFailed = faulted
+    transferFailed.actors[2] = record(2, status: .transferFailed, output: transferOutput, failure: .policyWriteFailed("constructed"))
+    documents.append(try assemble(transferFailed))
+    transferOutput.policyTransferError = nil
+    transferOutput.policyTransferTimeout = PWWorkerPolicyTransferTimeout(budget_ms: 10, elapsed_ms: 11,
+        bytes_written: policyBytes / 2, bytes_expected: policyBytes)
+    transferOutput.pollStopReason = "policy_transfer_deadline"; transferOutput.cleanupTrigger = "policy_transfer_timeout"
+    transferFailed.actors[2] = record(2, status: .transferFailed, output: transferOutput, failure: .policyTransferTimedOut("constructed"))
+    documents.append(try assemble(transferFailed))
+
+    // Readiness prerequisite errors have native errno; actor exit-grace waits
+    // and the scheduler's execution timing do not acquire that field here.
+    var readyFailedOutput = failedSetupOutput(translation.inputs[2], index: 2)
+    readyFailedOutput.readyByteReceived = false
+    readyFailedOutput.workerEvidence?.readiness = nil
+    readyFailedOutput.readyWait = PWHostWait(budget_ms: 1000, elapsed_ms: 0, stop: "setup_failed", native_errno: 9, clock_fault: false)
+    var readyFailed = faulted
+    readyFailed.actors[2] = record(2, status: .setupFailed, output: readyFailedOutput)
+    documents.append(try assemble(readyFailed))
+
+    // Capture belongs to each apply actor's policy and output. Use a request
+    // that enables it, preserving the ordinary actor translation and assembly.
+    var captureRequest = parsed
+    for index in [1, 2] {
+        captureRequest.actors![index].sandbox.policy!.capture_compiled_profile = true
+        captureRequest.actors![index].sandbox.policy!.capture_nonce = String(repeating: String(index), count: 32)
+    }
+    guard case .success(let capturePlan) = normalizeActorPlan(captureRequest) else {
+        throw TestFailure(message: "actor capture shape request refused")
+    }
+    let captureTranslation = ActorTranslation(plan: capturePlan, parsed: captureRequest,
+        workerExecutablePath: "/constructed/pw-probe-runner")
+    let bytecode = Data([10, 20, 30])
+    func capturedProfile(_ index: Int) -> CompiledProfileCapture {
+        let input = captureTranslation.inputs[index]
+        return CompiledProfileCapture(status: "captured", worker_pid: Int(outputs[index].workerPid),
+            producer: "worker", capture_stage: "before_apply", request_nonce: input.captureNonce,
+            profile_type: 0, bytecode_length: bytecode.count, bytecode_sha256: sha256Hex(bytecode),
+            bytecode_b64: bytecode.base64EncodedString(), source_sha256: sha256Hex(Data(input.policy.utf8)),
+            source_length: input.policy.utf8.count, params_sha256: consumedParamsDigest(input.params),
+            parameter_count: input.params.count)
+    }
+    var captured = complete
+    for index in [1, 2] {
+        try expectTrue(captureTranslation.inputs[index].captureCompiledProfile)
+        captured.actors[index].output!.profileCapture = capturedProfile(index)
+    }
+    documents.append(try assembleUsing(captured, parsed: captureRequest, plan: capturePlan, translation: captureTranslation))
+    var unavailableCapture = faulted
+    unavailableCapture.actors[1].output!.profileCapture = capturedProfile(1)
+    unavailableCapture.actors[2].output!.profileCapture = CompiledProfileCapture(status: "unavailable",
+        reason: "successful_application_unconfirmed", worker_pid: Int(outputs[2].workerPid))
+    documents.append(try assembleUsing(unavailableCapture, parsed: captureRequest,
+        plan: capturePlan, translation: captureTranslation))
     return documents
 }

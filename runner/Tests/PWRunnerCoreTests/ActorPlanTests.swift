@@ -119,6 +119,31 @@ func runActorPlanTests(_ tk: TestKit) {
             try expectEqual(selfPlan.delivery("da")?.recipientActorIndex, 0)
             try expectEqual(selfPlan.token("ta")?.deliveries, ["db", "da"])
         }
+        tk.run("empty visits retain their actor-local position before another actor's action") {
+            let text = """
+            {"schema_version": \(PWContract.requestSchema), "specimen_id": "empty_visits",
+             "actors": [{"actor_id":"A","sandbox":{"mode":"unapplied"}},
+                        {"actor_id":"B","sandbox":{"mode":"unapplied"}}],
+             "phases": [
+               {"phase_id":"a_first","actor_id":"A","actions":[
+                 {"step_id":"a1","extension":{"operation":"issue","family":"file","authority":"read","target":"/etc/hosts","token_ref":"t1"}}]},
+               {"phase_id":"a_empty","actor_id":"A","actions":[]},
+               {"phase_id":"b_first","actor_id":"B","actions":[
+                 {"step_id":"b1","extension":{"operation":"issue","family":"file","authority":"read","target":"/etc/hosts","token_ref":"t2"}}]},
+               {"phase_id":"a_last","actor_id":"A","actions":[
+                 {"step_id":"a2","extension":{"operation":"issue","family":"file","authority":"read","target":"/etc/hosts","token_ref":"t3"}}]},
+               {"phase_id":"b_empty","actor_id":"B","actions":[]}]}
+            """
+            let parsed = try decodeActorForm(text)
+            try expectNil(requestMeaningFailure(parsed))
+            guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "empty visits refused") }
+            let translated = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: "/unused")
+            try expectEqual(translated.inputs[0].phases.map { $0.firstSlot }, [0, 1, 1])
+            try expectEqual(translated.inputs[0].phases.map { $0.endSlot }, [1, 1, 2])
+            try expectEqual(translated.inputs[1].phases.map { $0.firstSlot }, [0, 1])
+            try expectEqual(translated.inputs[1].phases.map { $0.endSlot }, [1, 1])
+            try expectEqual(translated.phaseInputs.map { $0.firstSlot }, [0, 1, 0, 1, 1])
+        }
         tk.run("actor-form capacities are the declared limits") {
             try expectEqual(PWActorLimits.actions, PWShmLayout.maxSteps)
             try expectEqual(PWActorLimits.identifierBytes, PWExtensionLimits.referenceBytes)

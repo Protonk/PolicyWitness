@@ -23,7 +23,7 @@ captures remain available in Git.
 
 ## Refresh
 
-A response or controller-envelope version bump makes the readers reject the
+A response, controller-envelope or runner-protocol version bump makes the readers reject the
 current capture. Capture a new pair, without editing its contents; the
 `responseNN/` directory names the runner response schema. Run
 `witness_contract/worker_attempt_in_flight_at_deadline` against the final

@@ -323,34 +323,155 @@ private func encodeAllFreshWriteReply(_ original: PWRunnerRunResult) throws -> D
     return encoded
 }
 
-/// Ordinary full-reply encoding plus conservative, separately encoded additions.
-/// The actor form's additional members at their capacities: eight actor
-/// records (each with a subprocess whose disposition steps are already counted
-/// among the 256 ordinary entries), the eight phases beyond the legacy cap,
-/// every event, transfer and resource record, with every string maximal. The
-/// constructed documents are maximized rather than re-derived, and the union is
-/// conservative: no field the actor form omits is reclaimed.
+/// Actor components are measured separately: their optional branches may coexist
+/// for this representation bound without claiming to form a valid native reply.
+/// Every fixture contributes fields, including failure and capture companions.
+/// Numeric leaves use 20 decimal bytes (the widest 64-bit native representation),
+/// booleans use false, and bounded strings retain the ordinary string policy.
+/// Fixed ASCII vocabulary is padded to 128 bytes so an unexercised spelling does
+/// not make a shorter successful fixture the bound. The current vocabulary fits
+/// this ceiling; a longer fixture spelling requires a deliberate review.
+private func actorComponentUnion(_ values: [Any], path: String) throws -> Any {
+    let present = values.filter { !($0 is NSNull) }
+    guard !present.isEmpty else { return NSNull() }
+    let objects = present.compactMap { $0 as? [String: Any] }
+    if !objects.isEmpty {
+        var result: [String: Any] = [:]
+        for key in Set(objects.flatMap { $0.keys }) {
+            result[key] = try actorComponentUnion(objects.compactMap { $0[key] }, path: path + "." + key)
+        }
+        // A disposition value can be an integer or an object. The object union
+        // is larger than a 20-byte integer; keep both alternatives accounted for.
+        if objects.count != present.count {
+            try expectTrue(try JSONSerialization.data(withJSONObject: result).count >= 20,
+                           "actor component object must cover its scalar alternative: \(path)")
+        }
+        return result
+    }
+    let arrays = present.compactMap { $0 as? [Any] }
+    if !arrays.isEmpty {
+        let count: Int
+        switch path {
+        // These arrays are counted once at aggregate capacities below, rather
+        // than multiplying a 256-action population by eight actors or phases.
+        case "actor.subprocess.disposition.steps", "actor.subprocess.disposition.issues",
+             "phase.action_ids", "phase.validator_subprocess.records",
+             "phase.validator_subprocess.expected_step_ids", "phase.validator_subprocess.association_issues":
+            count = 0
+        case "actor.visits": count = PWActorLimits.phases
+        case "actor.launch.inherited_descriptors": count = 4
+        // ChildProcessState permits two lifetime EINTR retries and at most one
+        // terminal failed wait in polling, grace and final reap.
+        case "actor.subprocess.wait_errors", "phase.validator_subprocess.wait_errors": count = 5
+        case "handle.raw_equal_handles": count = PWActorLimits.handles
+        // The current phase and common ordering builders append at most ten
+        // distinct protocol violations. Sixteen safely covers their union.
+        case "phase.ordering.protocol_violations": count = 16
+        case _ where path.hasSuffix(".basis") || path.hasSuffix(".observations"):
+            count = PWDisposition.runReferences.count + PWDisposition.stepReferences.count
+        default: throw TestFailure(message: "unclassified actor reply array capacity: \(path)")
+        }
+        if count == 0 { return [Any]() }
+        try expectTrue(arrays.allSatisfy { $0.count <= count }, "actor array fixture exceeds its accounted capacity: \(path)")
+        var elements = arrays.flatMap { $0 }
+        if elements.isEmpty {
+            // Success fixtures have no ordering violations or equal handles.
+            switch path {
+            case "phase.ordering.protocol_violations": elements = ["attempt_or_acknowledgement_after_proceed_failure"]
+            case "handle.raw_equal_handles": elements = [maximal(PWExtensionLimits.referenceBytes)]
+            default: throw TestFailure(message: "actor reply array has no populated fixture: \(path)")
+            }
+        }
+        let element = try actorComponentUnion(elements, path: path + "[]")
+        return Array(repeating: element, count: count)
+    }
+    if let number = present.first as? NSNumber {
+        return CFGetTypeID(number) == CFBooleanGetTypeID() ? (false as Any) : (Int64.min as Any)
+    }
+    if present.first is String {
+        let key = path.split(separator: ".").last!.replacingOccurrences(of: "[]", with: "")
+        guard let policy = stringPolicy[key] else { throw Unclassified(keys: [key]) }
+        if let bytes = policy { return maximal(bytes) }
+        if key == "bytecode_b64" { return Data(repeating: 0xff, count: PWShmLayout.captureBytes).base64EncodedString() }
+        if key == "context_b64" { return Data(repeating: 0xff, count: 256).base64EncodedString() }
+        for value in present.compactMap({ $0 as? String }) {
+            try expectTrue(value.utf8.count <= 128 && value.utf8.allSatisfy { $0 >= 0x20 && $0 < 0x7f },
+                           "review actor fixed vocabulary ceiling: \(path)")
+        }
+        return String(repeating: "v", count: 128)
+    }
+    throw TestFailure(message: "unclassified actor reply value: \(path)")
+}
+
+private func actorReplyComponents(_ documents: [[String: Any]]) throws -> [String: Any] {
+    func rows(_ key: String, in objects: [[String: Any]]) -> [[String: Any]] {
+        objects.flatMap { ($0[key] as? [[String: Any]]) ?? [] }
+    }
+    let actors = rows("actors", in: documents)
+    let subprocesses = actors.compactMap { $0["subprocess"] as? [String: Any] }
+    let dispositions = subprocesses.compactMap { $0["disposition"] as? [String: Any] }
+    let resources = documents.compactMap { $0["resources"] as? [String: Any] }
+    // Ordinary phase companions supply validator and spawn-failure members that
+    // actor-shaped no-validator fixtures do not reach. Their variable record
+    // arrays remain charged at the aggregate limits in the ordinary base.
+    var ordinary = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(try replyFixture())) as! [String: Any]
+    addAbsentOptionalFields(&ordinary)
+    let phaseDocuments = documents + (try replyShapeDocuments()) + [ordinary]
+    let candidates: [String: [Any]] = [
+        "actor": actors, "phase": rows("phases", in: phaseDocuments),
+        "event": rows("extension_events", in: documents), "transfer": rows("transfers", in: documents),
+        "token": rows("tokens", in: resources), "delivery": rows("deliveries", in: resources),
+        "handle": rows("handles", in: resources), "disposition_step": rows("steps", in: dispositions),
+        "disposition_issue": rows("issues", in: dispositions),
+        "schedule": documents.compactMap { $0["schedule"] }
+    ]
+    var components: [String: Any] = [:]
+    for (name, values) in candidates {
+        try expectFalse(values.isEmpty, "actor size component lacks an encoder fixture: \(name)")
+        components[name] = try actorComponentUnion(values, path: name)
+    }
+    guard let actor = components["actor"] as? [String: Any],
+          let profile = actor["compiled_profile"] as? [String: Any], profile["bytecode_b64"] is String else {
+        throw TestFailure(message: "actor size account requires an encoded captured-profile fixture")
+    }
+    return components
+}
+
+/// The ordinary base already covers 256 attempts, 512 validator records, 768
+/// association issues and their identity arrays. Add every actor-specific member
+/// without reclaiming any ordinary fields. Disposition entries/issues are also
+/// charged here at aggregate capacities to include every actor-only branch.
 private func actorReplyAllowance() throws -> Int {
-    var unknown = Set<String>()
-    let documents = try actorShapeDocuments()
-    let complete = maximize(documents[0], key: nil, unknown: &unknown) as! [String: Any]
-    if !unknown.isEmpty { throw Unclassified(keys: unknown) }
-    func bytes(_ value: Any) throws -> Int { try JSONSerialization.data(withJSONObject: value).count }
-    let actors = complete["actors"] as! [[String: Any]]
-    let phases = complete["phases"] as! [[String: Any]]
-    let events = complete["extension_events"] as! [[String: Any]]
-    let transfers = complete["transfers"] as! [[String: Any]]
-    let resources = complete["resources"] as! [String: Any]
-    let largest = { (records: [[String: Any]]) throws -> Int in try records.map(bytes).max() ?? 0 }
-    var total = try bytes(["execution_form": "actors"]) + 1
-    total += PWActorLimits.actors * (try largest(actors) + 1)
-    total += (PWActorLimits.phases - PWRunnerPhase.maximumCount) * (try largest(phases) + 1)
-    total += (PWActorLimits.issues + 2 * PWActorLimits.deliveries + PWActorLimits.handles + PWActorLimits.releases) * (try largest(events) + 1)
-    total += PWActorLimits.deliveries * (try largest(transfers) + 1)
-    total += PWActorLimits.issues * (try largest(resources["tokens"] as! [[String: Any]]) + 1)
-    total += PWActorLimits.deliveries * (try largest(resources["deliveries"] as! [[String: Any]]) + 1)
-    total += PWActorLimits.handles * (try largest(resources["handles"] as! [[String: Any]]) + 1)
-    total += try bytes(["resources": ["tokens": [], "deliveries": [], "handles": []], "transfers": [], "actors": []])
+    let components = try actorReplyComponents(actorShapeDocuments())
+    func bytes(_ name: String) throws -> Int {
+        try JSONSerialization.data(withJSONObject: components[name]!).count + 1
+    }
+    var total = try JSONSerialization.data(withJSONObject: ["execution_form": "actors", "actors": [],
+        "resources": ["tokens": [], "deliveries": [], "handles": []], "transfers": [],
+        "extension_events": [], "schedule": [:]] as [String: Any]).count
+    total += PWActorLimits.actors * (try bytes("actor"))
+    // Count all sixteen phase overhead records, safely retaining the eight in
+    // the ordinary base. Heavy validator arrays are counted only there.
+    total += PWActorLimits.phases * (try bytes("phase"))
+    total += (PWActorLimits.issues + PWActorLimits.deliveries + PWActorLimits.handles + PWActorLimits.releases) * (try bytes("event"))
+    total += PWActorLimits.deliveries * (try bytes("transfer"))
+    total += PWActorLimits.issues * (try bytes("token"))
+    total += PWActorLimits.deliveries * (try bytes("delivery"))
+    total += PWActorLimits.handles * (try bytes("handle"))
+    total += PWActorLimits.actions * (try bytes("disposition_step"))
+    // resolveDisposition has at most one final-status issue per actor and two
+    // issue-producing questions per action; count both even when incompatible.
+    total += (PWActorLimits.actors + 2 * PWActorLimits.actions) * (try bytes("disposition_issue"))
+    total += try bytes("schedule")
+    // Count the actor phase action-id population again rather than depending
+    // on the ordinary base's eight-phase placement of the same 256 identities.
+    total += PWActorLimits.actions * (6 * (PWShmLayout.stepIdMax - 1) + 3)
+    // Each ordinary probe result also carries its actor_id in the actor form.
+    // The ordinary base's steps lack this member. One removed object brace is
+    // replaced by the comma joining the member to the existing step object.
+    let actorStepMember = try JSONSerialization.data(withJSONObject:
+        ["actor_id": maximal(PWActorLimits.identifierBytes)]).count - 1
+    total += PWActorLimits.actions * actorStepMember
     return total
 }
 
@@ -442,6 +563,43 @@ private struct Manifest: Decodable {
 
 func runReplyMaximumTests(_ tk: TestKit) {
     tk.group("maximal reply and receiver budget") {
+        tk.run("actor size account includes optional companions and requires array capacities") {
+            let documents = try actorShapeDocuments()
+            let components = try actorReplyComponents(documents)
+            let actor = components["actor"] as! [String: Any]
+            let process = actor["subprocess"] as! [String: Any]
+            for field in ["term_signal", "termination_request", "policy_transfer_error", "policy_transfer_timeout"] {
+                try expectNotNil(process[field], "failure companion escaped actor size account: \(field)")
+            }
+            let capture = actor["compiled_profile"] as! [String: Any]
+            let bytecode = Data(repeating: 0xff, count: PWShmLayout.captureBytes)
+            try expectEqual(capture["bytecode_b64"] as? String, bytecode.base64EncodedString())
+            let nativeCapture = CompiledProfileCapture(status: "captured", reason: nil, worker_pid: Int(Int32.max),
+                producer: "worker", capture_stage: "before_apply", request_nonce: String(repeating: "f", count: 32),
+                profile_type: Int(Int32.max), bytecode_length: bytecode.count,
+                bytecode_sha256: String(repeating: "f", count: 64), bytecode_b64: bytecode.base64EncodedString(),
+                source_sha256: String(repeating: "f", count: 64), source_length: PWShmLayout.policyBytes - 1,
+                params_sha256: String(repeating: "f", count: 64), parameter_count: PWShmLayout.maxParams)
+            let actualCaptureBytes = try pwRunnerEncodeJSON(nativeCapture).count
+            try expectTrue(try JSONSerialization.data(withJSONObject: capture).count >= actualCaptureBytes,
+                           "actor union must cover production encoding of one maximum capture")
+            let withoutCaptures = documents.map { document -> [String: Any] in
+                var copy = document
+                copy["actors"] = (document["actors"] as! [[String: Any]]).map { actor -> [String: Any] in
+                    var value = actor; value.removeValue(forKey: "compiled_profile"); return value
+                }
+                return copy
+            }
+            try expectThrows({ _ = try actorReplyComponents(withoutCaptures) }, { error in
+                try expectContains((error as? TestFailure)?.message ?? "", "requires an encoded captured-profile fixture")
+            })
+            try expectThrows({ _ = try actorComponentUnion([["future_array": []]] as [Any], path: "actor") }, { error in
+                try expectContains((error as? TestFailure)?.message ?? "", "unclassified actor reply array capacity")
+            })
+            try expectThrows({ _ = try actorComponentUnion([Array(repeating: 0, count: 5)], path: "actor.launch.inherited_descriptors") }, { error in
+                try expectContains((error as? TestFailure)?.message ?? "", "exceeds its accounted capacity")
+            })
+        }
         tk.run("the runner client budget is three times the synthesized maximal reply, rounded up") {
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
                 .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

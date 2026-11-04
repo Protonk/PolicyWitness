@@ -183,14 +183,14 @@ func runReservationAdmissionTests(_ tk: TestKit) {
             try expectEqual(scalar.0.utf8.count, 1022); try expectTrue(scalar.1)
         }
         tk.run("retained reply boundary and maximal encoded capture fit controller stdout") {
-            for n in [67_108_863, 67_108_864, 67_108_865] {
+            for n in [88_080_383, 88_080_384, 88_080_385] {
                 let captured = PWRunnerReplyCapture(Data(repeating: 0xff, count: n))
                 try expectEqual(captured.bytes_received, n)
-                try expectEqual(captured.bytes_retained, min(n, 67_108_864))
-                try expectEqual(captured.truncated, n > 67_108_864)
-                try expectEqual(Data(base64Encoded: captured.data_base64)?.count, min(n, 67_108_864))
+                try expectEqual(captured.bytes_retained, min(n, 88_080_384))
+                try expectEqual(captured.truncated, n > 88_080_384)
+                try expectEqual(Data(base64Encoded: captured.data_base64)?.count, min(n, 88_080_384))
             }
-            try expectTrue(try maximalReplyEncodedSize() < 67_108_864, "normal maximum must fit retained reply bytes")
+            try expectTrue(try maximalReplyEncodedSize() < 88_080_384, "normal maximum must fit retained reply bytes")
             // Escapable ASCII uses six JSON bytes per retained UTF8 byte. This
             // field superset deliberately overcounts combinations a session emits.
             var error = PWRunnerTransportError(stage: "acquisition", reason: "xpc_error", message: "")
@@ -209,7 +209,7 @@ func runReservationAdmissionTests(_ tk: TestKit) {
             for i in frame.attempts.indices { frame.attempts[i].control = control }
             frame.submission_refusal = control
             frame.error = error
-            frame.runner_reply = PWRunnerReplyCapture(Data(repeating: 0xff, count: 67_108_864))
+            frame.runner_reply = PWRunnerReplyCapture(Data(repeating: 0xff, count: 88_080_384))
             frame.submission = PWRunnerSubmission(state: "invoked", invoked_elapsed_ms: UInt64.max)
             let encoded = try pwRunnerEncodeClientCapture(frame)
             try expectTrue(encoded.count + 1 < 152 * 1024 * 1024, "max capture plus newline fits public stdout frame")

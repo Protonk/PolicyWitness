@@ -292,6 +292,24 @@ describes source transformations, object identity, cleanup and claim limits.
 The case requires Swift, clang and a signed app; exact source copies, command
 logs, receipts and rejected controls remain under `artifacts/controls/`.
 
+## Actor interruption and handoff controls
+
+The actor scheduler controls also retain a native application published during
+cleanup after setup expiry, without making the expired setup usable. Controlled
+host-clock advances distinguish excluded collection time from charged work
+before release. A withheld native wait exposes lost ownership: later actors
+remain unactivated and the recorded cleanup stays unresolved even after the
+fixture independently reaps its child.
+
+`actor_handoff_mutations` compiles disposable host sources. The baseline custody
+copy must preserve the first issue's bytes while a later issue is published.
+Aliasing the later outbound slot to the first must fail that exact observation.
+C controls independently reject a shared answer cell and premature outbound
+erasure. Compilation errors or unrelated failures do not establish sensitivity.
+This opt-in control requires Swift and clang, with synthetic authority instead
+of native extension calls. It retains
+source edits, build receipts and assertion logs, with build products in scratch.
+
 ## Host setup oracle sensitivity (opt-in)
 
 `host_setup_oracle_sensitivity` preserves and runs the unchanged setup recipe and

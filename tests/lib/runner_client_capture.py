@@ -13,7 +13,7 @@ import uuid
 
 import contract
 
-REPLY_BYTES = 64 * 1024 * 1024
+REPLY_BYTES = 84 * 1024 * 1024
 U64_MAX = 2**64 - 1
 I64_MAX = 2**63 - 1
 STOPS = ('granted', 'overall_deadline', 'attempt_limit', 'protocol_error', 'local_error')

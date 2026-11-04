@@ -122,7 +122,7 @@ root without an Info.plist.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
@@ -145,7 +145,7 @@ not manufacture one. `runner verify` uses this same path and admission order.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
 received/retained byte counts. Each stream retains at
-most <!-- span limits.controller_output.binary -->164 MiB<!-- /span -->;
+most <!-- span limits.controller_output.binary -->248 MiB<!-- /span -->;
 full output is collected first, so this is not a streaming allocation bound.
 `stdout_capture_error` identifies prefix loss and `stdout_parse_error` malformed
 untruncated JSON/UTF-8. Accepted stdin writes prove neither client reads nor XPC

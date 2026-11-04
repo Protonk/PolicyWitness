@@ -1160,7 +1160,14 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
         use std::process::{Command, Stdio};
         let directory = std::env::var("PW_POLICY_TRANSFER_REPLIES").unwrap();
         let mut controls = Vec::new();
-        for name in ["complete", "setup", "interrupted"] {
+        for name in [
+            "complete",
+            "setup",
+            "interrupted",
+            "transfer-interrupted",
+            "late-setup",
+            "failed-setup",
+        ] {
             let reply: Value = serde_json::from_slice(
                 &std::fs::read(
                     std::path::Path::new(&directory).join(format!("actor-review-{name}.json")),
@@ -1177,13 +1184,56 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
                     ("/transfers/0/recipient_acknowledged", json!(false)),
                     ("/transfers/0/equality", json!("unequal")),
                     ("/transfers/0/status", json!("custody_unavailable")),
+                    ("/transfers", json!([])),
+                    ("/resources/deliveries/0/status", json!("not_reached")),
+                    ("/resources/deliveries/0/equality", json!("unequal")),
+                    ("/resources/deliveries/0/delivered_length", json!(0)),
+                    ("/resources/handles/0/release_attempted", json!(false)),
+                    ("/resources/handles/0/raw_equal_handles", json!(["hc"])),
+                    ("/transfers/0/phase_id", json!("b_redelegate")),
                 ],
+                "transfer-interrupted" => vec![("/transfers/0/source_acknowledged", json!(true))],
+                "late-setup" => vec![("/actors/1/application_count", json!(0))],
+                "failed-setup" => vec![],
                 _ => vec![("/resources/tokens/0/status", json!("not_reached"))],
             };
             for (pointer, value) in changes {
                 let mut changed = reply.clone();
                 *changed.pointer_mut(pointer).unwrap() = value;
                 controls.push(json!({"name": format!("{name}:{pointer}"), "reply": changed, "accepted": false}));
+            }
+            if name == "complete" {
+                let mut changed = reply.clone();
+                changed["extension_events"][2]["delivery_ref"] = json!("dc");
+                changed["resources"]["handles"][0]["delivery_ref"] = json!("dc");
+                controls.push(json!({"name": "consume another recipient's future delivery", "reply": changed, "accepted": false}));
+                for token in ["absent", "tb"] {
+                    let mut changed = reply.clone();
+                    changed["extension_events"][1]["token_ref"] = json!(token);
+                    changed["resources"]["deliveries"][0]["token_ref"] = json!(token);
+                    changed["transfers"][0]["token_ref"] = json!(token);
+                    controls.push(json!({"name": format!("transfer unowned token {token}"), "reply": changed, "accepted": false}));
+                }
+                for pointer in [
+                    "/resources/tokens",
+                    "/resources/deliveries",
+                    "/resources/handles",
+                    "/transfers",
+                ] {
+                    let mut changed = reply.clone();
+                    let rows = changed
+                        .pointer_mut(pointer)
+                        .unwrap()
+                        .as_array_mut()
+                        .unwrap();
+                    rows.push(rows[0].clone());
+                    controls.push(json!({"name": format!("duplicate {pointer}"), "reply": changed, "accepted": false}));
+                }
+                let mut changed = reply.clone();
+                changed["extension_events"][0]["native_nonnull"] = json!(false);
+                changed["transfers"] = json!([]);
+                controls.push(json!({"name": "combined native contradiction and missing host transfer", "reply": changed, "accepted": false,
+                    "required_issues": ["issue nonnull disagrees with native result", "delivery claims host observation without transfer"]}));
             }
         }
         for control in &controls {
@@ -1195,6 +1245,13 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
                 control["name"],
                 diagnostics.disposition_issues
             );
+            for expected in control["required_issues"].as_array().into_iter().flatten() {
+                assert!(
+                    serde_json::to_string(&diagnostics.disposition_issues)
+                        .unwrap()
+                        .contains(expected.as_str().unwrap())
+                );
+            }
         }
         // Independently read the same actual publications and rejected variants.
         // The Python oracle does not call the Swift or Rust classifiers.
@@ -1204,11 +1261,38 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
                 "-c",
                 r#"
 import json, sys
+from copy import deepcopy
 sys.path.insert(0, sys.argv[1])
-from extension_evidence import validate_actor_extensions
+from consumer import validate, validate_shape, REPLY_SHAPE
 for control in json.load(sys.stdin):
-    errors = validate_actor_extensions(control['reply'])
+    errors = validate(control['reply'])
     assert (not errors) == control['accepted'], (control['name'], errors)
+    for expected in control.get('required_issues', []):
+        assert expected in errors, (control['name'], expected, errors)
+    if control['name'] == 'failed-setup':
+        evidence = control['reply']['actors'][1]['subprocess']['worker_evidence']
+        # Shape-only controls preserve optionality and type checking. The live
+        # compile failure above establishes the public native_result path;
+        # constructed neighboring fields exercise the rest of the same type.
+        for component, fields in [('failure', {'native_result': 0, 'errno': 22, 'index': 0}),
+                                  ('progress', {'index': 0})]:
+            path = 'reply.actors[].subprocess.worker_evidence.' + component
+            complete = dict(evidence[component], **fields)
+            for absent in [None, *fields]:
+                value = deepcopy(complete)
+                if absent is not None:
+                    del value[absent]
+                errors = []
+                validate_shape(value, path, REPLY_SHAPE, errors)
+                assert not errors, (path, absent, errors)
+            for field in fields:
+                value = dict(complete, **{field: 'wrong type'})
+                errors = []
+                validate_shape(value, path, REPLY_SHAPE, errors)
+                assert errors == [f'{path}.{field} is string, not number'], errors
+            errors = []
+            validate_shape(dict(complete, unexpected=True), path, REPLY_SHAPE, errors)
+            assert errors == [f'unknown key {path}.unexpected'], errors
 "#,
             ])
             .arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))

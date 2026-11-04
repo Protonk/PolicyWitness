@@ -534,9 +534,8 @@ def _validate_step(runner, step, failed_reporting):
     return errors
 
 
-def _validate_reply(runner):
+def _validate_capture(capture):
     errors = []
-    capture = runner.get('compiled_profile')
     if capture is not None:
         if not isinstance(capture, dict) or type(capture.get('schema_version')) is not int or capture['schema_version'] != 2:
             errors.append('unsupported or malformed compiled_profile schema_version')
@@ -548,6 +547,16 @@ def _validate_reply(runner):
                 errors.append('unavailable compiled_profile cannot claim capture context')
         else:
             errors.append('invalid compiled_profile status')
+    return errors
+
+
+def _validate_reply(runner):
+    errors = _validate_capture(runner.get('compiled_profile'))
+    if isinstance(runner.get('actors'), list):
+        for actor in runner['actors']:
+            if isinstance(actor, dict):
+                errors.extend(f"{actor.get('actor_id')}: {error}" for error in
+                              _validate_capture(actor.get('compiled_profile')))
     failure = runner.get('reporting_failure')
     failed_reporting = failure is not None
     if failed_reporting or runner.get('normalized_outcome') == 'runner_reporting_failed':
@@ -618,8 +627,10 @@ def _validate_actors(runner, failed_reporting, steps_value):
         if mode == 'apply' and setup == 'unapplied_declared':
             errors.append('apply actor cannot declare an unapplied setup')
         count = actor.get('application_count')
-        if type(count) is not int or count not in (0, 1) or (count == 1) != (setup == 'applied'):
-            errors.append('application_count disagrees with setup status')
+        # Setup can time out before the worker's application publication arrives.
+        # Final collection retains that application without making setup usable.
+        if type(count) is not int or count not in (0, 1) or (count == 1) != (actor.get('applied') is True):
+            errors.append('application_count disagrees with application publication')
         if setup == 'applied' and actor.get('applied') is not True:
             errors.append('applied setup lacks the worker\'s application publication')
         sub = actor.get('subprocess')

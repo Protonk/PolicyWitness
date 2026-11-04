@@ -156,6 +156,6 @@ enum SandboxCheckOutcome {
 enum PWContract {
     static let requestSchema: Int = 5
     static let responseSchema: Int = 25
-    static let runnerProtocol: Int = 2
+    static let runnerProtocol: Int = 3
 }
 // END GENERATED CONTRACT VERSIONS

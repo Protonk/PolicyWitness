@@ -33,6 +33,7 @@
       "actor_id" : "string",
       "application_count" : "number",
       "applied" : "boolean",
+      "compiled_profile" : "object",
       "index" : "number",
       "launch" : "object",
       "mode" : "string",
@@ -42,6 +43,23 @@
       "setup_status" : "string",
       "subprocess" : "object",
       "visits" : "array"
+    },
+    "reply.actors[].compiled_profile" : {
+      "bytecode_b64" : "string",
+      "bytecode_length" : "number",
+      "bytecode_sha256" : "string",
+      "capture_stage" : "string",
+      "parameter_count" : "number",
+      "params_sha256" : "string",
+      "producer" : "string",
+      "profile_type" : "number",
+      "reason" : "string",
+      "request_nonce" : "string",
+      "schema_version" : "number",
+      "source_length" : "number",
+      "source_sha256" : "string",
+      "status" : "string",
+      "worker_pid" : "number"
     },
     "reply.actors[].launch" : {
       "environment" : "string",
@@ -61,10 +79,14 @@
       "grace_end" : "string",
       "partial_steps" : "boolean",
       "pid" : "number",
+      "policy_transfer_error" : "object",
+      "policy_transfer_timeout" : "object",
       "poll_stop_reason" : "string",
       "ready_byte_received" : "boolean",
       "ready_wait" : "object",
       "reaped" : "boolean",
+      "term_signal" : "number",
+      "termination_request" : "object",
       "wait_errors" : "array",
       "worker_evidence" : "object"
     },
@@ -72,6 +94,14 @@
       "issues" : "array",
       "questions" : "object",
       "steps" : "array"
+    },
+    "reply.actors[].subprocess.disposition.issues[]" : {
+      "detail" : "string",
+      "kind" : "string",
+      "observations" : "array",
+      "question" : "string",
+      "rule" : "string",
+      "step_index" : "number"
     },
     "reply.actors[].subprocess.disposition.questions" : {
       "cleanup_trigger" : "object",
@@ -95,6 +125,7 @@
     "reply.actors[].subprocess.disposition.questions.final_status" : {
       "answer" : "string",
       "basis" : "array",
+      "reason" : "string",
       "state" : "string",
       "value" : "number"
     },
@@ -106,12 +137,20 @@
     "reply.actors[].subprocess.disposition.questions.kill_request_and_result" : {
       "answer" : "string",
       "basis" : "array",
-      "state" : "string"
+      "state" : "string",
+      "value" : "object"
+    },
+    "reply.actors[].subprocess.disposition.questions.kill_request_and_result.value" : {
+      "errno" : "number",
+      "rc" : "number",
+      "signal" : "number"
     },
     "reply.actors[].subprocess.disposition.questions.progress_association" : {
       "answer" : "string",
       "basis" : "array",
-      "state" : "string"
+      "reason" : "string",
+      "state" : "string",
+      "value" : "number"
     },
     "reply.actors[].subprocess.disposition.questions.stop_reason" : {
       "answer" : "string",
@@ -133,6 +172,7 @@
     "reply.actors[].subprocess.disposition.steps[].questions.step_boundary_reached" : {
       "answer" : "string",
       "basis" : "array",
+      "reason" : "string",
       "state" : "string"
     },
     "reply.actors[].subprocess.disposition.steps[].questions.step_requested_operation_applicability" : {
@@ -143,6 +183,8 @@
     "reply.actors[].subprocess.disposition.steps[].questions.step_result_published" : {
       "answer" : "string",
       "basis" : "array",
+      "issue" : "number",
+      "reason" : "string",
       "state" : "string"
     },
     "reply.actors[].subprocess.exit_grace_wait" : {
@@ -151,11 +193,33 @@
       "elapsed_ms" : "number",
       "stop" : "string"
     },
+    "reply.actors[].subprocess.policy_transfer_error" : {
+      "bytes_expected" : "number",
+      "bytes_written" : "number",
+      "errno" : "number"
+    },
+    "reply.actors[].subprocess.policy_transfer_timeout" : {
+      "budget_ms" : "number",
+      "bytes_expected" : "number",
+      "bytes_written" : "number",
+      "elapsed_ms" : "number"
+    },
     "reply.actors[].subprocess.ready_wait" : {
       "budget_ms" : "number",
       "clock_fault" : "boolean",
       "elapsed_ms" : "number",
+      "native_errno" : "number",
       "stop" : "string"
+    },
+    "reply.actors[].subprocess.termination_request" : {
+      "errno" : "number",
+      "rc" : "number",
+      "signal" : "number"
+    },
+    "reply.actors[].subprocess.wait_errors[]" : {
+      "errno" : "number",
+      "rc" : "number",
+      "stage" : "string"
     },
     "reply.actors[].subprocess.worker_evidence" : {
       "abi_identity" : "string",
@@ -176,7 +240,10 @@
     "reply.actors[].subprocess.worker_evidence.failure" : {
       "code" : "number",
       "detail" : "number",
+      "errno" : "number",
+      "index" : "number",
       "native_kind" : "number",
+      "native_result" : "number",
       "operation" : "number"
     },
     "reply.actors[].subprocess.worker_evidence.policy_read" : {
@@ -184,6 +251,7 @@
       "bytes_received" : "number"
     },
     "reply.actors[].subprocess.worker_evidence.progress" : {
+      "index" : "number",
       "operation" : "number",
       "raw" : "number",
       "stage" : "number"
@@ -256,6 +324,8 @@
     "reply.extension_events[].lifecycle.result" : {
       "answer" : "string",
       "basis" : "array",
+      "issue" : "number",
+      "reason" : "string",
       "state" : "string"
     },
     "reply.extensions[]" : {
@@ -687,6 +757,7 @@
       "rc" : "number"
     },
     "reply.schedule" : {
+      "cancelled" : "string",
       "collection_budget_ms" : "number",
       "execution_wait" : "object",
       "lifetime_budget_ms" : "number",

@@ -43,7 +43,11 @@ private func retainActorReply(_ reply: PWRunnerRunResult, _ name: String) throws
     guard let fixture = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"] else {
         throw TestFailure(message: "runner_unit receipt directory required")
     }
-    try pwRunnerEncodeJSON(reply).write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent()
+    // These tests enter below PWRunnerService. Apply its real post-orchestration
+    // enrichment before retaining a public reply for the complete readers.
+    var enriched = reply
+    enriched.steps = enrichPathDiagnostics(steps: reply.steps)
+    try pwRunnerEncodeJSON(enriched).write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent()
         .appendingPathComponent("actor-review-\(name).json"))
 }
 
@@ -90,6 +94,47 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectEqual(reply.actors![0].subprocess?.term_signal, Int(SIGKILL))
             _ = try pwRunnerEncodeJSON(reply)
             try retainActorReply(reply, "interrupted")
+        }
+        tk.run("host delivery survives source death before its transfer result publication") {
+            let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
+            guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "request refused") }
+            let translation = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: equipment("pw-probe-runner"))
+            var inputs = translation.inputs
+            inputs[0].killBeforePublishSlot = 1
+            let input = ActorScheduleInput(actors: inputs, applies: plan.actors.map { $0.applies },
+                schedule: translation.schedule, authority: translation.authority)
+            let outcome = ActorScheduler.run(input) { _, _, _ in }
+            let reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+                queryPlans: plan.phases.map { _ in [] }, validatorResults: plan.phases.map { _ in nil },
+                collectionStatuses: outcome.visits.map { $0.collectionInvoked ? "not_needed" : "not_reached" }, bundleId: "test")
+            let source = reply.extension_events!.first { $0.step_id == "a_to_b" }!
+            try expectFalse(source.result_published)
+            try expectEqual(source.status, "unresolved")
+            try expectEqual(reply.transfers![0].status, "delivered")
+            try expectFalse(reply.transfers![0].source_acknowledged)
+            try expectEqual(reply.resources!.deliveries[0].status, "delivered")
+            try expectEqual(reply.actors![0].subprocess?.term_signal, Int(SIGKILL))
+            try retainActorReply(reply, "transfer-interrupted")
+        }
+        tk.run("late application remains observed after setup timed out without permitting its phases") {
+            let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
+            guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "request refused") }
+            let translation = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: equipment("pw-probe-runner"))
+            var inputs = translation.inputs
+            inputs[1].preReadyHangMs = 150
+            inputs[1].exitGraceMs = 1000
+            var input = ActorScheduleInput(actors: inputs, applies: plan.actors.map { $0.applies },
+                schedule: translation.schedule, authority: translation.authority)
+            input.setupAllowanceMs = 40
+            let outcome = ActorScheduler.run(input) { _, _, _ in }
+            let reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+                queryPlans: plan.phases.map { _ in [] }, validatorResults: plan.phases.map { _ in nil },
+                collectionStatuses: outcome.visits.map { $0.collectionInvoked ? "not_needed" : "not_reached" }, bundleId: "test")
+            try expectEqual(reply.actors![1].setup_status, "setup_timeout")
+            try expectEqual(reply.actors![1].applied, true)
+            try expectEqual(reply.actors![1].application_count, 1)
+            try expectTrue(reply.phases.filter { $0.actor_id == "B" }.allSatisfy { !$0.arrival_observed })
+            try retainActorReply(reply, "late-setup")
         }
         tk.run("the corpus's principal request runs, assembles, encodes and decodes") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
@@ -204,6 +249,36 @@ func runActorReplyTests(_ tk: TestKit) {
             bad = reply
             bad.transfers![0].recipient_acknowledged = false
             try expectEqual(bad.actorExtensionEvidenceProblem(), "delivered transfer lacks custody, copy or recipient acknowledgement")
+            bad = reply
+            bad.transfers = []
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "delivery claims host observation without transfer")
+            bad = reply
+            bad.resources!.deliveries[0].status = "not_reached"
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "delivery projection contradicts host transfer")
+            bad = reply
+            bad.resources!.deliveries[0].equality = "unequal"
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "delivery projection contradicts host transfer")
+            bad = reply
+            bad.extension_events![2].delivery_ref = "dc"
+            bad.resources!.handles[0].delivery_ref = "dc"
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "consume delivery recipient/order")
+            bad = reply
+            bad.extension_events![1].token_ref = "absent"
+            bad.resources!.deliveries[0].token_ref = "absent"
+            bad.transfers![0].token_ref = "absent"
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "transfer token owner/order")
+            bad = reply
+            bad.resources!.tokens.append(resources.tokens[0])
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "resource and transfer references must be unique")
+            bad = reply
+            bad.transfers!.append(transfers[0])
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "resource and transfer references must be unique")
+            bad = reply
+            bad.resources!.handles[0].release_attempted = false
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "handle release projection contradicts event")
+            bad = reply
+            bad.resources!.handles[0].raw_equal_handles = ["hc"]
+            try expectEqual(bad.actorExtensionEvidenceProblem(), "handle equality projection contradicts native handles")
         }
         tk.run("a bare deny-default actor and a failed setup are reported per actor without a singular projection") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
@@ -229,6 +304,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectEqual(reply.steps[0].attempt.outcome, AttemptOutcome.readFailed)
             try expectEqual(reply.steps[0].sandbox_check.outcome, "deny")
             _ = try pwRunnerEncodeJSON(reply)
+            try retainActorReply(reply, "failed-setup")
         }
     }
 }

@@ -7,6 +7,8 @@ int main(void) {
     printf("slotHeaderBytes=%u\n", PW_AUTHORITY_SLOT_HEADER_BYTES);
     printf("slotBytes=%zu\n", sizeof(pw_authority_slot_t));
     printf("maxInbound=%u\n", PW_AUTHORITY_MAX_INBOUND);
+    printf("maxOutbound=%u\n", PW_AUTHORITY_MAX_OUTBOUND);
+    printf("maxTransfers=%u\n", PW_AUTHORITY_MAX_TRANSFERS);
     printf("maxHandles=%u\n", PW_AUTHORITY_MAX_HANDLES);
     printf("identityBytes=%u\n", PW_AUTHORITY_IDENTITY_BYTES);
     printf("exchangeWaitMs=%u\n", PW_AUTHORITY_EXCHANGE_WAIT_MS);
@@ -17,10 +19,14 @@ int main(void) {
     OFFSET(actorIndexOffset, pw_authority_region_t, actor_index);
     OFFSET(sessionNonceOffset, pw_authority_region_t, session_nonce);
     OFFSET(inboundCountOffset, pw_authority_region_t, inbound_count);
-    OFFSET(transferRequestOffset, pw_authority_region_t, transfer_request);
-    OFFSET(transferAckOffset, pw_authority_region_t, transfer_ack);
-    OFFSET(transferDetailOffset, pw_authority_region_t, transfer_detail);
-    OFFSET(outboundOffset, pw_authority_region_t, outbound);
+    OFFSET(outboundCountOffset, pw_authority_region_t, outbound_count);
+    OFFSET(transferCellsOffset, pw_authority_region_t, transfers);
+    printf("transferCellBytes=%zu\n", sizeof(pw_authority_transfer_t));
+    OFFSET(transferOperationOffset, pw_authority_transfer_t, operation_plus_one);
+    OFFSET(transferRequestOffset, pw_authority_transfer_t, requested);
+    OFFSET(transferAckOffset, pw_authority_transfer_t, acknowledged);
+    OFFSET(transferDetailOffset, pw_authority_transfer_t, detail);
+    OFFSET(slotsOffset, pw_authority_region_t, slots);
     OFFSET(slotMagicOffset, pw_authority_slot_t, magic);
     OFFSET(slotFamilyOffset, pw_authority_slot_t, family);
     OFFSET(slotWriterActorOffset, pw_authority_slot_t, writer_actor);
@@ -30,6 +36,7 @@ int main(void) {
     OFFSET(slotCommittedOffset, pw_authority_slot_t, committed);
     OFFSET(slotAcknowledgedOffset, pw_authority_slot_t, acknowledged);
     OFFSET(slotRejectDetailOffset, pw_authority_slot_t, reject_detail);
+    OFFSET(slotSettledOffset, pw_authority_slot_t, settled);
     OFFSET(slotTokenOffset, pw_authority_slot_t, token);
     return 0;
 }

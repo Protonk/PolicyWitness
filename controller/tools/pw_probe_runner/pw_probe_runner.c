@@ -565,19 +565,26 @@ static pw_issue_fn extension_issue;
 static pw_authority_region_t *authority;
 static size_t authority_bytes;
 static struct { uint32_t writer, operation, resource; } inbound_assignment[PW_AUTHORITY_MAX_INBOUND];
+static struct { uint32_t writer, operation, resource; } outbound_assignment[PW_AUTHORITY_MAX_OUTBOUND];
+static uint32_t transfer_assignment[PW_AUTHORITY_MAX_TRANSFERS];
+static uint8_t outbound_attempted[PW_AUTHORITY_MAX_OUTBOUND];
 static pw_shm_header_t *g_hdr;
 static pw_shm_evidence_t *g_evidence;
 static int64_t handle_table[PW_AUTHORITY_MAX_HANDLES];
 static uint8_t handle_valid[PW_AUTHORITY_MAX_HANDLES];
 
-/* Ordinary cleanup erases the whole accepted channel, including unused bytes,
- * and every token buffer of the authority region this actor mapped. This
- * neither consumes nor releases native extension authority. */
+/* Ordinary cleanup erases the legacy channel and actor-owned inbound copies.
+ * Published outbound bytes belong to the host, which may still be copying
+ * after a timeout or actor exit. Inbound ownership transfers only after the
+ * host's settled publication; until then host cleanup after reap owns erasure.
+ * This neither consumes nor releases native extension authority. */
 static void erase_authority(void) {
     if (!authority) return;
-    pw_extension_erase(authority->outbound.token, PW_EXTENSION_TOKEN_BYTES);
-    for (uint32_t i = 0; i < authority->inbound_count && i < PW_AUTHORITY_MAX_INBOUND; i++)
-        pw_extension_erase(authority->inbound[i].token, PW_EXTENSION_TOKEN_BYTES);
+    for (uint32_t i = 0; i < authority->inbound_count && i < PW_AUTHORITY_MAX_INBOUND; i++) {
+        pw_authority_slot_t *slot = pw_authority_inbound(authority, i);
+        if (atomic_load_explicit(&slot->settled, memory_order_acquire) != 0u)
+            pw_extension_erase(slot->token, PW_EXTENSION_TOKEN_BYTES);
+    }
 }
 static void erase_accepted_token(void) {
     if (extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
@@ -794,9 +801,9 @@ static void prepare_authority(pw_shm_header_t *hdr, int fd) {
     /* Darwin shm objects report a page-rounded length after ftruncate. Keep
      * the logical slot bound below; permit only the final page's padding here. */
     off_t page = getpagesize();
-    off_t maximum = (off_t)PW_AUTHORITY_REGION_BYTES(PW_AUTHORITY_MAX_INBOUND);
+    off_t maximum = (off_t)PW_AUTHORITY_REGION_BYTES(PW_AUTHORITY_MAX_OUTBOUND, PW_AUTHORITY_MAX_INBOUND);
     off_t rounded_maximum = page > 0 ? ((maximum + page - 1) / page) * page : maximum;
-    if (metadata.st_size < (off_t)PW_AUTHORITY_REGION_BYTES(0)
+    if (metadata.st_size < (off_t)PW_AUTHORITY_REGION_BYTES(0, 0)
         || metadata.st_size > rounded_maximum) {
         status = PW_AUTHORITY_SETUP_REJECTED; detail = PW_DELIVERY_STAGE_CHANNEL_SIZE;
         close(fd);
@@ -819,17 +826,27 @@ static void prepare_authority(pw_shm_header_t *hdr, int fd) {
         || memcmp(region->identity, PW_WORKER_ABI_IDENTITY, PW_AUTHORITY_IDENTITY_BYTES) != 0
         || region->actor_index != hdr->actor_index
         || region->inbound_count > PW_AUTHORITY_MAX_INBOUND
-        || bytes < PW_AUTHORITY_REGION_BYTES(region->inbound_count)) {
+        || region->outbound_count > PW_AUTHORITY_MAX_OUTBOUND
+        || bytes < PW_AUTHORITY_REGION_BYTES(region->outbound_count, region->inbound_count)) {
         status = PW_AUTHORITY_SETUP_REJECTED; detail = PW_DELIVERY_STAGE_CHANNEL_HEADER;
         munmap(p, bytes);
         goto publish;
     }
     authority = region;
     authority_bytes = bytes;
+    for (uint32_t i = 0; i < region->outbound_count; i++) {
+        pw_authority_slot_t *slot = pw_authority_outbound(region, i);
+        outbound_assignment[i].writer = slot->writer_actor;
+        outbound_assignment[i].operation = slot->operation_index;
+        outbound_assignment[i].resource = slot->resource_index;
+    }
+    for (uint32_t i = 0; i < PW_AUTHORITY_MAX_TRANSFERS; i++)
+        transfer_assignment[i] = region->transfers[i].operation_plus_one;
     for (uint32_t i = 0; i < region->inbound_count; i++) {
-        inbound_assignment[i].writer = region->inbound[i].writer_actor;
-        inbound_assignment[i].operation = region->inbound[i].operation_index;
-        inbound_assignment[i].resource = region->inbound[i].resource_index;
+        pw_authority_slot_t *slot = pw_authority_inbound(region, i);
+        inbound_assignment[i].writer = slot->writer_actor;
+        inbound_assignment[i].operation = slot->operation_index;
+        inbound_assignment[i].resource = slot->resource_index;
     }
     status = PW_AUTHORITY_SETUP_MAPPED;
 publish:
@@ -843,7 +860,7 @@ publish:
 static void service_inbound_once(void) {
     if (!authority) return;
     for (uint32_t i = 0; i < authority->inbound_count; i++) {
-        pw_authority_slot_t *slot = &authority->inbound[i];
+        pw_authority_slot_t *slot = pw_authority_inbound(authority, i);
         if (atomic_load_explicit(&slot->committed, memory_order_acquire) != 1u) continue;
         if (atomic_load_explicit(&slot->acknowledged, memory_order_acquire) != PW_AUTHORITY_ACK_NONE) continue;
         uint32_t problem = pw_authority_slot_problem(slot, PW_AUTHORITY_FAMILY_FILE,
@@ -887,12 +904,22 @@ static uint32_t wait_exchange(_Atomic uint32_t *word, pw_timing_t *timing, uint3
 /* Native file issuance by this actor. One call with the exact submitted
  * bytes, the class the authority selects and flags zero; raw nonnull/NULL
  * and errno are published as the native result. A bounded token is published
- * to the host through the outbound slot and the scratch is erased after the
- * host's answer; the native allocation is erased to its inspected length and
+ * to the host through its one-shot outbound slot; the host erases that copy
+ * before answering. The native allocation is erased to its inspected length and
  * freed. Custody acceptance is a separate status, never a native result. */
 static void attempt_extension_issue(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t index) {
     if (g_hdr->actor_mode == PW_ACTOR_MODE_LEGACY || !authority) { slot->unavailable_code = 5; return; }
     if (!extension_issue) { slot->unavailable_code = 3; return; }
+    pw_authority_slot_t *out = NULL;
+    for (uint32_t i = 0; i < authority->outbound_count; i++) {
+        if (outbound_assignment[i].resource != slot->ext_token_index
+            || outbound_assignment[i].operation != index || outbound_assignment[i].writer != g_hdr->actor_index) continue;
+        if (outbound_attempted[i]) { slot->unavailable_code = 4; return; }
+        outbound_attempted[i] = 1;
+        out = pw_authority_outbound(authority, i);
+        break;
+    }
+    if (!out) { slot->unavailable_code = 5; return; }
     slot->ext_target[PW_SHM_EXT_TARGET_BYTES - 1u] = '\0';
     const char *extension_class = slot->ext_authority == PW_EXTENSION_AUTHORITY_READ_WRITE
         ? "com.apple.app-sandbox.read-write" : "com.apple.app-sandbox.read";
@@ -915,7 +942,6 @@ static void attempt_extension_issue(pw_shm_slot_t *slot, pw_timing_t *timing, ui
         return;
     }
     slot->ext_token_length = (uint32_t)length;
-    pw_authority_slot_t *out = &authority->outbound;
     out->magic = PW_AUTHORITY_MAGIC;
     out->family = PW_AUTHORITY_FAMILY_FILE;
     out->writer_actor = g_hdr->actor_index;
@@ -926,33 +952,31 @@ static void attempt_extension_issue(pw_shm_slot_t *slot, pw_timing_t *timing, ui
     memcpy(out->token, token, length + 1u);
     pw_extension_erase(token, length);
     free(token);
-    atomic_store_explicit(&out->acknowledged, PW_AUTHORITY_ACK_NONE, memory_order_relaxed);
     atomic_store_explicit(&out->committed, 1u, memory_order_release);
     uint32_t status = PW_CUSTODY_NONE;
     uint32_t ack = wait_exchange(&out->acknowledged, timing, index, &status);
     if (ack == PW_AUTHORITY_ACK_ACCEPTED) status = PW_CUSTODY_ACCEPTED;
     else if (ack == PW_AUTHORITY_ACK_REJECTED) status = PW_CUSTODY_REJECTED;
     slot->ext_custody_status = status;
-    /* The scratch is erased and withdrawn whatever the answer; a host still
-     * reading after a timeout sees committed drop and rejects its copy. */
-    pw_extension_erase(out->token, PW_EXTENSION_TOKEN_BYTES);
-    out->token_length = 0;
-    atomic_store_explicit(&out->committed, 0u, memory_order_release);
+    /* Publication transfers payload ownership to the host. A timeout leaves
+     * these immutable bytes in this one-shot slot for a late host copy and
+     * erasure; later issues use different slots, including after actor exit. */
 }
 
 /* An explicit transfer is an apparatus request to the host, not a native
  * call: publish the request naming this action, wait for the host's
- * acknowledgement, record it, and withdraw the request. */
+ * acknowledgement and record it. The one-shot request remains published. */
 static void attempt_extension_transfer(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t index) {
     if (g_hdr->actor_mode == PW_ACTOR_MODE_LEGACY || !authority) { slot->unavailable_code = 5; return; }
-    atomic_store_explicit(&authority->transfer_ack, PW_TRANSFER_ACK_NONE, memory_order_relaxed);
-    authority->transfer_detail = 0;
-    atomic_store_explicit(&authority->transfer_request, index + 1u, memory_order_release);
+    if (slot->ext_delivery_index >= PW_AUTHORITY_MAX_TRANSFERS
+        || transfer_assignment[slot->ext_delivery_index] != index + 1u) { slot->unavailable_code = 5; return; }
+    pw_authority_transfer_t *cell = &authority->transfers[slot->ext_delivery_index];
+    if (atomic_load_explicit(&cell->requested, memory_order_acquire) != 0u) { slot->unavailable_code = 4; return; }
+    atomic_store_explicit(&cell->requested, 1u, memory_order_release);
     uint32_t status = PW_CUSTODY_NONE;
-    uint32_t ack = wait_exchange(&authority->transfer_ack, timing, index, &status);
+    uint32_t ack = wait_exchange(&cell->acknowledged, timing, index, &status);
     if (ack) slot->ext_transfer_status = ack;
     else slot->ext_transfer_status = status == PW_CUSTODY_TIMEOUT ? PW_TRANSFER_ACK_HOST_TIMEOUT : PW_TRANSFER_ACK_CLOCK_FAULT;
-    atomic_store_explicit(&authority->transfer_request, 0u, memory_order_release);
 }
 
 /* Actor-form consume: only the delivery this action names, and only when
@@ -963,8 +987,11 @@ static void attempt_extension_consume_actor(pw_shm_slot_t *slot) {
     if (!authority) { slot->unavailable_code = 5; return; }
     pw_authority_slot_t *in = NULL;
     for (uint32_t i = 0; i < authority->inbound_count; i++) {
-        pw_authority_slot_t *candidate = &authority->inbound[i];
+        pw_authority_slot_t *candidate = pw_authority_inbound(authority, i);
         if (candidate->resource_index != slot->ext_delivery_index) continue;
+        // Framing acceptance is not host settlement. In particular a source
+        // timeout cannot let self-consumption erase bytes during host equality.
+        if (atomic_load_explicit(&candidate->settled, memory_order_acquire) != 1u) continue;
         if (atomic_load_explicit(&candidate->committed, memory_order_acquire) != 1u) continue;
         if (atomic_load_explicit(&candidate->acknowledged, memory_order_acquire) != PW_AUTHORITY_ACK_ACCEPTED) continue;
         in = candidate;

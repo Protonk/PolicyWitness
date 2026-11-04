@@ -147,8 +147,8 @@ try:
     remove(service, skip=True)
     observations.append('skip-bootstrap completes installation; pending status and specimen rejection; pending removal')
 
-    for label, marker in [('missing', None), ('string', '2'), ('real', 2.0),
-                          ('boolean', True), ('old', 1), ('future', 3)]:
+    for label, marker in [('missing', None), ('string', '3'), ('real', 3.0),
+                          ('boolean', True), ('old', 2), ('future', 4)]:
         service, bundle, plist = prepare()
         info_path = bundle / 'Contents/Info.plist'
         info = plistlib.loads(info_path.read_bytes())
@@ -267,7 +267,7 @@ try:
     service, bundle, plist = prepare()
     installed = install(bundle, live=True)
     assert installed['bootstrapped'] and installed['state'] == 'installed'
-    assert installed['runner']['protocol_version'] == 2
+    assert installed['runner']['protocol_version'] == 3
     data(['runner', 'verify', '--service-name', service])
     # A constructed historical registry record on a current host proves that
     # the execution gate does not prevent inspection or owned cleanup. It does

@@ -563,6 +563,14 @@ recorded. Changed shared inputs qualify applicability, so inspect per-variant
 source receipts. `ownership.json` separately reports command settlement and
 cleanup. Passing assertions cannot override incomplete accounting or ownership.
 
+`actor_operations` executes production C operation bodies with independently
+counted native-call substitutes and a real fresh-open observation. Disposable
+source mutations omit a native call, cross delivery associations or substitute
+an existing descriptor. Each must fail its designated call or resource
+observation; a build error is never credited. These controls establish apparatus
+connections; the public composition and re-delegation cases establish native
+policy effects. Sources, commands and rejection diagnostics remain in artifacts.
+
 `authority_binding` compiles the production recipient preparation and inbound
 service with a counted consume replacement. It snapshots assigned references,
 then commits a matched frame or changes its source, operation or delivery.

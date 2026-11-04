@@ -471,13 +471,14 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   installation.
 - **Artifacts:** `<run>/suites/witness_contract/actors_byoxpc/artifacts/`
 
-### Actor re-delegation and timing qualification
+### Actor composition, re-delegation and timing qualification
 
-- **Cases:** `witness_contract/extension_redelegation` and
+- **Cases:** `witness_contract/actor_compositions`, `witness_contract/extension_redelegation` and
   `witness_contract/actor_timing_qualification`
 - **Location:** `tests/suites/witness_contract/extension_redelegation.sh` and
   `tests/suites/witness_contract/actor_timing_qualification.sh`
-- **Purpose:** The principal three-actor specimen, positive calibration and
+- **Purpose:** Public multi-resource compositions, renamed actor declarations,
+  empty revisits and per-actor compiled-profile receipts; the principal three-actor specimen, positive calibration and
   association contrasts through the public CLI; then finite one-, three- and
   eight-actor workloads, the aggregate limits workload and the eight-actor
   chain and calibration shapes measured against every actor-form allowance.
@@ -487,6 +488,22 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   transport, the actor limits or the worker's actor paths.
 - **Artifacts:** `<run>/suites/witness_contract/<case>/artifacts/report.json`
   beside every envelope and specimen.
+
+### Actor authority ownership and operation controls
+
+- **Cases:** `runner_c_worker_harness/authority_binding`,
+  `runner_c_worker_harness/actor_operations` and the opt-in
+  `runner_unit/actor_handoff_mutations`.
+- **Purpose:** Assigned frame references, delayed answers, independent native
+  call counts and fresh descriptor use; a copied host with aliased outbound
+  slots must fail the designated custody-copy observation.
+- **When to run:** After changing actor authority transport, payload ownership,
+  native operation dispatch or the corresponding observers.
+- **Equipment:** The C controls need clang; the host mutation also needs Swift.
+  They compile disposable sources and use synthetic authority; no selected app
+  is modified or required for these mutation observations.
+- **Artifacts:** Exact source edits, build logs and designated observation
+  failures under the selected case's artifacts; build products stay in scratch.
 
 ### built-in caller authentication
 

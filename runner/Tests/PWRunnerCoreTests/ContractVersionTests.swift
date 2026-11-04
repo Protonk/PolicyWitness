@@ -289,6 +289,48 @@ func runContractVersionTests(_ tk: TestKit) {
                                 ("reply.runner_subprocess", "term_signal"), ("reply.runner_subprocess", "policy_transfer_error"),
                                 ("reply.runner_subprocess", "policy_transfer_timeout"),
                                 ("reply.runner_subprocess.worker_evidence", "failure"),
+                                ("reply.actors[].subprocess.worker_evidence.failure", "native_result"),
+                                ("reply.actors[].subprocess.worker_evidence.failure", "errno"),
+                                ("reply.actors[].subprocess.worker_evidence.failure", "index"),
+                                ("reply.actors[].subprocess.worker_evidence.progress", "index"),
+                                ("reply.actors[].subprocess", "term_signal"),
+                                ("reply.actors[].subprocess", "policy_transfer_error"),
+                                ("reply.actors[].subprocess", "policy_transfer_timeout"),
+                                ("reply.actors[].subprocess.termination_request", "signal"),
+                                ("reply.actors[].subprocess.termination_request", "rc"),
+                                ("reply.actors[].subprocess.termination_request", "errno"),
+                                ("reply.actors[].subprocess.wait_errors[]", "stage"),
+                                ("reply.actors[].subprocess.wait_errors[]", "rc"),
+                                ("reply.actors[].subprocess.wait_errors[]", "errno"),
+                                ("reply.actors[].subprocess.ready_wait", "native_errno"),
+                                ("reply.actors[].subprocess.disposition.questions.final_status", "reason"),
+                                ("reply.actors[].subprocess.disposition.questions.progress_association", "reason"),
+                                ("reply.actors[].subprocess.disposition.questions.kill_request_and_result.value", "errno"),
+                                ("reply.actors[].subprocess.disposition.steps[].questions.step_boundary_reached", "reason"),
+                                ("reply.actors[].subprocess.disposition.steps[].questions.step_result_published", "reason"),
+                                ("reply.actors[].subprocess.disposition.steps[].questions.step_result_published", "issue"),
+                                ("reply.actors[].subprocess.disposition.issues[]", "kind"),
+                                ("reply.actors[].subprocess.disposition.issues[]", "rule"),
+                                ("reply.actors[].subprocess.disposition.issues[]", "question"),
+                                ("reply.actors[].subprocess.disposition.issues[]", "step_index"),
+                                ("reply.actors[].subprocess.disposition.issues[]", "observations"),
+                                ("reply.actors[].subprocess.disposition.issues[]", "detail"),
+                                ("reply.actors[]", "compiled_profile"),
+                                ("reply.actors[].compiled_profile", "schema_version"),
+                                ("reply.actors[].compiled_profile", "status"),
+                                ("reply.actors[].compiled_profile", "reason"),
+                                ("reply.actors[].compiled_profile", "worker_pid"),
+                                ("reply.actors[].compiled_profile", "producer"),
+                                ("reply.actors[].compiled_profile", "capture_stage"),
+                                ("reply.actors[].compiled_profile", "request_nonce"),
+                                ("reply.actors[].compiled_profile", "profile_type"),
+                                ("reply.actors[].compiled_profile", "bytecode_length"),
+                                ("reply.actors[].compiled_profile", "bytecode_sha256"),
+                                ("reply.actors[].compiled_profile", "bytecode_b64"),
+                                ("reply.actors[].compiled_profile", "source_sha256"),
+                                ("reply.actors[].compiled_profile", "source_length"),
+                                ("reply.actors[].compiled_profile", "params_sha256"),
+                                ("reply.actors[].compiled_profile", "parameter_count"),
                                 ("reply.runner_subprocess.disposition.issues[]", "rule"),
                                 ("reply.runner_subprocess.disposition.steps[].questions.step_result_published", "issue"),
                                 ("reply.runner_subprocess.disposition.steps[].questions.step_result_published", "reason"),
@@ -300,6 +342,32 @@ func runContractVersionTests(_ tk: TestKit) {
                                 ("reply.runner_subprocess.disposition.questions.kill_request_and_result", "reason")] {
                 try expectTrue(shape[path]?[key] != nil && shape[path]?[key] != "null", "\(path).\(key) is not typed")
             }
+        }
+        tk.run("actor capture shape companions retain per-process success and unavailable contexts") {
+            var captured = 0, unavailable = 0
+            for document in try actorShapeDocuments() {
+                try expectNil(document["compiled_profile"])
+                for actor in document["actors"] as! [[String: Any]] {
+                    guard let receipt = actor["compiled_profile"] as? [String: Any] else { continue }
+                    let subprocess = actor["subprocess"] as! [String: Any]
+                    try expectEqual(receipt["worker_pid"] as? Int, subprocess["pid"] as? Int)
+                    if receipt["status"] as? String == "captured" {
+                        captured += 1
+                        try expectEqual(receipt["producer"] as? String, "worker")
+                        try expectEqual(receipt["capture_stage"] as? String, "before_apply")
+                        try expectEqual(receipt["bytecode_b64"] as? String, "ChQe")
+                        try expectNil(receipt["reason"])
+                    } else {
+                        unavailable += 1
+                        try expectEqual(receipt["status"] as? String, "unavailable")
+                        try expectEqual(receipt["reason"] as? String, "successful_application_unconfirmed")
+                        try expectNil(receipt["producer"])
+                        try expectNil(receipt["capture_stage"])
+                        try expectNil(receipt["bytecode_b64"])
+                    }
+                }
+            }
+            try expectTrue(captured >= 2 && unavailable >= 1)
         }
         tk.run("reply shape golden agrees with the manifest") {
             let goldenURL = root.appendingPathComponent("tests/fixtures/contract/response_shape.json")

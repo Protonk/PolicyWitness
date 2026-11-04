@@ -452,6 +452,19 @@
             "clang"
           ],
           "default": false
+        },
+        {
+          "id": "actor_handoff_mutations",
+          "description": "Disposable outbound alias, shared answer and early erasure mutations fail designated independent observations while unmodified baselines pass",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/actor_handoff_mutations.sh"
+          ],
+          "requires": [
+            "swift",
+            "clang"
+          ],
+          "default": false
         }
       ]
     },
@@ -883,8 +896,24 @@
         {
           "id": "authority_binding",
           "description": "Recipient snapshots delivery ownership before application and rejects wrong source, action or resource before consumption",
-          "command": ["bash", "tests/suites/runner_c_worker_harness/authority_binding.sh"],
-          "requires": ["clang"]
+          "command": [
+            "bash",
+            "tests/suites/runner_c_worker_harness/authority_binding.sh"
+          ],
+          "requires": [
+            "clang"
+          ]
+        },
+        {
+          "id": "actor_operations",
+          "description": "Count actual extension calls and fresh opens in production C bodies; omitted calls, crossed delivery and inherited-descriptor substitutions fail designated observations",
+          "command": [
+            "bash",
+            "tests/suites/runner_c_worker_harness/actor_operations.sh"
+          ],
+          "requires": [
+            "clang"
+          ]
         },
         {
           "id": "activation_named_ordinal",
@@ -1787,6 +1816,17 @@
           ]
         },
         {
+          "id": "actor_compositions",
+          "description": "Public actor compositions preserve distinct resources across multiple issuers, fan-out, repeated handles, self-transfer, empty revisits and renamed actor declarations and failed-recipient isolation",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/actor_compositions.sh"
+          ],
+          "requires": [
+            "app"
+          ]
+        },
+        {
           "id": "actor_timing_qualification",
           "description": "Finite actor-form workloads on the signed candidate: three matched rounds of one, three and eight actors with a constant aggregate workload, the aggregate action and phase limits over eight actors, and the eight-actor re-delegation and calibration shapes complete with at least a quarter of every actor-form allowance remaining at the largest charged interval",
           "requires": [
@@ -2154,6 +2194,7 @@
         "runner_unit/host_setup_oracle_sensitivity",
         "runner_unit/reaped_ack_mutation",
         "runner_unit/exec_reader_mutations",
+        "runner_unit/actor_handoff_mutations",
         "runner_exec_lifecycle/closed_streams_leader_exit",
         "runner_exec_inheritance/closed_worker_stderr",
         "dispatcher/pytest_controls"

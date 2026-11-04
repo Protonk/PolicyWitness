@@ -1069,7 +1069,7 @@ subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
 For the runner client and sbpl-check, the controller collects full
-`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->164 MiB<!-- /span --> prefix per runner-client
+`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->248 MiB<!-- /span --> prefix per runner-client
 stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
 up to 4 MiB) and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
 Runner-client stdout is a protocol-versioned client capture, not a synthetic
@@ -1097,7 +1097,7 @@ proof that no worker ran.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver
-budget (<!-- span limits.controller_output.value -->171,966,464<!-- /span --> or <!-- span limits.policy_helper_output.value -->8,388,608<!-- /span --> bytes). Locally truncated
+budget (<!-- span limits.controller_output.value -->260,046,848<!-- /span --> or <!-- span limits.policy_helper_output.value -->8,388,608<!-- /span --> bytes). Locally truncated
 stdout is not parsed and has `stdout_capture_error`, distinct from
 `stdout_parse_error` for malformed JSON/UTF-8 within the cap. Text context may use
 replacement characters; accepted JSON is parsed from original untruncated bytes.
@@ -1149,7 +1149,7 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 The controller's runner-client and sbpl-check receivers use the same
-original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->164 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
+original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->248 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
 Received/retained byte counts precede lossy context conversion and count fully
 collected buffers. These are retention limits, not peak-memory bounds.
 `stdout_capture_error` identifies local truncation and precludes parsing the

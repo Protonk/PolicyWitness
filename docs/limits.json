@@ -1495,7 +1495,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 56017989,
+      "value": 85852557,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",
@@ -1528,15 +1528,21 @@
           "symbol": "main",
           "kind": "path",
           "form": "test"
+        },
+        {
+          "path": "tests/suites/witness_contract/check_actor_compositions.py",
+          "symbol": "assert_composition",
+          "kind": "path",
+          "form": "test"
         }
       ],
-      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer and two lifecycle-event records, the issuer override, 256 fresh-read payloads, 256 fresh-write payloads, 256 exec-observation payloads, and the actor form's eight actor records, eight further phases, every event, transfer and resource record at their capacities are added without subtracting the ordinary fields they replace. Those components include mutually exclusive optional fields, maximal native-width values, and JSON member punctuation. Exec allowance includes every optional member, widest native scalars and longest fixed vocabulary, even where branches cannot coexist. A separate ordinary full-reply encoder control carries valid exec evidence on every slot; another carries valid fresh-write evidence. This is an upper bound, not a reachable reply. Distinct maximal control-character identities satisfy the ordinary phase/action association. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write and mixed native workloads."
+      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer, lifecycle-event, fresh-read, fresh-write, exec-observation and actor components are added without reclaiming ordinary fields. Actor components use the union of encoded success, failure, interruption and capture fixtures: eight actor records with full compiled-profile payloads, sixteen phase overheads, every event, transfer and resource at its capacity, aggregate disposition entries and issues, and ordinary-step actor identities. Bounded echoed strings use maximal escaping, native scalars use 20 decimal bytes, fixed actor vocabulary has a checked 128-byte ASCII ceiling, and each array has an explicit capacity. The actor capture allowance is compared with production encoding of a maximum receipt; missing capture fixtures and unclassified or oversized arrays fail. Ordinary controls separately encode valid exec evidence and fresh-write evidence on every slot. Mutually exclusive fields remain counted, so this is an upper bound, not a reachable reply. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write, mixed native and actor capture workloads."
     },
     {
       "id": "controller_output",
       "section": "transport",
       "title": "Runner client output",
-      "value": 171966464,
+      "value": 260046848,
       "unit": "bytes",
       "counting": "Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes.",
       "effect": "Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred.",
@@ -1573,7 +1579,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or process-memory limit. The production maximal-capture control includes base64 expansion of the 64 MiB retained host reply and 256 bounded attempt/error records and requires the result to fit this cap. Independent receiver controls exercise oversized and malformed captures; normal maximal workloads separately establish actual host replies."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or process-memory limit. The production maximal-capture control includes base64 expansion of the retained host reply at its full capacity and 256 bounded attempt/error records and requires the result to fit this cap. Independent receiver controls exercise oversized and malformed captures; normal maximal workloads separately establish actual host replies."
     },
     {
       "id": "policy_helper_output",
@@ -1996,7 +2002,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Fixed phase records in each worker's shared header. The legacy form admits eight phases (`phase_count`); the remaining records are internal support for the actor form under development and no public request reaches them. A worker refuses a header naming more phases than its records before application."
+      "behavior": "Fixed phase records in each worker shared header. The declaration form admits eight phases; actor-form visits use the same records under their own admitted phase limit. A worker refuses a header naming more phases than its records before application."
     },
     {
       "id": "authority_slot_bytes",
@@ -2005,7 +2011,7 @@
       "value": 16448,
       "unit": "bytes",
       "counting": "One token publication slot in an actor's authority region: a fixed header and the token buffer.",
-      "effect": "A region holds one outbound slot and one inbound slot per admitted delivery to that actor; nothing in it enters the reply.",
+      "effect": "A region holds one outbound slot per admitted issue and one inbound slot per admitted delivery to that actor, with distinct bounded transfer answer cells; nothing in it enters the reply.",
       "control": "Fixed.",
       "sources": [
         {
@@ -2031,7 +2037,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Tokens are copied between fixed buffers, compared for equality and erased at their last declared use and at teardown; the layout suite compares the compiled C geometry with the Swift mirror."
+      "behavior": "Published outbound bytes remain immutable until the host copies or rejects and erases them. Inbound consumption/erasure follows host settlement. Shared teardown erasure requires confirmed worker quiescence; private custody is erased independently. The layout suite compares compiled C geometry with the Swift mirror."
     },
     {
       "id": "phase_publications",
@@ -3351,7 +3357,7 @@
       "id": "client_reply_retention",
       "section": "transport",
       "title": "Client host reply retention",
-      "value": 67108864,
+      "value": 88080384,
       "unit": "bytes",
       "counting": "Host result bytes retained before base64 encoding in the client capture.",
       "effect": "Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct.",
@@ -3360,6 +3366,14 @@
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
           "symbol": "runnerReplyBytes"
+        },
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "REPLY_CAPTURE_BYTES"
+        },
+        {
+          "path": "tests/lib/runner_client_capture.py",
+          "symbol": "REPLY_BYTES"
         }
       ],
       "checks": [
@@ -3373,6 +3387,12 @@
           "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
           "symbol": "runReservationAdmissionTests",
           "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "reply_capture_limit_matches_documented_capacity",
+          "kind": "value",
           "form": "test"
         }
       ],

@@ -362,18 +362,22 @@ releasing that actor's phases; missing native symbols instead leave individual
 operations unavailable. The recipient snapshots each inbound slot's assigned
 source, action and delivery before application and checks them on publication. [`attempt_extension_issue`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
 calls `sandbox_extension_issue_file` once with the exact submitted bytes,
-publishes nonnull or NULL with the saved errno, copies a bounded token into the
-outbound slot, waits for the host's custody answer, erases the native
-allocation to its inspected length and frees it, then erases the scratch
-whatever the answer. [`attempt_extension_transfer`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-publishes a request and waits for the host's acknowledgement while servicing
+publishes nonnull or NULL with the saved errno and copies a bounded token into
+that issue's assigned outbound slot. It erases the native allocation to its
+inspected length and frees it before publishing the slot. Published outbound
+bytes belong to the host, which copies or rejects and erases them; timeout and
+worker exit do not overwrite bytes a host may still read.
+[`attempt_extension_transfer`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+publishes into that transfer's own cell and waits for its answer while servicing
 its own inbound slots, so a transfer to itself cannot wait on itself. Actor
-consume reads only the inbound slot this actor accepted for the named
-delivery; the handle table is indexed by the plan's handle references rather
+consume reads only the inbound slot this actor accepted and the host settled
+as usable for the named delivery; the handle table is indexed by the plan's handle references rather
 than one static handle. Parked actors accept or reject deliveries in
 [`service_inbound_once`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-without consuming. Every ordinary exit erases the outbound and inbound token
-buffers of the region.
+without consuming. Ordinary exit erases settled inbound buffers. The host
+erases remaining shared buffers after confirmed worker quiescence; unresolved
+termination leaves their cleanup unknown. Private host custody has separate
+erasure ownership and does not depend on a worker publication.
 
 Known gap: private extension calls may allocate or retain internal state that PW
 cannot inspect. Erasure observations cover PW-owned transient buffers; successful

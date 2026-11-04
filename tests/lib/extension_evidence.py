@@ -217,6 +217,16 @@ def validate_actor_extensions(runner):
     by_actor = {a.get('actor_id'): a for a in actors if isinstance(a, dict)}
     consumed, released = {}, set()
 
+    for table, key in ((tokens, 'token_ref'), (deliveries, 'delivery_ref'), (handles, 'handle_ref'),
+                       (transfers, 'delivery_ref')):
+        references = [r.get(key) for r in table if isinstance(r, dict)]
+        if len(references) != len(table) or any(not _reference(r) for r in references) \
+                or len(set(r for r in references if isinstance(r, str))) != len(references):
+            errors.append('resource and transfer references must be unique')
+
+    def before(first, second):
+        return first in ids and second in ids and ids.index(first) < ids.index(second)
+
     def owned(table, **match):
         return any(isinstance(r, dict) and all(r.get(k) == v for k, v in match.items()) for r in table)
 
@@ -250,6 +260,9 @@ def validate_actor_extensions(runner):
             if not _reference(token) or not _reference(delivery) or handle is not None or not owned(
                     deliveries, delivery_ref=delivery, token_ref=token, source_actor_id=actor_id, step_id=sid):
                 errors.append('transfer reference')
+            if not any(isinstance(t, dict) and t.get('token_ref') == token and t.get('actor_id') == actor_id
+                       and before(t.get('step_id'), sid) for t in tokens):
+                errors.append('transfer token owner/order')
             if called or native is not None or errno is not None:
                 errors.append('transfer carries a native result')
             if (published is False) != (status == 'unresolved') or (status != 'unresolved' and status not in ACTOR_TRANSFER_STATUSES):
@@ -258,6 +271,10 @@ def validate_actor_extensions(runner):
             if not _reference(delivery) or not _reference(handle) or token is not None or handle in consumed or not owned(
                     handles, handle_ref=handle, delivery_ref=delivery, actor_id=actor_id, step_id=sid):
                 errors.append('consume reference')
+            if not any(isinstance(d, dict) and d.get('delivery_ref') == delivery
+                       and d.get('recipient_actor_id') == actor_id and before(d.get('step_id'), sid)
+                       for d in deliveries):
+                errors.append('consume delivery recipient/order')
             consumed[handle] = event
         elif operation == 'release':
             prior = consumed.get(handle)
@@ -311,6 +328,11 @@ def validate_actor_extensions(runner):
             errors.append('transfer record association')
         if not isinstance(transfer, dict):
             continue
+        source = next((e for e in events if isinstance(e, dict) and e.get('operation') == 'transfer'
+                       and e.get('delivery_ref') == transfer.get('delivery_ref')), None)
+        if source is None or transfer.get('phase_id') != source.get('phase_id') \
+                or transfer.get('lifecycle') != source.get('lifecycle'):
+            errors.append('transfer source phase/lifecycle association')
         if transfer.get('status') == 'delivered' and (transfer.get('request_published') is not True
                 or transfer.get('custody_status') != 'held' or transfer.get('copy_status') != 'copied'
                 or transfer.get('equality') != 'equal' or transfer.get('recipient_acknowledged') is not True):
@@ -330,8 +352,29 @@ def validate_actor_extensions(runner):
             if len(matches) != 1:
                 errors.append('resource lacks unique producing event'); continue
             event = matches[0]
-            if operation == 'transfer' and any(isinstance(t, dict) and t.get('delivery_ref') == resource.get(reference) for t in transfers):
-                continue  # host observation can survive missing source publication
+            if operation == 'transfer':
+                if resource.get('recipient_actor_id') not in by_actor:
+                    errors.append('delivery recipient does not exist')
+                host = next((t for t in transfers if isinstance(t, dict)
+                             and t.get('delivery_ref') == resource.get(reference)), None)
+                if host is not None:
+                    # Host observations survive a missing source publication;
+                    # the resource table must still describe those observations.
+                    if resource.get('status') != host.get('status') or resource.get('equality') != host.get('equality'):
+                        errors.append('delivery projection contradicts host transfer')
+                    length = resource.get('delivered_length')
+                    token = next((t for t in tokens if isinstance(t, dict) and t.get('token_ref') == resource.get('token_ref')), {})
+                    if host.get('status') == 'delivered':
+                        if not _integer(length, 1, 16383) or (token.get('token_length') is not None and length != token.get('token_length')):
+                            errors.append('delivered length contradicts custody')
+                    elif length is not None:
+                        errors.append('undelivered resource carries delivered length')
+                    continue
+                if resource.get('equality') is not None or resource.get('delivered_length') is not None \
+                        or event.get('status') not in ('none', 'host_timeout', 'clock_fault', 'unresolved'):
+                    errors.append('delivery claims host observation without transfer')
+                if event.get('result_published') is True and resource.get('status') != (event.get('unavailable_reason') or 'unrequested'):
+                    errors.append('unobserved delivery status contradicts source')
             if event.get('result_published') is not True:
                 lifecycle = event.get('lifecycle')
                 boundary = lifecycle.get('boundary') if isinstance(lifecycle, dict) else None
@@ -349,6 +392,23 @@ def validate_actor_extensions(runner):
                     errors.append('handle status or value contradicts consume')
             if operation == 'consume' and resource.get('native_handle') != (event.get('native_result') if resource.get('status') == 'produced' else None):
                 errors.append('handle status or value contradicts consume')
+            if operation == 'issue' and (resource.get('family') != 'file'
+                    or resource.get('token_length') != event.get('token_length')
+                    or (resource.get('status') == 'issued' and not _integer(resource.get('token_length'), 1, 16383))):
+                errors.append('token metadata contradicts issue')
+            if operation == 'consume':
+                release = next((e for e in events if isinstance(e, dict) and e.get('operation') == 'release'
+                                and e.get('handle_ref') == resource.get(reference)), None)
+                if resource.get('release_step_id') != (release.get('step_id') if release else None) \
+                        or resource.get('release_attempted') is not bool(release and release.get('call_boundary_observed')):
+                    errors.append('handle release projection contradicts event')
+                equal = [h.get('handle_ref') for h in handles if isinstance(h, dict)
+                         and h.get('handle_ref') != resource.get(reference) and h.get('actor_id') == resource.get('actor_id')
+                         and resource.get('native_handle') is not None and h.get('native_handle') == resource.get('native_handle')]
+                observed = resource.get('raw_equal_handles')
+                if not isinstance(observed, list) or any(not isinstance(x, str) for x in observed) \
+                        or len(observed) != len(set(observed)) or set(observed) != set(equal):
+                    errors.append('handle equality projection contradicts native handles')
     return errors
 
 

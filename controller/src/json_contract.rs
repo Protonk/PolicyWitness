@@ -16,7 +16,7 @@ pub const REQUEST_SCHEMA_VERSION: u32 = 5;
 /// The one runner response schema this controller reads; any other version is refused.
 pub const RESPONSE_SCHEMA_VERSION: u32 = 25;
 /// Required reservation RPC and client capture protocol.
-pub const RUNNER_PROTOCOL_VERSION: u32 = 2;
+pub const RUNNER_PROTOCOL_VERSION: u32 = 3;
 // END GENERATED CONTRACT VERSIONS
 
 #[derive(Serialize, Clone)]

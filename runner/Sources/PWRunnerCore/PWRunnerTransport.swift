@@ -12,7 +12,7 @@ enum PWRunnerTransportLimits {
     static let controlBytes = 64 * 1024
     static let errorMessageBytes = 1024
     static let errorDomainBytes = 128
-    static let runnerReplyBytes = 64 * 1024 * 1024
+    static let runnerReplyBytes = 84 * 1024 * 1024
 }
 
 enum PWContinuousClock {
