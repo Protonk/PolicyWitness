@@ -1,0 +1,975 @@
+{
+  "build": {
+    "commit": "a66955164507b15621ed9d291fda44b880c589ba",
+    "describe": "v0.3.4-36-ga6695516",
+    "number": "1117",
+    "version": "0.3.4"
+  },
+  "data": {
+    "policy_check": null,
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness-extension-actors/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "240000",
+        "--deadline-ticks",
+        "58178408058910",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "capture_limit_bytes": 171966464,
+      "ended_at_unix_ms": 1793761504471,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 2469,
+        "error": null
+      },
+      "runner_reply_error": null,
+      "started_at_unix_ms": 1793761503943,
+      "stderr": "",
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "stderr_truncated": false,
+      "stdout_bytes_received": 19362,
+      "stdout_bytes_retained": 19362,
+      "stdout_capture_error": null,
+      "stdout_parse_error": null,
+      "stdout_raw": null,
+      "stdout_truncated": false,
+      "submission": "invoked",
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "4E5E4C1B-3B01-4007-B710-7FE25E94A229",
+            "control": {
+              "bytes_received": 237,
+              "host_instance": "FCA3E6D5-D361-4556-9204-9AF7E44551EA",
+              "host_pid": 17306,
+              "lease_ms": 5000,
+              "sha256": "48cd4ab6c8463c6267da37f7572de3139e2965001937e9edeb6eb0936e4279b7",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 16,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 17305,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "deadline_continuous_ns": 2424100335787916,
+        "ended_continuous_ns": 2423860862662375,
+        "kind": "runner_client_capture",
+        "protocol_version": 2,
+        "runner_reply": {
+          "bytes_received": 13890,
+          "bytes_retained": 13890,
+          "data_base64": "eyJidW5kbGVfaWQiOiJjb20ucG9saWN5d2l0bmVzcy5wb2xpY3ktd2l0bmVzcy5QV1J1bm5lciIsImV4dGVuc2lvbl9ldmVudHMiOlt7ImNhbGxfYm91bmRhcnlfb2JzZXJ2ZWQiOmZhbHNlLCJoYW5kbGVfcmVmIjoiaGFuZGxlIiwibGlmZWN5Y2xlIjp7ImJvdW5kYXJ5Ijp7ImFuc3dlciI6InJlYWNoZWQiLCJiYXNpcyI6WyJwcm9ncmVzcyIsInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwicmVzdWx0Ijp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3VtbWFyeSI6ImNvbXBsZXRlZCJ9LCJvcGVyYXRpb24iOiJjb25zdW1lIiwicGhhc2VfaWQiOiJwMCIsInJlc3VsdF9wdWJsaXNoZWQiOnRydWUsInN0YXR1cyI6InVuYXZhaWxhYmxlIiwic3RlcF9pZCI6ImNvbnN1bWUiLCJ0b2tlbl9yZWYiOiJ0b2tlbiIsInVuYXZhaWxhYmxlX3JlYXNvbiI6InRva2VuX3VuYXZhaWxhYmxlIn0seyJjYWxsX2JvdW5kYXJ5X29ic2VydmVkIjpmYWxzZSwiaGFuZGxlX3JlZiI6ImhhbmRsZSIsImxpZmVjeWNsZSI6eyJib3VuZGFyeSI6eyJhbnN3ZXIiOiJyZWFjaGVkIiwiYmFzaXMiOlsicHJvZ3Jlc3MiLCJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInJlc3VsdCI6eyJhbnN3ZXIiOiJwdWJsaXNoZWQiLCJiYXNpcyI6WyJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN1bW1hcnkiOiJjb21wbGV0ZWQifSwib3BlcmF0aW9uIjoicmVsZWFzZSIsInBoYXNlX2lkIjoicDEiLCJyZXN1bHRfcHVibGlzaGVkIjp0cnVlLCJzdGF0dXMiOiJ1bmF2YWlsYWJsZSIsInN0ZXBfaWQiOiJyZWxlYXNlIiwidW5hdmFpbGFibGVfcmVhc29uIjoiaGFuZGxlX3VuYXZhaWxhYmxlIn1dLCJleHRlbnNpb25zIjpbeyJkZWxpdmVyeV9zdGF0dXMiOiJ0b2tlbl91bmF2YWlsYWJsZSIsImV4dGVuc2lvbl9jbGFzcyI6ImNvbS5hcHBsZS5hcHAtc2FuZGJveC5yZWFkIiwiaG9zdF9idWZmZXJfZXJhc2VkIjp0cnVlLCJpZGVudGl0eSI6eyJkZXZpY2UiOjE2Nzc3MjMzLCJnaWQiOjAsImlub2RlIjoxNTEzNjcyNjYsIm1vZGUiOjMzMTg4LCJ1aWQiOjUwMX0sImlzc3VhbmNlX3N0YXR1cyI6Imlzc3Vlcl9hYm5vcm1hbF9leGl0IiwiaXNzdWVyIjp7ImNhbGxfYm91bmRhcnlfb2JzZXJ2ZWQiOnRydWUsImVnaWQiOjIwLCJlcnJubyI6MCwiZXVpZCI6NTAxLCJleGVjdXRhYmxlX3BhdGgiOiJcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL2lzc3VlciIsImV4aXRfY29kZSI6ODcsImdpZCI6MjAsIm5hdGl2ZV9ub25udWxsIjp0cnVlLCJwaWQiOjE3MzA3LCJyZWFwZWQiOnRydWUsInJlc3VsdF9wdWJsaXNoZWQiOnRydWUsInRva2VuX2xlbmd0aCI6MjIwLCJ1aWQiOjUwMSwid2FpdF9lcnJvcnMiOltdfSwicHJlcGFyYXRpb25fc3RhdHVzIjoicHJlcGFyZWQiLCJyZXNvbHZlZF90YXJnZXQiOiJcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL3RhcmdldCIsInN1Ym1pdHRlZF90YXJnZXQiOiJcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL3RhcmdldCIsInRva2VuX3JlZiI6InRva2VuIn1dLCJub3JtYWxpemVkX291dGNvbWUiOiJvayIsInBoYXNlcyI6W3siYWN0aW9uX2lkcyI6WyJiZWZvcmUiLCJjb25zdW1lIl0sImFycml2YWxfb2JzZXJ2ZWQiOnRydWUsImNvbGxlY3Rpb25fc3RhdHVzIjoiY29sbGVjdGVkIiwiY29tcGxldGlvbl9vYnNlcnZlZCI6dHJ1ZSwib3JkZXJpbmciOnsiY29sbGVjdGlvbl9jbG9zZWRfYmVmb3JlX3Byb2NlZWQiOnRydWUsInByb2NlZWRfb2JzZXJ2ZWQiOnRydWUsInByb2NlZWRfc2V0Ijp0cnVlLCJwcm90b2NvbF92aW9sYXRpb25zIjpbXSwidmFsaWRhdG9yX2Rpc3Bvc2l0aW9uIjoicmVhcGVkIiwid29ya2VyX2xpZmV0aW1lX2VzdGFibGlzaGVkIjp0cnVlfSwib3JkaW5hbCI6MSwicGhhc2VfaWQiOiJwMCIsInZhbGlkYXRvcl9zdWJwcm9jZXNzIjp7ImFzc29jaWF0aW9uX2lzc3VlcyI6W10sImV4aXRfY29kZSI6MCwiZXhpdF9ncmFjZV93YWl0Ijp7ImJ1ZGdldF9tcyI6MTAwMCwiY2xvY2tfZmF1bHQiOmZhbHNlLCJlbGFwc2VkX21zIjowLCJzdG9wIjoicmVhcGVkIn0sImV4cGVjdGVkX3N0ZXBfaWRzIjpbImJlZm9yZSJdLCJvcmRpbmFsIjoxLCJwaGFzZV9pZCI6InAwIiwicGlkIjoxNzMwOSwicHJvYmVfYnl0ZXNfZXhwZWN0ZWQiOjE0MiwicHJvYmVfYnl0ZXNfd3JpdHRlbiI6MTQyLCJyZWFwZWQiOnRydWUsInJlY29yZHMiOlt7ImVycm5vIjowLCJmaWx0ZXJfdHlwZSI6IlBBVEgiLCJmaWx0ZXJfdHlwZV9pZCI6MSwiZmlsdGVyX3ZhbHVlIjoiXC9wcml2YXRlXC90bXBcL3B3LWV4dGVuc2lvbi1jb250cm9sLTJiamdmX2U2XC90YXJnZXQiLCJvcGVyYXRpb24iOiJmaWxlLXJlYWQtZGF0YSIsIm91dGNvbWUiOiJkZW55IiwicmF3X2xpbmUiOiJ7XCJraW5kXCI6XCJzYl9hcGlfdmFsaWRhdG9yX3ZlcmRpY3RcIixcInNjaGVtYV92ZXJzaW9uXCI6MSxcInN0ZXBfaWRcIjpcImJlZm9yZVwiLFwib3BlcmF0aW9uXCI6XCJmaWxlLXJlYWQtZGF0YVwiLFwiZmlsdGVyX3R5cGVcIjpcIlBBVEhcIixcImZpbHRlcl90eXBlX2lkXCI6MSxcImZpbHRlcl92YWx1ZVwiOlwiXC9wcml2YXRlXC90bXBcL3B3LWV4dGVuc2lvbi1jb250cm9sLTJiamdmX2U2XC90YXJnZXRcIixcInJjXCI6MSxcImVycm5vXCI6MCxcIm91dGNvbWVcIjpcImRlbnlcIixcImVycm9yXCI6bnVsbH0iLCJyYyI6MSwic3RlcF9pZCI6ImJlZm9yZSJ9XSwic3Rkb3V0X2J5dGVzX3JlY2VpdmVkIjoyNTcsInN0ZG91dF9jb2xsZWN0aW9uX3N0b3AiOiJlb2YiLCJ3YWl0X2Vycm9ycyI6W119fSx7ImFjdGlvbl9pZHMiOlsiZHVyaW5nIiwicmVsZWFzZSJdLCJhcnJpdmFsX29ic2VydmVkIjp0cnVlLCJjb2xsZWN0aW9uX3N0YXR1cyI6ImNvbGxlY3RlZCIsImNvbXBsZXRpb25fb2JzZXJ2ZWQiOnRydWUsIm9yZGVyaW5nIjp7ImNvbGxlY3Rpb25fY2xvc2VkX2JlZm9yZV9wcm9jZWVkIjp0cnVlLCJwcm9jZWVkX29ic2VydmVkIjp0cnVlLCJwcm9jZWVkX3NldCI6dHJ1ZSwicHJvdG9jb2xfdmlvbGF0aW9ucyI6W10sInZhbGlkYXRvcl9kaXNwb3NpdGlvbiI6InJlYXBlZCIsIndvcmtlcl9saWZldGltZV9lc3RhYmxpc2hlZCI6dHJ1ZX0sIm9yZGluYWwiOjIsInBoYXNlX2lkIjoicDEiLCJ2YWxpZGF0b3Jfc3VicHJvY2VzcyI6eyJhc3NvY2lhdGlvbl9pc3N1ZXMiOltdLCJleGl0X2NvZGUiOjAsImV4aXRfZ3JhY2Vfd2FpdCI6eyJidWRnZXRfbXMiOjEwMDAsImNsb2NrX2ZhdWx0IjpmYWxzZSwiZWxhcHNlZF9tcyI6MCwic3RvcCI6InJlYXBlZCJ9LCJleHBlY3RlZF9zdGVwX2lkcyI6WyJkdXJpbmciXSwib3JkaW5hbCI6MiwicGhhc2VfaWQiOiJwMSIsInBpZCI6MTczMTAsInByb2JlX2J5dGVzX2V4cGVjdGVkIjoxNDIsInByb2JlX2J5dGVzX3dyaXR0ZW4iOjE0MiwicmVhcGVkIjp0cnVlLCJyZWNvcmRzIjpbeyJlcnJubyI6MCwiZmlsdGVyX3R5cGUiOiJQQVRIIiwiZmlsdGVyX3R5cGVfaWQiOjEsImZpbHRlcl92YWx1ZSI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvdGFyZ2V0Iiwib3BlcmF0aW9uIjoiZmlsZS1yZWFkLWRhdGEiLCJvdXRjb21lIjoiZGVueSIsInJhd19saW5lIjoie1wia2luZFwiOlwic2JfYXBpX3ZhbGlkYXRvcl92ZXJkaWN0XCIsXCJzY2hlbWFfdmVyc2lvblwiOjEsXCJzdGVwX2lkXCI6XCJkdXJpbmdcIixcIm9wZXJhdGlvblwiOlwiZmlsZS1yZWFkLWRhdGFcIixcImZpbHRlcl90eXBlXCI6XCJQQVRIXCIsXCJmaWx0ZXJfdHlwZV9pZFwiOjEsXCJmaWx0ZXJfdmFsdWVcIjpcIlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvdGFyZ2V0XCIsXCJyY1wiOjEsXCJlcnJub1wiOjAsXCJvdXRjb21lXCI6XCJkZW55XCIsXCJlcnJvclwiOm51bGx9IiwicmMiOjEsInN0ZXBfaWQiOiJkdXJpbmcifV0sInN0ZG91dF9ieXRlc19yZWNlaXZlZCI6MjU3LCJzdGRvdXRfY29sbGVjdGlvbl9zdG9wIjoiZW9mIiwid2FpdF9lcnJvcnMiOltdfX0seyJhY3Rpb25faWRzIjpbImFmdGVyIl0sImFycml2YWxfb2JzZXJ2ZWQiOnRydWUsImNvbGxlY3Rpb25fc3RhdHVzIjoiY29sbGVjdGVkIiwiY29tcGxldGlvbl9vYnNlcnZlZCI6dHJ1ZSwib3JkZXJpbmciOnsiY29sbGVjdGlvbl9jbG9zZWRfYmVmb3JlX3Byb2NlZWQiOnRydWUsInByb2NlZWRfb2JzZXJ2ZWQiOnRydWUsInByb2NlZWRfc2V0Ijp0cnVlLCJwcm90b2NvbF92aW9sYXRpb25zIjpbXSwidmFsaWRhdG9yX2Rpc3Bvc2l0aW9uIjoicmVhcGVkIiwid29ya2VyX2xpZmV0aW1lX2VzdGFibGlzaGVkIjp0cnVlfSwib3JkaW5hbCI6MywicGhhc2VfaWQiOiJwMiIsInZhbGlkYXRvcl9zdWJwcm9jZXNzIjp7ImFzc29jaWF0aW9uX2lzc3VlcyI6W10sImV4aXRfY29kZSI6MCwiZXhpdF9ncmFjZV93YWl0Ijp7ImJ1ZGdldF9tcyI6MTAwMCwiY2xvY2tfZmF1bHQiOmZhbHNlLCJlbGFwc2VkX21zIjowLCJzdG9wIjoicmVhcGVkIn0sImV4cGVjdGVkX3N0ZXBfaWRzIjpbImFmdGVyIl0sIm9yZGluYWwiOjMsInBoYXNlX2lkIjoicDIiLCJwaWQiOjE3MzExLCJwcm9iZV9ieXRlc19leHBlY3RlZCI6MTQxLCJwcm9iZV9ieXRlc193cml0dGVuIjoxNDEsInJlYXBlZCI6dHJ1ZSwicmVjb3JkcyI6W3siZXJybm8iOjAsImZpbHRlcl90eXBlIjoiUEFUSCIsImZpbHRlcl90eXBlX2lkIjoxLCJmaWx0ZXJfdmFsdWUiOiJcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL3RhcmdldCIsIm9wZXJhdGlvbiI6ImZpbGUtcmVhZC1kYXRhIiwib3V0Y29tZSI6ImRlbnkiLCJyYXdfbGluZSI6IntcImtpbmRcIjpcInNiX2FwaV92YWxpZGF0b3JfdmVyZGljdFwiLFwic2NoZW1hX3ZlcnNpb25cIjoxLFwic3RlcF9pZFwiOlwiYWZ0ZXJcIixcIm9wZXJhdGlvblwiOlwiZmlsZS1yZWFkLWRhdGFcIixcImZpbHRlcl90eXBlXCI6XCJQQVRIXCIsXCJmaWx0ZXJfdHlwZV9pZFwiOjEsXCJmaWx0ZXJfdmFsdWVcIjpcIlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvdGFyZ2V0XCIsXCJyY1wiOjEsXCJlcnJub1wiOjAsXCJvdXRjb21lXCI6XCJkZW55XCIsXCJlcnJvclwiOm51bGx9IiwicmMiOjEsInN0ZXBfaWQiOiJhZnRlciJ9XSwic3Rkb3V0X2J5dGVzX3JlY2VpdmVkIjoyNTYsInN0ZG91dF9jb2xsZWN0aW9uX3N0b3AiOiJlb2YiLCJ3YWl0X2Vycm9ycyI6W119fV0sInBpZCI6MTczMDgsInBvbGljeV9mb3JtYXQiOiJzYnBsIiwicG9saWN5X3NoYTI1NiI6IjUzNTliM2QwMTVjNjc2Zjg5ODdiODE2YTk0ZTMzZDQzNjYyMTczN2E0NTBlMTU4ZTM3YmU5NzE4Y2UyNDQ0OWEiLCJyYyI6MCwicnVubmVyX3N1YnByb2Nlc3MiOnsiY2xlYW51cF90cmlnZ2VyIjoiY29tcGxldGlvbiIsImNvbGxlY3Rpb25fYmFzaXMiOiJhZnRlcl9jb25maXJtZWRfcmVhcCIsImRpc3Bvc2l0aW9uIjp7Imlzc3VlcyI6W10sInF1ZXN0aW9ucyI6eyJjbGVhbnVwX3RyaWdnZXIiOnsiYW5zd2VyIjoiY29tcGxldGlvbiIsImJhc2lzIjpbImNsZWFudXBfdHJpZ2dlciIsImV4aXRfcmVxdWVzdGVkIl0sInN0YXRlIjoic3VwcG9ydGVkIn0sImNvbGxlY3Rpb25fYmFzaXMiOnsiYW5zd2VyIjoiYWZ0ZXJfY29uZmlybWVkX3JlYXAiLCJiYXNpcyI6WyJjb2xsZWN0aW9uX2Jhc2lzIl0sInN0YXRlIjoic3VwcG9ydGVkIn0sImZpbmFsX3N0YXR1cyI6eyJhbnN3ZXIiOiJleGl0X2NvZGUiLCJiYXNpcyI6WyJyZWFwZWQiLCJleGl0X2NvZGUiXSwic3RhdGUiOiJzdXBwb3J0ZWQiLCJ2YWx1ZSI6MH0sImdyYWNlX2VuZCI6eyJhbnN3ZXIiOiJyZWFwZWRfZHVyaW5nX2dyYWNlIiwiYmFzaXMiOlsiZ3JhY2VfZW5kIiwiZXhpdF9yZXF1ZXN0ZWQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwia2lsbF9yZXF1ZXN0X2FuZF9yZXN1bHQiOnsiYW5zd2VyIjoibm9uZSIsImJhc2lzIjpbInRlcm1pbmF0aW9uX3JlcXVlc3QiLCJleGl0X3JlcXVlc3RlZCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJwcm9ncmVzc19hc3NvY2lhdGlvbiI6eyJhbnN3ZXIiOiJub25lIiwiYmFzaXMiOlsicHJvZ3Jlc3MiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RvcF9yZWFzb24iOnsiYW5zd2VyIjoiZG9uZSIsImJhc2lzIjpbInBvbGxfc3RvcF9yZWFzb24iXSwic3RhdGUiOiJzdXBwb3J0ZWQifX0sInN0ZXBzIjpbeyJhdHRlbXB0X3N1cHBvcnQiOiJzdXBwb3J0ZWQiLCJpbmRleCI6MCwicXVlc3Rpb25zIjp7InN0ZXBfYm91bmRhcnlfcmVhY2hlZCI6eyJhbnN3ZXIiOiJyZWFjaGVkIiwiYmFzaXMiOlsicHJvZ3Jlc3MiLCJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN0ZXBfcmVxdWVzdGVkX29wZXJhdGlvbl9hcHBsaWNhYmlsaXR5Ijp7ImFuc3dlciI6InN1cHBvcnRlZCIsImJhc2lzIjpbImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdGVwX3Jlc3VsdF9wdWJsaXNoZWQiOnsiYW5zd2VyIjoicHVibGlzaGVkIiwiYmFzaXMiOlsic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9fSwic2xvdCI6ImNvbXBsZXRlZCIsInN0ZXBfaWQiOiJiZWZvcmUifSx7ImF0dGVtcHRfc3VwcG9ydCI6InN1cHBvcnRlZCIsImluZGV4IjoxLCJxdWVzdGlvbnMiOnsic3RlcF9ib3VuZGFyeV9yZWFjaGVkIjp7ImFuc3dlciI6InJlYWNoZWQiLCJiYXNpcyI6WyJwcm9ncmVzcyIsInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXF1ZXN0ZWRfb3BlcmF0aW9uX2FwcGxpY2FiaWxpdHkiOnsiYW5zd2VyIjoic3VwcG9ydGVkIiwiYmFzaXMiOlsiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN0ZXBfcmVzdWx0X3B1Ymxpc2hlZCI6eyJhbnN3ZXIiOiJwdWJsaXNoZWQiLCJiYXNpcyI6WyJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn19LCJzbG90IjoiY29tcGxldGVkIiwic3RlcF9pZCI6ImNvbnN1bWUifSx7ImF0dGVtcHRfc3VwcG9ydCI6InN1cHBvcnRlZCIsImluZGV4IjoyLCJxdWVzdGlvbnMiOnsic3RlcF9ib3VuZGFyeV9yZWFjaGVkIjp7ImFuc3dlciI6InJlYWNoZWQiLCJiYXNpcyI6WyJwcm9ncmVzcyIsInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXF1ZXN0ZWRfb3BlcmF0aW9uX2FwcGxpY2FiaWxpdHkiOnsiYW5zd2VyIjoic3VwcG9ydGVkIiwiYmFzaXMiOlsiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN0ZXBfcmVzdWx0X3B1Ymxpc2hlZCI6eyJhbnN3ZXIiOiJwdWJsaXNoZWQiLCJiYXNpcyI6WyJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn19LCJzbG90IjoiY29tcGxldGVkIiwic3RlcF9pZCI6ImR1cmluZyJ9LHsiYXR0ZW1wdF9zdXBwb3J0Ijoic3VwcG9ydGVkIiwiaW5kZXgiOjMsInF1ZXN0aW9ucyI6eyJzdGVwX2JvdW5kYXJ5X3JlYWNoZWQiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdGVwX3JlcXVlc3RlZF9vcGVyYXRpb25fYXBwbGljYWJpbGl0eSI6eyJhbnN3ZXIiOiJzdXBwb3J0ZWQiLCJiYXNpcyI6WyJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXN1bHRfcHVibGlzaGVkIjp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifX0sInNsb3QiOiJjb21wbGV0ZWQiLCJzdGVwX2lkIjoicmVsZWFzZSJ9LHsiYXR0ZW1wdF9zdXBwb3J0Ijoic3VwcG9ydGVkIiwiaW5kZXgiOjQsInF1ZXN0aW9ucyI6eyJzdGVwX2JvdW5kYXJ5X3JlYWNoZWQiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdGVwX3JlcXVlc3RlZF9vcGVyYXRpb25fYXBwbGljYWJpbGl0eSI6eyJhbnN3ZXIiOiJzdXBwb3J0ZWQiLCJiYXNpcyI6WyJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3RlcF9yZXN1bHRfcHVibGlzaGVkIjp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifX0sInNsb3QiOiJjb21wbGV0ZWQiLCJzdGVwX2lkIjoiYWZ0ZXIifV19LCJkb25lX29ic2VydmVkIjp0cnVlLCJleGl0X2NvZGUiOjAsImV4aXRfZ3JhY2Vfd2FpdCI6eyJidWRnZXRfbXMiOjEwMDAsImNsb2NrX2ZhdWx0IjpmYWxzZSwiZWxhcHNlZF9tcyI6MCwic3RvcCI6InJlYXBlZF9kdXJpbmdfZ3JhY2UifSwiZXhpdF9yZXF1ZXN0ZWQiOnRydWUsImdyYWNlX2VuZCI6InJlYXBlZF9kdXJpbmdfZ3JhY2UiLCJwYXJ0aWFsX3N0ZXBzIjpmYWxzZSwicGlkIjoxNzMwOCwicG9sbF9zdG9wX3JlYXNvbiI6ImRvbmUiLCJyZWFkeV9ieXRlX3JlY2VpdmVkIjp0cnVlLCJyZWFkeV93YWl0Ijp7ImJ1ZGdldF9tcyI6MTAwMCwiY2xvY2tfZmF1bHQiOmZhbHNlLCJlbGFwc2VkX21zIjoyMjcsInN0b3AiOiJyZWNlaXZlZCJ9LCJyZWFwZWQiOnRydWUsInNlbnRpbmVsX3dhaXQiOnsiYnVkZ2V0X21zIjoxMjAwMDAsImNsb2NrX2ZhdWx0IjpmYWxzZSwiZWxhcHNlZF9tcyI6MjAsImV4Y2x1ZGVkX21zIjoxMiwic3RvcCI6ImRvbmUifSwid2FpdF9lcnJvcnMiOltdLCJ3b3JrZXJfZXZpZGVuY2UiOnsiYWJpX2lkZW50aXR5IjoiOTI1ZWFjZGQ0NThhMzYzNWY5YjhhMzNmYzRjZjEwYTQwYzAwYTFhMjI1NjY1MDMyMWMxNGMxZWJkNWIyNGQyZiIsImRpYWdub3N0aWMiOnsic3RhdGUiOjAsInN0YXR1cyI6ImFic2VudCJ9LCJmYWlsdXJlX3B1YmxpY2F0aW9uIjowLCJmYWlsdXJlX3N0YXRlIjoiYWJzZW50IiwicG9saWN5X3JlYWQiOnsiYnl0ZXNfZXhwZWN0ZWQiOjExMCwiYnl0ZXNfcmVjZWl2ZWQiOjExMH0sInByb2dyZXNzIjp7Im9wZXJhdGlvbiI6MTAsInJhdyI6MTY5ODY5MzEyLCJzdGFnZSI6Mn0sInJlYWRpbmVzcyI6eyJyYyI6MH19fSwic2FuZGJveGVkX2FmdGVyX2FwcGx5Ijp0cnVlLCJzY2hlbWFfdmVyc2lvbiI6MjUsInNwZWNpbWVuX2lkIjoiTTAxIiwic3RlcHMiOlt7ImF0dGVtcHQiOnsiZXJybm8iOjEsImZyZXNoX3JlYWQiOnsib3Blbl9lcnJubyI6MSwib3Blbl9yYyI6LTF9LCJsaWZlY3ljbGUiOnsiYm91bmRhcnkiOnsiYW5zd2VyIjoicmVhY2hlZCIsImJhc2lzIjpbInByb2dyZXNzIiwic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJyZXN1bHQiOnsiYW5zd2VyIjoicHVibGlzaGVkIiwiYmFzaXMiOlsic2xvdCIsImF0dGVtcHRfc3VwcG9ydCJdLCJzdGF0ZSI6InN1cHBvcnRlZCJ9LCJzdW1tYXJ5IjoiY29tcGxldGVkIn0sIm9ic2VydmVkX3BhdGgiOm51bGwsIm91dGNvbWUiOiJyZWFkX2ZhaWxlZCIsInBhdGhfZGlhZ25vc3RpY3MiOnsiaW5wdXQiOiJcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL3RhcmdldCIsIm9ic2VydmVyIjoicnVubmVyX2hvc3QiLCJzYW1lX2FzX2lucHV0IjpbInJlYWxwYXRoX3Jlc29sdmVkIiwicGFyZW50X3JlYWxwYXRoX3Jlc29sdmVkIl0sInN0YWdlIjoiYWZ0ZXJfb3JjaGVzdHJhdGlvbiJ9LCJyYyI6LTEsInJlcXVlc3RlZF9hY3Rpb24iOiJyZWFkX2ZyZXNoIiwicmVxdWVzdGVkX2tpbmQiOiJmaWxlIiwicmVxdWVzdGVkX3BhdGgiOiJcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL3RhcmdldCIsInJlc3VsdF9zb3VyY2UiOiJ3b3JrZXIifSwiY29tcGFyaXNvbiI6eyJsaW1pdGF0aW9ucyI6W10sIm9ic2VydmF0aW9uIjoicGVybWlzc2lvbl9mYWlsdXJlIiwib2JzZXJ2YXRpb25fYmFzaXMiOiJwZXJtaXNzaW9uX2Vycm5vIiwib3BlcmF0aW9uX3JlbGF0aW9uIjoibWF0Y2hlZCIsIm9yZGVyIjoicXVlcnlfZmlyc3QiLCJ0YXJnZXRfcmVsYXRpb24iOiJzYW1lX3N1Ym1pdHRlZCJ9LCJwaGFzZV9pZCI6InAwIiwic2FuZGJveF9jaGVjayI6eyJlcnJubyI6MCwiZXJyb3IiOm51bGwsImZpbHRlcl9raW5kIjoicGF0aCIsImZpbHRlcl90eXBlX2lkIjoxLCJmaWx0ZXJfdmFsdWUiOiJcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL3RhcmdldCIsIm5hdGl2ZV9yYyI6MSwib3BlcmF0aW9uIjoiZmlsZS1yZWFkLWRhdGEiLCJvdXRjb21lIjoiZGVueSIsInBhdGhfZGlhZ25vc3RpY3MiOnsiZmlybWxpbmtfcmVzb2x2ZWQiOiJcL1N5c3RlbVwvVm9sdW1lc1wvRGF0YVwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvdGFyZ2V0IiwiaW5wdXQiOiJcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL3RhcmdldCIsIm9ic2VydmVyIjoicnVubmVyX2hvc3QiLCJzYW1lX2FzX2lucHV0IjpbInJlYWxwYXRoX3Jlc29sdmVkIl0sInN0YWdlIjoiYWZ0ZXJfb3JjaGVzdHJhdGlvbiJ9LCJwaWQiOjE3MzA4LCJyYyI6MSwicmVzdWx0X3NvdXJjZSI6InZhbGlkYXRvciJ9LCJzdGVwX2lkIjoiYmVmb3JlIn0seyJhdHRlbXB0Ijp7ImVycm5vIjoxLCJmcmVzaF9yZWFkIjp7Im9wZW5fZXJybm8iOjEsIm9wZW5fcmMiOi0xfSwibGlmZWN5Y2xlIjp7ImJvdW5kYXJ5Ijp7ImFuc3dlciI6InJlYWNoZWQiLCJiYXNpcyI6WyJwcm9ncmVzcyIsInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwicmVzdWx0Ijp7ImFuc3dlciI6InB1Ymxpc2hlZCIsImJhc2lzIjpbInNsb3QiLCJhdHRlbXB0X3N1cHBvcnQiXSwic3RhdGUiOiJzdXBwb3J0ZWQifSwic3VtbWFyeSI6ImNvbXBsZXRlZCJ9LCJvYnNlcnZlZF9wYXRoIjpudWxsLCJvdXRjb21lIjoicmVhZF9mYWlsZWQiLCJwYXRoX2RpYWdub3N0aWNzIjp7ImlucHV0IjoiXC9wcml2YXRlXC90bXBcL3B3LWV4dGVuc2lvbi1jb250cm9sLTJiamdmX2U2XC90YXJnZXQiLCJvYnNlcnZlciI6InJ1bm5lcl9ob3N0Iiwic2FtZV9hc19pbnB1dCI6WyJyZWFscGF0aF9yZXNvbHZlZCIsInBhcmVudF9yZWFscGF0aF9yZXNvbHZlZCJdLCJzdGFnZSI6ImFmdGVyX29yY2hlc3RyYXRpb24ifSwicmMiOi0xLCJyZXF1ZXN0ZWRfYWN0aW9uIjoicmVhZF9mcmVzaCIsInJlcXVlc3RlZF9raW5kIjoiZmlsZSIsInJlcXVlc3RlZF9wYXRoIjoiXC9wcml2YXRlXC90bXBcL3B3LWV4dGVuc2lvbi1jb250cm9sLTJiamdmX2U2XC90YXJnZXQiLCJyZXN1bHRfc291cmNlIjoid29ya2VyIn0sImNvbXBhcmlzb24iOnsibGltaXRhdGlvbnMiOltdLCJvYnNlcnZhdGlvbiI6InBlcm1pc3Npb25fZmFpbHVyZSIsIm9ic2VydmF0aW9uX2Jhc2lzIjoicGVybWlzc2lvbl9lcnJubyIsIm9wZXJhdGlvbl9yZWxhdGlvbiI6Im1hdGNoZWQiLCJvcmRlciI6InF1ZXJ5X2ZpcnN0IiwidGFyZ2V0X3JlbGF0aW9uIjoic2FtZV9zdWJtaXR0ZWQifSwicGhhc2VfaWQiOiJwMSIsInNhbmRib3hfY2hlY2siOnsiZXJybm8iOjAsImVycm9yIjpudWxsLCJmaWx0ZXJfa2luZCI6InBhdGgiLCJmaWx0ZXJfdHlwZV9pZCI6MSwiZmlsdGVyX3ZhbHVlIjoiXC9wcml2YXRlXC90bXBcL3B3LWV4dGVuc2lvbi1jb250cm9sLTJiamdmX2U2XC90YXJnZXQiLCJuYXRpdmVfcmMiOjEsIm9wZXJhdGlvbiI6ImZpbGUtcmVhZC1kYXRhIiwib3V0Y29tZSI6ImRlbnkiLCJwYXRoX2RpYWdub3N0aWNzIjp7ImZpcm1saW5rX3Jlc29sdmVkIjoiXC9TeXN0ZW1cL1ZvbHVtZXNcL0RhdGFcL3ByaXZhdGVcL3RtcFwvcHctZXh0ZW5zaW9uLWNvbnRyb2wtMmJqZ2ZfZTZcL3RhcmdldCIsImlucHV0IjoiXC9wcml2YXRlXC90bXBcL3B3LWV4dGVuc2lvbi1jb250cm9sLTJiamdmX2U2XC90YXJnZXQiLCJvYnNlcnZlciI6InJ1bm5lcl9ob3N0Iiwic2FtZV9hc19pbnB1dCI6WyJyZWFscGF0aF9yZXNvbHZlZCJdLCJzdGFnZSI6ImFmdGVyX29yY2hlc3RyYXRpb24ifSwicGlkIjoxNzMwOCwicmMiOjEsInJlc3VsdF9zb3VyY2UiOiJ2YWxpZGF0b3IifSwic3RlcF9pZCI6ImR1cmluZyJ9LHsiYXR0ZW1wdCI6eyJlcnJubyI6MSwiZnJlc2hfcmVhZCI6eyJvcGVuX2Vycm5vIjoxLCJvcGVuX3JjIjotMX0sImxpZmVjeWNsZSI6eyJib3VuZGFyeSI6eyJhbnN3ZXIiOiJyZWFjaGVkIiwiYmFzaXMiOlsicHJvZ3Jlc3MiLCJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInJlc3VsdCI6eyJhbnN3ZXIiOiJwdWJsaXNoZWQiLCJiYXNpcyI6WyJzbG90IiwiYXR0ZW1wdF9zdXBwb3J0Il0sInN0YXRlIjoic3VwcG9ydGVkIn0sInN1bW1hcnkiOiJjb21wbGV0ZWQifSwib2JzZXJ2ZWRfcGF0aCI6bnVsbCwib3V0Y29tZSI6InJlYWRfZmFpbGVkIiwicGF0aF9kaWFnbm9zdGljcyI6eyJpbnB1dCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvdGFyZ2V0Iiwib2JzZXJ2ZXIiOiJydW5uZXJfaG9zdCIsInNhbWVfYXNfaW5wdXQiOlsicmVhbHBhdGhfcmVzb2x2ZWQiLCJwYXJlbnRfcmVhbHBhdGhfcmVzb2x2ZWQiXSwic3RhZ2UiOiJhZnRlcl9vcmNoZXN0cmF0aW9uIn0sInJjIjotMSwicmVxdWVzdGVkX2FjdGlvbiI6InJlYWRfZnJlc2giLCJyZXF1ZXN0ZWRfa2luZCI6ImZpbGUiLCJyZXF1ZXN0ZWRfcGF0aCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvdGFyZ2V0IiwicmVzdWx0X3NvdXJjZSI6IndvcmtlciJ9LCJjb21wYXJpc29uIjp7ImxpbWl0YXRpb25zIjpbXSwib2JzZXJ2YXRpb24iOiJwZXJtaXNzaW9uX2ZhaWx1cmUiLCJvYnNlcnZhdGlvbl9iYXNpcyI6InBlcm1pc3Npb25fZXJybm8iLCJvcGVyYXRpb25fcmVsYXRpb24iOiJtYXRjaGVkIiwib3JkZXIiOiJxdWVyeV9maXJzdCIsInRhcmdldF9yZWxhdGlvbiI6InNhbWVfc3VibWl0dGVkIn0sInBoYXNlX2lkIjoicDIiLCJzYW5kYm94X2NoZWNrIjp7ImVycm5vIjowLCJlcnJvciI6bnVsbCwiZmlsdGVyX2tpbmQiOiJwYXRoIiwiZmlsdGVyX3R5cGVfaWQiOjEsImZpbHRlcl92YWx1ZSI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvdGFyZ2V0IiwibmF0aXZlX3JjIjoxLCJvcGVyYXRpb24iOiJmaWxlLXJlYWQtZGF0YSIsIm91dGNvbWUiOiJkZW55IiwicGF0aF9kaWFnbm9zdGljcyI6eyJmaXJtbGlua19yZXNvbHZlZCI6IlwvU3lzdGVtXC9Wb2x1bWVzXC9EYXRhXC9wcml2YXRlXC90bXBcL3B3LWV4dGVuc2lvbi1jb250cm9sLTJiamdmX2U2XC90YXJnZXQiLCJpbnB1dCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvdGFyZ2V0Iiwib2JzZXJ2ZXIiOiJydW5uZXJfaG9zdCIsInNhbWVfYXNfaW5wdXQiOlsicmVhbHBhdGhfcmVzb2x2ZWQiXSwic3RhZ2UiOiJhZnRlcl9vcmNoZXN0cmF0aW9uIn0sInBpZCI6MTczMDgsInJjIjoxLCJyZXN1bHRfc291cmNlIjoidmFsaWRhdG9yIn0sInN0ZXBfaWQiOiJhZnRlciJ9XSwidGVzdF9vdmVycmlkZXMiOnsiaXNzdWVyX2V4ZWN1dGFibGVfcGF0aCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvaXNzdWVyIiwid29ya2VyX2V4ZWN1dGFibGVfcGF0aCI6IlwvcHJpdmF0ZVwvdG1wXC9wdy1leHRlbnNpb24tY29udHJvbC0yYmpnZl9lNlwvd29ya2VyIn19",
+          "truncated": false
+        },
+        "started_continuous_ns": 2423860338108291,
+        "submission": {
+          "invoked_elapsed_ms": 17,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "extension_events": [
+        {
+          "call_boundary_observed": false,
+          "handle_ref": "handle",
+          "lifecycle": {
+            "boundary": {
+              "answer": "reached",
+              "basis": [
+                "progress",
+                "slot",
+                "attempt_support"
+              ],
+              "state": "supported"
+            },
+            "result": {
+              "answer": "published",
+              "basis": [
+                "slot",
+                "attempt_support"
+              ],
+              "state": "supported"
+            },
+            "summary": "completed"
+          },
+          "operation": "consume",
+          "phase_id": "p0",
+          "result_published": true,
+          "status": "unavailable",
+          "step_id": "consume",
+          "token_ref": "token",
+          "unavailable_reason": "token_unavailable"
+        },
+        {
+          "call_boundary_observed": false,
+          "handle_ref": "handle",
+          "lifecycle": {
+            "boundary": {
+              "answer": "reached",
+              "basis": [
+                "progress",
+                "slot",
+                "attempt_support"
+              ],
+              "state": "supported"
+            },
+            "result": {
+              "answer": "published",
+              "basis": [
+                "slot",
+                "attempt_support"
+              ],
+              "state": "supported"
+            },
+            "summary": "completed"
+          },
+          "operation": "release",
+          "phase_id": "p1",
+          "result_published": true,
+          "status": "unavailable",
+          "step_id": "release",
+          "unavailable_reason": "handle_unavailable"
+        }
+      ],
+      "extensions": [
+        {
+          "delivery_status": "token_unavailable",
+          "extension_class": "com.apple.app-sandbox.read",
+          "host_buffer_erased": true,
+          "identity": {
+            "device": 16777233,
+            "gid": 0,
+            "inode": 151367266,
+            "mode": 33188,
+            "uid": 501
+          },
+          "issuance_status": "issuer_abnormal_exit",
+          "issuer": {
+            "call_boundary_observed": true,
+            "egid": 20,
+            "errno": 0,
+            "euid": 501,
+            "executable_path": "/private/tmp/pw-extension-control-2bjgf_e6/issuer",
+            "exit_code": 87,
+            "gid": 20,
+            "native_nonnull": true,
+            "pid": 17307,
+            "reaped": true,
+            "result_published": true,
+            "token_length": 220,
+            "uid": 501,
+            "wait_errors": []
+          },
+          "preparation_status": "prepared",
+          "resolved_target": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+          "submitted_target": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+          "token_ref": "token"
+        }
+      ],
+      "normalized_outcome": "ok",
+      "phases": [
+        {
+          "action_ids": [
+            "before",
+            "consume"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "p0",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "before"
+            ],
+            "ordinal": 1,
+            "phase_id": "p0",
+            "pid": 17309,
+            "probe_bytes_expected": 142,
+            "probe_bytes_written": 142,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+                "operation": "file-read-data",
+                "outcome": "deny",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"before\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-2bjgf_e6/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "rc": 1,
+                "step_id": "before"
+              }
+            ],
+            "stdout_bytes_received": 257,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        },
+        {
+          "action_ids": [
+            "during",
+            "release"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 2,
+          "phase_id": "p1",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "during"
+            ],
+            "ordinal": 2,
+            "phase_id": "p1",
+            "pid": 17310,
+            "probe_bytes_expected": 142,
+            "probe_bytes_written": 142,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+                "operation": "file-read-data",
+                "outcome": "deny",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"during\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-2bjgf_e6/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "rc": 1,
+                "step_id": "during"
+              }
+            ],
+            "stdout_bytes_received": 257,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        },
+        {
+          "action_ids": [
+            "after"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 3,
+          "phase_id": "p2",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "after"
+            ],
+            "ordinal": 3,
+            "phase_id": "p2",
+            "pid": 17311,
+            "probe_bytes_expected": 141,
+            "probe_bytes_written": 141,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+                "operation": "file-read-data",
+                "outcome": "deny",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"after\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-2bjgf_e6/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "rc": 1,
+                "step_id": "after"
+              }
+            ],
+            "stdout_bytes_received": 256,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        }
+      ],
+      "pid": 17308,
+      "policy_format": "sbpl",
+      "policy_sha256": "5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a",
+      "rc": 0,
+      "runner_subprocess": {
+        "cleanup_trigger": "completion",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "completion",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "exit_code",
+              "basis": [
+                "reaped",
+                "exit_code"
+              ],
+              "state": "supported",
+              "value": 0
+            },
+            "grace_end": {
+              "answer": "reaped_during_grace",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "none",
+              "basis": [
+                "termination_request",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "progress_association": {
+              "answer": "none",
+              "basis": [
+                "progress"
+              ],
+              "state": "supported"
+            },
+            "stop_reason": {
+              "answer": "done",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": [
+            {
+              "attempt_support": "supported",
+              "index": 0,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "before"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 1,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "consume"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 2,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "during"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 3,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "release"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 4,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "after"
+            }
+          ]
+        },
+        "done_observed": true,
+        "exit_code": 0,
+        "exit_grace_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 0,
+          "stop": "reaped_during_grace"
+        },
+        "exit_requested": true,
+        "grace_end": "reaped_during_grace",
+        "partial_steps": false,
+        "pid": 17308,
+        "poll_stop_reason": "done",
+        "ready_byte_received": true,
+        "ready_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 227,
+          "stop": "received"
+        },
+        "reaped": true,
+        "sentinel_wait": {
+          "budget_ms": 120000,
+          "clock_fault": false,
+          "elapsed_ms": 20,
+          "excluded_ms": 12,
+          "stop": "done"
+        },
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_identity": "925eacdd458a3635f9b8a33fc4cf10a40c00a1a2256650321c14c1ebd5b24d2f",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 110,
+            "bytes_received": 110
+          },
+          "progress": {
+            "operation": 10,
+            "raw": 169869312,
+            "stage": 2
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "schema_version": 25,
+      "specimen_id": "M01",
+      "steps": [
+        {
+          "attempt": {
+            "errno": 1,
+            "fresh_read": {
+              "open_errno": 1,
+              "open_rc": -1
+            },
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "read_failed",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "rc": -1,
+            "requested_action": "read_fresh",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "permission_errno",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "p0",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+            "native_rc": 1,
+            "operation": "file-read-data",
+            "outcome": "deny",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "input": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "pid": 17308,
+            "rc": 1,
+            "result_source": "validator"
+          },
+          "step_id": "before"
+        },
+        {
+          "attempt": {
+            "errno": 1,
+            "fresh_read": {
+              "open_errno": 1,
+              "open_rc": -1
+            },
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "read_failed",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "rc": -1,
+            "requested_action": "read_fresh",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "permission_errno",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "p1",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+            "native_rc": 1,
+            "operation": "file-read-data",
+            "outcome": "deny",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "input": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "pid": 17308,
+            "rc": 1,
+            "result_source": "validator"
+          },
+          "step_id": "during"
+        },
+        {
+          "attempt": {
+            "errno": 1,
+            "fresh_read": {
+              "open_errno": 1,
+              "open_rc": -1
+            },
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "read_failed",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "rc": -1,
+            "requested_action": "read_fresh",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "permission_errno",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "p2",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+            "native_rc": 1,
+            "operation": "file-read-data",
+            "outcome": "deny",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "input": "/private/tmp/pw-extension-control-2bjgf_e6/target",
+              "observer": "runner_host",
+              "same_as_input": [
+                "realpath_resolved"
+              ],
+              "stage": "after_orchestration"
+            },
+            "pid": 17308,
+            "rc": 1,
+            "result_source": "validator"
+          },
+          "step_id": "after"
+        }
+      ],
+      "test_overrides": {
+        "issuer_executable_path": "/private/tmp/pw-extension-control-2bjgf_e6/issuer",
+        "worker_executable_path": "/private/tmp/pw-extension-control-2bjgf_e6/worker"
+      }
+    },
+    "runner_sandbox_diagnostics": {
+      "disposition_integrity": "valid",
+      "disposition_issues": [],
+      "process_disposition": "clean_exit",
+      "stop_reason": "done",
+      "termination_cause": null
+    },
+    "specimen": {
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness-extension-actors/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "issuer": {
+          "actual_sha256": "0d5376c17ecd14ab1982d1f87c6254595b5a090f1af1a5841db1b56bcbf6d7cd",
+          "baseline_sha256": "def4b0f80cd3534d3a0c8b7e4f4527f889037f2b57124eaae76f99de9915a174",
+          "path": "/private/tmp/pw-extension-control-2bjgf_e6/issuer",
+          "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-extension-issuer",
+          "verification": "mismatch"
+        },
+        "service": null,
+        "validator": null,
+        "worker": {
+          "actual_sha256": "f38b178e3788b4364794b90154c33bb3e69121042f69be2204be1eef68ad118e",
+          "baseline_sha256": "bec765f807b04fc5e83e30ee5c4e225a18bc9e9879f853841ab8218492363fe8",
+          "path": "/private/tmp/pw-extension-control-2bjgf_e6/worker",
+          "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+          "verification": "mismatch"
+        }
+      },
+      "host": {
+        "arch": "arm64",
+        "kernel_release": "25.6.0",
+        "macos_build": "25G241",
+        "macos_version": "26.7.1"
+      },
+      "policy": {
+        "augmentation": {
+          "applied": [],
+          "applied_sha256": "5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a",
+          "error": null,
+          "original_sha256": "5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a",
+          "status": "not_requested"
+        },
+        "imports": {
+          "closure_sha256": "d1d2c0392c0ac81f53e4b1479f973c3181a2d4929d447f607288936059433882",
+          "cycle": null,
+          "exceeded": null,
+          "failure": null,
+          "records": [],
+          "status": "complete"
+        }
+      },
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness-extension-actors/tests/out/runs/stage4-captures-01/suites/witness_contract/extension_combinations/artifacts/M01/specimen.json",
+      "runner_provenance": {
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness-extension-actors/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness-extension-actors/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_issuer_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_issuer_signature": null,
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_signature": null,
+        "runner_validator_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_validator_signature": null,
+        "runner_worker_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_worker_signature": null
+      }
+    },
+    "timeout_ms": 240000
+  },
+  "generated_at_unix_ms": 1793761504471,
+  "kind": "run",
+  "result": {
+    "errno": null,
+    "error": null,
+    "exit_code": 0,
+    "normalized_outcome": "ok",
+    "ok": true,
+    "rc": null,
+    "stderr": null,
+    "stdout": null
+  },
+  "schema_version": 10
+}

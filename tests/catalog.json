@@ -881,6 +881,38 @@
           "description": "Worker release barrier: max slots proceed"
         },
         {
+          "id": "activation_named_ordinal",
+          "description": "Worker activation barrier: the named ordinal activates a parked apply actor"
+        },
+        {
+          "id": "activation_under_deny_default",
+          "description": "Worker activation barrier: an activated deny-default actor is denied after release"
+        },
+        {
+          "id": "activation_greater_ordinal",
+          "description": "Worker activation barrier: a greater ordinal is refused without arrival"
+        },
+        {
+          "id": "activation_withheld_cutoff",
+          "description": "Worker activation barrier: the lifetime cutoff ends a parked wait with a published failure"
+        },
+        {
+          "id": "activation_cancel_while_parked",
+          "description": "Worker activation barrier: an exit request ends a parked wait without publication"
+        },
+        {
+          "id": "activation_cutoff_past",
+          "description": "Worker activation barrier: a cutoff already past refuses at clock setup"
+        },
+        {
+          "id": "unapplied_actor_reads",
+          "description": "Worker setup modes: an unapplied actor declares itself and applies nothing"
+        },
+        {
+          "id": "unapplied_under_deny_default",
+          "description": "Worker setup modes: an unapplied actor's deny-default text is never applied"
+        },
+        {
           "id": "sysctl_read_capacity",
           "description": "Production sysctl read supplies one non-null 4096-byte destination, retains status and errno, and rejects a shortened-capacity mutation",
           "requires": [
@@ -1727,6 +1759,39 @@
           ]
         },
         {
+          "id": "extension_policy_qualification",
+          "description": "The principal re-delegation specimen's consumed-extension issuance policy compiles with sbpl-check and applies once in a fresh worker, with a denied baseline read and a readable control",
+          "requires": [
+            "app"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/extension_policy_qualification.sh"
+          ]
+        },
+        {
+          "id": "extension_redelegation",
+          "description": "The principal three-actor re-delegation specimen through the CLI: distinct fresh processes, exact policies applied once, every native call, custody, transfer, consume and read published or specifically unavailable, re-delegation credited only on the complete chain; with a positive calibration and four narrow contrasts",
+          "requires": [
+            "app"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/extension_redelegation.sh"
+          ]
+        },
+        {
+          "id": "actor_timing_qualification",
+          "description": "Finite actor-form workloads on the signed candidate: three matched rounds of one, three and eight actors with a constant aggregate workload, the aggregate action and phase limits over eight actors, and the eight-actor re-delegation and calibration shapes complete with at least a quarter of every actor-form allowance remaining at the largest charged interval",
+          "requires": [
+            "app"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/actor_timing_qualification.sh"
+          ]
+        },
+        {
           "id": "extension_boundaries",
           "description": "Native issuer faults and consume/release interruption with independent transient-token confinement and descriptor observations",
           "requires": [
@@ -1762,6 +1827,20 @@
             "app",
             "identity",
             "clang",
+            "gui"
+          ]
+        },
+        {
+          "id": "actors_byoxpc",
+          "default": false,
+          "description": "Actor re-delegation, calibration and contrasts on an owned BYOXPC runner's selected worker; the declaration form refused and the actor form executing with the installed issuer held aside; an unapplied actor on an App Sandbox-signed worker copy inheriting that restriction against the ordinary worker baseline",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/actors_byoxpc.sh"
+          ],
+          "requires": [
+            "app",
+            "identity",
             "gui"
           ]
         },
@@ -1838,7 +1917,7 @@
         },
         {
           "id": "reservation_controls",
-          "description": "Controlled reservation lifetime, acquisition reply loss, execution reply loss and helper capture loss with independent effects and no replay",
+          "description": "Controlled reservation lifetime, acquisition reply loss, execution reply loss, helper capture loss and an altered outgoing response-schema marker after one real execution, with independent effects and no replay",
           "default": false,
           "requires": [
             "app",
@@ -2061,6 +2140,7 @@
         "sandbox_extensions_native/feasibility",
         "sandbox_extensions_native/directory",
         "witness_contract/extensions_byoxpc",
+        "witness_contract/actors_byoxpc",
         "witness_contract/path_query_observations",
         "witness_contract/path_query_integrated",
         "runner_c_worker_harness/native_clock",

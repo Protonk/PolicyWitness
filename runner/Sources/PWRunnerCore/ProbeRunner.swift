@@ -49,23 +49,37 @@ func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
 /// and before either child is created, at both host orchestration entry points.
 /// Query and attempt scopes need not match; a known but unavailable prediction
 /// still permits a supported attempt and an honest unavailable observation.
-func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
-    if let augments = spec.policy.augments, !augments.isEmpty {
-        return PWRunnerRequestFailure(code: "unresolved_augments", path: ["policy", "augments"])
+/// The policy object's meaning rules, shared by the legacy policy and every
+/// apply actor's policy. `path` locates the object in the request.
+func policyMeaningFailure(_ policy: PWRunnerPolicySpec, path: [String]) -> PWRunnerRequestFailure? {
+    if let augments = policy.augments, !augments.isEmpty {
+        return PWRunnerRequestFailure(code: "unresolved_augments", path: path + ["augments"])
     }
-    if spec.policy.format != PWRunnerWire.policyFormatSbpl {
-        return PWRunnerRequestFailure(code: "unsupported_policy_format", path: ["policy", "format"])
+    if policy.format != PWRunnerWire.policyFormatSbpl {
+        return PWRunnerRequestFailure(code: "unsupported_policy_format", path: path + ["format"])
     }
-    if spec.policy.sbpl_source == nil {
-        return PWRunnerRequestFailure(code: "missing_policy_source", path: ["policy", "sbpl_source"])
+    if policy.sbpl_source == nil {
+        return PWRunnerRequestFailure(code: "missing_policy_source", path: path + ["sbpl_source"])
     }
-    if spec.policy.capture_compiled_profile == true {
-        if captureNonceBytes(spec.policy.capture_nonce) == nil {
-            return PWRunnerRequestFailure(code: "invalid_capture_nonce", path: ["policy", "capture_nonce"])
+    if policy.capture_compiled_profile == true {
+        if captureNonceBytes(policy.capture_nonce) == nil {
+            return PWRunnerRequestFailure(code: "invalid_capture_nonce", path: path + ["capture_nonce"])
         }
-    } else if spec.policy.capture_nonce != nil {
-        return PWRunnerRequestFailure(code: "inapplicable_field", path: ["policy", "capture_nonce"])
+    } else if policy.capture_nonce != nil {
+        return PWRunnerRequestFailure(code: "inapplicable_field", path: path + ["capture_nonce"])
     }
+    return nil
+}
+
+func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
+    if spec.isActorForm {
+        // The actor form's whole meaning pass is the plan normalizer; a valid
+        // plan is the same table the scheduler executes.
+        if case .failure(let failure) = normalizeActorPlan(spec) { return failure }
+        return nil
+    }
+    guard let policy = spec.policy else { return PWRunnerRequestFailure(code: "missing_field", path: ["policy"]) }
+    if let failure = policyMeaningFailure(policy, path: ["policy"]) { return failure }
     var phaseIDs = Set<String>()
     if let phases = spec.phases {
         if phases.isEmpty { return PWRunnerRequestFailure(code: "empty_phases", path: ["phases"]) }
@@ -73,6 +87,9 @@ func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
             if phase.phase_id.isEmpty { return PWRunnerRequestFailure(code: "empty_phase_id", path: ["phases", String(index), "phase_id"]) }
             if !phaseIDs.insert(phase.phase_id).inserted {
                 return PWRunnerRequestFailure(code: "duplicate_phase_id", path: ["phases", String(index), "phase_id"])
+            }
+            if phase.actor_id != nil {
+                return PWRunnerRequestFailure(code: "inapplicable_field", path: ["phases", String(index), "actor_id"])
             }
         }
     }
@@ -106,7 +123,7 @@ func requestRefusalReply(parsed: PWRunnerRunSpec, failure: PWRunnerRequestFailur
                          bundleId: String?, policyHash: String? = nil) -> PWRunnerRunResult {
     PWRunnerRunResult(specimen_id: parsed.specimen_id, run_kind: parsed.run_kind,
         rc: 1, normalized_outcome: NormalizedOutcome.badRequest, error: failure.description,
-        pid: Int(getpid()), bundle_id: bundleId, policy_format: parsed.policy.format,
+        pid: Int(getpid()), bundle_id: bundleId, policy_format: parsed.policy?.format,
         policy_sha256: policyHash, steps: [], test_overrides: parsed._test_overrides,
         request_failure: failure)
 }
@@ -186,20 +203,25 @@ func extensionMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure?
             guard case .extensionAction(let value) = action else { continue }
             if value.step_id.isEmpty { return fail("empty_step_id", path + ["step_id"]) }
             let op = value.intervention
-            if op.handle_ref.isEmpty { return fail("empty_reference", path + ["extension", "handle_ref"]) }
+            for (key, operand) in [("family", op.family), ("target", op.target), ("authority", op.authority),
+                                   ("recipient", op.recipient), ("delivery_ref", op.delivery_ref)] where operand != nil {
+                return fail("inapplicable_field", path + ["extension", key])
+            }
+            guard let handle = op.handle_ref else { return fail("missing_field", path + ["extension", "handle_ref"]) }
+            if handle.isEmpty { return fail("empty_reference", path + ["extension", "handle_ref"]) }
             switch op.operation {
             case "consume":
                 if consumedHandle != nil { return fail("repeated_consume", path + ["extension"]) }
                 guard let token = declarations.first?.token_ref, op.token_ref == token else {
                     return fail("unknown_token_reference", path + ["extension", "token_ref"])
                 }
-                if op.handle_ref == token { return fail("duplicate_reference", path + ["extension", "handle_ref"]) }
-                consumedHandle = op.handle_ref
+                if handle == token { return fail("duplicate_reference", path + ["extension", "handle_ref"]) }
+                consumedHandle = handle
             case "release":
                 if releaseSeen { return fail("repeated_release", path + ["extension"]) }
                 if op.token_ref != nil { return fail("inapplicable_field", path + ["extension", "token_ref"]) }
-                guard let handle = consumedHandle else { return fail("release_before_consume", path + ["extension"]) }
-                if op.handle_ref != handle { return fail("unknown_handle_reference", path + ["extension", "handle_ref"]) }
+                guard let consumed = consumedHandle else { return fail("release_before_consume", path + ["extension"]) }
+                if handle != consumed { return fail("unknown_handle_reference", path + ["extension", "handle_ref"]) }
                 releaseSeen = true
             default: return fail("unsupported_extension_action", path + ["extension", "operation"])
             }

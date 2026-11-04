@@ -4,7 +4,8 @@ import Darwin
 enum RequestContractError: Error {
     case unsupportedSchema(Int)
     case unknownField([CodingKey])
-    case unresolvedAugments
+    /// The policy object's location; the controller resolves augments there.
+    case unresolvedAugments([CodingKey])
 }
 
 /// A request refusal before execution. Path components are object keys or
@@ -57,10 +58,16 @@ struct PWRunnerRunSpec: Codable {
     var schema_version: Int
     var specimen_id: String
     var run_kind: String?
-    var policy: PWRunnerPolicySpec
+    /// The legacy form's one policy; absent in the actor form, where each
+    /// apply actor carries its own.
+    var policy: PWRunnerPolicySpec?
     private var ordinaryPlan: [PWRunnerProbeStep]?
     var phases: [PWRunnerPhase]?
     var extensions: [PWRunnerExtensionDeclaration]?
+    /// The actor form: mutually exclusive with `policy`, `probe_plan` and
+    /// `extensions`; requires `phases` naming an actor each.
+    var actors: [PWRunnerActor]?
+    var isActorForm: Bool { actors != nil }
     var probe_plan: [PWRunnerProbeStep] {
         get { phases?.flatMap { $0.actions.compactMap { $0.probe } } ?? ordinaryPlan ?? [] }
         set { ordinaryPlan = newValue; phases = nil }
@@ -85,24 +92,26 @@ struct PWRunnerRunSpec: Codable {
         schema_version: Int = PWContract.requestSchema,
         specimen_id: String,
         run_kind: String? = nil,
-        policy: PWRunnerPolicySpec,
+        policy: PWRunnerPolicySpec?,
         probe_plan: [PWRunnerProbeStep] = [],
         phases: [PWRunnerPhase]? = nil,
         extensions: [PWRunnerExtensionDeclaration]? = nil,
+        actors: [PWRunnerActor]? = nil,
         _test_overrides: PWRunnerTestOverrides? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
         self.run_kind = run_kind
         self.policy = policy
-        self.ordinaryPlan = phases == nil ? probe_plan : nil
+        self.ordinaryPlan = phases == nil && actors == nil ? probe_plan : nil
         self.phases = phases
         self.extensions = extensions
+        self.actors = actors
         self._test_overrides = _test_overrides
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, policy, probe_plan, phases, extensions, _test_overrides
+        case schema_version, specimen_id, run_kind, policy, probe_plan, phases, extensions, actors, _test_overrides
     }
 
     init(from decoder: Decoder) throws {
@@ -123,15 +132,41 @@ struct PWRunnerRunSpec: Codable {
         guard schema_version == PWContract.requestSchema else {
             throw RequestContractError.unsupportedSchema(schema_version)
         }
+        // The entry-point control: until the actor form is wired into both
+        // production entry points, `actors` is refused as today, before any
+        // other field is interpreted. Draft tests opt in through userInfo.
+
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         specimen_id = try c.decode(String.self, forKey: .specimen_id)
         run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)
-        policy = try c.decode(PWRunnerPolicySpec.self, forKey: .policy)
+        actors = try c.decodeIfPresent([PWRunnerActor].self, forKey: .actors)
+        if actors == nil {
+            policy = try c.decode(PWRunnerPolicySpec.self, forKey: .policy)
+        } else {
+            policy = try c.decodeIfPresent(PWRunnerPolicySpec.self, forKey: .policy)
+            if policy != nil { throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["policy"]) }
+        }
         extensions = try c.decodeIfPresent([PWRunnerExtensionDeclaration].self, forKey: .extensions)
         phases = try c.decodeIfPresent([PWRunnerPhase].self, forKey: .phases)
         ordinaryPlan = try c.decodeIfPresent([PWRunnerProbeStep].self, forKey: .probe_plan)
-        guard (phases == nil) != (ordinaryPlan == nil) else {
-            throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["phases"])
+        if actors == nil {
+            guard (phases == nil) != (ordinaryPlan == nil) else {
+                throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["phases"])
+            }
+            // The legacy operations name a handle; refuse its absence at decode
+            // time, as the closed object did before the operands became optional.
+            for (pi, phase) in (phases ?? []).enumerated() {
+                for (ai, action) in phase.actions.enumerated() {
+                    if case .extensionAction(let value) = action, value.intervention.handle_ref == nil {
+                        throw PWRunnerRequestFailure(code: "missing_field",
+                            path: ["phases", String(pi), "actions", String(ai), "extension", "handle_ref"])
+                    }
+                }
+            }
+        } else {
+            if ordinaryPlan != nil { throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["probe_plan"]) }
+            if extensions != nil { throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["extensions"]) }
+            if phases == nil { throw PWRunnerRequestFailure(code: "actors_require_phases", path: ["phases"]) }
         }
         _test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: ._test_overrides)
     }
@@ -141,10 +176,11 @@ struct PWRunnerRunSpec: Codable {
         try c.encode(schema_version, forKey: .schema_version)
         try c.encode(specimen_id, forKey: .specimen_id)
         try c.encodeIfPresent(run_kind, forKey: .run_kind)
-        try c.encode(policy, forKey: .policy)
+        try c.encodeIfPresent(policy, forKey: .policy)
         try c.encodeIfPresent(ordinaryPlan, forKey: .probe_plan)
         try c.encodeIfPresent(phases, forKey: .phases)
         try c.encodeIfPresent(extensions, forKey: .extensions)
+        try c.encodeIfPresent(actors, forKey: .actors)
         try c.encodeIfPresent(_test_overrides, forKey: ._test_overrides)
     }
 }
@@ -172,15 +208,25 @@ struct PWRunnerPhase: Codable {
     static let maximumCount = 8
     var phase_id: String
     var actions: [PWRunnerPhaseAction]
-    init(phase_id: String, actions: [PWRunnerPhaseAction]) {
-        self.phase_id = phase_id; self.actions = actions
+    /// The actor form names the one actor this phase activates; the legacy form
+    /// refuses the field as inapplicable.
+    var actor_id: String?
+    init(phase_id: String, actions: [PWRunnerPhaseAction], actor_id: String? = nil) {
+        self.phase_id = phase_id; self.actions = actions; self.actor_id = actor_id
     }
-    enum CodingKeys: String, CodingKey, CaseIterable { case phase_id, actions }
+    enum CodingKeys: String, CodingKey, CaseIterable { case phase_id, actor_id, actions }
     init(from decoder: Decoder) throws {
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
         phase_id = try c.decode(String.self, forKey: .phase_id)
+        actor_id = try c.decodeIfPresent(String.self, forKey: .actor_id)
         actions = try c.decode([PWRunnerPhaseAction].self, forKey: .actions)
+    }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(phase_id, forKey: .phase_id)
+        try c.encodeIfPresent(actor_id, forKey: .actor_id)
+        try c.encode(actions, forKey: .actions)
     }
 }
 
@@ -315,7 +361,7 @@ struct PWRunnerPolicySpec: Codable {
         augments = try c.decodeIfPresent([String].self, forKey: .augments)
         // Only the controller resolves named augments. Direct XPC must not
         // accept a request whose policy fragments would silently disappear.
-        if let augments, !augments.isEmpty { throw RequestContractError.unresolvedAugments }
+        if let augments, !augments.isEmpty { throw RequestContractError.unresolvedAugments(decoder.codingPath) }
     }
 
 }

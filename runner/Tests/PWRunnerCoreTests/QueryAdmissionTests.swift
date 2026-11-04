@@ -199,7 +199,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             let fields: [(String, (inout PWRunnerRunSpec, String) -> Void)] = [
                 ("specimen_id", { $0.specimen_id = $1 }),
                 ("run_kind", { $0.run_kind = $1 }),
-                ("policy.format", { $0.policy.format = $1 }),
+                ("policy.format", { $0.policy?.format = $1 }),
                 ("_test_overrides.worker_executable_path", { $0._test_overrides!.worker_executable_path = $1 }),
                 ("_test_overrides.validator_executable_path", { $0._test_overrides!.validator_executable_path = $1 }),
             ]

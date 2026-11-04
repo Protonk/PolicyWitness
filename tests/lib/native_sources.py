@@ -59,6 +59,7 @@ SHARED_CONTRACT_SOURCES = (
     'runner/Sources/PWRunnerCore/PWRunnerCoding.swift',
     'runner/Sources/PWRunnerCore/PWRunnerRequest.swift',
     'runner/Sources/PWRunnerCore/PWRunnerExtension.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerActors.swift',
     'runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift',
     'runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift',
     'runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift',

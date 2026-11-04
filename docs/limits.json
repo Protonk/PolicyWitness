@@ -803,6 +803,210 @@
       "behavior": "runCWorker measures the publication wait as elapsed monotonic time from the end of the readiness wait, with each synchronous phase collection interval measured and excluded; every sleep is bounded by the remaining allowance, and a failed or regressing clock spends only the last remaining allowance in nominal sleeps, including the last requested sleep, and sentinel_wait.clock_fault reports the fault. CWorkerClockTests cover oversleep, irregular polling costs, zero allowance, interrupted waits, clock failure, regression and excluded intervals; the live deadline cases assert the measured allowance within a stated scheduling tolerance. The worker uses a separate local active-time exec budget, configured below this window without an end-to-end guarantee."
     },
     {
+      "id": "actor_setup_allowance",
+      "section": "execution",
+      "title": "Actor setup allowance",
+      "value": 10000,
+      "unit": "milliseconds",
+      "counting": "One aggregate allowance from the first actor launch to the last setup disposition, capping each policy delivery and readiness wait.",
+      "effect": "An actor whose setup is unresolved at expiry is stopped and reported `setup_timeout`; independent actors keep their own dispositions.",
+      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "symbol": "ActorScheduleInput"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+          "symbol": "runActorSchedulerTests",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "The scheduler launches actors in order under one clock and polls every pending setup publication; a later actor can still launch while an earlier one is pending."
+    },
+    {
+      "id": "actor_execution_allowance",
+      "section": "execution",
+      "title": "Actor schedule allowance",
+      "value": 120000,
+      "unit": "milliseconds",
+      "counting": "One host allowance for the whole serial schedule, excluding measured validator collection; not one allowance per actor.",
+      "effect": "Expiry ends the current visit (`arrival_timeout` or `completion_timeout`) and cancels the remaining schedule; every earlier publication is retained.",
+      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "symbol": "ActorScheduleInput"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+          "symbol": "runActorSchedulerTests",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "Collection time is excluded through the same clock discipline as the single-worker sentinel wait."
+    },
+    {
+      "id": "actor_collection_allowance",
+      "section": "execution",
+      "title": "Actor collection allowance",
+      "value": 30000,
+      "unit": "milliseconds",
+      "counting": "Aggregate validator planning and collection allowance across every actor's phases.",
+      "effect": "Exhaustion marks later phases `budget_exhausted`; earlier collections are retained.",
+      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+          "symbol": "runActors"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Each phase plans its queries freshly against the active actor; the aggregate does not restart per actor."
+    },
+    {
+      "id": "actor_release_wait",
+      "section": "execution",
+      "title": "Actor release wait",
+      "value": 60000,
+      "unit": "milliseconds",
+      "counting": "The worker's wait from a visit's arrival to the host's release of that visit's ordinal.",
+      "effect": "Expiry refuses the visit with a published timing failure, as the single-worker release wait does.",
+      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "wait_for_proceed"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+          "symbol": "runActorSchedulerTests",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "The same wait the legacy worker runs, started only after the activated actor arrives; parked time is not charged to it."
+    },
+    {
+      "id": "actor_exchange_allowance",
+      "section": "execution",
+      "title": "Authority exchange allowance",
+      "value": 5000,
+      "unit": "milliseconds",
+      "counting": "Each custody acknowledgement a worker awaits after publishing an issued token, each transfer request it awaits an answer to, and each recipient acknowledgement the host awaits.",
+      "effect": "Expiry is a transport observation (`timeout` custody or a `host_timeout`/`recipient_timeout` transfer status), never a native result.",
+      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+          "symbol": "PW_AUTHORITY_EXCHANGE_WAIT_MS"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "PWAuthorityLayout"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "symbol": "runActorAuthorityTests",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "Both sides measure the exchange on their own clocks; the shared lifetime cutoff also bounds it."
+    },
+    {
+      "id": "actor_lifetime_cutoff",
+      "section": "execution",
+      "title": "Actor lifetime cutoff",
+      "value": 180000,
+      "unit": "milliseconds",
+      "counting": "One absolute continuous-clock cutoff shared by every actor, taken before the first launch; it includes parked waits, collection and sleep.",
+      "effect": "A worker that reaches the cutoff publishes a timing failure and exits; a cutoff already past at launch refuses before any policy byte.",
+      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "symbol": "continuousCutoff"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+          "symbol": "runActorSchedulerTests",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "Each actor's header carries the same raw `mach_continuous_time` cutoff; acknowledgements and heartbeats cannot extend it."
+    },
+    {
       "id": "worker_exit_grace",
       "section": "execution",
       "title": "Worker exit grace",
@@ -1291,7 +1495,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 52843694,
+      "value": 56017717,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",
@@ -1326,13 +1530,13 @@
           "form": "test"
         }
       ],
-      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer and two lifecycle-event records, the issuer override, 256 fresh-read payloads, 256 fresh-write payloads, and 256 exec-observation payloads are added without subtracting the ordinary fields they replace. Those components include mutually exclusive optional fields, maximal native-width values, and JSON member punctuation. Exec allowance includes every optional member, widest native scalars and longest fixed vocabulary, even where branches cannot coexist. A separate ordinary full-reply encoder control carries valid exec evidence on every slot; another carries valid fresh-write evidence. This is an upper bound, not a reachable reply. Distinct maximal control-character identities satisfy the ordinary phase/action association. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write and mixed native workloads."
+      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer and two lifecycle-event records, the issuer override, 256 fresh-read payloads, 256 fresh-write payloads, 256 exec-observation payloads, and the actor form's eight actor records, eight further phases, every event, transfer and resource record at their capacities are added without subtracting the ordinary fields they replace. Those components include mutually exclusive optional fields, maximal native-width values, and JSON member punctuation. Exec allowance includes every optional member, widest native scalars and longest fixed vocabulary, even where branches cannot coexist. A separate ordinary full-reply encoder control carries valid exec evidence on every slot; another carries valid fresh-write evidence. This is an upper bound, not a reachable reply. Distinct maximal control-character identities satisfy the ordinary phase/action association. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write and mixed native workloads."
     },
     {
       "id": "controller_output",
       "section": "transport",
       "title": "Runner client output",
-      "value": 159383552,
+      "value": 171966464,
       "unit": "bytes",
       "counting": "Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes.",
       "effect": "Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred.",
@@ -1710,8 +1914,8 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
-          "symbol": "PWShmLayout"
+          "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "symbol": "PWRunnerPhase"
         }
       ],
       "checks": [
@@ -1725,12 +1929,6 @@
           "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
           "symbol": "runRequestContractTests",
           "kind": "boundary",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "compare",
-          "kind": "value",
           "form": "test"
         }
       ],
@@ -1770,13 +1968,79 @@
       "refusal_field": "`phase_id`"
     },
     {
+      "id": "phase_records",
+      "section": "evidence",
+      "title": "Phase records per worker region",
+      "value": 16,
+      "unit": "items",
+      "counting": "Fixed phase records in each worker's shared header. The legacy form admits eight phases (`phase_count`); the remaining records are internal support for the actor form under development and no public request reaches them.",
+      "effect": "A worker refuses a header naming more phases than its records before application.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "PWShmLayout"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Fixed phase records in each worker's shared header. The legacy form admits eight phases (`phase_count`); the remaining records are internal support for the actor form under development and no public request reaches them. A worker refuses a header naming more phases than its records before application."
+    },
+    {
+      "id": "authority_slot_bytes",
+      "section": "evidence",
+      "title": "Authority slot storage",
+      "value": 16448,
+      "unit": "bytes",
+      "counting": "One token publication slot in an actor's authority region: a fixed header and the token buffer.",
+      "effect": "A region holds one outbound slot and one inbound slot per admitted delivery to that actor; nothing in it enters the reply.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "PWAuthorityLayout"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+          "symbol": "PW_AUTHORITY_SLOT_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/run.sh",
+          "symbol": "c_swift_layout_agreement",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "Tokens are copied between fixed buffers, compared for equality and erased at their last declared use and at teardown; the layout suite compares the compiled C geometry with the Swift mirror."
+    },
+    {
       "id": "phase_publications",
       "section": "evidence",
       "title": "Phase publication storage",
-      "value": 256,
+      "value": 512,
       "unit": "bytes",
-      "counting": "Eight fixed 32-byte phase records within the shared header.",
-      "effect": "The phase cap prevents excess publication storage.",
+      "counting": "Sixteen fixed 32-byte phase records within each shared header, one per visit an actor can be activated in; the legacy form uses the first eight.",
+      "effect": "The legacy and actor-form phase caps prevent excess publication storage.",
       "control": "Fixed.",
       "sources": [
         {
@@ -1798,7 +2062,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Eight fixed 32-byte phase records within the shared header. The phase cap prevents excess publication storage."
+      "behavior": "Sixteen fixed 32-byte phase records within each shared header, one per visit an actor can be activated in; the legacy form uses the first eight. The legacy and actor-form phase caps prevent excess publication storage."
     },
     {
       "id": "phase_collection_wait",
@@ -2295,6 +2559,342 @@
       ],
       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
       "refusal_field": "`extensions.target`"
+    },
+    {
+      "id": "actors",
+      "section": "admission",
+      "title": "Specimen actors",
+      "value": 8,
+      "unit": "items",
+      "refusal_field": "`actors`",
+      "counting": "Actor objects in one actor-form request; every phase names one of them.",
+      "effect": "Excess returns `admission_refused` before any child.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "normalizeActorPlan"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "The actor form launches one fresh worker per actor; the shared corpus holds the exact and over-limit examples."
+    },
+    {
+      "id": "actor_phases",
+      "section": "admission",
+      "title": "Actor-form phases",
+      "value": 16,
+      "unit": "items",
+      "refusal_field": "`phases`",
+      "counting": "Explicit phases in one actor-form request; each is one visit of its actor.",
+      "effect": "Excess returns `admission_refused` before any child.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "normalizeActorPlan"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Each actor's shared header holds a record for every phase it can be activated in; the legacy cap of eight phases is unchanged."
+    },
+    {
+      "id": "actor_issues",
+      "section": "admission",
+      "title": "Extension issues",
+      "value": 32,
+      "unit": "items",
+      "refusal_field": "`phases[].actions[].extension`",
+      "counting": "Issue actions across the complete actor-form specimen; each assigns one token reference.",
+      "effect": "Excess returns `admission_refused` before any child.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "normalizeActorPlan"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Issue outputs share the action capacity; the host allocates custody for admitted tokens only."
+    },
+    {
+      "id": "actor_deliveries",
+      "section": "admission",
+      "title": "Extension transfers",
+      "value": 64,
+      "unit": "items",
+      "refusal_field": "`phases[].actions[].extension`",
+      "counting": "Transfer actions across the complete actor-form specimen; each assigns one delivery reference.",
+      "effect": "Excess returns `admission_refused` before any child.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "normalizeActorPlan"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Each delivery has one inbound slot in its recipient's authority region; a self-transfer counts."
+    },
+    {
+      "id": "actor_handles",
+      "section": "admission",
+      "title": "Extension consumes",
+      "value": 64,
+      "unit": "items",
+      "refusal_field": "`phases[].actions[].extension`",
+      "counting": "Consume actions across the complete actor-form specimen; each assigns one handle reference.",
+      "effect": "Excess returns `admission_refused` before any child.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "normalizeActorPlan"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Repeated consumption of one delivery assigns distinct handles; raw native handles are never identified by equality."
+    },
+    {
+      "id": "actor_releases",
+      "section": "admission",
+      "title": "Extension releases",
+      "value": 64,
+      "unit": "items",
+      "refusal_field": "`phases[].actions[].extension`",
+      "counting": "Release actions across the complete actor-form specimen; at most one per handle.",
+      "effect": "Excess returns `admission_refused` before any child.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "normalizeActorPlan"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "A second release of a handle is refused at admission; a release still runs when its consume failed, and publishes unavailability."
+    },
+    {
+      "id": "actor_id",
+      "section": "admission",
+      "title": "Actor identifier",
+      "value": 63,
+      "unit": "UTF-8 bytes",
+      "refusal_field": "`actors[].actor_id`",
+      "counting": "Actor identifiers and token, delivery and handle references; nonempty, no NUL.",
+      "effect": "Excess returns `admission_refused`; empty or duplicate identifiers are request refusals.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "normalizeActorPlan"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "The same bound as the legacy extension references, shared by every identifier the reply echoes."
+    },
+    {
+      "id": "extension_issue_target",
+      "section": "admission",
+      "title": "Issue target",
+      "value": 1023,
+      "unit": "UTF-8 bytes",
+      "refusal_field": "`phases[].actions[].extension.target`",
+      "counting": "Absolute path an issue action submits; passed to the native call unchanged.",
+      "effect": "Excess returns `admission_refused`; a relative target is a request refusal.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "normalizeActorPlan"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "The exact submitted bytes reach the worker's slot and the native issue call; no canonicalization is applied."
     },
     {
       "id": "extension_token_storage",

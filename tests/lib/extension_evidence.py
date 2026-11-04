@@ -186,7 +186,133 @@ def validate_fresh_write(attempt):
     return errors
 
 
+ACTOR_TRANSFER_STATUSES = ('none', 'delivered', 'custody_unavailable', 'recipient_rejected', 'recipient_timeout',
+                           'recipient_unavailable', 'request_invalid', 'host_timeout', 'clock_fault', 'copy_mismatch')
+ACTOR_UNAVAILABLE_REASONS = ('token_unavailable', 'handle_unavailable', 'native_api_unavailable', 'repeated_action',
+                             'authority_channel_unavailable', 'delivery_unavailable')
+ACTOR_SETUP_ESTABLISHED = ('applied', 'unapplied_declared')
+
+
+def validate_actor_extensions(runner):
+    """The actor form's extension rules, shared with the Swift encoder and the
+    controller: every event names a live actor and one of its phases,
+    references resolve in the resource tables to their owners, transfers carry
+    no native result, and each status is published only by the shape it claims."""
+    events = runner.get('extension_events')
+    events = events if isinstance(events, list) else []
+    actors = runner.get('actors')
+    resources = runner.get('resources')
+    transfers = runner.get('transfers')
+    if not isinstance(actors, list) or not actors or not isinstance(resources, dict) or not isinstance(transfers, list):
+        return ['actor form lacks actor, resource or transfer tables']
+    if any(runner.get(k) is not None for k in ('extensions', 'runner_subprocess', 'policy_sha256', 'sandboxed_after_apply')):
+        return ['actor form carries singular projections']
+    tokens, deliveries, handles = (resources.get(k) for k in ('tokens', 'deliveries', 'handles'))
+    if not all(isinstance(t, list) for t in (tokens, deliveries, handles)) or len(actors) > 8 or len(tokens) > 32 \
+            or len(deliveries) > 64 or len(handles) > 64 or len(transfers) > 64 or len(events) > 32 + 128 + 64 + 64:
+        return ['actor extension record capacity']
+    errors = []
+    phases = [p for p in runner.get('phases', []) if isinstance(p, dict)] if isinstance(runner.get('phases'), list) else []
+    ids = [i for p in phases for i in p.get('action_ids', []) if isinstance(i, str)]
+    by_actor = {a.get('actor_id'): a for a in actors if isinstance(a, dict)}
+    consumed, released = {}, set()
+
+    def owned(table, **match):
+        return any(isinstance(r, dict) and all(r.get(k) == v for k, v in match.items()) for r in table)
+
+    for event in events:
+        if not isinstance(event, dict):
+            errors.append('extension event is not an object'); continue
+        actor_id, sid = event.get('actor_id'), event.get('step_id')
+        actor = by_actor.get(actor_id) if isinstance(actor_id, str) else None
+        if actor is None:
+            errors.append('extension event actor'); continue
+        matches = [p for p in phases if p.get('phase_id') == event.get('phase_id')
+                   and isinstance(p.get('action_ids'), list) and sid in p['action_ids']]
+        if len(matches) != 1 or matches[0].get('actor_id') != actor_id:
+            errors.append('extension event phase association'); continue
+        phase = matches[0]
+        if event.get('family') != 'file':
+            errors.append('extension event family'); continue
+        operation, status = event.get('operation'), event.get('status')
+        native, errno = event.get('native_result'), event.get('errno')
+        called, published = event.get('call_boundary_observed'), event.get('result_published')
+        if type(called) is not bool or type(published) is not bool:
+            errors.append('extension boundary/publication must be boolean')
+        token, delivery, handle = event.get('token_ref'), event.get('delivery_ref'), event.get('handle_ref')
+        if operation == 'issue':
+            if not _reference(token) or not owned(tokens, token_ref=token, actor_id=actor_id, step_id=sid) \
+                    or handle is not None or delivery is not None:
+                errors.append('issue reference')
+        elif operation == 'transfer':
+            if not _reference(token) or not _reference(delivery) or handle is not None or not owned(
+                    deliveries, delivery_ref=delivery, token_ref=token, source_actor_id=actor_id, step_id=sid):
+                errors.append('transfer reference')
+            if called or native is not None or errno is not None:
+                errors.append('transfer carries a native result')
+            if (published is False) != (status == 'unresolved') or (status != 'unresolved' and status not in ACTOR_TRANSFER_STATUSES):
+                errors.append('transfer status')
+            continue
+        elif operation == 'consume':
+            if not _reference(delivery) or not _reference(handle) or token is not None or handle in consumed or not owned(
+                    handles, handle_ref=handle, delivery_ref=delivery, actor_id=actor_id, step_id=sid):
+                errors.append('consume reference')
+            consumed[handle] = event
+        elif operation == 'release':
+            prior = consumed.get(handle)
+            order = prior is not None and prior.get('step_id') in ids and sid in ids and ids.index(prior['step_id']) < ids.index(sid)
+            if not _reference(handle) or token is not None or delivery is not None or handle in released or not order \
+                    or not owned(handles, handle_ref=handle, actor_id=actor_id, release_step_id=sid):
+                errors.append('release reference/order')
+            released.add(handle)
+            if status == 'returned' and (prior is None or prior.get('status') != 'returned'
+                                         or not _integer(prior.get('native_result'), -(1 << 63), (1 << 63) - 1)
+                                         or prior['native_result'] == -1):
+                errors.append('release lacks an observed consume handle')
+        else:
+            errors.append('unknown extension operation'); continue
+        if status == 'returned':
+            if published is not True or called is not True or not _integer(native, -(1 << 63), (1 << 63) - 1) \
+                    or not _integer(errno, 0, (1 << 31) - 1) or event.get('unavailable_reason') is not None:
+                errors.append('native extension result lacks publication')
+        elif status == 'unavailable':
+            if published is not True or called is not False or native is not None or errno is not None \
+                    or event.get('unavailable_reason') not in ACTOR_UNAVAILABLE_REASONS:
+                errors.append('unavailable extension action fabricates a call')
+        elif status == 'unresolved':
+            if published is not False or native is not None or errno is not None or event.get('unavailable_reason') is not None:
+                errors.append('unpublished extension result must stay unresolved')
+        else:
+            errors.append('invalid extension event status')
+        sub = actor.get('subprocess')
+        if isinstance(sub, dict):
+            record = sub.get('disposition')
+            entries = record.get('steps') if isinstance(record, dict) else None
+            entries = [s for s in entries if isinstance(s, dict) and s.get('step_id') == sid] if isinstance(entries, list) else []
+            lifecycle = event.get('lifecycle')
+            questions = entries[0].get('questions') if len(entries) == 1 else None
+            if len(entries) != 1 or not isinstance(lifecycle, dict) or not isinstance(questions, dict) or \
+                    published != (entries[0].get('slot') == 'completed' and entries[0].get('attempt_support') == 'supported') or \
+                    lifecycle.get('boundary') != questions.get('step_boundary_reached') or \
+                    lifecycle.get('result') != questions.get('step_result_published'):
+                errors.append('extension publication disagrees with disposition')
+        elif published is True or called is True or event.get('lifecycle') is not None:
+            errors.append('extension action evidence lacks a worker')
+        if (published is True or called is True) and (actor.get('setup_status') not in ACTOR_SETUP_ESTABLISHED
+                or not isinstance(phase.get('ordering'), dict) or phase['ordering'].get('proceed_observed') is not True):
+            errors.append('extension publication lacks setup and phase acknowledgement')
+    for transfer in transfers:
+        if not isinstance(transfer, dict) or transfer.get('status') not in ACTOR_TRANSFER_STATUSES or not owned(
+                deliveries, delivery_ref=transfer.get('delivery_ref'), token_ref=transfer.get('token_ref'),
+                source_actor_id=transfer.get('source_actor_id'), recipient_actor_id=transfer.get('recipient_actor_id'),
+                step_id=transfer.get('step_id')):
+            errors.append('transfer record association')
+    return errors
+
+
 def validate_extensions(runner):
+    if runner.get('execution_form') == 'actors':
+        return validate_actor_extensions(runner)
     declarations = runner.get('extensions', [])
     events = runner.get('extension_events', [])
     if not isinstance(declarations, list) or len(declarations) > 1 or not isinstance(events, list) or len(events) > 2:

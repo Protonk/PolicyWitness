@@ -61,10 +61,10 @@ rc, log = run('fixture-build', ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-
 assert rc == 0, log
 rc, log = run('fixture-warm', [fixture], timeout=30)
 assert rc == 90, (rc, log)
-worker = package / 'Sources/PWRunnerCore/CWorker.swift'
+worker = package / 'Sources/PWRunnerCore/ActorSession.swift'
 api = package / 'Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift'
 fixed_worker, fixed_api = worker.read_text(), api.read_text()
-gate = '        if completed != 1 {\n'
+gate = '            if completed != 1 {\n'
 absence = '        exec_observation = try container.decodeIfPresent(PWExecObservation.self, forKey: .exec_observation)\n'
 assert fixed_worker.count(gate) == 1 and fixed_api.count(absence) == 1, 'mutation anchors changed'
 invented = '''        exec_observation = try container.decodeIfPresent(PWExecObservation.self, forKey: .exec_observation)
@@ -77,10 +77,10 @@ environment = dict(os.environ, PW_LIFECYCLE_WORKER_FIXTURE=str(fixture))
 results = []
 try:
     for variant in ('baseline', 'decode_unpublished', 'invent_absent_metadata'):
-        worker.write_text(fixed_worker.replace(gate, '        if false { // deliberate publication bypass\n', 1)
+        worker.write_text(fixed_worker.replace(gate, '            if false { // deliberate publication bypass\n', 1)
                           if variant == 'decode_unpublished' else fixed_worker)
         api.write_text(fixed_api.replace(absence, invented, 1) if variant == 'invent_absent_metadata' else fixed_api)
-        for name, source in [('CWorker', worker), ('PWRunnerAttemptEvidence', api)]:
+        for name, source in [('ActorSession', worker), ('PWRunnerAttemptEvidence', api)]:
             shutil.copy2(source, OUT / (variant + '-' + name + '.swift'))
         rc, log = run(variant, [*SWIFT, 'run', '--package-path', package, '--scratch-path', scratch, 'PWRunnerCoreTests'], env=environment)
         failures = [line.strip() for line in log.splitlines() if line.strip().startswith('FAIL ')]

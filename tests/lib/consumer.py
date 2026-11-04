@@ -184,13 +184,43 @@ def _step_phase(runner, step):
     return matches[0] if len(matches) == 1 else {}
 
 
+def actor_form(runner):
+    return isinstance(runner, dict) and runner.get('execution_form') == 'actors'
+
+
+def actor_record(runner, actor_id):
+    """The actor record named by `actor_id`, or {} when the reply has none."""
+    actors = runner.get('actors')
+    matches = [a for a in actors if isinstance(a, dict) and a.get('actor_id') == actor_id] if isinstance(actors, list) else []
+    return matches[0] if len(matches) == 1 and isinstance(actor_id, str) else {}
+
+
+ACTOR_SETUP_ESTABLISHED = ('applied', 'unapplied_declared')
+
+
+def _setup_established(runner, owner):
+    """The prerequisite for a release: the legacy run's application, or the
+    owning actor's applied or declared setup."""
+    if actor_form(runner):
+        return actor_record(runner, owner.get('actor_id')).get('setup_status') in ACTOR_SETUP_ESTABLISHED
+    return runner.get('sandboxed_after_apply') is True
+
+
+def _worker_for(runner, owner):
+    """The worker record that ran `owner` (a phase or step): the owning actor's
+    subprocess in the actor form, the singular record otherwise."""
+    if actor_form(runner):
+        return actor_record(runner, owner.get('actor_id')).get('subprocess')
+    return runner.get('runner_subprocess')
+
+
 def _ordering_chain(runner, phase):
     ordering = phase.get('ordering')
     if not isinstance(ordering, dict):
         return False
     return all(ordering.get(k) is True for k in ('collection_closed_before_proceed', 'proceed_set', 'proceed_observed',
                                                    'worker_lifetime_established')) \
-        and ordering.get('protocol_violations') == [] and runner.get('sandboxed_after_apply') is True \
+        and ordering.get('protocol_violations') == [] and _setup_established(runner, phase) \
         and phase.get('arrival_observed') is True
 
 
@@ -199,8 +229,10 @@ def eligible_order(runner, step):
     query = step.get('sandbox_check')
     if not isinstance(query, dict):
         return False
-    worker = runner.get('runner_subprocess') or {}
     phase = _step_phase(runner, step)
+    if actor_form(runner) and (not isinstance(step.get('actor_id'), str) or step.get('actor_id') != phase.get('actor_id')):
+        return False
+    worker = _worker_for(runner, step) or {}
     validator = phase.get('validator_subprocess')
     if not isinstance(validator, dict):
         return False
@@ -545,7 +577,86 @@ def _validate_reply(runner):
     if not failed_reporting:
         errors.extend(_validate_phases(runner))
         errors.extend(validate_extensions(runner))
-    sub = runner.get('runner_subprocess')
+    if actor_form(runner):
+        errors.extend(_validate_actors(runner, failed_reporting, steps_value))
+        return errors
+    errors.extend(_validate_worker(runner, runner.get('runner_subprocess'), failed_reporting, steps_value))
+    return errors
+
+
+ACTOR_SETUP_STATUSES = ('not_launched', 'launch_refused', 'transfer_failed', 'applied', 'unapplied_declared',
+                        'setup_failed', 'exited_before_setup', 'setup_timeout')
+
+
+def _validate_actors(runner, failed_reporting, steps_value):
+    """The actor form: per-actor records with their own subprocess accounts,
+    no singular worker or policy projection, and actor identity on every
+    phase and step."""
+    errors = []
+    for key in ('runner_subprocess', 'policy_sha256', 'sandboxed_after_apply', 'extensions'):
+        if runner.get(key) is not None:
+            errors.append('actor form carries singular ' + key)
+    actors = runner.get('actors')
+    if not isinstance(actors, list) or not actors or len(actors) > 8:
+        return errors + ['actor form requires a bounded actors list']
+    ids = []
+    for index, actor in enumerate(actors):
+        if not isinstance(actor, dict):
+            errors.append('actor is not an object'); continue
+        actor_id = actor.get('actor_id')
+        if not isinstance(actor_id, str) or not actor_id or len(actor_id.encode('utf-8')) > 63 or '\0' in actor_id:
+            errors.append('invalid actor_id')
+        ids.append(actor_id)
+        if actor.get('index') != index:
+            errors.append('actor index disagrees with order')
+        mode, setup = actor.get('mode'), actor.get('setup_status')
+        if mode not in ('apply', 'unapplied') or setup not in ACTOR_SETUP_STATUSES:
+            errors.append('invalid actor mode or setup status')
+        if mode == 'unapplied' and (actor.get('applied') is not None or actor.get('policy_sha256') is not None
+                                    or actor.get('policy_format') is not None or setup == 'applied'):
+            errors.append('unapplied actor carries an application or policy claim')
+        if mode == 'apply' and setup == 'unapplied_declared':
+            errors.append('apply actor cannot declare an unapplied setup')
+        count = actor.get('application_count')
+        if type(count) is not int or count not in (0, 1) or (count == 1) != (setup == 'applied'):
+            errors.append('application_count disagrees with setup status')
+        if setup == 'applied' and actor.get('applied') is not True:
+            errors.append('applied setup lacks the worker\'s application publication')
+        sub = actor.get('subprocess')
+        launch = actor.get('launch')
+        if sub is not None:
+            if not isinstance(sub, dict) or not isinstance(launch, dict) or launch.get('pid') != sub.get('pid'):
+                errors.append('actor subprocess lacks its matching launch record')
+            errors.extend(_validate_worker(runner, sub, failed_reporting,
+                                           [s for s in steps_value if s.get('actor_id') == actor_id]))
+        elif launch is not None or setup in ('applied', 'unapplied_declared', 'setup_failed', 'exited_before_setup', 'transfer_failed'):
+            errors.append('actor setup claims a process that has no subprocess record')
+        visits = actor.get('visits')
+        if not isinstance(visits, list) or any(type(v) is not int or v < 1 for v in visits):
+            errors.append('invalid actor visits')
+    if len(set(ids)) != len(ids):
+        errors.append('duplicate actor_id')
+    phases = [p for p in runner.get('phases', []) if isinstance(p, dict)]
+    seen = {}
+    for phase in phases:
+        owner = phase.get('actor_id')
+        if owner not in ids:
+            errors.append('phase names no actor')
+            continue
+        seen[owner] = seen.get(owner, 0) + 1
+        if phase.get('actor_visit') != seen[owner]:
+            errors.append('phase actor_visit disagrees with that actor\'s visit order')
+        if phase.get('ordinal') not in (actor_record(runner, owner).get('visits') or []):
+            errors.append('actor visits disagree with its phases')
+    for step in steps_value:
+        if step.get('actor_id') not in ids or _step_phase(runner, step).get('actor_id') != step.get('actor_id'):
+            errors.append('step names no actor or another actor than its phase')
+    return errors
+
+
+def _validate_worker(runner, sub, failed_reporting, steps_value):
+    """One worker record's transfer, readiness and policy-read observations."""
+    errors = []
     if isinstance(sub, dict) and sub.get('policy_transfer_timeout') is not None:
         timeout = sub['policy_transfer_timeout']
         if not isinstance(timeout, dict) or any(type(timeout.get(k)) is not int or timeout[k] < 0
@@ -599,10 +710,13 @@ def _validate_reply(runner):
 
 def _validate_phases(runner):
     phases = runner.get('phases')
-    if not isinstance(phases, list) or len(phases) > 8:
+    actors = actor_form(runner)
+    if not isinstance(phases, list) or len(phases) > (16 if actors else 8):
         return ['phases must be a bounded array']
     errors, ids, actions = [], [], []
-    if runner.get('runner_subprocess') is not None and not phases:
+    launched = any(isinstance(a, dict) and a.get('subprocess') is not None for a in runner.get('actors') or []) if actors \
+        else runner.get('runner_subprocess') is not None
+    if launched and not phases:
         errors.append('a worker subprocess requires phase evidence')
     for index, phase in enumerate(phases):
         if not isinstance(phase, dict):
@@ -634,7 +748,12 @@ def _validate_phases(runner):
             ordering = {}
         if phase.get('completion_observed') is True and (phase.get('arrival_observed') is not True or ordering.get('proceed_observed') is not True):
             errors.append('phase completion lacks arrival or acknowledgement')
-        if phase.get('arrival_observed') is True and index and (not isinstance(phases[index - 1], dict) or phases[index - 1].get('completion_observed') is not True):
+        # A later phase of another actor may arrive after an unfinished phase;
+        # the missing completion edge stays visible on the earlier phase. The
+        # same actor's next visit still requires its previous completion.
+        previous = phases[index - 1] if index and isinstance(phases[index - 1], dict) else {}
+        same_owner = not actors or previous.get('actor_id') == phase.get('actor_id')
+        if phase.get('arrival_observed') is True and index and same_owner and previous.get('completion_observed') is not True:
             errors.append('phase arrival lacks preceding completion')
         if ordering.get('collection_closed_before_proceed') is True and phase.get('arrival_observed') is not True:
             errors.append('collection closure lacks phase arrival')
@@ -657,7 +776,7 @@ def _validate_phases(runner):
 
 def _validate_ordering(runner, phase):
     errors = []
-    worker = runner.get('runner_subprocess')
+    worker = _worker_for(runner, phase)
     validator = phase.get('validator_subprocess')
     if validator is not None and not isinstance(validator, dict):
         errors.append('invalid phase validator subprocess')
@@ -692,7 +811,7 @@ def _validate_ordering(runner, phase):
         contradictions.append('release_without_collection_closure')
     if o and not s:
         contradictions.append('acknowledgement_without_release')
-    if (s or o) and runner.get('sandboxed_after_apply') is not True:
+    if (s or o) and not _setup_established(runner, phase):
         contradictions.append('release_without_successful_application')
     failure = ((worker.get('worker_evidence') or {}).get('failure') or {})
     if failure.get('operation') == 11 and type(phase.get('ordinal')) is int and failure.get('index') == phase['ordinal'] - 1 and (o or any((x.get('attempt') or {}).get('result_source') == 'worker'

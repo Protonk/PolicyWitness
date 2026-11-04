@@ -23,8 +23,10 @@ struct ComparisonEvidence {
     }
 }
 
+/// `setupEstablished` replaces the successful-application prerequisite for the
+/// actor form, where an unapplied actor's declared setup is the prerequisite.
 func buildPhaseOrdering(_ worker: CWorkerOutput, index: Int, input: CWorkerPhaseInput,
-                        validatorOutput: ValidatorOutput?, hasQueries: Bool) -> PWRunnerOrdering {
+                        validatorOutput: ValidatorOutput?, hasQueries: Bool, setupEstablished: Bool? = nil) -> PWRunnerOrdering {
     let phase = worker.phases[index]
     // Reuse the single collection's claim rules on this phase's observations.
     var view = worker
@@ -37,16 +39,18 @@ func buildPhaseOrdering(_ worker: CWorkerOutput, index: Int, input: CWorkerPhase
     if view.workerEvidence?.failure?.operation == 11 && view.workerEvidence?.failure?.index != UInt32(index) {
         view.workerEvidence?.failure = nil
     }
-    return buildOrdering(view, validatorOutput: validatorOutput, hasQueries: hasQueries)
+    return buildOrdering(view, validatorOutput: validatorOutput, hasQueries: hasQueries, setupEstablished: setupEstablished)
 }
 
-func buildOrdering(_ worker: CWorkerOutput, validatorOutput: ValidatorOutput?, hasQueries: Bool) -> PWRunnerOrdering {
+func buildOrdering(_ worker: CWorkerOutput, validatorOutput: ValidatorOutput?, hasQueries: Bool,
+                   setupEstablished: Bool? = nil) -> PWRunnerOrdering {
     let disposition = !worker.hookInvoked ? "not_invoked" : !hasQueries ? "not_needed"
         : validatorOutput == nil ? "not_spawned" : validatorOutput?.reaped == true ? "reaped" : "unconfirmed"
     var violations = worker.orderingProtocolViolations
     if worker.proceedObserved && !worker.proceedSet { violations.append("acknowledgement_without_release") }
     if worker.proceedSet && !worker.hookInvoked { violations.append("release_without_collection_closure") }
-    if (worker.proceedSet || worker.proceedObserved) && (!worker.applied || worker.applyRC != 0) {
+    let established = setupEstablished ?? (worker.applied && worker.applyRC == 0)
+    if (worker.proceedSet || worker.proceedObserved) && !established {
         violations.append("release_without_successful_application")
     }
     if worker.slots.contains(where: { $0.completed }) && !worker.proceedObserved {

@@ -9,8 +9,10 @@ descriptor, with the authority that acquiring it supplied.
 
 The boundary is policy application inside a running process. The executable,
 libraries, memory and process context are already present. A fresh worker
-applies one specimen once; its later phases share that process and can observe
-effects of earlier actions. The unsandboxed host arranges queries, collects
+applies its policy once: the one worker of the single-worker form, or one
+worker per actor of the actor form, where an unapplied actor applies none. Its
+later phases share that process and can observe effects of earlier actions,
+and in the actor form an actor can hold authority it issued itself. The unsandboxed host arranges queries, collects
 publications and replies. This tour explains the resources and constraints of
 that instrument. The [architecture tour](ARCHITECTURE.md) owns orchestration
 and ordering; the [build tour](BUILD.md) owns compilation and provenance;
@@ -50,9 +52,13 @@ flowchart TB
 
 This is a conceptual overview; the [detailed capability inventory](#detailed-capability-inventory)
 keeps the individual resources, lifetimes and supporting citations. The diagram
-shows alternative admitted experiments: exec attempts cannot share a specimen
-with extension use. Token delivery precedes requested consumption; it does not
-consume the token.
+draws the declaration form's worker. An actor-form worker is the same
+instrument with two more pre-apply resources, its authority region and the
+native issue entry point, and one more post-apply operation, issuing a token
+for a file and publishing it to the host. The exec exclusion is per actor:
+an actor that issues, sends, receives, consumes or releases cannot exec, while
+another actor in the same specimen can. Token delivery precedes requested
+consumption; it does not consume the token.
 
 The host closes validator collection before releasing the worker to attempt a
 phase; the worker receives the release ordinal, while predictions stay outside
@@ -344,6 +350,25 @@ accept either result for the after-release read and verify returned content
 when successful. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)
 defines the limits of native results and local publication.
 
+In the actor form, [`prepare_authority`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+resolves the issue, consume and release entry points, lowers the core limit,
+maps the actor's authority region and validates its identity and index before
+application; a failure publishes a setup status and leaves the ordinary
+actions intact. [`attempt_extension_issue`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+calls `sandbox_extension_issue_file` once with the exact submitted bytes,
+publishes nonnull or NULL with the saved errno, copies a bounded token into the
+outbound slot, waits for the host's custody answer, erases the native
+allocation to its inspected length and frees it, then erases the scratch
+whatever the answer. [`attempt_extension_transfer`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+publishes a request and waits for the host's acknowledgement while servicing
+its own inbound slots, so a transfer to itself cannot wait on itself. Actor
+consume reads only the inbound slot this actor accepted for the named
+delivery; the handle table is indexed by the plan's handle references rather
+than one static handle. Parked actors accept or reject deliveries in
+[`service_inbound_once`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+without consuming. Every ordinary exit erases the outbound and inbound token
+buffers of the region.
+
 Known gap: private extension calls may allocate or retain internal state that PW
 cannot inspect. Erasure observations cover PW-owned transient buffers; successful
 native results and phase progress do not establish kernel extension state,
@@ -369,6 +394,22 @@ adding `done` or acknowledgement. After the phase loop and any selected
 post-phase seam,
 [`publish_done_and_exit`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
 releases `done` and calls `_exit(0)` without waiting for the host.
+
+In actor mode the worker also parks before each visit in an activation wait
+built from the same atomic fields, continuous-clock samples and relax batch as
+the release wait. It accepts only the global ordinal its next phase record
+names and publishes that ordinal back; a greater ordinal is a published
+refusal, an expired shared lifetime cutoff is a published timing failure, and
+cancellation exits without `done`. A parked actor runs nothing of the
+specimen; the apparatus cost is one runnable polling loop per parked actor. A
+cutoff already past at clock setup refuses before any policy byte. An
+unapplied actor publishes its declared setup after the ready byte and never
+sets `applied`, and every actor publishes its own hash of the policy bytes it
+read beside the host's hash of the submitted source. Legacy workers never
+enter the activation wait. This mode is internal support for the actor form
+under development, exercised by the
+[harness activation controls](../tests/suites/runner_c_worker_harness/README.md)
+and the actor driver tests; no admitted request reaches it.
 The host retains its evidence mapping after worker exit and independently
 observes reaping. Its exit request still cancels a worker waiting for release;
 grace and termination remain fallback cleanup. These paths use existing storage

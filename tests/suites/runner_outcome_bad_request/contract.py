@@ -54,10 +54,13 @@ def main():
             if accepted:
                 assert rc == 0 and env['result']['ok'] is True, env
                 assert observed, f'{name}: accepted request produced no file effect'
-                assert runner['steps'][0]['attempt']['outcome'] == 'ok', runner
+                # The singular form's first step is the witness; the actor
+                # form's accepted examples carry a step named `effect`.
+                created = runner['steps'][0] if 'actors' not in specimen else next(s for s in runner['steps'] if s['step_id'] == 'effect')
+                assert created['attempt']['outcome'] == 'ok', created
                 if prediction:
-                    assert runner['steps'][0]['sandbox_check']['outcome'] == prediction, runner
-                if specimen['policy'].get('capture_compiled_profile'):
+                    assert created['sandbox_check']['outcome'] == prediction, created
+                if (specimen.get('policy') or {}).get('capture_compiled_profile'):
                     assert runner['compiled_profile']['request_nonce'] == specimen['policy']['capture_nonce'], runner
                     assert runner['compiled_profile']['producer'] == 'worker' and runner['compiled_profile']['capture_stage'] == 'before_apply', runner
                     assert runner['compiled_profile']['schema_version'] == 2 and runner['sandboxed_after_apply'] is True, runner
@@ -101,9 +104,11 @@ def main():
             (case / 'effect.json').write_text(json.dumps(dict(observed=observed, expected=expected['xpc'] is None)) + '\n')
             if expected['xpc'] is None:
                 assert reply['normalized_outcome'] == 'ok' and observed, (example['id'], reply)
+                created = reply['steps'][0] if 'actors' not in specimen else next(s for s in reply['steps'] if s['step_id'] == 'effect')
+                assert created['attempt']['outcome'] == 'ok', created
                 if example.get('prediction'):
-                    assert reply['steps'][0]['sandbox_check']['outcome'] == example['prediction'], reply
-                if specimen['policy'].get('capture_compiled_profile'):
+                    assert created['sandbox_check']['outcome'] == example['prediction'], created
+                if (specimen.get('policy') or {}).get('capture_compiled_profile'):
                     assert reply['compiled_profile']['request_nonce'] == specimen['policy']['capture_nonce'], reply
                     assert reply['compiled_profile']['producer'] == 'worker' and reply['compiled_profile']['capture_stage'] == 'before_apply', reply
                     assert reply['compiled_profile']['schema_version'] == 2 and reply['sandboxed_after_apply'] is True, reply

@@ -131,7 +131,7 @@ func runRequestContractTests(_ tk: TestKit) {
         tk.run("parameter names remain open data and unknown names have bounded diagnostics") {
             let key = String(repeating: "é", count: 32_768)
             let parameter = replacing(requestFixture(), at: ["policy", "params"], with: ["future_field": "value"])
-            try expectEqual(try decodeRequest(parameter).policy.params?["future_field"], "value")
+            try expectEqual(try decodeRequest(parameter).policy?.params?["future_field"], "value")
             do {
                 _ = try decodeRequest(replacing(requestFixture(), at: ["policy", key], with: true))
                 throw TestFailure(message: "unknown field accepted")
@@ -148,7 +148,7 @@ func runRequestContractTests(_ tk: TestKit) {
             input["policy"] = ["format": "sbpl", "sbpl_source": "(version 1)", "params": NSNull()]
             let decoded = try decodeRequest(input)
             try expectNil(decoded.run_kind); try expectNil(decoded._test_overrides)
-            try expectNil(decoded.policy.params)
+            try expectNil(decoded.policy?.params)
             for path in [["policy", "params"], ["probe_plan", "0", "attempt", "args"], ["_test_overrides"]] {
                 try expectThrows { _ = try decodeRequest(replacing(requestFixture(), at: path, with: "wrong type")) }
             }

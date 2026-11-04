@@ -450,6 +450,24 @@ It models absent host stores; it does not kill a real XPC host.
 The clock substitution controls run in `runner_unit` against the real C
 producer companions. ABI mismatch remains a pre-application refusal.
 
+The activation controls exercise the actor form's parked wait and setup modes
+against the shipped worker: `activation_named_ordinal`,
+`activation_under_deny_default`, `activation_greater_ordinal`,
+`activation_withheld_cutoff`, `activation_cancel_while_parked`,
+`activation_cutoff_past`, `unapplied_actor_reads` and
+`unapplied_under_deny_default`. The harness writes the actor mode, the phase
+record's global ordinal and the shared continuous-clock cutoff into the header,
+polls the setup publication, and stores the activation ordinal after a delay.
+`check_activation.py` requires the worker's own policy hash to equal the hash
+of the delivered text, no attempt, completion or arrival before activation, the
+named ordinal acknowledged in `activation_observed`, a greater ordinal refused
+with failure operation 13 code 16, an expired cutoff published as operation 13
+code 15 while parked, a cutoff already past refused at clock setup (exit 12,
+failure operation 12 code 15 detail 1) before any policy byte, and an exit
+request ending a parked wait without a terminal publication. The unapplied rows
+show `actor_setup = 2` with `applied` unset and a successful read under a
+deny-default text that was never applied.
+
 `exec_control_states` compiles the production exec helper with deterministic
 native-call equipment and a controlled continuous counter. It checks absolute
 tick deadlines across slow spawn, multiple release exclusions and intervening

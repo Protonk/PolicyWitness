@@ -68,6 +68,20 @@ enum CWorkerOrchestrator {
         if let failure = requestMeaningFailure(parsed) {
             return requestRefusalReply(parsed: parsed, failure: failure, bundleId: bundleId, policyHash: policyHash)
         }
+        // The actor form is scheduled by its own driver.
+        if parsed.isActorForm {
+            guard case .success(let plan) = normalizeActorPlan(parsed) else {
+                return requestRefusalReply(parsed: parsed,
+                    failure: PWRunnerRequestFailure(code: "missing_field", path: ["actors"]), bundleId: bundleId, policyHash: policyHash)
+            }
+            return runActors(parsed: parsed, plan: plan, bundleId: bundleId, workerExecutablePath: workerExecutablePath,
+                             validatorExecutablePath: validatorExecutablePath, validatorSpawn: validatorSpawn,
+                             validatorProcessCalls: validatorProcessCalls)
+        }
+        guard let policy = parsed.policy else {
+            return requestRefusalReply(parsed: parsed,
+                failure: PWRunnerRequestFailure(code: "missing_field", path: ["policy"]), bundleId: bundleId, policyHash: policyHash)
+        }
 
         // ---- translation: request → driver inputs ------------------------
         let phases = parsed.executionPhases
@@ -78,7 +92,7 @@ enum CWorkerOrchestrator {
             case .extensionAction(let value):
                 return CWorkerSlotInput(stepId: value.step_id,
                     attemptKind: value.intervention.operation == "consume" ? .extensionConsume : .extensionRelease,
-                    target: value.intervention.operation == "consume" ? (value.intervention.token_ref ?? "") : value.intervention.handle_ref)
+                    target: value.intervention.operation == "consume" ? (value.intervention.token_ref ?? "") : (value.intervention.handle_ref ?? ""))
             }
         }
         let session = parsed.extensions?.first.map { ExtensionSession(declaration: $0,
@@ -92,7 +106,7 @@ enum CWorkerOrchestrator {
             reply.extensions = session.map { [$0.record] }
             return reply
         }
-        let workerParams = workerParamsFromPolicy(parsed.policy)
+        let workerParams = workerParamsFromPolicy(policy)
         var offset = 0
         let phaseInputs = phases.map { phase -> CWorkerPhaseInput in
             defer { offset += phase.actions.count }
@@ -106,7 +120,7 @@ enum CWorkerOrchestrator {
         // runner_timeouts.
         var workerInput = CWorkerInput(
             workerExecutablePath: workerExecutablePath,
-            policy: parsed.policy.sbpl_source ?? "",
+            policy: policy.sbpl_source ?? "",
             params: workerParams,
             slots: workerSlots,
             phases: phaseInputs,
@@ -117,8 +131,8 @@ enum CWorkerOrchestrator {
             postApplyKillSignal: parsed._test_overrides?.worker_post_apply_kill_signal,
             preReadyHangMs: parsed._test_overrides?.worker_pre_ready_hang_ms,
             killBeforePublishSlot: parsed._test_overrides?.worker_kill_before_publish_slot,
-            captureCompiledProfile: parsed.policy.capture_compiled_profile == true,
-            captureNonce: parsed.policy.capture_nonce
+            captureCompiledProfile: policy.capture_compiled_profile == true,
+            captureNonce: policy.capture_nonce
         )
 
         workerInput.extensionRequested = session != nil
@@ -242,7 +256,7 @@ enum CWorkerOrchestrator {
             error: runOutcome.error,
             pid: topPid,
             bundle_id: bundleId,
-            policy_format: parsed.policy.format,
+            policy_format: policy.format,
             policy_sha256: policyHash,
             sandboxed_after_apply: workerOutput?.applied,
             steps: stepResults,

@@ -50,11 +50,20 @@ EXTENSION_START = "<!-- BEGIN SHARED EXTENSION STATUSES -->"
 EXTENSION_END = "<!-- END SHARED EXTENSION STATUSES -->"
 GUIDE_EXTENSION_START = "<!-- BEGIN COPIED EXTENSION STATUSES -->"
 GUIDE_EXTENSION_END = "<!-- END COPIED EXTENSION STATUSES -->"
+COVERAGE_SHARED_START = "<!-- BEGIN SHARED EXTENSION COVERAGE -->"
+COVERAGE_SHARED_END = "<!-- END SHARED EXTENSION COVERAGE -->"
+GUIDE_COVERAGE_START = "<!-- BEGIN COPIED EXTENSION COVERAGE -->"
+GUIDE_COVERAGE_END = "<!-- END COPIED EXTENSION COVERAGE -->"
+EXTENSIONS_NAME = "docs/EXTENSIONS.md"
+# The guide section that holds the copied coverage; the FAQ's bare link to the
+# coverage document is rebased onto it in the copy.
+COVERAGE_ANCHOR = "#sandbox-extensions"
 SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md", "docs/PolicyWitness.md", "docs/REQUEST-GRAMMAR.md",
-                  "tests/FAILURE-PROPAGATION-CONTRACT.md", "controller/README.md", "runner/README.md")
+                  "tests/FAILURE-PROPAGATION-CONTRACT.md", "controller/README.md", "runner/README.md", EXTENSIONS_NAME)
 GUIDE_NAME = "PolicyWitness.md"
 # What a run reads besides the files the manifest cites: this generator and its helpers, the manifest, the
-# documents it renders or copies, the questions and the matrix. The reader's files are added by input_paths.
+# documents it renders or copies, the questions, the coverage document and the matrix. The reader's files are
+# added by input_paths.
 INPUTS = ("docs/generate_limits.py", "docs/generator_common.py", "tests/catalog.json", "docs/limits.json",
           "docs/LIMITS.md", "docs/PolicyWitness.md", "docs/QUESTIONS.md", *SPAN_DOCUMENTS)
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
@@ -228,6 +237,33 @@ def update_guide_rules(text, contract_document):
                          GUIDE_RULES_START + "\n\n" + shared_rules(contract_document) + "\n\n" + GUIDE_RULES_END)
 
 
+def shared_coverage(extensions_document):
+    """The extension coverage EXTENSIONS.md owns, demoted two levels to nest under
+    the guide's sandbox-extension section, with guide links made internal."""
+    begin, finish = block_bounds(extensions_document, COVERAGE_SHARED_START, COVERAGE_SHARED_END)
+    shared = extensions_document[begin + len(COVERAGE_SHARED_START):finish - len(COVERAGE_SHARED_END)].strip()
+    document = markdown_reader.parse(shared, "shared extension coverage")
+    if not document.headings or any(heading.level != 2 for heading in document.headings):
+        raise ValueError("shared extension coverage must use level-two headings only")
+    headers = {table.header[0].text for table in document.tables}
+    if not {"Form", "Family", "Operation", "Observation", "Situation"} <= headers:
+        raise ValueError("shared extension coverage must contain the form, family, operation, observation and situation tables")
+    lines = shared.split("\n")
+    for heading in document.headings:
+        if not heading.atx or not lines[heading.line].startswith("## "):
+            raise ValueError(f"shared extension coverage: write the heading {heading.text!r} as an unindented '## ' line")
+        lines[heading.line] = "##" + lines[heading.line]
+    demoted_text = "\n".join(lines)
+    copied = demoted_text.replace(f"]({GUIDE_NAME}#", "](#")
+    require_standalone(copied, "extension coverage")
+    return copied
+
+
+def update_guide_extension_coverage(text, extensions_document):
+    return replace_block(text, GUIDE_COVERAGE_START, GUIDE_COVERAGE_END,
+                         GUIDE_COVERAGE_START + "\n\n" + shared_coverage(extensions_document) + "\n\n" + GUIDE_COVERAGE_END)
+
+
 def update_guide_extension_statuses(text, contract_document):
     """Copy the contract-owned issuance/delivery account without reinterpretation."""
     begin, finish = block_bounds(contract_document, EXTENSION_START, EXTENSION_END)
@@ -330,13 +366,16 @@ def shared_questions(questions_document):
     # Questions nest under the guide's Questions heading, and links into the
     # guide become internal links in the copy. Everything else is verbatim.
     shared = demoted(shared, "shared questions")
-    copied = shared.replace(f"]({GUIDE_NAME}#", "](#")
+    # The exact bare coverage-document target rebases onto the guide's copy.
+    copied = shared.replace(f"]({GUIDE_NAME}#", "](#").replace("](EXTENSIONS.md)", f"]({COVERAGE_ANCHOR})")
     # The replacement must have changed link targets and nothing else.
     def shown(document, rewrite):
         return [[(kind, (value.label, value.image, rewrite(value.target)) if kind in ("link", "image") else value)
                  for kind, value in inline.pieces] for inline in document.inlines]
 
     def internal(target):
+        if target == "EXTENSIONS.md":
+            return COVERAGE_ANCHOR
         return target[len(GUIDE_NAME):] if target.startswith(GUIDE_NAME + "#") else target
     before, after = markdown_reader.parse(shared), markdown_reader.parse(copied)
     if shown(after, lambda target: target) != shown(before, internal) or after.blocks != before.blocks:
@@ -371,7 +410,7 @@ def validate_guide(text, limits):
         raise ValueError("guide must use inline internal links only")
     markers = {line.strip() for block in guide.blocks if block.kind == "html" for line in block.content.splitlines()}
     for marker in (GUIDE_START, GUIDE_END, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END, GUIDE_RULES_START, GUIDE_RULES_END,
-                   GUIDE_EXTENSION_START, GUIDE_EXTENSION_END):
+                   GUIDE_EXTENSION_START, GUIDE_EXTENSION_END, GUIDE_COVERAGE_START, GUIDE_COVERAGE_END):
         if marker not in markers:
             raise ValueError(f"guide marker {marker} must stand on its own line outside code")
     # Each limit's row opens with its title and the id as a code span.
@@ -394,6 +433,11 @@ def validate_guide(text, limits):
     begin, finish = block_bounds(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END)
     statuses = text[begin + len(GUIDE_EXTENSION_START):finish - len(GUIDE_EXTENSION_END)]
     require_standalone(statuses, "copied extension statuses")
+    begin, finish = block_bounds(text, GUIDE_COVERAGE_START, GUIDE_COVERAGE_END)
+    coverage = text[begin + len(GUIDE_COVERAGE_START):finish - len(GUIDE_COVERAGE_END)]
+    if not any(table.header and table.header[0].text == "Form" for table in markdown_reader.parse(coverage, "copied extension coverage").tables):
+        raise ValueError("guide must contain the copied extension coverage")
+    require_standalone(coverage, "copied extension coverage")
 
     # Match the anchors GitHub gives the guide's headings, including
     # duplicate-heading suffixes, against its internal links.
@@ -415,6 +459,7 @@ def main():
     path = ROOT / "docs/LIMITS.md"
     guide_path = ROOT / "docs/PolicyWitness.md"
     questions_path = ROOT / "docs/QUESTIONS.md"
+    extensions_path = ROOT / EXTENSIONS_NAME
     contract_path = ROOT / CONTRACT_NAME
     try:
         limits = load_limits(ROOT / "docs/limits.json")
@@ -440,6 +485,9 @@ def main():
             update_guide(render_spans(guide_before, "limits", span_values(limits), "docs/PolicyWitness.md"), after), questions),
             contract_after)
         guide_after = update_guide_extension_statuses(guide_after, contract_after)
+        # The coverage copy comes from the freshly span-rendered source document.
+        extensions_after = span_only[EXTENSIONS_NAME][1] if EXTENSIONS_NAME in span_only else extensions_path.read_text()
+        guide_after = update_guide_extension_coverage(guide_after, extensions_after)
         validate_guide(guide_after, limits)
         question_count = sum(heading.level == 3 for heading in markdown_reader.parse(shared_questions(questions)).headings)
         if args.check or args.stage_guide is not None:

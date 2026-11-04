@@ -146,7 +146,7 @@ func pwRunnerReplyData(_ result: PWRunnerRunResult,
                 "rc": 1, "normalized_outcome": NormalizedOutcome.runnerReportingFailed,
                 "error": finalDiagnostic, "pid": result.pid,
                 "bundle_id": result.bundle_id as Any? ?? NSNull(),
-                "policy_format": result.policy_format,
+                "policy_format": result.policy_format as Any? ?? NSNull(),
                 "policy_sha256": result.policy_sha256 as Any? ?? NSNull(), "steps": [], "phases": [],
                 "reporting_failure": [
                     "origin": "runner_host", "diagnostic": finalDiagnostic,
@@ -168,8 +168,9 @@ func requestDecodeFailure(_ error: Error) -> PWRunnerRequestFailure {
     case RequestContractError.unsupportedSchema:
         return PWRunnerRequestFailure(code: "unsupported_schema", path: ["schema_version"],
             expected_schema: PWContract.requestSchema)
-    case RequestContractError.unresolvedAugments:
-        return PWRunnerRequestFailure(code: "unresolved_augments", path: ["policy", "augments"])
+    case RequestContractError.unresolvedAugments(let keys):
+        let location = keys.isEmpty ? ["policy"] : keys.map { $0.intValue.map(String.init) ?? $0.stringValue }
+        return PWRunnerRequestFailure(code: "unresolved_augments", path: location + ["augments"])
     case RequestContractError.unknownField(let keys):
         code = "unknown_field"; path = keys.map { $0.intValue.map(String.init) ?? $0.stringValue }
     case DecodingError.typeMismatch(_, let c): code = "type_mismatch"; path = c.codingPath.map { $0.intValue.map(String.init) ?? $0.stringValue }
@@ -191,8 +192,9 @@ func requestDecodeDiagnostic(_ error: Error) -> String {
     case let failure as PWRunnerRequestFailure: return failure.description
     case RequestContractError.unsupportedSchema(let version):
         return "request decode failed: unsupported request schema \(version) (expected \(PWContract.requestSchema))"
-    case RequestContractError.unresolvedAugments:
-        return "request decode failed: policy.augments must be resolved by the controller before XPC delivery"
+    case RequestContractError.unresolvedAugments(let keys):
+        let location = keys.isEmpty ? "policy" : keys.map { $0.intValue.map { "[\($0)]" } ?? $0.stringValue }.joined(separator: ".")
+        return "request decode failed: \(location).augments must be resolved by the controller before XPC delivery"
     case RequestContractError.unknownField(let keys): kind = "unknown_field"; path = keys
     case DecodingError.typeMismatch(_, let context): kind = "type_mismatch"; path = context.codingPath
     case DecodingError.valueNotFound(_, let context): kind = "value_missing"; path = context.codingPath
@@ -331,9 +333,14 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
+        // The actor form hashes each apply actor's policy in its own driver.
         let policyHash: String
         do {
-            policyHash = try computePolicyHash(parsed.policy)
+            if parsed.isActorForm { policyHash = "" }
+            else {
+                guard let policy = parsed.policy else { throw PolicyHashError.missingField("policy") }
+                policyHash = try computePolicyHash(policy)
+            }
         } catch {
             let resp = PWRunnerRunResult(
                 specimen_id: parsed.specimen_id,
@@ -343,7 +350,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
                 error: "\(error)",
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: parsed.policy.format,
+                policy_format: parsed.policy?.format,
                 steps: []
             )
             replyAndExit(resp)

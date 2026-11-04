@@ -46,7 +46,7 @@ PolicyWitness supports imports the same way `sandbox-exec` does — `(import "na
 
 ## Can PolicyWitness test sandbox-extension behavior?
 
-Yes, for bounded file-read and directory read-write experiments. A fresh issuer outside the specimen sandbox prepares one token under ordinary authority: `read` selects `com.apple.app-sandbox.read`, and `read_write` selects `com.apple.app-sandbox.read-write`. Explicit phases can consume it once and release the returned handle once in the same worker under one fixed policy. Issuance, delivery, native lifecycle results, predictions and fresh-descriptor file observations remain separate. A successful consume or release does not establish effective permission or revocation. Raw tokens never enter the request or reply. See [sandbox extensions](PolicyWitness.md#sandbox-extensions).
+Yes. See [EXTENSIONS.md](EXTENSIONS.md) for supported extension operations and authority types.
 
 ## Which happens first, the prediction or the attempt?
 

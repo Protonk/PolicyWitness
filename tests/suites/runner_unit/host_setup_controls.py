@@ -94,9 +94,10 @@ def run(out, scratch):
              "munmap": "setup_munmap", "shm_unlink": "setup_unlink", "pw_cworker_shm_open_create": "setup_shm"}
     manifest = []
     expected = {
-        "CWorker.swift": {"posix_spawn_file_actions_init": 1, "posix_spawn_file_actions_destroy": 1,
-            "posix_spawn_file_actions_adddup2": 4, "posix_spawn": 1, "strdup": 1, "free": 1,
+        "ActorSession.swift": {"posix_spawn_file_actions_init": 1, "posix_spawn_file_actions_destroy": 1,
+            "posix_spawn_file_actions_adddup2": 4, "posix_spawn": 1,
             "fcntl": 8, "pipe": 2, "mmap": 1, "munmap": 1, "shm_unlink": 1, "pw_cworker_shm_open_create": 1},
+        "CWorker.swift": {"strdup": 1, "free": 1},
         "ExtensionIssuer.swift": {"posix_spawn_file_actions_init": 1, "posix_spawn_file_actions_destroy": 1,
             "posix_spawn_file_actions_adddup2": 1, "posix_spawn_file_actions_addopen": 1,
             "posix_spawnattr_init": 1, "posix_spawnattr_destroy": 1, "posix_spawnattr_setflags": 1,

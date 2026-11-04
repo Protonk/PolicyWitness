@@ -1,7 +1,9 @@
 """Live mandatory-reservation controls using disclosed copied-source gates.
 
 Production admission, orchestration and native effects remain in the copied
-host. Independent drivers author wrong/stale/cross-connection calls. The shipped
+host. One arrangement alters only the outgoing response-schema marker after a
+real execution, so the shipped controller meets an unsupported reply from the
+current XPC protocol. Independent drivers author wrong/stale/cross-connection calls. The shipped
 client supplies recovery/no-replay observations; one disclosed copied client
 holds capture publication after the real submission and completed host result.
 No controlled XPC loss attributes any historical failure or proves production
@@ -60,7 +62,7 @@ def service_source(source):
     source = replace_once(source, '            reply(true, data)',
         '            F2Trace.encoded(f2, result, data)\n'
         '            F2Trace.event(f2, "reply_invocation")\n'
-        '            reply(true, data)\n'
+        '            reply(true, ReservationTrace.outgoingReply(f2, data))\n'
         '            F2Trace.event(f2, "reply_returned")')
     call = '        let cResp = orchestrate(parsed, policyHash, bundleString("CFBundleIdentifier"), workerPath, validatorPath)'
     source = replace_once(source, call,
@@ -92,7 +94,7 @@ def build_host(scratch, out):
         body = original.read_text()
         if relative.endswith('/PWRunnerService.swift'):
             body = service_source(body)
-        elif relative.endswith('/CWorker.swift'):
+        elif relative.endswith('/ActorSession.swift'):
             body = worker_host_source(body)
         elif relative == 'runner/Services/PWRunner/main.swift':
             body = replace_once(body, 'let listener: NSXPCListener',
@@ -124,7 +126,8 @@ def build_host(scratch, out):
     save(out / 'source-hashes.json', hashes)
     save(out / 'instrumentation.json', dict(
         source_membership=sources, host_exit_delay_ms=50, gate_watchdog_seconds=20,
-        gates=['encoded grant/occupied control before invocation', 'execution reply after worker reap', 'retirement closure before exit(0)'],
+        gates=['encoded grant/occupied control before invocation', 'execution reply after worker reap', 'retirement closure before exit(0)',
+               'outgoing response-schema marker alteration after encoding'],
         unchanged_worker_identity_intentional=True,
         generated_worker_identity=contract.WORKER_IDENTITY,
         fixture_compiler_target='arm64-apple-macosx26.0', fixture_swift_optimization='-Onone',
@@ -331,7 +334,7 @@ class ReservationArrangement(Arrangement):
         self.processes.append(process); self.requests.append(record); save(folder / 'record.json', record)
         return process, record
 
-    def receive(self, launched):
+    def receive(self, launched, unsupported=None):
         process, record = launched
         folder = Path(record['folder'])
         try:
@@ -343,7 +346,12 @@ class ReservationArrangement(Arrangement):
             record['end_ns'] = time.monotonic_ns(); save(folder / 'record.json', record)
         value = json.loads((folder / 'stdout').read_bytes())
         problems = validate(value) if record['public'] else validate_capture(value)
-        assert not problems, problems
+        if unsupported is None:
+            assert not problems, problems
+        else:
+            # The reader refuses the preserved reply by version and reads nothing else.
+            assert problems == [f'unsupported runner response: schema_version {unsupported} '
+                                f'(this reader accepts {contract.RESPONSE_SCHEMA})'], problems
         save(folder / 'validated.json', value)
         return value
 
@@ -528,6 +536,37 @@ class ReservationArrangement(Arrangement):
             for peer in self.events(kind='legacy_protocol_control_substituted'):
                 self.no_host_execution(peer['host'])
 
+    def old_response(self):
+        # One real execution under the current protocol; only the reply's
+        # top-level response-schema marker is altered before the XPC reply.
+        name = 'f2-control-old-response'
+        value = self.receive(self.launch(name), unsupported=contract.RESPONSE_SCHEMA - 1)
+        assert self.requests[-1]['returncode'] == 1, self.requests[-1]
+        assert value['result']['normalized_outcome'] == 'unsupported_runner_response', value['result']
+        client = value['data']['runner_client']
+        assert client['submission'] == 'invoked' and client['transport_admission'] == 'accepted', client
+        assert client['transport']['terminal'] == 'runner_reply', client['transport']
+        preserved = value['data']['runner_result']
+        assert preserved['schema_version'] == contract.RESPONSE_SCHEMA - 1, preserved['schema_version']
+        assert value['data']['policy_check'] is None, 'refused reply requested a fallback compilation'
+        altered = self.event(name, 'outgoing_marker_altered')
+        assert altered['equal_after_restoring_marker'] is True
+        assert altered['original_marker'] == contract.RESPONSE_SCHEMA and altered['altered_marker'] == preserved['schema_version']
+        encoded = self.event(name, 'reply_encoded')
+        assert encoded['reply_sha256'] == altered['original_sha256'] and encoded['encoded_outcome'] == 'ok', (encoded, altered)
+        # The opaque reply is the real execution's reply: restoring the marker
+        # yields a valid current reply with the one effect.
+        restored = dict(preserved, schema_version=altered['original_marker'])
+        assert not validate(restored), validate(restored)
+        assert restored['normalized_outcome'] == 'ok' and restored['steps'][0]['attempt']['outcome'] == 'ok', restored['steps']
+        self.one_execution(name)
+        assert len(self.events(name, 'request_received')) == 1, 'execution was replayed'
+        assert not self.events(name, 'outgoing_marker_unaltered')
+        save(self.out / 'old-response.json', dict(controller_outcome=value['result']['normalized_outcome'],
+            controller_exit=self.requests[-1]['returncode'], preserved_marker=preserved['schema_version'],
+            alteration=altered, encoded=encoded, one_execution=True, replayed=False,
+            historical_host_interoperability_claimed=False))
+
     def cleanup(self):
         # A killed gated client has no capture; preserve its independent trace
         # even on an assertion failure before the normal copy was reached.
@@ -547,7 +586,7 @@ def main():
     host = build_host(scratch, out / 'build')
     driver, copied_client = build_callers(app, scratch, out / 'callers', identity)
     cases = ['credentials', 'expired', 'abandoned', 'lost_grant', 'lost_occupied',
-             'lost_execution', 'lost_capture', 'old_client', 'old_control']
+             'lost_execution', 'lost_capture', 'old_client', 'old_control', 'old_response']
     rows, failures = [], []
     for name in cases:
         folder = out / name; folder.mkdir()
@@ -556,7 +595,8 @@ def main():
         gates = {'reservation': ['exit']} if name in ('credentials', 'expired', 'abandoned') else (
             {'reservation': ['granted'] if name == 'lost_grant' else ['occupied', 'exit']} if name in ('lost_grant', 'lost_occupied') else
             {'f2-control-lost-execution': ['reply']} if name == 'lost_execution' else
-            {'reservation': ['legacy_control']} if name == 'old_control' else {})
+            {'reservation': ['legacy_control']} if name == 'old_control' else
+            {'reservation': ['old_response']} if name == 'old_response' else {})
         row = dict(arrangement=name, complete=False, cleanup_verified=False, resource=str(resource))
         try:
             candidate = custom_app(app, host, scratch, folder, identity, arrangement.trace, gates,
@@ -567,6 +607,7 @@ def main():
             elif name in ('lost_grant', 'lost_occupied'): arrangement.lost_control(driver, name == 'lost_occupied')
             elif name == 'lost_execution': arrangement.lost_execution()
             elif name == 'lost_capture': arrangement.lost_capture()
+            elif name == 'old_response': arrangement.old_response()
             else: arrangement.compatibility(driver, name == 'old_client')
             row['complete'] = True
         except BaseException as error:

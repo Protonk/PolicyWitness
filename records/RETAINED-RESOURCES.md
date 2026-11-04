@@ -29,6 +29,40 @@ Reviewed exceptions:
 - `witness_contract/order_barrier_mutations`: no worker wait, release store or
   eligibility change.
 
+## Sandbox-extension actor integration (2026-11-03)
+
+The explicit file authority path and the public actor form were accepted on
+the `extension-actors` branch and squashed into one commit on `main`. The plan
+(`SANDBOX-EXTENSION-WITNESSING-PLAN.md`) and its records
+(`records/sandbox-extension-issuance/`: the implementation journal and the
+test and documentation scouting reports) were retired with that integration;
+they remain recoverable at `4ebb1afc:SANDBOX-EXTENSION-WITNESSING-PLAN.md`
+and `4ebb1afc:records/sandbox-extension-issuance/IMPLEMENTATION-JOURNAL.md`.
+
+Acceptance ran on the candidate built at `a6695516` (build 1117, clean tree)
+in the worktree `/Users/raccoon/Desktop/Security/PolicyWitness-extension-actors`
+(branch `extension-actors`), whose `tests/out/runs/` holds the pinned runs
+`stage4-captures-01`, `stage4-acceptance-01` (default battery 213/213) and
+`stage4-acceptance-optin-01` (`order_barrier_mutations`, `actors_byoxpc`,
+`extensions_byoxpc`, `reservation_controls`), beside unpinned stage
+verification runs. Pins are relative to that worktree's `tests/out`; keep it
+whole. The main checkout's `tests/out` does not contain these runs.
+
+Resources outside worktrees created by this work:
+
+- `~/Library/Containers/com.policywitness.test.restricted-worker` and
+  `~/Library/Containers/com.policywitness.test.restricted-worker.1ef4fe8633cb88c7`:
+  App Sandbox containers created by the inherited-restriction control's
+  bundled worker copy (the second from the first run, before the control used
+  one fixed identifier). They hold nothing of value. The harness cannot remove
+  them (`EPERM` without Full Disk Access); delete them from Finder or a
+  terminal with Full Disk Access when convenient. The control reports a
+  retained container in its pass message each time it runs.
+- A crash report `~/Library/Logs/DiagnosticReports/pw-probe-runner-2026-11-03-185426.ips`
+  from the first restricted-worker launch (bare executable, no bundle
+  identifier); it is the retained diagnosis for the bundle requirement and
+  can be deleted.
+
 ## Why these stay where they are
 
 Retained runs are bound to their absolute location: `retention.valid_owner`

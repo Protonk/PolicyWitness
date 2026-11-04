@@ -1,0 +1,291 @@
+import Darwin
+import Foundation
+@testable import PWRunnerCore
+
+/*
+ * ActorSchedulerTests — the actor scheduler against the bundled worker and
+ * validator. Each case launches real processes: distinct policies reach
+ * distinct, identified processes and each applies once; repeated visits keep
+ * those identities; parked actors are quiescent; a failed setup, a death and a
+ * lost validator leave the other actors' evidence intact; the shared cutoff
+ * ends parked waits with published failures.
+ *
+ * Independent observations here come from the kernel (sysctl process table,
+ * kill(pid, 0)), from sb_api_validator against the active PID and from the
+ * other sessions' own publications, not from the scheduler's labels.
+ */
+
+private func equipment(_ name: String) -> String {
+    let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().deletingLastPathComponent()
+    let app = ProcessInfo.processInfo.environment["PW_APP_DIR"] ?? root.appendingPathComponent("dist/PolicyWitness.app").path
+    return app + "/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/" + name
+}
+
+private let hosts = "/private/etc/hosts"
+private let passwd = "/private/etc/passwd"
+private let allowAll = "(version 1)(allow default)"
+private func denyRead(_ path: String) -> String { "(version 1)(allow default)(deny file-read* (literal \"\(path)\"))" }
+
+private func read(_ id: String, _ target: String) -> CWorkerSlotInput {
+    CWorkerSlotInput(stepId: id, attemptKind: .fileOpenRead, target: target)
+}
+
+/// One actor's driver input from its visits: each visit names its global phase
+/// index and carries its own slots, in schedule order.
+private func actorInput(policy: String, visits: [(phase: Int, slots: [CWorkerSlotInput])],
+                        killBeforePublishSlot: Int? = nil) -> CWorkerInput {
+    var slots: [CWorkerSlotInput] = []
+    var phases: [CWorkerPhaseInput] = []
+    for visit in visits {
+        phases.append(CWorkerPhaseInput(firstSlot: slots.count, endSlot: slots.count + visit.slots.count, globalPhase: visit.phase + 1))
+        slots += visit.slots
+    }
+    var input = CWorkerInput(workerExecutablePath: equipment("pw-probe-runner"), policy: policy, slots: slots, phases: phases,
+                             sentinelTimeoutMs: 10_000, killBeforePublishSlot: killBeforePublishSlot)
+    input.proceedWaitMs = 5_000
+    return input
+}
+
+/// The global schedule from the actors' visit lists.
+private func schedule(_ visits: [[Int]]) -> [ActorScheduleEntry] {
+    var entries: [ActorScheduleEntry] = []
+    for (actor, phases) in visits.enumerated() {
+        for (visit, phase) in phases.enumerated() { entries.append(ActorScheduleEntry(phaseIndex: phase, actorIndex: actor, visit: visit)) }
+    }
+    return entries.sorted { $0.phaseIndex < $1.phaseIndex }
+}
+
+private func parentPid(of pid: pid_t) -> pid_t? {
+    var info = kinfo_proc()
+    var size = MemoryLayout<kinfo_proc>.stride
+    var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+    guard sysctl(&mib, UInt32(mib.count), &info, &size, nil, 0) == 0, size > 0 else { return nil }
+    return info.kp_eproc.e_ppid
+}
+
+private func verdicts(pid: pid_t, validator: String = equipment("sb_api_validator")) -> [String: String] {
+    let probes = [ValidatorProbe(stepId: "hosts", operation: "file-read-data", filterType: "PATH", filterValue: hosts),
+                  ValidatorProbe(stepId: "passwd", operation: "file-read-data", filterType: "PATH", filterValue: passwd)]
+    let result = runValidator(ValidatorClientInput(executablePath: validator, targetPid: pid, probes: probes, verdictReadTimeoutMs: 5_000))
+    guard case .success(let output) = result else { return [:] }
+    return Dictionary(uniqueKeysWithValues: output.verdicts.compactMap { v in v.stepId.map { ($0, v.outcome) } })
+}
+
+private func denied(_ slot: CWorkerSlotResult) -> Bool { slot.completed && slot.rc != 0 && [EPERM, EACCES].contains(slot.errnoVal) }
+private func readOK(_ slot: CWorkerSlotResult) -> Bool { slot.completed && slot.rc == 0 }
+
+func runActorSchedulerTests(_ tk: TestKit) {
+    let workerPresent = FileManager.default.isExecutableFile(atPath: equipment("pw-probe-runner"))
+    tk.group("actor scheduler: owned sessions and the serial schedule") {
+        tk.run("two policies reach two identified processes, each applied once, across repeated visits") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            let both = [read("hosts", hosts), read("passwd", passwd)]
+            let input = ActorScheduleInput(
+                actors: [actorInput(policy: denyRead(hosts), visits: [(0, both), (2, both)]),
+                         actorInput(policy: denyRead(passwd), visits: [(1, both), (3, both)])],
+                applies: [true, true], schedule: schedule([[0, 2], [1, 3]]))
+            let scheduler = ActorScheduler(input)
+            var observed: [(phase: Int, actor: Int, pid: pid_t, parent: pid_t?, verdicts: [String: String],
+                            otherAlive: Bool, otherCompleted: Int, otherArrivedNext: Bool, otherActivation: UInt32)] = []
+            let outcome = scheduler.run { phase, actor, pid in
+                let other = scheduler.sessions[1 - actor]!
+                // The parked actor's next visit: B's first, A's second, B's second,
+                // and none for A once its visits are spent.
+                let nextVisit: Int? = [0, 1, 1, nil][phase]
+                observed.append((phase, actor, pid, parentPid(of: pid), verdicts(pid: pid),
+                                 kill(other.pid, 0) == 0, other.completedSlotCount,
+                                 nextVisit.map { other.arrived($0) } ?? false, other.activationObserved))
+            }
+            try expectNil(outcome.cancelled)
+            try expectEqual(outcome.visits.map { $0.endReason }, ["completed", "completed", "completed", "completed"])
+            try expectEqual(outcome.visits.map { $0.actorIndex }, [0, 1, 0, 1])
+            try expectTrue(outcome.visits.allSatisfy { $0.activationStored && $0.arrivalObserved && $0.collectionClosed
+                && $0.releaseStored && $0.acknowledgementObserved && $0.completionObserved && $0.violations.isEmpty })
+            // Each actor: its own process, applied once, reaped after a clean exit.
+            let a = outcome.actors[0], b = outcome.actors[1]
+            try expectEqual([a.setupStatus, b.setupStatus], [.applied, .applied])
+            try expectEqual([a.applicationCount, b.applicationCount], [1, 1])
+            try expectTrue(a.pid != nil && b.pid != nil && a.pid != b.pid)
+            try expectEqual([a.quiescence, b.quiescence], ["reaped", "reaped"])
+            for record in [a, b] {
+                guard let out = record.output else { throw TestFailure(message: "missing output for actor \(record.index)") }
+                try expectTrue(out.applied && out.applyRC == 0 && out.done && out.exitCode == 0)
+                try expectEqual(out.actorSetup, 1)
+                try expectEqual(out.activationObserved, UInt32(record.index == 0 ? 3 : 4))
+                try expectEqual(out.phases.map { $0.completed }, [true, true])
+                try expectEqual(out.phases.map { $0.ownershipEstablished }, [true, true])
+                try expectEqual(out.policyReceivedSha256, sha256Hex(Data(input.actors[record.index].policy.utf8)))
+            }
+            // The attempts: A's hosts reads denied and passwd readable on both visits; B the reverse.
+            let aSlots = a.output!.slots, bSlots = b.output!.slots
+            try expectTrue(denied(aSlots[0]) && readOK(aSlots[1]) && denied(aSlots[2]) && readOK(aSlots[3]), "\(aSlots.map { ($0.rc, $0.errnoVal) })")
+            try expectTrue(readOK(bSlots[0]) && denied(bSlots[1]) && readOK(bSlots[2]) && denied(bSlots[3]), "\(bSlots.map { ($0.rc, $0.errnoVal) })")
+            // Independent: the kernel's process table names this host as parent,
+            // the validator's verdicts against the live PID follow that actor's
+            // policy at every visit, and the parked actor stayed alive with no
+            // new completion, no arrival for its next visit and no activation.
+            try expectEqual(observed.count, 4)
+            for (i, o) in observed.enumerated() {
+                try expectEqual(o.phase, i)
+                try expectEqual(o.pid, outcome.actors[o.actor].pid!)
+                try expectEqual(o.parent, getpid())
+                try expectEqual(o.verdicts["hosts"], o.actor == 0 ? "deny" : "allow", "phase \(i)")
+                try expectEqual(o.verdicts["passwd"], o.actor == 0 ? "allow" : "deny", "phase \(i)")
+                try expectTrue(o.otherAlive, "phase \(i): parked actor alive")
+                // The parked actor holds exactly the completions of its own earlier visits.
+                try expectEqual(o.otherCompleted, [0, 2, 2, 4][i], "phase \(i): parked actor completions")
+                try expectFalse(o.otherArrivedNext, "phase \(i): parked actor arrival")
+                // The parked actor's last accepted activation is its own last visit's ordinal.
+                try expectEqual(o.otherActivation, UInt32(i), "phase \(i): parked actor activation")
+            }
+            try expectEqual(outcome.setupWait?.stop, "all_resolved")
+            try expectEqual(outcome.executionWait?.stop, "schedule_complete")
+        }
+        tk.run("an unapplied actor declares itself, applies nothing and reads; an applied deny-default actor is denied") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            let input = ActorScheduleInput(
+                actors: [actorInput(policy: "", visits: [(0, [read("hosts", hosts)])]),
+                         actorInput(policy: "(version 1)(deny default)", visits: [(1, [read("hosts", hosts)])])],
+                applies: [false, true], schedule: schedule([[0], [1]]))
+            let outcome = ActorScheduler.run(input) { _, _, _ in }
+            try expectNil(outcome.cancelled)
+            try expectEqual(outcome.visits.map { $0.endReason }, ["completed", "completed"])
+            let a = outcome.actors[0], b = outcome.actors[1]
+            try expectEqual(a.setupStatus, .unappliedDeclared)
+            try expectEqual(a.applicationCount, 0)
+            try expectTrue(a.output!.applied == false && a.output!.applyRC == 0 && a.output!.done)
+            try expectEqual(a.output!.actorSetup, 2)
+            try expectNil(a.output!.profileCapture)
+            try expectTrue(readOK(a.output!.slots[0]))
+            try expectEqual(a.output!.policyReceivedSha256, sha256Hex(Data()))
+            try expectEqual(b.setupStatus, .applied)
+            try expectTrue(b.output!.applied && denied(b.output!.slots[0]))
+        }
+        tk.run("a failed setup leaves the other actor's visits intact") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            let input = ActorScheduleInput(
+                actors: [actorInput(policy: "(version 1)(bogus", visits: [(0, [read("hosts", hosts)]), (2, [read("hosts", hosts)])]),
+                         actorInput(policy: allowAll, visits: [(1, [read("hosts", hosts)]), (3, [read("passwd", passwd)])])],
+                applies: [true, true], schedule: schedule([[0, 2], [1, 3]]))
+            let outcome = ActorScheduler.run(input) { _, _, _ in }
+            try expectNil(outcome.cancelled)
+            try expectEqual(outcome.visits.map { $0.endReason }, ["actor_unavailable", "completed", "actor_unavailable", "completed"])
+            let a = outcome.actors[0], b = outcome.actors[1]
+            try expectEqual(a.setupStatus, .setupFailed)
+            try expectEqual(a.applicationCount, 0)
+            try expectEqual(a.quiescence, "reaped")
+            try expectEqual(a.stopReason, "setup_failed")
+            try expectTrue(a.output!.done && !a.output!.applied && a.output!.applyRC == -1)
+            try expectEqual(a.output!.actorSetup, 0)
+            try expectTrue(a.output!.slots.allSatisfy { !$0.completed })
+            try expectEqual(b.setupStatus, .applied)
+            try expectTrue(b.output!.slots.allSatisfy(readOK))
+            try expectEqual(b.output!.phases.map { $0.completed }, [true, true])
+        }
+        tk.run("the active actor's death is established before the next activation; later actors continue") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            let input = ActorScheduleInput(
+                actors: [actorInput(policy: allowAll, visits: [(0, [read("hosts", hosts)]), (2, [read("hosts", hosts)])], killBeforePublishSlot: 0),
+                         actorInput(policy: allowAll, visits: [(1, [read("hosts", hosts)]), (3, [read("passwd", passwd)])])],
+                applies: [true, true], schedule: schedule([[0, 2], [1, 3]]))
+            var aliveAtCollection: [Bool] = []
+            let scheduler = ActorScheduler(input)
+            let outcome = scheduler.run { _, actor, _ in
+                if actor == 1 { aliveAtCollection.append(kill(scheduler.sessions[0]!.pid, 0) == 0) }
+            }
+            try expectNil(outcome.cancelled)
+            try expectEqual(outcome.visits.map { $0.endReason }, ["died_before_completion", "completed", "actor_unavailable", "completed"])
+            let a = outcome.actors[0], b = outcome.actors[1]
+            try expectEqual(a.quiescence, "reaped")
+            try expectEqual(a.stopReason, "died_before_completion")
+            try expectEqual(a.output!.termSignal, SIGKILL)
+            try expectTrue(a.output!.applied && !a.output!.done)
+            try expectTrue(outcome.visits[0].releaseStored && outcome.visits[0].acknowledgementObserved && !outcome.visits[0].completionObserved)
+            try expectTrue(a.output!.slots.allSatisfy { !$0.completed })
+            // By B's first collection the dead actor is already reaped, so the
+            // kernel no longer knows its PID as ours.
+            try expectEqual(aliveAtCollection, [false, false])
+            try expectTrue(b.output!.slots.allSatisfy(readOK))
+            try expectEqual(b.output!.phases.map { $0.completed }, [true, true])
+        }
+        tk.run("a lost validator and long collections do not consume the schedule allowance") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            var input = ActorScheduleInput(
+                actors: [actorInput(policy: denyRead(hosts), visits: [(0, [read("hosts", hosts)])]),
+                         actorInput(policy: allowAll, visits: [(1, [read("hosts", hosts)])])],
+                applies: [true, true], schedule: schedule([[0], [1]]))
+            input.executionAllowanceMs = 400
+            var lost: [String: String]? = nil
+            let outcome = ActorScheduler.run(input) { phase, _, pid in
+                if phase == 0 { lost = verdicts(pid: pid, validator: "/nonexistent/sb_api_validator") }
+                usleep(300_000)
+            }
+            try expectEqual(lost, [:])
+            try expectNil(outcome.cancelled)
+            try expectEqual(outcome.visits.map { $0.endReason }, ["completed", "completed"])
+            try expectTrue(denied(outcome.actors[0].output!.slots[0]) && readOK(outcome.actors[1].output!.slots[0]))
+            try expectTrue((outcome.executionWait?.excluded_ms ?? 0) >= 600)
+        }
+        tk.run("the shared lifetime cutoff ends parked and released waits with published timing failures") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            var input = ActorScheduleInput(
+                actors: [actorInput(policy: allowAll, visits: [(0, [read("hosts", hosts)])]),
+                         actorInput(policy: allowAll, visits: [(1, [read("hosts", hosts)])])],
+                applies: [true, true], schedule: schedule([[0], [1]]))
+            input.lifetimeMs = 400
+            let outcome = ActorScheduler.run(input) { _, _, _ in usleep(800_000) }
+            // A hits the cutoff inside its release wait while the collection hook
+            // holds the schedule, publishes done and exits, and is reaped before the
+            // host rechecks ownership after collection; B hits it while parked.
+            try expectEqual(outcome.visits.map { $0.endReason }, ["died_during_collection", "ended_before_arrival"])
+            for (index, expectedOp) in [(0, UInt32(11)), (1, UInt32(13))] {
+                let record = outcome.actors[index]
+                try expectEqual(record.quiescence, "reaped")
+                guard let failure = record.output?.workerEvidence?.failure else { throw TestFailure(message: "actor \(index): no published failure") }
+                try expectEqual(failure.operation, expectedOp)
+                try expectEqual(failure.code, 15)
+                try expectTrue(record.output!.done && record.output!.exitCode == 0)
+                try expectTrue(record.output!.slots.allSatisfy { !$0.completed })
+            }
+        }
+        tk.run("a cutoff already past refuses every actor at clock setup") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            var input = ActorScheduleInput(
+                actors: [actorInput(policy: allowAll, visits: [(0, [read("hosts", hosts)])])],
+                applies: [true], schedule: schedule([[0]]))
+            input.lifetimeMs = 0
+            let outcome = ActorScheduler.run(input) { _, _, _ in }
+            try expectEqual(outcome.visits.map { $0.endReason }, ["actor_unavailable"])
+            let a = outcome.actors[0]
+            try expectEqual(a.setupStatus, .exitedBeforeSetup)
+            try expectEqual(a.output!.exitCode, 12)
+            try expectFalse(a.output!.readyByteReceived)
+            guard let failure = a.output?.workerEvidence?.failure else { throw TestFailure(message: "no published failure") }
+            try expectEqual([failure.operation, failure.code, failure.detail], [12, 15, 1])
+        }
+        tk.run("eight actors each complete one visit under the setup and execution allowances") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            let actors = (0..<PWActorLimits.actors).map { i in
+                actorInput(policy: i % 2 == 0 ? allowAll : denyRead(hosts), visits: [(i, [read("hosts", hosts)])])
+            }
+            let input = ActorScheduleInput(actors: actors, applies: actors.map { _ in true },
+                                           schedule: schedule(actors.indices.map { [$0] }))
+            let scheduler = ActorScheduler(input)
+            var parkedActivations: [[UInt32]] = []
+            let outcome = scheduler.run { phase, _, _ in
+                parkedActivations.append(scheduler.sessions.enumerated().filter { $0.offset > phase }.map { $0.element!.activationObserved })
+            }
+            try expectNil(outcome.cancelled)
+            try expectEqual(outcome.visits.map { $0.endReason }, Array(repeating: "completed", count: PWActorLimits.actors))
+            try expectEqual(Set(outcome.actors.compactMap { $0.pid }).count, PWActorLimits.actors)
+            for (i, record) in outcome.actors.enumerated() {
+                try expectEqual(record.setupStatus, .applied, "actor \(i)")
+                try expectEqual(record.output?.activationObserved, UInt32(i + 1), "actor \(i)")
+                try expectEqual(i % 2 == 0 ? readOK(record.output!.slots[0]) : denied(record.output!.slots[0]), true, "actor \(i)")
+            }
+            try expectTrue(parkedActivations.allSatisfy { $0.allSatisfy { $0 == 0 } })
+            try expectEqual(outcome.setupWait?.stop, "all_resolved")
+        }
+    }
+}

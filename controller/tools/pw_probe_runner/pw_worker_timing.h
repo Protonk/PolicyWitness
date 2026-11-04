@@ -38,7 +38,9 @@
  * stage, never by the ordinal of a clock call. No request can select one. */
 enum pw_clock_phase {
     PW_CLOCK_WORKER_START, PW_CLOCK_PROCEED_START, PW_CLOCK_PROCEED_OBSERVE,
-    PW_CLOCK_EXEC_ADMIT, PW_CLOCK_EXEC_OBSERVE, PW_CLOCK_EXEC_REAP
+    PW_CLOCK_EXEC_ADMIT, PW_CLOCK_EXEC_OBSERVE, PW_CLOCK_EXEC_REAP,
+    PW_CLOCK_ACTIVATE_START, PW_CLOCK_ACTIVATE_OBSERVE,
+    PW_CLOCK_EXCHANGE_START, PW_CLOCK_EXCHANGE_OBSERVE
 };
 
 /* Continuous Mach time in relative ticks. It advances during system sleep
@@ -76,11 +78,15 @@ typedef struct {
     pw_clock_t clock;
     uint64_t proceed_ticks, budget_ticks, child_ticks, reap_ticks;
     uint64_t plan_deadline;
+    /* The actor form's shared lifetime cutoff, relative to the worker origin;
+     * zero means no cutoff (the legacy form). */
+    uint64_t cutoff_ticks;
     long proceed_ms, budget_ms, child_ms;
 } pw_timing_t;
 
 static const char *const pw_clock_stage_names[] = {
-    "worker_start", "proceed_start", "proceed_observe", "exec_admit", "exec_observe", "exec_reap"
+    "worker_start", "proceed_start", "proceed_observe", "exec_admit", "exec_observe", "exec_reap",
+    "activate_start", "activate_observe", "exchange_start", "exchange_observe"
 };
 static const char *const pw_time_reason_names[] = {
     "none", "invalid_timebase", "invalid_duration", "backwards_counter",

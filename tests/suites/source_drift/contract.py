@@ -248,7 +248,7 @@ class WorkerIdentityTests(receipts.TestCase):
             ('controller/tools/pw_probe_runner/pw_probe_runner.c',
              'atomic_load_explicit(&hdr->proceed, memory_order_acquire)',
              'atomic_load_explicit(&hdr->proceed, memory_order_relaxed)'),
-            ('runner/Sources/PWRunnerCore/CWorker.swift',
+            ('runner/Sources/PWRunnerCore/ActorSession.swift',
              'storeRelease(rawBase, offset: PWShmLayout.proceedOffset, ordinal)',
              'storeRelease(rawBase, offset: PWShmLayout.proceedOffset, 0)'),
         ]

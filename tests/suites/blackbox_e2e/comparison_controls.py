@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from blackbox import recapture_host_reply
-BASE = ROOT / 'tests/fixtures/blackbox_e2e/checker/response24/valid_run.json'
+BASE = ROOT / 'tests/fixtures/blackbox_e2e/checker/response25/valid_run.json'
 COMPARER = ROOT / 'tests/lib/envelope_compare.py'
 
 

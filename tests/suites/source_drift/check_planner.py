@@ -303,7 +303,7 @@ def meson_scenarios(repo):
     assert original.count(client_line) == 1, 'fixture requires the explicit client contract boundary'
     client_without_coding = [
         'PWRunnerAPI', 'PWRunnerTransport', 'PWRunnerRequest', 'PWRunnerExtension',
-        'PWRunnerPathEvidence', 'PWRunnerAttemptEvidence', 'PWRunnerPredictionEvidence',
+        'PWRunnerActors', 'PWRunnerPathEvidence', 'PWRunnerAttemptEvidence', 'PWRunnerPredictionEvidence',
         'PWRunnerStepEvidence', 'PWRunnerLifecycleEvidence', 'PWRunnerDisposition',
         'PWRunnerProfileCapture', 'PWRunnerReply',
     ]
@@ -604,8 +604,8 @@ def rule_gap_scenarios(repo):
     timeout_row, last = row_named(rows, 'runner_timeout'), rows[-1]
     attempt_rows = rows_under(coverage, '## Attempt outcome coverage matrix')
     sysctl_row, attempt_last = row_named(attempt_rows, 'sysctl_failed'), attempt_rows[-1]
-    swift_close = '    case fileCreateFresh = 13\n}'
-    c_close = '    PW_ATTEMPT_FILE_CREATE_FRESH = 13,\n} pw_attempt_kind_t;'
+    swift_close = '    case extensionTransfer = 15\n}'
+    c_close = '    PW_ATTEMPT_EXTENSION_TRANSFER = 15,\n} pw_attempt_kind_t;'
     assert source[swift].count(swift_close) == 1 and source[header].count(c_close) == 1, 'fixture requires the current attempt kinds'
     assert source[swift].count('    case sysctlRead     = 7\n') == 1
     seam_first = rows_under(runner_readme, '## Test seam: `_test_overrides`')[0]
@@ -628,18 +628,18 @@ def rule_gap_scenarios(repo):
                  "attempt-outcome matrix lists 'bogus_attempt' but no AttemptOutcome constant by that name exists"),
         Scenario('rule-matrix-restored', {coverage: source[coverage]}, matrices),
         Scenario('rule-attempt-kind-swift-extra',
-                 {swift: source[swift].replace(swift_close, '    case fileCreateFresh = 13\n    case extraKind = 14\n}', 1)},
-                 {KINDS: ['attempt_kind.swift_only']}, 'Swift PWAttemptKind.EXTRA_KIND=14 has no matching pw_attempt_kind_t value'),
+                 {swift: source[swift].replace(swift_close, '    case extensionTransfer = 15\n    case extraKind = 16\n}', 1)},
+                 {KINDS: ['attempt_kind.swift_only']}, 'Swift PWAttemptKind.EXTRA_KIND=16 has no matching pw_attempt_kind_t value'),
         Scenario('rule-attempt-kind-c-extra',
-                 {header: source[header].replace(c_close, '    PW_ATTEMPT_FILE_CREATE_FRESH = 13,\n    PW_ATTEMPT_EXTRA_KIND = 14,\n} pw_attempt_kind_t;', 1)},
-                 {KINDS: ['attempt_kind.c_only']}, 'C PW_ATTEMPT_EXTRA_KIND=14 has no matching PWAttemptKind raw value'),
+                 {header: source[header].replace(c_close, '    PW_ATTEMPT_EXTENSION_TRANSFER = 15,\n    PW_ATTEMPT_EXTRA_KIND = 16,\n} pw_attempt_kind_t;', 1)},
+                 {KINDS: ['attempt_kind.c_only']}, 'C PW_ATTEMPT_EXTRA_KIND=16 has no matching PWAttemptKind raw value'),
         Scenario('rule-attempt-kind-name-mismatch',
                  {swift: source[swift].replace('    case sysctlRead     = 7\n', '    case sysctlQuery    = 7\n', 1)},
                  {KINDS: ['attempt_kind.name_mismatch']}, 'value 7 is PW_ATTEMPT_SYSCTL_READ in C but PWAttemptKind.SYSCTL_QUERY in Swift'),
         Scenario('rule-attempt-kind-c-gap',
-                 {swift: source[swift].replace(swift_close, '    case fileCreateFresh = 13\n    case gapped = 15\n}', 1),
-                  header: source[header].replace(c_close, '    PW_ATTEMPT_FILE_CREATE_FRESH = 13,\n    PW_ATTEMPT_GAPPED = 15,\n} pw_attempt_kind_t;', 1)},
-                 {KINDS: ['attempt_kind.gap']}, 'pw_attempt_kind_t has a numeric gap at 14'),
+                 {swift: source[swift].replace(swift_close, '    case extensionTransfer = 15\n    case gapped = 17\n}', 1),
+                  header: source[header].replace(c_close, '    PW_ATTEMPT_EXTENSION_TRANSFER = 15,\n    PW_ATTEMPT_GAPPED = 17,\n} pw_attempt_kind_t;', 1)},
+                 {KINDS: ['attempt_kind.gap']}, 'pw_attempt_kind_t has a numeric gap at 16'),
         Scenario('rule-attempt-kind-malformed-c-enum', {header: source[header].replace('} pw_attempt_kind_t;', '};', 1)},
                  {KINDS: ['enum.missing']}, 'could not locate pw_attempt_kind_t in pw_probe_runner_abi.h'),
         Scenario('rule-attempt-kind-restored', {swift: source[swift], header: source[header]}, {KINDS: []}),

@@ -152,6 +152,45 @@ recipe. Expected refusals remain independent corpus data. Consume/release may
 be omitted or share a phase; their order is an action-order rule, not a promise
 that effective permissions are stable during a phase.
 
+## Give each actor its own sandbox
+
+The actor form replaces the singular `policy` with `actors`: each actor has an
+`actor_id` and a `sandbox` whose `mode` is `apply` (with its own `policy`
+object) or `unapplied` (no policy; the process runs under the runner's
+ordinary authority). Every phase names its `actor_id`, every declared actor
+owns at least one phase; `probe_plan` and `extensions` do not combine with
+`actors`, and `policy` is absent. The
+corpus's `actors_redelegation` is the principal specimen: an unapplied `A`
+issues a file token and transfers it to `B`; `B` consumes it, reads, issues
+under the consumed extension and transfers to `C`; `C` consumes and reads;
+both handles are released; a final phase has `A` create the corpus's effect
+file, the independent witness that the request executed. The guide's
+[sandbox-extension section](PolicyWitness.md#sandbox-extensions) walks the
+same request.
+
+Extension actions name their operands by reference. `issue` takes `family`
+(`file`), `authority` (`read` or `read_write`), an absolute `target` and a new
+`token_ref`; `transfer` takes an existing `token_ref`, a `recipient` actor and a
+new `delivery_ref`; `consume` takes a `delivery_ref` the acting actor received
+and a new `handle_ref`; `release` takes that `handle_ref`. References are
+assigned once across tokens, deliveries and handles, used after their producer
+in global action order, and owned: only the issuing actor transfers its token,
+only the recipient consumes a delivery, only the consuming actor releases its
+handle. An actor that issues, sends, receives, consumes or releases cannot also
+`exec`; another actor may. Each capacity is a specimen-wide count.
+
+| Corpus family | Meaning or refusal |
+| --- | --- |
+| `actors_with_policy`, `actors_with_probe_plan`, `actors_with_legacy_extensions`, `actors_without_phases`, `actors_empty_phases`, `actors_empty` | The actor form is one closed shape: actors with explicit phases and nothing from the singular form. |
+| `actor_empty_id`, `actor_duplicate_id`, `actor_unknown_mode`, `actor_unapplied_with_policy`, `actor_apply_without_policy`, `actor_policy_format`, `actor_unknown_sandbox_field` | Actor identity and sandbox objects are closed and complete. |
+| `actor_policy_augments_direct` | Named augments resolve in the controller per actor; direct XPC refuses them at the actor's own path. |
+| `phase_without_actor`, `phase_unknown_actor`, `actor_without_phases`, `transfer_unknown_recipient` | Phases and transfers name declared actors, and every declared actor owns at least one phase. |
+| `issue_unknown_family`, `issue_raw_class`, `issue_relative_target`, `issue_with_handle`, `transfer_without_delivery`, `consume_legacy_spelling` | Each operation takes exactly its operands; raw classes and relative targets are refused. |
+| `transfer_unknown_token`, `transfer_before_issue`, `transfer_wrong_owner`, `consume_wrong_owner`, `consume_unknown_delivery`, `release_wrong_owner`, `release_repeated`, `issue_duplicate_reference`, `handle_duplicates_delivery`, `transfer_empty_token`, `actor_duplicate_step` | References follow their producers, keep their owners and are assigned once. |
+| `exec_in_extension_actor`, `exec_in_other_actor` | The exec exclusion is per participating actor, not specimen-wide. |
+| `self_transfer`, `repeated_consume` | A delivery to the sending actor and repeated consumption of one delivery are admitted with distinct references. |
+| Actor, phase, issue, delivery, handle, release, action, identifier and target exact/over cases | The actor-form capacities and byte bounds apply inclusively. |
+
 ## The entry point matters
 
 The controller accepts an authored specimen and resolves controller-owned
@@ -163,6 +202,7 @@ Both independently enforce the request marker.
 | `selector` | Resolves and records runner selection; creates the file. | Rejects `runner` as an unknown field. |
 | `selector_typo` | Identifies the non-string entitlement at its array position. | Rejects the controller-only `runner` field. |
 | `augment` | Resolves the named fragment, records policy provenance, and creates the file. | Refuses unresolved `policy.augments`. |
+| `actor_policy_augments_direct` | Resolves each actor's named fragment and records a dossier per actor. | Refuses unresolved `actors[].sandbox.policy.augments`. |
 
 Consistent diagnostics do not imply identical accepted fields at different
 boundaries. The corpus records an expectation for each boundary explicitly.

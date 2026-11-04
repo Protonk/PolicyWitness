@@ -54,6 +54,9 @@ runQueryAdmissionTests(tk)
 runContractVersionTests(tk)
 // Closed request objects, exact input version, lossless fields and separate admission limits.
 runRequestContractTests(tk)
+// The actor form's draft contract: public refusal until wiring, the normalizer's
+// owned reference tables, and the draft corpus's refusals.
+runActorPlanTests(tk)
 // Synthesized maximal reply (256 steps, every string at its limit) and the
 // runner client budget derived from it; unclassified reply keys fail here.
 runReplyMaximumTests(tk)
@@ -61,6 +64,14 @@ runReplyMaximumTests(tk)
 runPathDiagnosticsTests(tk)
 // CWorker driver with a real worker: shm setup, sentinel polling, publication.
 runCWorkerTests(tk)
+// The actor scheduler with real workers: distinct policies per process,
+// repeated visits, parked quiescence, setup failure, death and cutoff.
+runActorSchedulerTests(tk)
+// The native file authority path: issue, host custody, explicit transfer,
+// parked acceptance, consume after release, release and the faults between.
+runActorAuthorityTests(tk)
+// The actor form through the production orchestrator: assembled, encoded and decoded.
+runActorReplyTests(tk)
 // Production host driver against the separately built ABI fixture with
 // controlled kill/waitpid faults; host lifecycle observations only. The fixture
 // never applies a sandbox, so no policy cause can be claimed here.

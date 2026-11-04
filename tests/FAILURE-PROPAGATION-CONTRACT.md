@@ -225,6 +225,26 @@ failure observed while undoing earlier setup. A cleanup failure never changes
 the status. The account is present exactly for those two statuses. Delivery
 success still establishes neither consumption nor effective access.
 
+The actor form (`execution_form: actors`) has no `extensions[]` and no singular
+worker: `actors[]` carries each actor's mode, setup status, policy hashes
+(the host's hash of the submitted source and the worker's hash of the bytes it
+read), launch context and its own `subprocess` with its disposition record.
+`extension_events[]` then carry `actor_id`, `family` and, for an issue, the
+exact `target`, `extension_class`, `flags`, `native_nonnull` and
+`token_length`; a transfer event carries no native result and its `status` is
+the host's acknowledgement (`delivered`, `custody_unavailable`,
+`recipient_rejected`, `recipient_timeout`, `recipient_unavailable`,
+`request_invalid`, `host_timeout`, `clock_fault` or `copy_mismatch`).
+`transfers[]` record each exchange from the host's side: the request, custody,
+copy, byte equality, recipient and source acknowledgement. `resources` holds
+the token, delivery and handle tables keyed by the request's references with
+their owners, producing steps and last declared uses. Readers join an event to
+its actor, that actor's phase, the resource table and the actor's disposition
+record; a release must follow a consume of the same handle in action order,
+and no event is credited without the acting actor's declared or applied setup
+and that phase's acknowledged release. Custody acceptance, delivery acceptance
+and native consumption remain three observations.
+
 <!-- BEGIN SHARED EXTENSION STATUSES -->
 
 Issuance and delivery are separate observations. Only `issued` makes the token
@@ -263,6 +283,34 @@ keeps that wait status; clean and abnormal reaps distinguish `issued` from
 | `channel_rejected` | The worker inspected the channel and rejected it. `delivery_failure.stage` is `channel_size` (a successful `fstat` reported an object smaller than the channel; `native_rc` 0 and no errno), `channel_header` (magic, completion or status) or `channel_token` (length, terminator or embedded NUL). Format rejections carry no native result. No delivered byte count is supplied. |
 | `local_setup_failed` | A local native call before channel validation failed. `delivery_failure.stage` is `core_limit` (`setrlimit`), `descriptor_metadata` (`fstat`), `mapping` (`mmap`) or `descriptor_close` (`close`), with that call's `native_rc` and the errno saved immediately after it. The channel contents were not judged. No delivered byte count is supplied. |
 | `native_api_unavailable` | The worker published that consume or release API support was unavailable. No delivered byte count is supplied. |
+
+In the actor form, host custody and explicit transfer have their own statuses.
+A custody status describes the host's acceptance of the bytes an actor
+published after a nonnull native issue; a transfer status describes the host's
+answer to the sending actor and is never a native result.
+
+| Custody status | Host observation and supported meaning |
+| --- | --- |
+| `issued` | The native issue returned nonnull and the host accepted the published bytes into custody after framing checks. |
+| `issued_uncustodied` | The native issue returned nonnull but the host rejected, timed out on or never saw the publication; the token's transfers read `custody_unavailable`. |
+| `null` | The native issue returned NULL with its errno. No custody exists. |
+| `unavailable` | The issue was not called; the event's `unavailable_reason` says why. |
+| `not_reached` | The issue action never published a result. |
+
+| Transfer status | Host observation and supported meaning |
+| --- | --- |
+| `delivered` | The recipient acknowledged a framed delivery and its bytes equalled the host's custody copy (`equality: equal`). This is not consumption. |
+| `custody_unavailable` | The named token had no accepted custody when the transfer ran. |
+| `recipient_rejected` | The recipient's framing check refused the delivery. |
+| `recipient_timeout` | The recipient did not acknowledge within the exchange allowance; the delivery was withdrawn. |
+| `recipient_unavailable` | The recipient had no usable process or region when the transfer ran. |
+| `request_invalid` | The request named no admitted transfer of this actor. |
+| `host_timeout`, `clock_fault` | The sending worker's own wait for the host's answer expired or lost its clock; the host's record may still carry an answer. |
+| `copy_mismatch` | The recipient acknowledged bytes that no longer equalled custody; the delivery was withdrawn. |
+
+An actor event's `unavailable_reason` adds `authority_channel_unavailable` (the
+worker could not map its authority region) and `delivery_unavailable` (the
+named delivery was never accepted by this actor) to the legacy reasons.
 
 <!-- END SHARED EXTENSION STATUSES -->
 
@@ -694,9 +742,11 @@ payload is read through progress. This is the latest milestone, not a history.
 Operations: 1 compatible header validation, 2 policy read, 3 parameter allocation,
 4 parameter assignment, 5 compilation, 6 optional profile capture, 7 readiness
 write, 8 application, 9 indexed attempt, 10 terminal completion, 11 proceed wait,
-12 clock setup. Temporal order differs from numeric order: clock setup follows
-header validation and precedes the policy read; proceed precedes each phase's
-attempts.
+12 clock setup, 13 the actor form's parked activation wait. Temporal order
+differs from numeric order: clock setup follows header validation and precedes
+the policy read; activation follows application (or an unapplied actor's
+declared setup) and precedes each visit's proceed wait; proceed precedes each
+phase's attempts.
 Started means control reached the call boundary; returned means control returned, regardless
 of success. Application is established only by `applied == 1`. Completed attempt
 outputs are established only by that slot's `completed == 1`.
@@ -715,6 +765,9 @@ outputs are established only by that slot's `completed == 1`.
 | proceed wait starts; budget expires | Operation 11/code 8, budget milliseconds in detail, done; no acknowledgement or attempt, even after late release |
 | proceed sample below the origin or the last accepted sample | Operation 11/code 14/kind 0, reason 3 in detail, the stage in the diagnostic; done, no acknowledgement or attempts |
 | proceed after an earlier exec rejected a sample | Operation 11/code 14, reason 6 in detail, no new sample; the diagnostic names the first rejection's reason, stage, phase and slot; done, no acknowledgement |
+| activation wait sees a later ordinal than its next visit | Operation 13/code 16, the observed ordinal in detail; done, no arrival, acknowledgement or attempt |
+| the shared lifetime cutoff expires while parked, waiting for release or waiting for a custody or transfer answer | Code 15 under operation 13, 11 or 9 (the attempt's slot in the index); done, no later attempt |
+| the cutoff is already past at clock setup | Operation 12/code 15/detail 1; diagnostic, exit 12, no done, before any policy byte |
 | release acknowledged; worker dies | Lifetime and eligible query order remain established; an acknowledgement first acquired after confirmed reap also qualifies while ownership remained unbroken, even without done; attempt evidence may be missing |
 | attempt i starts but never completes | Progress may identify the started slot; no completed result or claim that it never ran |
 | failure published; diagnostic incomplete; cleanup fails | Failure status, diagnostic availability and host observations survive independently |
@@ -751,7 +804,10 @@ differs from the host's expectation (operation 2; detail is the received count;
 exit 11), and 14 a local timing refusal with no native result or errno, whose
 detail is a reason: 1 invalid timebase, 2 invalid or unrepresentable duration,
 3 backwards counter (a rejected sample), 4 unrepresentable delta, 5 deadline or
-exclusion overflow, 6 prior clock fault. Clock setup (operation 12) refuses
+exclusion overflow, 6 prior clock fault; 15 the actor form's shared lifetime
+cutoff (detail 1 when already past at clock setup, otherwise 0); and 16 an
+activation ordinal beyond the actor's next visit (operation 13; detail is the
+observed ordinal). Clock setup (operation 12) refuses
 before the policy read with exit 12 and without `done`, like the header and
 policy-read refusals; it never claims a status-word result. Code 9's detail is the NUL byte offset; code 10's is the phase
 capacity. On the policy read the order is capacity (2, which stops before EOF
@@ -1006,7 +1062,7 @@ subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
 For the runner client and sbpl-check, the controller collects full
-`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->152 MiB<!-- /span --> prefix per runner-client
+`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->164 MiB<!-- /span --> prefix per runner-client
 stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
 up to 4 MiB) and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
 Runner-client stdout is a protocol-versioned client capture, not a synthetic
@@ -1034,7 +1090,7 @@ proof that no worker ran.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver
-budget (<!-- span limits.controller_output.value -->159,383,552<!-- /span --> or <!-- span limits.policy_helper_output.value -->8,388,608<!-- /span --> bytes). Locally truncated
+budget (<!-- span limits.controller_output.value -->171,966,464<!-- /span --> or <!-- span limits.policy_helper_output.value -->8,388,608<!-- /span --> bytes). Locally truncated
 stdout is not parsed and has `stdout_capture_error`, distinct from
 `stdout_parse_error` for malformed JSON/UTF-8 within the cap. Text context may use
 replacement characters; accepted JSON is parsed from original untruncated bytes.
@@ -1086,7 +1142,7 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 The controller's runner-client and sbpl-check receivers use the same
-original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->152 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
+original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->164 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
 Received/retained byte counts precede lossy context conversion and count fully
 collected buffers. These are retention limits, not peak-memory bounds.
 `stdout_capture_error` identifies local truncation and precludes parsing the

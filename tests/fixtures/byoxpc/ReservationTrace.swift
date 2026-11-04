@@ -58,6 +58,44 @@ enum ReservationTrace {
         }
         F2Trace.event(request, "gate_released", ["boundary": boundary])
     }
+    private static func sha(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+    /// After one real execution, alter only the top-level response-schema
+    /// marker of the encoded reply, once. The bytes are otherwise unchanged:
+    /// the altered body parses to the original object once the marker is
+    /// restored, or nothing is altered and the reason is traced.
+    static func outgoingReply(_ request: F2Request, _ data: Data) -> Data {
+        guard armed, gates["reservation"]?.contains("old_response") == true, let directory else { return data }
+        let fd = open(directory + "/once-old_response", O_WRONLY | O_CREAT | O_EXCL, 0o600)
+        guard fd >= 0 else { return data }
+        close(fd)
+        guard let original = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let marker = original["schema_version"] as? Int else {
+            F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "unreadable reply"]); return data
+        }
+        let needle = Data("\"schema_version\":\(marker)".utf8)
+        let replacement = Data("\"schema_version\":\(marker - 1)".utf8)
+        var search = data.startIndex..<data.endIndex
+        while let range = data.range(of: needle, in: search) {
+            var candidate = data
+            candidate.replaceSubrange(range, with: replacement)
+            if var parsed = (try? JSONSerialization.jsonObject(with: candidate)) as? [String: Any],
+               parsed["schema_version"] as? Int == marker - 1 {
+                parsed["schema_version"] = marker
+                if NSDictionary(dictionary: parsed).isEqual(to: original) {
+                    F2Trace.event(request, "outgoing_marker_altered", ["original_marker": marker,
+                        "altered_marker": marker - 1, "original_bytes": data.count, "altered_bytes": candidate.count,
+                        "original_sha256": sha(data), "altered_sha256": sha(candidate),
+                        "byte_offset": range.lowerBound, "equal_after_restoring_marker": true])
+                    return candidate
+                }
+            }
+            search = range.upperBound..<data.endIndex
+        }
+        F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "no top-level marker occurrence"])
+        return data
+    }
     static func beforeExit() {
         let context = F2Request(invocation: "\(getpid())-\(UUID().uuidString)", specimen: "<retirement>",
             requestHash: "", requestBytes: 0, clientPID: nil)

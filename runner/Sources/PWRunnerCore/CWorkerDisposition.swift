@@ -310,9 +310,16 @@ func classify(
             if let failure = evidence.failure {
                 let names: [UInt32: String] = [1: "header validation", 2: "policy read", 3: "sandbox_create_params",
                     4: "sandbox_set_param", 5: "sandbox_compile_string", 8: "sandbox_apply", 11: "proceed wait",
-                    12: "clock setup"]
+                    12: "clock setup", 13: "activation wait"]
                 let operation = names[failure.operation] ?? "operation \(failure.operation)"
                 var detail = "pw-probe-runner reported \(operation) failure (code=\(failure.code))"
+                if failure.code == 15 && failure.native_kind == 0 {
+                    detail += failure.operation == 12 ? "; actor lifetime cutoff already past at clock setup; no policy byte read"
+                                                       : "; actor lifetime cutoff expired while waiting"
+                }
+                if failure.operation == 13 && failure.code == 16 && failure.native_kind == 0 {
+                    detail += "; activation ordinal \(failure.detail) names a later visit; actor never arrived"
+                }
                 if failure.operation == 11 {
                     switch (failure.code, failure.native_kind) {
                     case (8, 0), (1, 3):

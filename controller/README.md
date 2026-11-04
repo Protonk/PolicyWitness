@@ -2,6 +2,11 @@
 
 The Rust controller drives a selected runner service and prints one JSON witness
 per specimen. It ships as `PolicyWitness.app/Contents/MacOS/policy-witness`.
+For the actor form the dossier carries one policy account per actor
+(`data.specimen.actors[]`), the fallback compilation runs once per apply actor
+(`data.actor_policy_checks[]`) and the execution diagnostics project each
+actor's disposition record (`data.runner_sandbox_diagnostics.actors[]`) under
+a `per_actor` aggregate.
 The runner owns policy application, predictions and attempts; the controller
 owns request preparation, reply admission, provenance and execution diagnostics.
 See [AGENTS.md](AGENTS.md) for working guidance and the
@@ -117,7 +122,7 @@ root without an Info.plist.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 24, controller envelope 9, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
@@ -140,7 +145,7 @@ not manufacture one. `runner verify` uses this same path and admission order.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
 received/retained byte counts. Each stream retains at
-most <!-- span limits.controller_output.binary -->152 MiB<!-- /span -->;
+most <!-- span limits.controller_output.binary -->164 MiB<!-- /span -->;
 full output is collected first, so this is not a streaming allocation bound.
 `stdout_capture_error` identifies prefix loss and `stdout_parse_error` malformed
 untruncated JSON/UTF-8. Accepted stdin writes prove neither client reads nor XPC

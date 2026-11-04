@@ -44,6 +44,10 @@ private let stringPolicy: [String: Int?] = [
     "detail": nil, "observations": nil, "rule": nil, "original_error": 8191,
     "extension_class": nil, "preparation_status": nil, "issuance_status": nil, "delivery_status": nil,
     "cleanup_stage": nil, "stop": nil, "stop_reason": nil, "deadline_kind": nil,
+    // Actor form: fixed vocabulary and hashes.
+    "execution_form": nil, "mode": nil, "setup_status": nil, "policy_received_sha256": nil, "family": nil,
+    "custody_status": nil, "copy_status": nil, "equality": nil, "environment": nil, "standard_streams": nil,
+    "cancelled": nil,
     // Bounded echoes of request strings.
     "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 63,
     "phase_id": requestLabelMaxBytes, "action_ids": PWShmLayout.stepIdMax - 1,
@@ -56,6 +60,10 @@ private let stringPolicy: [String: Int?] = [
     "issuer_executable_path": testOverridePathMaxBytes,
     "validator_executable_path": testOverridePathMaxBytes, "executable_path": testOverridePathMaxBytes,
     "token_ref": PWExtensionLimits.referenceBytes, "handle_ref": PWExtensionLimits.referenceBytes,
+    "delivery_ref": PWExtensionLimits.referenceBytes, "actor_id": PWActorLimits.identifierBytes,
+    "source_actor_id": PWActorLimits.identifierBytes, "recipient_actor_id": PWActorLimits.identifierBytes,
+    "last_use_step_id": PWShmLayout.stepIdMax - 1, "release_step_id": PWShmLayout.stepIdMax - 1,
+    "raw_equal_handles": PWExtensionLimits.referenceBytes, "target": PWActorLimits.targetBytes,
     "submitted_target": PWExtensionLimits.targetBytes, "resolved_target": PWExtensionLimits.targetBytes,
     // Bounded host-derived strings.
     "error": 8191, "diagnostic": 1023, "message": 1023, "read_error": 1023, "io_error": 1023,
@@ -316,6 +324,36 @@ private func encodeAllFreshWriteReply(_ original: PWRunnerRunResult) throws -> D
 }
 
 /// Ordinary full-reply encoding plus conservative, separately encoded additions.
+/// The actor form's additional members at their capacities: eight actor
+/// records (each with a subprocess whose disposition steps are already counted
+/// among the 256 ordinary entries), the eight phases beyond the legacy cap,
+/// every event, transfer and resource record, with every string maximal. The
+/// constructed documents are maximized rather than re-derived, and the union is
+/// conservative: no field the actor form omits is reclaimed.
+private func actorReplyAllowance() throws -> Int {
+    var unknown = Set<String>()
+    let documents = try actorShapeDocuments()
+    let complete = maximize(documents[0], key: nil, unknown: &unknown) as! [String: Any]
+    if !unknown.isEmpty { throw Unclassified(keys: unknown) }
+    func bytes(_ value: Any) throws -> Int { try JSONSerialization.data(withJSONObject: value).count }
+    let actors = complete["actors"] as! [[String: Any]]
+    let phases = complete["phases"] as! [[String: Any]]
+    let events = complete["extension_events"] as! [[String: Any]]
+    let transfers = complete["transfers"] as! [[String: Any]]
+    let resources = complete["resources"] as! [String: Any]
+    let largest = { (records: [[String: Any]]) throws -> Int in try records.map(bytes).max() ?? 0 }
+    var total = try bytes(["execution_form": "actors"]) + 1
+    total += PWActorLimits.actors * (try largest(actors) + 1)
+    total += (PWActorLimits.phases - PWRunnerPhase.maximumCount) * (try largest(phases) + 1)
+    total += (PWActorLimits.issues + 2 * PWActorLimits.deliveries + PWActorLimits.handles + PWActorLimits.releases) * (try largest(events) + 1)
+    total += PWActorLimits.deliveries * (try largest(transfers) + 1)
+    total += PWActorLimits.issues * (try largest(resources["tokens"] as! [[String: Any]]) + 1)
+    total += PWActorLimits.deliveries * (try largest(resources["deliveries"] as! [[String: Any]]) + 1)
+    total += PWActorLimits.handles * (try largest(resources["handles"] as! [[String: Any]]) + 1)
+    total += try bytes(["resources": ["tokens": [], "deliveries": [], "handles": []], "transfers": [], "actors": []])
+    return total
+}
+
 func maximalReplyEncodedSize() throws -> Int {
     let fixture = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(try replyFixture())) as! [String: Any]
     var unknown = Set<String>()
@@ -385,6 +423,7 @@ func maximalReplyEncodedSize() throws -> Int {
     // a nonempty phase adds one comma instead. All key/value bytes stay counted.
     let spawnAllowance = PWRunnerPhase.maximumCount * (try pwRunnerEncodeJSON(spawn).count - 1)
     let bound = try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance() + freshWriteReplyAllowance() + spawnAllowance + execReplyAllowance()
+        + actorReplyAllowance()
     let execBytes = try encodeAllExecReply(decoded)
     try expectTrue(execBytes.count <= bound, "every-slot valid exec reply exceeds conservative representation bound")
     let writeBytes = try encodeAllFreshWriteReply(decoded)

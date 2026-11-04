@@ -67,6 +67,7 @@
 #include "pw_worker_evidence.h"
 #include "pw_profile_capture.h"
 #include "pw_extension_channel.h"
+#include "pw_authority_region.h"
 
 #include "pw_worker_timing.h"
 
@@ -96,6 +97,7 @@ extern void sandbox_free_params(void *params);
 
 typedef struct {
     int extension_fd;
+    int authority_fd;
     int shm_fd;
     int ready_fd;
     int policy_fd;
@@ -192,6 +194,7 @@ static int parse_int_arg(const char *value, long *out) {
 
 static int parse_args(int argc, char **argv, pw_args_t *args) {
     args->extension_fd = -1;
+    args->authority_fd = -1;
     args->shm_fd                 = -1;
     args->ready_fd               = -1;
     args->policy_fd              = STDIN_FILENO;
@@ -208,6 +211,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
     while (i < argc) {
         const char *flag = argv[i];
         if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 || strcmp(flag, "--extension-fd") == 0 ||
+            strcmp(flag, "--authority-fd") == 0 ||
             strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0 ||
             strcmp(flag, "--post-apply-hang-ms") == 0 ||
             strcmp(flag, "--post-apply-kill-signal") == 0 ||
@@ -228,6 +232,9 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
             if (strcmp(flag, "--extension-fd") == 0) {
                 if (v < 0 || v > INT_MAX) return -1;
                 args->extension_fd = (int)v;
+            } else if (strcmp(flag, "--authority-fd") == 0) {
+                if (v < 0 || v > INT_MAX) return -1;
+                args->authority_fd = (int)v;
             } else if (strcmp(flag, "--shm-fd") == 0) {
                 if (v < 0 || v > INT_MAX) {
                     fprintf(stderr, "pw-probe-runner: %s: fd out of range %ld\n", flag, v);
@@ -550,10 +557,30 @@ static pw_extension_channel_t *extension_channel;
 static int64_t extension_handle = -1;
 static int consume_decided, release_decided;
 
-/* Ordinary cleanup erases the whole accepted channel, including unused bytes.
- * This neither consumes nor releases native extension authority. */
+/* Actor form: the issue entry point, this actor's authority region and its
+ * local handle table. The header and evidence pointers are kept for the
+ * exchange waits inside attempts, which may have to publish a cutoff failure. */
+typedef char *(*pw_issue_fn)(const char *, const char *, uint32_t);
+static pw_issue_fn extension_issue;
+static pw_authority_region_t *authority;
+static size_t authority_bytes;
+static pw_shm_header_t *g_hdr;
+static pw_shm_evidence_t *g_evidence;
+static int64_t handle_table[PW_AUTHORITY_MAX_HANDLES];
+static uint8_t handle_valid[PW_AUTHORITY_MAX_HANDLES];
+
+/* Ordinary cleanup erases the whole accepted channel, including unused bytes,
+ * and every token buffer of the authority region this actor mapped. This
+ * neither consumes nor releases native extension authority. */
+static void erase_authority(void) {
+    if (!authority) return;
+    pw_extension_erase(authority->outbound.token, PW_EXTENSION_TOKEN_BYTES);
+    for (uint32_t i = 0; i < authority->inbound_count && i < PW_AUTHORITY_MAX_INBOUND; i++)
+        pw_extension_erase(authority->inbound[i].token, PW_EXTENSION_TOKEN_BYTES);
+}
 static void erase_accepted_token(void) {
     if (extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
+    erase_authority();
 }
 
 /* Test-only observation at the actual release-store boundary. Production has
@@ -724,6 +751,249 @@ static void attempt_extension(pw_shm_slot_t *slot, int release) {
     if (!release) erase_accepted_token();
 }
 
+/* ---- actor-form authority operations ------------------------------------ */
+
+static inline void cpu_relax(void);
+
+/* Compile-time observation seam for issue interruption controls; the shipped
+ * worker compiles it away. 1 is after the pre-call publication; 2 is after
+ * native return, before any result publication. */
+#ifndef PW_ISSUE_OBSERVE
+#define PW_ISSUE_OBSERVE(stage, nonnull) ((void)0)
+#endif
+
+/* Map this actor's authority region and resolve the native entry points
+ * before application. Each failure is published as a setup status with its
+ * stage; nothing here is a native API result. Legacy workers close any
+ * descriptor and publish nothing. */
+static void prepare_authority(pw_shm_header_t *hdr, int fd) {
+    if (hdr->actor_mode == PW_ACTOR_MODE_LEGACY) { if (fd >= 0) close(fd); return; }
+    uint32_t symbols = 0;
+    extension_consume = (pw_consume_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_consume");
+    extension_release = (pw_release_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_release");
+    extension_issue = (pw_issue_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_issue_file");
+    if (extension_consume) symbols |= PW_NATIVE_SYMBOL_CONSUME;
+    if (extension_release) symbols |= PW_NATIVE_SYMBOL_RELEASE;
+    if (extension_issue) symbols |= PW_NATIVE_SYMBOL_ISSUE;
+    hdr->native_symbols = symbols;
+    uint32_t status = PW_AUTHORITY_SETUP_DESCRIPTOR_MISSING, detail = 0;
+    struct rlimit core = {0, 0};
+    if (PW_EXTENSION_SETRLIMIT(RLIMIT_CORE, &core) != 0) {
+        status = PW_AUTHORITY_SETUP_LOCAL_FAILED; detail = PW_DELIVERY_STAGE_CORE_LIMIT;
+        if (fd >= 0) close(fd);
+        goto publish;
+    }
+    if (fd < 0) goto publish;
+    struct stat metadata;
+    if (PW_EXTENSION_FSTAT(fd, &metadata) != 0) {
+        status = PW_AUTHORITY_SETUP_LOCAL_FAILED; detail = PW_DELIVERY_STAGE_DESCRIPTOR_METADATA;
+        close(fd);
+        goto publish;
+    }
+    if (metadata.st_size < (off_t)PW_AUTHORITY_REGION_BYTES(0)
+        || metadata.st_size > (off_t)PW_AUTHORITY_REGION_BYTES(PW_AUTHORITY_MAX_INBOUND)) {
+        status = PW_AUTHORITY_SETUP_REJECTED; detail = PW_DELIVERY_STAGE_CHANNEL_SIZE;
+        close(fd);
+        goto publish;
+    }
+    size_t bytes = (size_t)metadata.st_size;
+    void *p = PW_EXTENSION_MMAP(bytes, fd);
+    int closed = PW_EXTENSION_CLOSE(fd);
+    if (p == MAP_FAILED) {
+        status = PW_AUTHORITY_SETUP_LOCAL_FAILED; detail = PW_DELIVERY_STAGE_MAPPING;
+        goto publish;
+    }
+    if (closed) {
+        status = PW_AUTHORITY_SETUP_LOCAL_FAILED; detail = PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE;
+        munmap(p, bytes);
+        goto publish;
+    }
+    pw_authority_region_t *region = p;
+    if (region->magic != PW_AUTHORITY_MAGIC
+        || memcmp(region->identity, PW_WORKER_ABI_IDENTITY, PW_AUTHORITY_IDENTITY_BYTES) != 0
+        || region->actor_index != hdr->actor_index
+        || region->inbound_count > PW_AUTHORITY_MAX_INBOUND
+        || bytes < PW_AUTHORITY_REGION_BYTES(region->inbound_count)) {
+        status = PW_AUTHORITY_SETUP_REJECTED; detail = PW_DELIVERY_STAGE_CHANNEL_HEADER;
+        munmap(p, bytes);
+        goto publish;
+    }
+    authority = region;
+    authority_bytes = bytes;
+    status = PW_AUTHORITY_SETUP_MAPPED;
+publish:
+    hdr->authority_status = status;
+    hdr->authority_detail = detail;
+}
+
+/* Validate and acknowledge at most one committed, unacknowledged inbound
+ * delivery. Acceptance is framing only: nothing is consumed and no byte
+ * leaves the slot. Parked and waiting actors call this between polls. */
+static void service_inbound_once(void) {
+    if (!authority) return;
+    for (uint32_t i = 0; i < authority->inbound_count; i++) {
+        pw_authority_slot_t *slot = &authority->inbound[i];
+        if (atomic_load_explicit(&slot->committed, memory_order_acquire) != 1u) continue;
+        if (atomic_load_explicit(&slot->acknowledged, memory_order_acquire) != PW_AUTHORITY_ACK_NONE) continue;
+        uint32_t problem = pw_authority_frame_problem(slot, PW_AUTHORITY_FAMILY_FILE);
+        slot->reject_detail = problem;
+        atomic_store_explicit(&slot->acknowledged,
+                              problem ? PW_AUTHORITY_ACK_REJECTED : PW_AUTHORITY_ACK_ACCEPTED, memory_order_release);
+        return;
+    }
+}
+
+/* Bounded wait for one acknowledgement word to leave zero: the exchange
+ * allowance, the shared cutoff and cancellation bound it, and inbound
+ * deliveries are serviced meanwhile so a self-transfer cannot wait on itself.
+ * Returns the observed word, or 0 with *status set to PW_CUSTODY_TIMEOUT or
+ * PW_CUSTODY_CLOCK_FAULT. An expired cutoff is a published failure. */
+static uint32_t wait_exchange(_Atomic uint32_t *word, pw_timing_t *timing, uint32_t slot_index, uint32_t *status) {
+    uint64_t start = 0, now = 0, cap = 0;
+    if (pw_ticks_for_ms(&timing->clock, (long)PW_AUTHORITY_EXCHANGE_WAIT_MS, &cap)
+        || pw_clock_sample(&timing->clock, PW_CLOCK_EXCHANGE_START, slot_index, PW_CLOCK_NO_SCOPE, &start)) {
+        *status = PW_CUSTODY_CLOCK_FAULT; return 0;
+    }
+    for (;;) {
+        uint32_t value = atomic_load_explicit(word, memory_order_acquire);
+        if (value) return value;
+        if (pw_clock_sample(&timing->clock, PW_CLOCK_EXCHANGE_OBSERVE, slot_index, PW_CLOCK_NO_SCOPE, &now)) {
+            *status = PW_CUSTODY_CLOCK_FAULT; return 0;
+        }
+        if (timing->cutoff_ticks && now >= timing->cutoff_ticks) {
+            pw_failure(g_evidence, PW_OP_ATTEMPT, PW_FAILURE_LIFETIME_CUTOFF, PW_NATIVE_NONE, 0, 0, 0, slot_index, 0);
+            pw_diagnostic(g_evidence, "authority exchange: the actor lifetime cutoff expired while waiting for acknowledgement");
+            publish_done_and_exit(g_hdr);
+        }
+        if (now - start >= cap) { *status = PW_CUSTODY_TIMEOUT; return 0; }
+        if (atomic_load_explicit(&g_hdr->exit_requested, memory_order_acquire) != 0u) { erase_accepted_token(); _exit(0); }
+        service_inbound_once();
+        for (uint32_t i = 0; i < 1000u; i++) cpu_relax();
+    }
+}
+
+/* Native file issuance by this actor. One call with the exact submitted
+ * bytes, the class the authority selects and flags zero; raw nonnull/NULL
+ * and errno are published as the native result. A bounded token is published
+ * to the host through the outbound slot and the scratch is erased after the
+ * host's answer; the native allocation is erased to its inspected length and
+ * freed. Custody acceptance is a separate status, never a native result. */
+static void attempt_extension_issue(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t index) {
+    if (g_hdr->actor_mode == PW_ACTOR_MODE_LEGACY || !authority) { slot->unavailable_code = 5; return; }
+    if (!extension_issue) { slot->unavailable_code = 3; return; }
+    slot->ext_target[PW_SHM_EXT_TARGET_BYTES - 1u] = '\0';
+    const char *extension_class = slot->ext_authority == PW_EXTENSION_AUTHORITY_READ_WRITE
+        ? "com.apple.app-sandbox.read-write" : "com.apple.app-sandbox.read";
+    atomic_store_explicit(&slot->call_boundary, 1, memory_order_release);
+    PW_ISSUE_OBSERVE(1, 0);
+    errno = 0;
+    char *token = extension_issue(extension_class, slot->ext_target, 0);
+    int saved = errno;
+    PW_ISSUE_OBSERVE(2, token != NULL);
+    slot->native_errno = saved;
+    slot->native_result = token != NULL ? 1 : 0;
+    slot->native_result_valid = 1;
+    slot->ext_custody_status = PW_CUSTODY_NOT_PUBLISHED;
+    if (!token) return;
+    size_t length = strnlen(token, PW_EXTENSION_TOKEN_BYTES);
+    if (length == 0 || length >= PW_EXTENSION_TOKEN_BYTES) {
+        snprintf(slot->error, sizeof(slot->error), "issued token length out of bounds");
+        pw_extension_erase(token, length);
+        free(token);
+        return;
+    }
+    slot->ext_token_length = (uint32_t)length;
+    pw_authority_slot_t *out = &authority->outbound;
+    out->magic = PW_AUTHORITY_MAGIC;
+    out->family = PW_AUTHORITY_FAMILY_FILE;
+    out->writer_actor = g_hdr->actor_index;
+    out->operation_index = index;
+    out->resource_index = slot->ext_token_index;
+    out->token_length = (uint32_t)length;
+    out->reject_detail = 0;
+    memcpy(out->token, token, length + 1u);
+    pw_extension_erase(token, length);
+    free(token);
+    atomic_store_explicit(&out->acknowledged, PW_AUTHORITY_ACK_NONE, memory_order_relaxed);
+    atomic_store_explicit(&out->committed, 1u, memory_order_release);
+    uint32_t status = PW_CUSTODY_NONE;
+    uint32_t ack = wait_exchange(&out->acknowledged, timing, index, &status);
+    if (ack == PW_AUTHORITY_ACK_ACCEPTED) status = PW_CUSTODY_ACCEPTED;
+    else if (ack == PW_AUTHORITY_ACK_REJECTED) status = PW_CUSTODY_REJECTED;
+    slot->ext_custody_status = status;
+    /* The scratch is erased and withdrawn whatever the answer; a host still
+     * reading after a timeout sees committed drop and rejects its copy. */
+    pw_extension_erase(out->token, PW_EXTENSION_TOKEN_BYTES);
+    out->token_length = 0;
+    atomic_store_explicit(&out->committed, 0u, memory_order_release);
+}
+
+/* An explicit transfer is an apparatus request to the host, not a native
+ * call: publish the request naming this action, wait for the host's
+ * acknowledgement, record it, and withdraw the request. */
+static void attempt_extension_transfer(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t index) {
+    if (g_hdr->actor_mode == PW_ACTOR_MODE_LEGACY || !authority) { slot->unavailable_code = 5; return; }
+    atomic_store_explicit(&authority->transfer_ack, PW_TRANSFER_ACK_NONE, memory_order_relaxed);
+    authority->transfer_detail = 0;
+    atomic_store_explicit(&authority->transfer_request, index + 1u, memory_order_release);
+    uint32_t status = PW_CUSTODY_NONE;
+    uint32_t ack = wait_exchange(&authority->transfer_ack, timing, index, &status);
+    if (ack) slot->ext_transfer_status = ack;
+    else slot->ext_transfer_status = status == PW_CUSTODY_TIMEOUT ? PW_TRANSFER_ACK_HOST_TIMEOUT : PW_TRANSFER_ACK_CLOCK_FAULT;
+    atomic_store_explicit(&authority->transfer_request, 0u, memory_order_release);
+}
+
+/* Actor-form consume: only the delivery this action names, and only when
+ * this actor accepted it while parked. The handle is stored by the plan's
+ * handle index on a published candidate-producing result. */
+static void attempt_extension_consume_actor(pw_shm_slot_t *slot) {
+    if (!extension_consume) { slot->unavailable_code = 3; return; }
+    if (!authority) { slot->unavailable_code = 5; return; }
+    pw_authority_slot_t *in = NULL;
+    for (uint32_t i = 0; i < authority->inbound_count; i++) {
+        pw_authority_slot_t *candidate = &authority->inbound[i];
+        if (candidate->resource_index != slot->ext_delivery_index) continue;
+        if (atomic_load_explicit(&candidate->committed, memory_order_acquire) != 1u) continue;
+        if (atomic_load_explicit(&candidate->acknowledged, memory_order_acquire) != PW_AUTHORITY_ACK_ACCEPTED) continue;
+        in = candidate;
+        break;
+    }
+    if (!in) { slot->unavailable_code = 6; return; }
+    atomic_store_explicit(&slot->call_boundary, 1, memory_order_release);
+    PW_EXTENSION_OBSERVE(1, 0, 0);
+    errno = 0;
+    int64_t result = extension_consume(in->token);
+    int saved = errno;
+    PW_EXTENSION_OBSERVE(2, 0, result);
+    slot->native_result = result;
+    slot->native_errno = saved;
+    slot->native_result_valid = 1;
+    if (result != -1 && slot->ext_handle_index < PW_AUTHORITY_MAX_HANDLES) {
+        handle_table[slot->ext_handle_index] = result;
+        handle_valid[slot->ext_handle_index] = 1;
+    }
+    if (slot->ext_last_use) {
+        pw_extension_erase(in->token, PW_EXTENSION_TOKEN_BYTES);
+        in->token_length = 0;
+    }
+}
+
+static void attempt_extension_release_actor(pw_shm_slot_t *slot) {
+    if (!extension_release) { slot->unavailable_code = 3; return; }
+    if (slot->ext_handle_index >= PW_AUTHORITY_MAX_HANDLES || !handle_valid[slot->ext_handle_index]) {
+        slot->unavailable_code = 2; return;
+    }
+    atomic_store_explicit(&slot->call_boundary, 1, memory_order_release);
+    PW_EXTENSION_OBSERVE(1, 1, 0);
+    errno = 0;
+    int64_t result = (int64_t)extension_release(handle_table[slot->ext_handle_index]);
+    int saved = errno;
+    PW_EXTENSION_OBSERVE(2, 1, result);
+    slot->native_result = result;
+    slot->native_errno = saved;
+    slot->native_result_valid = 1;
+}
+
 /* A single bounded read on a fresh descriptor, with its own identity and close
  * observations. This does not change open_read's historical open-only meaning. */
 static void attempt_file_read_fresh(pw_shm_slot_t *slot) {
@@ -824,8 +1094,16 @@ static void run_attempt(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t phase
 
     switch (slot->attempt_kind) {
     case PW_ATTEMPT_NONE:                                                 break;
-    case PW_ATTEMPT_EXTENSION_CONSUME: attempt_extension(slot, 0); break;
-    case PW_ATTEMPT_EXTENSION_RELEASE: attempt_extension(slot, 1); break;
+    case PW_ATTEMPT_EXTENSION_CONSUME:
+        if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_consume_actor(slot);
+        else attempt_extension(slot, 0);
+        break;
+    case PW_ATTEMPT_EXTENSION_RELEASE:
+        if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_release_actor(slot);
+        else attempt_extension(slot, 1);
+        break;
+    case PW_ATTEMPT_EXTENSION_ISSUE: attempt_extension_issue(slot, timing, index); break;
+    case PW_ATTEMPT_EXTENSION_TRANSFER: attempt_extension_transfer(slot, timing, index); break;
     case PW_ATTEMPT_FILE_READ_FRESH: attempt_file_read_fresh(slot); break;
     case PW_ATTEMPT_FILE_WRITE_FRESH: attempt_file_write_fresh(slot, 0); break;
     case PW_ATTEMPT_FILE_CREATE_FRESH: attempt_file_write_fresh(slot, 1); break;
@@ -871,10 +1149,65 @@ static inline void cpu_relax(void) {
 #define PW_PROCEED_CANCEL_LOADED(phase) ((void)0)
 #endif
 
-static _Noreturn void proceed_refused(pw_shm_header_t *hdr, pw_shm_evidence_t *e, uint32_t phase_index,
+static _Noreturn void proceed_refused(pw_shm_header_t *hdr, pw_shm_evidence_t *e, uint32_t op, uint32_t phase_index,
                                       uint32_t reason, const char *diagnostic) {
-    pw_failure(e, PW_OP_PROCEED, PW_FAILURE_TIME_INVALID, PW_NATIVE_NONE, 0, 0, 0, phase_index, reason);
+    pw_failure(e, op, PW_FAILURE_TIME_INVALID, PW_NATIVE_NONE, 0, 0, 0, phase_index, reason);
     pw_diagnostic(e, diagnostic);
+    publish_done_and_exit(hdr);
+}
+
+/* The actor form's parked wait. Nothing of the specimen runs here: the actor
+ * samples the continuous clock, checks the shared cutoff and cancellation,
+ * then looks for the activation naming its next visit. The relax batch is the
+ * same instruction hint as the release wait. Elapsed parked time is excluded
+ * from the exec plan deadline once, when the activation is accepted. */
+static void wait_for_activation(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
+                                uint32_t visit, pw_timing_t *timing) {
+    pw_shm_phase_t *phase = &hdr->phases[visit];
+    uint32_t expected = phase->global_phase;
+    pw_progress(e, PW_OP_ACTIVATE, PW_PROGRESS_STARTED, phase->first_slot);
+    if (timing->clock.fault.reason) {
+        char text[PW_SHM_ERROR_MAX];
+        pw_text_t out = {text, 0, sizeof(text)};
+        pw_text_add(&out, "activation refused: worker clock already invalid; first rejected sample: ");
+        pw_text_add_fault(&out, &timing->clock.fault);
+        proceed_refused(hdr, e, PW_OP_ACTIVATE, visit, PW_TIME_REASON_PRIOR_CLOCK_FAULT, text);
+    }
+    uint64_t start = 0, now = 0, extended = 0;
+    if (pw_clock_sample(&timing->clock, PW_CLOCK_ACTIVATE_START, visit, PW_CLOCK_NO_SCOPE, &start))
+        proceed_refused(hdr, e, PW_OP_ACTIVATE, visit, PW_TIME_REASON_BACKWARDS_COUNTER,
+                        "activation wait: worker clock went backwards at parked start (reason in detail)");
+    for (;;) {
+        if (pw_clock_sample(&timing->clock, PW_CLOCK_ACTIVATE_OBSERVE, visit, PW_CLOCK_NO_SCOPE, &now))
+            proceed_refused(hdr, e, PW_OP_ACTIVATE, visit, PW_TIME_REASON_BACKWARDS_COUNTER,
+                            "activation wait: worker clock went backwards while parked (reason in detail)");
+        if (timing->cutoff_ticks && now >= timing->cutoff_ticks) {
+            pw_failure(e, PW_OP_ACTIVATE, PW_FAILURE_LIFETIME_CUTOFF, PW_NATIVE_NONE, 0, 0, 0, visit, 0);
+            pw_diagnostic(e, "activation wait: the actor lifetime cutoff expired while parked");
+            break;
+        }
+        uint64_t waited = now - start;
+        if (pw_ticks_add(timing->plan_deadline, waited, &extended))
+            proceed_refused(hdr, e, PW_OP_ACTIVATE, visit, PW_TIME_REASON_DEADLINE_OVERFLOW,
+                            "activation wait: exec plan deadline cannot exclude this wait (reason in detail)");
+        uint32_t cancelled = atomic_load_explicit(&hdr->exit_requested, memory_order_acquire);
+        if (cancelled != 0u) { erase_accepted_token(); _exit(0); }
+        uint32_t ordinal = atomic_load_explicit(&hdr->activation, memory_order_acquire);
+        if (ordinal == expected) {
+            timing->plan_deadline = extended;
+            atomic_store_explicit(&hdr->activation_observed, ordinal, memory_order_release);
+            pw_progress(e, PW_OP_ACTIVATE, PW_PROGRESS_RETURNED, phase->first_slot);
+            return;
+        }
+        if (ordinal > expected) {
+            pw_failure(e, PW_OP_ACTIVATE, PW_FAILURE_ACTIVATION, PW_NATIVE_NONE, 0, 0, 0, visit, ordinal);
+            pw_diagnostic(e, "activation names a phase beyond this actor's next visit");
+            break;
+        }
+        /* Parked servicing: accept or reject one delivery; never consume. */
+        service_inbound_once();
+        for (uint32_t i = 0; i < 1000u; i++) cpu_relax();
+    }
     publish_done_and_exit(hdr);
 }
 
@@ -894,16 +1227,21 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
         pw_text_t out = {text, 0, sizeof(text)};
         pw_text_add(&out, "proceed refused: worker clock already invalid; first rejected sample: ");
         pw_text_add_fault(&out, &timing->clock.fault);
-        proceed_refused(hdr, e, phase_index, PW_TIME_REASON_PRIOR_CLOCK_FAULT, text);
+        proceed_refused(hdr, e, PW_OP_PROCEED, phase_index, PW_TIME_REASON_PRIOR_CLOCK_FAULT, text);
     }
     uint64_t start = 0, now = 0, extended = 0;
     if (pw_clock_sample(&timing->clock, PW_CLOCK_PROCEED_START, phase_index, PW_CLOCK_NO_SCOPE, &start))
-        proceed_refused(hdr, e, phase_index, PW_TIME_REASON_BACKWARDS_COUNTER,
+        proceed_refused(hdr, e, PW_OP_PROCEED, phase_index, PW_TIME_REASON_BACKWARDS_COUNTER,
                         "proceed wait: worker clock went backwards at proceed start (reason in detail)");
     for (;;) {
         if (pw_clock_sample(&timing->clock, PW_CLOCK_PROCEED_OBSERVE, phase_index, PW_CLOCK_NO_SCOPE, &now))
-            proceed_refused(hdr, e, phase_index, PW_TIME_REASON_BACKWARDS_COUNTER,
+            proceed_refused(hdr, e, PW_OP_PROCEED, phase_index, PW_TIME_REASON_BACKWARDS_COUNTER,
                             "proceed wait: worker clock went backwards while observing release (reason in detail)");
+        if (timing->cutoff_ticks && now >= timing->cutoff_ticks) {
+            pw_failure(e, PW_OP_PROCEED, PW_FAILURE_LIFETIME_CUTOFF, PW_NATIVE_NONE, 0, 0, 0, phase_index, 0);
+            pw_diagnostic(e, "proceed wait: the actor lifetime cutoff expired before release");
+            break;
+        }
         uint64_t waited = now - start;
         if (waited >= timing->proceed_ticks) {
             pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PROCEED_TIMEOUT, PW_NATIVE_NONE,
@@ -912,7 +1250,7 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
             break;
         }
         if (pw_ticks_add(timing->plan_deadline, waited, &extended))
-            proceed_refused(hdr, e, phase_index, PW_TIME_REASON_DEADLINE_OVERFLOW,
+            proceed_refused(hdr, e, PW_OP_PROCEED, phase_index, PW_TIME_REASON_DEADLINE_OVERFLOW,
                             "proceed wait: exec plan deadline cannot exclude this wait (reason in detail)");
         PW_PROCEED_DECIDED(phase_index);
         uint32_t ordinal = atomic_load_explicit(&hdr->proceed, memory_order_acquire);
@@ -986,6 +1324,8 @@ int main(int argc, char **argv) {
     pw_shm_param_t  *params = (pw_shm_param_t *)((char *)slots
                               + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES));
     pw_shm_evidence_t *evidence = pw_evidence(base);
+    g_hdr = hdr;
+    g_evidence = evidence;
     pw_progress(evidence, PW_OP_HEADER, PW_PROGRESS_STARTED, UINT32_MAX);
     if (atomic_load_explicit(&hdr->prepared, memory_order_acquire) != 1u) {
         fprintf(stderr,
@@ -1031,9 +1371,18 @@ int main(int argc, char **argv) {
         pw_diagnostic(evidence, "invalid phase partition or publication input");
         return 9;
     }
+    if (hdr->actor_mode > PW_ACTOR_MODE_UNAPPLIED
+        || atomic_load_explicit(&hdr->actor_setup, memory_order_acquire) != 0u
+        || atomic_load_explicit(&hdr->activation_observed, memory_order_acquire) != 0u) {
+        pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_PHASE_LAYOUT, PW_NATIVE_NONE,
+                   0, 0, 0, UINT32_MAX, hdr->actor_mode);
+        pw_diagnostic(evidence, "invalid actor mode or publication input");
+        return 9;
+    }
 
 
     prepare_extension(hdr, args.extension_fd);
+    prepare_authority(hdr, args.authority_fd);
 
     /* Ensure host-populated strings are bounded before the sandbox is
      * applied. The worker is intentionally defensive here because a
@@ -1042,6 +1391,7 @@ int main(int argc, char **argv) {
     for (uint32_t i = 0; i < step_count; i++) {
         slots[i].step_id[PW_SHM_STEP_ID_MAX - 1u] = '\0';
         slots[i].target[PW_SHM_TARGET_MAX - 1u] = '\0';
+        slots[i].ext_target[PW_SHM_EXT_TARGET_BYTES - 1u] = '\0';
         atomic_store_explicit(&slots[i].completed, 0u, memory_order_release);
     }
 
@@ -1076,6 +1426,18 @@ int main(int argc, char **argv) {
      * a published failure and a distinct exit, with applied, done and apply_rc
      * untouched. It precedes every policy byte and the application. */
     if (pw_timing_setup(&timing, evidence) != 0) { erase_accepted_token(); return 12; }
+    /* The shared actor cutoff is an absolute reading of the same continuous
+     * clock; it becomes an origin-relative tick count like every other
+     * allowance. A cutoff already past refuses before any policy byte. */
+    if (hdr->lifetime_cutoff_ticks) {
+        if (hdr->lifetime_cutoff_ticks <= timing.clock.origin) {
+            pw_failure(evidence, PW_OP_CLOCK_SETUP, PW_FAILURE_LIFETIME_CUTOFF, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX, 1);
+            pw_diagnostic(evidence, "clock setup: the actor lifetime cutoff had already passed at launch");
+            erase_accepted_token();
+            return 12;
+        }
+        timing.cutoff_ticks = hdr->lifetime_cutoff_ticks - timing.clock.origin;
+    }
 
     uint32_t param_count = hdr->param_count;
     for (uint32_t i = 0; i < param_count; i++) {
@@ -1143,6 +1505,26 @@ int main(int argc, char **argv) {
             erase_accepted_token();
             return 9;
         }
+    }
+    /* The worker's own identity for the bytes it is about to compile, beside
+     * the host's hash of what it submitted. Equal lengths alone would not
+     * establish identity. */
+    CC_SHA256(policy_buf, (CC_LONG)plen, hdr->policy_received_sha256);
+    atomic_store_explicit(&hdr->policy_hash_published, 1u, memory_order_release);
+
+    /* An unapplied actor declares itself: no parameters, compilation, capture
+     * or application, and no apply result. Its readiness publication keeps the
+     * same shape so the host's setup accounting is uniform. */
+    if (hdr->actor_mode == PW_ACTOR_MODE_UNAPPLIED) {
+        pw_progress(evidence, PW_OP_READY, PW_PROGRESS_STARTED, UINT32_MAX);
+        int declared_ready_rc = write_ready_byte(args.ready_fd);
+        int declared_ready_errno = errno;
+        evidence->ready_rc = declared_ready_rc;
+        evidence->ready_errno = declared_ready_rc ? declared_ready_errno : 0;
+        atomic_store_explicit(&evidence->ready_published, 1, memory_order_release);
+        pw_progress(evidence, PW_OP_READY, PW_PROGRESS_RETURNED, UINT32_MAX);
+        atomic_store_explicit(&hdr->actor_setup, PW_ACTOR_SETUP_UNAPPLIED, memory_order_release);
+        goto visits;
     }
 
     /* Build SandboxParams from the host-populated params region. The
@@ -1283,9 +1665,12 @@ int main(int argc, char **argv) {
         publish_done_and_exit(hdr);
     }
     atomic_store_explicit(&hdr->applied, 1u, memory_order_release);
+    atomic_store_explicit(&hdr->actor_setup, PW_ACTOR_SETUP_APPLIED, memory_order_release);
 
+visits:
     for (uint32_t phase_index = 0; phase_index < hdr->phase_count; phase_index++) {
         pw_shm_phase_t *phase = &hdr->phases[phase_index];
+        if (hdr->actor_mode != PW_ACTOR_MODE_LEGACY) wait_for_activation(hdr, evidence, phase_index, &timing);
         wait_for_proceed(hdr, evidence, phase_index, &timing);
         for (uint32_t i = phase->first_slot; i < phase->end_slot; i++) {
             pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_STARTED, i);

@@ -44,10 +44,7 @@ def worker_source(source, gate):
 
 
 def host_source(source):
-    release = ('                    let ordinal = input.phaseReleaseOrdinal?(index) ?? UInt32(index + 1)\n'
-               '                    storeRelease(rawBase, offset: PWShmLayout.proceedOffset, ordinal)\n'
-               '                    phaseOutputs[index].releaseSet = ordinal == UInt32(index + 1)\n'
-               '                    if ordinal != UInt32(index + 1) { phaseOutputs[index].violations.append("wrong_release_ordinal") }\n')
+    release = '                    session.releaseVisit(index)\n'
     source = replace_once(source, release, '')
     return replace_once(source, '                if let hook = phaseBoundary { hook(pid, index) }',
                         release + '                if let hook = phaseBoundary { hook(pid, index) }')

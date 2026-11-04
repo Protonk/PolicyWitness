@@ -40,6 +40,7 @@ digraph documents {
         coverage_md;
         build_md;
         worker_md;
+        extensions_md;
     }
     subgraph cluster_sources {
         label="sources with generated or checked regions"; style=dashed; color="#888888"; fontsize=10;
@@ -75,7 +76,7 @@ digraph documents {
     gen_architecture [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_architecture.py\ngen_architecture", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_architecture: generate_architecture.py | these figures, their dot and SVG files, the tables beside them and the architecture spans "];
     contract_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/CONTRACT.md\ncontract_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_md: docs/CONTRACT.md | the version sentence and table "];
     limits_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/LIMITS.md\nlimits_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="limits_md: docs/LIMITS.md | the limits tables and coverage "];
-    guide [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/PolicyWitness.md\nguide", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="guide: docs/PolicyWitness.md | copied limits, questions, reading rules and extension statuses; the version sentence; the only document that ships "];
+    guide [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/PolicyWitness.md\nguide", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="guide: docs/PolicyWitness.md | copied limits, questions, reading rules and extension statuses and coverage; the version sentence; the only document that ships "];
     questions_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/QUESTIONS.md\nquestions_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="questions_md: docs/QUESTIONS.md | the shared questions the guide copies "];
     failure_contract [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="tests/FAILURE-PROPAGATION-CONTRACT.md\nfailure_contract", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="failure_contract: tests/FAILURE-PROPAGATION-CONTRACT.md | the generated scenario matrix, shared reading rules and extension statuses "];
     architecture_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/ARCHITECTURE.md\narchitecture_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="architecture_md: docs/ARCHITECTURE.md | these figures and their tables "];
@@ -112,6 +113,7 @@ digraph documents {
     drift_build [shape="octagon", style="dashed", color="#8e24aa", label="source_drift build.py\ndrift_build", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_build: source_drift build.py | the build manifest against build.sh, meson.build, the Makefile, the inventories and the baseline, and its copies "];
     worker_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/WORKER.md\nworker_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="worker_md: docs/WORKER.md | resource inventory, capability figure and tables "];
     markdown_reader [shape="component", style="dashed", color="#2e7d32", label="markdown_reader.py\nmarkdown_reader", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="markdown_reader: markdown_reader.py | the only import of the vendored markdown-it-py 3.0.0 and mdurl 0.1.2, and the Markdown structure the generators and checks read: blocks, headings and anchors, sections, links, inline code, list items and table cells "];
+    extensions_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/EXTENSIONS.md\nextensions_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="extensions_md: docs/EXTENSIONS.md | the shared sandbox-extension coverage the guide copies "];
     contract_json -> gen_contract [style="solid", color="#8a7400", label="D1 versions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D1: version numbers |  "];
     gen_contract -> contract_md [style="bold", color="#2e7d32", label="D2 sentence, table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D2: version sentence and table |  "];
     gen_contract -> api_swift [style="bold", color="#2e7d32", label="D3 PWContract", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D3: PWContract |  "];
@@ -182,4 +184,5 @@ digraph documents {
     markdown_reader -> gen_build [style="solid", color="#8a7400", label="D70 inventory", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D70: README.md's bundle inventory and figure anchors |  "];
     markdown_reader -> drift_check [style="solid", color="#8a7400", label="D71 structure", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D71: sections, tables, lists, links and guidance routes |  "];
     markdown_reader -> drift_generators [style="solid", color="#8a7400", label="D72 prose", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D72: G9 prose lines, citation pairs and G11 links |  "];
+    extensions_md -> gen_limits [style="solid", color="#8a7400", label="D63 coverage", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D63: shared extension coverage |  "];
 }

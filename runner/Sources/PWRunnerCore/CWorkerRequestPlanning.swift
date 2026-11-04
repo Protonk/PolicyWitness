@@ -12,10 +12,11 @@ extension CWorkerOrchestrator {
     /// gate; the driver also retains its checks local to the ABI writer.
     static func admissionFailure(for parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
         if let refused = requestAdmissionFailure(parsed) { return refused }
+        if parsed.isActorForm { return actorAdmissionFailure(parsed) }
         // Count checks precede translating an unbounded plan or sorting params.
         if let phases = parsed.phases {
-            if phases.count > PWShmLayout.maxPhases {
-                return PWRunnerAdmissionFailure(field: "phases", actual: phases.count, maximum: PWShmLayout.maxPhases, unit: "items")
+            if phases.count > PWRunnerPhase.maximumCount {
+                return PWRunnerAdmissionFailure(field: "phases", actual: phases.count, maximum: PWRunnerPhase.maximumCount, unit: "items")
             }
             let count = phases.reduce(0) { $0 + $1.actions.count }
             if count > PWShmLayout.maxSteps {
@@ -32,12 +33,12 @@ extension CWorkerOrchestrator {
             return PWRunnerAdmissionFailure(field: "probe_plan", actual: parsed.probe_plan.count,
                 maximum: PWShmLayout.maxSteps, unit: "items")
         }
-        if let count = parsed.policy.params?.count, count > PWShmLayout.maxParams {
+        if let count = parsed.policy?.params?.count, count > PWShmLayout.maxParams {
             return PWRunnerAdmissionFailure(field: "policy.params", actual: count,
                 maximum: PWShmLayout.maxParams, unit: "items")
         }
-        let capacity = CWorkerInput(workerExecutablePath: "", policy: parsed.policy.sbpl_source ?? "",
-            params: workerParamsFromPolicy(parsed.policy), slots: workerSlotsFromProbePlan(parsed.probe_plan))
+        let capacity = CWorkerInput(workerExecutablePath: "", policy: parsed.policy?.sbpl_source ?? "",
+            params: parsed.policy.map(workerParamsFromPolicy) ?? [], slots: workerSlotsFromProbePlan(parsed.probe_plan))
         if let refused = workerAdmissionFailure(capacity) { return refused }
         return queryAdmissionFailure(parsed.probe_plan)
     }
@@ -70,7 +71,7 @@ func timeoutMsForValidator(override: Int?) -> Int {
 
 // MARK: - Translation: request → driver inputs
 
-private func workerSlotsFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [CWorkerSlotInput] {
+func workerSlotsFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [CWorkerSlotInput] {
     var slots: [CWorkerSlotInput] = []
     slots.reserveCapacity(plan.count)
     for step in plan {
@@ -222,7 +223,7 @@ let overridePathAdmissions: [(key: WritableKeyPath<PWRunnerTestOverrides, String
 
 func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
     for (rule, value) in [(specimenIdAdmission, parsed.specimen_id),
-                           (runKindAdmission, parsed.run_kind), (policyFormatAdmission, parsed.policy.format)] {
+                           (runKindAdmission, parsed.run_kind), (policyFormatAdmission, parsed.policy?.format)] {
         if let refused = rule.failure(value) { return refused }
     }
     if let declarations = parsed.extensions {
@@ -233,12 +234,24 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
             }
         }
     }
+    for (i, actor) in (parsed.actors ?? []).enumerated() {
+        if let failure = AdmissionStringRule(field: "actors.\(i).actor_id", maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(actor.actor_id) { return failure }
+        if let failure = AdmissionStringRule(field: "actors.\(i).sandbox.mode", maximum: requestLabelMaxBytes).failure(actor.sandbox.mode) { return failure }
+        if let format = actor.sandbox.policy?.format,
+           let failure = AdmissionStringRule(field: "actors.\(i).sandbox.policy.format", maximum: requestLabelMaxBytes).failure(format) { return failure }
+    }
     for (pi, phase) in (parsed.phases ?? []).enumerated() {
+        if parsed.isActorForm, let failure = AdmissionStringRule(field: "phases.\(pi).actor_id", maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(phase.actor_id) { return failure }
         for (ai, action) in phase.actions.enumerated() {
             guard case .extensionAction(let value) = action else { continue }
-            for (key, text) in [("step_id", value.step_id), ("extension.operation", value.intervention.operation),
-                                ("extension.token_ref", value.intervention.token_ref), ("extension.handle_ref", value.intervention.handle_ref)] {
-                let cap = key.hasSuffix("_ref") ? PWExtensionLimits.referenceBytes : requestLabelMaxBytes
+            let op = value.intervention
+            for (key, text) in [("step_id", value.step_id), ("extension.operation", op.operation),
+                                ("extension.token_ref", op.token_ref), ("extension.handle_ref", op.handle_ref),
+                                ("extension.delivery_ref", op.delivery_ref), ("extension.recipient", op.recipient),
+                                ("extension.family", op.family), ("extension.authority", op.authority),
+                                ("extension.target", op.target)] {
+                let cap = key.hasSuffix("_ref") || key.hasSuffix("recipient") ? PWExtensionLimits.referenceBytes
+                    : key.hasSuffix("target") ? PWActorLimits.targetBytes : requestLabelMaxBytes
                 if let failure = AdmissionStringRule(field: "phases.\(pi).actions.\(ai).\(key)", maximum: cap, requiresCString: true).failure(text) { return failure }
             }
         }
@@ -271,7 +284,7 @@ func admissionRefusalReply(parsed: PWRunnerRunSpec, refused: PWRunnerAdmissionFa
         run_kind: runKindAdmission.safeEcho(parsed.run_kind), rc: 1,
         normalized_outcome: NormalizedOutcome.badRequest,
         error: CWorkerRunError.admissionFailed(record).description, pid: Int(getpid()),
-        bundle_id: bundleId, policy_format: policyFormatAdmission.safeEcho(parsed.policy.format) ?? "unknown",
+        bundle_id: bundleId, policy_format: parsed.isActorForm ? nil : (policyFormatAdmission.safeEcho(parsed.policy?.format) ?? "unknown"),
         policy_sha256: policyHash, steps: [], test_overrides: mirrored, admission_failure: record,
         request_failure: requestCapacityFailure(record, parsed: parsed))
 }

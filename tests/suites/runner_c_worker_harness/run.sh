@@ -783,6 +783,22 @@ for scenario in proceed_never_set proceed_late_after_expiry proceed_before_appli
   run_proceed_control "$scenario"
 done
 
+# Actor-form activation barrier, setup modes and the worker's policy hash.
+run_activation_control() {
+  local scenario="$1"
+  run_harness_case "${scenario}" "${scenario}" "Exercise the parked activation wait, setup mode and cutoff: ${scenario}" || return 0
+  set +e
+  "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_activation.py" "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+for scenario in activation_named_ordinal activation_under_deny_default activation_greater_ordinal \
+  activation_withheld_cutoff activation_cancel_while_parked activation_cutoff_past \
+  unapplied_actor_reads unapplied_under_deny_default; do
+  run_activation_control "$scenario"
+done
+
 if test_selected sysctl_read_capacity; then
   test_begin runner_c_worker_harness sysctl_read_capacity
   test_step control "observe the actual sysctl call capacity and reject a shortened-capacity mutation"

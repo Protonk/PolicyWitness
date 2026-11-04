@@ -447,6 +447,47 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   issuer signing, provenance or runner installation.
 - **Artifacts:** `<run>/suites/witness_contract/extensions_byoxpc/artifacts/`
 
+### BYOXPC actor controls
+
+- **Case:** `witness_contract/actors_byoxpc`
+- **Location:** `tests/suites/witness_contract/opt_in/actors_byoxpc.sh`
+- **Purpose:** Run the principal re-delegation, calibration and contrasts
+  through an owned installed runner's selected worker; with the installed
+  issuer held aside, show the declaration form refused and the actor form
+  executing without a helper; launch an App Sandbox-signed copy of the worker
+  through the host's override to show an `unapplied` actor inheriting that
+  restriction against the ordinary worker baseline.
+- **Execution considerations:** Installs a launchd service in a logged-in GUI
+  session and re-signs a bundled worker copy with the selected identity. The
+  App Sandbox initializer creates that copy's container under a fixed
+  `com.policywitness.test.restricted-worker` identifier in the user's Library;
+  removal needs Full Disk Access, so the case records the attempt and reports
+  a retained container rather than failing.
+- **Resource dependency:** Signed app, signing identity and GUI session.
+  Targets and the worker copy live in the owned `/private/tmp` staging
+  directory under the shared session helper's ownership.
+- **When to run:** After changing actor execution, authority transport, the
+  issuer dependency of the declaration form, worker launch or BYOXPC
+  installation.
+- **Artifacts:** `<run>/suites/witness_contract/actors_byoxpc/artifacts/`
+
+### Actor re-delegation and timing qualification
+
+- **Cases:** `witness_contract/extension_redelegation` and
+  `witness_contract/actor_timing_qualification`
+- **Location:** `tests/suites/witness_contract/extension_redelegation.sh` and
+  `tests/suites/witness_contract/actor_timing_qualification.sh`
+- **Purpose:** The principal three-actor specimen, positive calibration and
+  association contrasts through the public CLI; then finite one-, three- and
+  eight-actor workloads, the aggregate limits workload and the eight-actor
+  chain and calibration shapes measured against every actor-form allowance.
+- **Resource dependency:** Signed app and the embedded runner; test-owned
+  targets in `/private/tmp`. Timing results describe the recorded equipment.
+- **When to run:** After changing the actor scheduler, waits, authority
+  transport, the actor limits or the worker's actor paths.
+- **Artifacts:** `<run>/suites/witness_contract/<case>/artifacts/report.json`
+  beside every envelope and specimen.
+
 ### built-in caller authentication
 
 - **Case:** `smoke/runner_caller_auth`
@@ -688,7 +729,10 @@ PW_APP_DIR=/path/to/candidate.app PW_TEST_OUT_DIR=tests/out/runs/retirement-cand
   fresh acquisition before submission. Lost execution replies and lost helper
   captures cannot cause replay. Independent append effects, request hashes,
   boundary traces and kernel generations establish the controlled observations.
-  Old execution selectors and unsupported protocol replies cannot execute.
+  Old execution selectors and unsupported protocol replies cannot execute. A
+  reply whose response-schema marker alone is altered after one real execution
+  is refused as `unsupported_runner_response` with the opaque reply preserved
+  and no replay.
 - **Limits:** Trace IO/gates perturb timing; a controlled error code does not
   attribute an earlier failure. Passing establishes these boundaries and
   cleanup, not ordinary BYOXPC reliability or production equivalence.

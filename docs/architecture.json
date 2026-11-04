@@ -322,7 +322,7 @@
             "Where": "inside the XPC bundle",
             "Started by": "launchd: XPC service lookup, or a Mach service for BYOXPC",
             "Sandboxed": "no",
-            "Native sandbox API": "none, by the invariance rule",
+            "Native sandbox API": "none, by the invariance rule; actor-form token custody copies, compares and erases bytes without a sandbox call",
             "Lifetime": "one reservation and at most one specimen; unused reservation expiry or abandonment retires the host; terminal reply flush delay {limit:host_exit_delay} is best effort"
           },
           "note": "All authorized connections share one locked reservation slot. Only the connection holding its grant can consume it, before specimen decoding. Stale expiry or disconnect cannot retire an executing owner; client loss after submission never permits replay.",
@@ -338,6 +338,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
               "symbol": "hostExitDelayMs"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "AuthorityCustody"
             }
           ],
           "checks": [
@@ -360,6 +364,11 @@
               "path": "tests/suites/runner_byoxpc/opt_in/single_use.sh",
               "symbol": "single_use",
               "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift",
+              "symbol": "runActorReplyTests",
+              "form": "test"
             }
           ]
         },
@@ -372,8 +381,8 @@
             "Where": "inside the XPC bundle",
             "Started by": "the host",
             "Sandboxed": "yes; applies the specimen policy to itself",
-            "Native sandbox API": "sandbox_compile_string, params, sandbox_apply; sandbox_extension_consume and sandbox_extension_release",
-            "Lifetime": "one specimen; one application and all ordered phases; terminal publication exits without host permission"
+            "Native sandbox API": "sandbox_compile_string, params, sandbox_apply; sandbox_extension_consume and sandbox_extension_release; sandbox_extension_issue_file in an actor",
+            "Lifetime": "one specimen in the single-worker form, or one actor of an actor-form specimen; one application (none for an unapplied actor) and all of its ordered visits; parked between visits; terminal publication exits without host permission"
           },
           "sources": [
             {
@@ -387,6 +396,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "publish_done_and_exit"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension_issue"
             }
           ],
           "checks": [
@@ -423,6 +436,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "terminal_exit_without_request",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
               "form": "test"
             }
           ]
@@ -769,11 +787,11 @@
           "note": "Policy delivery uses nonblocking writes under one absolute monotonic deadline (the worker_policy_transfer limit) beginning after spawn. Expiry closes input and enters cleanup before readiness or sentinel polling. The pipe carries no framing: the host writes the submission's byte count into the shared header before spawn, and the worker at EOF publishes the count it read and refuses a different length before compiling.",
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
               "symbol": "posix_spawn_file_actions_adddup2"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
               "symbol": "F_SETNOSIGPIPE"
             },
             {
@@ -1099,6 +1117,116 @@
             }
           ],
           "note": "Token storage {limit:extension_token_storage}; raw bytes never enter reply fields."
+        },
+        {
+          "id": "T15",
+          "from": "host",
+          "to": "worker",
+          "kind": "spawn",
+          "label": "actor form: posix_spawn with an empty environment and null standard streams; fd 5 the actor's own authority region; activation ordinal and shared lifetime cutoff in the evidence header",
+          "short": "actor launch; fd 5 authority region",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "posix_spawn_file_actions_addopen"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "launchAndSetUp"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_authority"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+              "symbol": "runActorSchedulerTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "activation_named_ordinal",
+              "form": "test"
+            }
+          ],
+          "note": "One region per actor, mapped by the host before launch and by that actor before application; a validator or another actor never maps it. Setup allowance {limit:actor_setup_allowance}; lifetime cutoff {limit:actor_lifetime_cutoff}."
+        },
+        {
+          "id": "T16",
+          "from": "worker",
+          "to": "host",
+          "kind": "channel",
+          "label": "outbound token publication after a nonnull native issue, and transfer requests naming the sending action; the host acknowledges custody and answers requests",
+          "short": "issue publication and transfer request",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension_transfer"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+              "symbol": "transfer_request"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "serviceOutbound"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_abi_layout/run.sh",
+              "symbol": "c_swift_layout_agreement",
+              "form": "test"
+            }
+          ],
+          "note": "Exchange allowance {limit:actor_exchange_allowance} on each side; expiry is a transport status, never a native result. The worker erases its scratch whatever the answer."
+        },
+        {
+          "id": "T17",
+          "from": "host",
+          "to": "worker",
+          "kind": "channel",
+          "label": "delivery into the recipient's assigned inbound slot; the parked recipient validates framing and acknowledges without consuming",
+          "short": "delivery and acknowledgement",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "serviceTransfer"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "service_inbound_once"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+              "symbol": "pw_authority_frame_problem"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift",
+              "symbol": "runActorReplyTests",
+              "form": "test"
+            }
+          ],
+          "note": "The host compares the recipient's accepted bytes with its custody copy before crediting delivery; custody is erased at the token's last declared transfer."
         }
       ]
     },
@@ -1551,6 +1679,72 @@
             {
               "path": "tests/suites/witness_contract/check_extension_combinations.py",
               "symbol": "check_row",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "actor_plan",
+          "label": "normalized actor plan",
+          "kind": "record",
+          "facts": {
+            "Owner": "host normalization before any process work; shared by public admission, direct XPC and the scheduler",
+            "Form": "actors, phases with actor and visit, tokens, deliveries and handles by reference with owners, producers and last uses"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+              "symbol": "normalizeActorPlan"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+              "symbol": "ActorTranslation"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorPlanTests.swift",
+              "symbol": "runActorPlanTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+              "symbol": "runRequestContractTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "authority_region",
+          "label": "per-actor authority region and host custody",
+          "kind": "record",
+          "facts": {
+            "Owner": "host creates, unlinks and maps each region; the actor maps its inherited descriptor; custody buffers are host-only",
+            "Form": "one outbound slot and one inbound slot per admitted delivery; fixed headers with family, writer, indexes, length, commit and acknowledgement words; never retained JSON"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+              "symbol": "pw_authority_slot_t"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "PWAuthorityLayout"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "TokenCustody"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_abi_layout/run.sh",
+              "symbol": "c_swift_layout_agreement",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
               "form": "test"
             }
           ]
@@ -2162,6 +2356,100 @@
               "form": "test"
             }
           ]
+        },
+        {
+          "id": "B17",
+          "from": "run_spec",
+          "to": "actor_plan",
+          "kind": "guard",
+          "label": "closed actor and sandbox objects, phases naming declared actors, single-assignment references used after their producers by their owners, and the per-actor exec exclusion",
+          "short": "admit the actor form",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+              "symbol": "normalizeActorPlan"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+              "symbol": "actorAdmissionFailure"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorPlanTests.swift",
+              "symbol": "runActorPlanTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_outcome_bad_request/contract.py",
+              "symbol": "main",
+              "form": "test"
+            }
+          ],
+          "note": "Actors {limit:actors}; phases {limit:actor_phases}; issues {limit:actor_issues}; deliveries {limit:actor_deliveries}; handles {limit:actor_handles}; releases {limit:actor_releases}; identifiers {limit:actor_id}; issue target {limit:extension_issue_target}."
+        },
+        {
+          "id": "B18",
+          "from": "shm_region",
+          "to": "authority_region",
+          "kind": "guard",
+          "label": "an outbound token enters custody only with the expected framing, writer, action and token indexes, and only while the writer still stands behind it; a delivery is credited only when the recipient's accepted bytes equal the custody copy",
+          "short": "custody and delivery acceptance",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "slotFramingProblem"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "serviceTransfer"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+              "symbol": "pw_authority_slot_problem"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "B19",
+          "from": "authority_region",
+          "to": "reply",
+          "kind": "guard",
+          "label": "every actor event names its actor and one of that actor's phases, references resolve to their owners in the resource tables, transfers carry no native result, and nothing is credited without the actor's declared or applied setup and its phase's acknowledged release",
+          "short": "actor evidence association",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+              "symbol": "actorExtensionEvidenceProblem"
+            },
+            {
+              "path": "controller/src/disposition.rs",
+              "symbol": "actor_extension_issues"
+            },
+            {
+              "path": "tests/lib/extension_evidence.py",
+              "symbol": "validate_actor_extensions"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift",
+              "symbol": "runActorReplyTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift",
+              "symbol": "runContractVersionTests",
+              "form": "test"
+            }
+          ]
         }
       ]
     },
@@ -2222,7 +2510,8 @@
             "tests_agents",
             "coverage_md",
             "build_md",
-            "worker_md"
+            "worker_md",
+            "extensions_md"
           ]
         },
         {
@@ -2497,7 +2786,7 @@
           "label": "docs/PolicyWitness.md",
           "kind": "document",
           "facts": {
-            "Carries": "copied limits, questions, reading rules and extension statuses; the version sentence; the only document that ships"
+            "Carries": "copied limits, questions, reading rules and extension statuses and coverage; the version sentence; the only document that ships"
           },
           "sources": [
             {
@@ -3468,6 +3757,27 @@
             {
               "path": "tests/suites/source_drift/markdown.py",
               "symbol": "test_only_the_reader_imports_the_parser",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "extensions_md",
+          "label": "docs/EXTENSIONS.md",
+          "kind": "document",
+          "facts": {
+            "Carries": "the shared sandbox-extension coverage the guide copies"
+          },
+          "sources": [
+            {
+              "path": "docs/EXTENSIONS.md",
+              "symbol": "BEGIN SHARED EXTENSION COVERAGE"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/limits.py",
+              "symbol": "test_extension_coverage_is_copied_from_its_document_demoted_and_standalone",
               "form": "test"
             }
           ]
@@ -5016,6 +5326,27 @@
             {
               "path": "tests/suites/source_drift/generators.py",
               "symbol": "test_prose_baseline_is_consistent_and_growth_is_explicit",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D63",
+          "from": "extensions_md",
+          "to": "gen_limits",
+          "kind": "reads",
+          "label": "shared extension coverage",
+          "short": "coverage",
+          "sources": [
+            {
+              "path": "docs/generate_limits.py",
+              "symbol": "COVERAGE_SHARED_START"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/limits.py",
+              "symbol": "test_extension_coverage_copy_rejects_staleness_dependencies_and_missing_regions_without_writes",
               "form": "test"
             }
           ]

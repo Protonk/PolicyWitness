@@ -633,8 +633,8 @@ remain separately asserted.
 
 
 The opt-in `runner_byoxpc/reservation_controls` case compiles copied host and
-client sources to control reservation, execution-reply and capture-publication
-boundaries, with independent effects and process-exit evidence. Its controlled
+client sources to control reservation, execution-reply, capture-publication and
+unsupported-response boundaries, with independent effects and process-exit evidence. Its controlled
 results do not replace ordinary BYOXPC acceptance; see the owning suite account.
 
 ## Pytest exec family

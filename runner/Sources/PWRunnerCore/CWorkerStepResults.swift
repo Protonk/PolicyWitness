@@ -10,7 +10,8 @@ func buildStepResults(
     validatorOutput: ValidatorOutput?,
     ordering: PWRunnerOrdering? = nil,
     disposition: PWDispositionRecord? = nil,
-    stepOffset: Int = 0
+    stepOffset: Int = 0,
+    setupEstablished: Bool? = nil
 ) -> [PWRunnerStepResult] {
     // One resolved account for every lifecycle projection below.
     let account = disposition ?? workerOutput.map { resolveDisposition($0, plan: probePlan) }
@@ -72,7 +73,9 @@ func buildStepResults(
             queryExclusionReason: decisions[channel.step.step_id]?.exclusionCode,
             order: eligibleOrderedStep(stepId: channel.step.step_id, query: channel.sandboxCheck,
                 records: validatorOutput?.verdicts ?? [], ordering: ordering,
-                sandboxedAfterApply: workerOutput?.applied == true && workerOutput?.applyRC == 0,
+                // The actor form supplies the declared setup of an unapplied
+                // actor; otherwise the prerequisite is the successful application.
+                sandboxedAfterApply: setupEstablished ?? (workerOutput?.applied == true && workerOutput?.applyRC == 0),
                 workerPid: workerOutput.map { Int($0.workerPid) })
                 ? .queryFirst : .unestablished)
         // Exactly one lifecycle limitation for a summary other than completed. It

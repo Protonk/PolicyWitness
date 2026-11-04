@@ -30,6 +30,21 @@ pub struct Specimen {
     pub runner_provenance: Option<RunnerProvenance>,
     pub app_provenance: Option<AppProvenance>,
     pub binaries: Binaries,
+    /// The actor form's per-actor policy dossiers, in request order; absent
+    /// for the legacy form, whose one dossier is `policy`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actors: Option<Vec<ActorDossier>>,
+}
+
+/// One actor's policy dossier. An unapplied actor, or an actor whose policy
+/// object is absent or malformed, carries a not-applicable dossier; the runner
+/// decides admission. Ids and modes are copied from the request as strings or
+/// null when they are not strings.
+#[derive(Serialize, Clone)]
+pub struct ActorDossier {
+    pub actor_id: Option<String>,
+    pub mode: Option<String>,
+    pub policy: PolicyDossier,
 }
 
 #[derive(Serialize, Clone)]
@@ -492,6 +507,7 @@ impl Specimen {
             runner_provenance: None,
             app_provenance: None,
             binaries: Binaries::unselected(reason),
+            actors: None,
         }
     }
 }

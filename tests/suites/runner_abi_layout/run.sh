@@ -292,6 +292,18 @@ if ! "${PW_PYTHON}" -B -S "${SUITE_DIR}/extension_layout.py" "${PW_TEST_ARTIFACT
   test_fail "transient extension channel layout disagrees"
 fi
 
+test_step authority_layout "compare per-actor authority region sizeof and offsets with Swift"
+if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Werror -O2 -std=c11 \
+    -I "${ABI_HEADER_DIR}" "${SUITE_DIR}/authority_printer.c" -o "${PW_TEST_ARTIFACTS}/authority-printer" \
+    2>"${PW_TEST_ARTIFACTS}/authority-printer.err"; then
+  test_fail "authority region printer failed to compile"
+fi
+"${PW_TEST_ARTIFACTS}/authority-printer" >"${PW_TEST_ARTIFACTS}/authority-layout.txt"
+if ! "${PW_PYTHON}" -B -S "${SUITE_DIR}/authority_layout.py" "${PW_TEST_ARTIFACTS}/authority-layout.txt" \
+    >"${PW_TEST_ARTIFACTS}/authority-layout.log" 2>&1; then
+  test_fail "authority region layout disagrees"
+fi
+
 test_step "capture" "exercise bounded profile reads against independently constructed objects"
 if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Wno-deprecated-declarations -O2 -std=c11 \
     -I "${ABI_HEADER_DIR}" "${SUITE_DIR}/capture.c" -o "${PW_TEST_ARTIFACTS}/capture" \

@@ -1,5 +1,5 @@
 {
-  "controller_envelope": 9,
+  "controller_envelope": 10,
   "shape": {
     "envelope": {
       "build": "object",
@@ -16,6 +16,7 @@
       "version": "string"
     },
     "envelope.data": {
+      "actor_policy_checks": "array",
       "policy_check": "object",
       "request_failure": "object",
       "runner_client": "object",
@@ -23,6 +24,78 @@
       "runner_sandbox_diagnostics": "object",
       "specimen": "object",
       "timeout_ms": "number"
+    },
+    "envelope.data.actor_policy_checks[]": {
+      "actor_id": "string",
+      "policy_check": "object"
+    },
+    "envelope.data.actor_policy_checks[].policy_check": {
+      "capture_limit_bytes": "number",
+      "envelope": "object",
+      "status": "string",
+      "stderr": "string",
+      "stderr_bytes_received": "number",
+      "stderr_bytes_retained": "number",
+      "stderr_truncated": "boolean",
+      "stdout_bytes_received": "number",
+      "stdout_bytes_retained": "number",
+      "stdout_capture_error": "string",
+      "stdout_parse_error": "string",
+      "stdout_raw": "string",
+      "stdout_truncated": "boolean",
+      "tool_exit_code": "number"
+    },
+    "envelope.data.actor_policy_checks[].policy_check.envelope": {
+      "build": "object",
+      "data": "object",
+      "generated_at_unix_ms": "number",
+      "kind": "string",
+      "result": "object",
+      "schema_version": "number"
+    },
+    "envelope.data.actor_policy_checks[].policy_check.envelope.build": {
+      "commit": "string",
+      "describe": "string",
+      "number": "string",
+      "version": "string"
+    },
+    "envelope.data.actor_policy_checks[].policy_check.envelope.data": {
+      "compile": "object",
+      "import_inventory": "object",
+      "macos_build_version": "string",
+      "params_count": "number",
+      "params_present": "boolean",
+      "policy_format": "string",
+      "policy_sha256": "string"
+    },
+    "envelope.data.actor_policy_checks[].policy_check.envelope.data.compile": {
+      "error": "string",
+      "ok": "boolean",
+      "stage": "string"
+    },
+    "envelope.data.actor_policy_checks[].policy_check.envelope.data.import_inventory": {
+      "cycle": "array",
+      "policy_closure_sha256": "string",
+      "records": "array",
+      "truncated": "boolean"
+    },
+    "envelope.data.actor_policy_checks[].policy_check.envelope.data.import_inventory.records[]": {
+      "error": "string",
+      "mtime_unix": "number",
+      "name": "string",
+      "resolved_path": "string",
+      "sha256": "string",
+      "size_bytes": "number"
+    },
+    "envelope.data.actor_policy_checks[].policy_check.envelope.result": {
+      "errno": "number",
+      "error": "string",
+      "exit_code": "number",
+      "normalized_outcome": "string",
+      "ok": "boolean",
+      "rc": "number",
+      "stderr": "string",
+      "stdout": "string"
     },
     "envelope.data.policy_check": {
       "capture_limit_bytes": "number",
@@ -196,23 +269,69 @@
       "status": "string"
     },
     "envelope.data.runner_sandbox_diagnostics": {
+      "actors": "array",
       "disposition_integrity": "string",
       "disposition_issues": "array",
       "process_disposition": "string",
       "stop_reason": "string",
       "termination_cause": "string"
     },
+    "envelope.data.runner_sandbox_diagnostics.actors[]": {
+      "actor_id": "string",
+      "disposition_integrity": "string",
+      "disposition_issues": "array",
+      "process_disposition": "string",
+      "stop_reason": "string",
+      "termination_cause": "string"
+    },
+    "envelope.data.runner_sandbox_diagnostics.actors[].disposition_issues[]": {
+      "detail": "string",
+      "kind": "string"
+    },
     "envelope.data.runner_sandbox_diagnostics.disposition_issues[]": {
       "detail": "string",
       "kind": "string"
     },
     "envelope.data.specimen": {
+      "actors": "array",
       "app_provenance": "object",
       "binaries": "object",
       "host": "object",
       "policy": "object",
       "request_path": "string",
       "runner_provenance": "object"
+    },
+    "envelope.data.specimen.actors[]": {
+      "actor_id": "string",
+      "mode": "string",
+      "policy": "object"
+    },
+    "envelope.data.specimen.actors[].policy": {
+      "augmentation": "object",
+      "imports": "object"
+    },
+    "envelope.data.specimen.actors[].policy.augmentation": {
+      "applied": "array",
+      "applied_sha256": "string",
+      "error": "string",
+      "original_sha256": "string",
+      "status": "string"
+    },
+    "envelope.data.specimen.actors[].policy.imports": {
+      "closure_sha256": "string",
+      "cycle": "array",
+      "exceeded": "string",
+      "failure": "string",
+      "records": "array",
+      "status": "string"
+    },
+    "envelope.data.specimen.actors[].policy.imports.records[]": {
+      "error": "string",
+      "mtime_unix": "number",
+      "name": "string",
+      "resolved_path": "string",
+      "sha256": "string",
+      "size_bytes": "number"
     },
     "envelope.data.specimen.app_provenance": {
       "evidence_manifest_path": "string",

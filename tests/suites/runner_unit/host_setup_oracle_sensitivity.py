@@ -244,14 +244,14 @@ def prepare_variant(inputs, out, variant):
     root = out / "source"
     shutil.copytree(inputs / "root", root)
     manifest = []
-    worker = root / "runner/Sources/PWRunnerCore/CWorker.swift"
+    worker = root / "runner/Sources/PWRunnerCore/ActorSession.swift"
     edits = {
         "wrong_ready_direction": (
-            "    posix_spawn_file_actions_adddup2(&fa, readyPipe[1], 4)\n",
-            "    posix_spawn_file_actions_adddup2(&fa, readyPipe[0], 4)\n"),
-        "wrong_shm_argv": ('        "--shm-fd", "3",\n', '        "--shm-fd", "4",\n'),
-        "partial_unmap": ("        _ = munmap(base, PWShmLayout.regionBytes)\n",
-                          "        _ = munmap(base, Int(getpagesize()))\n"),
+            "        posix_spawn_file_actions_adddup2(&fileActions, readyPipe[1], 4)\n",
+            "        posix_spawn_file_actions_adddup2(&fileActions, readyPipe[0], 4)\n"),
+        "wrong_shm_argv": ('            "--shm-fd", "3",\n', '            "--shm-fd", "4",\n'),
+        "partial_unmap": ("        if let base { _ = munmap(base, PWShmLayout.regionBytes) }\n",
+                          "        if let base { _ = munmap(base, Int(getpagesize())) }\n"),
     }
     if variant in edits:
         replace_once(worker, *edits[variant], manifest, "deliberate host counterexample: " + variant)

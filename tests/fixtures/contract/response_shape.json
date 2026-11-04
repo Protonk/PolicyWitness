@@ -1,11 +1,13 @@
 {
-  "response_schema" : 24,
+  "response_schema" : 25,
   "shape" : {
     "reply" : {
+      "actors" : "array",
       "admission_failure" : "object",
       "bundle_id" : "string",
       "compiled_profile" : "object",
       "error" : "string",
+      "execution_form" : "string",
       "extension_events" : "array",
       "extensions" : "array",
       "normalized_outcome" : "string",
@@ -16,13 +18,179 @@
       "rc" : "number",
       "reporting_failure" : "object",
       "request_failure" : "object",
+      "resources" : "object",
       "run_kind" : "string",
       "runner_subprocess" : "object",
       "sandboxed_after_apply" : "boolean",
+      "schedule" : "object",
       "schema_version" : "number",
       "specimen_id" : "string",
       "steps" : "array",
-      "test_overrides" : "object"
+      "test_overrides" : "object",
+      "transfers" : "array"
+    },
+    "reply.actors[]" : {
+      "actor_id" : "string",
+      "application_count" : "number",
+      "applied" : "boolean",
+      "index" : "number",
+      "launch" : "object",
+      "mode" : "string",
+      "policy_format" : "string",
+      "policy_received_sha256" : "string",
+      "policy_sha256" : "string",
+      "setup_status" : "string",
+      "subprocess" : "object",
+      "visits" : "array"
+    },
+    "reply.actors[].launch" : {
+      "environment" : "string",
+      "inherited_descriptors" : "array",
+      "parent_pid" : "number",
+      "pid" : "number",
+      "standard_streams" : "string"
+    },
+    "reply.actors[].subprocess" : {
+      "cleanup_trigger" : "string",
+      "collection_basis" : "string",
+      "disposition" : "object",
+      "done_observed" : "boolean",
+      "exit_code" : "number",
+      "exit_grace_wait" : "object",
+      "exit_requested" : "boolean",
+      "grace_end" : "string",
+      "partial_steps" : "boolean",
+      "pid" : "number",
+      "poll_stop_reason" : "string",
+      "ready_byte_received" : "boolean",
+      "ready_wait" : "object",
+      "reaped" : "boolean",
+      "wait_errors" : "array",
+      "worker_evidence" : "object"
+    },
+    "reply.actors[].subprocess.disposition" : {
+      "issues" : "array",
+      "questions" : "object",
+      "steps" : "array"
+    },
+    "reply.actors[].subprocess.disposition.questions" : {
+      "cleanup_trigger" : "object",
+      "collection_basis" : "object",
+      "final_status" : "object",
+      "grace_end" : "object",
+      "kill_request_and_result" : "object",
+      "progress_association" : "object",
+      "stop_reason" : "object"
+    },
+    "reply.actors[].subprocess.disposition.questions.cleanup_trigger" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.collection_basis" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.final_status" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string",
+      "value" : "number"
+    },
+    "reply.actors[].subprocess.disposition.questions.grace_end" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.kill_request_and_result" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.progress_association" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.disposition.questions.stop_reason" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[]" : {
+      "attempt_support" : "string",
+      "index" : "number",
+      "questions" : "object",
+      "slot" : "string",
+      "step_id" : "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions" : {
+      "step_boundary_reached" : "object",
+      "step_requested_operation_applicability" : "object",
+      "step_result_published" : "object"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_boundary_reached" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_requested_operation_applicability" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.disposition.steps[].questions.step_result_published" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.actors[].subprocess.exit_grace_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "stop" : "string"
+    },
+    "reply.actors[].subprocess.ready_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "stop" : "string"
+    },
+    "reply.actors[].subprocess.worker_evidence" : {
+      "abi_identity" : "string",
+      "diagnostic" : "object",
+      "failure" : "object",
+      "failure_publication" : "number",
+      "failure_state" : "string",
+      "policy_read" : "object",
+      "progress" : "object",
+      "readiness" : "object"
+    },
+    "reply.actors[].subprocess.worker_evidence.diagnostic" : {
+      "length" : "number",
+      "state" : "number",
+      "status" : "string",
+      "text" : "string"
+    },
+    "reply.actors[].subprocess.worker_evidence.failure" : {
+      "code" : "number",
+      "detail" : "number",
+      "native_kind" : "number",
+      "operation" : "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.policy_read" : {
+      "bytes_expected" : "number",
+      "bytes_received" : "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.progress" : {
+      "operation" : "number",
+      "raw" : "number",
+      "stage" : "number"
+    },
+    "reply.actors[].subprocess.worker_evidence.readiness" : {
+      "errno" : "number",
+      "rc" : "number"
     },
     "reply.admission_failure" : {
       "actual" : "number",
@@ -53,16 +221,24 @@
       "worker_pid" : "number"
     },
     "reply.extension_events[]" : {
+      "actor_id" : "string",
       "call_boundary_observed" : "boolean",
+      "delivery_ref" : "string",
       "errno" : "number",
+      "extension_class" : "string",
+      "family" : "string",
+      "flags" : "number",
       "handle_ref" : "string",
       "lifecycle" : "object",
+      "native_nonnull" : "boolean",
       "native_result" : "number",
       "operation" : "string",
       "phase_id" : "string",
       "result_published" : "boolean",
       "status" : "string",
       "step_id" : "string",
+      "target" : "string",
+      "token_length" : "number",
       "token_ref" : "string",
       "unavailable_reason" : "string"
     },
@@ -154,6 +330,8 @@
     },
     "reply.phases[]" : {
       "action_ids" : "array",
+      "actor_id" : "string",
+      "actor_visit" : "number",
       "arrival_observed" : "boolean",
       "collection_status" : "string",
       "completion_observed" : "boolean",
@@ -161,7 +339,8 @@
       "ordinal" : "number",
       "phase_id" : "string",
       "validator_spawn_failure" : "object",
-      "validator_subprocess" : "object"
+      "validator_subprocess" : "object",
+      "visit_timing" : "object"
     },
     "reply.phases[].ordering" : {
       "collection_closed_before_proceed" : "boolean",
@@ -245,6 +424,12 @@
       "rc" : "number",
       "stage" : "string"
     },
+    "reply.phases[].visit_timing" : {
+      "activation_to_arrival_ms" : "number",
+      "arrival_to_release_ms" : "number",
+      "collection_ms" : "number",
+      "release_to_completion_ms" : "number"
+    },
     "reply.reporting_failure" : {
       "diagnostic" : "string",
       "evidence_retained" : "boolean",
@@ -257,6 +442,42 @@
       "code" : "string",
       "expected_schema" : "number",
       "path" : "array"
+    },
+    "reply.resources" : {
+      "deliveries" : "array",
+      "handles" : "array",
+      "tokens" : "array"
+    },
+    "reply.resources.deliveries[]" : {
+      "delivered_length" : "number",
+      "delivery_ref" : "string",
+      "equality" : "string",
+      "last_use_step_id" : "string",
+      "recipient_actor_id" : "string",
+      "source_actor_id" : "string",
+      "status" : "string",
+      "step_id" : "string",
+      "token_ref" : "string"
+    },
+    "reply.resources.handles[]" : {
+      "actor_id" : "string",
+      "delivery_ref" : "string",
+      "handle_ref" : "string",
+      "native_handle" : "number",
+      "raw_equal_handles" : "array",
+      "release_attempted" : "boolean",
+      "release_step_id" : "string",
+      "status" : "string",
+      "step_id" : "string"
+    },
+    "reply.resources.tokens[]" : {
+      "actor_id" : "string",
+      "family" : "string",
+      "last_use_step_id" : "string",
+      "status" : "string",
+      "step_id" : "string",
+      "token_length" : "number",
+      "token_ref" : "string"
     },
     "reply.runner_subprocess" : {
       "cleanup_trigger" : "string",
@@ -465,7 +686,27 @@
       "errno" : "number",
       "rc" : "number"
     },
+    "reply.schedule" : {
+      "collection_budget_ms" : "number",
+      "execution_wait" : "object",
+      "lifetime_budget_ms" : "number",
+      "setup_wait" : "object"
+    },
+    "reply.schedule.execution_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "excluded_ms" : "number",
+      "stop" : "string"
+    },
+    "reply.schedule.setup_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "stop" : "string"
+    },
     "reply.steps[]" : {
+      "actor_id" : "string",
       "attempt" : "object",
       "comparison" : "object",
       "phase_id" : "string",
@@ -699,6 +940,44 @@
       "worker_post_apply_kill_signal" : "number",
       "worker_pre_ready_hang_ms" : "number",
       "worker_timeout_ms" : "number"
+    },
+    "reply.transfers[]" : {
+      "copy_status" : "string",
+      "custody_status" : "string",
+      "delivery_ref" : "string",
+      "equality" : "string",
+      "lifecycle" : "object",
+      "phase_id" : "string",
+      "recipient_acknowledged" : "boolean",
+      "recipient_actor_id" : "string",
+      "recipient_wait" : "object",
+      "request_published" : "boolean",
+      "source_acknowledged" : "boolean",
+      "source_actor_id" : "string",
+      "status" : "string",
+      "step_id" : "string",
+      "token_ref" : "string"
+    },
+    "reply.transfers[].lifecycle" : {
+      "boundary" : "object",
+      "result" : "object",
+      "summary" : "string"
+    },
+    "reply.transfers[].lifecycle.boundary" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.transfers[].lifecycle.result" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.transfers[].recipient_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "stop" : "string"
     }
   }
 }

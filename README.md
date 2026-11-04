@@ -109,7 +109,7 @@ The app contains:
   - `Contents/MacOS/policy-witness` (Rust controller)
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sbpl-check` (SBPL compile-check helper)
-  - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host and worker per specimen, with a fresh validator per eligible phase)
+  - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host per specimen and one fresh worker per sandboxed process it names, with a fresh validator per eligible phase)
     - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched per eligible phase for sandbox_check verdicts)
     - `Contents/MacOS/pw-extension-issuer` (ordinary-authority file-extension issuer with a transient token channel)

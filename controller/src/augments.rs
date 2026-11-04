@@ -77,12 +77,113 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         Some(p) => p,
         None => return AugmentResolution::NotPresent,
     };
+    resolve_policy_augments(policy, &["policy"], app_root)
+}
+
+/// One apply actor's resolution in the actor form. `original_source` and
+/// `selected_source` are the string sources before and after resolution, when
+/// they existed; the actor's id and mode are copied for the dossier.
+pub struct ActorAugmentResolution {
+    pub index: usize,
+    pub actor_id: Option<String>,
+    pub mode: Option<String>,
+    pub original_source: Option<String>,
+    pub selected_source: Option<String>,
+    pub resolution: AugmentResolution,
+}
+
+/// Resolve every `actors[i].sandbox.policy.augments` in place, in actor order,
+/// stopping at the first refusal so no later actor is partially resolved.
+/// Actors without a policy object produce a `NotPresent` entry. Only the
+/// runner judges whether an actor's mode permits a policy.
+pub fn resolve_actor_augments(
+    request_value: &mut Value,
+    app_root: &Path,
+) -> Vec<ActorAugmentResolution> {
+    let mut out = Vec::new();
+    let Some(actors) = request_value
+        .get_mut("actors")
+        .and_then(Value::as_array_mut)
+    else {
+        return out;
+    };
+    for (index, actor) in actors.iter_mut().enumerate() {
+        let actor_id = actor
+            .get("actor_id")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        let mode = actor
+            .get("sandbox")
+            .and_then(|s| s.get("mode"))
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        let index_text = index.to_string();
+        let path = ["actors", index_text.as_str(), "sandbox", "policy"];
+        let policy = actor
+            .get_mut("sandbox")
+            .and_then(|s| s.get_mut("policy"))
+            .and_then(Value::as_object_mut);
+        let Some(policy) = policy else {
+            out.push(ActorAugmentResolution {
+                index,
+                actor_id,
+                mode,
+                original_source: None,
+                selected_source: None,
+                resolution: AugmentResolution::NotPresent,
+            });
+            continue;
+        };
+        let original_source = policy
+            .get("sbpl_source")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        let resolution = resolve_policy_augments(policy, &path, app_root);
+        let selected_source = policy
+            .get("sbpl_source")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        let refused = matches!(resolution, AugmentResolution::BadRequest(_));
+        out.push(ActorAugmentResolution {
+            index,
+            actor_id,
+            mode,
+            original_source,
+            selected_source,
+            resolution,
+        });
+        if refused {
+            break;
+        }
+    }
+    out
+}
+
+/// Resolve one policy object's `augments`; `path` locates that object in the
+/// request for refusal diagnostics.
+pub fn resolve_policy_augments(
+    policy: &mut serde_json::Map<String, Value>,
+    path: &[&str],
+    app_root: &Path,
+) -> AugmentResolution {
+    let at = |suffix: &[&str]| -> Vec<String> {
+        path.iter()
+            .map(|s| (*s).to_string())
+            .chain(suffix.iter().map(|s| (*s).to_string()))
+            .collect()
+    };
+    let refuse = |code: &str, suffix: &[&str], message: String| -> AugmentResolution {
+        let owned = at(suffix);
+        let parts: Vec<&str> = owned.iter().map(String::as_str).collect();
+        AugmentResolution::BadRequest(RequestError::new(code, &parts, message))
+    };
+    let location = path.join(".");
 
     let augments_field = match policy.remove("augments") {
         Some(v) => v,
         None => return AugmentResolution::NotPresent,
     };
-    // From here on `request_value` is mutated (the augments key is stripped).
+    // From here on the request is mutated (the augments key is stripped).
     // The caller serializes the resolved value once and delivers that string
     // to every reader, so the runner sees the augment-free shape.
 
@@ -94,22 +195,22 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
                 match item.as_str() {
                     Some(s) => collected.push(s.to_string()),
                     None => {
-                        return AugmentResolution::BadRequest(RequestError::new(
+                        return refuse(
                             "type_mismatch",
-                            &["policy", "augments", &idx.to_string()],
-                            format!("policy.augments[{idx}] must be a string"),
-                        ));
+                            &["augments", &idx.to_string()],
+                            format!("{location}.augments[{idx}] must be a string"),
+                        );
                     }
                 }
             }
             collected
         }
         _ => {
-            return AugmentResolution::BadRequest(RequestError::new(
+            return refuse(
                 "type_mismatch",
-                &["policy", "augments"],
-                "policy.augments must be an array of strings",
-            ));
+                &["augments"],
+                format!("{location}.augments must be an array of strings"),
+            );
         }
     };
 
@@ -124,11 +225,11 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         } else {
             "type_mismatch"
         };
-        return AugmentResolution::BadRequest(RequestError::new(
+        return refuse(
             code,
-            &["policy", "sbpl_source"],
-            "policy.sbpl_source must be a string when policy.augments is nonempty",
-        ));
+            &["sbpl_source"],
+            format!("{location}.sbpl_source must be a string when {location}.augments is nonempty"),
+        );
     };
     let original_source = original_source.to_owned();
 
@@ -136,14 +237,14 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
     // the last entry can't leak partial-resolution state.
     for (index, name) in names.iter().enumerate() {
         if !is_valid_augment_name(name) {
-            return AugmentResolution::BadRequest(RequestError::new(
+            return refuse(
                 "invalid_value",
-                &["policy", "augments", &index.to_string()],
+                &["augments", &index.to_string()],
                 format!(
                     "invalid augment name {} (must be ASCII alphanumeric or underscore)",
                     reportable_name(name)
                 ),
-            ));
+            );
         }
     }
 
@@ -155,11 +256,11 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         let contents = match std::fs::read_to_string(&path) {
             Ok(s) => s,
             Err(_) => {
-                return AugmentResolution::BadRequest(RequestError::new(
+                return refuse(
                     "augment_unavailable",
-                    &["policy", "augments", &index.to_string()],
+                    &["augments", &index.to_string()],
                     format!("unknown augment {}", reportable_name(name)),
-                ));
+                );
             }
         };
         // Always splice with a leading newline so we never accidentally
@@ -371,6 +472,123 @@ mod tests {
             AugmentResolution::StrippedNoOp => "StrippedNoOp",
             AugmentResolution::Applied(_) => "Applied",
             AugmentResolution::BadRequest(_) => "BadRequest",
+        }
+    }
+
+    #[test]
+    fn actor_policies_resolve_at_their_own_paths_and_stop_at_the_first_refusal() {
+        let app = tempdir("actors");
+        write_augment(&app, "exec_baseline", "; fragment\n");
+        let mut req = json!({
+            "schema_version": 5, "specimen_id": "a",
+            "actors": [
+                {"actor_id": "A", "sandbox": {"mode": "unapplied"}},
+                {"actor_id": "B", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1)", "augments": ["exec_baseline"]}}},
+                {"actor_id": "C", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1)", "augments": ["nope"]}}},
+                {"actor_id": "D", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1)", "augments": ["exec_baseline"]}}}
+            ],
+            "phases": []
+        });
+        let resolved = resolve_actor_augments(&mut req, &app);
+        assert_eq!(
+            resolved.len(),
+            3,
+            "resolution stops after the refused actor"
+        );
+        assert!(matches!(
+            resolved[0].resolution,
+            AugmentResolution::NotPresent
+        ));
+        assert_eq!(resolved[0].actor_id.as_deref(), Some("A"));
+        assert_eq!(resolved[0].mode.as_deref(), Some("unapplied"));
+        assert!(resolved[0].original_source.is_none() && resolved[0].selected_source.is_none());
+        match &resolved[1].resolution {
+            AugmentResolution::Applied(record) => {
+                assert_eq!(record.applied, vec!["exec_baseline".to_string()])
+            }
+            _ => panic!("B not applied"),
+        }
+        assert_eq!(resolved[1].original_source.as_deref(), Some("(version 1)"));
+        assert_eq!(
+            resolved[1].selected_source.as_deref(),
+            Some("(version 1)\n; fragment\n")
+        );
+        assert_eq!(
+            req["actors"][1]["sandbox"]["policy"]["sbpl_source"],
+            "(version 1)\n; fragment\n"
+        );
+        assert!(
+            req["actors"][1]["sandbox"]["policy"]
+                .get("augments")
+                .is_none()
+        );
+        match &resolved[2].resolution {
+            AugmentResolution::BadRequest(error) => {
+                assert_eq!(error.failure.code, "augment_unavailable");
+                assert_eq!(
+                    error.failure.path.as_deref(),
+                    Some(
+                        &[
+                            "actors".to_string(),
+                            "2".to_string(),
+                            "sandbox".to_string(),
+                            "policy".to_string(),
+                            "augments".to_string(),
+                            "0".to_string()
+                        ][..]
+                    )
+                );
+            }
+            _ => panic!("C not refused"),
+        }
+        // D was never touched: its augments remain in the request.
+        assert_eq!(
+            req["actors"][3]["sandbox"]["policy"]["augments"],
+            json!(["exec_baseline"])
+        );
+        assert_eq!(
+            req["actors"][3]["sandbox"]["policy"]["sbpl_source"],
+            "(version 1)"
+        );
+    }
+
+    #[test]
+    fn legacy_refusal_paths_are_unchanged_by_the_shared_resolver() {
+        let app = tempdir("legacy-paths");
+        let mut req =
+            json!({"policy": {"format": "sbpl", "sbpl_source": "(version 1)", "augments": [7]}});
+        match resolve_augments(&mut req, &app) {
+            AugmentResolution::BadRequest(error) => {
+                assert_eq!(
+                    error.failure.path.as_deref(),
+                    Some(
+                        &[
+                            "policy".to_string(),
+                            "augments".to_string(),
+                            "0".to_string()
+                        ][..]
+                    )
+                );
+                assert!(
+                    error
+                        .message
+                        .contains("policy.augments[0] must be a string")
+                );
+            }
+            _ => panic!("expected refusal"),
+        }
+        let mut req = json!({"actors": [{"actor_id": "B", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "augments": ["exec_baseline"]}}}]});
+        let resolved = resolve_actor_augments(&mut req, &app);
+        match &resolved[0].resolution {
+            AugmentResolution::BadRequest(error) => {
+                assert_eq!(error.failure.code, "missing_policy_source");
+                assert!(
+                    error
+                        .message
+                        .contains("actors.0.sandbox.policy.sbpl_source")
+                );
+            }
+            _ => panic!("expected refusal"),
         }
     }
 }

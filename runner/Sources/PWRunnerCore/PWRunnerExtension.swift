@@ -30,20 +30,74 @@ struct PWRunnerExtensionDeclaration: Codable {
         authority = try c.decodeIfPresent(String.self, forKey: .authority)
     }
 }
+/// One closed operation object for both request forms. The legacy form uses
+/// `consume` (token_ref, handle_ref) and `release` (handle_ref); the actor form
+/// adds `issue` (family, target, authority, token_ref) and `transfer`
+/// (token_ref, recipient, delivery_ref) and spells `consume` with a
+/// delivery_ref. Every operand decodes as optional; the form's meaning pass
+/// requires and forbids them per operation, and the legacy decoder still
+/// refuses a missing handle_ref before admission.
 struct PWRunnerExtensionOperation: Codable {
+    static let actorOperations = ["issue", "transfer", "consume", "release"]
     var operation: String
     var token_ref: String?
-    var handle_ref: String
-    enum CodingKeys: String, CodingKey, CaseIterable { case operation, token_ref, handle_ref }
-    init(operation: String, token_ref: String? = nil, handle_ref: String) {
+    var handle_ref: String?
+    var family: String?
+    var target: String?
+    var authority: String?
+    var recipient: String?
+    var delivery_ref: String?
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case operation, token_ref, handle_ref, family, target, authority, recipient, delivery_ref
+    }
+    init(operation: String, token_ref: String? = nil, handle_ref: String? = nil, family: String? = nil,
+         target: String? = nil, authority: String? = nil, recipient: String? = nil, delivery_ref: String? = nil) {
         self.operation = operation; self.token_ref = token_ref; self.handle_ref = handle_ref
+        self.family = family; self.target = target; self.authority = authority
+        self.recipient = recipient; self.delivery_ref = delivery_ref
     }
     init(from decoder: Decoder) throws {
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
         operation = try c.decode(String.self, forKey: .operation)
         token_ref = try c.decodeIfPresent(String.self, forKey: .token_ref)
-        handle_ref = try c.decode(String.self, forKey: .handle_ref)
+        handle_ref = try c.decodeIfPresent(String.self, forKey: .handle_ref)
+        family = try c.decodeIfPresent(String.self, forKey: .family)
+        target = try c.decodeIfPresent(String.self, forKey: .target)
+        authority = try c.decodeIfPresent(String.self, forKey: .authority)
+        recipient = try c.decodeIfPresent(String.self, forKey: .recipient)
+        delivery_ref = try c.decodeIfPresent(String.self, forKey: .delivery_ref)
+    }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(operation, forKey: .operation)
+        try c.encodeIfPresent(token_ref, forKey: .token_ref)
+        try c.encodeIfPresent(handle_ref, forKey: .handle_ref)
+        try c.encodeIfPresent(family, forKey: .family)
+        try c.encodeIfPresent(target, forKey: .target)
+        try c.encodeIfPresent(authority, forKey: .authority)
+        try c.encodeIfPresent(recipient, forKey: .recipient)
+        try c.encodeIfPresent(delivery_ref, forKey: .delivery_ref)
+    }
+    /// The operands this operation names in the actor form; the legacy form
+    /// has its own table in extensionMeaningFailure.
+    static let actorOperands: [String: [CodingKeys]] = [
+        "issue": [.family, .target, .authority, .token_ref],
+        "transfer": [.token_ref, .recipient, .delivery_ref],
+        "consume": [.delivery_ref, .handle_ref],
+        "release": [.handle_ref],
+    ]
+    func operand(_ key: CodingKeys) -> String? {
+        switch key {
+        case .operation: return operation
+        case .token_ref: return token_ref
+        case .handle_ref: return handle_ref
+        case .family: return family
+        case .target: return target
+        case .authority: return authority
+        case .recipient: return recipient
+        case .delivery_ref: return delivery_ref
+        }
     }
 }
 struct PWRunnerExtensionAction: Codable {
@@ -66,7 +120,8 @@ struct PWRunnerExtensionEvent: Codable {
     var step_id: String
     var operation: String
     var token_ref: String?
-    var handle_ref: String
+    /// Required by the legacy consume/release events; absent on actor issue and transfer.
+    var handle_ref: String?
     var call_boundary_observed: Bool
     var result_published: Bool
     var status: String
@@ -74,6 +129,15 @@ struct PWRunnerExtensionEvent: Codable {
     var errno: Int32?
     var unavailable_reason: String?
     var lifecycle: PWAttemptLifecycle?
+    // Actor form: the acting actor, the family operands and references.
+    var actor_id: String?
+    var family: String?
+    var target: String?
+    var extension_class: String?
+    var flags: Int?
+    var delivery_ref: String?
+    var native_nonnull: Bool?
+    var token_length: Int?
 }
 struct PWRunnerIssuer: Codable {
     var executable_path: String

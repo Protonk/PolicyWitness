@@ -164,6 +164,13 @@ execution replies after a real worker completed one append. A copied helper
 terminated before stdout publication leaves submission unknown in the controller;
 independent traces establish one helper and one execution invocation. Legacy
 selectors and unsupported protocol replies cannot reach specimen execution.
+One arrangement alters only the top-level response-schema marker of the encoded
+reply after a real execution under the current protocol: the shipped controller
+reports `unsupported_runner_response`, preserves the opaque reply, requests no
+fallback compilation, and the trace, effect and request count establish one
+execution and no replay. Restoring the marker yields the valid current reply.
+This needs no historical signed runner and claims no historical-host
+interoperability.
 
 Temporary source changes, original/copy hashes, compiler commands, signed
 substitution provenance, request/reply bytes, trace events, kernel generations,

@@ -135,8 +135,8 @@ def run(out, scratch):
     source_manifest.update({str(p.relative_to(ROOT)): digest(p) for p in sorted(HERE.iterdir()) if p.is_file()})
     source_manifest[str(Path(__file__).relative_to(ROOT))] = digest(Path(__file__))
     (out/'source-manifest.json').write_text(json.dumps(dict(base_commit=base, inputs=source_manifest), indent=2)+'\n')
-    path = package/'Sources/PWRunnerCore/CWorker.swift'
-    original = path.read_text(); (snapshots/'CWorker.original.swift').write_text(original)
+    path = package/'Sources/PWRunnerCore/ActorSession.swift'
+    original = path.read_text(); (snapshots/'ActorSession.original.swift').write_text(original)
     transformations = []
     def replace(old,new,count=1):
         nonlocal original
@@ -150,18 +150,18 @@ def run(out, scratch):
     replace('_ = munmap(base, PWShmLayout.regionBytes)', '_ = descriptorUnmap(base, PWShmLayout.regionBytes)')
     replace('if pipe(&', 'if probePipe(&', 2)
     replace('fcntl(', 'probeFcntl(', 8)
-    replace('    _ = probeFcntl(shmFD, F_SETFD, 0)', '    if probeVariant != "no_clear" { _ = probeFcntl(shmFD, F_SETFD, 0) }')
-    replace('    storeRelease(rawBase, offset: PWShmLayout.preparedOffset, 1)',
-            '    storeRelease(rawBase, offset: PWShmLayout.preparedOffset, 1)\n    probePrepared(base)')
-    replace('    ownsShmFD = false\n    _ = probeClose(shmFD)', """    probeChildSpawned(pid)
-    // Deliberate defects affect only this copied executable. Candidate executes
-    // the production ownership operations without substitutions.
-    if probeVariant != "old_lifetime" {
-        if probeVariant != "stale_owner" { ownsShmFD = false }
-        _ = probeClose(shmFD)
-    }
-    probeAfterSpawn(ownsShmFD)""")
-    path.write_text(original); (snapshots/'CWorker.instrumented.swift').write_text(original)
+    replace('        _ = probeFcntl(shmFD, F_SETFD, 0)', '        if probeVariant != "no_clear" { _ = probeFcntl(shmFD, F_SETFD, 0) }')
+    replace('        storeRelease(rawBase, offset: PWShmLayout.preparedOffset, 1)',
+            '        storeRelease(rawBase, offset: PWShmLayout.preparedOffset, 1)\n        probePrepared(base)')
+    replace('        ownsShmFD = false\n        _ = probeClose(shmFD)', """        probeChildSpawned(pid)
+        // Deliberate defects affect only this copied executable. Candidate executes
+        // the production ownership operations without substitutions.
+        if probeVariant != "old_lifetime" {
+            if probeVariant != "stale_owner" { ownsShmFD = false }
+            _ = probeClose(shmFD)
+        }
+        probeAfterSpawn(ownsShmFD)""")
+    path.write_text(original); (snapshots/'ActorSession.instrumented.swift').write_text(original)
     (out/'transformations.json').write_text(json.dumps(transformations,indent=2)+'\n')
     shutil.copyfile(HERE/'Probe.swift', package/'Sources/PWRunnerCore/Probe.swift')
     shutil.copyfile(HERE/'mapping.c', package/'Sources/PWCWorkerShim/descriptor_mapping.c')

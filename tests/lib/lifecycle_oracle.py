@@ -454,6 +454,72 @@ def _compare_claim(name, expected, actual, findings, step_index, obs, entry):
                                      name, step_index))
 
 
+def actor_view(envelope, actor, diagnostics):
+    """One actor's envelope view: its subprocess as the worker record, its own
+    steps, events and phases, and its own controller projection, so the
+    single-worker rules apply to it unchanged."""
+    runner = envelope['data']['runner_result']
+    actor_id = actor.get('actor_id')
+    view = {k: v for k, v in runner.items() if k not in ('actors', 'transfers', 'resources', 'execution_form')}
+    view['runner_subprocess'] = actor.get('subprocess')
+    view['sandboxed_after_apply'] = actor.get('setup_status') in ('applied', 'unapplied_declared')
+    view['steps'] = [s for s in runner.get('steps', []) if isinstance(s, dict) and s.get('actor_id') == actor_id]
+    view['extension_events'] = [e for e in runner.get('extension_events') or [] if isinstance(e, dict) and e.get('actor_id') == actor_id]
+    view['phases'] = [p for p in runner.get('phases', []) if isinstance(p, dict) and p.get('actor_id') == actor_id]
+    # The actor form's extension tables are validated once on the whole reply.
+    view['_actor_view'] = True
+    own = next((d for d in diagnostics if isinstance(d, dict) and d.get('actor_id') == actor_id), None)
+    return {'schema_version': envelope.get('schema_version'), 'kind': envelope.get('kind'),
+            'data': {'runner_result': view, 'runner_sandbox_diagnostics': own}}
+
+
+def check_actor_records(envelope):
+    """The actor form: every actor's subprocess record is checked as its own
+    worker against its own steps and projection; the aggregate projection must
+    be `per_actor` (or `no_worker`) and valid only when every actor's is."""
+    runner = envelope['data']['runner_result']
+    data = envelope.get('data') or {}
+    aggregate = data.get('runner_sandbox_diagnostics') if isinstance(data.get('runner_sandbox_diagnostics'), dict) else {}
+    per_actor = aggregate.get('actors') if isinstance(aggregate.get('actors'), list) else []
+    findings = []
+    actors = runner.get('actors')
+    if not isinstance(actors, list) or not actors:
+        return [_finding('D8', 'malformed_record', 'actor-form reply without actor records')]
+    from extension_evidence import validate_extensions
+    for error in validate_extensions(runner):
+        findings.append(_finding('D6', 'extension_evidence', error))
+    launched = False
+    all_valid = True
+    for actor in actors:
+        if not isinstance(actor, dict):
+            findings.append(_finding('D8', 'malformed_record', 'actor record is not an object'))
+            continue
+        view = actor_view(envelope, actor, per_actor)
+        own = view['data']['runner_sandbox_diagnostics']
+        if actor.get('subprocess') is None:
+            if own is not None and own.get('process_disposition') not in (None, 'no_worker'):
+                findings.append(_finding('D7', 'invented_worker', f'actor {actor.get("actor_id")!r} never launched but projected {own.get("process_disposition")!r}'))
+            continue
+        launched = True
+        if own is None:
+            findings.append(_finding('D7', 'missing_projection', f'actor {actor.get("actor_id")!r} has no controller projection'))
+            all_valid = False
+            continue
+        if own.get('disposition_integrity') != 'valid':
+            all_valid = False
+        for finding in check_record(view):
+            finding = dict(finding)
+            finding['detail'] = f'actor {actor.get("actor_id")!r}: ' + str(finding.get('detail'))
+            findings.append(finding)
+    expected = 'per_actor' if launched else 'no_worker'
+    observed = aggregate.get('process_disposition')
+    if observed not in (expected, 'withheld'):
+        findings.append(_finding('D7', 'aggregate_projection', f'actor-form aggregate projected {observed!r}, expected {expected!r} or withheld'))
+    if launched and observed == 'per_actor' and (aggregate.get('disposition_integrity') == 'valid') != all_valid:
+        findings.append(_finding('D7', 'aggregate_integrity', 'aggregate integrity disagrees with the per-actor projections'))
+    return findings
+
+
 def check_record(envelope):
     """Findings for one envelope; empty means the record and projections satisfy the contract."""
     errors = version_errors(envelope)
@@ -461,6 +527,10 @@ def check_record(envelope):
         error = errors[0]
         kind = 'unsupported_version' if error.startswith('unsupported') else 'malformed_version'
         return [_finding('D8', kind, error)]
+    data = envelope.get('data')
+    runner = data.get('runner_result') if isinstance(data, dict) else None
+    if isinstance(runner, dict) and runner.get('execution_form') == 'actors':
+        return check_actor_records(envelope)
     view = read_lifecycle(envelope)
     findings = []
     proj = view['projections']
@@ -505,8 +575,9 @@ def check_record(envelope):
         findings.append(_finding('D8', 'unknown_question', f'question {extra!r} is not registered', extra))
     from extension_evidence import ordered_actions, validate_extensions
     runner_steps = ordered_actions(envelope['data']['runner_result'])
-    for error in validate_extensions(envelope['data']['runner_result']):
-        findings.append(_finding('D6', 'extension_evidence', error))
+    if not runner.get('_actor_view'):
+        for error in validate_extensions(envelope['data']['runner_result']):
+            findings.append(_finding('D6', 'extension_evidence', error))
     if len(view['steps']) != len(runner_steps):
         findings.append(_finding('D8', 'step_count', f'record has {len(view["steps"])} steps, reply has {len(runner_steps)}'))
     for i, entry in enumerate(view['steps']):

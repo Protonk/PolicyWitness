@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response24/missing_path_run.json"
+BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response25/missing_path_run.json"
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from blackbox import recapture_host_reply
 

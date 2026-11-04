@@ -172,6 +172,46 @@ class LimitsDocumentationTests(receipts.TestCase):
                 else:
                     self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
 
+    def test_extension_coverage_is_copied_from_its_document_demoted_and_standalone(self):
+        extensions = (ROOT / generator.EXTENSIONS_NAME).read_text()
+        shared = extensions.split(generator.COVERAGE_SHARED_START)[1].split(generator.COVERAGE_SHARED_END)[0].strip()
+        copied = self.guide.split(generator.GUIDE_COVERAGE_START)[1].split(generator.GUIDE_COVERAGE_END)[0].strip()
+        self.assertEqual(copied, generator.shared_coverage(extensions))
+        self.assertTrue(all(h.level == 4 for h in markdown_reader.parse(copied).headings))
+        self.assertTrue(all(h.level == 2 for h in markdown_reader.parse(shared).headings))
+        self.assertNotIn('](../', copied)
+        self.assertNotIn('PolicyWitness.md#', copied)
+        headers = {table.header[0].text for table in markdown_reader.parse(copied).tables}
+        self.assertTrue({'Form', 'Family', 'Operation', 'Observation', 'Situation'} <= headers)
+
+    def test_extension_coverage_copy_rejects_staleness_dependencies_and_missing_regions_without_writes(self):
+        for filename, mutate, recoverable in [
+            (generator.EXTENSIONS_NAME, lambda t: t.replace('Both are current; neither is deprecated.', 'Both forms are current.', 1), True),
+            ('docs/PolicyWitness.md', lambda t: t.replace('Both are current; neither is deprecated.', 'Both forms are current.', 1), True),
+            (generator.EXTENSIONS_NAME, lambda t: t.replace(generator.COVERAGE_SHARED_END, ''), False),
+            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_COVERAGE_END, ''), False),
+            (generator.EXTENSIONS_NAME, lambda t: t.replace('| Form |', '| Shape |'), False),
+            (generator.EXTENSIONS_NAME, lambda t: t.replace('The family table is the whole supported set.',
+                'The family table is the whole supported set ([source](../runner/Sources/PWRunnerCore/ActorPlan.swift)).', 1), False),
+            (generator.EXTENSIONS_NAME, lambda t: t.replace('## Two request forms', '### Two request forms', 1), False),
+        ]:
+            with self.subTest(filename=filename, mutation=mutate):
+                root = self.checkout()
+                path = root / filename
+                path.write_text(mutate(path.read_text()))
+                guide, extensions = root / 'docs/PolicyWitness.md', root / generator.EXTENSIONS_NAME
+                before = guide.read_bytes(), extensions.read_bytes()
+                self.assertEqual(self.command(root, '--check').returncode, 1)
+                self.assertEqual((guide.read_bytes(), extensions.read_bytes()), before)
+                result = self.command(root)
+                self.assertEqual(result.returncode, 0 if recoverable else 1, result.stderr)
+                if recoverable:
+                    copied = guide.read_text().split(generator.GUIDE_COVERAGE_START)[1].split(generator.GUIDE_COVERAGE_END)[0].strip()
+                    self.assertEqual(copied, generator.shared_coverage(extensions.read_text()))
+                    self.assertEqual(self.command(root, '--check').returncode, 0)
+                else:
+                    self.assertEqual((guide.read_bytes(), extensions.read_bytes()), before)
+
     def test_matrix_fixture_rejects_rows_the_table_cannot_render(self):
         rows = json.loads((ROOT / generator.MATRIX_NAME).read_text())
         mutations = [
@@ -209,7 +249,12 @@ class LimitsDocumentationTests(receipts.TestCase):
         copied = self.guide.split(generator.GUIDE_QUESTIONS_START)[1].split(generator.GUIDE_QUESTIONS_END)[0].strip()
         expected = '\n'.join('#' + line if line.startswith('## ') else line
                              for line in shared.splitlines())
-        self.assertEqual(copied, expected.replace('](PolicyWitness.md#', '](#'))
+        # Guide links become internal; the FAQ's bare coverage-document link is
+        # rebased onto the copied coverage section.
+        expected = expected.replace('](PolicyWitness.md#', '](#').replace('](EXTENSIONS.md)', f']({generator.COVERAGE_ANCHOR})')
+        self.assertEqual(copied, expected)
+        self.assertIn('](EXTENSIONS.md)', shared)
+        self.assertIn(f']({generator.COVERAGE_ANCHOR})', copied)
         questions = [h for h in markdown_reader.parse(shared).headings if h.level == 2]
         self.assertTrue(questions)
         copy = markdown_reader.parse(copied)

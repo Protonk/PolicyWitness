@@ -142,6 +142,85 @@ keeps the first child unreaped and each phase’s records separate; the test own
 independent child cleanup. Rust assembly and the Python consumer/oracle replay
 that production-encoded reply. The fixture’s query answers are controlled data.
 
+## Principal policy qualification
+
+`extension_policy_qualification` compiles the principal re-delegation
+specimen's B policy with the bundled `sbpl-check` helper, then applies the same
+bytes once in a fresh worker through the ordinary single-worker run path with a
+baseline `read_fresh` of a test-owned file. The policy denies ordinary reads of
+the target and permits issuance only under a consumed read extension; the
+denied baseline read, its `deny` prediction and the collection/release chain
+are the application observations. An independent run under an ordinary
+allowance shows the same target is readable. The bytes live in
+[extension_actors.py](../../lib/extension_actors.py), which the principal
+acceptance specimen also uses, so the qualified bytes and the submitted bytes
+cannot diverge. Retained: the policy and its hash, helper envelope, both run
+envelopes, commands and environment. Compile success alone establishes neither
+application nor extension-dependent issuance; this case establishes
+compilation and application on the recorded equipment only.
+
+## Principal re-delegation acceptance
+
+`extension_redelegation` runs the plan's principal three-actor specimen through
+the public CLI against a test-owned file, then a positive calibration and four
+narrow contrasts. The witnessing assertions concern the apparatus: `A`, `B` and
+`C` are distinct fresh processes whose parent is the host; `B` and `C` applied
+the exact qualified policy bytes once (the host's hash, the worker's hash of
+the bytes it read and the hash of the source agree) and `A` applied none;
+every phase arrived and completed without protocol violations; every ordinary
+query names its actor's PID and established `query_first`; every extension
+action published; the second delivery is bound to `B`'s issue and `C`'s
+consume to that delivery; every launched actor was reaped. The kernel's
+answers are recorded, not forced: a published NULL issue, a failed consume or
+a denied read passes those assertions. Re-delegation is credited in the report
+only when the whole chain published and the fresh reads returned the known
+bytes where the baseline reads had failed; otherwise the report names the first
+link that broke. The calibration (an unapplied issuer supplying an applied
+reader under a simple consumed-extension allowance) must exercise real
+issuance, delivery, consumption and access on the host, or the case fails and
+the positive coverage is missing. The contrasts omit `B`'s consume, remove
+`B`'s issuance allowance, omit `C`'s consume and omit `C`'s extension
+predicate; each must still publish its remaining links and must not be
+credited, and their observations are retained beside the principal run for
+comparison. Retained: every envelope and specimen, the target's identity and
+`report.json`.
+
+`actor_timing_qualification` measures the actor profile on the signed
+candidate with the actual polling implementation and every actor launched
+before the first phase: three matched rounds of one-, three- and eight-actor
+specimens sharing one aggregate fresh-read workload distributed over the
+actors, a workload at the aggregate action and phase limits over eight actors,
+and the principal re-delegation and calibration shapes with five further live
+actors servicing bounded ordinary phases. Every run must complete without
+budget exhaustion, and the largest charged interval in each accounting scope
+(setup, charged execution, aggregate collection, release wait, exchange wait
+and the lifetime total) must leave at least a quarter of its allowance. The
+intervals come from the reply's schedule, visit timing and transfer records:
+host scheduling and publication measurements, never native call latency. The
+eight-actor executions keep the chain and calibration assertions. `report.json`
+retains the hardware's CPU topology, OS, power and load, every measurement and
+margin, and the actor PIDs. A deliberately slow or hung specimen is a different
+control; it is not expected to meet this margin.
+
+The opt-in `actors_byoxpc` case repeats the re-delegation, calibration and
+contrasts through an owned installed runner's selected worker, then holds the
+installed issuer aside under a recovery record: the declaration form is refused
+before any worker exists while an actor-form specimen issues, delivers,
+consumes and reads through the same installation, so actor execution launches
+no issuer helper; public validation reports the damaged and restored states and
+the exact bytes are verified back. Its last step places an owned copy of the
+installed worker in a minimal bundle (the App Sandbox initializer needs a
+bundle identifier and aborts a bare executable), signs it with the App Sandbox
+entitlement under a unique identifier and launches it through the host's
+worker override: an `unapplied` actor on that
+copy cannot read the test-owned target but reads a system file, and the
+validator's query for its PID reports the same inherited denial, while the
+ordinary worker and the test process read the target. The entitlement is read
+back from the signed copy. The copy's App Sandbox container, under a fixed
+`com.policywitness.test` identifier in the user's Library, needs Full Disk
+Access to remove; the case records its presence and the removal attempt and
+reports a retained container in its pass message.
+
 ## Invariants
 
 - The suite is included in the default battery, including regression guards

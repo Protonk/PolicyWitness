@@ -29,9 +29,9 @@ executable; it does not build the shipped service bundle.
 | Reply and profile evidence | [PWRunnerReply.swift](Sources/PWRunnerCore/PWRunnerReply.swift): phase/run codecs and checks joining families; [PWRunnerProfileCapture.swift](Sources/PWRunnerCore/PWRunnerProfileCapture.swift): compiled-profile records and local validity. |
 | Service lifecycle | [PWRunnerService.swift](Sources/PWRunnerCore/PWRunnerService.swift): caller authorization, shared single-use admission, request handling, reply degradation and host retirement. |
 | Listener and bundle | [PWRunnerListener.swift](Sources/PWRunnerCore/PWRunnerListener.swift): listener selection; [Services/PWRunner/](Services/PWRunner/): entry point, Info.plist and entitlements. |
-| Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): admission, extension preparation/erasure, per-phase collection, driver invocation and final reply sequence; [CWorkerRequestPlanning.swift](Sources/PWRunnerCore/CWorkerRequestPlanning.swift): request translation, capacity checks, refusal assembly and fresh query planning. |
+| Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): admission, extension preparation/erasure, per-phase collection, driver invocation and final reply sequence; [CWorkerRequestPlanning.swift](Sources/PWRunnerCore/CWorkerRequestPlanning.swift): request translation, capacity checks, refusal assembly and fresh query planning; [ActorPlan.swift](Sources/PWRunnerCore/ActorPlan.swift): the actor form's normalized reference tables; [ActorOrchestration.swift](Sources/PWRunnerCore/ActorOrchestration.swift): per-actor driver inputs, the schedule with per-phase collection, and the actor-indexed reply. |
 | Host result construction | [CWorkerStepResults.swift](Sources/PWRunnerCore/CWorkerStepResults.swift): query/attempt step assembly; [CWorkerComparison.swift](Sources/PWRunnerCore/CWorkerComparison.swift): ordering and comparison construction; [CWorkerDisposition.swift](Sources/PWRunnerCore/CWorkerDisposition.swift): unique slot association, disposition, subprocess projection and outcome classification. |
-| Child drivers | [CWorker.swift](Sources/PWRunnerCore/CWorker.swift): worker launch, shared memory, publication polling and the shared child lifecycle observer; [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift): concurrent probe writes/verdict reads and partial-evidence collection. |
+| Child drivers | [ActorSession.swift](Sources/PWRunnerCore/ActorSession.swift): one owned worker process: evidence region, pipes, launch, policy transfer, readiness, polling primitives, cleanup and decoded output; [CWorker.swift](Sources/PWRunnerCore/CWorker.swift): the layout mirror, driver inputs and outputs, the single-worker loop over one session and the shared child lifecycle observer; [ActorScheduler.swift](Sources/PWRunnerCore/ActorScheduler.swift): the actor form's serial schedule over several sessions; [AuthorityCustody.swift](Sources/PWRunnerCore/AuthorityCustody.swift): per-actor authority regions, host custody buffers and transfer servicing, with no sandbox call; [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift): concurrent probe writes/verdict reads and partial-evidence collection. |
 | Extension preparation | [ExtensionIssuer.swift](Sources/PWRunnerCore/ExtensionIssuer.swift): target resolution/metadata, separate issuer lifetime, bounded transient token delivery and host erasure. |
 | Time and native shim | [MonotonicDeadline.swift](Sources/PWRunnerCore/MonotonicDeadline.swift): deadlines and policy-pipe delivery; [PWCWorkerShim/](Sources/PWCWorkerShim/): fixed-argument shared-memory opening and acquire/release helpers. |
 | Request and path helpers | [ProbeRunner.swift](Sources/PWRunnerCore/ProbeRunner.swift): request meaning and prediction-exclusion definitions; [SandboxApply.swift](Sources/PWRunnerCore/SandboxApply.swift): policy hashing; [PathUtils.swift](Sources/PWRunnerCore/PathUtils.swift): planning and later host path observations. |
@@ -108,6 +108,17 @@ creates no validator spawn failure.
 6. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
 
+For the actor form the same steps run per actor under one scheduler: every
+actor's region and authority region exist before the first launch; actors
+launch in order under one setup allowance and each publishes its own setup
+(application, or an unapplied declaration); the schedule activates one actor
+per phase, plans and collects that phase's queries against that actor's PID,
+releases its visit ordinal and awaits its completion while servicing the
+active actor's token publications and transfer requests; a failed actor is
+stopped and reaped before another is activated; and every actor is stopped,
+reaped and read at the end. The reply carries each actor's own records and no
+singular worker or policy projection.
+
 The host evidence descriptor lasts only through worker launch. After successful
 spawn, the host starts the existing policy-transfer deadline, relinquishes close
 ownership and closes the descriptor before policy delivery. Setup and spawn
@@ -152,7 +163,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 24, controller envelope 9, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 2. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL

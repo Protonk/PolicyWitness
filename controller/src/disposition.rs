@@ -22,6 +22,21 @@ pub(crate) struct RunnerExecutionDiagnostics {
     pub disposition_integrity: Option<&'static str>,
     /// Integrity issues plus the record's own reported conflicts; empty when none.
     pub disposition_issues: Vec<Value>,
+    /// The actor form: one projection per actor, in actor order. The singular
+    /// fields above then read `per_actor`, with integrity valid only when every
+    /// launched actor's record is valid.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actors: Option<Vec<ActorExecutionDiagnostics>>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ActorExecutionDiagnostics {
+    pub actor_id: Option<String>,
+    pub process_disposition: &'static str,
+    pub termination_cause: Option<&'static str>,
+    pub stop_reason: Option<String>,
+    pub disposition_integrity: Option<&'static str>,
+    pub disposition_issues: Vec<Value>,
 }
 
 // Worker disposition record projection (tests/FAILURE-PROPAGATION-CONTRACT.md,
@@ -156,7 +171,9 @@ type DispositionPosition = (usize, u64, u64);
 
 /// Temporal order of worker operations (pw_probe_runner_abi.h): clock setup (12)
 /// follows header validation (1), proceed (11) precedes the indexed attempts (9).
-const PROTOCOL_ORDER: [u64; 12] = [1, 12, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10];
+// The actor form's parked activation wait (13) follows application and
+// precedes each visit's release wait (11).
+const PROTOCOL_ORDER: [u64; 13] = [1, 12, 2, 3, 4, 5, 6, 7, 8, 13, 11, 9, 10];
 
 /// The protocol position of the indexed attempt operation.
 fn attempt_position() -> usize {
@@ -943,6 +960,9 @@ fn delivery_failure_problem(status: &str, failure: &Value) -> Option<&'static st
 // query/attempt comparisons. Check their distinct publication and reference
 // requirements before allowing the disposition projection to use them.
 fn extension_account_issues(runner: &Value) -> Vec<Value> {
+    if runner["execution_form"] == "actors" {
+        return actor_extension_issues(runner);
+    }
     let mut issues = Vec::new();
     let mut reject =
         |detail: &str| issues.push(integrity_issue("extension_evidence", detail.into()));
@@ -1217,6 +1237,280 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
 }
 
 // Optional bounded exec evidence. Absence carries no negative cleanup fact.
+/// The actor form's extension evidence rules, shared with the Swift encoder
+/// and the Python reader: every event names a live actor and one of its
+/// phases, references resolve in the resource tables to their owners,
+/// transfers carry no native result, and each status is published only by the
+/// shape it claims.
+fn actor_extension_issues(runner: &Value) -> Vec<Value> {
+    let mut issues = Vec::new();
+    let mut reject =
+        |detail: &str| issues.push(integrity_issue("extension_evidence", detail.into()));
+    let empty = Vec::new();
+    let events = runner["extension_events"].as_array().unwrap_or(&empty);
+    let (Some(actors), Some(resources), Some(transfers)) = (
+        runner["actors"].as_array(),
+        runner["resources"].as_object(),
+        runner["transfers"].as_array(),
+    ) else {
+        reject("actor form lacks actor, resource or transfer tables");
+        return issues;
+    };
+    if !runner["extensions"].is_null()
+        || !runner["runner_subprocess"].is_null()
+        || !runner["policy_sha256"].is_null()
+        || !runner["sandboxed_after_apply"].is_null()
+    {
+        reject("actor form carries singular projections");
+        return issues;
+    }
+    let tokens = resources["tokens"].as_array().unwrap_or(&empty);
+    let deliveries = resources["deliveries"].as_array().unwrap_or(&empty);
+    let handles = resources["handles"].as_array().unwrap_or(&empty);
+    if actors.is_empty()
+        || actors.len() > 8
+        || tokens.len() > 32
+        || deliveries.len() > 64
+        || handles.len() > 64
+        || transfers.len() > 64
+        || events.len() > 32 + 128 + 64 + 64
+    {
+        reject("actor extension record capacity");
+        return issues;
+    }
+    let reference = |v: &Value| {
+        v.as_str()
+            .is_some_and(|s| !s.is_empty() && s.len() <= 63 && !s.contains('\0'))
+    };
+    let phases = runner["phases"].as_array().unwrap_or(&empty);
+    let action_ids: Vec<&Value> = phases
+        .iter()
+        .flat_map(|p| p["action_ids"].as_array().into_iter().flatten())
+        .collect();
+    let transfer_statuses = [
+        "none",
+        "delivered",
+        "custody_unavailable",
+        "recipient_rejected",
+        "recipient_timeout",
+        "recipient_unavailable",
+        "request_invalid",
+        "host_timeout",
+        "clock_fault",
+        "copy_mismatch",
+    ];
+    let mut consumed: std::collections::BTreeMap<String, &Value> = Default::default();
+    let mut released = std::collections::BTreeSet::new();
+    for event in events {
+        let actor_id = &event["actor_id"];
+        let Some(actor) = actors
+            .iter()
+            .find(|a| actor_id.is_string() && a["actor_id"] == *actor_id)
+        else {
+            reject("extension event actor");
+            continue;
+        };
+        let Some(phase) = phases.iter().find(|p| {
+            p["phase_id"] == event["phase_id"]
+                && p["action_ids"]
+                    .as_array()
+                    .is_some_and(|ids| ids.contains(&event["step_id"]))
+        }) else {
+            reject("extension event phase association");
+            continue;
+        };
+        if phase["actor_id"] != *actor_id {
+            reject("extension event phase association");
+            continue;
+        }
+        if event["family"] != "file" {
+            reject("extension event family");
+            continue;
+        }
+        let status = event["status"].as_str().unwrap_or("");
+        let published = event["result_published"] == true;
+        let called = event["call_boundary_observed"] == true;
+        match event["operation"].as_str() {
+            Some("issue") => {
+                let ok = reference(&event["token_ref"])
+                    && tokens.iter().any(|t| {
+                        t["token_ref"] == event["token_ref"]
+                            && t["actor_id"] == *actor_id
+                            && t["step_id"] == event["step_id"]
+                    })
+                    && event["handle_ref"].is_null()
+                    && event["delivery_ref"].is_null();
+                if !ok {
+                    reject("issue reference");
+                }
+            }
+            Some("transfer") => {
+                let ok = reference(&event["token_ref"])
+                    && reference(&event["delivery_ref"])
+                    && deliveries.iter().any(|d| {
+                        d["delivery_ref"] == event["delivery_ref"]
+                            && d["token_ref"] == event["token_ref"]
+                            && d["source_actor_id"] == *actor_id
+                            && d["step_id"] == event["step_id"]
+                    })
+                    && event["handle_ref"].is_null();
+                if !ok {
+                    reject("transfer reference");
+                }
+                if called || !event["native_result"].is_null() || !event["errno"].is_null() {
+                    reject("transfer carries a native result");
+                }
+                let status_ok = if status == "unresolved" {
+                    !published
+                } else {
+                    published && transfer_statuses.contains(&status)
+                };
+                if !status_ok {
+                    reject("transfer status");
+                }
+                continue;
+            }
+            Some("consume") => {
+                let handle = event["handle_ref"].as_str().unwrap_or("").to_string();
+                let ok = reference(&event["delivery_ref"])
+                    && reference(&event["handle_ref"])
+                    && handles.iter().any(|h| {
+                        h["handle_ref"] == event["handle_ref"]
+                            && h["delivery_ref"] == event["delivery_ref"]
+                            && h["actor_id"] == *actor_id
+                            && h["step_id"] == event["step_id"]
+                    })
+                    && event["token_ref"].is_null();
+                if !ok || consumed.contains_key(&handle) {
+                    reject("consume reference");
+                }
+                consumed.insert(handle, event);
+            }
+            Some("release") => {
+                let handle = event["handle_ref"].as_str().unwrap_or("").to_string();
+                let prior = consumed.get(&handle).copied();
+                let order_ok = prior.is_some_and(|p| {
+                    let first = action_ids.iter().position(|id| **id == p["step_id"]);
+                    let second = action_ids.iter().position(|id| **id == event["step_id"]);
+                    matches!((first, second), (Some(a), Some(b)) if a < b)
+                });
+                let ok = reference(&event["handle_ref"])
+                    && event["token_ref"].is_null()
+                    && event["delivery_ref"].is_null()
+                    && handles.iter().any(|h| {
+                        h["handle_ref"] == event["handle_ref"]
+                            && h["actor_id"] == *actor_id
+                            && h["release_step_id"] == event["step_id"]
+                    })
+                    && !released.contains(&handle)
+                    && order_ok;
+                if !ok {
+                    reject("release reference/order");
+                }
+                released.insert(handle);
+                if status == "returned"
+                    && prior.is_some_and(|p| {
+                        p["status"] != "returned"
+                            || p["native_result"].is_null()
+                            || p["native_result"] == -1
+                    })
+                {
+                    reject("release lacks an observed consume handle");
+                }
+            }
+            _ => {
+                reject("unknown extension operation");
+                continue;
+            }
+        }
+        match status {
+            "returned" => {
+                if !published
+                    || !called
+                    || event["native_result"].is_null()
+                    || !event["errno"].as_i64().is_some_and(|e| e >= 0)
+                    || !event["unavailable_reason"].is_null()
+                {
+                    reject("native extension result lacks publication");
+                }
+            }
+            "unavailable" => {
+                let reason = event["unavailable_reason"].as_str().unwrap_or("");
+                if !published
+                    || called
+                    || !event["native_result"].is_null()
+                    || !event["errno"].is_null()
+                    || ![
+                        "token_unavailable",
+                        "handle_unavailable",
+                        "native_api_unavailable",
+                        "repeated_action",
+                        "authority_channel_unavailable",
+                        "delivery_unavailable",
+                    ]
+                    .contains(&reason)
+                {
+                    reject("unavailable extension action fabricates a call");
+                }
+            }
+            "unresolved" => {
+                if published
+                    || !event["native_result"].is_null()
+                    || !event["errno"].is_null()
+                    || !event["unavailable_reason"].is_null()
+                {
+                    reject("unpublished extension result must stay unresolved");
+                }
+            }
+            _ => reject("invalid extension event status"),
+        }
+        let record = actor["subprocess"]["disposition"]["steps"]
+            .as_array()
+            .and_then(|steps| steps.iter().find(|s| s["step_id"] == event["step_id"]));
+        match record {
+            Some(step) => {
+                if published != (step["slot"] == "completed")
+                    || event["lifecycle"]["boundary"] != step["questions"]["step_boundary_reached"]
+                    || event["lifecycle"]["result"] != step["questions"]["step_result_published"]
+                {
+                    reject("extension publication disagrees with disposition");
+                }
+            }
+            None => {
+                if actor["subprocess"].is_object()
+                    || called
+                    || published
+                    || !event["lifecycle"].is_null()
+                {
+                    reject("extension event lacks disposition");
+                }
+            }
+        }
+        let setup = actor["setup_status"].as_str().unwrap_or("");
+        if (published || called)
+            && (phase["ordering"]["proceed_observed"] != true
+                || !["applied", "unapplied_declared"].contains(&setup))
+        {
+            reject("extension publication lacks setup and phase acknowledgement");
+        }
+    }
+    for transfer in transfers {
+        let ok = deliveries.iter().any(|d| {
+            d["delivery_ref"] == transfer["delivery_ref"]
+                && d["token_ref"] == transfer["token_ref"]
+                && d["source_actor_id"] == transfer["source_actor_id"]
+                && d["recipient_actor_id"] == transfer["recipient_actor_id"]
+                && d["step_id"] == transfer["step_id"]
+        }) && transfer["status"]
+            .as_str()
+            .is_some_and(|s| transfer_statuses.contains(&s));
+        if !ok {
+            reject("transfer record association");
+        }
+    }
+    issues
+}
+
 fn exec_observation_problem(attempt: &Value) -> Option<&'static str> {
     let value = &attempt["exec_observation"];
     if value.is_null() {
@@ -1647,6 +1941,9 @@ fn validator_ownership_problem(
 }
 
 pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDiagnostics {
+    if let Some(runner) = runner.filter(|r| r["execution_form"] == "actors") {
+        return actor_execution_diagnostics(runner);
+    }
     let pid = worker_pid(runner);
     let sub = runner.and_then(|r| r.get("runner_subprocess"));
     // Disposition indexes every declared action, including native interventions.
@@ -1713,6 +2010,94 @@ pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDi
         stop_reason: projection.stop_reason,
         disposition_integrity: projection.integrity,
         disposition_issues: projection.issues,
+        actors: None,
+    }
+}
+
+/// The actor form: each actor's own subprocess record is projected against
+/// that actor's steps and events; native, collection and exec issues of the
+/// whole reply withhold the aggregate.
+fn actor_execution_diagnostics(runner: &Value) -> RunnerExecutionDiagnostics {
+    let reporting_failed = runner["normalized_outcome"] == "runner_reporting_failed"
+        && runner["reporting_failure"].is_object();
+    let action_ids: Vec<&Value> = runner["phases"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|p| p["action_ids"].as_array().into_iter().flatten())
+        .collect();
+    let empty = Vec::new();
+    let mut actors = Vec::new();
+    let mut all_valid = true;
+    for actor in runner["actors"].as_array().unwrap_or(&empty) {
+        let actor_id = actor["actor_id"].as_str().map(str::to_string);
+        let Some(sub) = actor.get("subprocess").filter(|s| s.is_object()) else {
+            actors.push(ActorExecutionDiagnostics {
+                actor_id,
+                process_disposition: "no_worker",
+                termination_cause: None,
+                stop_reason: None,
+                disposition_integrity: None,
+                disposition_issues: vec![],
+            });
+            continue;
+        };
+        let mut reply_steps: Vec<Value> = runner["steps"]
+            .as_array()
+            .unwrap_or(&empty)
+            .iter()
+            .chain(
+                runner["extension_events"]
+                    .as_array()
+                    .unwrap_or(&empty)
+                    .iter(),
+            )
+            .filter(|s| s["actor_id"] == actor["actor_id"])
+            .cloned()
+            .collect();
+        reply_steps.sort_by_key(|a| {
+            action_ids
+                .iter()
+                .position(|id| **id == a["step_id"])
+                .unwrap_or(usize::MAX)
+        });
+        let projection = project_disposition(sub, &reply_steps, reporting_failed);
+        if projection.integrity != Some("valid") {
+            all_valid = false;
+        }
+        actors.push(ActorExecutionDiagnostics {
+            actor_id,
+            process_disposition: projection.disposition,
+            termination_cause: projection.cause,
+            stop_reason: projection.stop_reason,
+            disposition_integrity: projection.integrity,
+            disposition_issues: projection.issues,
+        });
+    }
+    let mut native_issues = extension_account_issues(runner);
+    native_issues.extend(phase_collection_issues(runner));
+    native_issues.extend(exec_observation_issues(runner));
+    let launched = actors.iter().any(|a| a.process_disposition != "no_worker");
+    let withheld = !native_issues.is_empty();
+    RunnerExecutionDiagnostics {
+        process_disposition: if withheld {
+            "withheld"
+        } else if launched {
+            "per_actor"
+        } else {
+            "no_worker"
+        },
+        termination_cause: if withheld { Some("unknown") } else { None },
+        stop_reason: None,
+        disposition_integrity: if !launched && !withheld {
+            None
+        } else if withheld || !all_valid {
+            Some("invalid")
+        } else {
+            Some("valid")
+        },
+        disposition_issues: native_issues,
+        actors: Some(actors),
     }
 }
 
@@ -1892,7 +2277,7 @@ mod tests {
     #[test]
     fn validator_collection_ownership_rejects_transplants_and_ignores_pid_reuse() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response24/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response25/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1955,7 +2340,7 @@ mod tests {
     #[test]
     fn shared_evidence_type_corpus() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response24/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response25/issuer_abnormal_run.json"
         ))
         .unwrap();
         let rows: Vec<Value> = serde_json::from_str(include_str!(
@@ -1990,7 +2375,7 @@ mod tests {
     #[test]
     fn missing_issuer_result_rejects_publication_and_payload_without_erasing_cleanup() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response24/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response25/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -2056,7 +2441,7 @@ mod tests {
     #[test]
     fn published_abnormal_issuer_exit_requires_both_observations() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response24/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response25/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -2078,7 +2463,7 @@ mod tests {
     #[test]
     fn native_event_references_and_publication_gate_disposition() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response24/extension_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response25/extension_run.json"
         ))
         .unwrap();
         let runner = &envelope["data"]["runner_result"];
@@ -2340,7 +2725,7 @@ mod tests {
             json!({"worker_evidence": {"progress":
                 {"operation": op, "stage": stage, "raw": (op << 24) | (stage << 20)}}})
         };
-        let (header, setup, read, open) = (word(1, 2), word(12, 2), word(2, 1), word(13, 1));
+        let (header, setup, read, open) = (word(1, 2), word(12, 2), word(2, 1), word(14, 1));
         let (header_answer, _, header) = disposition_progress(&header, 1);
         let (setup_answer, setup_index, setup) = disposition_progress(&setup, 1);
         let (_, _, read) = disposition_progress(&read, 1);
@@ -2349,14 +2734,21 @@ mod tests {
             (Some("none"), Some("none"), None)
         );
         assert!(header.unwrap() < setup.unwrap() && setup.unwrap() < read.unwrap());
-        // An open code acquires no temporal meaning from its magnitude.
+        // The parked activation wait (13) follows application and precedes the
+        // release wait; an open code acquires no temporal meaning from its magnitude.
+        let (apply_word, activate_word, proceed_word) = (word(8, 2), word(13, 1), word(11, 1));
+        let (_, _, apply) = disposition_progress(&apply_word, 1);
+        let (activate_answer, _, activate) = disposition_progress(&activate_word, 1);
+        let (_, _, proceed) = disposition_progress(&proceed_word, 1);
+        assert_eq!(activate_answer, Some("none"));
+        assert!(apply.unwrap() < activate.unwrap() && activate.unwrap() < proceed.unwrap());
         assert_eq!(disposition_progress(&open, 1), (None, None, None));
     }
 
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response24/a1_expected.json"
+            "../../tests/fixtures/disposition/response25/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

@@ -46,6 +46,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <mach/mach_time.h>
 
 #include "pw_probe_runner_abi.h"
 #include "first_touch_probe.h"
@@ -158,6 +159,15 @@ typedef struct {
     int skip_touch;
     size_t probe_offset;
     int touch_probe;
+
+    /* Actor-form controls. actor_mode is the header input (0 legacy, 1 apply,
+     * 2 unapplied). activation_mode: 0 none, 1 store the ordinal the phase
+     * record names (1), 2 store a greater ordinal (2), 3 withhold activation.
+     * activation_delay_ms is measured from the worker's setup publication.
+     * cutoff_ms > 0 sets the shared lifetime cutoff that far ahead of the
+     * header write; -1 sets a cutoff already in the past. */
+    int actor_mode, activation_mode, activation_delay_ms;
+    long cutoff_ms;
 } scenario_t;
 
 static void populate_happy(pw_shm_slot_t *slots) {
@@ -340,42 +350,59 @@ static const char SCEN_UTF8_POLICY[] =
     "; caf\xc3\xa9 \xe2\x9c\x93\n";
 
 static scenario_t SCENARIOS[] = {
-    { "proceed_never_set", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "proceed_late_after_expiry", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "proceed_before_applied", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 1, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "proceed_delayed_observed_quiescence", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "proceed_under_bare_deny_default", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "proceed_wait_budget_short", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "proceed_wait_budget_long", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "proceed_expiry_release_boundary", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 100, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "proceed_without_host_release", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "max_slots_proceed", SCEN_ALLOW_DEFAULT_POLICY, 256, 1, populate_max_slots, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    /* Actor-form activation barrier and setup modes. */
+    { .name = "activation_named_ordinal", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_happy, .proceed_wait_ms = 2000, .actor_mode = 1, .activation_mode = 1, .activation_delay_ms = 300 },
+    { .name = "activation_under_deny_default", .policy = SCEN_DENY_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_deny_default, .proceed_wait_ms = 2000, .actor_mode = 1, .activation_mode = 1, .activation_delay_ms = 300 },
+    { .name = "activation_greater_ordinal", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_happy, .proceed_wait_ms = 2000, .actor_mode = 1, .activation_mode = 2, .activation_delay_ms = 100 },
+    { .name = "activation_withheld_cutoff", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_happy, .proceed_wait_ms = 2000, .actor_mode = 1, .activation_mode = 3, .cutoff_ms = 300 },
+    { .name = "activation_cancel_while_parked", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_happy, .proceed_wait_ms = 2000, .actor_mode = 1, .activation_mode = 3, .poll_deadline_ms = 400 },
+    { .name = "activation_cutoff_past", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_happy, .proceed_wait_ms = 2000, .actor_mode = 1, .activation_mode = 1, .cutoff_ms = -1 },
+    { .name = "unapplied_actor_reads", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_happy, .proceed_wait_ms = 2000, .actor_mode = 2, .activation_mode = 1, .activation_delay_ms = 100 },
+    { .name = "unapplied_under_deny_default", .policy = SCEN_DENY_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_happy, .proceed_wait_ms = 2000, .actor_mode = 2, .activation_mode = 1, .activation_delay_ms = 100 },
+    { "proceed_never_set", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "proceed_late_after_expiry", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "proceed_before_applied", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 1, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "proceed_delayed_observed_quiescence", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "proceed_under_bare_deny_default", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "proceed_wait_budget_short", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "proceed_wait_budget_long", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "proceed_expiry_release_boundary", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 100, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "proceed_without_host_release", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "max_slots_proceed", SCEN_ALLOW_DEFAULT_POLICY, 256, 1, populate_max_slots, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 
     /* name, policy, step_count, request_exit, populate_slots, populate_params,
      * corrupt_abi, skip_prepared, override_step_count, override_param_count,
      * oversize_policy, temp_target */
-    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                0, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                0, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { .name = "terminal_empty_phase", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 0 },
-    { "terminal_exit_without_request",        SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "terminal_exit_without_request",        SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 
     /* #1 — file attempt kinds with no other execution coverage. */
-    { "unlink_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "unlink_deny",            SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "create_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_create,       NULL,                   0, 0, 0, 0, 0, TEMP_ENSURE_ABSENT, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "unlink_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "unlink_deny",            SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "create_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_create,       NULL,                   0, 0, 0, 0, 0, TEMP_ENSURE_ABSENT, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 
     /* #2 — pre-apply self-defense / refusal branches. */
-    { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { .name = "abi_magic_mismatch", .policy = SCEN_ALLOW_DEFAULT_POLICY,
       .step_count = 1, .request_exit = 1, .populate_slots = populate_happy, .corrupt_abi = 2 },
-    { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
-    { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     /* Expectation pinned at the capacity: the worker's read overflows before
      * EOF and keeps code 2; without the pin the header would refuse the
      * impossible length first. */
@@ -633,6 +660,19 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     hdr->step_count = scen->step_count;
     hdr->phase_count = 1;
     hdr->phases[0].end_slot = scen->step_count;
+    hdr->phases[0].global_phase = 1;
+    hdr->actor_mode = (uint32_t)scen->actor_mode;
+    int cutoff_set = 0;
+    if (scen->cutoff_ms > 0) {
+        mach_timebase_info_data_t tb;
+        mach_timebase_info(&tb);
+        uint64_t ticks = (uint64_t)scen->cutoff_ms * 1000000ull * tb.denom / tb.numer;
+        hdr->lifetime_cutoff_ticks = mach_continuous_time() + ticks;
+        cutoff_set = 1;
+    } else if (scen->cutoff_ms < 0) {
+        hdr->lifetime_cutoff_ticks = 1; /* nonzero and before any later origin sample */
+        cutoff_set = 1;
+    }
     if (scen->populate_slots) scen->populate_slots(slots);
     if (scen->populate_params) {
         hdr->param_count = scen->populate_params(params);
@@ -893,7 +933,8 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
      * its status here rather than polling the full deadline. */
     int release_set = scen->proceed_at_prepare;
     int early_completion = 0, early_attempt = 0, quiescence_polls = 0;
-    long held_ms = 0, done_after_applied_ms = -1;
+    int activation_set = 0, arrived_before_activation = 0;
+    long held_ms = 0, done_after_applied_ms = -1, activation_ms = -1;
     int poll_iters = (scen->poll_deadline_ms ? scen->poll_deadline_ms : 2000) / 2;
     struct timespec applied_time = {0};
     pw_shm_evidence_t *order_e = (void *)((char *)base + PW_SHM_REGION_BYTES
@@ -908,8 +949,34 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         for (int i = 0; i < poll_iters; i++) {
             uint32_t applied = atomic_load_explicit(&hdr->applied, memory_order_acquire);
             uint32_t done = atomic_load_explicit(&hdr->done, memory_order_acquire);
+            /* The actor form's setup publication stands in for applied: an
+             * unapplied actor never sets applied. The timer starts at setup. */
+            if (scen->actor_mode) applied = atomic_load_explicit(&hdr->actor_setup, memory_order_acquire) != 0u;
             if (applied && !saw_applied) { saw_applied = 1; clock_gettime(CLOCK_MONOTONIC, &applied_time); }
-            if (applied && !release_set) {
+            if (applied && scen->actor_mode && !activation_set) {
+                /* Parked before activation: nothing of the specimen runs and
+                 * no arrival is published until the named ordinal is stored. */
+                quiescence_polls++;
+                for (uint32_t slot = 0; slot < scen->step_count; slot++) {
+                    if (atomic_load_explicit(&slots[slot].completed, memory_order_acquire)) early_completion = 1;
+                }
+                uint32_t progress = atomic_load_explicit(&order_e->progress, memory_order_acquire);
+                if ((progress >> 24) == PW_OP_ATTEMPT) early_attempt = 1;
+                if (atomic_load_explicit(&hdr->phases[0].arrived, memory_order_acquire)) arrived_before_activation = 1;
+                struct timespec now; clock_gettime(CLOCK_MONOTONIC, &now);
+                long elapsed = (now.tv_sec - applied_time.tv_sec) * 1000
+                    + (now.tv_nsec - applied_time.tv_nsec) / 1000000;
+                if ((scen->activation_mode == 1 || scen->activation_mode == 2) && elapsed >= scen->activation_delay_ms) {
+                    atomic_store_explicit(&hdr->activation, scen->activation_mode == 1 ? 1u : 2u, memory_order_release);
+                    activation_set = 1;
+                    activation_ms = elapsed;
+                }
+            }
+            /* The actor form releases only after the activated visit arrived. */
+            int release_gate = scen->actor_mode
+                ? (activation_set && atomic_load_explicit(&hdr->phases[0].arrived, memory_order_acquire))
+                : applied;
+            if (release_gate && !release_set) {
                 /* The worker has published application and is parked in its
                  * release wait; nothing of it runs until the store below. */
                 if (scen->probe_offset && !ft.at_applied.taken) ft_sample(&ft.at_applied, base);
@@ -1023,6 +1090,24 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     }
     printf(",\"proceed_set\":%s,\"proceed_observed\":%u", release_set ? "true" : "false",
         atomic_load_explicit(&hdr->proceed_observed, memory_order_acquire));
+    printf(",\"actor_mode\":%d,\"actor_setup\":%u,\"activation_set\":%d,\"activation_observed\":%u",
+        scen->actor_mode, atomic_load_explicit(&hdr->actor_setup, memory_order_acquire), activation_set,
+        atomic_load_explicit(&hdr->activation_observed, memory_order_acquire));
+    printf(",\"arrived_before_activation\":%d,\"activation_ms\":%ld,\"cutoff_set\":%d",
+        arrived_before_activation, activation_ms, cutoff_set);
+    printf(",\"phase_arrived\":%u,\"phase_completed\":%u",
+        atomic_load_explicit(&hdr->phases[0].arrived, memory_order_acquire),
+        atomic_load_explicit(&hdr->phases[0].completed, memory_order_acquire));
+    {
+        uint32_t hash_published = atomic_load_explicit(&hdr->policy_hash_published, memory_order_acquire);
+        printf(",\"policy_hash_published\":%u", hash_published);
+        if (hash_published == 1u) {
+            printf(",\"policy_received_sha256\":\"");
+            for (size_t i = 0; i < sizeof(hdr->policy_received_sha256); i++) printf("%02x", hdr->policy_received_sha256[i]);
+            printf("\"");
+        }
+    }
+    printf(",\"policy\":"); emit_json_string(stdout, scen->policy);
     printf(",\"early_completion\":%d,\"early_attempt\":%d,\"quiescence_polls\":%d",
            early_completion, early_attempt, quiescence_polls);
     printf(",\"held_ms\":%ld,\"done_after_applied_ms\":%ld", held_ms, done_after_applied_ms);

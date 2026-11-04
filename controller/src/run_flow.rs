@@ -42,11 +42,22 @@ const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 struct ExecutionData {
     pub specimen: Specimen,
     pub policy_check: Option<PolicyCheckCapture>,
+    /// The actor form's fallback compilations, one per apply actor in request
+    /// order; absent for the legacy form and when no fallback ran.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actor_policy_checks: Option<Vec<ActorPolicyCheck>>,
     pub timeout_ms: Option<u64>,
     pub runner_client: Option<RunnerClientRun>,
     pub runner_result: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_failure: Option<Value>,
+}
+
+/// One apply actor's fallback compilation capture.
+#[derive(Serialize)]
+pub(crate) struct ActorPolicyCheck {
+    pub actor_id: Option<String>,
+    pub policy_check: PolicyCheckCapture,
 }
 
 #[derive(Serialize)]
@@ -135,6 +146,7 @@ fn execution_only(
         execution: ExecutionData {
             specimen,
             policy_check: None,
+            actor_policy_checks: None,
             timeout_ms,
             runner_client,
             runner_result,
@@ -307,6 +319,33 @@ fn policy_dossier(
     )
 }
 
+/// Per-actor policy dossiers for the actor form, from each actor's
+/// resolution, and the first refusal in actor order. The legacy dossier rules
+/// apply to each policy object; an actor without a policy object gets a
+/// not-applicable dossier.
+pub(crate) fn actor_policy_dossiers(
+    resolutions: &[crate::augments::ActorAugmentResolution],
+) -> (Vec<crate::dossier::ActorDossier>, Option<RequestError>) {
+    let mut dossiers = Vec::with_capacity(resolutions.len());
+    let mut first_error = None;
+    for actor in resolutions {
+        let (policy, error) = policy_dossier(
+            actor.original_source.as_deref(),
+            &actor.resolution,
+            actor.selected_source.as_deref(),
+        );
+        if first_error.is_none() {
+            first_error = error;
+        }
+        dossiers.push(crate::dossier::ActorDossier {
+            actor_id: actor.actor_id.clone(),
+            mode: actor.mode.clone(),
+            policy,
+        });
+    }
+    (dossiers, first_error)
+}
+
 /// What a client capture permits. A delivery error is a controller failure
 /// that takes precedence over any captured reply; otherwise the reply's
 /// version gates every semantic reader.
@@ -364,6 +403,32 @@ fn fallback_policy_check(
         return None;
     }
     Some(run().unwrap_or_else(PolicyCheckCapture::unavailable))
+}
+
+/// The actor form's fallback compilations: each apply actor's resolved policy
+/// object is checked on its own, never applied to another actor, and the
+/// captures keep request order. None when the legacy rule withholds the
+/// fallback or no actor carries a policy object.
+fn actor_fallback_checks(
+    client: &RunnerClientRun,
+    policies: &[(Option<String>, Value)],
+) -> Option<Vec<ActorPolicyCheck>> {
+    if policies.is_empty() || !client.fallback_eligible() {
+        return None;
+    }
+    Some(
+        policies
+            .iter()
+            .map(|(actor_id, policy)| {
+                let request = serde_json::json!({ "policy": policy }).to_string();
+                ActorPolicyCheck {
+                    actor_id: actor_id.clone(),
+                    policy_check: run_policy_check(&request)
+                        .unwrap_or_else(PolicyCheckCapture::unavailable),
+                }
+            })
+            .collect(),
+    )
 }
 
 struct Parsed {
@@ -591,6 +656,36 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         &resolution,
         string_source(&request_value),
     );
+    // The actor form resolves each actor's own policy and keeps one dossier
+    // per actor; the first refusal in actor order is the request's refusal.
+    let actor_resolutions = crate::augments::resolve_actor_augments(&mut request_value, &app_root);
+    let (actor_dossiers, augmentation_error) = if actor_resolutions.is_empty() {
+        (None, augmentation_error)
+    } else {
+        let (dossiers, error) = actor_policy_dossiers(&actor_resolutions);
+        (Some(dossiers), augmentation_error.or(error))
+    };
+    let actor_policies: Vec<(Option<String>, Value)> = request_value
+        .get("actors")
+        .and_then(Value::as_array)
+        .map(|actors| {
+            actors
+                .iter()
+                .filter_map(|actor| {
+                    let policy = actor.get("sandbox")?.get("policy")?;
+                    policy.is_object().then(|| {
+                        (
+                            actor
+                                .get("actor_id")
+                                .and_then(Value::as_str)
+                                .map(str::to_string),
+                            policy.clone(),
+                        )
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
 
     let (runner_target, binaries, runner_provenance, selection_error) = match selection {
         Ok(target) => {
@@ -607,6 +702,7 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         runner_provenance,
         app_provenance,
         binaries,
+        actors: actor_dossiers,
     };
 
     if let Some(error) = selection_error {
@@ -644,9 +740,11 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         ReplyAdmission::Refused { outcome, error } => (outcome, 1, error),
         ReplyAdmission::Admitted => {
             let policy_check = fallback_policy_check(&runner_client, || run_policy_check(&held));
+            let actor_policy_checks = actor_fallback_checks(&runner_client, &actor_policies);
             let execution = complete_execution(ExecutionData {
                 specimen,
                 policy_check,
+                actor_policy_checks,
                 timeout_ms,
                 runner_client: Some(runner_client),
                 runner_result,
@@ -661,6 +759,10 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         fallback_policy_check(data.execution.runner_client.as_ref().unwrap(), || {
             run_policy_check(&held)
         });
+    data.execution.actor_policy_checks = actor_fallback_checks(
+        data.execution.runner_client.as_ref().unwrap(),
+        &actor_policies,
+    );
     envelope(
         json_contract::JsonResult::new(false, exit_code, Some(outcome), Some(error)),
         &data,
@@ -752,6 +854,7 @@ mod tests {
         ExecutionData {
             specimen: specimen(),
             policy_check: None,
+            actor_policy_checks: None,
             timeout_ms: Some(DEFAULT_TIMEOUT_MS),
             runner_client: Some(client_run(runner.as_ref())),
             runner_result: runner,
@@ -1643,6 +1746,78 @@ else:
                 "records",
                 "status"
             ]
+        );
+    }
+
+    #[test]
+    fn actor_policy_dossiers_follow_each_actor_and_report_the_first_refusal() {
+        use crate::augments::ActorAugmentResolution;
+        let source = "(version 1)\n(allow default)\n";
+        let hash = crate::digest::sha256_hex(source);
+        let resolutions = vec![
+            ActorAugmentResolution {
+                index: 0,
+                actor_id: Some("A".into()),
+                mode: Some("unapplied".into()),
+                original_source: None,
+                selected_source: None,
+                resolution: AugmentResolution::NotPresent,
+            },
+            ActorAugmentResolution {
+                index: 1,
+                actor_id: Some("B".into()),
+                mode: Some("apply".into()),
+                original_source: Some(source.into()),
+                selected_source: Some(source.into()),
+                resolution: AugmentResolution::StrippedNoOp,
+            },
+            ActorAugmentResolution {
+                index: 2,
+                actor_id: None,
+                mode: Some("apply".into()),
+                original_source: Some(source.into()),
+                selected_source: Some(source.into()),
+                resolution: AugmentResolution::BadRequest(RequestError::new(
+                    "augment_unavailable",
+                    &["actors", "2", "sandbox", "policy", "augments", "0"],
+                    "unknown augment: nope",
+                )),
+            },
+        ];
+        let (dossiers, error) = actor_policy_dossiers(&resolutions);
+        assert_eq!(dossiers.len(), 3);
+        assert_eq!(dossiers[0].actor_id.as_deref(), Some("A"));
+        assert_eq!(dossiers[0].mode.as_deref(), Some("unapplied"));
+        assert_eq!(dossiers[0].policy.augmentation.status, "not_applicable");
+        assert_eq!(dossiers[0].policy.imports.status, "not_applicable");
+        assert_eq!(dossiers[1].policy.augmentation.status, "not_requested");
+        assert_eq!(
+            dossiers[1].policy.augmentation.applied_sha256.as_deref(),
+            Some(hash.as_str())
+        );
+        assert_eq!(dossiers[1].policy.imports.status, "complete");
+        assert!(dossiers[2].actor_id.is_none());
+        assert_eq!(dossiers[2].policy.augmentation.status, "failed");
+        assert_eq!(
+            error.as_ref().map(|e| e.failure.code.as_str()),
+            Some("augment_unavailable")
+        );
+        let wire = serde_json::to_value(&dossiers[1]).unwrap();
+        assert_eq!(keys(&wire), ["actor_id", "mode", "policy"]);
+        let mut specimen = specimen();
+        assert!(
+            serde_json::to_value(&specimen)
+                .unwrap()
+                .get("actors")
+                .is_none()
+        );
+        specimen.actors = Some(dossiers);
+        assert_eq!(
+            serde_json::to_value(&specimen).unwrap()["actors"]
+                .as_array()
+                .unwrap()
+                .len(),
+            3
         );
     }
 
@@ -2696,6 +2871,27 @@ else:
                     validator: Some(binary()),
                     issuer: Some(binary()),
                 },
+                actors: Some(vec![crate::dossier::ActorDossier {
+                    actor_id: Some("B".into()),
+                    mode: Some("apply".into()),
+                    policy: PolicyDossier {
+                        augmentation: Augmentation {
+                            status: "applied".into(),
+                            applied: vec!["augment".into()],
+                            original_sha256: Some("c".repeat(64)),
+                            applied_sha256: Some("d".repeat(64)),
+                            error: Some("constructed".into()),
+                        },
+                        imports: Imports {
+                            status: "incomplete".into(),
+                            closure_sha256: Some("e".repeat(64)),
+                            records: vec![import_record()],
+                            cycle: Some(vec!["a".into(), "b".into()]),
+                            exceeded: Some("depth".into()),
+                            failure: Some("constructed".into()),
+                        },
+                    },
+                }]),
             };
             let reply = json!({
                 "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
@@ -2710,6 +2906,15 @@ else:
                         output: capture(crate::utils::HELPER_CAPTURE_BYTES),
                         envelope: Some(sbpl_check_envelope()),
                     }),
+                    actor_policy_checks: Some(vec![ActorPolicyCheck {
+                        actor_id: Some("B".into()),
+                        policy_check: PolicyCheckCapture {
+                            status: "ok".into(),
+                            tool_exit_code: 0,
+                            output: capture(crate::utils::HELPER_CAPTURE_BYTES),
+                            envelope: Some(sbpl_check_envelope()),
+                        },
+                    }]),
                     timeout_ms: Some(DEFAULT_TIMEOUT_MS),
                     runner_client: Some(RunnerClientRun {
                         argv: vec!["constructed-client".into()],
@@ -2743,6 +2948,17 @@ else:
                         "missing_record",
                         "constructed".into(),
                     )],
+                    actors: Some(vec![crate::disposition::ActorExecutionDiagnostics {
+                        actor_id: Some("B".into()),
+                        process_disposition: "clean_exit",
+                        termination_cause: Some("host_sentinel_deadline"),
+                        stop_reason: Some("done".into()),
+                        disposition_integrity: Some("valid"),
+                        disposition_issues: vec![integrity_issue(
+                            "missing_record",
+                            "constructed".into(),
+                        )],
+                    }]),
                 }),
             };
             (full_result(), data)

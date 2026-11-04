@@ -61,19 +61,23 @@ struct PWRunnerStepResult: Codable {
     /// Present on every step of an ordinary reply; withheld by a
     /// `runner_reporting_failed` reply.
     var comparison: PWRunnerComparison?
+    /// Actor form: the actor whose process ran this step.
+    var actor_id: String?
 
     init(
         step_id: String,
         phase_id: String = "main",
         sandbox_check: PWRunnerSandboxCheckResult,
         attempt: PWRunnerAttemptResult,
-        comparison: PWRunnerComparison? = nil
+        comparison: PWRunnerComparison? = nil,
+        actor_id: String? = nil
     ) {
         self.phase_id = phase_id
         self.step_id = step_id
         self.sandbox_check = sandbox_check
         self.attempt = attempt
         self.comparison = comparison
+        self.actor_id = actor_id
     }
 
     enum CodingKeys: String, CodingKey {
@@ -81,11 +85,13 @@ struct PWRunnerStepResult: Codable {
         case sandbox_check
         case attempt
         case comparison
+        case actor_id
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(comparison, forKey: .comparison)
+        try container.encodeIfPresent(actor_id, forKey: .actor_id)
         try container.encode(phase_id, forKey: .phase_id)
         try container.encode(step_id, forKey: .step_id)
         try container.encode(sandbox_check, forKey: .sandbox_check)
@@ -96,6 +102,7 @@ struct PWRunnerStepResult: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         phase_id = try container.decode(String.self, forKey: .phase_id)
         step_id = try container.decode(String.self, forKey: .step_id)
+        actor_id = try container.decodeIfPresent(String.self, forKey: .actor_id)
         sandbox_check = try container.decode(PWRunnerSandboxCheckResult.self, forKey: .sandbox_check)
         attempt = try container.decode(PWRunnerAttemptResult.self, forKey: .attempt)
         comparison = try container.decodeIfPresent(PWRunnerComparison.self, forKey: .comparison)

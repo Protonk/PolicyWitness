@@ -72,6 +72,32 @@ int main(void) {
     printf("offsetof.pw_shm_phase_t.arrived=%zu\n", offsetof(pw_shm_phase_t, arrived));
     printf("offsetof.pw_shm_phase_t.acknowledged=%zu\n", offsetof(pw_shm_phase_t, acknowledged));
     printf("offsetof.pw_shm_phase_t.completed=%zu\n", offsetof(pw_shm_phase_t, completed));
+    printf("offsetof.pw_shm_phase_t.global_phase=%zu\n", offsetof(pw_shm_phase_t, global_phase));
+    /* Actor-form inputs and publications. */
+    printf("offsetof.pw_shm_header_t.actor_mode=%zu\n", offsetof(pw_shm_header_t, actor_mode));
+    printf("offsetof.pw_shm_header_t.actor_index=%zu\n", offsetof(pw_shm_header_t, actor_index));
+    printf("offsetof.pw_shm_header_t.actor_setup=%zu\n", offsetof(pw_shm_header_t, actor_setup));
+    printf("offsetof.pw_shm_header_t.activation=%zu\n", offsetof(pw_shm_header_t, activation));
+    printf("offsetof.pw_shm_header_t.activation_observed=%zu\n", offsetof(pw_shm_header_t, activation_observed));
+    printf("offsetof.pw_shm_header_t.lifetime_cutoff_ticks=%zu\n", offsetof(pw_shm_header_t, lifetime_cutoff_ticks));
+    printf("offsetof.pw_shm_header_t.policy_hash_published=%zu\n", offsetof(pw_shm_header_t, policy_hash_published));
+    printf("offsetof.pw_shm_header_t.policy_received_sha256=%zu\n", offsetof(pw_shm_header_t, policy_received_sha256));
+    printf("offsetof.pw_shm_header_t.authority_status=%zu\n", offsetof(pw_shm_header_t, authority_status));
+    printf("offsetof.pw_shm_header_t.authority_detail=%zu\n", offsetof(pw_shm_header_t, authority_detail));
+    printf("offsetof.pw_shm_header_t.native_symbols=%zu\n", offsetof(pw_shm_header_t, native_symbols));
+    /* Actor-form extension operands and publications in the slot. */
+    printf("PW_SHM_EXT_TARGET_BYTES=%u\n", PW_SHM_EXT_TARGET_BYTES);
+    printf("offsetof.pw_shm_slot_t.ext_family=%zu\n", offsetof(pw_shm_slot_t, ext_family));
+    printf("offsetof.pw_shm_slot_t.ext_authority=%zu\n", offsetof(pw_shm_slot_t, ext_authority));
+    printf("offsetof.pw_shm_slot_t.ext_token_index=%zu\n", offsetof(pw_shm_slot_t, ext_token_index));
+    printf("offsetof.pw_shm_slot_t.ext_delivery_index=%zu\n", offsetof(pw_shm_slot_t, ext_delivery_index));
+    printf("offsetof.pw_shm_slot_t.ext_handle_index=%zu\n", offsetof(pw_shm_slot_t, ext_handle_index));
+    printf("offsetof.pw_shm_slot_t.ext_recipient_index=%zu\n", offsetof(pw_shm_slot_t, ext_recipient_index));
+    printf("offsetof.pw_shm_slot_t.ext_last_use=%zu\n", offsetof(pw_shm_slot_t, ext_last_use));
+    printf("offsetof.pw_shm_slot_t.ext_token_length=%zu\n", offsetof(pw_shm_slot_t, ext_token_length));
+    printf("offsetof.pw_shm_slot_t.ext_custody_status=%zu\n", offsetof(pw_shm_slot_t, ext_custody_status));
+    printf("offsetof.pw_shm_slot_t.ext_transfer_status=%zu\n", offsetof(pw_shm_slot_t, ext_transfer_status));
+    printf("offsetof.pw_shm_slot_t.ext_target=%zu\n", offsetof(pw_shm_slot_t, ext_target));
 
     /* Header field offsets. */
     printf("offsetof.pw_shm_header_t.abi_magic=%zu\n",    offsetof(pw_shm_header_t, abi_magic));

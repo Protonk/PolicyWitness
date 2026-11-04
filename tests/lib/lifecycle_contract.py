@@ -114,9 +114,11 @@ TRIGGER_FOR_STOP = {'sentinel_deadline': 'deadline_expiry', 'done': 'completion'
 # attempts (9).
 OPERATIONS = {1: 'header', 2: 'policy_read', 3: 'params_create', 4: 'param_set', 5: 'compile',
               6: 'capture', 7: 'ready', 8: 'apply', 9: 'attempt', 10: 'finished', 11: 'proceed',
-              12: 'clock_setup'}
+              12: 'clock_setup', 13: 'activate'}
 PHASES = {1: 'started', 2: 'returned'}
-PROTOCOL_ORDER = (1, 12, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10)
+# The actor form's parked activation wait (13) follows application (8) and
+# precedes each visit's release wait (11).
+PROTOCOL_ORDER = (1, 12, 2, 3, 4, 5, 6, 7, 8, 13, 11, 9, 10)
 OP_ATTEMPT, OP_FINISHED, OP_PARAM_SET = 9, 10, 4
 INDEXED_OPERATIONS = {OP_ATTEMPT: 'step_index', OP_PARAM_SET: 'parameter_index'}
 
@@ -279,7 +281,10 @@ NEGATIVE_ANSWERS = {'step_boundary_reached': 'not_reached', 'step_result_publish
 
 # runner_sandbox_diagnostics.process_disposition
 PROCESS_DISPOSITIONS = ('no_worker', 'unconfirmed', 'clean_exit', 'nonzero_exit', 'signaled',
-                        'conflicting', 'withheld', 'unrecognized')
+                        'conflicting', 'withheld', 'unrecognized',
+                        # The actor form's aggregate: each launched actor's own projection
+                        # sits in runner_sandbox_diagnostics.actors.
+                        'per_actor')
 # runner_sandbox_diagnostics.termination_cause. Only the first label is fixed
 # for a live witness today (A1); the others follow the same trigger rule.
 HOST_SENTINEL_DEADLINE = 'host_sentinel_deadline'

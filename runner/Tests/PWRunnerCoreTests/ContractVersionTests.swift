@@ -200,6 +200,7 @@ func replyShapeDocuments() throws -> [[String: Any]] {
     documents += try extensionShapeDocuments()
     documents += try freshWriteShapeDocuments()
     documents += try execObservationShapeDocuments()
+    documents += try actorShapeDocuments()
     return documents
 }
 

@@ -36,7 +36,9 @@ enum PWDisposition {
     /// Temporal order of worker operations (pw_probe_runner_abi.h): clock setup
     /// (12) follows header validation (1) and precedes the policy read (2);
     /// proceed (11) precedes the indexed attempts (9); completion (10) follows them.
-    static let protocolOrder: [UInt32] = [1, 12, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10]
+    // The actor form's parked activation wait (13) follows application and
+    // precedes each visit's release wait (11).
+    static let protocolOrder: [UInt32] = [1, 12, 2, 3, 4, 5, 6, 7, 8, 13, 11, 9, 10]
     static let runReferences = ["reaped", "exit_code", "term_signal", "poll_stop_reason", "exit_requested",
                                        "termination_request", "wait_errors", "cleanup_trigger", "grace_end",
                                        "collection_basis", "done_observed", "progress", "worker_failure", "plan"]

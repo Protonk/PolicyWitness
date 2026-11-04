@@ -566,6 +566,12 @@ func runReplyFailureTests(_ tk: TestKit) {
             var result = try replyFixture()
             result.extensions = []
             result.extension_events = []
+            result.execution_form = "single_worker"
+            result.actors = []
+            result.transfers = []
+            result.resources = PWRunnerResourceTables(tokens: [], deliveries: [], handles: [])
+            result.schedule = PWRunnerScheduleRecord(setup_wait: nil, execution_wait: nil, lifetime_budget_ms: PWActorLimits.lifetimeMs,
+                                                     collection_budget_ms: PWActorLimits.collectionMs, cancelled: nil)
             result.steps[0].comparison = nil
             result = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(result))
             let labels = Set(Mirror(reflecting: result).children.compactMap { $0.label })

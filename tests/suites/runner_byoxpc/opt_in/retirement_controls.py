@@ -98,8 +98,8 @@ def service_source(source):
 def worker_host_source(source):
     # The child still blocks on policy delivery here. This records its kernel
     # generation before the real transfer; no worker code or ABI is changed.
-    anchor = '    // The transfer calls (clock, write, poll) are one injection point: the'
-    return replace_once(source, anchor, '    F2Trace.workerSpawned(pid)\n' + anchor)
+    anchor = '        // The transfer calls (clock, write, poll) are one injection point: the'
+    return replace_once(source, anchor, '        F2Trace.workerSpawned(pid)\n' + anchor)
 
 
 def build_host(scratch, out):
@@ -121,7 +121,7 @@ def build_host(scratch, out):
         body = original.read_text()
         if relative.endswith('/PWRunnerService.swift'):
             body = service_source(body)
-        elif relative.endswith('/CWorker.swift'):
+        elif relative.endswith('/ActorSession.swift'):
             body = worker_host_source(body)
         elif relative == 'runner/Services/PWRunner/main.swift':
             body = replace_once(body, 'let listener: NSXPCListener',

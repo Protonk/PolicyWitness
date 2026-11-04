@@ -43,6 +43,22 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "policy_source": PWShmLayout.policyBytes - 1,
                 "probe_steps": PWShmLayout.maxSteps,
                 "phase_count": PWRunnerPhase.maximumCount,
+                "phase_records": PWShmLayout.maxPhases,
+                "actors": PWActorLimits.actors,
+                "actor_phases": PWActorLimits.phases,
+                "actor_issues": PWActorLimits.issues,
+                "actor_deliveries": PWActorLimits.deliveries,
+                "actor_handles": PWActorLimits.handles,
+                "actor_releases": PWActorLimits.releases,
+                "actor_id": PWActorLimits.identifierBytes,
+                "extension_issue_target": PWActorLimits.targetBytes,
+                "actor_setup_allowance": PWActorLimits.setupMs,
+                "actor_execution_allowance": PWActorLimits.executionMs,
+                "actor_collection_allowance": PWActorLimits.collectionMs,
+                "actor_release_wait": PWActorLimits.releaseWaitMs,
+                "actor_exchange_allowance": PWActorLimits.exchangeMs,
+                "actor_lifetime_cutoff": PWActorLimits.lifetimeMs,
+                "authority_slot_bytes": PWAuthorityLayout.slotBytes,
                 "phase_id": requestLabelMaxBytes,
                 "phase_publications": PWShmLayout.maxPhases * PWShmLayout.phaseBytes,
                 "phase_collection_wait": phaseCollectionBudgetMs,
@@ -100,7 +116,8 @@ func runLimitsContractTests(_ tk: TestKit) {
             ]
             try expectTrue(observed["worker_proceed_wait"]! > validator.verdictReadTimeoutMs
                 + validator.exitGraceMs + validatorReleaseMarginMs)
-            try expectEqual(PWRunnerPhase.maximumCount, PWShmLayout.maxPhases)
+            try expectTrue(PWRunnerPhase.maximumCount <= PWShmLayout.maxPhases)
+            try expectEqual(PWActorLimits.phases, PWShmLayout.maxPhases)
             try expectEqual(PWExtensionLimits.tokenBytes, PWExtensionLayout.tokenBytes)
             try expectEqual(PWExtensionLimits.targetBytes + 1, PWExtensionLayout.pathBytes)
             try expectEqual(PWExtensionLimits.freshReadBytes, PWShmLayout.freshReadBytes)

@@ -70,9 +70,9 @@ assert rc == 0, log
 rc, log = run("fixture-warm", [fixture], timeout=30)
 assert rc == 90, ("fixture must refuse absent shared descriptor", rc, log)
 
-source = package / "Sources/PWRunnerCore/CWorker.swift"
+source = package / "Sources/PWRunnerCore/ActorSession.swift"
 fixed = source.read_text()
-anchor = "    if process.status != nil { observeAcknowledgement() }\n"
+anchor = "        if process.status != nil { observeAcknowledgement() }\n"
 assert fixed.count(anchor) == 1, "reconciliation anchor changed; review mutation"
 environment = dict(os.environ, PW_LIFECYCLE_WORKER_FIXTURE=str(fixture))
 results = []

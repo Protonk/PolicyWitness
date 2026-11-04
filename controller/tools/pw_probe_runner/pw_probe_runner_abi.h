@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "87c9ac8e3b6dec120ae1c6a5a726fde3ddfc338907bf26a0e91d12efde176336"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x87, 0xc9, 0xac, 0x8e, 0x3b, 0x6d, 0xec, 0x12, 0x0a, 0xe1, 0xc6, 0xa5, 0xa7, 0x26, 0xfd, 0xe3, 0xdd, 0xfc, 0x33, 0x89, 0x07, 0xbf, 0x26, 0xa0, 0xe9, 0x1d, 0x12, 0xef, 0xde, 0x17, 0x63, 0x36};
+#define PW_WORKER_ABI_IDENTITY_HEX "925eacdd458a3635f9b8a33fc4cf10a40c00a1a2256650321c14c1ebd5b24d2f"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x92, 0x5e, 0xac, 0xdd, 0x45, 0x8a, 0x36, 0x35, 0xf9, 0xb8, 0xa3, 0x3f, 0xc4, 0xcf, 0x10, 0xa4, 0x0c, 0x00, 0xa1, 0xa2, 0x25, 0x66, 0x50, 0x32, 0x1c, 0x14, 0xc1, 0xeb, 0xd5, 0xb2, 0x4d, 0x2f};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -59,11 +59,15 @@ static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x87, 0xc9, 0xac, 0x8e, 0x3b,
 #define PW_SHM_POLICY_BYTES 262144u /* includes terminating NUL */
 #define PW_SHM_MAX_STEPS    256u
 #define PW_SHM_SLOT_BYTES   8192u
+/* Exact submitted issue path, including the terminator (pw_extension_channel.h's path bound). */
+#define PW_SHM_EXT_TARGET_BYTES 1024u
 #define PW_SHM_MAX_PARAMS   1024u
 #define PW_SHM_PARAM_BYTES  512u
-#define PW_SHM_MAX_PHASES 8u
+/* Phase records: the legacy form admits 8 phases; an actor can be activated in
+ * every one of the 16 actor-form phases, so each region holds 16 records. */
+#define PW_SHM_MAX_PHASES 16u
 #define PW_SHM_PHASE_BYTES 32u
-#define PW_SHM_HEADER_BYTES 448u
+#define PW_SHM_HEADER_BYTES 768u
 /* Optional compiled-object capture. The host pre-touches this bounded region;
  * no capture pipe or post-apply allocation/file output is needed. */
 #define PW_SHM_CAPTURE_HEADER_BYTES 144u
@@ -137,17 +141,41 @@ typedef enum {
     PW_ATTEMPT_EXTENSION_RELEASE = 11,
     PW_ATTEMPT_FILE_WRITE_FRESH = 12,
     PW_ATTEMPT_FILE_CREATE_FRESH = 13,
+    /* Actor-form extension operations: native file issuance by this actor and
+     * the apparatus transfer of an issued token to a recipient actor. */
+    PW_ATTEMPT_EXTENSION_ISSUE = 14,
+    PW_ATTEMPT_EXTENSION_TRANSFER = 15,
 } pw_attempt_kind_t;
 
+/* Actor-form inputs and publications. The legacy single worker is mode 0. */
+enum { PW_ACTOR_MODE_LEGACY = 0, PW_ACTOR_MODE_APPLY = 1, PW_ACTOR_MODE_UNAPPLIED = 2 };
+enum { PW_ACTOR_SETUP_NONE = 0, PW_ACTOR_SETUP_APPLIED = 1, PW_ACTOR_SETUP_UNAPPLIED = 2 };
+/* Actor-form authority region setup, published in authority_status with the
+ * failing stage or rejection reason in authority_detail. Legacy workers leave
+ * both zero. native_symbols carries the entry points resolved before
+ * application (bits below); an absent symbol makes only its operation
+ * unavailable. */
+enum { PW_AUTHORITY_SETUP_NONE = 0, PW_AUTHORITY_SETUP_MAPPED = 1, PW_AUTHORITY_SETUP_DESCRIPTOR_MISSING = 2,
+       PW_AUTHORITY_SETUP_REJECTED = 3, PW_AUTHORITY_SETUP_LOCAL_FAILED = 4 };
+enum { PW_NATIVE_SYMBOL_CONSUME = 1u, PW_NATIVE_SYMBOL_RELEASE = 2u, PW_NATIVE_SYMBOL_ISSUE = 4u };
+/* ext_custody_status after an issue: whether the host accepted the published
+ * token into custody. None of these is a native result. */
+enum { PW_CUSTODY_NONE = 0, PW_CUSTODY_ACCEPTED = 1, PW_CUSTODY_REJECTED = 2, PW_CUSTODY_TIMEOUT = 3,
+       PW_CUSTODY_NOT_PUBLISHED = 4, PW_CUSTODY_CLOCK_FAULT = 5 };
+
 /* Host inputs partition the slots in order. Each worker publication is written
- * once, independently of the latest release ordinal in the region header. */
+ * once, independently of the latest release ordinal in the region header.
+ * global_phase is the host's 1-based ordinal of this visit in the specimen's
+ * schedule; an actor parked before this visit accepts only the activation
+ * that names it. The legacy form writes index + 1. */
 typedef struct {
     uint32_t first_slot;
     uint32_t end_slot;
     _Atomic uint32_t arrived;
     _Atomic uint32_t acknowledged;
     _Atomic uint32_t completed;
-    uint8_t reserved[12];
+    uint32_t global_phase;
+    uint8_t reserved[8];
 } pw_shm_phase_t;
 _Static_assert(sizeof(pw_shm_phase_t) == PW_SHM_PHASE_BYTES, "phase size drift");
 
@@ -203,6 +231,25 @@ _Static_assert(sizeof(pw_shm_phase_t) == PW_SHM_PHASE_BYTES, "phase size drift")
  *                    publishes nothing here. An acquire of 1 is the only gate
  *                    for reading the count; it establishes the completed read,
  *                    not acceptance, compilation or application.
+ *   actor_mode, actor_index — host inputs. Mode 0 is the legacy single worker;
+ *                    1 applies this actor's policy once; 2 declares an
+ *                    unapplied actor that compiles and applies nothing.
+ *   actor_setup    — worker → host. 1 after a successful application (beside
+ *                    applied), 2 when an unapplied actor has declared itself
+ *                    after its ready byte. Never supplies an apply result.
+ *   activation, activation_observed — host → worker, worker → host. The host
+ *                    release-publishes the global phase ordinal that activates
+ *                    this actor's next visit; a parked actor accepts only the
+ *                    ordinal its next phase record names and publishes it back.
+ *                    Legacy workers never wait on it.
+ *   lifetime_cutoff_ticks — host input: the absolute continuous-clock cutoff
+ *                    shared by every actor of the specimen (raw
+ *                    mach_continuous_time units), or 0 for none. The worker
+ *                    refuses a cutoff already past at startup and treats a
+ *                    later expiry as a published timing failure.
+ *   policy_received_sha256, policy_hash_published — worker → host. The
+ *                    worker's own SHA-256 of the policy bytes it read at EOF,
+ *                    published before compilation when the length agreed.
  */
 typedef struct {
     uint32_t abi_magic;
@@ -238,8 +285,19 @@ typedef struct {
     uint32_t policy_bytes_expected;            /* host input; see ownership above */
     uint32_t policy_bytes_received;            /* worker: count read at EOF */
     _Atomic uint32_t policy_read_published;    /* worker: 1 publishes the count */
-    uint8_t reserved[44];
+    uint32_t actor_mode;                       /* host input: PW_ACTOR_MODE_* */
+    uint32_t actor_index;                      /* host input */
+    _Atomic uint32_t actor_setup;              /* worker: PW_ACTOR_SETUP_* */
+    _Atomic uint32_t activation;               /* host: global phase ordinal of the next visit */
+    _Atomic uint32_t activation_observed;      /* worker: latest acquired activation */
+    uint64_t lifetime_cutoff_ticks;            /* host input: absolute continuous-clock cutoff, 0 none */
+    _Atomic uint32_t policy_hash_published;    /* worker: 1 publishes policy_received_sha256 */
+    uint32_t authority_status;                 /* worker: PW_AUTHORITY_SETUP_* */
+    uint32_t authority_detail;                 /* worker: stage or rejection reason */
+    uint32_t native_symbols;                   /* worker: PW_NATIVE_SYMBOL_* bits */
     pw_shm_phase_t phases[PW_SHM_MAX_PHASES];
+    uint8_t policy_received_sha256[32];        /* worker: hash of the bytes read at EOF */
+    uint8_t reserved_tail[32];
 } pw_shm_header_t;
 
 _Static_assert(offsetof(pw_shm_header_t, abi_magic) == 0,
@@ -250,6 +308,17 @@ _Static_assert(offsetof(pw_shm_header_t, policy_bytes_expected) == 136
                && offsetof(pw_shm_header_t, policy_read_published) == 144
                && offsetof(pw_shm_header_t, phases) == 192,
                "policy transfer fields are carved from the reserved bytes; no offset moves");
+_Static_assert(offsetof(pw_shm_header_t, actor_mode) == 148
+               && offsetof(pw_shm_header_t, actor_setup) == 156
+               && offsetof(pw_shm_header_t, activation) == 160
+               && offsetof(pw_shm_header_t, lifetime_cutoff_ticks) == 168
+               && offsetof(pw_shm_header_t, policy_hash_published) == 176
+               && offsetof(pw_shm_header_t, policy_received_sha256) == 704,
+               "actor fields are carved from the reserved bytes and the header tail");
+_Static_assert(offsetof(pw_shm_phase_t, global_phase) == 20, "phase global ordinal offset");
+_Static_assert(offsetof(pw_shm_header_t, authority_status) == 180
+               && offsetof(pw_shm_header_t, native_symbols) == 188,
+               "authority setup publications fill the header's reserved bytes");
 
 /* Open numeric values: unknown operation/code values remain transportable. */
 enum {
@@ -259,7 +328,10 @@ enum {
     PW_OP_PROCEED = 11,
     /* Mach timebase initialization and duration preparation. Temporally it
      * follows header validation (1) and precedes the policy read (2). */
-    PW_OP_CLOCK_SETUP = 12
+    PW_OP_CLOCK_SETUP = 12,
+    /* The actor-form parked wait for activation; precedes each visit's
+     * proceed wait (11) and follows application. */
+    PW_OP_ACTIVATE = 13
 };
 enum { PW_PROGRESS_STARTED = 1, PW_PROGRESS_RETURNED = 2 };
 enum {
@@ -281,7 +353,13 @@ enum {
     PW_FAILURE_SOURCE_LENGTH = 13,
     /* A local worker timing refusal with no native result or errno; detail
      * is a PW_TIME_REASON_* value, never milliseconds. */
-    PW_FAILURE_TIME_INVALID = 14
+    PW_FAILURE_TIME_INVALID = 14,
+    /* The shared actor lifetime cutoff expired, or was already past at clock
+     * setup (detail 1). No native result or errno. */
+    PW_FAILURE_LIFETIME_CUTOFF = 15,
+    /* An activation ordinal named a visit beyond this actor's next one; detail
+     * is the observed ordinal. */
+    PW_FAILURE_ACTIVATION = 16
 };
 /* Kind 3 is the historical CLOCK_MONOTONIC failure; the current worker's
  * continuous clock has no native error return and never publishes it. */
@@ -409,7 +487,7 @@ typedef struct {
     uint32_t native_result_valid;
     int64_t native_result;
     int32_t native_errno;
-    uint32_t unavailable_code; /* 1 no token, 2 no handle, 3 API absent, 4 repeated action */
+    uint32_t unavailable_code; /* 1 no token, 2 no handle, 3 API absent, 4 repeated action, 5 authority region unavailable, 6 delivery not accepted */
     int32_t access_open_rc, access_open_errno;
     int64_t access_read_rc;
     int32_t access_read_errno, access_close_rc, access_close_errno;
@@ -441,6 +519,19 @@ typedef struct {
 
     pw_fresh_write_t fresh_write;
 
+    /* Actor-form extension operands (host inputs) and publications, carved
+     * from the reserved bytes. Indexes are the normalized plan's global
+     * token, delivery, handle and actor indexes; ext_last_use marks the last
+     * declared use of the action's delivery so the worker erases it after
+     * the call. ext_target carries the exact submitted issue path. Outputs:
+     * the measured token length of a nonnull issue, the host custody status
+     * (PW_CUSTODY_*) and the transfer acknowledgement (PW_TRANSFER_ACK_*). */
+    uint32_t ext_family, ext_authority, ext_token_index, ext_delivery_index, ext_handle_index, ext_recipient_index;
+    uint32_t ext_last_use;
+    uint32_t ext_token_length, ext_custody_status, ext_transfer_status;
+    uint32_t ext_reserved;
+    char     ext_target[PW_SHM_EXT_TARGET_BYTES];
+
     /* Reserved padding so the slot stays exactly PW_SHM_SLOT_BYTES.
      * A future field that pushes past this budget breaks the
      * _Static_assert below at compile time. */
@@ -460,7 +551,8 @@ typedef struct {
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stdout */
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stderr */
                       - sizeof(_Atomic uint32_t)
-                      - 156u - PW_SHM_EXEC_EVIDENCE_BYTES - PW_SHM_FRESH_WRITE_BYTES];
+                      - 156u - PW_SHM_EXEC_EVIDENCE_BYTES - PW_SHM_FRESH_WRITE_BYTES
+                      - 44u - PW_SHM_EXT_TARGET_BYTES];
 } pw_shm_slot_t;
 
 _Static_assert(offsetof(pw_shm_slot_t, exec_valid) == 6136,
