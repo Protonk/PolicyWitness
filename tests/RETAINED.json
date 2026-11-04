@@ -575,6 +575,55 @@
       "reason": "Sandbox-extension actor integration acceptance, opt-in cases on the same candidate: order_barrier_mutations, actors_byoxpc (BYOXPC re-delegation, no-issuer contrast, inherited App Sandbox restriction), extensions_byoxpc and reservation_controls with the old_response arrangement; all pass with verified cleanup, except the App Sandbox container the inherited-restriction control cannot remove without Full Disk Access, which it reports.",
       "source": "4ebb1afc7247c723c03ec2851f7d9d4a67c7bef0",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/actor-review-targeted-01",
+      "run_id": "20261104T150422Z_69688c70",
+      "reason": "Initial repair verification: unit/reply-bound, fixture-scratch and actor descriptor-launch failures retained; not acceptance credit. Repairs committed as 557f98defa9a428c481a1c5301e4fd4c6f7b8e05; actual dirty-source identity is described in review/source.json, not this retention commit.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/actor-review-targeted-02",
+      "run_id": "20261104T151132Z_03f771d7",
+      "reason": "Intermediate three-case pass, including 513 Swift assertions, cross-reader controls and full-reader re-delegation; superseded by final native verification. Repairs committed as 557f98defa9a428c481a1c5301e4fd4c6f7b8e05; actual dirty-source identity is described in review/source.json, not this retention commit.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/actor-review-default-01",
+      "run_id": "20261104T151351Z_be021021",
+      "reason": "Initial full run: missing isolated pytest equipment, stale setup-control anchors and maximum-capacity authority mapping failure. Failed and unrun outcomes remain historical facts; no acceptance credit. Repairs committed as 557f98defa9a428c481a1c5301e4fd4c6f7b8e05; actual dirty-source identity is described in review/source.json, not this retention commit.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/actor-review-targeted-03",
+      "run_id": "20261104T153110Z_435fa47b",
+      "reason": "Four corrected setup, descriptor, native authority-binding and accepted-request cases pass; repeated in final full verification. Repairs committed as 557f98defa9a428c481a1c5301e4fd4c6f7b8e05; actual dirty-source identity is described in review/source.json, not this retention commit.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/actor-review-default-02",
+      "run_id": "20261104T153341Z_156de9ba",
+      "reason": "Full 214-case run: 212 pass, two worker-document link/index checks fail, no skips/unrun/sleep. All production/native cases pass, including principal re-delegation, timing, 513 Swift assertions and independent readers. Documentation failures replaced by final-controls-01; see review/verification.json for combined credit. Repairs committed as 557f98defa9a428c481a1c5301e4fd4c6f7b8e05; actual dirty-source identity is described in review/source.json, not this retention commit.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/actor-review-final-controls-01",
+      "run_id": "20261104T154844Z_788682bd",
+      "reason": "All eight source_drift checks and all four original opt-in acceptance cases pass (12); extra setup-oracle characterization fails on stale count and pre-mmap refusal expectations. Failed capture preserved; replaced only for that case by final-controls-02. BYOXPC service cleanup verified. Repairs committed as 557f98defa9a428c481a1c5301e4fd4c6f7b8e05; actual dirty-source identity is described in review/source.json, not this retention commit.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/actor-review-final-controls-02",
+      "run_id": "20261104T155555Z_5e2a6930",
+      "reason": "Corrected setup-oracle characterization passes: baseline and three independently observed counterexamples, with explicit no-mapping evidence for checked early refusals. Completes the five opt-in controls; no production change after default-02. Repairs committed as 557f98defa9a428c481a1c5301e4fd4c6f7b8e05; actual dirty-source identity is described in review/source.json, not this retention commit.",
+      "source": null,
+      "app_inventory": null
     }
   ]
 }
