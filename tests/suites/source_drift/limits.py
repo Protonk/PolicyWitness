@@ -186,19 +186,24 @@ class LimitsDocumentationTests(receipts.TestCase):
 
     def test_extension_coverage_copy_rejects_staleness_dependencies_and_missing_regions_without_writes(self):
         for filename, mutate, recoverable in [
-            (generator.EXTENSIONS_NAME, lambda t: t.replace('Both are current; neither is deprecated.', 'Both forms are current.', 1), True),
-            ('docs/PolicyWitness.md', lambda t: t.replace('Both are current; neither is deprecated.', 'Both forms are current.', 1), True),
+            (generator.EXTENSIONS_NAME, lambda t: t.replace(generator.COVERAGE_SHARED_START,
+                generator.COVERAGE_SHARED_START + '\n\nCoverage copy freshness control.', 1), True),
+            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_COVERAGE_START,
+                generator.GUIDE_COVERAGE_START + '\n\nCoverage copy freshness control.', 1), True),
             (generator.EXTENSIONS_NAME, lambda t: t.replace(generator.COVERAGE_SHARED_END, ''), False),
             ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_COVERAGE_END, ''), False),
             (generator.EXTENSIONS_NAME, lambda t: t.replace('| Form |', '| Shape |'), False),
-            (generator.EXTENSIONS_NAME, lambda t: t.replace('The family table is the whole supported set.',
-                'The family table is the whole supported set ([source](../runner/Sources/PWRunnerCore/ActorPlan.swift)).', 1), False),
-            (generator.EXTENSIONS_NAME, lambda t: t.replace('## Two request forms', '### Two request forms', 1), False),
+            (generator.EXTENSIONS_NAME, lambda t: t.replace(generator.COVERAGE_SHARED_START,
+                generator.COVERAGE_SHARED_START + '\n\n[Source](../runner/Sources/PWRunnerCore/ActorPlan.swift)', 1), False),
+            (generator.EXTENSIONS_NAME, lambda t: t.replace('## Operations and references', '### Operations and references', 1), False),
         ]:
             with self.subTest(filename=filename, mutation=mutate):
                 root = self.checkout()
                 path = root / filename
-                path.write_text(mutate(path.read_text()))
+                original = path.read_text()
+                mutated = mutate(original)
+                self.assertNotEqual(mutated, original)
+                path.write_text(mutated)
                 guide, extensions = root / 'docs/PolicyWitness.md', root / generator.EXTENSIONS_NAME
                 before = guide.read_bytes(), extensions.read_bytes()
                 self.assertEqual(self.command(root, '--check').returncode, 1)

@@ -1,38 +1,12 @@
 # Sandbox extensions in PolicyWitness
 
-This document is the authored source for what PolicyWitness covers of macOS
-sandbox extensions: the two accepted request forms, the native calls each
-operation makes, the lifecycle rules for references, how authority moves
-between processes, what each observation establishes and where the coverage
-stops. The section between the shared markers is copied into the user guide's
-sandbox-extension section by `docs/generate_limits.py`; links written as
-`PolicyWitness.md#anchor` become internal links in the copy. Repository
-citations stay outside the shared region.
-
-Implementation references, in the order a request meets them: request
-normalization in [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift);
-the schedule in [ActorScheduler.swift](../runner/Sources/PWRunnerCore/ActorScheduler.swift);
-host custody and transfer servicing in
-[AuthorityCustody.swift](../runner/Sources/PWRunnerCore/AuthorityCustody.swift);
-the per-actor authority region layout in
-[pw_authority_region.h](../controller/tools/pw_probe_runner/pw_authority_region.h);
-the worker's issue, transfer, consume, release and parked servicing in
-[pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c);
-and reply assembly in
-[ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift).
-The declaration path keeps [ExtensionIssuer.swift](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)
-and [pw_extension_issuer.c](../controller/tools/pw_probe_runner/pw_extension_issuer.c).
-The live tests are the actor authority and actor reply groups of the
-[runner unit tests](../runner/Tests/PWRunnerCoreTests), the harness activation
-rows in [runner_c_worker_harness](../tests/suites/runner_c_worker_harness/README.md)
-and the `witness_contract` extension cases.
-
 <!-- BEGIN SHARED EXTENSION COVERAGE -->
 
-## Two request forms
+File sandbox extensions carry read or read-write authority for a path from an
+issuing process to a consuming process. PolicyWitness records their lifecycle
+alongside probes of file access.
 
-PolicyWitness accepts two ways to put a sandbox extension into an experiment.
-Both are current; neither is deprecated.
+PolicyWitness accepts two routes for sandbox extension experiments.
 
 | Form | How authority enters | Processes | Fields |
 | --- | --- | --- | --- |
@@ -52,13 +26,9 @@ process rather than in a helper.
 | `file` | `read` | `com.apple.app-sandbox.read` | `sandbox_extension_issue_file(class, path, 0)` | `sandbox_extension_consume(token)` | `sandbox_extension_release(handle)` |
 | `file` | `read_write` | `com.apple.app-sandbox.read-write` | the same call with the read-write class | the same | the same |
 
-The family table is the whole supported set. The issue call receives the
-submitted path bytes unchanged and flags zero; the declaration form resolves
-its target with `realpath` before issuance and records both paths, the actor
-form passes the submitted absolute path. Raw class names, token bytes and
-flags are never request fields. No other extension class or kind of token is
-issued, transported or consumed, and nothing here promises coverage of other
-macOS extension mechanisms.
+Issuance uses flags zero. The declaration form resolves its target with
+`realpath` before issuance and records both paths; the actor form passes the
+submitted absolute path unchanged.
 
 ## Operations and references
 
@@ -75,9 +45,13 @@ and stays with its owner: only the issuer transfers its token, only the
 recipient consumes a delivery, only the consumer releases its handle. A
 delivery may be consumed more than once with distinct handles, a token may be
 transferred to several recipients or back to its issuer, and each handle is
-released at most once. An actor that issues, transfers, receives, consumes or
-releases cannot also run an `exec` attempt; another actor in the same specimen
-can. The capacities are in the [limits](PolicyWitness.md#limits).
+released at most once.
+
+## `exec` limitation
+
+An actor that issues, transfers, receives, consumes or releases cannot also
+run an `exec` attempt; another actor in the same specimen can. The capacities
+are in the [limits](PolicyWitness.md#limits).
 
 ## How authority moves
 
@@ -93,15 +67,15 @@ action and delivery references and acknowledge them, compares the
 two copies, settles the delivery as usable or withdrawn, and reports the outcome
 to the sender. Consumption requires the host's usable settlement, so a
 self-transfer cannot consume or erase bytes while the host compares them.
-The recipient accepts a
-delivery while parked between its visits; it consumes only in a later visit of
-its own, after that phase's queries were collected and the host released it.
-The host erases private custody at the token's last declared transfer and at
-teardown. The worker erases settled inbound slots at last use and ordinary exit;
-the host clears remaining shared slots after confirmed process exit. If worker
-termination remains unresolved, the host records that uncertainty and avoids
-erasing shared bytes that may still be in use. Tokens never enter the request,
-the reply, logs or diagnostics.
+
+The recipient accepts a delivery while parked between its visits; it consumes
+only in a later visit of its own, after that phase's queries were collected and
+the host released it. The host erases private custody at the token's last
+declared transfer and at teardown. The worker erases settled inbound slots at
+last use and ordinary exit; the host clears remaining shared slots after
+confirmed process exit. If worker termination remains unresolved, the host
+records that uncertainty and avoids erasing shared bytes that may still be in
+use. Tokens never enter the request, the reply, logs or diagnostics.
 
 Every actor's worker is launched with an empty environment, a policy pipe on
 stdin, and stdout and stderr opened on the null device. Its other inherited
@@ -131,9 +105,7 @@ acknowledgement requires the source action's published matching answer; a
 pending request alone does not establish that the source observed an answer. The
 `sandbox_check` query cannot represent an extension class beside a path, so
 `file-issue-extension` queries cannot express that full issuance predicate and
-extension events stay outside the query/attempt comparison. This is a limit
-of the available query representation, not a prediction of every native
-issuance outcome.
+extension events stay outside the query/attempt comparison.
 
 ## What can go wrong, and how it reads
 
@@ -149,15 +121,3 @@ issuance outcome.
 | Native symbols are missing in the worker | The affected operations are `unavailable` with `native_api_unavailable`; unrelated reads still run. |
 
 <!-- END SHARED EXTENSION COVERAGE -->
-
-## Scope notes for maintainers
-
-The shared region above must stay standalone: no repository links, no
-reference definitions, and only internal guide anchors. Repository-specific
-detail belongs here below the region or in the implementation references at
-the top. The actor timing budgets in the limits inventory are qualified by
-`witness_contract/actor_timing_qualification`, which measures finite one-,
-three- and eight-actor workloads on the signed candidate and requires at least
-a quarter of each allowance to remain; its retained report names the equipment
-the measurement describes. A deliberately slow or hung specimen is covered by
-the deadline controls, not by that margin.

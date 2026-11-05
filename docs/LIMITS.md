@@ -286,7 +286,7 @@ actor may exec.
 
 The user guide supplies the semantic rules alongside these numeric bounds:
 [request rules](PolicyWitness.md#correcting-a-refused-request),
-[extension forms and references](PolicyWitness.md#two-request-forms),
+[extension forms and references](PolicyWitness.md#sandbox-extensions),
 [receipt prerequisites](PolicyWitness.md#compiled-object-receipt-opt-in),
 [prediction eligibility](PolicyWitness.md#filter-kinds-where-prediction-is-unavailable)
 and [receiver evidence](PolicyWitness.md#receiver-evidence).

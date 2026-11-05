@@ -13,9 +13,16 @@ explanations in [LIMITS.md](LIMITS.md) and shared questions in
 [PolicyWitness.md](PolicyWitness.md). Write links in shared questions as
 `PolicyWitness.md#anchor` so the copied guide can resolve them internally.
 The extension coverage region in [EXTENSIONS.md](EXTENSIONS.md) is also copied
-into the guide. Its contents must remain standalone. The bare `EXTENSIONS.md`
-link in QUESTIONS is rebased to the copied coverage anchor; shared coverage
-uses only anchors that exist in the guide.
+into the guide. Keep the topic introduction inside the shared markers so it
+travels with the section. Use level-two headings in the extension source;
+the generator nests them under the guide's sandbox-extension heading.
+Shared content must stand alone: keep repository citations and implementation
+references outside its markers, and maintenance instructions in this file.
+Use inline links to guide anchors, not reference definitions, autolinks or
+companion files. Write guide links as `PolicyWitness.md#anchor`; the generator
+rebases them to internal links. The bare `EXTENSIONS.md` link in QUESTIONS is
+also rebased to the copied coverage anchor. Each target anchor must exist in
+the guide.
 Author scalar spans outside generated regions; the generator renders them
 before copying the shared prose.
 
@@ -30,3 +37,13 @@ Run `tests/lib/python.sh docs/generate_limits.py --check` after editing. The
 describe manifest validation, copying, staging and prose checks. For changes to
 limits themselves, follow the
 [verification guidance](../tests/AGENTS.md#verify-a-limit-change).
+
+When staging the standalone guide, run
+`tests/lib/python.sh docs/generate_limits.py --stage-guide dist/PolicyWitness.md`
+after regeneration; staging checks freshness and does not regenerate sources.
+Review the copied sections as part of the guide, including their introductions,
+heading levels and links. Run `tests/run.sh --suite source_drift` for the
+documentation checks. If an edit removes a mutation control's prose target,
+update the control to make the same change to the revised document and confirm
+that its mutation still changes the input; do not restore reader-facing prose
+solely to satisfy a test fixture.

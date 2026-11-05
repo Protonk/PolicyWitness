@@ -127,7 +127,7 @@ A `query_first` comparison identifies an eligible native prediction collected be
 No. Earlier versions included a best-effort unified-log observer. The observer
 and its former PolicyWitness integration are archived at
 [Protonk/Observer](https://github.com/Protonk/Observer). The archive is
-unmaintained and available for independent adaptation.
+unmaintained.
 
 ### How long does a run take?
 
@@ -421,10 +421,11 @@ record establishes.
 
 <!-- BEGIN COPIED EXTENSION COVERAGE -->
 
-#### Two request forms
+File sandbox extensions carry read or read-write authority for a path from an
+issuing process to a consuming process. PolicyWitness records their lifecycle
+alongside probes of file access.
 
-PolicyWitness accepts two ways to put a sandbox extension into an experiment.
-Both are current; neither is deprecated.
+PolicyWitness accepts two routes for sandbox extension experiments.
 
 | Form | How authority enters | Processes | Fields |
 | --- | --- | --- | --- |
@@ -444,13 +445,9 @@ process rather than in a helper.
 | `file` | `read` | `com.apple.app-sandbox.read` | `sandbox_extension_issue_file(class, path, 0)` | `sandbox_extension_consume(token)` | `sandbox_extension_release(handle)` |
 | `file` | `read_write` | `com.apple.app-sandbox.read-write` | the same call with the read-write class | the same | the same |
 
-The family table is the whole supported set. The issue call receives the
-submitted path bytes unchanged and flags zero; the declaration form resolves
-its target with `realpath` before issuance and records both paths, the actor
-form passes the submitted absolute path. Raw class names, token bytes and
-flags are never request fields. No other extension class or kind of token is
-issued, transported or consumed, and nothing here promises coverage of other
-macOS extension mechanisms.
+Issuance uses flags zero. The declaration form resolves its target with
+`realpath` before issuance and records both paths; the actor form passes the
+submitted absolute path unchanged.
 
 #### Operations and references
 
@@ -467,9 +464,13 @@ and stays with its owner: only the issuer transfers its token, only the
 recipient consumes a delivery, only the consumer releases its handle. A
 delivery may be consumed more than once with distinct handles, a token may be
 transferred to several recipients or back to its issuer, and each handle is
-released at most once. An actor that issues, transfers, receives, consumes or
-releases cannot also run an `exec` attempt; another actor in the same specimen
-can. The capacities are in the [limits](#limits).
+released at most once.
+
+#### `exec` limitation
+
+An actor that issues, transfers, receives, consumes or releases cannot also
+run an `exec` attempt; another actor in the same specimen can. The capacities
+are in the [limits](#limits).
 
 #### How authority moves
 
@@ -485,15 +486,15 @@ action and delivery references and acknowledge them, compares the
 two copies, settles the delivery as usable or withdrawn, and reports the outcome
 to the sender. Consumption requires the host's usable settlement, so a
 self-transfer cannot consume or erase bytes while the host compares them.
-The recipient accepts a
-delivery while parked between its visits; it consumes only in a later visit of
-its own, after that phase's queries were collected and the host released it.
-The host erases private custody at the token's last declared transfer and at
-teardown. The worker erases settled inbound slots at last use and ordinary exit;
-the host clears remaining shared slots after confirmed process exit. If worker
-termination remains unresolved, the host records that uncertainty and avoids
-erasing shared bytes that may still be in use. Tokens never enter the request,
-the reply, logs or diagnostics.
+
+The recipient accepts a delivery while parked between its visits; it consumes
+only in a later visit of its own, after that phase's queries were collected and
+the host released it. The host erases private custody at the token's last
+declared transfer and at teardown. The worker erases settled inbound slots at
+last use and ordinary exit; the host clears remaining shared slots after
+confirmed process exit. If worker termination remains unresolved, the host
+records that uncertainty and avoids erasing shared bytes that may still be in
+use. Tokens never enter the request, the reply, logs or diagnostics.
 
 Every actor's worker is launched with an empty environment, a policy pipe on
 stdin, and stdout and stderr opened on the null device. Its other inherited
@@ -523,9 +524,7 @@ acknowledgement requires the source action's published matching answer; a
 pending request alone does not establish that the source observed an answer. The
 `sandbox_check` query cannot represent an extension class beside a path, so
 `file-issue-extension` queries cannot express that full issuance predicate and
-extension events stay outside the query/attempt comparison. This is a limit
-of the available query representation, not a prediction of every native
-issuance outcome.
+extension events stay outside the query/attempt comparison.
 
 #### What can go wrong, and how it reads
 
