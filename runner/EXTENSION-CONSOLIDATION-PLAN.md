@@ -46,10 +46,20 @@ separate extension forms and execution engines.
 
 Use the actor schedule and submitted absolute target path as the proposed
 canonical behavior. Do not silently reproduce declaration-time target
-resolution or the helper's exit-before-subject lifetime. Retain a different
-preparation or lifetime behavior only if the design review identifies a
-concrete witnessing requirement and agrees how the actor model expresses it.
+resolution or the helper's exit-before-subject lifetime. Eager actor setup and
+overlapping process lifetimes remain the default, with requested actions in a
+serial schedule. Pursue an observed-termination dependency as the narrow
+lifetime candidate below: it belongs to host scheduling, not to the extension
+operation vocabulary. Deferred subject launch/setup and coordinated issuer
+liveness need their own concrete specimen questions before expanding scope.
 Historical equivalence alone is not a requirement.
+
+Keep one way to express and execute extension experiments. Setup, evidence
+collection and cleanup are PW's responsibility; users should not choose a
+transport implementation or a diagnostic mode to obtain complete observations.
+An explicit experimental ordering dependency does not select another execution
+engine. Expose additional choices only when the witnessing requirement makes
+them necessary.
 
 Keep the repository's [core ideas](../AGENTS.md#core-ideas): fresh processes,
 sandbox calls outside the host, observations supporting effects, collection
@@ -127,13 +137,81 @@ disposition is actor-time issuance on the submitted path, actor lifetime under
 the scheduler, actor-native missing-symbol/unavailable records, and actor-indexed
 evidence. Evaluate resolved-target identity and issuer-exit observations on
 their own merits. Any retained feature needs an explicit actor operation or
-evidence rule with a bounded implementation; it must not reintroduce a hidden
-declaration preparation engine.
+evidence rule, or a host scheduling condition for process ordering, with a
+bounded implementation; it must not reintroduce a hidden declaration
+preparation engine. Process-lifetime dependencies do not become extension
+operations.
+
+### Lifecycle decision packet
+
+Prepare this compact packet next, before selecting API syntax or simplifying
+the architecture documentation. Carry the agreed semantic decisions into the
+Stage 2 contract packet. The candidate below is for review, not an implemented
+or fully specified request feature.
+
+**Default and retired guarantees.** Resolve launch/setup for the actor
+population before walking the serial schedule; resolution includes failure,
+and does not promise successful setup of every actor. Parked actors can
+service deliveries without running requested native actions. Successful visits
+advance after observed phase completion without a prerequisite issuer reap.
+Failed visits separately establish quiescence before further activation, or
+cancel remaining activation under the existing failure rules. Actors may
+publish terminal completion and exit after their own last visit, and resource
+cleanup can occur during the schedule. Do not imply survival until final
+cleanup. Retire the declaration path's automatic clean issuer reap before
+delivery and before subject creation; a new termination dependency does not
+restore that creation order.
+
+| Witnessing requirement | Required mechanism | Disposition |
+| --- | --- | --- |
+| Subject consumes after issuer termination | Confirmed reap of the issuing actor before eligibility of the dependent subject visit. | Pursue as the narrow host-owned dependency candidate. Place the gate before visit activation and query collection so predictions as well as actions follow the observation. |
+| Subject starts or applies its policy after issuer termination | Deferred subject launch or setup. | Outside this consolidation unless a concrete specimen question warrants a reviewed scope change. Eager setup plus a visit gate does not establish this observation. |
+| Subject consumes while issuer remains alive | Deliberate lifetime coordination with observations supporting liveness during the relevant interval. | Outside this consolidation unless a concrete specimen question warrants a reviewed scope change. Ordinary visit order or absence of a reap is insufficient. |
+
+**Candidate dependency.** Associate a later visit with the host's observed
+termination of another actor after that actor's final visit. Admit only a
+dependency whose referenced actor has no remaining visits when the gate is
+reached; otherwise waiting could require an activation the gate prevents.
+Issue, transfer and consume retain their existing meanings. Decide whether
+the required condition is termination or clean completion: an observed reap
+after an abnormal exit establishes the former, not the latter. Retain exit
+status and termination observations separately whichever condition is chosen;
+do not add both as user-selectable modes merely to avoid this decision.
+
+**Failure and evidence.** Specify the gate's bounded wait, budget accounting,
+ownership requirements and effect on subsequent scheduling. Timeout or lost
+ownership leaves the dependent visit ineligible, without its collection or
+release. A reap observed later during cleanup cannot retroactively satisfy
+that gate. Observe natural termination through the child-observation boundary;
+do not call `requestExit`/`finishCleanup` in
+[ActorSession.swift](Sources/PWRunnerCore/ActorSession.swift) to make the condition
+true, since those paths request departure and may terminate the process. Record the dependency,
+the owned child observation, the gate's terminal outcome and its relation to
+visit eligibility. A final `reaped` flag or a worker's `done` publication alone
+does not establish that relation. Delivery settlement and recipient storage
+ownership remain independent prerequisites and observations.
+
+**Specimen question and controls.** Use an issuer/subject specimen asking
+whether the subject observes fresh access after the issuing process naturally
+terminates: both actors set up eagerly; the subject records baseline access;
+the issuer issues and transfers in its final visit; the host gates the
+subject's consuming visit on the selected termination condition; a later phase
+collects queries before fresh attempts; release and another fresh-access
+observation follow. Gate success establishes ordering, not native consumption
+success or access persistence. Include natural exit, phase completion and
+`done` publication while the process remains alive, an abnormal reaped exit,
+and gate timeout followed by successful cleanup. Removing the gate must fail
+an independent ordering assertion. The native `issuer_exit` scenario in
+[sandbox_extensions_native](../tests/suites/sandbox_extensions_native/README.md#controls)
+is supporting evidence for its own arrangement, not proof of this integrated
+scheduler guarantee.
 
 ### Open design decisions
 
-The following decisions remain open. The simplification and test work below
-does not authorize resolving them implicitly by deleting evidence or copying
+The following decisions still require contract review. The lifecycle packet
+fixes the default and candidate scope, while its remaining choices stay open.
+The simplification and test work below does not authorize resolving them
+implicitly by deleting evidence or copying
 old expectations into actor tests. Include their dispositions in the Stage 2
 review packet before implementing dependent changes.
 
@@ -141,7 +219,7 @@ review packet before implementing dependent changes.
 | --- | --- | --- |
 | Actor authority-setup evidence | The worker's `prepare_authority` records status and stage, without the declaration path's native return, saved errno and separate cleanup-failure account. Some cleanup results are unchecked. | Inventory the old failure assertions and decide which observations the actor contract must retain. Specify any replacement fields and controls; do not count removal of those assertions as evidence of equivalent failure reporting. |
 | Normalized execution instructions | `ActorTranslation` reconstructs references from optional strings, substitutes index zero for missing relationships and uses a default release branch. Equipment selection would add another resolved relationship. | Decide how the admitted plan represents operation operands and selected equipment, and how an inconsistent internal plan fails. No new representation or fallback policy is selected by this plan yet. |
-| Lifecycle and ownership | All actors launch and resolve setup before scheduled issuance; parked recipients can accept deliveries before their actions run. Process lifetime, action order, custody, settlement and cleanup have distinct boundaries. | Name the declaration guarantees being retired and the actor guarantees replacing them, including partial setup failure and terminal erasure. Review the depiction of one run in time in [ARCHITECTURE](../docs/ARCHITECTURE.md) and its [generator input](../docs/architecture.json). The exact actor erasure assertions and any additional lifetime behavior remain undecided. |
+| Lifecycle and ownership | Eager setup, overlapping lifetimes and serial visits remain the default. The candidate adds an observed-termination dependency before a later visit, with no new extension operation or deferred subject setup. | Complete the lifecycle packet: choose termination versus clean completion, specify wait/eligibility evidence and failure behavior, and settle actor erasure assertions. Review one run in time in [ARCHITECTURE](../docs/ARCHITECTURE.md) and its [generator input](../docs/architecture.json), showing exit and cleanup during visits as well as remaining cleanup afterward. |
 
 **Exit:** a proposed authority arrangement grounded in the actual signing and
 launch paths, a disposition for each meaningful declaration-only observation,
@@ -179,6 +257,10 @@ conversation. Include:
    actor path, or retain with its still-current purpose. For each removed
    behavioral control, identify its replacement assertion or the retired
    behavior that makes it obsolete. List any new controls and their owners.
+6. The reviewed lifecycle packet: deliberately retired guarantees, default
+   actor ordering, the proposed host termination dependency and its specimen,
+   failure/evidence rules and decisive controls. Settle those meanings before
+   choosing the dependency's wire syntax or rewriting the temporal account.
 
 Use the following map to start the ledger, then close it over references found
 in the current tree:
@@ -239,6 +321,7 @@ ownership and registration in the Stage 2 packet.
 | Mixed-equipment permutation and provenance substitution | Extend `actor_compositions` and BYOXPC controls with different equipment choices, reordered actor declarations and consistent renaming. Equipment must stay associated with the intended actor. Add constructed reader controls that substitute another actor's equipment evidence and require rejection, alongside live process and signature observations. |
 | Exact submitted-path forwarding | Under the proposed submitted-path contract, use an instrumented issue callback and a symlink path to check the exact native argument. Pair it with scheduled target creation/replacement and independent file observations. Do not require a particular kernel return to establish absence of hidden host resolution. Finalize expectations with the path/lifecycle disposition. |
 | Actor terminal erasure | Replace the old terminal-erasure fixture with independent observations of full-capacity storage and the terminal publication boundary. Determine settled-inbound and host-owned-storage expectations through the lifecycle decision, retaining mutations that distinguish final cleanup from cleanup at the required boundary. Do not imply native authority from synthetic tokens. |
+| Host termination dependency, if accepted | Extend actor scheduler/reply controls and a public issuer/subject specimen. Independent observations must distinguish phase completion, `done`, natural exit, reap, gate eligibility and cleanup; include timeout followed by late cleanup and a removed-gate mutation. Admission must reject a dependency on an actor that still needs a later visit. Keep transfer settlement and recipient ownership assertions active. |
 
 Require successful basic issuance, transfer, consumption and fresh access on
 the applicable signed equipment, with release and later fresh-access evidence.
@@ -297,6 +380,17 @@ accurate account. Update signing, process counts, resource lifetimes, refusal
 names and test descriptions wherever they still assume the separate helper.
 Search active documentation and fixtures for declaration assumptions, not only
 for the helper's filename.
+
+Organize the architecture's temporal account around admission/equipment,
+actor population setup, serial visits across overlapping process lifetimes,
+remaining cleanup and final observation collection, then reply delivery.
+Show process exit and resource cleanup during visits as well as afterward.
+Keep a short ordinary single-worker route alongside the actor extension
+walkthrough. Use topology for process/channel inventory, the timeline for
+ordering, the handoff sequence for usable delivery and generated tables for
+source/check grounding; shorten repeated implementation-route prose. Depict
+the termination dependency only after its semantics have been reviewed, and
+do not depict it as restoring declaration-time subject creation order.
 
 Regenerate with the owning tools for changed inputs. The possible commands,
 run from the root, are:
