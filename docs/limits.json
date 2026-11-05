@@ -7,7 +7,7 @@
       "title": "Policy source",
       "value": 262143,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`policy.sbpl_source`",
+      "refusal_field": "`policy.sbpl_source` or `actors.{actor}.sandbox.policy.sbpl_source`",
       "counting": "Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
@@ -99,7 +99,7 @@
       "title": "Policy parameters",
       "value": 1024,
       "unit": "items",
-      "refusal_field": "`policy.params`",
+      "refusal_field": "`policy.params` or `actors.{actor}.sandbox.policy.params`",
       "counting": "Entries per policy, separately for each actor policy; not an aggregate across actors.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
@@ -145,8 +145,8 @@
       "title": "Step ID",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`step_id`, with `step_index`",
-      "counting": "Each `step_id`. A refused ID is identified by `step_index` and is never echoed.",
+      "refusal_field": "`step_id`, with `step_index`; extension actions: `phases.{phase}.actions.{action}.step_id`",
+      "counting": "Each `step_id`. A refused ordinary probe ID is identified by `step_index`; a refused extension-action ID is identified by its indexed field. The refused ID is never echoed.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -355,7 +355,7 @@
       "title": "Parameter value",
       "value": 383,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`value`, with `parameter_key`",
+      "refusal_field": "`value` or `actors.{actor}.sandbox.policy.value`, with `parameter_key`",
       "counting": "Each parameter value.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
@@ -565,8 +565,8 @@
       "title": "Request labels",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`run_kind`, `policy.format` or actor sandbox labels",
-      "counting": "Each run_kind, policy.format, actors[].sandbox.mode and actors[].sandbox.policy.format. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal.",
+      "refusal_field": "`run_kind`, `policy.format`, `actors.{actor}.sandbox.mode`, `actors.{actor}.sandbox.policy.format`, `phases.{phase}.actions.{action}.extension.operation`, `phases.{phase}.actions.{action}.extension.family` or `phases.{phase}.actions.{action}.extension.authority`",
+      "counting": "Each run_kind, policy.format, actors[].sandbox.mode, actors[].sandbox.policy.format and extension-action operation, family or authority label. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -607,7 +607,7 @@
       "title": "Test-seam executable paths",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path`",
+      "refusal_field": "`_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.issuer_executable_path`",
       "counting": "Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
@@ -1987,7 +1987,7 @@
         }
       ],
       "behavior": "UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity.",
-      "refusal_field": "`phase_id`"
+      "refusal_field": "`phase_id`, with `index`"
     },
     {
       "id": "phase_records",
@@ -2466,7 +2466,7 @@
         }
       ],
       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "`phases.actions.extension`"
+      "refusal_field": "No `admission_failure.field`; `request_failure.code: repeated_consume`, with `request_failure.path: [\"phases\", \"{phase}\", \"actions\", \"{action}\", \"extension\"]`"
     },
     {
       "id": "extension_releases",
@@ -2502,15 +2502,15 @@
         }
       ],
       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "`phases.actions.extension`"
+      "refusal_field": "No `admission_failure.field`; `request_failure.code: repeated_release`, with `request_failure.path: [\"phases\", \"{phase}\", \"actions\", \"{action}\", \"extension\"]`"
     },
     {
       "id": "extension_reference",
       "section": "admission",
-      "title": "Token and handle references",
+      "title": "Extension references and recipients",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "counting": "Each nonempty local token or handle reference; embedded NUL is refused.",
+      "counting": "Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL.",
       "effect": "Excess returns `admission_refused`; references must also satisfy declaration and action order.",
       "control": "Fixed.",
       "sources": [
@@ -2538,7 +2538,7 @@
         }
       ],
       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "`extensions.token_ref` or `phases.actions.extension.token_ref` / `handle_ref`"
+      "refusal_field": "`extensions.{declaration}.token_ref`, `phases.{phase}.actions.{action}.extension.token_ref`, `phases.{phase}.actions.{action}.extension.handle_ref`, `phases.{phase}.actions.{action}.extension.delivery_ref` or `phases.{phase}.actions.{action}.extension.recipient`"
     },
     {
       "id": "extension_target",
@@ -2580,7 +2580,7 @@
         }
       ],
       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "`extensions.target`"
+      "refusal_field": "`extensions.{declaration}.target`"
     },
     {
       "id": "actors",
@@ -2672,7 +2672,7 @@
       "title": "Extension issues",
       "value": 32,
       "unit": "items",
-      "refusal_field": "`phases[].actions[].extension`",
+      "refusal_field": "`extension.issue`",
       "counting": "Issue actions across the complete actor-form specimen; each assigns one token reference.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
@@ -2714,7 +2714,7 @@
       "title": "Extension transfers",
       "value": 64,
       "unit": "items",
-      "refusal_field": "`phases[].actions[].extension`",
+      "refusal_field": "`extension.transfer`",
       "counting": "Transfer actions across the complete actor-form specimen; each assigns one delivery reference.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
@@ -2756,7 +2756,7 @@
       "title": "Extension consumes",
       "value": 64,
       "unit": "items",
-      "refusal_field": "`phases[].actions[].extension`",
+      "refusal_field": "`extension.consume`",
       "counting": "Consume actions across the complete actor-form specimen; each assigns one handle reference.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
@@ -2798,7 +2798,7 @@
       "title": "Extension releases",
       "value": 64,
       "unit": "items",
-      "refusal_field": "`phases[].actions[].extension`",
+      "refusal_field": "`extension.release`",
       "counting": "Release actions across the complete actor-form specimen; at most one per handle.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
@@ -2840,8 +2840,8 @@
       "title": "Actor identifier",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`actors[].actor_id`",
-      "counting": "Actor identifiers and token, delivery and handle references; nonempty, no NUL.",
+      "refusal_field": "`actors.{actor}.actor_id` or `phases.{phase}.actor_id`",
+      "counting": "Each actor declaration identifier and phase actor reference; nonempty, no NUL. Extension transfer recipient identifiers use the extension_reference row.",
       "effect": "Excess returns `admission_refused`; empty or duplicate identifiers are request refusals.",
       "control": "Fixed.",
       "sources": [
@@ -2882,7 +2882,7 @@
       "title": "Issue target",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`phases[].actions[].extension.target`",
+      "refusal_field": "`phases.{phase}.actions.{action}.extension.target`",
       "counting": "Absolute path an issue action submits; passed to the native call unchanged.",
       "effect": "Excess returns `admission_refused`; a relative target is a request refusal.",
       "control": "Fixed.",
@@ -3445,9 +3445,21 @@
           "symbol": "runLimitsContractTests",
           "kind": "boundary",
           "form": "test"
+        },
+        {
+          "path": "controller/src/request_patch.rs",
+          "symbol": "documented_request_failure_path_limits_match_retained_paths",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "controller/src/request_patch.rs",
+          "symbol": "request_failure_path_depth_retains_eight_and_withholds_nine",
+          "kind": "boundary",
+          "form": "test"
         }
       ],
-      "behavior": "Constructed Swift paths derive the retained maximum and independently assert depth 8/9 and UTF-8 component 63/64 all-or-null boundaries. Actor parameter refusal controls cover component 63/64; Rust constructor parity is source-inspected."
+      "behavior": "Constructed Swift and Rust paths independently derive the retained maximum from their production constructors. Separate literal depth 8/9 and UTF-8 component 63/64 controls assert whole-path retention or withholding; Rust also checks serialized null and exact retained components. Actor parameter refusal controls cover component 63/64. These are constructor and serialization observations, not live XPC evidence."
     },
     {
       "id": "request_failure_path_component",
@@ -3480,9 +3492,21 @@
           "symbol": "runLimitsContractTests",
           "kind": "boundary",
           "form": "test"
+        },
+        {
+          "path": "controller/src/request_patch.rs",
+          "symbol": "documented_request_failure_path_limits_match_retained_paths",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "controller/src/request_patch.rs",
+          "symbol": "request_failure_path_components_use_utf8_bytes_and_withhold_the_whole_path",
+          "kind": "boundary",
+          "form": "test"
         }
       ],
-      "behavior": "Constructed Swift paths derive the retained maximum and independently assert depth 8/9 and UTF-8 component 63/64 all-or-null boundaries. Actor parameter refusal controls cover component 63/64; Rust constructor parity is source-inspected."
+      "behavior": "Constructed Swift and Rust paths independently derive the retained maximum from their production constructors. Separate literal depth 8/9 and UTF-8 component 63/64 controls assert whole-path retention or withholding; Rust also checks serialized null and exact retained components. Actor parameter refusal controls cover component 63/64. These are constructor and serialization observations, not live XPC evidence."
     }
   ]
 }

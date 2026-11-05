@@ -974,6 +974,17 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 ### How to read the tables
 
+The Refusal names column gives literal `admission_failure.field` values, except
+where it explicitly names a `request_failure` code and path instead. In indexed
+patterns, replace `{actor}`, `{phase}`, `{action}` and `{declaration}` with the
+zero-based decimal position in that request array; an action position is local
+to its phase. Braces are notation, not emitted text: for example,
+`actors.{actor}.sandbox.policy.sbpl_source` can emit
+`actors.0.sandbox.policy.sbpl_source`. Dots in field values are literal.
+A `request_failure.path` is a separate array of string components, subject to
+the diagnostic retention bounds; it is not the `admission_failure.field`.
+For numeric refusals, names following “with” identify separate admission-record fields.
+
 An ordinary request has one worker. The declaration form adds a pre-worker
 issuer and permits one declaration, consume and release across its phases.
 The actor form is a separate public form, with
@@ -1027,36 +1038,36 @@ actor may exec.
 
 | Limit | Value | Refusal names | Counting and consequence | Control |
 | --- | --- | --- | --- | --- |
-| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` | Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` or `actors.{actor}.sandbox.policy.sbpl_source` | Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Total actions and queries (`probe_steps`) | 256 items | `probe_plan` or `phases.actions` | Total ordinary pairs and extension lifecycle actions across the complete specimen, including all actor phases. A pair counts once; a lifecycle action occupies one slot but supplies no query. Neither phases nor actors multiply this cap. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` | Entries per policy, separately for each actor policy; not an aggregate across actors. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index` | Each `step_id`. A refused ID is identified by `step_index` and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` or `actors.{actor}.sandbox.policy.params` | Entries per policy, separately for each actor policy; not an aggregate across actors. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index`; extension actions: `phases.{phase}.actions.{action}.step_id` | Each `step_id`. A refused ordinary probe ID is identified by `step_index`; a refused extension-action ID is identified by its indexed field. The refused ID is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Attempt target (`attempt_target`) | 511 UTF-8 bytes | `target`, with `step_id` and `step_index` | Each attempt target (path, service or sysctl name). For exec, this is also argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Supplied exec arguments (`exec_arguments`) | 15 items | `args` with unit `items`, with `step_id` and `step_index` | Arguments supplied in `attempt.args`; the exec target is the additional argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Each supplied exec argument (`exec_argument`) | 127 UTF-8 bytes | `args` with unit `utf8_bytes`, with `index`, `step_id` and `step_index` | Each supplied exec argument; the target has its own larger limit. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Parameter key (`parameter_key`) | 127 UTF-8 bytes | `key` | Each parameter key. A refused key is identified by field and byte count and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Parameter value (`parameter_value`) | 383 UTF-8 bytes | `value`, with `parameter_key` | Each parameter value. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Parameter value (`parameter_value`) | 383 UTF-8 bytes | `value` or `actors.{actor}.sandbox.policy.value`, with `parameter_key` | Each parameter value. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Query operation (`query_operation`) | 127 UTF-8 bytes | `sandbox_check.operation`, with `step_id` and `step_index` | Each `sandbox_check.operation`, also echoed per step in the reply. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Query filter value (`query_filter_value`) | 511 UTF-8 bytes | `sandbox_check.filter.value`, with `step_id` and `step_index` | Each `sandbox_check.filter.value` when present, including for `none` and unrecognized filter kinds. The query value and attempt target are counted separately, even when they name different paths. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | `sandbox_check.filter.kind`, `attempt.kind` or `attempt.action`, with `step_id` and `step_index` | Each `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`. Unknown labels within the capacity still receive a meaning refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Specimen ID (`specimen_id`) | 255 UTF-8 bytes | `specimen_id` | The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind`, `policy.format` or actor sandbox labels | Each run_kind, policy.format, actors[].sandbox.mode and actors[].sandbox.policy.format. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind`, `policy.format`, `actors.{actor}.sandbox.mode`, `actors.{actor}.sandbox.policy.format`, `phases.{phase}.actions.{action}.extension.operation`, `phases.{phase}.actions.{action}.extension.family` or `phases.{phase}.actions.{action}.extension.authority` | Each run_kind, policy.format, actors[].sandbox.mode, actors[].sandbox.policy.format and extension-action operation, family or authority label. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Ordinary/declaration phases (`phase_count`) | 8 items | `phases` | Explicit phases in an ordinary or declaration request; probe_plan normalizes to one phase. Actor requests use actor_phases. Excess returns admission_failure before any child. | Fixed. |
-| Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
+| Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id`, with `index` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
 | Declaration-form declarations (`extension_declarations`) | 1 item | `extensions` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. Additional declarations return `admission_refused`. | Fixed. |
-| Declaration-form consume actions (`extension_consumes`) | 1 item | `phases.actions.extension` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated consume returns `repeated_consume`. | Fixed. |
-| Declaration-form release actions (`extension_releases`) | 1 item | `phases.actions.extension` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated release returns `repeated_release`. | Fixed. |
-| Token and handle references (`extension_reference`) | 63 UTF-8 bytes | `extensions.token_ref` or `phases.actions.extension.token_ref` / `handle_ref` | Each nonempty local token or handle reference; embedded NUL is refused. Excess returns `admission_refused`; references must also satisfy declaration and action order. | Fixed. |
-| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.target` | Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
+| Declaration-form consume actions (`extension_consumes`) | 1 item | No `admission_failure.field`; `request_failure.code: repeated_consume`, with `request_failure.path: ["phases", "{phase}", "actions", "{action}", "extension"]` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated consume returns `repeated_consume`. | Fixed. |
+| Declaration-form release actions (`extension_releases`) | 1 item | No `admission_failure.field`; `request_failure.code: repeated_release`, with `request_failure.path: ["phases", "{phase}", "actions", "{action}", "extension"]` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated release returns `repeated_release`. | Fixed. |
+| Extension references and recipients (`extension_reference`) | 63 UTF-8 bytes | `extensions.{declaration}.token_ref`, `phases.{phase}.actions.{action}.extension.token_ref`, `phases.{phase}.actions.{action}.extension.handle_ref`, `phases.{phase}.actions.{action}.extension.delivery_ref` or `phases.{phase}.actions.{action}.extension.recipient` | Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL. Excess returns `admission_refused`; references must also satisfy declaration and action order. | Fixed. |
+| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.{declaration}.target` | Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
 | Specimen actors (`actors`) | 8 items | `actors` | Actor objects in one actor-form request; every phase names one of them. Excess returns `admission_refused` before any child. | Fixed. |
 | Actor-form phases (`actor_phases`) | 16 items | `phases` | All explicit phases across the complete actor-form request, including empty visits; each visits one actor. Not a per-actor allowance. Excess returns `admission_refused` before any child. | Fixed. |
-| Extension issues (`actor_issues`) | 32 items | `phases[].actions[].extension` | Issue actions across the complete actor-form specimen; each assigns one token reference. Excess returns `admission_refused` before any child. | Fixed. |
-| Extension transfers (`actor_deliveries`) | 64 items | `phases[].actions[].extension` | Transfer actions across the complete actor-form specimen; each assigns one delivery reference. Excess returns `admission_refused` before any child. | Fixed. |
-| Extension consumes (`actor_handles`) | 64 items | `phases[].actions[].extension` | Consume actions across the complete actor-form specimen; each assigns one handle reference. Excess returns `admission_refused` before any child. | Fixed. |
-| Extension releases (`actor_releases`) | 64 items | `phases[].actions[].extension` | Release actions across the complete actor-form specimen; at most one per handle. Excess returns `admission_refused` before any child. | Fixed. |
-| Actor identifier (`actor_id`) | 63 UTF-8 bytes | `actors[].actor_id` | Actor identifiers and token, delivery and handle references; nonempty, no NUL. Excess returns `admission_refused`; empty or duplicate identifiers are request refusals. | Fixed. |
-| Issue target (`extension_issue_target`) | 1,023 UTF-8 bytes | `phases[].actions[].extension.target` | Absolute path an issue action submits; passed to the native call unchanged. Excess returns `admission_refused`; a relative target is a request refusal. | Fixed. |
+| Extension issues (`actor_issues`) | 32 items | `extension.issue` | Issue actions across the complete actor-form specimen; each assigns one token reference. Excess returns `admission_refused` before any child. | Fixed. |
+| Extension transfers (`actor_deliveries`) | 64 items | `extension.transfer` | Transfer actions across the complete actor-form specimen; each assigns one delivery reference. Excess returns `admission_refused` before any child. | Fixed. |
+| Extension consumes (`actor_handles`) | 64 items | `extension.consume` | Consume actions across the complete actor-form specimen; each assigns one handle reference. Excess returns `admission_refused` before any child. | Fixed. |
+| Extension releases (`actor_releases`) | 64 items | `extension.release` | Release actions across the complete actor-form specimen; at most one per handle. Excess returns `admission_refused` before any child. | Fixed. |
+| Actor identifier (`actor_id`) | 63 UTF-8 bytes | `actors.{actor}.actor_id` or `phases.{phase}.actor_id` | Each actor declaration identifier and phase actor reference; nonempty, no NUL. Extension transfer recipient identifiers use the extension_reference row. Excess returns `admission_refused`; empty or duplicate identifiers are request refusals. | Fixed. |
+| Issue target (`extension_issue_target`) | 1,023 UTF-8 bytes | `phases.{phase}.actions.{action}.extension.target` | Absolute path an issue action submits; passed to the native call unchanged. Excess returns `admission_refused`; a relative target is a request refusal. | Fixed. |
 
 ### Execution budgets
 
@@ -2331,10 +2342,17 @@ not the exec descendants.
 
 ### Running specimens in parallel
 
-Each run is its own controller, XPC host, worker and validator. Four processes
-per run, plus any exec children, count against the per-user process table, and
-a failed spawn is reported as `worker_spawn_failed` or `validator_spawn_failed`
-with the native return code (see the
+A run uses a controller and a separate `pw-runner-client` to acquire a fresh
+XPC host. After admission, an ordinary or declaration specimen uses one fresh
+worker; an actor specimen uses one fresh worker per actor, retained across
+that actor's phases. Each eligible phase gets a fresh validator; a phase with
+no eligible queries creates none. The declaration form also uses a transient
+issuer before worker creation. Exec attempts can create children, and a
+terminal XPC error can trigger independent `sbpl-check` helpers. These processes
+have different lifetimes, so there is no fixed process count per run. Concurrent
+runs add to per-user process-table pressure. A failed worker or validator spawn
+is reported as `worker_spawn_failed` or `validator_spawn_failed` with the native
+return code (see the
 [outcome catalog](#normalized_outcome-catalog)). Resource delays can exhaust
 the separate budgets in the [limits inventory](#limits): client RPC expiry
 produces `xpc_timeout`, while a delivered host sentinel-timeout reply reports

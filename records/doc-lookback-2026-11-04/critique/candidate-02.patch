@@ -1,0 +1,698 @@
+diff --git a/READER-OUTFLOW-PLAN.md b/READER-OUTFLOW-PLAN.md
+index d6e146e9..9bba8dfb 100644
+--- a/READER-OUTFLOW-PLAN.md
++++ b/READER-OUTFLOW-PLAN.md
+@@ -1,8 +1,8 @@
+ # Documentation lookback: decisions and follow-up
+ 
+-Status: stages 0–6 complete; final acceptance recorded and retirement held for user review. I1–I3 are implemented, source-reviewed and have passing direct checks. D1–D5 documentation is implemented and regenerated; its corrected candidate passes the documentation checks, with the preceding Swift pass retained. All three final reader pairs have completed. The user authorized correcting R1 and proceeding to final acceptance; that minor authored figure reference is now corrected and passes both focused checks. ARCHITECTURE, WORKER and LIMITS are accepted. R2 retains the inventories; R3 retains the reader-evidence qualifications. No new deferral was added. F1 remains explicitly deferred. This is the single outflow of [DOC-LOOKBACK-PLAN](docs/DOC-LOOKBACK-PLAN.md).
++Status: reopened after Fable's critique, with user authorization to resolve accuracy, verification coverage and evidence durability before reconvening. The lookback includes I1, a production host-admission diagnostic correction, as well as documentation and test changes; build 1121 carries that behavior and its regenerated worker identity. The earlier acceptance is preserved as a historical checkpoint, not sufficient closure of these reopened items. LIMITS accuracy and overall verification/retirement readiness are open. ARCHITECTURE/WORKER reader results and F1's accepted deferral remain retained. No retirement or pruning is authorized by this follow-up. This is the single outflow of [DOC-LOOKBACK-PLAN](docs/DOC-LOOKBACK-PLAN.md).
+ 
+-The [acceptance record](records/doc-lookback-2026-11-04/ACCEPTANCE.md) is the current handoff. It records completed actions, the one-line post-reading delta, fresh and retained verification, per-document acceptance and the pause before retirement. The plans, records, reader artifacts and managed test evidence remain in place; no retirement or pruning has occurred.
++The [acceptance record](records/doc-lookback-2026-11-04/ACCEPTANCE.md) is the preceding acceptance checkpoint. It records completed actions, the one-line post-reading delta, fresh and retained verification, per-document acceptance and the pause before retirement. The plans, records, reader artifacts and managed test evidence remain in place; no retirement or pruning has occurred.
+ 
+ The signed build passed and the first coordinated selection completed all 83 cases: 82 passed and the setup sensitivity control failed. Subsequent authorized runs retained both passes and failures. Additive fixture diagnostics passed both setup controls in run 05; the final two authorized focused runs, 06 and 07, both reproduced missing observer receipts alongside exhausted waits, a successful SIGKILL request and signal-9 reap. The user authorized deferring further investigation on recurrence. That deferral is applied; the completed repair-verification tranche does not claim a wholly passing battery. No further F1 runs were performed during documentation validation or final reading.
+ 
+@@ -10,6 +10,26 @@ The [documentation checkpoint](records/doc-lookback-2026-11-04/documentation/PRE
+ 
+ The [documentation rerun](records/doc-lookback-2026-11-04/documentation/VERIFICATION-02.md) passed `source_drift/architecture_documentation`, `source_drift/limits_documentation` and `source_drift/generator_contract`, all completed with zero recorded sleep. It validates the two corrected citation passages without changing the baseline or test. The [preceding run](records/doc-lookback-2026-11-04/documentation/VERIFICATION-01.md) remains three pass / one fail historically; its 525/525 Swift tests and three downstream reader replays retain their credit. The [applicability review](records/doc-lookback-2026-11-04/documentation/EVIDENCE-APPLICABILITY.md) distinguishes retained I1–I3 observations from fresh checks and records the manifest-input exceptions. The [final reader review](records/doc-lookback-2026-11-04/final-readers/FINAL-REVIEW.md) and [reader closing identity](records/doc-lookback-2026-11-04/final-readers/final-state.json) preserve the pre-decision checkpoint. The [final verification](records/doc-lookback-2026-11-04/acceptance/verification-03.json) adds two fresh passes after R1, with no skipped/unrun cases or recorded sleep, and pins the accepted source state. The reviewed artifacts remain unchanged; the [R1 delta](records/doc-lookback-2026-11-04/acceptance/r1.patch) identifies their sole subsequent source difference.
+ 
++
++## Reopened critique items
++
++User authorization: resolve the proposed follow-up with sub-agents; tests and
++corrective reruns need no intermediate pause. Return before retirement.
++
++| Item | Authorized resolution | Status |
++| --- | --- | --- |
++| C1 — refusal names | Audit every admission row; use literal emitted fields or defined exact indexed patterns, with explicitly labeled meaning-refusal exceptions. Distinguish field from request-failure path. | In progress |
++| C2 — parallel-run guide | Replace the fixed four-process account with form-dependent workers and helper lifetimes; regenerate and stage the guide through its owner. | In progress |
++| C3/C4 — verification selection | Run the default battery once against applicable build 1121, including integration and full source_drift; reconcile all seven required suites and the five nondefault cases separately. Correct failures as needed, retaining original results. | Pending edits |
++| C5 — Rust parity | Add independent diagnostic-path boundaries and manifest value ownership in Rust; no production constructor change. | In progress |
++| C6 — durable evidence | Preserve identified raw evidence and provenance needed for credited observations; retain F1 copies and audit existing pins before any replacement. | In progress |
++
++The user-approved crosswalk/inventory approach remains unchanged. Coordinator
++owns manifest integration, generation, staged-guide freshness, serial execution
++and acceptance; specialist roles own bounded documentation, Rust tests and
++historical evidence preservation. New work does not rewrite old failures or
++relabel the old binaries with the follow-up commit.
++
+ ## Accepted final reader dispositions
+ 
+ The [preparation record](records/doc-lookback-2026-11-04/final-readers/PREPARATION.md) and [artifact manifest](records/doc-lookback-2026-11-04/final-readers/rendering/artifact-manifest.json) record fidelity, hashes and bounded exposure. Each pair used a fresh first reader followed by a fresh skeptical assessor, with no inherited investigation conclusions or external links. The assessor intentionally saw the first report and full interaction history. The PDFs expand collapsible inventories; part of the reported navigation burden is specific to that presentation.
+@@ -176,9 +196,6 @@ three documents are recorded. Stage 6 is closed. F1 stays assigned and deferred,
+ with its evidence and acceptance checks intact. Review closure does not close
+ F1 or turn the earlier broad run into a full pass.
+ 
+-Current pause: ready for the requested review immediately before retirement.
+-The execution plan, this outflow and all supporting records/evidence remain in
+-place. No archiving, deletion, pruning, retention-index change, staging or
+-commit has occurred. Later retirement must preserve F1's actionable handoff
+-and still-needed unreplaced observations. No build, test or further reader
+-dispatch is running or queued; no new F1 execution is proposed.
++Current work: resolve C1–C6 and record refreshed acceptance evidence before
++reconvening. Plans and records remain in place. F1 remains deferred; no F1
++rerun, retirement, pruning, or pin replacement is currently planned.
+diff --git a/controller/src/request_patch.rs b/controller/src/request_patch.rs
+index 88e40216..f27a34ff 100644
+--- a/controller/src/request_patch.rs
++++ b/controller/src/request_patch.rs
+@@ -99,6 +99,125 @@ mod tests {
+     use super::*;
+     use serde_json::json;
+ 
++    #[test]
++    fn documented_request_failure_path_limits_match_retained_paths() {
++        let depth = (0..=128)
++            .filter(|&count| {
++                RequestError::new("type_mismatch", &vec!["key"; count], "invalid value")
++                    .failure
++                    .path
++                    .is_some()
++            })
++            .max()
++            .unwrap();
++        let component_bytes = (0..=256)
++            .filter(|&count| {
++                RequestError::new("type_mismatch", &[&"x".repeat(count)], "invalid value")
++                    .failure
++                    .path
++                    .is_some()
++            })
++            .max()
++            .unwrap();
++        // These scan ceilings are independent of the inventory. Reaching one
++        // means the production maximum has not been observed.
++        assert!(depth < 128);
++        assert!(component_bytes < 256);
++        let manifest: Value = serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
++        let owned: std::collections::BTreeMap<&str, (u64, &str)> = manifest["limits"]
++            .as_array()
++            .unwrap()
++            .iter()
++            .filter(|row| {
++                row["checks"].as_array().unwrap().iter().any(|check| {
++                    check["path"] == "controller/src/request_patch.rs" && check["kind"] == "value"
++                })
++            })
++            .map(|row| {
++                (
++                    row["id"].as_str().unwrap(),
++                    (
++                        row["value"].as_u64().unwrap(),
++                        row["unit"].as_str().unwrap(),
++                    ),
++                )
++            })
++            .collect();
++        assert_eq!(
++            owned,
++            std::collections::BTreeMap::from([
++                ("request_failure_path_components", (depth as u64, "items")),
++                (
++                    "request_failure_path_component",
++                    (component_bytes as u64, "UTF-8 bytes")
++                ),
++            ])
++        );
++    }
++
++    #[test]
++    fn request_failure_path_depth_retains_eight_and_withholds_nine() {
++        let path = [
++            "actors", "0", "phases", "1", "steps", "2", "attempt", "target",
++        ];
++        let retained = RequestError::new("type_mismatch", &path, "invalid value");
++        assert_eq!(retained.failure.path, Some(path.map(String::from).to_vec()));
++        assert_eq!(
++            serde_json::to_value(&retained.failure).unwrap(),
++            json!({"code": "type_mismatch", "path": path})
++        );
++        let mut too_deep = path.to_vec();
++        too_deep.push("leaf");
++        let withheld = RequestError::new("type_mismatch", &too_deep, "invalid value");
++        assert_eq!(withheld.failure.path, None);
++        assert_eq!(
++            serde_json::to_value(&withheld.failure).unwrap(),
++            json!({"code": "type_mismatch", "path": null})
++        );
++        assert_eq!(withheld.message, "invalid value");
++    }
++
++    #[test]
++    fn request_failure_path_components_use_utf8_bytes_and_withhold_the_whole_path() {
++        for component in ["a".repeat(63), format!("{}a", "é".repeat(31))] {
++            assert_eq!(component.len(), 63);
++            let path = [
++                "actors",
++                "0",
++                "policy",
++                "params",
++                component.as_str(),
++                "value",
++            ];
++            let retained = RequestError::new("type_mismatch", &path, "invalid value");
++            assert_eq!(retained.failure.path, Some(path.map(String::from).to_vec()));
++            assert_eq!(
++                serde_json::to_value(&retained.failure).unwrap(),
++                json!({"code": "type_mismatch", "path": path})
++            );
++        }
++        // The oversized component is in the middle: neither a prefix nor a
++        // subset of otherwise valid components may stand in for the location.
++        for component in ["a".repeat(64), "é".repeat(32)] {
++            assert_eq!(component.len(), 64);
++            let path = [
++                "actors",
++                "0",
++                "policy",
++                "params",
++                component.as_str(),
++                "value",
++            ];
++            let withheld = RequestError::new("type_mismatch", &path, "invalid value");
++            assert_eq!(withheld.failure.path, None);
++            assert_eq!(
++                serde_json::to_value(&withheld.failure).unwrap(),
++                json!({"code": "type_mismatch", "path": null})
++            );
++            assert_eq!(withheld.message, "invalid value");
++        }
++    }
++
+     #[test]
+     fn request_version_is_an_exact_value_not_an_implementation_range() {
+         let current = crate::json_contract::REQUEST_SCHEMA_VERSION;
+diff --git a/docs/LIMITS.md b/docs/LIMITS.md
+index 7c88a082..6e7cd358 100644
+--- a/docs/LIMITS.md
++++ b/docs/LIMITS.md
+@@ -25,6 +25,17 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
+ 
+ ## How to read the tables
+ 
++The Refusal names column gives literal `admission_failure.field` values, except
++where it explicitly names a `request_failure` code and path instead. In indexed
++patterns, replace `{actor}`, `{phase}`, `{action}` and `{declaration}` with the
++zero-based decimal position in that request array; an action position is local
++to its phase. Braces are notation, not emitted text: for example,
++`actors.{actor}.sandbox.policy.sbpl_source` can emit
++`actors.0.sandbox.policy.sbpl_source`. Dots in field values are literal.
++A `request_failure.path` is a separate array of string components, subject to
++the diagnostic retention bounds; it is not the `admission_failure.field`.
++For numeric refusals, names following “with” identify separate admission-record fields.
++
+ An ordinary request has one worker. The declaration form adds a pre-worker
+ issuer and permits one declaration, consume and release across its phases.
+ The actor form is a separate public form, with
+@@ -78,36 +89,36 @@ actor may exec.
+ 
+ | Limit | Value | Refusal names | Counting and consequence | Control |
+ | --- | --- | --- | --- | --- |
+-| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` | Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` or `actors.{actor}.sandbox.policy.sbpl_source` | Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Total actions and queries (`probe_steps`) | 256 items | `probe_plan` or `phases.actions` | Total ordinary pairs and extension lifecycle actions across the complete specimen, including all actor phases. A pair counts once; a lifecycle action occupies one slot but supplies no query. Neither phases nor actors multiply this cap. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` | Entries per policy, separately for each actor policy; not an aggregate across actors. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index` | Each `step_id`. A refused ID is identified by `step_index` and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` or `actors.{actor}.sandbox.policy.params` | Entries per policy, separately for each actor policy; not an aggregate across actors. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index`; extension actions: `phases.{phase}.actions.{action}.step_id` | Each `step_id`. A refused ordinary probe ID is identified by `step_index`; a refused extension-action ID is identified by its indexed field. The refused ID is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Attempt target (`attempt_target`) | 511 UTF-8 bytes | `target`, with `step_id` and `step_index` | Each attempt target (path, service or sysctl name). For exec, this is also argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Supplied exec arguments (`exec_arguments`) | 15 items | `args` with unit `items`, with `step_id` and `step_index` | Arguments supplied in `attempt.args`; the exec target is the additional argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Each supplied exec argument (`exec_argument`) | 127 UTF-8 bytes | `args` with unit `utf8_bytes`, with `index`, `step_id` and `step_index` | Each supplied exec argument; the target has its own larger limit. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Parameter key (`parameter_key`) | 127 UTF-8 bytes | `key` | Each parameter key. A refused key is identified by field and byte count and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Parameter value (`parameter_value`) | 383 UTF-8 bytes | `value`, with `parameter_key` | Each parameter value. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Parameter value (`parameter_value`) | 383 UTF-8 bytes | `value` or `actors.{actor}.sandbox.policy.value`, with `parameter_key` | Each parameter value. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Query operation (`query_operation`) | 127 UTF-8 bytes | `sandbox_check.operation`, with `step_id` and `step_index` | Each `sandbox_check.operation`, also echoed per step in the reply. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Query filter value (`query_filter_value`) | 511 UTF-8 bytes | `sandbox_check.filter.value`, with `step_id` and `step_index` | Each `sandbox_check.filter.value` when present, including for `none` and unrecognized filter kinds. The query value and attempt target are counted separately, even when they name different paths. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | `sandbox_check.filter.kind`, `attempt.kind` or `attempt.action`, with `step_id` and `step_index` | Each `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`. Unknown labels within the capacity still receive a meaning refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Specimen ID (`specimen_id`) | 255 UTF-8 bytes | `specimen_id` | The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind`, `policy.format` or actor sandbox labels | Each run_kind, policy.format, actors[].sandbox.mode and actors[].sandbox.policy.format. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind`, `policy.format`, `actors.{actor}.sandbox.mode`, `actors.{actor}.sandbox.policy.format`, `phases.{phase}.actions.{action}.extension.operation`, `phases.{phase}.actions.{action}.extension.family` or `phases.{phase}.actions.{action}.extension.authority` | Each run_kind, policy.format, actors[].sandbox.mode, actors[].sandbox.policy.format and extension-action operation, family or authority label. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Ordinary/declaration phases (`phase_count`) | 8 items | `phases` | Explicit phases in an ordinary or declaration request; probe_plan normalizes to one phase. Actor requests use actor_phases. Excess returns admission_failure before any child. | Fixed. |
+-| Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
++| Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id`, with `index` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
+ | Declaration-form declarations (`extension_declarations`) | 1 item | `extensions` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. Additional declarations return `admission_refused`. | Fixed. |
+-| Declaration-form consume actions (`extension_consumes`) | 1 item | `phases.actions.extension` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated consume returns `repeated_consume`. | Fixed. |
+-| Declaration-form release actions (`extension_releases`) | 1 item | `phases.actions.extension` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated release returns `repeated_release`. | Fixed. |
+-| Token and handle references (`extension_reference`) | 63 UTF-8 bytes | `extensions.token_ref` or `phases.actions.extension.token_ref` / `handle_ref` | Each nonempty local token or handle reference; embedded NUL is refused. Excess returns `admission_refused`; references must also satisfy declaration and action order. | Fixed. |
+-| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.target` | Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
++| Declaration-form consume actions (`extension_consumes`) | 1 item | No `admission_failure.field`; `request_failure.code: repeated_consume`, with `request_failure.path: ["phases", "{phase}", "actions", "{action}", "extension"]` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated consume returns `repeated_consume`. | Fixed. |
++| Declaration-form release actions (`extension_releases`) | 1 item | No `admission_failure.field`; `request_failure.code: repeated_release`, with `request_failure.path: ["phases", "{phase}", "actions", "{action}", "extension"]` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated release returns `repeated_release`. | Fixed. |
++| Extension references and recipients (`extension_reference`) | 63 UTF-8 bytes | `extensions.{declaration}.token_ref`, `phases.{phase}.actions.{action}.extension.token_ref`, `phases.{phase}.actions.{action}.extension.handle_ref`, `phases.{phase}.actions.{action}.extension.delivery_ref` or `phases.{phase}.actions.{action}.extension.recipient` | Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL. Excess returns `admission_refused`; references must also satisfy declaration and action order. | Fixed. |
++| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.{declaration}.target` | Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
+ | Specimen actors (`actors`) | 8 items | `actors` | Actor objects in one actor-form request; every phase names one of them. Excess returns `admission_refused` before any child. | Fixed. |
+ | Actor-form phases (`actor_phases`) | 16 items | `phases` | All explicit phases across the complete actor-form request, including empty visits; each visits one actor. Not a per-actor allowance. Excess returns `admission_refused` before any child. | Fixed. |
+-| Extension issues (`actor_issues`) | 32 items | `phases[].actions[].extension` | Issue actions across the complete actor-form specimen; each assigns one token reference. Excess returns `admission_refused` before any child. | Fixed. |
+-| Extension transfers (`actor_deliveries`) | 64 items | `phases[].actions[].extension` | Transfer actions across the complete actor-form specimen; each assigns one delivery reference. Excess returns `admission_refused` before any child. | Fixed. |
+-| Extension consumes (`actor_handles`) | 64 items | `phases[].actions[].extension` | Consume actions across the complete actor-form specimen; each assigns one handle reference. Excess returns `admission_refused` before any child. | Fixed. |
+-| Extension releases (`actor_releases`) | 64 items | `phases[].actions[].extension` | Release actions across the complete actor-form specimen; at most one per handle. Excess returns `admission_refused` before any child. | Fixed. |
+-| Actor identifier (`actor_id`) | 63 UTF-8 bytes | `actors[].actor_id` | Actor identifiers and token, delivery and handle references; nonempty, no NUL. Excess returns `admission_refused`; empty or duplicate identifiers are request refusals. | Fixed. |
+-| Issue target (`extension_issue_target`) | 1,023 UTF-8 bytes | `phases[].actions[].extension.target` | Absolute path an issue action submits; passed to the native call unchanged. Excess returns `admission_refused`; a relative target is a request refusal. | Fixed. |
++| Extension issues (`actor_issues`) | 32 items | `extension.issue` | Issue actions across the complete actor-form specimen; each assigns one token reference. Excess returns `admission_refused` before any child. | Fixed. |
++| Extension transfers (`actor_deliveries`) | 64 items | `extension.transfer` | Transfer actions across the complete actor-form specimen; each assigns one delivery reference. Excess returns `admission_refused` before any child. | Fixed. |
++| Extension consumes (`actor_handles`) | 64 items | `extension.consume` | Consume actions across the complete actor-form specimen; each assigns one handle reference. Excess returns `admission_refused` before any child. | Fixed. |
++| Extension releases (`actor_releases`) | 64 items | `extension.release` | Release actions across the complete actor-form specimen; at most one per handle. Excess returns `admission_refused` before any child. | Fixed. |
++| Actor identifier (`actor_id`) | 63 UTF-8 bytes | `actors.{actor}.actor_id` or `phases.{phase}.actor_id` | Each actor declaration identifier and phase actor reference; nonempty, no NUL. Extension transfer recipient identifiers use the extension_reference row. Excess returns `admission_refused`; empty or duplicate identifiers are request refusals. | Fixed. |
++| Issue target (`extension_issue_target`) | 1,023 UTF-8 bytes | `phases.{phase}.actions.{action}.extension.target` | Absolute path an issue action submits; passed to the native call unchanged. Excess returns `admission_refused`; a relative target is a request refusal. | Fixed. |
+ 
+ ## Execution budgets
+ 
+@@ -384,8 +395,8 @@ Value checks compare the inventory with compiled constants, constructed defaults
+ | `client_error_message` | [`errorMessageBytes`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift) | value (test): [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift); boundary (test): [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) | Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery. |
+ | `client_error_domain` | [`errorDomainBytes`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift) | value (test): [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift); boundary (test): [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) | Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery. |
+ | `client_reply_retention` | [`runnerReplyBytes`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift); [`REPLY_CAPTURE_BYTES`](../controller/src/runner_client.rs); [`REPLY_BYTES`](../tests/lib/runner_client_capture.py) | value (test): [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift); boundary (test): [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift); value (test): [`reply_capture_limit_matches_documented_capacity`](../controller/src/runner_client.rs) | Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery. |
+-| `request_failure_path_components` | [`PWRunnerRequestFailure`](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift); [`RequestError`](../controller/src/request_patch.rs) | value (test): [`runLimitsContractTests`](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift); boundary (test): [`runLimitsContractTests`](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift) | Constructed Swift paths derive the retained maximum and independently assert depth 8/9 and UTF-8 component 63/64 all-or-null boundaries. Actor parameter refusal controls cover component 63/64; Rust constructor parity is source-inspected. |
+-| `request_failure_path_component` | [`PWRunnerRequestFailure`](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift); [`RequestError`](../controller/src/request_patch.rs) | value (test): [`runLimitsContractTests`](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift); boundary (test): [`runLimitsContractTests`](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift) | Constructed Swift paths derive the retained maximum and independently assert depth 8/9 and UTF-8 component 63/64 all-or-null boundaries. Actor parameter refusal controls cover component 63/64; Rust constructor parity is source-inspected. |
++| `request_failure_path_components` | [`PWRunnerRequestFailure`](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift); [`RequestError`](../controller/src/request_patch.rs) | value (test): [`runLimitsContractTests`](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift); boundary (test): [`runLimitsContractTests`](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift); value (test): [`documented_request_failure_path_limits_match_retained_paths`](../controller/src/request_patch.rs); boundary (test): [`request_failure_path_depth_retains_eight_and_withholds_nine`](../controller/src/request_patch.rs) | Constructed Swift and Rust paths independently derive the retained maximum from their production constructors. Separate literal depth 8/9 and UTF-8 component 63/64 controls assert whole-path retention or withholding; Rust also checks serialized null and exact retained components. Actor parameter refusal controls cover component 63/64. These are constructor and serialization observations, not live XPC evidence. |
++| `request_failure_path_component` | [`PWRunnerRequestFailure`](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift); [`RequestError`](../controller/src/request_patch.rs) | value (test): [`runLimitsContractTests`](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift); boundary (test): [`runLimitsContractTests`](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift); value (test): [`documented_request_failure_path_limits_match_retained_paths`](../controller/src/request_patch.rs); boundary (test): [`request_failure_path_components_use_utf8_bytes_and_withhold_the_whole_path`](../controller/src/request_patch.rs) | Constructed Swift and Rust paths independently derive the retained maximum from their production constructors. Separate literal depth 8/9 and UTF-8 component 63/64 controls assert whole-path retention or withholding; Rust also checks serialized null and exact retained components. Actor parameter refusal controls cover component 63/64. These are constructor and serialization observations, not live XPC evidence. |
+ 
+ <!-- END GENERATED LIMIT COVERAGE -->
+ 
+diff --git a/docs/PolicyWitness.md b/docs/PolicyWitness.md
+index 79b283a2..aab1c5c8 100644
+--- a/docs/PolicyWitness.md
++++ b/docs/PolicyWitness.md
+@@ -974,6 +974,17 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
+ 
+ ### How to read the tables
+ 
++The Refusal names column gives literal `admission_failure.field` values, except
++where it explicitly names a `request_failure` code and path instead. In indexed
++patterns, replace `{actor}`, `{phase}`, `{action}` and `{declaration}` with the
++zero-based decimal position in that request array; an action position is local
++to its phase. Braces are notation, not emitted text: for example,
++`actors.{actor}.sandbox.policy.sbpl_source` can emit
++`actors.0.sandbox.policy.sbpl_source`. Dots in field values are literal.
++A `request_failure.path` is a separate array of string components, subject to
++the diagnostic retention bounds; it is not the `admission_failure.field`.
++For numeric refusals, names following “with” identify separate admission-record fields.
++
+ An ordinary request has one worker. The declaration form adds a pre-worker
+ issuer and permits one declaration, consume and release across its phases.
+ The actor form is a separate public form, with
+@@ -1027,36 +1038,36 @@ actor may exec.
+ 
+ | Limit | Value | Refusal names | Counting and consequence | Control |
+ | --- | --- | --- | --- | --- |
+-| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` | Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` or `actors.{actor}.sandbox.policy.sbpl_source` | Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Total actions and queries (`probe_steps`) | 256 items | `probe_plan` or `phases.actions` | Total ordinary pairs and extension lifecycle actions across the complete specimen, including all actor phases. A pair counts once; a lifecycle action occupies one slot but supplies no query. Neither phases nor actors multiply this cap. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` | Entries per policy, separately for each actor policy; not an aggregate across actors. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index` | Each `step_id`. A refused ID is identified by `step_index` and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` or `actors.{actor}.sandbox.policy.params` | Entries per policy, separately for each actor policy; not an aggregate across actors. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index`; extension actions: `phases.{phase}.actions.{action}.step_id` | Each `step_id`. A refused ordinary probe ID is identified by `step_index`; a refused extension-action ID is identified by its indexed field. The refused ID is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Attempt target (`attempt_target`) | 511 UTF-8 bytes | `target`, with `step_id` and `step_index` | Each attempt target (path, service or sysctl name). For exec, this is also argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Supplied exec arguments (`exec_arguments`) | 15 items | `args` with unit `items`, with `step_id` and `step_index` | Arguments supplied in `attempt.args`; the exec target is the additional argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Each supplied exec argument (`exec_argument`) | 127 UTF-8 bytes | `args` with unit `utf8_bytes`, with `index`, `step_id` and `step_index` | Each supplied exec argument; the target has its own larger limit. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Parameter key (`parameter_key`) | 127 UTF-8 bytes | `key` | Each parameter key. A refused key is identified by field and byte count and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Parameter value (`parameter_value`) | 383 UTF-8 bytes | `value`, with `parameter_key` | Each parameter value. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Parameter value (`parameter_value`) | 383 UTF-8 bytes | `value` or `actors.{actor}.sandbox.policy.value`, with `parameter_key` | Each parameter value. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Query operation (`query_operation`) | 127 UTF-8 bytes | `sandbox_check.operation`, with `step_id` and `step_index` | Each `sandbox_check.operation`, also echoed per step in the reply. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Query filter value (`query_filter_value`) | 511 UTF-8 bytes | `sandbox_check.filter.value`, with `step_id` and `step_index` | Each `sandbox_check.filter.value` when present, including for `none` and unrecognized filter kinds. The query value and attempt target are counted separately, even when they name different paths. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | `sandbox_check.filter.kind`, `attempt.kind` or `attempt.action`, with `step_id` and `step_index` | Each `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`. Unknown labels within the capacity still receive a meaning refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Specimen ID (`specimen_id`) | 255 UTF-8 bytes | `specimen_id` | The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind`, `policy.format` or actor sandbox labels | Each run_kind, policy.format, actors[].sandbox.mode and actors[].sandbox.policy.format. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+-| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind`, `policy.format`, `actors.{actor}.sandbox.mode`, `actors.{actor}.sandbox.policy.format`, `phases.{phase}.actions.{action}.extension.operation`, `phases.{phase}.actions.{action}.extension.family` or `phases.{phase}.actions.{action}.extension.authority` | Each run_kind, policy.format, actors[].sandbox.mode, actors[].sandbox.policy.format and extension-action operation, family or authority label. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
++| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+ | Ordinary/declaration phases (`phase_count`) | 8 items | `phases` | Explicit phases in an ordinary or declaration request; probe_plan normalizes to one phase. Actor requests use actor_phases. Excess returns admission_failure before any child. | Fixed. |
+-| Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
++| Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id`, with `index` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
+ | Declaration-form declarations (`extension_declarations`) | 1 item | `extensions` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. Additional declarations return `admission_refused`. | Fixed. |
+-| Declaration-form consume actions (`extension_consumes`) | 1 item | `phases.actions.extension` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated consume returns `repeated_consume`. | Fixed. |
+-| Declaration-form release actions (`extension_releases`) | 1 item | `phases.actions.extension` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated release returns `repeated_release`. | Fixed. |
+-| Token and handle references (`extension_reference`) | 63 UTF-8 bytes | `extensions.token_ref` or `phases.actions.extension.token_ref` / `handle_ref` | Each nonempty local token or handle reference; embedded NUL is refused. Excess returns `admission_refused`; references must also satisfy declaration and action order. | Fixed. |
+-| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.target` | Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
++| Declaration-form consume actions (`extension_consumes`) | 1 item | No `admission_failure.field`; `request_failure.code: repeated_consume`, with `request_failure.path: ["phases", "{phase}", "actions", "{action}", "extension"]` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated consume returns `repeated_consume`. | Fixed. |
++| Declaration-form release actions (`extension_releases`) | 1 item | No `admission_failure.field`; `request_failure.code: repeated_release`, with `request_failure.path: ["phases", "{phase}", "actions", "{action}", "extension"]` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated release returns `repeated_release`. | Fixed. |
++| Extension references and recipients (`extension_reference`) | 63 UTF-8 bytes | `extensions.{declaration}.token_ref`, `phases.{phase}.actions.{action}.extension.token_ref`, `phases.{phase}.actions.{action}.extension.handle_ref`, `phases.{phase}.actions.{action}.extension.delivery_ref` or `phases.{phase}.actions.{action}.extension.recipient` | Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL. Excess returns `admission_refused`; references must also satisfy declaration and action order. | Fixed. |
++| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.{declaration}.target` | Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
+ | Specimen actors (`actors`) | 8 items | `actors` | Actor objects in one actor-form request; every phase names one of them. Excess returns `admission_refused` before any child. | Fixed. |
+ | Actor-form phases (`actor_phases`) | 16 items | `phases` | All explicit phases across the complete actor-form request, including empty visits; each visits one actor. Not a per-actor allowance. Excess returns `admission_refused` before any child. | Fixed. |
+-| Extension issues (`actor_issues`) | 32 items | `phases[].actions[].extension` | Issue actions across the complete actor-form specimen; each assigns one token reference. Excess returns `admission_refused` before any child. | Fixed. |
+-| Extension transfers (`actor_deliveries`) | 64 items | `phases[].actions[].extension` | Transfer actions across the complete actor-form specimen; each assigns one delivery reference. Excess returns `admission_refused` before any child. | Fixed. |
+-| Extension consumes (`actor_handles`) | 64 items | `phases[].actions[].extension` | Consume actions across the complete actor-form specimen; each assigns one handle reference. Excess returns `admission_refused` before any child. | Fixed. |
+-| Extension releases (`actor_releases`) | 64 items | `phases[].actions[].extension` | Release actions across the complete actor-form specimen; at most one per handle. Excess returns `admission_refused` before any child. | Fixed. |
+-| Actor identifier (`actor_id`) | 63 UTF-8 bytes | `actors[].actor_id` | Actor identifiers and token, delivery and handle references; nonempty, no NUL. Excess returns `admission_refused`; empty or duplicate identifiers are request refusals. | Fixed. |
+-| Issue target (`extension_issue_target`) | 1,023 UTF-8 bytes | `phases[].actions[].extension.target` | Absolute path an issue action submits; passed to the native call unchanged. Excess returns `admission_refused`; a relative target is a request refusal. | Fixed. |
++| Extension issues (`actor_issues`) | 32 items | `extension.issue` | Issue actions across the complete actor-form specimen; each assigns one token reference. Excess returns `admission_refused` before any child. | Fixed. |
++| Extension transfers (`actor_deliveries`) | 64 items | `extension.transfer` | Transfer actions across the complete actor-form specimen; each assigns one delivery reference. Excess returns `admission_refused` before any child. | Fixed. |
++| Extension consumes (`actor_handles`) | 64 items | `extension.consume` | Consume actions across the complete actor-form specimen; each assigns one handle reference. Excess returns `admission_refused` before any child. | Fixed. |
++| Extension releases (`actor_releases`) | 64 items | `extension.release` | Release actions across the complete actor-form specimen; at most one per handle. Excess returns `admission_refused` before any child. | Fixed. |
++| Actor identifier (`actor_id`) | 63 UTF-8 bytes | `actors.{actor}.actor_id` or `phases.{phase}.actor_id` | Each actor declaration identifier and phase actor reference; nonempty, no NUL. Extension transfer recipient identifiers use the extension_reference row. Excess returns `admission_refused`; empty or duplicate identifiers are request refusals. | Fixed. |
++| Issue target (`extension_issue_target`) | 1,023 UTF-8 bytes | `phases.{phase}.actions.{action}.extension.target` | Absolute path an issue action submits; passed to the native call unchanged. Excess returns `admission_refused`; a relative target is a request refusal. | Fixed. |
+ 
+ ### Execution budgets
+ 
+@@ -2331,10 +2342,17 @@ not the exec descendants.
+ 
+ ### Running specimens in parallel
+ 
+-Each run is its own controller, XPC host, worker and validator. Four processes
+-per run, plus any exec children, count against the per-user process table, and
+-a failed spawn is reported as `worker_spawn_failed` or `validator_spawn_failed`
+-with the native return code (see the
++A run uses a controller and a separate `pw-runner-client` to acquire a fresh
++XPC host. After admission, an ordinary or declaration specimen uses one fresh
++worker; an actor specimen uses one fresh worker per actor, retained across
++that actor's phases. Each eligible phase gets a fresh validator; a phase with
++no eligible queries creates none. The declaration form also uses a transient
++issuer before worker creation. Exec attempts can create children, and a
++terminal XPC error can trigger independent `sbpl-check` helpers. These processes
++have different lifetimes, so there is no fixed process count per run. Concurrent
++runs add to per-user process-table pressure. A failed worker or validator spawn
++is reported as `worker_spawn_failed` or `validator_spawn_failed` with the native
++return code (see the
+ [outcome catalog](#normalized_outcome-catalog)). Resource delays can exhaust
+ the separate budgets in the [limits inventory](#limits): client RPC expiry
+ produces `xpc_timeout`, while a delivered host sentinel-timeout reply reports
+diff --git a/docs/generate_limits.py b/docs/generate_limits.py
+index c1372eb4..0638a38c 100644
+--- a/docs/generate_limits.py
++++ b/docs/generate_limits.py
+@@ -85,6 +85,7 @@ VALUE_OWNERS = {
+     'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
+     'runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift',
+     'controller/src/run_flow.rs',
++    'controller/src/request_patch.rs',
+     'controller/src/runner_client.rs',
+     'controller/src/bin/sbpl-check.rs',
+     'controller/src/runner_manager.rs', 'controller/src/runner_commands.rs',
+diff --git a/docs/limits.json b/docs/limits.json
+index 76580fb8..fc083d1c 100644
+--- a/docs/limits.json
++++ b/docs/limits.json
+@@ -7,7 +7,7 @@
+       "title": "Policy source",
+       "value": 262143,
+       "unit": "UTF-8 bytes",
+-      "refusal_field": "`policy.sbpl_source`",
++      "refusal_field": "`policy.sbpl_source` or `actors.{actor}.sandbox.policy.sbpl_source`",
+       "counting": "Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count.",
+       "effect": "Excess returns `bad_request` with `admission_failure`.",
+       "control": "Fixed.",
+@@ -99,7 +99,7 @@
+       "title": "Policy parameters",
+       "value": 1024,
+       "unit": "items",
+-      "refusal_field": "`policy.params`",
++      "refusal_field": "`policy.params` or `actors.{actor}.sandbox.policy.params`",
+       "counting": "Entries per policy, separately for each actor policy; not an aggregate across actors.",
+       "effect": "Excess returns `bad_request` with `admission_failure`.",
+       "control": "Fixed.",
+@@ -145,8 +145,8 @@
+       "title": "Step ID",
+       "value": 63,
+       "unit": "UTF-8 bytes",
+-      "refusal_field": "`step_id`, with `step_index`",
+-      "counting": "Each `step_id`. A refused ID is identified by `step_index` and is never echoed.",
++      "refusal_field": "`step_id`, with `step_index`; extension actions: `phases.{phase}.actions.{action}.step_id`",
++      "counting": "Each `step_id`. A refused ordinary probe ID is identified by `step_index`; a refused extension-action ID is identified by its indexed field. The refused ID is never echoed.",
+       "effect": "Excess returns `bad_request` with `admission_failure`.",
+       "control": "Fixed.",
+       "sources": [
+@@ -355,7 +355,7 @@
+       "title": "Parameter value",
+       "value": 383,
+       "unit": "UTF-8 bytes",
+-      "refusal_field": "`value`, with `parameter_key`",
++      "refusal_field": "`value` or `actors.{actor}.sandbox.policy.value`, with `parameter_key`",
+       "counting": "Each parameter value.",
+       "effect": "Excess returns `bad_request` with `admission_failure`.",
+       "control": "Fixed.",
+@@ -565,8 +565,8 @@
+       "title": "Request labels",
+       "value": 63,
+       "unit": "UTF-8 bytes",
+-      "refusal_field": "`run_kind`, `policy.format` or actor sandbox labels",
+-      "counting": "Each run_kind, policy.format, actors[].sandbox.mode and actors[].sandbox.policy.format. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal.",
++      "refusal_field": "`run_kind`, `policy.format`, `actors.{actor}.sandbox.mode`, `actors.{actor}.sandbox.policy.format`, `phases.{phase}.actions.{action}.extension.operation`, `phases.{phase}.actions.{action}.extension.family` or `phases.{phase}.actions.{action}.extension.authority`",
++      "counting": "Each run_kind, policy.format, actors[].sandbox.mode, actors[].sandbox.policy.format and extension-action operation, family or authority label. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal.",
+       "effect": "Excess returns `bad_request` with `admission_failure`.",
+       "control": "Fixed.",
+       "sources": [
+@@ -607,7 +607,7 @@
+       "title": "Test-seam executable paths",
+       "value": 1023,
+       "unit": "UTF-8 bytes",
+-      "refusal_field": "`_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path`",
++      "refusal_field": "`_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.issuer_executable_path`",
+       "counting": "Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer.",
+       "effect": "Excess returns `bad_request` with `admission_failure`.",
+       "control": "Fixed.",
+@@ -1987,7 +1987,7 @@
+         }
+       ],
+       "behavior": "UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity.",
+-      "refusal_field": "`phase_id`"
++      "refusal_field": "`phase_id`, with `index`"
+     },
+     {
+       "id": "phase_records",
+@@ -2466,7 +2466,7 @@
+         }
+       ],
+       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+-      "refusal_field": "`phases.actions.extension`"
++      "refusal_field": "No `admission_failure.field`; `request_failure.code: repeated_consume`, with `request_failure.path: [\"phases\", \"{phase}\", \"actions\", \"{action}\", \"extension\"]`"
+     },
+     {
+       "id": "extension_releases",
+@@ -2502,15 +2502,15 @@
+         }
+       ],
+       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+-      "refusal_field": "`phases.actions.extension`"
++      "refusal_field": "No `admission_failure.field`; `request_failure.code: repeated_release`, with `request_failure.path: [\"phases\", \"{phase}\", \"actions\", \"{action}\", \"extension\"]`"
+     },
+     {
+       "id": "extension_reference",
+       "section": "admission",
+-      "title": "Token and handle references",
++      "title": "Extension references and recipients",
+       "value": 63,
+       "unit": "UTF-8 bytes",
+-      "counting": "Each nonempty local token or handle reference; embedded NUL is refused.",
++      "counting": "Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL.",
+       "effect": "Excess returns `admission_refused`; references must also satisfy declaration and action order.",
+       "control": "Fixed.",
+       "sources": [
+@@ -2538,7 +2538,7 @@
+         }
+       ],
+       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+-      "refusal_field": "`extensions.token_ref` or `phases.actions.extension.token_ref` / `handle_ref`"
++      "refusal_field": "`extensions.{declaration}.token_ref`, `phases.{phase}.actions.{action}.extension.token_ref`, `phases.{phase}.actions.{action}.extension.handle_ref`, `phases.{phase}.actions.{action}.extension.delivery_ref` or `phases.{phase}.actions.{action}.extension.recipient`"
+     },
+     {
+       "id": "extension_target",
+@@ -2580,7 +2580,7 @@
+         }
+       ],
+       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+-      "refusal_field": "`extensions.target`"
++      "refusal_field": "`extensions.{declaration}.target`"
+     },
+     {
+       "id": "actors",
+@@ -2672,7 +2672,7 @@
+       "title": "Extension issues",
+       "value": 32,
+       "unit": "items",
+-      "refusal_field": "`phases[].actions[].extension`",
++      "refusal_field": "`extension.issue`",
+       "counting": "Issue actions across the complete actor-form specimen; each assigns one token reference.",
+       "effect": "Excess returns `admission_refused` before any child.",
+       "control": "Fixed.",
+@@ -2714,7 +2714,7 @@
+       "title": "Extension transfers",
+       "value": 64,
+       "unit": "items",
+-      "refusal_field": "`phases[].actions[].extension`",
++      "refusal_field": "`extension.transfer`",
+       "counting": "Transfer actions across the complete actor-form specimen; each assigns one delivery reference.",
+       "effect": "Excess returns `admission_refused` before any child.",
+       "control": "Fixed.",
+@@ -2756,7 +2756,7 @@
+       "title": "Extension consumes",
+       "value": 64,
+       "unit": "items",
+-      "refusal_field": "`phases[].actions[].extension`",
++      "refusal_field": "`extension.consume`",
+       "counting": "Consume actions across the complete actor-form specimen; each assigns one handle reference.",
+       "effect": "Excess returns `admission_refused` before any child.",
+       "control": "Fixed.",
+@@ -2798,7 +2798,7 @@
+       "title": "Extension releases",
+       "value": 64,
+       "unit": "items",
+-      "refusal_field": "`phases[].actions[].extension`",
++      "refusal_field": "`extension.release`",
+       "counting": "Release actions across the complete actor-form specimen; at most one per handle.",
+       "effect": "Excess returns `admission_refused` before any child.",
+       "control": "Fixed.",
+@@ -2840,8 +2840,8 @@
+       "title": "Actor identifier",
+       "value": 63,
+       "unit": "UTF-8 bytes",
+-      "refusal_field": "`actors[].actor_id`",
+-      "counting": "Actor identifiers and token, delivery and handle references; nonempty, no NUL.",
++      "refusal_field": "`actors.{actor}.actor_id` or `phases.{phase}.actor_id`",
++      "counting": "Each actor declaration identifier and phase actor reference; nonempty, no NUL. Extension transfer recipient identifiers use the extension_reference row.",
+       "effect": "Excess returns `admission_refused`; empty or duplicate identifiers are request refusals.",
+       "control": "Fixed.",
+       "sources": [
+@@ -2882,7 +2882,7 @@
+       "title": "Issue target",
+       "value": 1023,
+       "unit": "UTF-8 bytes",
+-      "refusal_field": "`phases[].actions[].extension.target`",
++      "refusal_field": "`phases.{phase}.actions.{action}.extension.target`",
+       "counting": "Absolute path an issue action submits; passed to the native call unchanged.",
+       "effect": "Excess returns `admission_refused`; a relative target is a request refusal.",
+       "control": "Fixed.",
+@@ -3445,9 +3445,21 @@
+           "symbol": "runLimitsContractTests",
+           "kind": "boundary",
+           "form": "test"
++        },
++        {
++          "path": "controller/src/request_patch.rs",
++          "symbol": "documented_request_failure_path_limits_match_retained_paths",
++          "kind": "value",
++          "form": "test"
++        },
++        {
++          "path": "controller/src/request_patch.rs",
++          "symbol": "request_failure_path_depth_retains_eight_and_withholds_nine",
++          "kind": "boundary",
++          "form": "test"
+         }
+       ],
+-      "behavior": "Constructed Swift paths derive the retained maximum and independently assert depth 8/9 and UTF-8 component 63/64 all-or-null boundaries. Actor parameter refusal controls cover component 63/64; Rust constructor parity is source-inspected."
++      "behavior": "Constructed Swift and Rust paths independently derive the retained maximum from their production constructors. Separate literal depth 8/9 and UTF-8 component 63/64 controls assert whole-path retention or withholding; Rust also checks serialized null and exact retained components. Actor parameter refusal controls cover component 63/64. These are constructor and serialization observations, not live XPC evidence."
+     },
+     {
+       "id": "request_failure_path_component",
+@@ -3480,9 +3492,21 @@
+           "symbol": "runLimitsContractTests",
+           "kind": "boundary",
+           "form": "test"
++        },
++        {
++          "path": "controller/src/request_patch.rs",
++          "symbol": "documented_request_failure_path_limits_match_retained_paths",
++          "kind": "value",
++          "form": "test"
++        },
++        {
++          "path": "controller/src/request_patch.rs",
++          "symbol": "request_failure_path_components_use_utf8_bytes_and_withhold_the_whole_path",
++          "kind": "boundary",
++          "form": "test"
+         }
+       ],
+-      "behavior": "Constructed Swift paths derive the retained maximum and independently assert depth 8/9 and UTF-8 component 63/64 all-or-null boundaries. Actor parameter refusal controls cover component 63/64; Rust constructor parity is source-inspected."
++      "behavior": "Constructed Swift and Rust paths independently derive the retained maximum from their production constructors. Separate literal depth 8/9 and UTF-8 component 63/64 controls assert whole-path retention or withholding; Rust also checks serialized null and exact retained components. Actor parameter refusal controls cover component 63/64. These are constructor and serialization observations, not live XPC evidence."
+     }
+   ]
+ }
+diff --git a/records/doc-lookback-2026-11-04/DISPATCH.md b/records/doc-lookback-2026-11-04/DISPATCH.md
+index 72cbcaef..9d74a81b 100644
+--- a/records/doc-lookback-2026-11-04/DISPATCH.md
++++ b/records/doc-lookback-2026-11-04/DISPATCH.md
+@@ -53,3 +53,5 @@ All three stage-5 first readers completed work, whole-document reading, neutral
+ The pairs support the assigned work results without establishing general unaided clarity. Root accepted the assessor qualifications: ARCHITECTURE explicitly addresses its task proposal; WORKER general cautions preceded reading, its initial skim covered only the opening, and its whole read corrected reporting-resource shorthand before targeted questions; LIMITS prompted answers elaborated conditions without repairing demonstrated contrary beliefs. Later whole-document exposure is recorded for all. R1 is a confirmed minor authored figure-reference error, left unchanged pending user decision; R2 reference-navigation burden and R3 methodological limits recommend retention/qualified evidence rather than new work. No additional consequential omission established, no further reader round needed, and no new deferral recommended. All23 specialists finished. final-readers/FINAL-REVIEW.md, final-state.json and root READER-OUTFLOW-PLAN.md are the review handoff; source, figures, packets, artifacts and withheld notes match their recorded identities. No product/document remedy, build, test or F1 execution followed the final readings. Stage6 and all document acceptance remain open for the user.
+ 
+ The user accepted proceeding with R1 correction and final acceptance of the plan actions, requiring a pause before retirement. Root verified the reader candidate/report/artifact identities, changed only docs/ARCHITECTURE.md:622 from the premature last-figure reference to the document graph below, and recorded the exact one-line delta. After selection inspection, root executed architecture_documentation and generator_contract once in doc-lookback-docs-03, run20261105T050537Z_eee41d84: two passes, all completed, no harness errors, zero sleep, 43578ms. Source remained unchanged during execution; transcript and requested selection were attached under the checkout lock after owner/run/path/terminal validation. No new specialist, build, Swift run or F1 run. Root accepted all three documents with the existing evidence qualifications and recorded D1-D5/I1-I3/R1-R3 completion. Stage6 is complete; F1 remains separately deferred. ACCEPTANCE.md and acceptance/verification-03.json are the current handoff. Original reader records and artifacts remain immutable, with R1 recorded as a post-reading delta. Plans, records and managed evidence remain in place; no archiving, pruning, staging or commit. Stop at the user-requested pre-retirement review.
++
++User authorized reopening and resolving Fable critique with subagents and no test/rerun pauses. Prior work committed as f25c18ed. Root reopened C1-C6 and retained old acceptance as history, with production I1 scope made explicit upfront. Fresh Astra critique_doc_accuracy and critique_rust_bounds own disjoint documentation/refusal-name and cfg(test) Rust edits; critique_evidence owns identified historical evidence copies and four-case applicability review. Root owns manifest integration, regeneration, staged guide, serial verification and closure. No retirement/pruning or F1 execution. Specialist total26.
+diff --git a/records/doc-lookback-2026-11-04/checkpoint-status.json b/records/doc-lookback-2026-11-04/checkpoint-status.json
+index d891ebad..9fe134ba 100644
+--- a/records/doc-lookback-2026-11-04/checkpoint-status.json
++++ b/records/doc-lookback-2026-11-04/checkpoint-status.json
+@@ -1,5 +1,5 @@
+ {
+-  "recorded_utc": "2026-11-05T05:09:43.249316+00:00",
++  "recorded_utc": "2026-11-05T15:34:22.846520+00:00",
+   "completed_stages": [
+     0,
+     1,
+@@ -10,7 +10,7 @@
+     6
+   ],
+   "stage4_decisions": "I1-I3 implemented with direct passes and explicit applicability review; F1 deferred; D1-D5 implemented/regenerated and documentation validation passed",
+-  "specialists_used": 23,
++  "specialists_used": 26,
+   "baseline_files_changed": [
+     "docs/ARCHITECTURE.md",
+     "docs/WORKER.md",
+@@ -127,14 +127,14 @@
+       "transcript": "tests/out/runs/doc-lookback-repairs-01/build-console.log"
+     }
+   ],
+-  "next_action": "User review immediately before plan/record retirement; preserve F1 handoff and unreplaced observations",
+-  "pause_reason": "Final acceptance complete; user requested pause before retirement",
++  "next_action": "Complete authorized critique follow-up, then reconvene before retirement",
++  "pause_reason": null,
+   "outflow": "READER-OUTFLOW-PLAN.md",
+   "resume_record": "ACCEPTANCE.md",
+   "document_acceptance": {
+     "ARCHITECTURE": "accepted with R1 correction",
+     "WORKER": "accepted unchanged since final reading",
+-    "LIMITS": "accepted unchanged since final reading"
++    "LIMITS": "reopened for exact refusal-name accuracy and Rust verification"
+   },
+   "implementation_deferrals_accepted": [
+     {
+@@ -151,12 +151,13 @@
+   ],
+   "documentation_candidate_state": "acceptance/verification-03.json",
+   "final_reader_state": "final-readers/final-state.json",
+-  "stage6_status": "complete; all three documents accepted, F1 remains deferred",
++  "stage6_status": "reopened: C1-C6 accuracy, coverage and durability",
+   "active_builds_tests_or_readers": false,
+   "accepted_final_reader_dispositions": [
+     "R1 corrected and checked",
+     "R2 inventories retained",
+     "R3 evidence qualifications retained"
+   ],
+-  "retirement_status": "held; no retirement or pruning performed"
++  "retirement_status": "held; no retirement/pruning",
++  "critique_status": "in progress"
+ }
+diff --git a/tests/suites/source_drift/README.md b/tests/suites/source_drift/README.md
+index 832e79d4..2a91a119 100644
+--- a/tests/suites/source_drift/README.md
++++ b/tests/suites/source_drift/README.md
+@@ -240,9 +240,13 @@ The limits manifest is a reviewed description; production code does not load
+ it. Every row cites a test or rule, and a value owner must be a test in the
+ generator's declared owner set. A check citation's `form` identifies the kind
+ of definition, while its `kind` distinguishes value, boundary and path
+-coverage. Admission rows carry `refusal_field`, the exact
+-`admission_failure.field` text, and each `control` begins with Fixed, Flag,
+-Derived or Not enforced.
++coverage. Admission rows carry `refusal_field`: literal
++`admission_failure.field` alternatives or exact indexed patterns using the
++zero-based notation defined in [Limits](../../../docs/LIMITS.md#how-to-read-the-tables).
++Meaning-only rows explicitly identify `request_failure.code` and the array
++pattern for `request_failure.path` instead. These are reviewed emission
++contracts; the generator checks nonempty text, not correspondence to emission
++branches. Each `control` begins with Fixed, Flag, Derived or Not enforced.
+ 
+ `tests/lib/python.sh docs/generate_limits.py --check` validates the manifest, source and
+ check references, generated tables, copied guide sections and the guide's
+diff --git a/tests/suites/source_drift/limits.py b/tests/suites/source_drift/limits.py
+index f955adbc..23fbba49 100644
+--- a/tests/suites/source_drift/limits.py
++++ b/tests/suites/source_drift/limits.py
+@@ -497,6 +497,7 @@ class LimitsDocumentationTests(receipts.TestCase):
+             'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
+             'runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift',
+             'controller/src/run_flow.rs',
++            'controller/src/request_patch.rs',
+             'controller/src/runner_client.rs',
+             'controller/src/bin/sbpl-check.rs',
+             'controller/src/runner_manager.rs',

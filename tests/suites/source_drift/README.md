@@ -240,9 +240,13 @@ The limits manifest is a reviewed description; production code does not load
 it. Every row cites a test or rule, and a value owner must be a test in the
 generator's declared owner set. A check citation's `form` identifies the kind
 of definition, while its `kind` distinguishes value, boundary and path
-coverage. Admission rows carry `refusal_field`, the exact
-`admission_failure.field` text, and each `control` begins with Fixed, Flag,
-Derived or Not enforced.
+coverage. Admission rows carry `refusal_field`: literal
+`admission_failure.field` alternatives or exact indexed patterns using the
+zero-based notation defined in [Limits](../../../docs/LIMITS.md#how-to-read-the-tables).
+Meaning-only rows explicitly identify `request_failure.code` and the array
+pattern for `request_failure.path` instead. These are reviewed emission
+contracts; the generator checks nonempty text, not correspondence to emission
+branches. Each `control` begins with Fixed, Flag, Derived or Not enforced.
 
 `tests/lib/python.sh docs/generate_limits.py --check` validates the manifest, source and
 check references, generated tables, copied guide sections and the guide's

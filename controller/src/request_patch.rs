@@ -100,6 +100,125 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn documented_request_failure_path_limits_match_retained_paths() {
+        let depth = (0..=128)
+            .filter(|&count| {
+                RequestError::new("type_mismatch", &vec!["key"; count], "invalid value")
+                    .failure
+                    .path
+                    .is_some()
+            })
+            .max()
+            .unwrap();
+        let component_bytes = (0..=256)
+            .filter(|&count| {
+                RequestError::new("type_mismatch", &[&"x".repeat(count)], "invalid value")
+                    .failure
+                    .path
+                    .is_some()
+            })
+            .max()
+            .unwrap();
+        // These scan ceilings are independent of the inventory. Reaching one
+        // means the production maximum has not been observed.
+        assert!(depth < 128);
+        assert!(component_bytes < 256);
+        let manifest: Value = serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
+        let owned: std::collections::BTreeMap<&str, (u64, &str)> = manifest["limits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| {
+                row["checks"].as_array().unwrap().iter().any(|check| {
+                    check["path"] == "controller/src/request_patch.rs" && check["kind"] == "value"
+                })
+            })
+            .map(|row| {
+                (
+                    row["id"].as_str().unwrap(),
+                    (
+                        row["value"].as_u64().unwrap(),
+                        row["unit"].as_str().unwrap(),
+                    ),
+                )
+            })
+            .collect();
+        assert_eq!(
+            owned,
+            std::collections::BTreeMap::from([
+                ("request_failure_path_components", (depth as u64, "items")),
+                (
+                    "request_failure_path_component",
+                    (component_bytes as u64, "UTF-8 bytes")
+                ),
+            ])
+        );
+    }
+
+    #[test]
+    fn request_failure_path_depth_retains_eight_and_withholds_nine() {
+        let path = [
+            "actors", "0", "phases", "1", "steps", "2", "attempt", "target",
+        ];
+        let retained = RequestError::new("type_mismatch", &path, "invalid value");
+        assert_eq!(retained.failure.path, Some(path.map(String::from).to_vec()));
+        assert_eq!(
+            serde_json::to_value(&retained.failure).unwrap(),
+            json!({"code": "type_mismatch", "path": path})
+        );
+        let mut too_deep = path.to_vec();
+        too_deep.push("leaf");
+        let withheld = RequestError::new("type_mismatch", &too_deep, "invalid value");
+        assert_eq!(withheld.failure.path, None);
+        assert_eq!(
+            serde_json::to_value(&withheld.failure).unwrap(),
+            json!({"code": "type_mismatch", "path": null})
+        );
+        assert_eq!(withheld.message, "invalid value");
+    }
+
+    #[test]
+    fn request_failure_path_components_use_utf8_bytes_and_withhold_the_whole_path() {
+        for component in ["a".repeat(63), format!("{}a", "é".repeat(31))] {
+            assert_eq!(component.len(), 63);
+            let path = [
+                "actors",
+                "0",
+                "policy",
+                "params",
+                component.as_str(),
+                "value",
+            ];
+            let retained = RequestError::new("type_mismatch", &path, "invalid value");
+            assert_eq!(retained.failure.path, Some(path.map(String::from).to_vec()));
+            assert_eq!(
+                serde_json::to_value(&retained.failure).unwrap(),
+                json!({"code": "type_mismatch", "path": path})
+            );
+        }
+        // The oversized component is in the middle: neither a prefix nor a
+        // subset of otherwise valid components may stand in for the location.
+        for component in ["a".repeat(64), "é".repeat(32)] {
+            assert_eq!(component.len(), 64);
+            let path = [
+                "actors",
+                "0",
+                "policy",
+                "params",
+                component.as_str(),
+                "value",
+            ];
+            let withheld = RequestError::new("type_mismatch", &path, "invalid value");
+            assert_eq!(withheld.failure.path, None);
+            assert_eq!(
+                serde_json::to_value(&withheld.failure).unwrap(),
+                json!({"code": "type_mismatch", "path": null})
+            );
+            assert_eq!(withheld.message, "invalid value");
+        }
+    }
+
+    #[test]
     fn request_version_is_an_exact_value_not_an_implementation_range() {
         let current = crate::json_contract::REQUEST_SCHEMA_VERSION;
         for version in [json!(current), json!(f64::from(current))] {

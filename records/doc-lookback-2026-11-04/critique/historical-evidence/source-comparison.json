@@ -1,0 +1,1339 @@
+{
+  "scope": "Recorded per-case source hashes only; not complete transitive dependency coverage",
+  "cases": [
+    {
+      "case": "exec_reader_mutations",
+      "source_manifest": "tests/out/runs/doc-lookback-repairs-01/suites/runner_unit/exec_reader_mutations/artifacts/controls/source-sha256.json",
+      "comparisons": [
+        {
+          "historical_path": "fixtures/diagnostic_transport/worker.h",
+          "current_path": "tests/fixtures/diagnostic_transport/worker.h",
+          "historical_sha256": "6dfca6643b415ba7a07c02cc73a2d95311891a078f70597d1ffc672c0c680369",
+          "current_sha256": "6dfca6643b415ba7a07c02cc73a2d95311891a078f70597d1ffc672c0c680369",
+          "status": "same"
+        },
+        {
+          "historical_path": "fixtures/worker_lifecycle/worker.c",
+          "current_path": "tests/fixtures/worker_lifecycle/worker.c",
+          "historical_sha256": "237603effa17677e784b6eb57b3aaedbaa5c95184524ffa341d276247080264c",
+          "current_sha256": "237603effa17677e784b6eb57b3aaedbaa5c95184524ffa341d276247080264c",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_authority_region.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+          "historical_sha256": "b7c46d975f5b7a8e6843819ce80771bfb53678a03e603886e4b2db3e45ef3f1e",
+          "current_sha256": "b7c46d975f5b7a8e6843819ce80771bfb53678a03e603886e4b2db3e45ef3f1e",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_extension_channel.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "historical_sha256": "c3f1a1c0eeea07fd906eb954f86cfcbcb52e110df08d6d37be7c2f479ae29023",
+          "current_sha256": "c3f1a1c0eeea07fd906eb954f86cfcbcb52e110df08d6d37be7c2f479ae29023",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_probe_runner_abi.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "historical_sha256": "db88599fde6de5acee9cb63c26b6264544bc3a843c00d11d14374cad31afe2c1",
+          "current_sha256": "db88599fde6de5acee9cb63c26b6264544bc3a843c00d11d14374cad31afe2c1",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_profile_capture.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+          "historical_sha256": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+          "current_sha256": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_worker_evidence.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_evidence.h",
+          "historical_sha256": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65",
+          "current_sha256": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_worker_exec.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
+          "historical_sha256": "372b3acffc43f3c29acabf66c170714302345b4890fb171b212e0044f749fa30",
+          "current_sha256": "372b3acffc43f3c29acabf66c170714302345b4890fb171b212e0044f749fa30",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_worker_timing.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
+          "historical_sha256": "86e77cb185b122f3e720701ce0985dd98f0f99ad59969735d22fc88e9fa61a81",
+          "current_sha256": "86e77cb185b122f3e720701ce0985dd98f0f99ad59969735d22fc88e9fa61a81",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Package.swift",
+          "current_path": "runner/Package.swift",
+          "historical_sha256": "5e82260323be0f470dcc7032a7bc2b3f318904cac1afc8fc347924614eecfda7",
+          "current_sha256": "5e82260323be0f470dcc7032a7bc2b3f318904cac1afc8fc347924614eecfda7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWCWorkerShim/PWCWorkerShim.c",
+          "current_path": "runner/Sources/PWCWorkerShim/PWCWorkerShim.c",
+          "historical_sha256": "a42d03198bc0407fc3f071714ac13f0016afca97dc1d54dca53faca48d8e5a34",
+          "current_sha256": "a42d03198bc0407fc3f071714ac13f0016afca97dc1d54dca53faca48d8e5a34",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h",
+          "current_path": "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h",
+          "historical_sha256": "2fbb4151dc587447c50cce4206b65712e7b6e95ccc7504556c04fa9d74d98599",
+          "current_sha256": "2fbb4151dc587447c50cce4206b65712e7b6e95ccc7504556c04fa9d74d98599",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+          "historical_sha256": "5bb9de1ca8fa0978ee817fbe2ae886e50daf0fc2f47b6eacd85b1cad1379ad0a",
+          "current_sha256": "5bb9de1ca8fa0978ee817fbe2ae886e50daf0fc2f47b6eacd85b1cad1379ad0a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "historical_sha256": "0a5fda8936660b0c3f6746fb61a7d159f226064a2bc1fa3644aac7589d7c3aef",
+          "current_sha256": "0a5fda8936660b0c3f6746fb61a7d159f226064a2bc1fa3644aac7589d7c3aef",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "historical_sha256": "a139ed8108bf2ee8a3e9cab5f9e1e9b72643d1a2d3bb819d0154cb6b2842fc8b",
+          "current_sha256": "a139ed8108bf2ee8a3e9cab5f9e1e9b72643d1a2d3bb819d0154cb6b2842fc8b",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "historical_sha256": "b42fbdb86a2520c2ed47497cab6b30edee446da7fc542bedf9cdc7c292597ad2",
+          "current_sha256": "b42fbdb86a2520c2ed47497cab6b30edee446da7fc542bedf9cdc7c292597ad2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "current_path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "historical_sha256": "3963e3fb5bba047c8d54c8a7bf8b7d33b1cb549059dc02575aec4135c2d6e0e9",
+          "current_sha256": "3963e3fb5bba047c8d54c8a7bf8b7d33b1cb549059dc02575aec4135c2d6e0e9",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "historical_sha256": "06498fad4c596a947a0fed2324701fe3851755322886df7a4d0300ec66b396a7",
+          "current_sha256": "06498fad4c596a947a0fed2324701fe3851755322886df7a4d0300ec66b396a7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
+          "historical_sha256": "ced6669fc10b5ede416c63c5f988a1c705cb889bd8e536b8863f7fae26cb5ef6",
+          "current_sha256": "ced6669fc10b5ede416c63c5f988a1c705cb889bd8e536b8863f7fae26cb5ef6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift",
+          "historical_sha256": "e816b173e81eb8ed1d471e49b40c872e94612ca6f5853f6448463825acef7b1a",
+          "current_sha256": "e816b173e81eb8ed1d471e49b40c872e94612ca6f5853f6448463825acef7b1a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "historical_sha256": "a75a7f423efcb47ce9180523e322a3910306b7b361da58e9510011e10303ba96",
+          "current_sha256": "a75a7f423efcb47ce9180523e322a3910306b7b361da58e9510011e10303ba96",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "historical_sha256": "63ad99828a14b6530c736e7f604e4101e50d9e1b0945dc7a6c41990458ed82e6",
+          "current_sha256": "63ad99828a14b6530c736e7f604e4101e50d9e1b0945dc7a6c41990458ed82e6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift",
+          "historical_sha256": "4f8f3bd4349447fbdb94a0654ac6b58fe3429b0a62ddc5cd0b04695cc94544d7",
+          "current_sha256": "4f8f3bd4349447fbdb94a0654ac6b58fe3429b0a62ddc5cd0b04695cc94544d7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+          "historical_sha256": "57b1c2c14d30af5f881f7424aa8732430a885929e33a6ad33eb2b70ee17d8ba7",
+          "current_sha256": "57b1c2c14d30af5f881f7424aa8732430a885929e33a6ad33eb2b70ee17d8ba7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+          "current_path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+          "historical_sha256": "afbaebc250873a2a5067cea683b3246bfeecac5263ce017fc879296dd2241064",
+          "current_sha256": "afbaebc250873a2a5067cea683b3246bfeecac5263ce017fc879296dd2241064",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "historical_sha256": "6f4c7bb353655990329bb64164c923570cee1bab5d1249d63dfdda2ece50a7fb",
+          "current_sha256": "6f4c7bb353655990329bb64164c923570cee1bab5d1249d63dfdda2ece50a7fb",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "historical_sha256": "744e8536fa4e59a8b607c03ca047a3567ccceb6f1442c42f9eefab76ca6b981a",
+          "current_sha256": "744e8536fa4e59a8b607c03ca047a3567ccceb6f1442c42f9eefab76ca6b981a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+          "historical_sha256": "9abfcdb56e0c00028ba4585bcea7925173e96a2eb6586fae52ad88b2997cfae9",
+          "current_sha256": "9abfcdb56e0c00028ba4585bcea7925173e96a2eb6586fae52ad88b2997cfae9",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift",
+          "historical_sha256": "f9c99b094e5a5aac6f57901b5f7db274d3e294c0620682cb0ef811ecd3ab80bd",
+          "current_sha256": "f9c99b094e5a5aac6f57901b5f7db274d3e294c0620682cb0ef811ecd3ab80bd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+          "historical_sha256": "5b635e461121297dd4df1d36f49a4ef42bfd7fbaf190b66622d33f73ebc8af20",
+          "current_sha256": "5b635e461121297dd4df1d36f49a4ef42bfd7fbaf190b66622d33f73ebc8af20",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
+          "historical_sha256": "ba59f7786254e50da4b991ccca16879d6eb9ecb188b0448959895d084ccc20a6",
+          "current_sha256": "ba59f7786254e50da4b991ccca16879d6eb9ecb188b0448959895d084ccc20a6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+          "historical_sha256": "a0117766556f72655379365a913cc781acc8b6a88b515b03921212e67e9cb579",
+          "current_sha256": "a0117766556f72655379365a913cc781acc8b6a88b515b03921212e67e9cb579",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerListener.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerListener.swift",
+          "historical_sha256": "ba6de887addb85872b7eed72612fe696a95d14b6dbfbe7a6cdfda28ff5989342",
+          "current_sha256": "ba6de887addb85872b7eed72612fe696a95d14b6dbfbe7a6cdfda28ff5989342",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+          "historical_sha256": "90bb2b6c8afbcdb13b98ae2ca671d82493d57972e00c586a1c18595f18fa9ddf",
+          "current_sha256": "90bb2b6c8afbcdb13b98ae2ca671d82493d57972e00c586a1c18595f18fa9ddf",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+          "historical_sha256": "e844765db429ed051140a37757d47bf6d7598ac3ec9d7ea20090ebfc13587d5e",
+          "current_sha256": "e844765db429ed051140a37757d47bf6d7598ac3ec9d7ea20090ebfc13587d5e",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
+          "historical_sha256": "29db6b62b867f6e56c18d0605ef3275ffa0d697612800c305b9dac88c2932625",
+          "current_sha256": "29db6b62b867f6e56c18d0605ef3275ffa0d697612800c305b9dac88c2932625",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+          "historical_sha256": "c416e631314f7d842b85e7d410c49aaa13af9db9d52b058068f0824ebe416a4e",
+          "current_sha256": "c416e631314f7d842b85e7d410c49aaa13af9db9d52b058068f0824ebe416a4e",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "historical_sha256": "988f2b855010735a274ea68f2f4d868a0c766db7f7d4198642955ffd114d1405",
+          "current_sha256": "988f2b855010735a274ea68f2f4d868a0c766db7f7d4198642955ffd114d1405",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerReservation.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerReservation.swift",
+          "historical_sha256": "8d60a3982ca1eaeaa8cbf1334a18270376ec5d80f9f2f427316bfdd403da715b",
+          "current_sha256": "8d60a3982ca1eaeaa8cbf1334a18270376ec5d80f9f2f427316bfdd403da715b",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "historical_sha256": "d2cf75dcdbac872fdafc789fb7f6179a12d5ac08e2b40eaa32311f22cfbfe5d2",
+          "current_sha256": "d2cf75dcdbac872fdafc789fb7f6179a12d5ac08e2b40eaa32311f22cfbfe5d2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+          "historical_sha256": "bcfa5cf727eac39a77d03308f5b08807332936990d357b416e234ae73c1101dd",
+          "current_sha256": "bcfa5cf727eac39a77d03308f5b08807332936990d357b416e234ae73c1101dd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "historical_sha256": "38a9364eb332cada69a97843688f5849f5698ab7fb648d698ffc2c173e5d69dc",
+          "current_sha256": "38a9364eb332cada69a97843688f5849f5698ab7fb648d698ffc2c173e5d69dc",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PathUtils.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PathUtils.swift",
+          "historical_sha256": "168b30f76ee20c3d6d3bbf8a5e296ebb4dfbde777bbde7016e2cd7241acb12d2",
+          "current_sha256": "168b30f76ee20c3d6d3bbf8a5e296ebb4dfbde777bbde7016e2cd7241acb12d2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "historical_sha256": "13ee8b4368668325234ca88bd45db39be9a3198af40b2e5be73a5783a83d51cd",
+          "current_sha256": "13ee8b4368668325234ca88bd45db39be9a3198af40b2e5be73a5783a83d51cd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/SandboxApply.swift",
+          "current_path": "runner/Sources/PWRunnerCore/SandboxApply.swift",
+          "historical_sha256": "6c6dfcd787dba603a66e824b43e935841aae3880b71924b466d02d91db2a92d5",
+          "current_sha256": "6c6dfcd787dba603a66e824b43e935841aae3880b71924b466d02d91db2a92d5",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "historical_sha256": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb",
+          "current_sha256": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "historical_sha256": "a652618c46be9be3e223e58ae97689db8ee641429f716f118e5197bdf775e362",
+          "current_sha256": "a652618c46be9be3e223e58ae97689db8ee641429f716f118e5197bdf775e362",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ActorPlanTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ActorPlanTests.swift",
+          "historical_sha256": "f8116cb608c59d33f126f5634dcc7ae6ffecab48ac78d0df94e8e4cbbef991df",
+          "current_sha256": "f8116cb608c59d33f126f5634dcc7ae6ffecab48ac78d0df94e8e4cbbef991df",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift",
+          "historical_sha256": "80dbec3ee02945d18b3e916c2fce02a2a6f6e511fce4f468ea8640fb7ecd2ae0",
+          "current_sha256": "80dbec3ee02945d18b3e916c2fce02a2a6f6e511fce4f468ea8640fb7ecd2ae0",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+          "historical_sha256": "93ed91fa7bf702c97cf040a48d32c5b0bdb422df12f8812f7eee64cefc251b7c",
+          "current_sha256": "93ed91fa7bf702c97cf040a48d32c5b0bdb422df12f8812f7eee64cefc251b7c",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ActorShapeFixtures.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ActorShapeFixtures.swift",
+          "historical_sha256": "27bddbe360117cd453cc355112a43ecacf4f8f3a7b2b3e14620fd5851af99a5f",
+          "current_sha256": "27bddbe360117cd453cc355112a43ecacf4f8f3a7b2b3e14620fd5851af99a5f",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift",
+          "historical_sha256": "7657350649322ccdc7d1b72f45e892bab2cbad8ddf9caeb16cf51c798d0ea127",
+          "current_sha256": "7657350649322ccdc7d1b72f45e892bab2cbad8ddf9caeb16cf51c798d0ea127",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/AugmentTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/AugmentTests.swift",
+          "historical_sha256": "79dacfb38fcf0d6453c37285094868d8216e26834e1a71b4a560fd80039d7f2e",
+          "current_sha256": "79dacfb38fcf0d6453c37285094868d8216e26834e1a71b4a560fd80039d7f2e",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/CWorkerClockTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/CWorkerClockTests.swift",
+          "historical_sha256": "dfd83e3eb7aa78614e9aceb72bb79b62b36d33b73c7317fddf81021c300644a1",
+          "current_sha256": "dfd83e3eb7aa78614e9aceb72bb79b62b36d33b73c7317fddf81021c300644a1",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "historical_sha256": "71eddda8d3f2ea2ff1b11f78e8eec383a9f68de4e2c5cb1a24a43dbab7e85575",
+          "current_sha256": "71eddda8d3f2ea2ff1b11f78e8eec383a9f68de4e2c5cb1a24a43dbab7e85575",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+          "historical_sha256": "4375164ec0cd7ccef05cfa96b7b9c144e4e78184727bdfe6ad60bf9d7c4ac808",
+          "current_sha256": "4375164ec0cd7ccef05cfa96b7b9c144e4e78184727bdfe6ad60bf9d7c4ac808",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift",
+          "historical_sha256": "a356bbca7171682f5e4092aa72d095aa0d3ad86e4a90a4ec0476b39f03db0986",
+          "current_sha256": "a356bbca7171682f5e4092aa72d095aa0d3ad86e4a90a4ec0476b39f03db0986",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift",
+          "historical_sha256": "1148f53459ccc4f4874ac3ec4fe245809bba0e61d352e70dec6dd9e5e4ae3911",
+          "current_sha256": "1148f53459ccc4f4874ac3ec4fe245809bba0e61d352e70dec6dd9e5e4ae3911",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift",
+          "historical_sha256": "1f764376b3de46911b942baa30eb44f914f2f71d6329dbd536d26beebd60b410",
+          "current_sha256": "1f764376b3de46911b942baa30eb44f914f2f71d6329dbd536d26beebd60b410",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift",
+          "historical_sha256": "4f2e149aae9469085e4d4a3c4c337c301a09269aa32f9d11eaced3874a2adecd",
+          "current_sha256": "4f2e149aae9469085e4d4a3c4c337c301a09269aa32f9d11eaced3874a2adecd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/DiagnosticTransportTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/DiagnosticTransportTests.swift",
+          "historical_sha256": "8d190becfe6426f30352e274c08e86d2f8aafdb906a3e519027c3336201d2d80",
+          "current_sha256": "8d190becfe6426f30352e274c08e86d2f8aafdb906a3e519027c3336201d2d80",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift",
+          "historical_sha256": "a27ce5a26bafbef8cb424fefbd252bee5226d8358e6abcab2c80f6594a52d2e6",
+          "current_sha256": "a27ce5a26bafbef8cb424fefbd252bee5226d8358e6abcab2c80f6594a52d2e6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/EnvelopeInvariantTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/EnvelopeInvariantTests.swift",
+          "historical_sha256": "7ff903a5c0ed6a5fe81adce2af595bfaf30dc8d87538c2e750c421a6a5d49eb7",
+          "current_sha256": "7ff903a5c0ed6a5fe81adce2af595bfaf30dc8d87538c2e750c421a6a5d49eb7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ExecObservationTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ExecObservationTests.swift",
+          "historical_sha256": "c6b7ba8185d2b732d1434827c52c1f963c22f3760317fc2c0c7204aa383f9b74",
+          "current_sha256": "c6b7ba8185d2b732d1434827c52c1f963c22f3760317fc2c0c7204aa383f9b74",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+          "historical_sha256": "f3d95a799ea8a135f398246a327b8b1adecf77fc8a51db357140b51f66d06530",
+          "current_sha256": "f3d95a799ea8a135f398246a327b8b1adecf77fc8a51db357140b51f66d06530",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/FilterKindValidationTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/FilterKindValidationTests.swift",
+          "historical_sha256": "e4b637b307be4afce385d5629e91abd8feeefbeba7e060cc298636c5bf952530",
+          "current_sha256": "e4b637b307be4afce385d5629e91abd8feeefbeba7e060cc298636c5bf952530",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/FreshWriteEvidenceTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/FreshWriteEvidenceTests.swift",
+          "historical_sha256": "a6bf96d00f705359c412c59559e3e39a12b517ba6e74d9ff427ab3633daa8e51",
+          "current_sha256": "a6bf96d00f705359c412c59559e3e39a12b517ba6e74d9ff427ab3633daa8e51",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift",
+          "historical_sha256": "a2c6519a6a3f0feee69d48a00416599f881dc726ae2b610d458584e659812269",
+          "current_sha256": "a2c6519a6a3f0feee69d48a00416599f881dc726ae2b610d458584e659812269",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "historical_sha256": "a5f1aa3054c27301664144b1187410f6a52b8e3e446ae4060cbb2f6a05f34b30",
+          "current_sha256": "1981a3b64b95c67e5f3b7feb6d9719a6e699c0feaa413c127719f6cb9c314e58",
+          "status": "different_or_generated"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ListenerConfigTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ListenerConfigTests.swift",
+          "historical_sha256": "0fc3138f643dd1ddc58d952c5ae99bc7edf956357cd5ef434ec79ac821c85235",
+          "current_sha256": "0fc3138f643dd1ddc58d952c5ae99bc7edf956357cd5ef434ec79ac821c85235",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
+          "historical_sha256": "d4c8f0467fd2b25e9294875a6455319e95606c0196ae4796d447ae98c50520ce",
+          "current_sha256": "d4c8f0467fd2b25e9294875a6455319e95606c0196ae4796d447ae98c50520ce",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/PathDiagnosticsTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/PathDiagnosticsTests.swift",
+          "historical_sha256": "82544b313d43b992c96723b30bb44499038b18c60bbf81b82e8bb145e5c7b32e",
+          "current_sha256": "82544b313d43b992c96723b30bb44499038b18c60bbf81b82e8bb145e5c7b32e",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+          "historical_sha256": "45386337ba6a83d5f6b1ef575aed57cb5bc92f3023e9afeb7f2a2d3dd24f7eea",
+          "current_sha256": "45386337ba6a83d5f6b1ef575aed57cb5bc92f3023e9afeb7f2a2d3dd24f7eea",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
+          "historical_sha256": "3d7c6a6ba32817ca733cafe8745431aaaf380c679f1bf1b7a9c347ff5d994560",
+          "current_sha256": "3d7c6a6ba32817ca733cafe8745431aaaf380c679f1bf1b7a9c347ff5d994560",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/PredictionUnavailableTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/PredictionUnavailableTests.swift",
+          "historical_sha256": "4b4d44c18247d3af21a89a7173d72937dee39bc723d56528c87943f2e4380e66",
+          "current_sha256": "4b4d44c18247d3af21a89a7173d72937dee39bc723d56528c87943f2e4380e66",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+          "historical_sha256": "cc3d19ccaa14e7be6c7a44f815d43fc2769f24dc6490e55ce6696c15f1160f25",
+          "current_sha256": "cc3d19ccaa14e7be6c7a44f815d43fc2769f24dc6490e55ce6696c15f1160f25",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift",
+          "historical_sha256": "ebdbd6aa46ace40c815ac0e85b60d099d50693af37ef68ca491fdcfb8c6d468a",
+          "current_sha256": "ebdbd6aa46ace40c815ac0e85b60d099d50693af37ef68ca491fdcfb8c6d468a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+          "historical_sha256": "6d850908c2493be24fb5dbaebe3ea7c03a79a23484ef2995f18a912a5ee1fdd8",
+          "current_sha256": "6d850908c2493be24fb5dbaebe3ea7c03a79a23484ef2995f18a912a5ee1fdd8",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "historical_sha256": "5cc9f0974216ac056b457e2362e4d721ef50e7463befd314e23a17c25c70903b",
+          "current_sha256": "5cc9f0974216ac056b457e2362e4d721ef50e7463befd314e23a17c25c70903b",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "historical_sha256": "4378618ee0ccdb52c6b4662aae73a31ecb3748e16b53c40211518564b3f958c0",
+          "current_sha256": "4378618ee0ccdb52c6b4662aae73a31ecb3748e16b53c40211518564b3f958c0",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+          "historical_sha256": "ceb712509de112e4e68415dc985fa255903777dd60cb6d83628d4b4b59eb4b7a",
+          "current_sha256": "ceb712509de112e4e68415dc985fa255903777dd60cb6d83628d4b4b59eb4b7a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/TestKit.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/TestKit.swift",
+          "historical_sha256": "9be1c908b36c7ddd67264b9a63ad57ad9f24a3a1f8e8f485a985e365598894fa",
+          "current_sha256": "9be1c908b36c7ddd67264b9a63ad57ad9f24a3a1f8e8f485a985e365598894fa",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "historical_sha256": "9f2cfca29f328e59e71e30dd1605eb5edf5d2c578d15fa5c27e8899573719321",
+          "current_sha256": "9f2cfca29f328e59e71e30dd1605eb5edf5d2c578d15fa5c27e8899573719321",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ValidatorStartGate.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ValidatorStartGate.swift",
+          "historical_sha256": "d3140f3d51cd092e7ffad5f2aba08397486dd3a9eb83f3d848547af964798476",
+          "current_sha256": "d3140f3d51cd092e7ffad5f2aba08397486dd3a9eb83f3d848547af964798476",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
+          "historical_sha256": "6c035efb5ea80b9d60f2b069fb513f73813f75dae5ef908241ee389b1157d621",
+          "current_sha256": "6c035efb5ea80b9d60f2b069fb513f73813f75dae5ef908241ee389b1157d621",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift",
+          "historical_sha256": "2656e88b87ca3f31b75e4c4c32d08f61346d7ff501dded302228dc70f31471b3",
+          "current_sha256": "2656e88b87ca3f31b75e4c4c32d08f61346d7ff501dded302228dc70f31471b3",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/main.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/main.swift",
+          "historical_sha256": "333f04889bf9bfce016edcd6dbb6922f163ba6c095f636757e93bb7e70210d13",
+          "current_sha256": "e9420316c8c1fab8b8c88da056bf400394126431b0d696b55b17d5509289d013",
+          "status": "different_or_generated"
+        },
+        {
+          "historical_path": "tests/fixtures/contract/exec_observation.json",
+          "current_path": "tests/fixtures/contract/exec_observation.json",
+          "historical_sha256": "75c79125f4fa96179012963fb83a978a472563e067a667a65c4e5b51b313d62d",
+          "current_sha256": "75c79125f4fa96179012963fb83a978a472563e067a667a65c4e5b51b313d62d",
+          "status": "same"
+        }
+      ]
+    },
+    {
+      "case": "reaped_ack_mutation",
+      "source_manifest": "tests/out/runs/doc-lookback-repairs-01/suites/runner_unit/reaped_ack_mutation/artifacts/controls/source-sha256.json",
+      "comparisons": [
+        {
+          "historical_path": "fixtures/diagnostic_transport/worker.h",
+          "current_path": "tests/fixtures/diagnostic_transport/worker.h",
+          "historical_sha256": "6dfca6643b415ba7a07c02cc73a2d95311891a078f70597d1ffc672c0c680369",
+          "current_sha256": "6dfca6643b415ba7a07c02cc73a2d95311891a078f70597d1ffc672c0c680369",
+          "status": "same"
+        },
+        {
+          "historical_path": "fixtures/worker_lifecycle/worker.c",
+          "current_path": "tests/fixtures/worker_lifecycle/worker.c",
+          "historical_sha256": "237603effa17677e784b6eb57b3aaedbaa5c95184524ffa341d276247080264c",
+          "current_sha256": "237603effa17677e784b6eb57b3aaedbaa5c95184524ffa341d276247080264c",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_authority_region.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+          "historical_sha256": "b7c46d975f5b7a8e6843819ce80771bfb53678a03e603886e4b2db3e45ef3f1e",
+          "current_sha256": "b7c46d975f5b7a8e6843819ce80771bfb53678a03e603886e4b2db3e45ef3f1e",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_extension_channel.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "historical_sha256": "c3f1a1c0eeea07fd906eb954f86cfcbcb52e110df08d6d37be7c2f479ae29023",
+          "current_sha256": "c3f1a1c0eeea07fd906eb954f86cfcbcb52e110df08d6d37be7c2f479ae29023",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_probe_runner_abi.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "historical_sha256": "db88599fde6de5acee9cb63c26b6264544bc3a843c00d11d14374cad31afe2c1",
+          "current_sha256": "db88599fde6de5acee9cb63c26b6264544bc3a843c00d11d14374cad31afe2c1",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_profile_capture.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+          "historical_sha256": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+          "current_sha256": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_worker_evidence.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_evidence.h",
+          "historical_sha256": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65",
+          "current_sha256": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_worker_exec.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
+          "historical_sha256": "372b3acffc43f3c29acabf66c170714302345b4890fb171b212e0044f749fa30",
+          "current_sha256": "372b3acffc43f3c29acabf66c170714302345b4890fb171b212e0044f749fa30",
+          "status": "same"
+        },
+        {
+          "historical_path": "native/pw_worker_timing.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
+          "historical_sha256": "86e77cb185b122f3e720701ce0985dd98f0f99ad59969735d22fc88e9fa61a81",
+          "current_sha256": "86e77cb185b122f3e720701ce0985dd98f0f99ad59969735d22fc88e9fa61a81",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Package.swift",
+          "current_path": "runner/Package.swift",
+          "historical_sha256": "5e82260323be0f470dcc7032a7bc2b3f318904cac1afc8fc347924614eecfda7",
+          "current_sha256": "5e82260323be0f470dcc7032a7bc2b3f318904cac1afc8fc347924614eecfda7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWCWorkerShim/PWCWorkerShim.c",
+          "current_path": "runner/Sources/PWCWorkerShim/PWCWorkerShim.c",
+          "historical_sha256": "a42d03198bc0407fc3f071714ac13f0016afca97dc1d54dca53faca48d8e5a34",
+          "current_sha256": "a42d03198bc0407fc3f071714ac13f0016afca97dc1d54dca53faca48d8e5a34",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h",
+          "current_path": "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h",
+          "historical_sha256": "2fbb4151dc587447c50cce4206b65712e7b6e95ccc7504556c04fa9d74d98599",
+          "current_sha256": "2fbb4151dc587447c50cce4206b65712e7b6e95ccc7504556c04fa9d74d98599",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+          "historical_sha256": "5bb9de1ca8fa0978ee817fbe2ae886e50daf0fc2f47b6eacd85b1cad1379ad0a",
+          "current_sha256": "5bb9de1ca8fa0978ee817fbe2ae886e50daf0fc2f47b6eacd85b1cad1379ad0a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "historical_sha256": "0a5fda8936660b0c3f6746fb61a7d159f226064a2bc1fa3644aac7589d7c3aef",
+          "current_sha256": "0a5fda8936660b0c3f6746fb61a7d159f226064a2bc1fa3644aac7589d7c3aef",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "historical_sha256": "a139ed8108bf2ee8a3e9cab5f9e1e9b72643d1a2d3bb819d0154cb6b2842fc8b",
+          "current_sha256": "a139ed8108bf2ee8a3e9cab5f9e1e9b72643d1a2d3bb819d0154cb6b2842fc8b",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "historical_sha256": "b42fbdb86a2520c2ed47497cab6b30edee446da7fc542bedf9cdc7c292597ad2",
+          "current_sha256": "b42fbdb86a2520c2ed47497cab6b30edee446da7fc542bedf9cdc7c292597ad2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "current_path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "historical_sha256": "3963e3fb5bba047c8d54c8a7bf8b7d33b1cb549059dc02575aec4135c2d6e0e9",
+          "current_sha256": "3963e3fb5bba047c8d54c8a7bf8b7d33b1cb549059dc02575aec4135c2d6e0e9",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "historical_sha256": "06498fad4c596a947a0fed2324701fe3851755322886df7a4d0300ec66b396a7",
+          "current_sha256": "06498fad4c596a947a0fed2324701fe3851755322886df7a4d0300ec66b396a7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
+          "historical_sha256": "ced6669fc10b5ede416c63c5f988a1c705cb889bd8e536b8863f7fae26cb5ef6",
+          "current_sha256": "ced6669fc10b5ede416c63c5f988a1c705cb889bd8e536b8863f7fae26cb5ef6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift",
+          "historical_sha256": "e816b173e81eb8ed1d471e49b40c872e94612ca6f5853f6448463825acef7b1a",
+          "current_sha256": "e816b173e81eb8ed1d471e49b40c872e94612ca6f5853f6448463825acef7b1a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "historical_sha256": "a75a7f423efcb47ce9180523e322a3910306b7b361da58e9510011e10303ba96",
+          "current_sha256": "a75a7f423efcb47ce9180523e322a3910306b7b361da58e9510011e10303ba96",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "historical_sha256": "63ad99828a14b6530c736e7f604e4101e50d9e1b0945dc7a6c41990458ed82e6",
+          "current_sha256": "63ad99828a14b6530c736e7f604e4101e50d9e1b0945dc7a6c41990458ed82e6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift",
+          "historical_sha256": "4f8f3bd4349447fbdb94a0654ac6b58fe3429b0a62ddc5cd0b04695cc94544d7",
+          "current_sha256": "4f8f3bd4349447fbdb94a0654ac6b58fe3429b0a62ddc5cd0b04695cc94544d7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+          "historical_sha256": "57b1c2c14d30af5f881f7424aa8732430a885929e33a6ad33eb2b70ee17d8ba7",
+          "current_sha256": "57b1c2c14d30af5f881f7424aa8732430a885929e33a6ad33eb2b70ee17d8ba7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+          "current_path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+          "historical_sha256": "afbaebc250873a2a5067cea683b3246bfeecac5263ce017fc879296dd2241064",
+          "current_sha256": "afbaebc250873a2a5067cea683b3246bfeecac5263ce017fc879296dd2241064",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "historical_sha256": "6f4c7bb353655990329bb64164c923570cee1bab5d1249d63dfdda2ece50a7fb",
+          "current_sha256": "6f4c7bb353655990329bb64164c923570cee1bab5d1249d63dfdda2ece50a7fb",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "historical_sha256": "744e8536fa4e59a8b607c03ca047a3567ccceb6f1442c42f9eefab76ca6b981a",
+          "current_sha256": "744e8536fa4e59a8b607c03ca047a3567ccceb6f1442c42f9eefab76ca6b981a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+          "historical_sha256": "9abfcdb56e0c00028ba4585bcea7925173e96a2eb6586fae52ad88b2997cfae9",
+          "current_sha256": "9abfcdb56e0c00028ba4585bcea7925173e96a2eb6586fae52ad88b2997cfae9",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift",
+          "historical_sha256": "f9c99b094e5a5aac6f57901b5f7db274d3e294c0620682cb0ef811ecd3ab80bd",
+          "current_sha256": "f9c99b094e5a5aac6f57901b5f7db274d3e294c0620682cb0ef811ecd3ab80bd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+          "historical_sha256": "5b635e461121297dd4df1d36f49a4ef42bfd7fbaf190b66622d33f73ebc8af20",
+          "current_sha256": "5b635e461121297dd4df1d36f49a4ef42bfd7fbaf190b66622d33f73ebc8af20",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
+          "historical_sha256": "ba59f7786254e50da4b991ccca16879d6eb9ecb188b0448959895d084ccc20a6",
+          "current_sha256": "ba59f7786254e50da4b991ccca16879d6eb9ecb188b0448959895d084ccc20a6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+          "historical_sha256": "a0117766556f72655379365a913cc781acc8b6a88b515b03921212e67e9cb579",
+          "current_sha256": "a0117766556f72655379365a913cc781acc8b6a88b515b03921212e67e9cb579",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerListener.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerListener.swift",
+          "historical_sha256": "ba6de887addb85872b7eed72612fe696a95d14b6dbfbe7a6cdfda28ff5989342",
+          "current_sha256": "ba6de887addb85872b7eed72612fe696a95d14b6dbfbe7a6cdfda28ff5989342",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+          "historical_sha256": "90bb2b6c8afbcdb13b98ae2ca671d82493d57972e00c586a1c18595f18fa9ddf",
+          "current_sha256": "90bb2b6c8afbcdb13b98ae2ca671d82493d57972e00c586a1c18595f18fa9ddf",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+          "historical_sha256": "e844765db429ed051140a37757d47bf6d7598ac3ec9d7ea20090ebfc13587d5e",
+          "current_sha256": "e844765db429ed051140a37757d47bf6d7598ac3ec9d7ea20090ebfc13587d5e",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
+          "historical_sha256": "29db6b62b867f6e56c18d0605ef3275ffa0d697612800c305b9dac88c2932625",
+          "current_sha256": "29db6b62b867f6e56c18d0605ef3275ffa0d697612800c305b9dac88c2932625",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+          "historical_sha256": "c416e631314f7d842b85e7d410c49aaa13af9db9d52b058068f0824ebe416a4e",
+          "current_sha256": "c416e631314f7d842b85e7d410c49aaa13af9db9d52b058068f0824ebe416a4e",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "historical_sha256": "988f2b855010735a274ea68f2f4d868a0c766db7f7d4198642955ffd114d1405",
+          "current_sha256": "988f2b855010735a274ea68f2f4d868a0c766db7f7d4198642955ffd114d1405",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerReservation.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerReservation.swift",
+          "historical_sha256": "8d60a3982ca1eaeaa8cbf1334a18270376ec5d80f9f2f427316bfdd403da715b",
+          "current_sha256": "8d60a3982ca1eaeaa8cbf1334a18270376ec5d80f9f2f427316bfdd403da715b",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "historical_sha256": "d2cf75dcdbac872fdafc789fb7f6179a12d5ac08e2b40eaa32311f22cfbfe5d2",
+          "current_sha256": "d2cf75dcdbac872fdafc789fb7f6179a12d5ac08e2b40eaa32311f22cfbfe5d2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+          "historical_sha256": "bcfa5cf727eac39a77d03308f5b08807332936990d357b416e234ae73c1101dd",
+          "current_sha256": "bcfa5cf727eac39a77d03308f5b08807332936990d357b416e234ae73c1101dd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "historical_sha256": "38a9364eb332cada69a97843688f5849f5698ab7fb648d698ffc2c173e5d69dc",
+          "current_sha256": "38a9364eb332cada69a97843688f5849f5698ab7fb648d698ffc2c173e5d69dc",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PathUtils.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PathUtils.swift",
+          "historical_sha256": "168b30f76ee20c3d6d3bbf8a5e296ebb4dfbde777bbde7016e2cd7241acb12d2",
+          "current_sha256": "168b30f76ee20c3d6d3bbf8a5e296ebb4dfbde777bbde7016e2cd7241acb12d2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "historical_sha256": "13ee8b4368668325234ca88bd45db39be9a3198af40b2e5be73a5783a83d51cd",
+          "current_sha256": "13ee8b4368668325234ca88bd45db39be9a3198af40b2e5be73a5783a83d51cd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/SandboxApply.swift",
+          "current_path": "runner/Sources/PWRunnerCore/SandboxApply.swift",
+          "historical_sha256": "6c6dfcd787dba603a66e824b43e935841aae3880b71924b466d02d91db2a92d5",
+          "current_sha256": "6c6dfcd787dba603a66e824b43e935841aae3880b71924b466d02d91db2a92d5",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "historical_sha256": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb",
+          "current_sha256": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "historical_sha256": "71eddda8d3f2ea2ff1b11f78e8eec383a9f68de4e2c5cb1a24a43dbab7e85575",
+          "current_sha256": "71eddda8d3f2ea2ff1b11f78e8eec383a9f68de4e2c5cb1a24a43dbab7e85575",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/TestKit.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/TestKit.swift",
+          "historical_sha256": "9be1c908b36c7ddd67264b9a63ad57ad9f24a3a1f8e8f485a985e365598894fa",
+          "current_sha256": "9be1c908b36c7ddd67264b9a63ad57ad9f24a3a1f8e8f485a985e365598894fa",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/main.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/main.swift",
+          "historical_sha256": "ea7bcf03241af29a041dd8d5f00742223214b46fa0ca03a61bb09be7d7916441",
+          "current_sha256": "e9420316c8c1fab8b8c88da056bf400394126431b0d696b55b17d5509289d013",
+          "status": "different_or_generated"
+        }
+      ]
+    },
+    {
+      "case": "actor_handoff_mutations",
+      "source_manifest": "tests/out/runs/doc-lookback-repairs-01/suites/runner_unit/actor_handoff_mutations/artifacts/controls/source-manifest.json",
+      "comparisons": [
+        {
+          "historical_path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_authority_region.h",
+          "historical_sha256": "b7c46d975f5b7a8e6843819ce80771bfb53678a03e603886e4b2db3e45ef3f1e",
+          "current_sha256": "b7c46d975f5b7a8e6843819ce80771bfb53678a03e603886e4b2db3e45ef3f1e",
+          "status": "same"
+        },
+        {
+          "historical_path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "historical_sha256": "c3f1a1c0eeea07fd906eb954f86cfcbcb52e110df08d6d37be7c2f479ae29023",
+          "current_sha256": "c3f1a1c0eeea07fd906eb954f86cfcbcb52e110df08d6d37be7c2f479ae29023",
+          "status": "same"
+        },
+        {
+          "historical_path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "current_path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "historical_sha256": "3e0ca91163e335744c07d61fe59800447de4d88e21bfbd597b0c97373dd8fa79",
+          "current_sha256": "3e0ca91163e335744c07d61fe59800447de4d88e21bfbd597b0c97373dd8fa79",
+          "status": "same"
+        },
+        {
+          "historical_path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "historical_sha256": "db88599fde6de5acee9cb63c26b6264544bc3a843c00d11d14374cad31afe2c1",
+          "current_sha256": "db88599fde6de5acee9cb63c26b6264544bc3a843c00d11d14374cad31afe2c1",
+          "status": "same"
+        },
+        {
+          "historical_path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+          "historical_sha256": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+          "current_sha256": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+          "status": "same"
+        },
+        {
+          "historical_path": "controller/tools/pw_probe_runner/pw_worker_evidence.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_evidence.h",
+          "historical_sha256": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65",
+          "current_sha256": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65",
+          "status": "same"
+        },
+        {
+          "historical_path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
+          "historical_sha256": "372b3acffc43f3c29acabf66c170714302345b4890fb171b212e0044f749fa30",
+          "current_sha256": "372b3acffc43f3c29acabf66c170714302345b4890fb171b212e0044f749fa30",
+          "status": "same"
+        },
+        {
+          "historical_path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
+          "current_path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
+          "historical_sha256": "86e77cb185b122f3e720701ce0985dd98f0f99ad59969735d22fc88e9fa61a81",
+          "current_sha256": "86e77cb185b122f3e720701ce0985dd98f0f99ad59969735d22fc88e9fa61a81",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Package.swift",
+          "current_path": "runner/Package.swift",
+          "historical_sha256": "5e82260323be0f470dcc7032a7bc2b3f318904cac1afc8fc347924614eecfda7",
+          "current_sha256": "5e82260323be0f470dcc7032a7bc2b3f318904cac1afc8fc347924614eecfda7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWCWorkerShim/PWCWorkerShim.c",
+          "current_path": "runner/Sources/PWCWorkerShim/PWCWorkerShim.c",
+          "historical_sha256": "a42d03198bc0407fc3f071714ac13f0016afca97dc1d54dca53faca48d8e5a34",
+          "current_sha256": "a42d03198bc0407fc3f071714ac13f0016afca97dc1d54dca53faca48d8e5a34",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h",
+          "current_path": "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h",
+          "historical_sha256": "2fbb4151dc587447c50cce4206b65712e7b6e95ccc7504556c04fa9d74d98599",
+          "current_sha256": "2fbb4151dc587447c50cce4206b65712e7b6e95ccc7504556c04fa9d74d98599",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift",
+          "historical_sha256": "5bb9de1ca8fa0978ee817fbe2ae886e50daf0fc2f47b6eacd85b1cad1379ad0a",
+          "current_sha256": "5bb9de1ca8fa0978ee817fbe2ae886e50daf0fc2f47b6eacd85b1cad1379ad0a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "historical_sha256": "0a5fda8936660b0c3f6746fb61a7d159f226064a2bc1fa3644aac7589d7c3aef",
+          "current_sha256": "0a5fda8936660b0c3f6746fb61a7d159f226064a2bc1fa3644aac7589d7c3aef",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "historical_sha256": "a139ed8108bf2ee8a3e9cab5f9e1e9b72643d1a2d3bb819d0154cb6b2842fc8b",
+          "current_sha256": "a139ed8108bf2ee8a3e9cab5f9e1e9b72643d1a2d3bb819d0154cb6b2842fc8b",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "historical_sha256": "b42fbdb86a2520c2ed47497cab6b30edee446da7fc542bedf9cdc7c292597ad2",
+          "current_sha256": "b42fbdb86a2520c2ed47497cab6b30edee446da7fc542bedf9cdc7c292597ad2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "current_path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "historical_sha256": "3963e3fb5bba047c8d54c8a7bf8b7d33b1cb549059dc02575aec4135c2d6e0e9",
+          "current_sha256": "3963e3fb5bba047c8d54c8a7bf8b7d33b1cb549059dc02575aec4135c2d6e0e9",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "historical_sha256": "06498fad4c596a947a0fed2324701fe3851755322886df7a4d0300ec66b396a7",
+          "current_sha256": "06498fad4c596a947a0fed2324701fe3851755322886df7a4d0300ec66b396a7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerComparison.swift",
+          "historical_sha256": "ced6669fc10b5ede416c63c5f988a1c705cb889bd8e536b8863f7fae26cb5ef6",
+          "current_sha256": "ced6669fc10b5ede416c63c5f988a1c705cb889bd8e536b8863f7fae26cb5ef6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerDisposition.swift",
+          "historical_sha256": "e816b173e81eb8ed1d471e49b40c872e94612ca6f5853f6448463825acef7b1a",
+          "current_sha256": "e816b173e81eb8ed1d471e49b40c872e94612ca6f5853f6448463825acef7b1a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "historical_sha256": "a75a7f423efcb47ce9180523e322a3910306b7b361da58e9510011e10303ba96",
+          "current_sha256": "a75a7f423efcb47ce9180523e322a3910306b7b361da58e9510011e10303ba96",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "historical_sha256": "63ad99828a14b6530c736e7f604e4101e50d9e1b0945dc7a6c41990458ed82e6",
+          "current_sha256": "63ad99828a14b6530c736e7f604e4101e50d9e1b0945dc7a6c41990458ed82e6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift",
+          "current_path": "runner/Sources/PWRunnerCore/CWorkerStepResults.swift",
+          "historical_sha256": "4f8f3bd4349447fbdb94a0654ac6b58fe3429b0a62ddc5cd0b04695cc94544d7",
+          "current_sha256": "4f8f3bd4349447fbdb94a0654ac6b58fe3429b0a62ddc5cd0b04695cc94544d7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+          "historical_sha256": "57b1c2c14d30af5f881f7424aa8732430a885929e33a6ad33eb2b70ee17d8ba7",
+          "current_sha256": "57b1c2c14d30af5f881f7424aa8732430a885929e33a6ad33eb2b70ee17d8ba7",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+          "current_path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift",
+          "historical_sha256": "afbaebc250873a2a5067cea683b3246bfeecac5263ce017fc879296dd2241064",
+          "current_sha256": "afbaebc250873a2a5067cea683b3246bfeecac5263ce017fc879296dd2241064",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "historical_sha256": "6f4c7bb353655990329bb64164c923570cee1bab5d1249d63dfdda2ece50a7fb",
+          "current_sha256": "6f4c7bb353655990329bb64164c923570cee1bab5d1249d63dfdda2ece50a7fb",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "historical_sha256": "744e8536fa4e59a8b607c03ca047a3567ccceb6f1442c42f9eefab76ca6b981a",
+          "current_sha256": "744e8536fa4e59a8b607c03ca047a3567ccceb6f1442c42f9eefab76ca6b981a",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+          "historical_sha256": "9abfcdb56e0c00028ba4585bcea7925173e96a2eb6586fae52ad88b2997cfae9",
+          "current_sha256": "9abfcdb56e0c00028ba4585bcea7925173e96a2eb6586fae52ad88b2997cfae9",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerCoding.swift",
+          "historical_sha256": "f9c99b094e5a5aac6f57901b5f7db274d3e294c0620682cb0ef811ecd3ab80bd",
+          "current_sha256": "f9c99b094e5a5aac6f57901b5f7db274d3e294c0620682cb0ef811ecd3ab80bd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+          "historical_sha256": "5b635e461121297dd4df1d36f49a4ef42bfd7fbaf190b66622d33f73ebc8af20",
+          "current_sha256": "5b635e461121297dd4df1d36f49a4ef42bfd7fbaf190b66622d33f73ebc8af20",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
+          "historical_sha256": "ba59f7786254e50da4b991ccca16879d6eb9ecb188b0448959895d084ccc20a6",
+          "current_sha256": "ba59f7786254e50da4b991ccca16879d6eb9ecb188b0448959895d084ccc20a6",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+          "historical_sha256": "a0117766556f72655379365a913cc781acc8b6a88b515b03921212e67e9cb579",
+          "current_sha256": "a0117766556f72655379365a913cc781acc8b6a88b515b03921212e67e9cb579",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerListener.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerListener.swift",
+          "historical_sha256": "ba6de887addb85872b7eed72612fe696a95d14b6dbfbe7a6cdfda28ff5989342",
+          "current_sha256": "ba6de887addb85872b7eed72612fe696a95d14b6dbfbe7a6cdfda28ff5989342",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+          "historical_sha256": "90bb2b6c8afbcdb13b98ae2ca671d82493d57972e00c586a1c18595f18fa9ddf",
+          "current_sha256": "90bb2b6c8afbcdb13b98ae2ca671d82493d57972e00c586a1c18595f18fa9ddf",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+          "historical_sha256": "e844765db429ed051140a37757d47bf6d7598ac3ec9d7ea20090ebfc13587d5e",
+          "current_sha256": "e844765db429ed051140a37757d47bf6d7598ac3ec9d7ea20090ebfc13587d5e",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
+          "historical_sha256": "29db6b62b867f6e56c18d0605ef3275ffa0d697612800c305b9dac88c2932625",
+          "current_sha256": "29db6b62b867f6e56c18d0605ef3275ffa0d697612800c305b9dac88c2932625",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+          "historical_sha256": "c416e631314f7d842b85e7d410c49aaa13af9db9d52b058068f0824ebe416a4e",
+          "current_sha256": "c416e631314f7d842b85e7d410c49aaa13af9db9d52b058068f0824ebe416a4e",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "historical_sha256": "988f2b855010735a274ea68f2f4d868a0c766db7f7d4198642955ffd114d1405",
+          "current_sha256": "988f2b855010735a274ea68f2f4d868a0c766db7f7d4198642955ffd114d1405",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerReservation.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerReservation.swift",
+          "historical_sha256": "8d60a3982ca1eaeaa8cbf1334a18270376ec5d80f9f2f427316bfdd403da715b",
+          "current_sha256": "8d60a3982ca1eaeaa8cbf1334a18270376ec5d80f9f2f427316bfdd403da715b",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "historical_sha256": "d2cf75dcdbac872fdafc789fb7f6179a12d5ac08e2b40eaa32311f22cfbfe5d2",
+          "current_sha256": "d2cf75dcdbac872fdafc789fb7f6179a12d5ac08e2b40eaa32311f22cfbfe5d2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+          "historical_sha256": "bcfa5cf727eac39a77d03308f5b08807332936990d357b416e234ae73c1101dd",
+          "current_sha256": "bcfa5cf727eac39a77d03308f5b08807332936990d357b416e234ae73c1101dd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "historical_sha256": "38a9364eb332cada69a97843688f5849f5698ab7fb648d698ffc2c173e5d69dc",
+          "current_sha256": "38a9364eb332cada69a97843688f5849f5698ab7fb648d698ffc2c173e5d69dc",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/PathUtils.swift",
+          "current_path": "runner/Sources/PWRunnerCore/PathUtils.swift",
+          "historical_sha256": "168b30f76ee20c3d6d3bbf8a5e296ebb4dfbde777bbde7016e2cd7241acb12d2",
+          "current_sha256": "168b30f76ee20c3d6d3bbf8a5e296ebb4dfbde777bbde7016e2cd7241acb12d2",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "historical_sha256": "13ee8b4368668325234ca88bd45db39be9a3198af40b2e5be73a5783a83d51cd",
+          "current_sha256": "13ee8b4368668325234ca88bd45db39be9a3198af40b2e5be73a5783a83d51cd",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/SandboxApply.swift",
+          "current_path": "runner/Sources/PWRunnerCore/SandboxApply.swift",
+          "historical_sha256": "6c6dfcd787dba603a66e824b43e935841aae3880b71924b466d02d91db2a92d5",
+          "current_sha256": "6c6dfcd787dba603a66e824b43e935841aae3880b71924b466d02d91db2a92d5",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "current_path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "historical_sha256": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb",
+          "current_sha256": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "historical_sha256": "a652618c46be9be3e223e58ae97689db8ee641429f716f118e5197bdf775e362",
+          "current_sha256": "a652618c46be9be3e223e58ae97689db8ee641429f716f118e5197bdf775e362",
+          "status": "same"
+        },
+        {
+          "historical_path": "runner/Tests/PWRunnerCoreTests/TestKit.swift",
+          "current_path": "runner/Tests/PWRunnerCoreTests/TestKit.swift",
+          "historical_sha256": "9be1c908b36c7ddd67264b9a63ad57ad9f24a3a1f8e8f485a985e365598894fa",
+          "current_sha256": "9be1c908b36c7ddd67264b9a63ad57ad9f24a3a1f8e8f485a985e365598894fa",
+          "status": "same"
+        },
+        {
+          "historical_path": "tests/fixtures/extension_controls/authority_binding.c",
+          "current_path": "tests/fixtures/extension_controls/authority_binding.c",
+          "historical_sha256": "2c81760a75cdc57677b350ba0f9ee3d4b9876371055760a140cda489876372b9",
+          "current_sha256": "2c81760a75cdc57677b350ba0f9ee3d4b9876371055760a140cda489876372b9",
+          "status": "same"
+        },
+        {
+          "historical_path": "tests/lib/build_receipt.py",
+          "current_path": "tests/lib/build_receipt.py",
+          "historical_sha256": "ce0bcab14d642768030874c1c6c5624632910e68bdd027bc8a34c36c42349277",
+          "current_sha256": "ce0bcab14d642768030874c1c6c5624632910e68bdd027bc8a34c36c42349277",
+          "status": "same"
+        },
+        {
+          "historical_path": "tests/suites/runner_unit/actor_handoff_mutations.py",
+          "current_path": "tests/suites/runner_unit/actor_handoff_mutations.py",
+          "historical_sha256": "51821d569eea837e5b111ad900a7934e2f8b4a1c27ea69102bb45560cfe35cee",
+          "current_sha256": "51821d569eea837e5b111ad900a7934e2f8b4a1c27ea69102bb45560cfe35cee",
+          "status": "same"
+        },
+        {
+          "historical_path": "tests/suites/runner_unit/actor_handoff_mutations.sh",
+          "current_path": "tests/suites/runner_unit/actor_handoff_mutations.sh",
+          "historical_sha256": "18d93366a3379442a0b8feb41834d9f6f0b573046e09589f047f601309250786",
+          "current_sha256": "18d93366a3379442a0b8feb41834d9f6f0b573046e09589f047f601309250786",
+          "status": "same"
+        }
+      ]
+    }
+  ]
+}
