@@ -27,8 +27,8 @@ this policy.
 This plan is ready to begin design work. Broad implementation follows the
 contract review at the end of Stage 2. The authority configuration below is a
 recommendation to make concrete and review, not an already accepted wire shape.
-Plan preparation inspected source and existing test descriptions at
-`a70a040d45a214d7b9c265b83c84da3fcbe91489`; it establishes no new native behavior.
+Plan preparation inspected source and test assertions at
+`0e3f5e6b20d950691991640376ee575b89590986`; it establishes no new native behavior.
 At execution, refresh that baseline rather than assuming the tree is unchanged.
 
 The plan lives in `runner/` because the host orchestration, request/reply types
@@ -130,6 +130,19 @@ their own merits. Any retained feature needs an explicit actor operation or
 evidence rule with a bounded implementation; it must not reintroduce a hidden
 declaration preparation engine.
 
+### Open design decisions
+
+The following decisions remain open. The simplification and test work below
+does not authorize resolving them implicitly by deleting evidence or copying
+old expectations into actor tests. Include their dispositions in the Stage 2
+review packet before implementing dependent changes.
+
+| Decision | Current concern | Required disposition |
+| --- | --- | --- |
+| Actor authority-setup evidence | The worker's `prepare_authority` records status and stage, without the declaration path's native return, saved errno and separate cleanup-failure account. Some cleanup results are unchecked. | Inventory the old failure assertions and decide which observations the actor contract must retain. Specify any replacement fields and controls; do not count removal of those assertions as evidence of equivalent failure reporting. |
+| Normalized execution instructions | `ActorTranslation` reconstructs references from optional strings, substitutes index zero for missing relationships and uses a default release branch. Equipment selection would add another resolved relationship. | Decide how the admitted plan represents operation operands and selected equipment, and how an inconsistent internal plan fails. No new representation or fallback policy is selected by this plan yet. |
+| Lifecycle and ownership | All actors launch and resolve setup before scheduled issuance; parked recipients can accept deliveries before their actions run. Process lifetime, action order, custody, settlement and cleanup have distinct boundaries. | Name the declaration guarantees being retired and the actor guarantees replacing them, including partial setup failure and terminal erasure. Review the depiction of one run in time in [ARCHITECTURE](../docs/ARCHITECTURE.md) and its [generator input](../docs/architecture.json). The exact actor erasure assertions and any additional lifetime behavior remain undecided. |
+
 **Exit:** a proposed authority arrangement grounded in the actual signing and
 launch paths, a disposition for each meaningful declaration-only observation,
 and identified controls capable of distinguishing the proposed arrangements.
@@ -174,15 +187,73 @@ in the current tree:
 | --- | --- | --- |
 | Admission and request preparation | [PWRunnerRequest.swift](Sources/PWRunnerCore/PWRunnerRequest.swift), [ProbeRunner.swift](Sources/PWRunnerCore/ProbeRunner.swift), [CWorkerRequestPlanning.swift](Sources/PWRunnerCore/CWorkerRequestPlanning.swift), [ActorPlan.swift](Sources/PWRunnerCore/ActorPlan.swift), [request_patch.rs](../controller/src/request_patch.rs), [runner_select.rs](../controller/src/runner_select.rs). | Remove declaration admission and add the reviewed actor equipment contract; retain bounded diagnostics and version-first refusal. |
 | Orchestration and native operations | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift), [ExtensionIssuer.swift](Sources/PWRunnerCore/ExtensionIssuer.swift), [ActorOrchestration.swift](Sources/PWRunnerCore/ActorOrchestration.swift), [ActorSession.swift](Sources/PWRunnerCore/ActorSession.swift), [native worker directory](../controller/tools/pw_probe_runner/). | Remove the separate issuer, transient declaration channel and declaration-specific handle/dispatch paths; preserve shared worker behavior and actor custody. |
-| Reply producers and readers | [PWRunnerExtension.swift](Sources/PWRunnerCore/PWRunnerExtension.swift), [PWRunnerActors.swift](Sources/PWRunnerCore/PWRunnerActors.swift), [PWRunnerReply.swift](Sources/PWRunnerCore/PWRunnerReply.swift), [runner_client.rs](../controller/src/runner_client.rs), [dossier.rs](../controller/src/dossier.rs), [consumer.py](../tests/lib/consumer.py), [extension_evidence.py](../tests/lib/extension_evidence.py). | Remove obsolete records and eligibility branches; associate per-actor equipment and evidence consistently in Swift, Rust and independent Python readers. |
+| Reply producers and readers | [PWRunnerExtension.swift](Sources/PWRunnerCore/PWRunnerExtension.swift), [PWRunnerActors.swift](Sources/PWRunnerCore/PWRunnerActors.swift), [PWRunnerReply.swift](Sources/PWRunnerCore/PWRunnerReply.swift), [runner_client.rs](../controller/src/runner_client.rs), [disposition.rs](../controller/src/disposition.rs), [dossier.rs](../controller/src/dossier.rs), [consumer.py](../tests/lib/consumer.py), [extension_evidence.py](../tests/lib/extension_evidence.py). | Remove obsolete records and eligibility branches; associate per-actor equipment and evidence consistently in Swift, Rust and independent Python readers. |
 | Build, signing and installation | [build.sh](../build.sh), [meson.build](../meson.build), [Package.swift](Package.swift), [app_layout.rs](../controller/src/app_layout.rs), [runner_manager.rs](../controller/src/runner_manager.rs), [build-evidence.py](../tests/build-evidence.py). | Replace the issuer inventory with the accepted worker equipment; update signing, validation, provenance, source lists and artifact controls together. |
 | Limits and contracts | [contract.json](../docs/contract.json), [limits.json](../docs/limits.json), [ABI golden](../tests/fixtures/contract/abi_layout.txt), [worker identity generator](../docs/generate_worker_identity.py). | Delete obsolete bounds, ground new ones independently, review reply/transport sizing, and regenerate owning outputs. |
 | Tests and fixtures | [test catalog](../tests/catalog.json), [runner tests](Tests/PWRunnerCoreTests/), [controller integration](../controller/integration/), [fixture catalog](../tests/fixtures/README.md), [change-verification guide](../tests/CHANGE-VERIFICATION.md). | Update active specimens and shape fixtures to the frontier, preserve useful assertions, and remove old semantic success expectations. |
 | Documentation and generated accounts | [EXTENSIONS](../docs/EXTENSIONS.md), [user guide](../docs/PolicyWitness.md), [request grammar](../docs/REQUEST-GRAMMAR.md), [architecture input](../docs/architecture.json), [build input](../docs/build.json), [documentation guidance](../docs/AGENTS.md). | Present one extension model; update process/resource inventories, signing, limits, examples and shared guide regions. |
 
+### Required simplification and protected shared coverage
+
+Make these entries concrete in the ledger. Retire obsolete mechanisms rather
+than preserving their abstractions behind actor-shaped inputs. Keep entries
+dependent on an open design decision unresolved until that decision is made.
+
+| Disposition | Code or test work |
+| --- | --- |
+| Remove the declaration execution path | Delete declaration preparation and `ExtensionSession`, `extensionRequested`/`extensionFD`, the old delivery publications and channel layout, the singleton native handle and its consume/release decision state, and the separate native consume/release implementation. Each extension operation has one dispatch path afterward. Retain the ordinary single-worker scheduling behavior. |
+| Collapse declaration admission and interpretation | Remove `extensionMeaningFailure`, declaration-only capacities and the declaration branches in Swift reply validation, Rust disposition interpretation and Python extension validation. Review surviving event fields for required actor ownership. Keep operation-specific optional evidence and genuinely shared limits. |
+| Narrow surviving interfaces | Review default Swift `internal` visibility and make implementation helpers private where their callers permit it; `ActorTranslation.extensionSlot` is an initial candidate. Remove unused parameters and duplicate form-specific wrappers. Keep the normalized-instruction design decision separate from this visibility cleanup. |
+| Retire obsolete controls | Remove helper-specific reap-before-delivery controls, the old channel ABI tests and declaration-only preparation/status/cardinality expectations. Give each surviving publication, native interruption, reference or cleanup assertion an actor owner. General child cleanup and resource recovery remain covered. |
+| Consolidate current workloads | Combine useful `extensions_byoxpc` and `actors_byoxpc` workloads under one owned installation/session, retaining independent signing, live authority, provenance and restoration assertions. Remove the missing-issuer contrast and add missing-selected-equipment coverage. |
+| Extract shared test support and assertions | Move generic CLI capture support out of [check_extensions.py](../tests/suites/witness_contract/check_extensions.py). Give ordinary fresh-read/write and validator-ownership checks small non-declaration fixtures; they currently occur in [FreshWriteEvidenceTests](Tests/PWRunnerCoreTests/FreshWriteEvidenceTests.swift) and [blackbox extension controls](../tests/suites/blackbox_e2e/extension_controls.py). Retain live extension-dependent access checks separately. |
+| Preserve size accounting and native primitives | [ReplyMaximumTests](Tests/PWRunnerCoreTests/ReplyMaximumTests.swift)'s `extensionReplyAllowance` also counts every ordinary fresh-read payload: extract that allowance before deleting declaration accounting. Trace shared token bounds, erasure primitives, fresh-file observations and actor layout dependencies before removing declaration-named files. |
+
+### Initial test watchlist
+
+These are source-based hypotheses for repair and coverage selection, not
+candidate execution results. Inspect the named assertions before treating a
+passing case as evidence of the consolidation's intended behavior.
+
+| Attention | Existing control | Hypothesis and required treatment |
+| --- | --- | --- |
+| Passing with incomplete native coverage | `witness_contract/extension_redelegation` and its BYOXPC reuse | The principal chain may fail while the case passes its apparatus assertions and successful simpler calibration. Preserve that observation coverage, report whether re-delegation was actually credited, and do not count its pass as proof of a successful full chain. |
+| Passing despite failed calibration consumption | [ActorAuthorityTests](Tests/PWRunnerCoreTests/ActorAuthorityTests.swift)'s positive-calibration group | It accepts a published consume failure. Distinguish this assertion set from a required successful basic lifecycle calibration; rename or revise its coverage account accordingly. |
+| Passing despite broken dispatch | `runner_c_worker_harness/actor_operations` | [operation_control.c](../tests/fixtures/extension_controls/operation_control.c) calls operation bodies directly. Add dispatch coverage below; its current pass alone cannot establish that production routes a slot to the right body. |
+| Definite fixture redesign | `runner_c_worker_harness/terminal_erasure` | [terminal_control.c](../tests/fixtures/extension_controls/terminal_control.c) and [its mutations](../tests/suites/runner_c_worker_harness/check_terminal_erasure.py) inspect the declaration channel. Preserve the independent full-capacity and publication-boundary coverage obligation with an actor replacement; settle the exact ownership assertions under the lifecycle decision. |
+| Definite removal or adaptation | `ExtensionEvidenceTests`, the request corpus, extension boundaries/combinations, ABI controls, BYOXPC provenance and reply-size tests | These construct removed requests, records or transport mechanisms. Preserve shared assertions identified above, retire obsolete expectations and update active fixtures to the frontier. |
+| Changed semantic expectations | `witness_contract/extensions` symlink, missing-target and replacement cases; `extension_directory` authority/default cases | Host target resolution and pre-worker issuance are proposed for removal; actor issuance currently requires explicit authority. Review each expectation against the accepted contract instead of restoring hidden preparation or old defaults to obtain a pass. |
+| Possible timing sensitivity | `witness_contract/actor_timing_qualification` and converted CLI extension workloads | Actor setup and equipment validation can affect margins. Shared CLI capture currently imposes a 40-second timeout, separate from actor allowances. Identify the expired boundary and actual work before changing a timeout or margin; do not treat a larger production allowance as proof that the capture can wait that long. |
+| Known independent instability | `runner_unit/host_setup_oracle_sensitivity` | Missing observer receipts have a separately deferred disposition and may recur in the mandatory full-suite selection. Preserve each failure's observations; a passing retry does not close that issue. |
+
+### Additional controls and coverage obligations
+
+Extend existing families where possible; a new public case is needed only when
+its equipment, selection or evidence ownership warrants one. Assign exact case
+ownership and registration in the Stage 2 packet.
+
+| Control | Intended observation and initial owner |
+| --- | --- |
+| Production dispatch and targeted mutations | Extend `runner_c_worker_harness/actor_operations` to submit extension slots through `run_attempt`. Independently counted calls and handle observations must reject omitted or misrouted consume/release dispatch, even when the operation bodies remain correct. Compilation failure is not mutation detection. |
+| Individually unavailable native symbols | Adapt extension boundary controls to remove issue, consume and release symbols individually. Establish the affected operation's unavailable evidence and continued execution of unrelated supported operations. The old consume/release implementation required both symbols together; the actor implementation checks them separately. Keep setup-evidence expectations pending their open decision. |
+| Mixed-equipment permutation and provenance substitution | Extend `actor_compositions` and BYOXPC controls with different equipment choices, reordered actor declarations and consistent renaming. Equipment must stay associated with the intended actor. Add constructed reader controls that substitute another actor's equipment evidence and require rejection, alongside live process and signature observations. |
+| Exact submitted-path forwarding | Under the proposed submitted-path contract, use an instrumented issue callback and a symlink path to check the exact native argument. Pair it with scheduled target creation/replacement and independent file observations. Do not require a particular kernel return to establish absence of hidden host resolution. Finalize expectations with the path/lifecycle disposition. |
+| Actor terminal erasure | Replace the old terminal-erasure fixture with independent observations of full-capacity storage and the terminal publication boundary. Determine settled-inbound and host-owned-storage expectations through the lifecycle decision, retaining mutations that distinguish final cleanup from cleanup at the required boundary. Do not imply native authority from synthetic tokens. |
+
+Require successful basic issuance, transfer, consumption and fresh access on
+the applicable signed equipment, with release and later fresh-access evidence.
+Keep this positive coverage requirement separate from the principal
+re-delegation specimen's observation-only success criterion and from native
+return values alone. Retain its negative controls and report missing positive
+coverage as such.
+
+Removed-field controls must use the current request schema and identify the
+intended refusal before execution. Keep unsupported-version controls separate,
+so version rejection cannot accidentally satisfy a removed-field assertion.
+
 **Review checkpoint:** return with the concrete examples, authority design,
-observation dispositions, version decisions, removal ledger and verification
-selection before broad implementation. The user is reviewing those choices,
+observation dispositions, the three open design decisions, version decisions,
+removal ledger and verification selection before broad implementation. The user is reviewing those choices,
 not being asked to approve an unspecified redesign. Record the decision and
 revise this plan if its scope changes.
 
@@ -200,6 +271,9 @@ native sources, layout members and capacity checks after tracing shared uses.
 If removing a layout field changes geometry, review C/Swift agreement and the
 layout golden; do not update a golden without explaining its semantic delta.
 All packaged worker variants must pass the current host/worker identity check.
+Carry out the ledger's interface cleanup and shared-test extractions as part
+of removal; a smaller wire surface must leave a smaller extension execution
+and interpretation surface as well.
 
 Update the contract manifest and every active fixture through the owning
 generation/update procedures. Remove obsolete historical semantic branches in
@@ -274,7 +348,7 @@ obsolete declaration expectations:
 | --- | --- |
 | Basic lifecycle, placement, omission, fresh access and partial failure evidence | [witness_contract](../tests/suites/witness_contract/README.md), [failure_boundaries](../tests/suites/failure_boundaries/README.md), [blackbox_e2e](../tests/suites/blackbox_e2e/README.md), and applicable [runner_validator_failure](../tests/suites/runner_validator_failure/README.md) assertions. Move declaration-only useful checks to actors; pin refused removed fields and unsupported versions separately. |
 | Multiple actors/resources, sandboxed issuance, re-delegation and finite budget qualification | `witness_contract/actor_compositions`, `witness_contract/extension_redelegation`, `witness_contract/actor_timing_qualification`, and affected extension boundary/directory/combination controls in the owning suite. Keep calibration and negative controls, not just successful native returns. |
-| Authority publication, binding, delivery and native dispatch | `runner_c_worker_harness/authority_binding`, `runner_c_worker_harness/actor_operations`, and `runner_unit/actor_handoff_mutations`; follow their [change triggers](../tests/CHANGE-VERIFICATION.md#actor-authority-ownership-and-operation-controls). |
+| Authority publication, binding, delivery, native dispatch and terminal erasure | `runner_c_worker_harness/authority_binding`, extended `runner_c_worker_harness/actor_operations`, the actor replacement for `runner_c_worker_harness/terminal_erasure`, and `runner_unit/actor_handoff_mutations`; follow their [change triggers](../tests/CHANGE-VERIFICATION.md#actor-authority-ownership-and-operation-controls). |
 | Unentitled issuer with entitled subject, and inherited restrictions on an unapplied entitled actor | Adapt `witness_contract/actors_byoxpc` and useful assertions from `witness_contract/extensions_byoxpc`; extend `runner_byoxpc/entitlement_readback` and applicable dossier/selection controls. Read back actual signatures, bind equipment to actor processes, and observe live operations with independent file evidence. Remove the obsolete missing-issuer contrast; test missing selected equipment instead. |
 | Signed inventory and installation integrity | Applicable [preflight](../tests/suites/preflight/README.md) build/signature controls and [runner_byoxpc](../tests/suites/runner_byoxpc/README.md) installation, verification and recovery controls. Prove the removed helper is absent from the candidate bundle and new equipment is independently validated. |
 | Native authority and issuer-lifetime assumptions | `sandbox_extensions_native/feasibility` and `sandbox_extensions_native/directory`, selected according to the [native-control guidance](../tests/CHANGE-VERIFICATION.md#native-sandbox-extensions) during design and again if their dependencies or assumptions change. These supplement integrated PW observations. |
@@ -286,6 +360,10 @@ result alone cannot establish that distinction. Signature read-back,
 per-process provenance and independent native effects support different claims.
 For removed features, assert refusal before execution rather than accepting
 silently ignored declaration fields.
+Execute the additional controls assigned in Stage 2 and resolve each watchlist
+entry in the verification account. Credit the successful basic calibration
+separately from apparatus-only re-delegation observations and direct-body
+operation checks separately from production dispatch checks.
 
 If worker waits, release publication or query eligibility change, run
 `witness_contract/order_barrier_mutations`. Apply the other change-specific
@@ -332,6 +410,10 @@ The acceptance account must establish:
 - Every meaningful removed test has an explained disposition; every retained
   result has its source/build applicability established. Source inspection,
   mutation controls and live observations receive distinct credit.
+- Shared fresh-file, validator-ownership and reply-size coverage survives
+  declaration removal. The watchlist and additional controls have explicit
+  outcomes, and no open design decision was resolved by silently deleting
+  an assertion or weakening its observation requirements.
 - Necessary evidence will survive ordinary retention, and external-runner or
   child-resource recovery remains owned until settled.
 
