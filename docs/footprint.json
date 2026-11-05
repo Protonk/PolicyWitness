@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "document": "docs/FOOTPRINT.md",
+  "rows": [
+    {
+      "id": "W1",
+      "case": "waiting",
+      "title": "Worker release wait",
+      "subject": {
+        "kind": "activity",
+        "owner": "worker",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": "worker_proceed_wait",
+        "behavior": "Polls the release word continuously, in batches of yield hints, until a release store is accepted, a continuous-clock sample expires or cancellation is observed."
+      },
+      "conditions": "One ordinary worker arrived at a phase boundary with no requested attempt released.",
+      "interval": {
+        "starts": "phase arrival acknowledged by the worker",
+        "ends": "release accepted, expiry sampled or cancellation observed",
+        "ending_event": "release, expiry or cancellation"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "wait_for_proceed"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "cpu_relax"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_c_worker_harness/run.sh",
+          "symbol": "proceed_delayed_observed_quiescence",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Requested effects stay absent across a delayed release and occur after it; the control does not measure CPU."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "R1",
+      "case": "response",
+      "title": "Controller collection of client stdout",
+      "subject": {
+        "kind": "allocation",
+        "owner": "controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": "controller_output",
+        "behavior": "Collects the complete child stdout before applying the retention prefix; the allowance bounds retained bytes, not collection memory. The buffer's disposal boundary relative to parsing and rendering is unestablished."
+      },
+      "conditions": "Any run whose client replies; the large workload's stdout carries the base64 host reply.",
+      "interval": {
+        "starts": "client stdout pipe opened",
+        "ends": null,
+        "ending_event": null
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "controller/src/utils.rs",
+          "symbol": "run_with_stdin"
+        },
+        {
+          "path": "controller/src/utils.rs",
+          "symbol": "capture_json_output"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "valid_oversized_producer_is_receiver_loss_not_malformed_json",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "An over-allowance producer is reported as receiver loss with its full received count, not as malformed JSON."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "A1",
+      "case": "aftermath",
+      "title": "Host retirement after the reply",
+      "subject": {
+        "kind": "process",
+        "owner": "host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": "host_exit_delay",
+        "behavior": "Schedules its own exit a fixed delay after replying; a client timeout after invocation cancels neither the submitted work nor this retirement."
+      },
+      "conditions": "Ordinary completion with a delivered reply.",
+      "interval": {
+        "starts": "reply sent",
+        "ends": "host process exit",
+        "ending_event": "host exit observed independently of the host's own report"
+      },
+      "aftermath": {
+        "at_cli_return": "unknown",
+        "expected_ending": "host process exit after the scheduled delay"
+      },
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "symbol": "replyAndExit"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "symbol": "hostExitDelayMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Single retirement ownership and refusal of a stale timer; the production delay is value-checked, not observed at CLI return."
+        }
+      ],
+      "figure": null
+    }
+  ]
+}

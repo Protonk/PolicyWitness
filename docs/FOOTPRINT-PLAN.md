@@ -21,13 +21,13 @@ in the repository; the source-findings table retains their reconciled summary.
 No native measurements or acceptance results are credited from that preparation.
 Refresh the baseline and continue from reconciliation.
 
-Deliver the document, its generated DOT/SVG figures, registered tests and
-observer/checker controls, current native observations, completed cross-review
-and `records/FOOTPRINT-OUTFLOW.md`. Record reduction candidates for a separate
-effort that will start from LIMITS and FOOTPRINT and try to make PW smaller and
-a quieter neighbor without changing what it claims; do not design or implement
-those optimizations here. FOOTPRINT describes current behavior and carries no
-forward-looking content.
+Deliver the document, its manifest and generator, its generated DOT/SVG figures,
+registered tests and observer/checker controls, current native observations,
+completed cross-review and `records/FOOTPRINT-OUTFLOW.md`. Record reduction
+candidates for a separate effort that will start from LIMITS and FOOTPRINT and
+try to make PW smaller and a quieter neighbor without changing what it claims;
+do not design or implement those optimizations here. FOOTPRINT describes
+current behavior and carries no forward-looking content.
 
 ## Common cases and accounting boundaries
 
@@ -62,7 +62,7 @@ These are starting points for verification, not newly measured consumption.
 | Each worker gets a fixed evidence region, initialized even for a small plan. Host and worker map one backing object. | [`PWShmLayout`](../runner/Sources/PWRunnerCore/CWorker.swift), [`ActorSession`](../runner/Sources/PWRunnerCore/ActorSession.swift), [ABI golden](../tests/fixtures/contract/abi_layout.txt). | Derive logical geometry from current layout evidence. Do not count aliases as separate backing objects or call logical bytes resident memory. Include authority regions only where used. |
 | Collected host values can overlap their source mapping, but sessions tear down before later reply assembly/encoding stages. | [`ActorSession.collectOutput` / `tearDown`](../runner/Sources/PWRunnerCore/ActorSession.swift), [`finish`](../runner/Sources/PWRunnerCore/ActorScheduler.swift), [`CWorkerOrchestrator`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift). | Construct a stage/lifetime account before calculating totals; do not add all representations from the whole run. |
 | The controller collects complete child stdout/stderr before applying retention limits. Parsed capture, base64 text, decoded host bytes and parsed host objects overlap at particular stages. | [`run_with_stdin` / `capture_json_output`](../controller/src/utils.rs), [`parse_runner_client_output`](../controller/src/runner_client.rs), [`render_envelope` / `sort_value`](../controller/src/json_contract.rs). | The cap is a retention bound, not a streaming-memory bound. Final envelope construction and pretty-printing need their own accounting. |
-| The synthesized maximum is a conservative constructed reply, not a reachable workload or a memory peak. Two live-size receipts call client stdout bytes `runner_reply_bytes`. | [`ReplyMaximumTests`](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift), [`ReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift), [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py), [check_max_exec_steps.py](../tests/suites/witness_contract/check_max_exec_steps.py). | Correct the names and comparisons as a prerequisite. Raw host bytes come from `runner_client.transport.runner_reply.bytes_received`; client stdout includes the versioned capture and base64. Keep both. |
+| The synthesized maximum is a conservative constructed reply, not a reachable workload or a memory peak. The live-size receipts record host reply bytes and client stdout bytes separately. | [`ReplyMaximumTests`](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift), [`ReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift), [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py), [check_max_exec_steps.py](../tests/suites/witness_contract/check_max_exec_steps.py). | Compare `host_reply_bytes` (`runner_client.transport.runner_reply.bytes_received`) with the synthesized host bound and `client_stdout_bytes` (`runner_client.stdout_bytes_received`, the versioned capture with its base64 reply) with the controller allowance. Keep both counts in every new receipt. |
 | Client timeout after invocation does not cancel submitted host work. Host retirement is scheduled after the reply. | [`PWRunnerClientSession`](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift), [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [reservation controls](../tests/CHANGE-VERIFICATION.md). | Observe continuing work and retirement separately from CLI return. Do not relabel client timeout as worker cancellation. |
 | Plain-run installation checks cover registry/plist state; lifecycle controls already establish selected survivors before fixture cleanup. | [check_installs_nothing.py](../tests/suites/run_effects/check_installs_nothing.py), [check_closed_streams_leader_exit.py](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py), [lifecycle suite](../tests/suites/runner_exec_lifecycle/README.md). | Reuse these boundaries and independent identities. Do not extend installation invariance into a claim of zero processes, mappings or residue. |
 
@@ -100,8 +100,10 @@ stage 4, the records directory path and its question from stage 2.
 
 The coordinator alone edits shared integration files such as
 `tests/catalog.json` and suite-wide documentation, unless explicitly handed to
-one owner. Assign diagram-manifest edits to one owner; this plan does not require
-generator changes. Agree the common measurement/identity interface and assign
+one owner. Assign diagram-manifest edits and the footprint generator to one
+owner. This plan adds one generator, `footprint`, modeled on `limits`, and
+changes no existing generator; bringing the manifests under one roof is a later
+question. Agree the common measurement/identity interface and assign
 one author before case owners use it. Source edits may proceed in parallel in
 disjoint files; builds and test runs in one checkout remain serialized under
 the checkout lock. Separate worktrees are required for concurrent builds/tests.
@@ -110,9 +112,9 @@ the checkout lock. Separate worktrees are required for concurrent builds/tests.
 
 | Stage | Output | Gate to the next stage |
 | --- | --- | --- |
-| 0. Baseline | Records baseline; corrected size receipts; chosen workloads | Documentation checks and both receipt cases pass on a current signed app |
+| 0. Baseline | Records baseline; verified size receipts; chosen workloads | Documentation checks and both receipt cases pass on a current signed app |
 | 1. Reconcile | Working ledger with per-case claims; response representation ledger | Every source finding is confirmed, narrowed or turned into a question |
-| 2. Draft | Provisional FOOTPRINT with row IDs; one question per case; candidates ledger begun | `source_drift/generator_contract` passes on the provisional file |
+| 2. Draft | Footprint manifest and generator; rendered provisional FOOTPRINT with row IDs; one question per case; candidates ledger begun | Generator contract, the footprint drift case and the build's generator check pass on the rendered file |
 | 3. Diagrams | Manifest graphs citing existing assertions; rendered figures inspected | Generator check passes and row/element correspondence is inspected |
 | 4. Cycles | Three registered cases with receipts and controls; updated rows and figures | Each case passes its assertions and controls in fresh output |
 | 5. Integrate | Consolidated FOOTPRINT; reviewer dispositions; editorial pass | Each reviewer reconstructed one claim and disagreements are resolved |
@@ -152,18 +154,18 @@ execution; a suite selector includes its opt-in members. Do not create output
 or redirect transcripts into the chosen directory before dispatcher startup.
 Keep raw evidence and unresolved cleanup ownership out of disposable scratch.
 
-Before collecting footprint receipts, fix the misleading size labels in both
+The size receipts written by
 [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py)
-and [check_max_exec_steps.py](../tests/suites/witness_contract/check_max_exec_steps.py).
-Record `host_reply_bytes` from
+and [check_max_exec_steps.py](../tests/suites/witness_contract/check_max_exec_steps.py)
+record `host_reply_bytes` from
 `runner_client.transport.runner_reply.bytes_received` and
-`client_stdout_bytes` from `runner_client.stdout_bytes_received`. Compare the
-former with the synthesized host-reply bound and the latter with the controller
-allowance. Correct dependent ratios, receipt-allowance arithmetic, printed
-labels and receipt consumers/documentation; retain each original boundary's
-count. Verify the correction through `tests/run.sh` with
+`client_stdout_bytes` from `runner_client.stdout_bytes_received`, and compare
+the former with the synthesized host-reply bound and the latter with the
+controller allowance. Before collecting footprint receipts, confirm both cases
+pass through `tests/run.sh` with
 `--case witness_contract/max_targets_reply_survives` and
-`--case witness_contract/max_exec_steps_spawn` in a fresh output directory.
+`--case witness_contract/max_exec_steps_spawn` in a fresh output directory, and
+keep both counts in every new receipt.
 
 Choose these concrete workloads before measurement:
 
@@ -232,36 +234,60 @@ disagreements about different intervals, units, owners or resources by keeping
 both useful distinctions. For incompatible claims about the same quantity
 under the same conditions, name an observation that could select between them.
 
-Create `docs/FOOTPRINT.md` with a short reading guide and three provisional
-tables, assigning stable row IDs:
+Create `docs/generate_footprint.py`, modeled on
+[generate_limits.py](generate_limits.py), and render `docs/FOOTPRINT.md` from
+[footprint.json](footprint.json): an authored reading guide outside the
+generated regions, and generated regions for the tables. The skeleton manifest
+already in the tree holds one source-supported row per case with real
+citations; keep its field set, replace its rows as evidence arrives, and add
+rows with stable IDs. Each row carries:
 
-> Situation · resource demand or remaining state · quantity or behavior ·
-> interval and ending condition · supporting test
+- `id`, `case` and `title`; `subject` with `kind` (mapping, allocation,
+  descriptor, process, registry, file or activity), `owner` and a `backing`
+  identity shared by every row that views one object.
+- `quantity` with `evidence` (measured, logical, constructed or source) and
+  either a `value` and `unit`, a `limit` naming a LIMITS row, or a `behavior`
+  sentence; `conditions`.
+- `interval` with `starts`, `ends` and `ending_event`, null where
+  unestablished; `aftermath` with `at_cli_return` and `expected_ending` for
+  rows the aftermath table reports.
+- `sources` and `checks` as in the limits manifest, with each check's `kind`
+  (`assertion` for a relation, identity or count the test asserts, `receipt`
+  for a measured value whose receipt the test validates without a threshold,
+  `value` for a compiled constant) and a short `pins` phrase; `figure` naming
+  the architecture graph and node, or null.
 
-The tables are **Waiting and retained resources**, **Response storage and
-transport**, and **State remaining after a run**. Add the process, representation
-or backing object directly to each row. Keep conditions alongside quantities,
-and mark each quantity's evidence class: measured, logical capacity,
-constructed bound or source-supported.
+The generator renders the three principal tables **Waiting and retained
+resources**, **Response storage and transport** and **State remaining after a
+run** from the rows by case, a shared-backing view grouped by `backing`, an
+endings view grouped by `ending_event`, and a coverage table like LIMITS's, and
+owns `footprint.<row>.<field>` spans so prose can quote a quantity. Register it
+as the sixth entry of the generator tuple in
+[fixture_inputs.py](../tests/lib/fixture_inputs.py). Give it `input_paths`,
+`SPAN_DOCUMENTS` and `--check`. Add its drift module
+`tests/suites/source_drift/footprint.py`, modeled on the limits module, with a
+catalog case. Run its check in `build.sh` beside the others and account for it
+in `docs/build.json`. Add its entry to the
+[generator contracts](../tests/suites/source_drift/README.md#generator-contracts).
+The invariants there govern it; the generator contract case refuses what they
+forbid. Do not touch the existing generators.
 
-Quantities in FOOTPRINT must pass the documentation drift checks, which read
-table cells and inline code as prose and flag any number followed by a byte or
-time unit unless a limit span owns it. Put units in column headers and bare
-integers in cells. In prose, quote durations and sizes through existing limit
-spans, or name them as `*_ns` and `*_bytes` identifiers whose values live in
-the cited receipt. Do not add FOOTPRINT lines to the prose baseline: its entries
-pin exact text and the release preflight refuses growth. Run
-`source_drift/generator_contract` as soon as the provisional file exists. Leave
-the README index and the architecture document graph untouched until
-integration; no drift check requires a new document to be indexed on creation.
-Record the check's assumption that every number in `docs/` is a limit as the
-first entry in the encoded-structure findings.
+Quantities reach FOOTPRINT only through generated regions and `footprint.`
+spans; the documentation drift checks read table cells and inline code as prose
+and flag any other number followed by a byte or time unit. Do not add FOOTPRINT
+lines to the prose baseline: its entries pin exact text and the release
+preflight refuses growth. Run `source_drift/generator_contract` and the
+footprint case as soon as the rendered file exists. Leave the README index and
+the architecture document graph untouched until integration; no drift check
+requires a new document to be indexed on creation. Record as the first
+encoded-structure finding that, before this generator, the drift checks assumed
+every number in `docs/` was a limit.
 
-For each test citation, identify the assertion supporting that row. Distinguish
-an asserted value or relation from a measured value whose receipt is checked
-for validity. A mechanism change need not fail a test if the asserted property
-still holds. Put this distinction in the reading guide so the citation column
-identifies which assertions to inspect after a change.
+For each test citation, the `pins` phrase names the assertion supporting that
+row. Distinguish an asserted value or relation from a measured value whose
+receipt is checked for validity. A mechanism change need not fail a test if the
+asserted property still holds. The reading guide states this distinction so the
+citation column identifies which assertions to inspect after a change.
 
 For aftermath, use explicit `present`, `absence confirmed` and `unknown` states
 with observation boundaries; zero is valid only for the inventoried category
@@ -299,10 +325,12 @@ render with Graphviz `dot -Tsvg`, stamp SVGs with DOT hashes, and maintain
 document regions. Do not hand-edit generated DOT/SVG or introduce Mermaid,
 ImageGen or a separate drawing pipeline.
 
-Use only the generator's current schema, styles, citation rules and registered
-destinations. Keep new figure/citation regions in the already registered
-`docs/ARCHITECTURE.md`, embed their SVGs in FOOTPRINT, and link their generated
-ID tables. Place new regions before ARCHITECTURE's final known-gap index.
+Use only the architecture generator's current schema, styles, citation rules
+and registered destinations. Keep new figure/citation regions in the already
+registered `docs/ARCHITECTURE.md`, embed their SVGs in FOOTPRINT, and link their
+generated ID tables. Place new regions before ARCHITECTURE's final known-gap
+index. Footprint graph node IDs equal footprint row IDs; the footprint drift
+case checks that correspondence in both directions.
 Add only the small graphs the principal tables need, using underscore-separated
 graph IDs and hyphenated file stems, initially:
 
@@ -331,8 +359,9 @@ unique system memory.
 Use globally unique diagram IDs and put corresponding IDs in principal rows
 and graph facts so a reviewer can trace both directions. Keep generated
 supporting tables small and avoid duplicating the principal claim prose. Use
-existing graph validation and drift checks. Do not extend the generator or cite
-an unrelated passing test to make an unsupported relationship renderable.
+existing graph validation and drift checks. Do not extend the architecture
+generator or cite an unrelated passing test to make an unsupported relationship
+renderable.
 At this stage, cite only existing assertions. Keep relationships awaiting new
 tests in the working ledger and unresolved prose outside generated regions;
 add them to the manifest when their supporting assertions exist.
@@ -386,9 +415,10 @@ measurements may be opt-in because of their cost, but all three cases are
 mandatory for this plan's acceptance. Missing equipment is not a supported skip.
 For each case, implement its controls, then run the case and controls through
 `tests/run.sh` in fresh output: the coordinator runs them in this checkout, or
-the case owner runs them in its own worktree. Update the rows, diagram and
-citations from the retained results. Add newly supported relationships to the
-manifest and regenerate the figures as part of that update.
+the case owner runs them in its own worktree. Update the manifest rows,
+regenerate FOOTPRINT, and update the diagram and citations from the retained
+results. Add newly supported relationships to the architecture manifest and
+regenerate the figures as part of that update.
 
 ### Waiting: measured demand during an independently held phase
 
@@ -641,9 +671,10 @@ observation and separately recorded intervention outcome.
 
 After the three cycles, consolidate supported claims into FOOTPRINT. Its reading
 guide defines units, shared backing versus views, conditional quantities and
-presence/absence/unknown. Check that each row identifies what its cited assertion
-pins, including the distinction between a measured value and a test of its
-receipt's validity. Keep the three principal tables and small diagrams central.
+presence/absence/unknown. Check that each row's `pins` phrases identify what its
+cited assertions pin, including the distinction between a measured value and a
+test of its receipt's validity. Keep the three principal tables and small
+diagrams central.
 Add only interactions that change interpretation, such as:
 
 - Equal wait durations can have different worker/actor CPU demands.
@@ -703,6 +734,7 @@ Check generated documents with:
 ```sh
 tests/lib/python.sh docs/generate_architecture.py --check
 tests/lib/python.sh docs/generate_limits.py --check
+tests/lib/python.sh docs/generate_footprint.py --check
 ```
 
 Run the current default battery in a separate fresh managed directory for final
@@ -754,6 +786,9 @@ its agents receive the note. Keep all forward-looking content in these records.
   sensitivity-controlled test, native execution and coupled table/diagram update.
 - Each new case satisfies its deterministic assertions, complete receipt schema
   and positive/rejected controls; no recorder-only case receives passing credit.
+- The footprint manifest owns every quantity FOOTPRINT states; its generator,
+  drift case and build check pass, and footprint row IDs correspond to figure
+  node IDs in both directions.
 - Response accounting separates capacity, synthesized bounds, actual encoded
   bytes, retained bytes and live-memory observations; coexistence and shared
   backing support any combined quantity.
@@ -769,8 +804,9 @@ its agents receive the note. Keep all forward-looking content in these records.
   documentation checks pass against the credited state. Records identify any
   remaining limited claims without disguising missing required execution.
 
-The final delivery names FOOTPRINT and its figures, states the three material
-findings at their measured scope, links the supporting test owners, names the
-outflow note, and reports verification and unresolved limitations. It does not
+The final delivery names FOOTPRINT, its manifest and its figures, states the
+three material findings at their measured scope, links the supporting test
+owners, names the outflow note, and reports verification and unresolved
+limitations. It does not
 claim a universal memory ceiling, idle waiting, or complete teardown where the
 evidence establishes less.
