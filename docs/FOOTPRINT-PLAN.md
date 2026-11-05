@@ -19,8 +19,11 @@ This is an execution plan, not a completed footprint investigation. Preparation
 used three independent, read-only accounting scouts against clean commit
 `2022f3261e7a2c9e59db35d245525443ddd444ad`. Their source and assertion inspection
 informs the choices below; no native measurements, new behavioral tests or
-version-zero acceptance results are claimed. On execution, refresh the source
-baseline and preserve the independent accounts as described below.
+version-zero acceptance results are claimed. The full scout accounts were
+delivered in conversation but were not preserved as frozen repository records.
+The source-findings table is their reconciled summary, not three independently
+reviewable accounts. Execution refreshes the baseline and starts at
+reconciliation; it does not repeat or claim a new independent-account gate.
 
 Deliver the document, its generated DOT/SVG figures, registered tests and
 observer/checker controls, current native observations, and completed cross-review.
@@ -31,7 +34,7 @@ audit or an unrequested runtime redesign.
 
 ## Common cases and accounting boundaries
 
-Every initial account and every review addresses this same trio. A section
+Every investigation and every review addresses this same trio. A section
 assignment determines depth, not permission to omit the other two cases.
 
 | Case | Required scope | Required distinctions |
@@ -62,7 +65,7 @@ These are starting points for verification, not newly measured consumption.
 | Each worker gets a fixed evidence region, initialized even for a small plan. Host and worker map one backing object. | [`PWShmLayout`](../runner/Sources/PWRunnerCore/CWorker.swift), [`ActorSession`](../runner/Sources/PWRunnerCore/ActorSession.swift), [ABI golden](../tests/fixtures/contract/abi_layout.txt). | Derive logical geometry from current layout evidence. Do not count aliases as separate backing objects or call logical bytes resident memory. Include authority regions only where used. |
 | Collected host values can overlap their source mapping, but sessions tear down before later reply assembly/encoding stages. | [`ActorSession.collectOutput` / `tearDown`](../runner/Sources/PWRunnerCore/ActorSession.swift), [`finish`](../runner/Sources/PWRunnerCore/ActorScheduler.swift), [`CWorkerOrchestrator`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift). | Construct a stage/lifetime account before calculating totals; do not add all representations from the whole run. |
 | The controller collects complete child stdout/stderr before applying retention limits. Parsed capture, base64 text, decoded host bytes and parsed host objects overlap at particular stages. | [`run_with_stdin` / `capture_json_output`](../controller/src/utils.rs), [`parse_runner_client_output`](../controller/src/runner_client.rs), [`render_envelope` / `sort_value`](../controller/src/json_contract.rs). | The cap is a retention bound, not a streaming-memory bound. Final envelope construction and pretty-printing need their own accounting. |
-| The synthesized maximum is a conservative constructed reply, not a reachable workload or a memory peak. The existing live-size receipt calls client stdout bytes `runner_reply_bytes`. | [`ReplyMaximumTests`](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift), [`ReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift), [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py). | Correct the counter's name and comparisons. Raw host bytes come from `runner_client.transport.runner_reply.bytes_received`; client stdout includes the versioned capture and base64. Keep both. |
+| The synthesized maximum is a conservative constructed reply, not a reachable workload or a memory peak. Two live-size receipts call client stdout bytes `runner_reply_bytes`. | [`ReplyMaximumTests`](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift), [`ReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift), [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py), [check_max_exec_steps.py](../tests/suites/witness_contract/check_max_exec_steps.py). | Correct the names and comparisons as a prerequisite. Raw host bytes come from `runner_client.transport.runner_reply.bytes_received`; client stdout includes the versioned capture and base64. Keep both. |
 | Client timeout after invocation does not cancel submitted host work. Host retirement is scheduled after the reply. | [`PWRunnerClientSession`](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift), [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift), [reservation controls](../tests/CHANGE-VERIFICATION.md). | Observe continuing work and retirement separately from CLI return. Do not relabel client timeout as worker cancellation. |
 | Plain-run installation checks cover registry/plist state; lifecycle controls already establish selected survivors before fixture cleanup. | [check_installs_nothing.py](../tests/suites/run_effects/check_installs_nothing.py), [check_closed_streams_leader_exit.py](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py), [lifecycle suite](../tests/suites/runner_exec_lifecycle/README.md). | Reuse these boundaries and independent identities. Do not extend installation invariance into a claim of zero processes, mappings or residue. |
 
@@ -77,27 +80,30 @@ footprint claim.
 
 ## Subagent assignments and coordination
 
-Up to 32 subagents are authorized. Plan for eleven substantive assignments,
-with additional agents reserved for a concrete unresolved disagreement. The
-current runtime allows four active agents including the coordinator, so run
-at most three delegated tasks concurrently. Do not assume 32 simultaneous
-workers. Use fresh contexts (`fork_turns="none"`) for independent accounts and
-fresh review assignments; use the inherited model unless separately instructed.
+Use subagents within the executing harness's concurrency (up to 32 authorized),
+with builds and tests serialized under the checkout lock.
 
-| Wave | Agents and ownership | Handoff gate |
+Assign one investigation owner per case and rotate those owners for review;
+each case receives one reviewer using a different accounting model. Fresh
+agents for another full account reconstruction are unnecessary.
+
+| Case | Investigation model and ownership | Reviewer |
 | --- | --- | --- |
-| 1: independent reconstruction | O: objects and lifetimes; W: work and amplification; M: demand on the surrounding machine. All three cover all cases, read source and assertions, and write separate accounts. | All three accounts complete and frozen before any account, reconciliation or document draft is shared among them. |
-| 2: three investigations | T-Wait applies M's perspective to waiting; T-Response applies W's perspective to response; T-After applies O's perspective to aftermath. Each owns its case-specific test/fixture files and reports a proposed row/diagram update. | Coordinator accepts questions, distinguishes observers from production, assigns shared-file ownership and reviews sensitivity controls before native execution. |
-| 3: diagram and document integration | D owns footprint graph entries, generator integration and rendered inspection. Coordinator owns principal tables and prose, incorporating the three test authors' results. | Relationships are drawn and checked before prose is compressed. No final claim outruns its evidence. |
-| 4: rotated review | R-O reviews waiting primarily as objects/lifetimes; R-M reviews response primarily as machine demand; R-W reviews aftermath primarily as work/amplification. Each also checks the entire trio for missing interactions. | Each independently reconstructs at least one consequential claim and returns an evidence-based disposition. |
-| 5: acceptance | A checks evidence applicability, all three cycles, render/table correspondence, test results and the compact editorial form. Coordinator resolves findings and owns final acceptance. | All version-zero conditions below are met. |
+| Waiting | Machine demand; owns held-phase observer, case assertions and row/diagram proposal. | Aftermath owner, using objects and lifetimes. |
+| Response | Work and amplification; owns representation ledger, controller measurement and internal assertions. | Waiting owner, using machine demand. |
+| Aftermath | Objects and lifetimes; owns resource inventory, boundary observations and intervention ledger. | Response owner, using work and amplification. |
+
+The coordinator reconciles findings, integrates tables and diagrams, and checks
+acceptance. Review starts after the case's observations and draft are available;
+each reviewer reconstructs one consequential claim and checks interactions with
+the other two cases. There are no separate diagram or acceptance-agent waves.
 
 The coordinator alone edits shared integration files such as
 `tests/catalog.json` and suite-wide documentation, unless explicitly handed to
-one owner. D alone edits `docs/architecture.json` and its generator during its
-wave. Avoid simultaneous changes to shared observers: agree the small common
-measurement/identity interface first, assign one author, then let case authors
-use it. Source edits may proceed in parallel in disjoint files; builds and test
+one owner. Assign diagram-manifest edits to one owner; this plan does not require
+generator changes. Agree the common measurement/identity interface and assign
+one author before case authors use it. Source edits may proceed in parallel in
+disjoint files; builds and test
 runs in one checkout remain serialized under the checkout lock. Separate
 worktrees are required for genuinely concurrent builds/tests.
 
@@ -113,12 +119,23 @@ actual inspected binaries and measurement conditions, not merely the source
 checkout's revision.
 
 Keep planning/review materials in a task-owned
-`records/footprint-<date>/` directory: baseline, three independent accounts,
-reconciliation/questions, review dispositions and acceptance. This plan is the
-only inbound documentation link owner for those records. Permanent FOOTPRINT
+`records/footprint-<date>/` directory: baseline, reconciliation/questions,
+review dispositions and acceptance. This plan is the only inbound documentation
+link owner for those records. Permanent FOOTPRINT
 content links to source and tests, not to planning records. Keep raw execution
 evidence in fresh managed `tests/out/runs/` directories; identify locally
 available, gitignored evidence honestly. Do not use scratch as its sole store.
+
+Before collecting footprint receipts, fix the misleading size labels in both
+[check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py)
+and [check_max_exec_steps.py](../tests/suites/witness_contract/check_max_exec_steps.py).
+Record `host_reply_bytes` from
+`runner_client.transport.runner_reply.bytes_received` and
+`client_stdout_bytes` from `runner_client.stdout_bytes_received`. Compare the
+former with the synthesized host-reply bound and the latter with the controller
+allowance. Correct dependent ratios, receipt-allowance arithmetic, printed
+labels and receipt consumers/documentation; retain each original boundary's
+count. This is a prerequisite correction, not the response measurement cycle.
 
 Choose these concrete workloads before measurement:
 
@@ -130,8 +147,8 @@ Choose these concrete workloads before measurement:
   checks and actual available profile receipt. Separately pair its
   `independent_query` and `eight_phase_maximum` workloads to isolate repeated
   collection with fixed actions, targets and queries; the latter is not a phased
-  version of the escaped exec workload. The
-  ordinary/declaration phase cap is eight; sixteen phases requires actor form.
+  version of the escaped exec workload. The ordinary/declaration phase cap is
+  eight; sixteen phases requires actor form.
   The synthesized maximal reply remains a separate constructed control.
 - **Waiting variation:** one worker, followed by a legal multi-actor specimen
   with constant aggregate requested actions and additional parked workers.
@@ -145,13 +162,11 @@ If a fixture needs an installation, inventory it before the specimen and keep
 fixture installation/removal outside PW-run accounting. Follow existing
 session ownership and recovery helpers, including retaining unresolved cleanup.
 
-## 1. Obtain three independent accounts
+## 1. Reconcile the existing findings
 
-Give O, W and M separate initial packets containing only the task scope,
-common-case table, baseline/repository access, applicable working rules and
-their accounting obligations. Do not include another account, a footprint
-draft, preferred conclusions or coordinator-selected answers. Each reads the
-relevant documentation, implementation and actual test assertions.
+Start with the source-findings table, checking its claims against the refreshed
+baseline and current assertions. Preserve these accounting distinctions without
+recommissioning three initial accounts:
 
 | Account | Reconstruction obligation |
 | --- | --- |
@@ -159,7 +174,7 @@ relevant documentation, implementation and actual test assertions.
 | W: work and amplification | Follow polling, process checks, repeated collection, encoding, transport, decoding and cleanup. Explain scaling with elapsed time, phases, actions, payload bytes and repeated runs. |
 | M: surrounding machine | Identify observable CPU activity, memory occupancy, capacity held and post-run state. Separate PW from observer/test demand and record what inspection can actually establish. |
 
-For **each** of the three cases, require:
+For each case, retain in the working ledger:
 
 1. A scoped claim naming quantity/unit, interval, owner and process/resource
    boundary, with source and assertion references and their limits.
@@ -172,8 +187,8 @@ Useful counterexamples to verify, rather than slogans to repeat, include equal
 held object sets over different wait durations; equal retained prefixes after
 different full-stream collections; and equal output artifacts with different
 surviving process trees. Record assumptions about shared backing and absence
-as questions until supported. The coordinator may clarify a packet without
-exposing another account. Freeze all three reports before reconciliation.
+as questions until supported. New investigation is directed at a missing
+quantity or consequential disagreement, not at reproducing the preparation.
 
 ## 2. Reconcile into questions, rows and relationships
 
@@ -198,7 +213,8 @@ and observed interval. Retain the expected ending condition even when the
 observation does not establish that it occurred.
 
 The initial table is a question map, not publication-ready evidence. Draw its
-relationships next, including unresolved edges, before compressing the prose.
+supported relationships next, with unresolved relationships named in adjacent
+prose, before compressing the prose.
 Select one material unanswered question per case for the cycles below; refine
 the proposed question if account reconciliation identifies a more consequential
 uncertainty. Do not spend a cycle rediscovering what source already settles,
@@ -212,9 +228,12 @@ render with Graphviz `dot -Tsvg`, stamp SVGs with DOT hashes, and maintain
 document regions. Do not hand-edit generated DOT/SVG or introduce Mermaid,
 ImageGen or a separate drawing pipeline.
 
-Register `docs/FOOTPRINT.md` in the generator's document destinations. Add small
-graphs with `document: "docs/FOOTPRINT.md"`, using underscore-separated graph
-IDs and hyphenated file stems, initially:
+Use only the generator's current schema, styles, citation rules and registered
+destinations. Keep new figure/citation regions in the already registered
+`docs/ARCHITECTURE.md`, embed their SVGs in FOOTPRINT, and link their generated
+ID tables. This avoids a new destination or source-only citation mechanism.
+Add only the small graphs the principal tables need, using underscore-separated
+graph IDs and hyphenated file stems, initially:
 
 - `footprint_waiting` / `footprint-waiting`: worker polling, host/validator work,
   shared backing and views, protocol descriptors, parked actors where applicable,
@@ -232,26 +251,21 @@ IDs and hyphenated file stems, initially:
 Preserve existing Helvetica typography, light process/storage colors, named
 clusters, short edge labels, stable IDs and linked citation tables. Identify
 shared views, established copies, ownership transfer and lifetime overlap by
-explicit labels; a generic arrow must not silently assert a copy. Mark
-unestablished XPC/Foundation backing relationships as unresolved. Do not infer
+explicit labels; a generic arrow must not silently assert a copy. State
+unestablished XPC/Foundation backing relationships as unresolved in prose beside
+the figure; omit unsupported copy/backing edges. Do not infer
 physical allocation from two language-level values or sum per-process RSS as
 unique system memory.
 
 Use globally unique diagram IDs and put corresponding IDs in principal rows
 and graph facts so a reviewer can trace both directions. Keep generated
-supporting tables small and avoid duplicating the principal claim prose.
-If an unmeasured relationship needs source-only support, extend the existing
-worker-graph scoped-citation/source-only handling narrowly to footprint graphs;
-retain explicit unsupported-fact labeling and the existing check requirements
-for other graphs. Do not cite an unrelated passing test to satisfy validation.
-Extend [architecture generator controls](../tests/suites/source_drift/architecture.py)
-for the new destination, scoped support, stale output and input discovery.
-Update its owning contract description if that behavior changes.
+supporting tables small and avoid duplicating the principal claim prose. Use
+existing graph validation and drift checks. Do not extend the generator or cite
+an unrelated passing test to make an unsupported relationship renderable.
 
-Reuse limits placeholders/spans for limits quoted in figures/prose; register
-FOOTPRINT with the limits span generator if needed. Do not copy numeric limits
-into an independently maintained table. Keep measured observations distinct
-from manifest constants. Add the document to the README documentation index and
+Reuse existing limit placeholders in graph facts and link FOOTPRINT prose to
+the relevant LIMITS rows; no new span destination is needed. Keep measured
+observations distinct from manifest constants. Add the document to the README documentation index and
 the architecture document graph with an accurate reader purpose; avoid broad
 rewrites of LIMITS, WORKER or ARCHITECTURE.
 
@@ -269,122 +283,183 @@ interpretation and the coupled table/diagram/citation update. Use existing
 capture, fixture ownership, dispatcher and retention infrastructure. New case
 IDs below are proposed additions, not existing tests.
 
+A case passes only when its deterministic assertions hold, its required receipt
+is complete, valid controls are accepted and every rejected control below is
+rejected for the intended reason. Missing required observations fail the case;
+recording a number is not sufficient. Explicitly allowed `unknown` resource
+states preserve limited inspection and cannot support an absence claim.
+
+All receipts use a versioned JSON object with `schema_version`, `case_id`,
+`run_id`, `workload_id`, exact request/artifact hashes, inspected binary hashes,
+source identity, OS/hardware, observer identity/version, clock and metric units,
+measurement configuration, raw native results/errors and assertion outcomes.
+Counts, capacities, byte quantities and `*_ns` values are nonnegative integers;
+unknown optional quantities are null with a reason, never zero or omitted.
+Required quantities cannot be unknown. Retain raw samples and every repetition.
+The lists below specify each case's
+additional schema and assertion contract; quantities without a universal bound
+remain scoped observations rather than invented machine-independent thresholds.
+
 ### Waiting: measured demand during an independently held phase
 
-**Question.** How much CPU time accumulates in the identified worker during a
-validator-gate-acknowledged hold with no observed requested effect, and how does adding parked
-actors change that demand? The source establishes active polling; it does not
-establish near-zero CPU, one fully occupied core, or the aggregate effect of
-several workers. Distinguish these with per-process CPU deltas over known holds.
+**Question.** How much CPU time accumulates during a validator-gate-acknowledged
+hold, and how does adding parked actors change demand? The source establishes
+active polling, not a utilization percentage. Compare identified workers with
+an independently sleeping control over the same observation window.
 
 Extend the acknowledged gate machinery in
 [check_ordering.py](../tests/suites/witness_contract/check_ordering.py) and the
 existing validator/exec fixtures. Register
-`witness_contract/held_phase_footprint`. Retain the original independent target
-and helper observations before interpreting the envelope. Credit only their
-observed action scope, not absence of all syscalls.
+`witness_contract/held_phase_footprint`. The existing gate directly observes
+validator acknowledgement and target PID; production control flow connects
+collection to worker arrival. Describe that source-qualified connection, not a
+direct external read of `phase.arrived`. Actor comparisons additionally need a
+host/harness snapshot of acquire-loaded setup, activation, arrival and progress
+publications with generation identities; process presence alone is insufficient.
 
-- The existing gate directly observes validator acknowledgement and target PID;
-  the production control flow connects that collection to worker phase arrival.
-  Describe this as a source-qualified collection gate with independent effects
-  and process observations, not a direct external read of `phase.arrived`.
-  For actor-state confirmation, add a narrow host/harness snapshot of
-  acquire-loaded arrival, acknowledgement and activation publications, paired
-  with each process generation. Label its internal observation scope.
-- Take CPU samples after gate acknowledgement and just before release, retaining
-  the qualified arrival evidence above. Retain sample-call brackets, actual interval,
-  user/system CPU counters, process generation, OS/hardware/power conditions,
-  sample cadence, system-sleep observations and observer CPU. Measure host,
-  validator and parked-worker demand separately where identities are available.
-  Use native per-process counters, such as the SDK's `proc_pid_rusage`, rather
-  than a displayed instantaneous CPU percentage.
-- Compare two sufficiently separated held durations with fixed actions/queries,
-  repeat each, and compare one versus several confirmed parked actors. Begin
-  with short holds comfortably inside production allowances; increase duration
-  only if timer resolution or noise prevents distinguishing the accounts.
-  Retain every repetition and the actual distribution, not just the best run.
-- Exercise release, expiry and cancellation endings using the existing proceed
-  and activation controls. A shortened injected allowance is evidence about
-  that control, not the production timeout's duration. Do not change the worker
-  wait merely to measure it or identify a client timeout as cancellation.
-- Validate the meter with independently active and sleeping children, absent/
-  exited/reused-PID cases and failed inspection. Compare sparse/dense sampling
-  and a minimally observed hold to expose observer effects. Reject missing or
-  too-short intervals and attempts that proceeded early. Keep raw unknowns.
-- Run `witness_contract/order_barrier_mutations` for the changed hold observer,
-  as required by [ordering-control guidance](../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls).
+**Deterministic assertions**
 
-Assert deterministic ordering/identity/count facts exactly. Machine-dependent
-CPU results are scoped measurements with conditions; avoid an arbitrary
-cross-machine utilization threshold. If the meter cannot separate its controls,
-repair it before crediting a result. Update waiting rows and diagram together,
-including whether multiple parked processes explain aggregate demand.
+- Gate acknowledgement precedes the measured hold; repeated independent target
+  reads remain unchanged and the exec rendezvous remains absent until release.
+  The expected effects occur afterward. These assertions concern the selected
+  actions, not absence of all syscalls.
+- Every required start/end CPU sample succeeds and names the same live process
+  generation. Per-process user/system counters are nondecreasing. The worker,
+  busy-control and sleeping-control samples cover a matched held window, with
+  endpoint sampling skew no greater than the declared accounting quantum.
+- Declare `hold_min_ns = max(1_000_000_000, 100 * accounting_quantum_ns)` before
+  execution. The reported running-process quantum is 10 ms; verify and record
+  the meter's resolution rather than treating it as universal. At that quantum
+  the minimum measured hold is one second. Use one- and three-second target
+  holds, increased before execution if resolution requires it, with three
+  repetitions each. Every credited actual interval meets the minimum and has
+  no system sleep; do not round a short interval into compliance.
+- Over each matched interval, total CPU delta for the busy control exceeds the
+  sleeping control's delta. The held production worker's total CPU delta also
+  exceeds the sleeping control's delta. These strict directional assertions
+  supply a falsifiable production claim without prescribing a CPU percentage.
+  Record failures and distinguish invalid measurement from contrary behavior;
+  do not silently weaken the comparison or select only favorable repetitions.
+- Retain the existing release, expiry and cancellation assertions from proceed/
+  activation controls. A shortened expiry control establishes its own allowance,
+  not the production timeout's duration; client timeout is not cancellation.
+
+**Measured receipt schema and conditions**
+
+- `hold`: gate/target identity, acknowledgement, before/after target observations,
+  release/expiry/cancellation event, requested duration, minimum duration,
+  actual continuous-clock interval and per-call sampling brackets, all in ns.
+- `processes[]`: role, PID and generation identity at both endpoints,
+  `user_cpu_ns` and `system_cpu_ns` before/after, derived deltas, sample times
+  and native return/error. Worker and both controls are required; host,
+  validator and parked actors have separate records when measured.
+- `conditions`: accounting quantum and its calibration evidence, power state,
+  system-sleep observation, repetitions, sample cadence and endpoint skew.
+  `observer`: its own CPU delta and cadence. Keep sparse/dense sampling checks
+  separate so observer work is not attributed to PW.
+- `actor_states[]`, when comparing actors: generation, setup/activation/arrival/
+  acknowledgement/progress publications and observation boundary. Record the
+  internal scope; report aggregate CPU only for the identified processes.
+
+**Controls that must fail**
+
+- Missing gate, early effect/release, changed target, absent rendezvous evidence,
+  too-short hold, excessive sample skew or a sleep-overlapped interval.
+- Missing/failed CPU samples, an exited worker, changed generation, decreasing
+  counters, and busy/sleeping or production/sleeping deltas swapped or equal.
+- A receipt presenting process presence as parked-state proof or observer CPU
+  as worker CPU. Valid busy/sleeping and held/released fixtures must pass before
+  these corrupted observations can establish checker sensitivity.
+- The existing premature-effect variants in
+  `witness_contract/order_barrier_mutations`, required for the changed hold
+  observer by [ordering-control guidance](../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls).
+
+Use native per-process counters such as `proc_pid_rusage`. Update the waiting
+rows and diagram with measured CPU at the stated scope and the independent
+resource-ending observations.
 
 ### Response: coexistence and amplification, beyond retention size
 
-**Question.** At which collection/decoding/rendering stages do the substantial
-representations coexist for the small and large admitted workloads, and how
-does that coexistence appear in measured live memory? Competing accounts may
-place the largest demand in host encoding, client base64/capture encoding, or
-controller raw/parsed/final-envelope overlap. Source settles the retention
-cap's meaning but not the dominant measured stage or private framework storage.
+**Question.** What resident and physical-footprint bytes are observed in a fresh
+controller generation handling each small/large admitted response, and which
+internal representations coexist despite the retention cap? Restrict the
+discriminating native observation to the controller. Host/client framework
+allocation, XPC backing and a pipeline-wide peak remain unresolved in version
+zero; do not build instrumented Swift binaries or stage rendezvous to resolve them.
 
-Extend `witness_contract/max_targets_reply_survives` with correctly named size
-receipts, and add `witness_contract/response_footprint` for the paired workloads
-and memory observations. Preserve the existing round-trip and effect checks.
-Correct `runner_reply_bytes` and dependent comparisons in
-`check_max_target_reply.py`: compare raw host bytes to the synthesized host
-bound, client stdout to its own retained allowance, and record final envelope
-bytes separately. Update receipt consumers/docs with the labels.
+The response owner builds the representation/lifetime ledger during account
+work, before measurement. Trace the full path in source, including validator
+raw/decoded records and final envelope rendering, but do not instrument every
+stage. Register `witness_contract/response_footprint` for one external observer
+sampling each fresh shipped controller on the named native metrics
+`ri_resident_size` and `ri_phys_footprint`, recorded separately in bytes. Retain
+the actual interval/cadence and metric accounting limits. Where sampling cannot
+name a decoding boundary, leave stage attribution unknown.
 
-- Record logical evidence/authority-region capacity, actual receipt bytes,
-  encoded host bytes, retained host bytes, base64 characters, encoded client
-  capture stdout/stderr, controller retained counts and final output bytes.
-  Decode retained base64 independently and verify exact length/hash against its
-  counts. Use actual emitted bytes rather than reserialization to claim exact
-  wire size. Keep the synthesized union distinct from reachable native cases.
-- Build a stage ledger through host collection/encoding, client capture,
-  controller full collection, capture parse, typed validation/base64 decode,
-  host parse and final envelope sorting/rendering. Record creation and last-use/
-  disposal boundaries. Include validator raw lines/decoded records where they
-  materially affect the large workload.
-- Establish controller coexistence through a narrow internal test seam around
-  the production receiver/rendering functions under `unit/rust.unit`. Observe
-  real live vectors/strings/values at named boundaries, including lengths and
-  allocation capacities where accessible. A scripted diagram or unrelated
-  mock serializer is not evidence of those lifetimes. No new public wire fields
-  are needed. Instrumented measurements must retain the exact source delta and
-  use the same serialization path. Collect borrowed scalar summaries at existing
-  boundaries: do not clone payloads, retain references beyond normal last use,
-  or accumulate all stages' snapshots in the measured process. The observer
-  must not manufacture the coexistence it reports. Use fresh process generations
-  for machine-memory measurements and separate test-runner allocator history
-  from the production demand; unit assertions establish internal quantities.
-- Use bounded stage rendezvous in disposable native instrumented builds only
-  where external sampling cannot otherwise identify the overlap. Pair their
-  outputs with uninstrumented admitted runs by stable semantics and declared
-  workload/output invariants, not identical whole-wire bytes: identities,
-  timestamps and timing records naturally differ. Preserve each run's actual
-  byte counts and report the pause's effect. Before measurement select and name
-  the native memory metrics, for example resident bytes and physical-footprint
-  bytes, recording each separately with its shared-page/accounting limits.
-  Distinguish known application allocations, these process metrics,
-  allocator-retained pages and unknown XPC/Foundation storage. Bound response
-  samples by the named stages; earlier exec-child demand in the large workload
-  must not be mislabeled as response memory.
-  Sampling alone supplies observed maxima, not proof of an instantaneous peak.
-- Extend receiver controls with equal-retained-prefix/different-total-output
-  producers, keeping synthetic over-cap cases separate from admitted workloads.
-  Challenge swapped host/capture counters, omitted representations, invalid
-  base64/counts, truncated responses, missing actions/output, and unavailable
-  receipts misclassified as large. A controlled brief allocation tests whether
-  the observer misses short peaks; narrow peak wording if it does.
+A narrow Rust test seam under `unit/rust.unit` asserts internal lengths,
+capacities and lifetimes at existing receiver/rendering boundaries. It collects
+borrowed scalar summaries without cloning payloads or extending their last use.
+This supplies internal assertions, not shipped-process memory measurements.
+Keep the native observer external; neither Rust test-runner allocator history
+nor internal test instrumentation is credited as production memory.
 
-Preserve `ReplyMaximumTests`, client retention controls and receiver rejection
-semantics. Do not sum stage maxima from different times or count shared views
-twice. Report a supported scoped memory observation even if private framework
-copy counts remain unresolved. Update the response table, overlap diagram and
-test citation as one change.
+**Deterministic assertions**
+
+- Both workloads are admitted and contain every expected action, output and
+  applicable receipt; retain the existing round-trip/effect checks. Refused or
+  truncated output cannot masquerade as a small response.
+- Strictly decoded base64 length equals retained host bytes, and its SHA-256
+  equals the captured host hash for an untruncated reply. Received and retained
+  host counts agree; actual host bytes fit the synthesized host bound. Client
+  stdout received/retained counts agree and fit their own allowance; stderr has
+  its own count. Final envelope byte count equals the captured output file size.
+- The internal success-path boundary sequence is fixed: full client collection,
+  capture parsing, typed capture validation/base64 decoding, host parsing,
+  envelope construction/sorting, final rendering. The seam checks actual buffer
+  lengths against the independent input and `capacity >= length` where exposed,
+  and establishes raw/parsed coexistence at the claimed boundaries without
+  asserting an allocator-specific capacity or lifetime beyond normal last use.
+- The external observer records successful samples from the same fresh controller
+  generation, with increasing timestamps, both named metrics present in bytes,
+  and at least two samples during its verified lifetime. Required inspection
+  errors or missing coverage fail observation rather than yielding zero memory.
+  No ordering of small/large memory values or fixed byte threshold is required.
+
+**Measured receipt schema and conditions**
+
+- `sizes`: logical region capacities, actual optional receipt bytes,
+  synthesized host bound, host received/retained bytes and hash, base64 character
+  count, client stdout/stderr received/retained bytes and allowances, and final
+  envelope bytes. Identify each representation; preserve actual wire counts.
+- `controller`: PID/generation, executable hash, observed launch/exit and sample
+  interval. `samples[]`: bracket timestamps, native return/error,
+  `ri_resident_size`, `ri_phys_footprint`. `conditions`: requested/actual cadence,
+  observer process and its memory, power/sleep observations, workload/repetition.
+- `internal_assertions`: separate unit-case receipt identity, input hash, ordered
+  boundary names, lengths/capacities and ownership assertions. Do not align these
+  test-process events to a production sample by assumption.
+- `summary`: per-metric observed minima/maxima and coverage interval, labeled
+  sampled values, not instantaneous peaks. State whether collection/decoding
+  boundaries could be located; earlier controller work and exec-child demand
+  must not be assigned to an unobserved response stage or added to these metrics.
+
+**Controls that must fail**
+
+- Swapped host/client-stream counters; incorrect retained length/hash; invalid
+  base64; missing output/actions/required receipt; truncation; or the synthesized
+  bound presented as measured bytes. Valid receipts must first be accepted.
+- An omitted/reordered internal boundary, wrong length, capacity below length,
+  or a claimed overlap after the source buffer has been dropped. Reuse existing
+  receiver rejection controls; do not add another synthetic producer family.
+- Missing metric, wrong unit or generation, failed inspection reported as zero,
+  out-of-lifetime samples, or missing/reversed timestamps. Exercise the native
+  observer against a live touched allocation held through observation and its
+  exited generation; detecting brief peaks is outside the claim and this cycle.
+
+Preserve `ReplyMaximumTests`, retention controls and receiver semantics. Do not
+sum nonconcurrent maxima, shared views or the two native memory metrics. Update
+the response table, diagram and citation together, explicitly leaving host-side
+framework storage and unobserved stage attribution unresolved.
 
 ### Aftermath: what PW leaves before the harness intervenes
 
@@ -401,53 +476,72 @@ events and the existing lifecycle ownership pattern. Extend
 `runner_exec_lifecycle/closed_streams_leader_exit` and
 `runner_exec_lifecycle/worker_dies_during_exec` as live sensitivity controls.
 
-- Snapshot relevant surfaces before starting PW. Inventory exact owned paths,
-  file identity/content where appropriate, known process generations and
-  baseline registration. List requested output and fixture artifacts separately.
-  Installation fixtures must already be in the baseline before measuring a run.
-- Start observation while identities are available, using peer credentials,
-  process start/generation information, ancestry and exit events. At CLI return
-  record which identified host/worker/validator/issuer/exec processes remain,
-  which exits are already independently known, and which could not be inspected.
-  Observe again at actual resource-specific end events. Do not wait an arbitrary
-  duration and call the resulting snapshot the CLI-return state.
-- Record elapsed time from CLI return to every observed ending or harness
-  intervention. Keep PW's termination/reap reports separate from independent
-  observer results. In the held-timeout path, reuse the CPU observer for one
-  bounded pre-intervention interval where available: unchanged inventory can
-  conceal continuing worker polling and host collection.
-- For the interrupted path, require independent evidence of invocation and a
-  held worker before allowing the client's timeout. At CLI return first record
-  continuing state. Opening a test gate afterward is a harness intervention:
-  record it before observing subsequent completion, never as autonomous cleanup.
-  The ordinary path supplies unsteered retirement observations.
-- Trace named shared-memory objects, descriptor references and mappings using
-  their actual ownership. Name absence is insufficient for backing reclamation.
-  Use existing host setup/descriptor controls for a targeted component
-  observation where public CLI visibility cannot establish a mapping's lifetime;
-  label that scope. Preserve unknown state instead of declaring global absence.
-- Take the product-aftermath snapshot before any `RunCapture.close`, tree-control
-  release, fixture signal, session removal or staging deletion that could change
-  it. Audit context-manager/finally cleanup ordering. Write a separate intervention
-  ledger with action, identity, reason, time, result and subsequent observation.
-  On failure preserve both the earlier state and durable cleanup ownership.
-- Challenge the observer/checker with a known survivor, a PID-generation mismatch,
-  failed inspection, an exited leader with a live descendant, an unchanged path
-  with replaced object identity, and a pre-existing registration. Include a
-  premature-cleanup control: a clean final fixture directory must not pass in
-  place of a missing pre-cleanup snapshot.
-- Choose and record a small fixed N before execution. For N identified ordinary
-  runs, record how many run-created resources remain at each CLI return and
-  after their observed ending events. Count baseline objects once. Report
-  overlapping retirement, accumulation and unresolved inspection separately;
-  a flat count can conceal replacement generations or continuing work.
+Inventory exact resources before starting PW and observe their independent
+ending events, not an arbitrary settling delay. In the timeout path, opening a
+gate after CLI return is a harness intervention; record it before observing the
+resulting completion. Audit context-manager/finally behavior so `RunCapture.close`,
+tree-control release and staging cleanup cannot erase the primary observation.
+Use the existing setup/descriptor controls for component facts that public CLI
+inspection cannot establish, and label that narrower scope.
 
-Keep requested file effects and exec descendants visible even when they are not
-apparatus leaks. Keep private token erasure, shared authority erasure, native
-extension release, process exit and reap separate. `AuthorityCustody.finish`
-cannot safely erase shared storage owned by an unresolved live actor; include
-that condition wherever relevant. Update aftermath rows/diagrams/citations with
-the pre-cleanup observation and separately recorded harness outcome.
+**Deterministic assertions**
+
+- Every inventoried object has exactly one state at each required boundary:
+  `present`, `absence_confirmed` or `unknown`, with observation/error and owner.
+  None is omitted or unclassified. Absence requires identity-qualified evidence;
+  failed inspection is unknown, and name absence does not prove unmapped backing.
+- Baseline, CLI return and resource-specific ending observations are separately
+  identified. Ordinary completion has an identified worker and independent exit
+  observation. The timeout path establishes invocation and the held worker before
+  timeout, then observes that worker still present at CLI return. Missing these
+  required observations fails the case rather than passing an all-unknown ledger.
+- The primary pre-intervention snapshot finishes before every post-return harness
+  intervention begins, on one declared observer clock. A later snapshot that
+  follows gate release, signalling or cleanup is explicitly marked assisted and
+  cannot replace the pre-intervention snapshot or prove autonomous teardown.
+- The known-survivor control is classified present before fixture cleanup; a
+  leader's exit cannot classify its descendant absent. Pre-existing registration,
+  requested effects/output and observer artifacts keep their proper categories.
+- Choose and record N before execution. Every one of N ordinary runs has its own
+  resource identities and boundary counts; distinguish overlapping retirement,
+  accumulation and unknowns. Do not require zero residue to obtain a pass, but
+  retain failures of subsequent harness cleanup and durable recovery ownership.
+
+**Measured receipt schema and conditions**
+
+- `inventory[]`: stable object ID, type, owner/ownership basis, creation or
+  pre-existence evidence, process generation or file/object identity, and category
+  (`baseline`, `specimen_effect`, `requested_output`, `apparatus`, `observer`).
+- `snapshots[]`: boundary, start/end observer timestamps, CLI-return-relative
+  elapsed time, assisted/unassisted status, and one state/evidence/native-error
+  entry per inventoried object. Include the expected ending event and whether
+  it was observed, still pending, or unestablished.
+- `end_events[]`: object identity, event and observation time, independent source
+  and outcome. Keep PW's own signal/reap reports separate from observer results;
+  erasure, native authority release, exit and reap are different events.
+- `interventions[]`: action, target identity, ownership, reason, start/end times,
+  native result/error and later observation. `cleanup`: final status and retained
+  recovery record. No intervention is silently absorbed into product aftermath.
+- `repetitions`: declared N and per-run resource counts. If waiting CPU samples
+  are reused after timeout, include their bounded pre-intervention interval and
+  conditions separately: unchanged inventory can conceal continuing work.
+
+**Controls that must fail**
+
+- An omitted object/state, missing baseline, unsupported absence, or failed
+  inspection relabeled absent. A valid explicit unknown for an optional surface
+  is accepted, while unknown cannot replace the required worker observations.
+- A reused PID or changed file identity treated as the original object; a live
+  descendant classified absent from its leader's exit; the known survivor missed;
+  a baseline registration counted as run-created residue.
+- Missing snapshot/intervention timestamps, a primary snapshot taken after an
+  intervention, or an assisted final clean directory substituted for pre-cleanup
+  state. Exercise premature cleanup as well as malformed ledger controls.
+
+Keep requested effects and exec descendants visible even when they are not
+apparatus leaks. Shared authority erasure still requires a reaped or
+never-launched owner. Update aftermath rows/diagrams/citations with the original
+observation and separately recorded intervention outcome.
 
 ## 5. Integrate, rotate review and edit
 
@@ -462,12 +556,13 @@ central. Add only interactions that change interpretation, such as:
 - Identical output artifacts can coexist with different surviving processes;
   CLI timeout and CLI success both need resource-specific end observations.
 
-R-O, R-M and R-W each receive the full trio, final candidate graphs/tables,
-source baseline, test assertions and retained observations. They reconstruct
-one consequential claim in their assigned section independently from source
-and evidence using the different accounting model. Require a concrete missing
-quantity, owner, interval or observation, or an explanation of why the evidence
-supports the claim despite the alternative perspective. They also check effects
+Each case's designated reviewer receives the full trio, final candidate
+graphs/tables, source baseline, assertions and retained observations. The
+reviewer reconstructs one consequential claim independently from source and
+evidence using the rotated accounting model; another full account is not
+required. Require a concrete missing quantity, owner, interval or observation,
+or an explanation of why the evidence
+supports the claim despite the alternative perspective. Each also checks effects
 on the other two cases. Record agreement only at the claim's actual scope.
 
 For each row/diagram pair ask whether the table erased an owner, copy,
@@ -554,10 +649,13 @@ superseded runs only through the helpers. Never unlink `tests/.checkout.lock`.
 
 - All three cases have concise claims with conditions, named owners/objects,
   intervals, ending events and support from current tests.
-- Initial O/W/M accounts were independent until all three were complete; their
-  disagreements became explicit distinctions or discriminating questions.
+- The preserved summary of the original O/W/M preparation was reconciled against
+  the current baseline; the missing frozen scout records are acknowledged, and
+  no repeated independent-account gate is claimed.
 - Waiting, response and aftermath each completed assessment, question,
   sensitivity-controlled test, native execution and coupled table/diagram update.
+- Each new case satisfies its deterministic assertions, complete receipt schema
+  and positive/rejected controls; no recorder-only case receives passing credit.
 - Response accounting separates capacity, synthesized bounds, actual encoded
   bytes, retained bytes and live-memory observations; coexistence and shared
   backing support any combined quantity.
@@ -567,8 +665,8 @@ superseded runs only through the helpers. Never unlink `tests/.checkout.lock`.
   apparatus residue is accepted where observed.
 - Rendered diagrams preserve owners, copies/shared views, overlaps, activity
   and ending conditions, with bidirectional correspondence to the tables.
-- Different-model cross-review reconstructed consequential claims and resolved
-  disagreements through evidence or narrower wording.
+- One different-model reviewer per case reconstructed a consequential claim
+  and resolved disagreements through evidence or narrower wording.
 - Relevant behavioral tests, observer/checker controls, default acceptance and
   documentation checks pass against the credited state. Records identify any
   remaining limited claims without disguising missing required execution.
