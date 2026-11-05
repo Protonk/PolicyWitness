@@ -15,62 +15,18 @@ investigate mechanisms, without reproducing their tours. The document must
 distinguish measured consumption, logical capacity, constructed bounds and
 source-supported mechanisms.
 
-This is an execution plan, not a completed footprint investigation. Preparation
-used three independent, read-only accounting scouts against clean commit
-`2022f3261e7a2c9e59db35d245525443ddd444ad`. Their source and assertion inspection
-informs the choices below; no native measurements, new behavioral tests or
-version-zero acceptance results are claimed. The full scout accounts were
-delivered in conversation but were not preserved as frozen repository records.
-The source-findings table is their reconciled summary, not three independently
-reviewable accounts. Execution refreshes the baseline and starts at
-reconciliation; it does not repeat or claim a new independent-account gate.
+Preparation used three independent, read-only scouts against commit
+`2022f3261e7a2c9e59db35d245525443ddd444ad`. Their full reports were not preserved
+in the repository; the source-findings table retains their reconciled summary.
+No native measurements or acceptance results are credited from that preparation.
+Refresh the baseline and continue from reconciliation.
 
 Deliver the document, its generated DOT/SVG figures, registered tests and
 observer/checker controls, current native observations, completed cross-review
-and the closeout outflow note described below. An optimization is not required.
-Findings may confirm behavior, narrow a claim, identify leakage or support later
-implementation work. Do not turn this into a general performance benchmark, a
-replacement limits inventory, an installation audit or an unrequested runtime
-redesign.
-
-## Outflow: later footprint reduction
-
-A later, separate effort will attempt perturbative reduction of PW's footprint,
-starting from [LIMITS](LIMITS.md) and FOOTPRINT. This plan performs and designs
-no optimization, and the prohibition above on runtime redesign stands. Two
-obligations prepare that effort without gating this one.
-
-- While investigating, each case owner appends to
-  `records/footprint-<date>/outflow-candidates.md`, one entry per noticed
-  perturbation: the row ID, the mechanism behind the demand, the imagined
-  change, the assertions expected to react, and the author's unverified opinion
-  on whether each assertion pins a documented promise or an incidental
-  structure. Record candidates when they are noticed, during measurement work.
-- At closeout the coordinator distills that ledger into
-  `records/FOOTPRINT-OUTFLOW.md`, in the shape of the existing outflow notes in
-  `records/`: recorded date and source revision; a status line stating deferred
-  investigation, not a plan, no gate and no release commitment; the question to
-  return to; what FOOTPRINT establishes, by row ID and without restatement; the
-  candidate list; and the boundaries retained, which are the
-  [core ideas](../AGENTS.md#core-ideas). An optimization that breaches them is a
-  redesign, not a reduction. The note is a closeout deliverable; its contents
-  are not acceptance conditions.
-
-FOOTPRINT itself carries no forward-looking content. What makes it the starting
-point is a rule in its reading guide: the test a row cites pins the recorded
-quantity or behavior, so a change to the mechanism should be expected to reach
-it. The citation column is therefore the enumerated set of expected test
-reactions. After a perturbation, a cited test that fails identifies a row to
-update; a failing test that no row cites and no LIMITS or user-guide passage
-promises is a finding about encoded structure. One entry is already known: the
-waiting assertion that the held worker's CPU delta exceeds the sleeping
-control's is a claim about the current polling wait and must fail if the worker
-blocks instead. Record it as a row to update, not a finding.
-
-This plan is the note's only inbound reference. When the plan retires, the note
-stands alone until a reduction plan links it. Whether the reduction agents
-receive the note is that plan's decision; withholding it lets the note serve as
-a control for what fresh readers of LIMITS and FOOTPRINT find.
+and `records/FOOTPRINT-OUTFLOW.md`. Record reduction candidates for a separate
+effort starting from LIMITS and FOOTPRINT; do not design or implement those
+optimizations here. FOOTPRINT describes current behavior and carries no
+forward-looking content.
 
 ## Common cases and accounting boundaries
 
@@ -124,8 +80,7 @@ Use subagents within the executing harness's concurrency (up to 32 authorized),
 with builds and tests serialized under the checkout lock.
 
 Assign one investigation owner per case and rotate those owners for review;
-each case receives one reviewer using a different accounting model. Fresh
-agents for another full account reconstruction are unnecessary.
+each case receives one reviewer using a different accounting model.
 
 | Case | Investigation model and ownership | Reviewer |
 | --- | --- | --- |
@@ -136,16 +91,15 @@ agents for another full account reconstruction are unnecessary.
 The coordinator reconciles findings, integrates tables and diagrams, and checks
 acceptance. Review starts after the case's observations and draft are available;
 each reviewer reconstructs one consequential claim and checks interactions with
-the other two cases. There are no separate diagram or acceptance-agent waves.
+the other two cases.
 
 The coordinator alone edits shared integration files such as
 `tests/catalog.json` and suite-wide documentation, unless explicitly handed to
 one owner. Assign diagram-manifest edits to one owner; this plan does not require
 generator changes. Agree the common measurement/identity interface and assign
 one author before case authors use it. Source edits may proceed in parallel in
-disjoint files; builds and test
-runs in one checkout remain serialized under the checkout lock. Separate
-worktrees are required for genuinely concurrent builds/tests.
+disjoint files; builds and test runs in one checkout remain serialized under
+the checkout lock. Separate worktrees are required for concurrent builds/tests.
 
 ## 0. Establish the execution baseline
 
@@ -158,13 +112,26 @@ facilities. Preserve existing work. Native measurements must identify the
 actual inspected binaries and measurement conditions, not merely the source
 checkout's revision.
 
+Only the coordinator runs builds/tests in this checkout. Use a current signed
+app from [the build pipeline](BUILD.md), rebuilding if compiled sources change.
+Update Meson for native source additions, regenerate worker identity for its
+covered inputs, and review ABI/layout/version consequences if those boundaries
+change. Preserve the inspected artifact on diagnostic retries. Native XPC,
+process-observation and signing work runs in the applicable unsandboxed macOS
+environment; follow the repository's diagnostic-and-same-command escalation
+procedure for sandbox refusals. Do not attribute them from permission-shaped
+errors alone.
+
 Keep planning/review materials in a task-owned
 `records/footprint-<date>/` directory: baseline, reconciliation/questions, the
 outflow-candidates ledger, review dispositions and acceptance. This plan is the
 only inbound documentation link owner for those records. Permanent FOOTPRINT
 content links to source and tests, not to planning records. Keep raw execution
 evidence in fresh managed `tests/out/runs/` directories; identify locally
-available, gitignored evidence honestly. Do not use scratch as its sole store.
+available, gitignored evidence honestly. Inspect selections with `--list` before
+execution; a suite selector includes its opt-in members. Do not create output
+or redirect transcripts into the chosen directory before dispatcher startup.
+Keep raw evidence and unresolved cleanup ownership out of disposable scratch.
 
 Before collecting footprint receipts, fix the misleading size labels in both
 [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py)
@@ -175,7 +142,9 @@ Record `host_reply_bytes` from
 former with the synthesized host-reply bound and the latter with the controller
 allowance. Correct dependent ratios, receipt-allowance arithmetic, printed
 labels and receipt consumers/documentation; retain each original boundary's
-count. This is a prerequisite correction, not the response measurement cycle.
+count. Verify the correction through `tests/run.sh` with
+`--case witness_contract/max_targets_reply_survives` and
+`--case witness_contract/max_exec_steps_spawn` in a fresh output directory.
 
 Choose these concrete workloads before measurement:
 
@@ -205,8 +174,7 @@ session ownership and recovery helpers, including retaining unresolved cleanup.
 ## 1. Reconcile the existing findings
 
 Start with the source-findings table, checking its claims against the refreshed
-baseline and current assertions. Preserve these accounting distinctions without
-recommissioning three initial accounts:
+baseline and current assertions. Preserve these accounting distinctions:
 
 | Account | Reconstruction obligation |
 | --- | --- |
@@ -223,14 +191,19 @@ For each case, retain in the working ledger:
    materially under another. Explain the equivalence and the missing quantity.
 4. A consequential unanswered question and the observation needed to answer it.
 
-Useful counterexamples to verify, rather than slogans to repeat, include equal
-held object sets over different wait durations; equal retained prefixes after
-different full-stream collections; and equal output artifacts with different
+Counterexamples to check include equal held object sets over different wait
+durations; equal retained prefixes after different full-stream collections;
+and equal output artifacts with different
 surviving process trees. Record assumptions about shared backing and absence
-as questions until supported. New investigation is directed at a missing
-quantity or consequential disagreement, not at reproducing the preparation.
+as questions until supported.
 
-## 2. Reconcile into questions, rows and relationships
+The response owner also builds the representation/lifetime ledger here. Trace
+host collection and encoding, client capture, controller full collection,
+parsing/decoding and final envelope rendering. Record creation and last-use
+boundaries, known overlaps and shared backing; include validator raw/decoded
+records where material. Mark unestablished relationships explicitly.
+
+## 2. Draft questions, rows and relationships
 
 Compare claims before combining prose. Maintain a small working ledger with
 case, resource/representation, owner, unit, start/end boundary, conditions,
@@ -239,7 +212,8 @@ disagreements about different intervals, units, owners or resources by keeping
 both useful distinctions. For incompatible claims about the same quantity
 under the same conditions, name an observation that could select between them.
 
-Draft three principal tables, using stable row IDs:
+Create `docs/FOOTPRINT.md` with a short reading guide and three provisional
+tables, assigning stable row IDs:
 
 > Situation · resource demand or remaining state · quantity or behavior ·
 > interval and ending condition · supporting test
@@ -249,18 +223,40 @@ transport**, and **State remaining after a run**. Add the process, representatio
 or backing object directly to each row. Keep conditions alongside quantities,
 and mark each quantity's evidence class: measured, logical capacity,
 constructed bound or source-supported.
+
+For each test citation, identify the assertion supporting that row. Distinguish
+an asserted value or relation from a measured value whose receipt is checked
+for validity. A mechanism change need not fail a test if the asserted property
+still holds. Put this distinction in the reading guide so the citation column
+identifies which assertions to inspect after a change.
+
 For aftermath, use explicit `present`, `absence confirmed` and `unknown` states
 with observation boundaries; zero is valid only for the inventoried category
 and observed interval. Retain the expected ending condition even when the
 observation does not establish that it occurred.
 
-The initial table is a question map, not publication-ready evidence. Draw its
-supported relationships next, with unresolved relationships named in adjacent
-prose, before compressing the prose.
-Select one material unanswered question per case for the cycles below; refine
-the proposed question if account reconciliation identifies a more consequential
-uncertainty. Do not spend a cycle rediscovering what source already settles,
-such as whether controller retention occurs after full collection.
+Set one material question per case, starting from these:
+
+- **Waiting:** How much CPU time accumulates during a validator-gate-acknowledged
+  hold, and how does adding parked actors change demand?
+- **Response:** What resident and physical-footprint bytes are observed in a
+  fresh controller handling each small/large response, and which internal
+  representations coexist despite the retention cap?
+- **Aftermath:** Which run-created apparatus resources remain at CLI return
+  after ordinary completion and a post-invocation timeout, and what independent
+  observations establish their end?
+
+Refine a question where reconciliation found a more consequential uncertainty.
+The provisional tables record claims, missing evidence and the observation
+needed to distinguish competing accounts. Draw their supported relationships
+before compressing the prose.
+
+Begin `records/footprint-<date>/outflow-candidates.md` once row IDs exist. Each
+case owner records noticed reduction candidates during investigation: row ID,
+demand mechanism, imagined change, assertions expected to react, and an
+unverified assessment of whether each assertion pins a documented promise or
+incidental structure. Keep candidate evaluation outside this task. If a
+candidate was noticed earlier, enter it now against its row ID.
 
 ## 3. Author and inspect the diagrams
 
@@ -273,7 +269,7 @@ ImageGen or a separate drawing pipeline.
 Use only the generator's current schema, styles, citation rules and registered
 destinations. Keep new figure/citation regions in the already registered
 `docs/ARCHITECTURE.md`, embed their SVGs in FOOTPRINT, and link their generated
-ID tables. This avoids a new destination or source-only citation mechanism.
+ID tables. Place new regions before ARCHITECTURE's final known-gap index.
 Add only the small graphs the principal tables need, using underscore-separated
 graph IDs and hyphenated file stems, initially:
 
@@ -295,8 +291,8 @@ clusters, short edge labels, stable IDs and linked citation tables. Identify
 shared views, established copies, ownership transfer and lifetime overlap by
 explicit labels; a generic arrow must not silently assert a copy. State
 unestablished XPC/Foundation backing relationships as unresolved in prose beside
-the figure; omit unsupported copy/backing edges. Do not infer
-physical allocation from two language-level values or sum per-process RSS as
+the figure; omit unsupported copy/backing edges. Do not infer physical allocation
+from two language-level values or sum per-process RSS as
 unique system memory.
 
 Use globally unique diagram IDs and put corresponding IDs in principal rows
@@ -304,11 +300,14 @@ and graph facts so a reviewer can trace both directions. Keep generated
 supporting tables small and avoid duplicating the principal claim prose. Use
 existing graph validation and drift checks. Do not extend the generator or cite
 an unrelated passing test to make an unsupported relationship renderable.
+At this stage, cite only existing assertions. Keep relationships awaiting new
+tests in the working ledger and unresolved prose outside generated regions;
+add them to the manifest when their supporting assertions exist.
 
 Reuse existing limit placeholders in graph facts and link FOOTPRINT prose to
-the relevant LIMITS rows; no new span destination is needed. Keep measured
-observations distinct from manifest constants. Add the document to the README documentation index and
-the architecture document graph with an accurate reader purpose; avoid broad
+the relevant LIMITS rows. Keep measured observations distinct from manifest
+constants. Add the document to the README documentation index and the architecture
+document graph with an accurate reader purpose; avoid broad
 rewrites of LIMITS, WORKER or ARCHITECTURE.
 
 Generate with `tests/lib/python.sh docs/generate_architecture.py`, inspect every
@@ -338,16 +337,24 @@ measurement configuration, raw native results/errors and assertion outcomes.
 Counts, capacities, byte quantities and `*_ns` values are nonnegative integers;
 unknown optional quantities are null with a reason, never zero or omitted.
 Required quantities cannot be unknown. Retain raw samples and every repetition.
-The lists below specify each case's
-additional schema and assertion contract; quantities without a universal bound
-remain scoped observations rather than invented machine-independent thresholds.
+Each case specifies its additional schema and assertion contract. Quantities
+without a universal bound remain scoped observations.
+
+Register every added case in [catalog.json](../tests/catalog.json), with actual
+equipment, default membership and dependencies, and update owning suite READMEs,
+the suite map and relevant coverage/change-verification accounts. Keep cheap
+deterministic checker controls in the default battery. Repeated resource
+measurements may be opt-in because of their cost, but all three cases are
+mandatory for this plan's acceptance. Missing equipment is not a supported skip.
+For each case, implement its controls, run the case and controls through
+`tests/run.sh` in fresh output, then update the rows, diagram and citations from
+the retained results. Add newly supported relationships to the manifest and
+regenerate the figures as part of that update.
 
 ### Waiting: measured demand during an independently held phase
 
-**Question.** How much CPU time accumulates during a validator-gate-acknowledged
-hold, and how does adding parked actors change demand? The source establishes
-active polling, not a utilization percentage. Compare identified workers with
-an independently sleeping control over the same observation window.
+Compare identified workers with an independently sleeping control over the same
+observation window.
 
 Extend the acknowledged gate machinery in
 [check_ordering.py](../tests/suites/witness_contract/check_ordering.py) and the
@@ -380,8 +387,7 @@ publications with generation identities; process presence alone is insufficient.
   into compliance.
 - Over each matched interval, total CPU delta for the busy control exceeds the
   sleeping control's delta. The held production worker's total CPU delta also
-  exceeds the sleeping control's delta. These strict directional assertions
-  supply a falsifiable production claim without prescribing a CPU percentage.
+  exceeds the sleeping control's delta.
   Record failures and distinguish invalid measurement from contrary behavior;
   do not silently weaken the comparison or select only favorable repetitions.
 - Retain the existing release, expiry and cancellation assertions from proceed/
@@ -422,19 +428,19 @@ Use native per-process counters such as `proc_pid_rusage`. Update the waiting
 rows and diagram with measured CPU at the stated scope and the independent
 resource-ending observations.
 
+Record replacement of the polling wait with a blocking wait as an outflow
+candidate. The measured CPU account would need review, but the strict comparison
+with the sleeping control could still pass. Treat the expected test reaction
+as unverified; do not promise that this assertion detects every blocking wait.
+
 ### Response: coexistence and amplification, beyond retention size
 
-**Question.** What resident and physical-footprint bytes are observed in a fresh
-controller generation handling each small/large admitted response, and which
-internal representations coexist despite the retention cap? Restrict the
-discriminating native observation to the controller. Host/client framework
+Restrict native memory observation to the controller. Host/client framework
 allocation, XPC backing and a pipeline-wide peak remain unresolved in version
 zero; do not build instrumented Swift binaries or stage rendezvous to resolve them.
 
-The response owner builds the representation/lifetime ledger during account
-work, before measurement. Trace the full path in source, including validator
-raw/decoded records and final envelope rendering, but do not instrument every
-stage. Register `witness_contract/response_footprint` for one external observer
+Use the representation/lifetime ledger to locate the internal assertions.
+Register `witness_contract/response_footprint` for one external observer
 sampling each fresh shipped controller on the named native metrics
 `ri_resident_size` and `ri_phys_footprint`, recorded separately in bytes. Retain
 the actual interval/cadence and metric accounting limits. Where sampling cannot
@@ -507,11 +513,8 @@ framework storage and unobserved stage attribution unresolved.
 
 ### Aftermath: what PW leaves before the harness intervenes
 
-**Question.** Which run-created apparatus resources remain at CLI return after
-ordinary completion and after a controlled post-invocation timeout, and what
-independent later observations establish their end? Distinguish ordinary
-asynchronous retirement, continuing submitted work, surviving descendants,
-unresolved cleanup and actual apparatus residue.
+Distinguish ordinary asynchronous retirement, continuing submitted work,
+surviving descendants, unresolved cleanup and actual apparatus residue.
 
 Register `run_effects/aftermath_footprint`, reusing
 [`RunCapture`](../tests/lib/run_capture.py), fixture process identities/exit
@@ -591,10 +594,10 @@ observation and separately recorded intervention outcome.
 
 After the three cycles, consolidate supported claims into FOOTPRINT. Its reading
 guide defines units, shared backing versus views, conditional quantities and
-presence/absence/unknown, and states that a row's cited test pins the recorded
-quantity or behavior, so a change to the mechanism should be expected to reach
-it. Keep the three principal tables and small diagrams central. Add only
-interactions that change interpretation, such as:
+presence/absence/unknown. Check that each row identifies what its cited assertion
+pins, including the distinction between a measured value and a test of its
+receipt's validity. Keep the three principal tables and small diagrams central.
+Add only interactions that change interpretation, such as:
 
 - Equal wait durations can have different worker/actor CPU demands.
 - Equal retained response bytes can conceal different full collection sizes,
@@ -605,10 +608,9 @@ interactions that change interpretation, such as:
 Each case's designated reviewer receives the full trio, final candidate
 graphs/tables, source baseline, assertions and retained observations. The
 reviewer reconstructs one consequential claim independently from source and
-evidence using the rotated accounting model; another full account is not
-required. Require a concrete missing quantity, owner, interval or observation,
-or an explanation of why the evidence
-supports the claim despite the alternative perspective. Each also checks effects
+evidence using the rotated accounting model. Require a concrete missing quantity,
+owner, interval or observation, or an explanation of why the evidence supports
+the claim despite the alternative perspective. Each also checks effects
 on the other two cases. Record agreement only at the claim's actual scope.
 
 For each row/diagram pair ask whether the table erased an owner, copy,
@@ -624,31 +626,15 @@ that change the reader's understanding of demand, ownership or aftermath.
 Current tests and scoped observations support the publication; planning history
 stays in records. Render again after final edits.
 
-## Verification and evidence handling
+## 6. Verify the integrated result
 
-Register every added case in [catalog.json](../tests/catalog.json), with actual
-equipment, default membership and dependencies, and update owning suite READMEs,
-the suite map and relevant coverage/change-verification accounts. Keep cheap
-deterministic checker controls in the default battery. The dedicated repeated
-resource-measurement cases may be opt-in because of their sampling and workload
-cost, but they remain normal dispatcher cases and mandatory for this plan's
-acceptance. Missing measurement equipment is not a supported skip.
-
-Only the coordinator runs builds/tests in this checkout. Use a current signed
-app from [the build pipeline](BUILD.md), rebuilding if compiled sources change.
-Update Meson for native source additions, regenerate worker identity for its
-covered inputs, and review ABI/layout/version consequences if those boundaries
-change. Preserve the inspected artifact on diagnostic retries. Native XPC,
-process-observation and signing work runs in the applicable unsandboxed macOS
-environment; follow the repository's diagnostic-and-same-command escalation
-procedure for sandbox refusals. Do not attribute them from permission-shaped
-errors alone.
-
-Inspect selections with `--list` before execution. A representative final
-targeted selection, after registering the new IDs, is:
+Use a fresh output directory and replace `<unique>` in the command before
+running it. Inspect the expanded selection with `--list`, including opt-in
+suite members and their prerequisites. The `run_effects` selection includes
+the new aftermath case. A representative final targeted selection is:
 
 ```sh
-PW_TEST_OUT_DIR=tests/out/runs/footprint-targeted-<unique> tests/run.sh \
+PW_TEST_OUT_DIR="tests/out/runs/footprint-targeted-<unique>" tests/run.sh \
   --suite unit --suite runner_unit --suite runner_abi_layout \
   --suite runner_c_worker_harness --suite run_effects \
   --suite runner_exec_lifecycle \
@@ -656,16 +642,13 @@ PW_TEST_OUT_DIR=tests/out/runs/footprint-targeted-<unique> tests/run.sh \
   --case witness_contract/response_footprint \
   --case witness_contract/attempt_effects_wait_for_collection \
   --case witness_contract/max_targets_reply_survives \
+  --case witness_contract/max_exec_steps_spawn \
   --case witness_contract/order_barrier_mutations \
   --suite source_drift
 ```
 
-Replace `<unique>` with a fresh valid name; do not redirect a transcript into
-the output directory before dispatcher startup. A suite selector includes its
-opt-in members; inspect the expanded selection and prerequisites. The above
-`run_effects` suite includes the new aftermath case. Add `failure_boundaries`
-and applicable validator/consumer suites if admission or receiver behavior
-changes; use coordinated selection from [tests/AGENTS.md](../tests/AGENTS.md),
+Add `failure_boundaries` and applicable validator/consumer suites if admission
+or receiver behavior changes; use coordinated selection from [tests/AGENTS.md](../tests/AGENTS.md),
 not a narrower memory-only check. Do not treat constructed receiver stress as
 evidence of a reachable specimen.
 
@@ -691,13 +674,36 @@ Keep the accepted default and complementary targeted evidence within the
 normal retention policy, preserve unresolved recovery records, and retire
 superseded runs only through the helpers. Never unlink `tests/.checkout.lock`.
 
+## 7. Closeout: later footprint reduction
+
+Distill `records/footprint-<date>/outflow-candidates.md` into
+`records/FOOTPRINT-OUTFLOW.md`, in the shape of the existing outflow notes:
+
+- Recorded date and source revision.
+- Status: deferred investigation, not an execution plan, acceptance gate or
+  release commitment.
+- The question to return to and what FOOTPRINT establishes, referenced by row
+  ID without repeating the account.
+- Reduction candidates, their mechanisms and expected assertion reactions,
+  keeping unverified expectations distinct from tested sensitivity.
+- The [core ideas](../AGENTS.md#core-ideas) that a reduction must preserve.
+
+The note is a closeout deliverable; its candidates do not gate acceptance. For
+later reduction work, a cited test failure identifies a row and assertion to
+review, not an automatic reason to change the test. A failure with no cited
+FOOTPRINT assertion or LIMITS/user-guide promise is a candidate for investigation
+of encoded structure; the missing citation alone does not establish that the
+behavior is incidental.
+
+This plan owns the note's only inbound reference. After plan retirement, the
+note stands alone until a reduction plan links it. That plan decides whether
+its agents receive the note. Keep all forward-looking content in these records.
+
 ## Version-zero acceptance
 
 - All three cases have concise claims with conditions, named owners/objects,
   intervals, ending events and support from current tests.
-- The preserved summary of the original O/W/M preparation was reconciled against
-  the current baseline; the missing frozen scout records are acknowledged, and
-  no repeated independent-account gate is claimed.
+- The source-findings summary was reconciled against the current baseline.
 - Waiting, response and aftermath each completed assessment, question,
   sensitivity-controlled test, native execution and coupled table/diagram update.
 - Each new case satisfies its deterministic assertions, complete receipt schema
