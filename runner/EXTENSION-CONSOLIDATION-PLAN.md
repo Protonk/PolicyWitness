@@ -177,8 +177,9 @@ Carry these requirements into the Stage 2 contract packet:
 - Keep observation eligibility separate from scheduling eligibility. Failed,
   incomplete or late setup must not enable a visit, but still permits valid
   setup/cleanup observations. A late application publication can remain a fact
-  without changing a setup timeout. Required authority setup failure withholds
-  activation; it does not prove the worker never applied its policy.
+  without changing a host setup timeout. Required authority setup failure takes
+  the terminal pre-application path specified below; its published refusal
+  establishes that the worker did not attempt specimen policy application.
 - Retain independently observed issue, consume and release symbol availability.
   Availability is not a native operation result or proof of effective authority;
   an unavailable operation must not suppress unrelated supported operations.
@@ -200,6 +201,46 @@ cannot represent a primary failure and independent cleanup failures. Choose
 bounded storage and its C/Swift layout, reply shape, limits and reader rules
 together. No exact field spelling or new publication mechanism is selected by
 this plan.
+
+### Terminal setup boundary and failure meanings
+
+Make failure of required worker authority apparatus terminal immediately after
+authority preparation, before policy reading, compilation, capture or
+application. Publish the reached setup observations, perform and record the
+applicable cleanup, and exit through a path that cannot return to policy
+processing or visits. Publication must identify the terminal decision even
+when cleanup is incomplete; cleanup completion and process reap retain their
+own observations. The host resolves this refusal without waiting for an
+applied/unapplied setup publication. This is an automatic worker control-flow
+rule, with no additional host permission handshake or user mode.
+
+This changes the current `prepare_authority` path, which returns after recording
+failure and permits `main` to continue to application. Keep per-operation symbol
+availability separate: a missing issue, consume or release symbol retains its
+operation-specific unavailable result. Specify which apparatus is required
+for each actor under the applicability rule above. An absent descriptor that
+was never required remains an ordinary setup condition.
+
+Tie each failure account to the boundary its observed path establishes. Use
+these distinctions in producers, readers, tests and documentation rather than
+assigning one meaning to every `setup_failed` summary:
+
+| Observed boundary | Established flow and evidence |
+| --- | --- |
+| Host authority preparation refuses before actor launch | No actor worker is launched. Preserve the host's native/validation and cleanup facts and the resulting launch refusals. |
+| Worker publishes a terminal required-authority refusal | That worker takes the cleanup/exit branch before specimen policy processing. Preserve the setup refusal and independent cleanup outcomes; record application as not attempted, with no native apply result. |
+| Worker publishes a terminal header/input, parameter or compilation refusal | The existing terminal branch excludes the later application call. Identify the reached stage and its actual result instead of presenting a synthesized `apply_rc` as a native application result. |
+| Host setup deadline expires after launch | The deadline closes visit eligibility. Retain worker facts that become observable later, including application when published, beside that scheduling decision. |
+| Ready-byte reporting or optional profile capture fails | The current worker continues toward application. Preserve the failed auxiliary observation and the separately observed application outcome. |
+| Application is entered but its result is unpublished | Retain eligible call-entry evidence and classify the result as unobserved. A published native return, successful application publication and process termination each supply their own facts. |
+
+Ground a terminal-refusal claim in the worker publication and the branch that
+excludes application, with independent controls at the application call
+boundary. An absent application publication instead means application was not
+observed. `done` and reap retain their completion/termination meanings; neither
+identifies the refusal stage by itself. These statements concern the specimen
+policy call in the named worker; inherited restrictions and signed entitlements
+remain part of its starting context.
 
 ### Lifecycle decision packet
 
@@ -277,7 +318,7 @@ review packet before implementing dependent changes.
 
 | Decision | Current concern | Required disposition |
 | --- | --- | --- |
-| Actor authority-setup evidence representation | One automatic account must retain primary native, independent cleanup, per-operation availability and per-actor facts, with host/worker ownership intact. Current status/stage fields and the aggregate error do not suffice. | Specify the bounded layout, publication boundary, reply landing paths and independent-reader rules implementing the accepted requirements. Inventory and replace old failure assertions; do not reopen evidence retention by silently deleting them. |
+| Actor authority-setup evidence representation | One automatic account must retain primary native, independent cleanup, per-operation availability and per-actor facts, with host/worker ownership intact. Required worker apparatus failure now has an accepted terminal boundary before policy processing. | Specify the bounded layout, publication boundary, reply landing paths and independent-reader rules implementing those requirements, including host recognition of terminal refusal before normal actor setup completion. Inventory and replace old failure assertions; do not reopen evidence retention or terminal flow by silently deleting them. |
 | Normalized execution instructions | `ActorTranslation` reconstructs references from optional strings, substitutes index zero for missing relationships and uses a default release branch. Equipment selection would add another resolved relationship. | Decide how the admitted plan represents operation operands and selected equipment, and how an inconsistent internal plan fails. No new representation or fallback policy is selected by this plan yet. |
 | Lifecycle and ownership | Eager setup, overlapping lifetimes and serial visits remain the default. The candidate adds an observed-termination dependency before a later visit, with no new extension operation or deferred subject setup. | Complete the lifecycle packet: choose termination versus clean completion, specify wait/eligibility evidence and failure behavior, and settle actor erasure assertions. Review one run in time in [ARCHITECTURE](../docs/ARCHITECTURE.md) and its [generator input](../docs/architecture.json), showing exit and cleanup during visits as well as remaining cleanup afterward. |
 
@@ -323,7 +364,9 @@ conversation. Include:
    choosing the dependency's wire syntax or rewriting the temporal account.
 7. The unified setup account: bounded primary/cleanup/capability records,
    ownership, publication and eligibility rules, and representative failed-setup
-   replies retaining multiple actors' observations. Include a documentation
+   replies retaining multiple actors' observations. Specify terminal setup
+   refusal separately from host timeout, auxiliary reporting failure and native
+   application failure. Include a documentation
    claim ledger for the affected WORKER and ARCHITECTURE regions, using the
    execution guidance below; distinguish supported assertions from source-only
    facts and remaining gaps.
@@ -386,6 +429,7 @@ ownership and registration in the Stage 2 packet.
 | Production dispatch and targeted mutations | Extend `runner_c_worker_harness/actor_operations` to submit extension slots through `run_attempt`. Independently counted calls and handle observations must reject omitted or misrouted consume/release dispatch, even when the operation bodies remain correct. Compilation failure is not mutation detection. |
 | Individually unavailable native symbols | Adapt extension boundary controls to remove issue, consume and release symbols individually. Establish the affected operation's unavailable evidence and continued execution of unrelated supported operations. The old consume/release implementation required both symbols together; the actor implementation checks them separately. Preserve the availability observation through setup publication and independent reply readers. |
 | Primary setup failure plus independent cleanup failure | Adapt [check_extension_boundaries.py](../tests/suites/witness_contract/check_extension_boundaries.py)'s core-limit, metadata, mapping, close, combined metadata/cleanup and framing assertions, plus [extension control](../tests/fixtures/extension_controls/README.md) mode 118's missing API plus cleanup failure. Inject different primary/cleanup errors; include successful acquisition followed by failed cleanup, unmap failure and successful metadata followed by format rejection. Host region/private-custody allocation needs corresponding ownership/result checks at its own call boundary. |
+| Terminal authority refusal before policy application | Extend native setup controls through production `main`, independently observing entry to policy processing and `sandbox_apply`. Every required-apparatus refusal must retain its setup/cleanup facts with zero application calls and no visit activation. Include a setup-success control that reaches application and a mutation removing the terminal branch that must fail the call-entry assertion. Exercise host recognition before normal actor setup publication, including an interrupted policy transfer caused by the early exit; preserve both the worker refusal and observed transport facts. Keep missing-symbol continuation and host timeout with later application as distinct controls. |
 | Setup publication and actor association | Extend actor scheduler/reply and independent Swift, Rust and Python reader controls. Two actors failing at different setup stages must retain both accounts despite one summary disposition. Interrupt publication and require withholding of unpublished fields; retain eligible earlier facts and host observations. Cover valid late observations without restored activation, and substituted actor ownership that readers must reject. |
 | Mixed-equipment permutation and provenance substitution | Extend `actor_compositions` and BYOXPC controls with different equipment choices, reordered actor declarations and consistent renaming. Equipment must stay associated with the intended actor. Add constructed reader controls that substitute another actor's equipment evidence and require rejection, alongside live process and signature observations. |
 | Exact submitted-path forwarding | Under the proposed submitted-path contract, use an instrumented issue callback and a symlink path to check the exact native argument. Pair it with scheduled target creation/replacement and independent file observations. Do not require a particular kernel return to establish absence of hidden host resolution. Finalize expectations with the path/lifecycle disposition. |
@@ -480,9 +524,12 @@ early unavailable/channel/delivery returns do not establish that erasure.
 Keep close, unmap, byte erasure, native release, `done` and reap as different
 observations, without invented success returns for operations lacking one.
 
-Review adjacent claims against code while rewriting: failed authority setup
-blocks activation, not necessarily application; operations of an unapplied
-actor follow setup without applying a policy; `ActorSession` currently supplies
+Describe each failure by its observed stage and terminal or continuing flow,
+using the failure-meaning table above. Show the new required-authority refusal
+before policy processing, auxiliary failures that continue, and host deadlines
+that settle eligibility while later worker facts remain collectable. Operations
+of an unapplied actor follow setup without applying a policy. Review adjacent
+claims against code while rewriting: `ActorSession` currently supplies
 spawn attributes in both ordinary and actor execution, contrary to WORKER's
 nil-attributes claim. Correct descriptions without changing launch behavior.
 Retain the bounded applicability of launch observation L, fresh acquisition
@@ -495,7 +542,9 @@ by deleting qualifications or merging distinct resource ownership.
 **ARCHITECTURE edits.** Organize `One run in time` around admission/equipment,
 host authority preparation, actor population setup, serial visits across
 overlapping lifetimes, remaining cleanup/final observations and reply. Keep a
-short ordinary-worker route. Show exit and cleanup interleaved with visits;
+short ordinary-worker route. Show the terminal authority-setup refusal branch
+before application and separate host setup deadlines from worker refusals.
+Show exit and cleanup interleaved with visits;
 phase completion, `done`, exit/reap and host cleanup are separate events.
 Depict a termination dependency only after review, before dependent activation
 and collection, without suggesting deferred subject creation or retrospective
@@ -604,7 +653,7 @@ obsolete declaration expectations:
 | Basic lifecycle, placement, omission, fresh access and partial failure evidence | [witness_contract](../tests/suites/witness_contract/README.md), [failure_boundaries](../tests/suites/failure_boundaries/README.md), [blackbox_e2e](../tests/suites/blackbox_e2e/README.md), and applicable [runner_validator_failure](../tests/suites/runner_validator_failure/README.md) assertions. Move declaration-only useful checks to actors; pin refused removed fields and unsupported versions separately. |
 | Multiple actors/resources, sandboxed issuance, re-delegation and finite budget qualification | `witness_contract/actor_compositions`, `witness_contract/extension_redelegation`, `witness_contract/actor_timing_qualification`, and affected extension boundary/directory/combination controls in the owning suite. Keep calibration and negative controls, not just successful native returns. |
 | Authority publication, binding, delivery, native dispatch and terminal erasure | `runner_c_worker_harness/authority_binding`, extended `runner_c_worker_harness/actor_operations`, the actor replacement for `runner_c_worker_harness/terminal_erasure`, and `runner_unit/actor_handoff_mutations`; follow their [change triggers](../tests/CHANGE-VERIFICATION.md#actor-authority-ownership-and-operation-controls). |
-| Automatic setup evidence, publication and independent cleanup | Adapt native extension setup/failure controls; extend actor setup/reply and independent-reader controls assigned in Stage 2. Assert primary/cleanup coexistence, local rejection without invented errno, per-operation availability, host versus worker ownership, all affected actors' facts and withheld incomplete publication. Retain failed/late-setup ineligibility independently of valid observations. |
+| Automatic setup evidence, terminal refusal and independent cleanup | Adapt native extension setup/failure controls; extend actor setup/reply and independent-reader controls assigned in Stage 2. Assert primary/cleanup coexistence, local rejection without invented errno, per-operation availability, host versus worker ownership, all affected actors' facts and withheld incomplete publication. Independently establish no application after terminal apparatus refusal, including the removed-branch mutation. Retain host-timeout ineligibility alongside valid late observations. |
 | Unentitled issuer with entitled subject, and inherited restrictions on an unapplied entitled actor | Adapt `witness_contract/actors_byoxpc` and useful assertions from `witness_contract/extensions_byoxpc`; extend `runner_byoxpc/entitlement_readback` and applicable dossier/selection controls. Read back actual signatures, bind equipment to actor processes, and observe live operations with independent file evidence. Remove the obsolete missing-issuer contrast; test missing selected equipment instead. |
 | Signed inventory and installation integrity | Applicable [preflight](../tests/suites/preflight/README.md) build/signature controls and [runner_byoxpc](../tests/suites/runner_byoxpc/README.md) installation, verification and recovery controls. Prove the removed helper is absent from the candidate bundle and new equipment is independently validated. |
 | Native authority and issuer-lifetime assumptions | `sandbox_extensions_native/feasibility` and `sandbox_extensions_native/directory`, selected according to the [native-control guidance](../tests/CHANGE-VERIFICATION.md#native-sandbox-extensions) during design and again if their dependencies or assumptions change. These supplement integrated PW observations. |
@@ -665,6 +714,10 @@ The acceptance account must establish:
   cleanup and per-operation availability observations with their actual owners;
   summary disposition does not replace per-actor facts. Publication and
   scheduling eligibility remain separate, and no diagnostic mode is required.
+- Required authority-apparatus refusal terminates that worker before specimen
+  policy processing. Its observed terminal branch establishes application was
+  not attempted; timeout, auxiliary failure and unpublished application results
+  retain their distinct meanings and supporting controls.
 - WORKER and ARCHITECTURE describe the same implemented resource and temporal
   account. The declaration/crosswalk duplication is removed; changed inventory
   claims have reviewed assertion scope or explicit source-only support.
