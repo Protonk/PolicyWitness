@@ -115,6 +115,10 @@ ordinal bump. See [the contract](../../../docs/CONTRACT.md#internal-hostworker-i
 [capture.c](capture.c) exercises the production capture helper against
 independently constructed bounded objects. It checks selected bytes, rejected
 extents and unreadable inputs, plus parameter-digest sensitivity to changed
-values and invariance under pair reordering. These controls compile or apply
+values and invariance under pair reordering. The exact-capacity fixture supplies
+an independently sized, readable 1 MiB payload and asserts captured status,
+length, complete byte equality and a checksum computed from the source before
+capture. A readable 1 MiB plus one byte object must be refused without copying
+payload bytes. These controls compile or apply
 no sandbox policy; [runner_unit](../runner_unit/README.md) checks the Swift
 receipt reader and its availability gates.

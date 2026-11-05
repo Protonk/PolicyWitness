@@ -302,7 +302,7 @@ func actorAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailur
             if var r = AdmissionStringRule(field: "key", maximum: parameterKeyAdmission.maximum, requiresCString: true).failure(param.key) {
                 r.parameter_key = nil; return r
             }
-            if var r = AdmissionStringRule(field: "value", maximum: PWShmLayout.paramValueMax - 1, requiresCString: true).failure(param.value) {
+            if var r = AdmissionStringRule(field: prefix + "value", maximum: PWShmLayout.paramValueMax - 1, requiresCString: true).failure(param.value) {
                 r.parameter_key = parameterKeyAdmission.safeEcho(param.key); return r
             }
         }

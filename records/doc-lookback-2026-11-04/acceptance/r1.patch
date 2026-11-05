@@ -1,0 +1,11 @@
+--- reviewed/docs/ARCHITECTURE.md
++++ accepted/docs/ARCHITECTURE.md
+@@ -619,7 +619,7 @@
+   fixture bundles with a damaged seal or a sandbox-importing host prove the
+   check refuses them.
+ 
+-The last figure is the graph those generators and rules draw over the
++The document graph below shows how those generators and rules connect the
+ documents: which manifest feeds which generator, which regions it writes,
+ which copies a rule keeps equal, and where the build runs the checks.
+ 

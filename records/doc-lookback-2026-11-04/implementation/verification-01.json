@@ -1,0 +1,66 @@
+{
+  "recorded_utc": "2026-11-05T02:58:58.269313+00:00",
+  "run_path": "tests/out/runs/doc-lookback-repairs-01",
+  "run_id": "20261105T025009Z_d5dead5d",
+  "run_json_sha256": "9c862abd4077022d1174c79d3d25ea9f90461ff707cb6412e9d20c286e1156d7",
+  "terminal": true,
+  "completion": {
+    "completed": 83,
+    "selected": 83,
+    "skipped": 0,
+    "unrun": 0
+  },
+  "case_outcome_counts": {
+    "fail": 1,
+    "pass": 82
+  },
+  "legacy_counts": {
+    "fail": 1,
+    "pass": 81,
+    "skip": 0,
+    "total": 82
+  },
+  "legacy_counts_scope": "legacy reports only",
+  "duration_ms": 273763,
+  "artifact_integrity": {
+    "app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+    "harness_errors": [],
+    "report_dir": "artifact-integrity",
+    "unchanged": true,
+    "valid_before": true
+  },
+  "harness_errors": [
+    {
+      "code": "suite_exit",
+      "invocation": 13,
+      "message": "case command exited with status 1",
+      "requested_suite": "runner_unit"
+    }
+  ],
+  "cases_with_sleep": [],
+  "failed_cases": [
+    {
+      "context": "standard",
+      "id": "runner_unit/host_setup_oracle_sensitivity",
+      "reason": "host setup oracle characterization failed (exit 1; log: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/doc-lookback-repairs-01/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls.log)",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    }
+  ],
+  "base_revision": "ea64218be2549fd034096f53ac23d79afac711ae",
+  "patch_sha256": "3187ec9af01ca527d180e8f9a592199cbf6b7db81fe53fa159278eddf853d1e7",
+  "changed_file_mismatches": [],
+  "baseline_document_mismatches": [],
+  "build_number": 1121,
+  "build_passed": true,
+  "build_executions": 1,
+  "test_executions": 1,
+  "reruns": 0,
+  "paused_before_rerun": true,
+  "transcript_sha256": {
+    "build-console.log": "c65ab973f70a90ee26765ca0ef2343823796b8de1e4cf47f55b728a36dc4d24f",
+    "test-console.log": "f4d41f111b527597876692307abf54d8522aee50084832e67abd27f70f0971bb",
+    "requested-selection.json": "b57ff4d6772cf139ce9f89f77b4e70014611eb757829b04fc5ce495388d56b5d"
+  }
+}

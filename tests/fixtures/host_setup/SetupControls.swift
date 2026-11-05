@@ -131,6 +131,44 @@ func setup_spawn(_ pid: UnsafeMutablePointer<pid_t>, _ path: UnsafePointer<CChar
     setupEvent("native_spawn", ["rc": rc, "pid": pid.pointee]); return rc
 }
 
+// Fixture receipt only: retain existing host observations without collecting
+// anything new while the child runs. Nested records use their existing encoders.
+private struct SetupWorkerObservation: Encodable {
+    let worker_pid: pid_t
+    let ready_byte_received: Bool
+    let ready_wait: PWHostWait?
+    let sentinel_wait: PWHostWait?
+    let grace_wait: PWHostWait?
+    let poll_stop_reason: String?
+    let exit_requested: Bool?
+    let termination_request: PWRunnerTerminationRequest?
+    let reaped: Bool?
+    let exit_code: Int32?
+    let term_signal: Int32?
+    let wait_errors: [PWRunnerWaitError]?
+    let cleanup_trigger: String?
+    let grace_end: String?
+    let collection_basis: String?
+
+    init(_ output: CWorkerOutput) {
+        worker_pid = output.workerPid
+        ready_byte_received = output.readyByteReceived
+        ready_wait = output.readyWait
+        sentinel_wait = output.sentinelWait
+        grace_wait = output.graceWait
+        poll_stop_reason = output.pollStopReason
+        exit_requested = output.exitRequested
+        termination_request = output.terminationRequest
+        reaped = output.reaped
+        exit_code = output.exitCode
+        term_signal = output.termSignal
+        wait_errors = output.waitErrors
+        cleanup_trigger = output.cleanupTrigger
+        grace_end = output.graceEnd
+        collection_basis = output.collectionBasis
+    }
+}
+
 func runSetupControl(_ owner: String, _ fault: String, _ child: String, _ output: String) throws {
     setupCase = fault
     // Each invocation has its own process. Occupy low descriptors for the
@@ -149,14 +187,18 @@ func runSetupControl(_ owner: String, _ fault: String, _ child: String, _ output
     var token: Int32 = -1
     if owner == "worker_token" { token = open(child, O_RDONLY) }
     var outcome = ""
+    var workerOutput: CWorkerOutput? = nil
     if owner.hasPrefix("worker") {
         var input = CWorkerInput(workerExecutablePath: child, policy: "(version 1) (allow default)",
             slots: [], readyByteTimeoutMs: 100, sentinelTimeoutMs: 200, exitGraceMs: 200)
         if token >= 0 { input.extensionFD = token }
         let result = runCWorker(input, postApplied: nil)
         switch result {
-        case .failure(let failure, _): outcome = String(describing: failure)
+        case .failure(let failure, let value):
+            outcome = String(describing: failure)
+            workerOutput = value
         case .success(let value): outcome = "worker observation pid=\(value.workerPid)"
+            workerOutput = value
         }
     } else {
         var session: ExtensionSession? = ExtensionSession(
@@ -188,11 +230,13 @@ func runSetupControl(_ owner: String, _ fault: String, _ child: String, _ output
     }
     dup2(savedOut, STDOUT_FILENO); dup2(savedErr, STDERR_FILENO)
     close(savedOut); close(savedErr)
+    let workerObservationData = try JSONEncoder().encode(workerOutput.map(SetupWorkerObservation.init))
+    let workerObservation = try JSONSerialization.jsonObject(with: workerObservationData, options: [.fragmentsAllowed])
     let receipt: [String: Any] = ["owner": owner, "fault": fault, "events": setupEvents,
         "outcome": outcome, "fds_closed": fdsClosed, "maps_remaining": setupMaps.count,
         "strings_remaining": setupStrings.count, "handles_remaining": setupHandles,
         "names_present_before_fixture_cleanup": namesPresent, "fixture_names_removed": namesRemoved,
-        "spawn_pid": setupPID, "host_reaped": reaped]
+        "spawn_pid": setupPID, "host_reaped": reaped, "worker_observation": workerObservation]
     let data = try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
     try data.write(to: URL(fileURLWithPath: output))
 }

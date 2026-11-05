@@ -1,0 +1,38 @@
+{
+  "candidate_patch_sha256": "7e31a30a89cd89f126e6a23a2563ac2d8688face1e8de1605a986bf45250bad5",
+  "tracked_changed_files": {
+    "controller/README.md": "8561a436d16695096d591080f2a4cdfaea7c63abdaba8611bbfc6ab23f463a66",
+    "controller/src/run_flow.rs": "a7e798e9b225c4fe5a8bdcdf01a24d83deb038e505a15579cac751f3cb3660a1",
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "db88599fde6de5acee9cb63c26b6264544bc3a843c00d11d14374cad31afe2c1",
+    "docs/ARCHITECTURE.md": "3e4e0073acbfc47aacc30c8fcc2752fde3dbc2940ff749cdfeb2f0d4c550bc8e",
+    "docs/LIMITS.md": "87d91b6b0ec3a63aca0e9449e80862b9c220a760ece6c57ebedb7519320ec16e",
+    "docs/PolicyWitness.md": "0ade68fec2de359bd75fad3367c0af5c22915b401f0de1994b36d2ec97068fab",
+    "docs/WORKER.md": "e7e5232be2b500c4dcf2c01bf6d24a460c8a5612461647fc186a592c348c9321",
+    "docs/architecture-boundaries.dot": "a190ae21f106dd4d13a3010348fe0dd0f77b3f1fc6b6c97dced9e42e0724d519",
+    "docs/architecture-boundaries.svg": "3e4735321fc4e87c9283ae62403e296e3974df0f454bb8e26475d0792f1ba5d1",
+    "docs/architecture-byoxpc.dot": "99156e86814fe2d6be4561b646dcd0a6cd42753127308f6216168f01476b307b",
+    "docs/architecture-byoxpc.svg": "5b0b6e689699c1db21758348dd5e398ab1e39c79547876be3a78d5da90458b98",
+    "docs/architecture-topology.dot": "bdc3c6c2014ef10e9aaabc69713eff76241686ea499bb3a5761da30be315937a",
+    "docs/architecture-topology.svg": "915d92045ae9a5a1347c2525f58278a4a8f9cdb9e47c7f1d89eac2632b280be4",
+    "docs/architecture.json": "93c347dc8465af4c90a8a75f52fe8c58924d45224eb0ad2cf587ee83808cddd2",
+    "docs/limits.json": "85207c568be561c6fe5fe1617819ec554404b24bc9dd47719abc4f1078d5d57b",
+    "docs/worker-capabilities.dot": "51b9c388afe923c72b76680c42737e5b77b9b37097fca2e23817c8590f5d2eb4",
+    "docs/worker-capabilities.svg": "0b128d61dc2d5193d6f2284ab08f46d2b29de4edd419f9bf65a9a79284fc6dcc",
+    "runner/Sources/PWRunnerCore/ActorPlan.swift": "0a5fda8936660b0c3f6746fb61a7d159f226064a2bc1fa3644aac7589d7c3aef",
+    "runner/Sources/PWRunnerCore/CWorker.swift": "06498fad4c596a947a0fed2324701fe3851755322886df7a4d0300ec66b396a7",
+    "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift": "63ad99828a14b6530c736e7f604e4101e50d9e1b0945dc7a6c41990458ed82e6",
+    "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift": "1981a3b64b95c67e5f3b7feb6d9719a6e699c0feaa413c127719f6cb9c314e58",
+    "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift": "5cc9f0974216ac056b457e2362e4d721ef50e7463befd314e23a17c25c70903b",
+    "tests/fixtures/host_setup/README.md": "ba0427c330cf10006f7dab16a2c600ce1aba6fc0c656ab1bd7f0fdc3761cc73c",
+    "tests/fixtures/host_setup/SetupControls.swift": "97ca8805049bc2954bad61030389b413ff860d8bb62d1db48e4b45e552df8cd9",
+    "tests/fixtures/request_contract/examples.json": "3546f52a11cd7dd5b6c60b6cbc0a51c5cb3c428fa22616afa65151255ef95c21",
+    "tests/lib/contract.py": "367d4233132b1ac2eeed623ba8bc536361942c8ef4f204ae7ec3815ae474291b",
+    "tests/suites/runner_abi_layout/README.md": "3fd7fe53661f7c8035b3e10bac45aa7618cef040a66c7cb935acb22064447bda",
+    "tests/suites/runner_abi_layout/capture.c": "6d53684021eb857327f84df36d624fde1ded6a19ec9013575eb8c1e34673f6cf",
+    "tests/suites/witness_contract/README.md": "bc018aed13a6866cbf4fe88c8b5edc5afa024d19f6d80c52ad17005ed8ba5f1a"
+  },
+  "source_delta": [
+    "docs/ARCHITECTURE.md"
+  ],
+  "r1_patch_sha256": "66f719a320709f99c5ad5342553799f31bfae54e6cb3a71337709a8feb7b9552"
+}

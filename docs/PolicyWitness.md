@@ -226,8 +226,9 @@ At most <!-- span limits.phase_count.value -->8<!-- /span --> phases and <!-- sp
 
 ### Sandbox extensions
 
-An extension specimen declares a local token reference, target path and optional authority, then
-places native consume/release actions in explicit phases. The issuer prepares
+A declaration-form extension specimen declares a local token reference, target
+path and optional authority, then places native consume/release actions in
+explicit phases. The issuer prepares
 one token outside the specimen sandbox under ordinary authority. `read` selects
 `com.apple.app-sandbox.read`; `read_write` selects
 `com.apple.app-sandbox.read-write`. Absent or null authority means `read`.
@@ -337,8 +338,8 @@ its planned prediction unavailable. Inspect independent contents and directory
 entries to establish effects and persistence after release or worker exit;
 native release alone does not establish revocation or undo completed writes.
 
-A current runner bundle without the issuer returns `bad_request` with
-`extension_issuer_unavailable`; an issuer without the native issuance API returns
+A declaration-form request to a current runner bundle without the issuer returns
+`bad_request` with `extension_issuer_unavailable`; an issuer without the native issuance API returns
 `extension_api_unavailable`. Native refusal,
 issuer death, timeout, malformed publication and unconfirmed cleanup retain their
 own issuance evidence and withhold delivery. Worker-side API absence is an
@@ -350,7 +351,8 @@ its `delivery_failure` account names the failing stage with the native return
 and saved errno when a native call supplied them; a cleanup failure after the
 first failure is recorded separately and never changes the status.
 The host clears its own mapping before replying. Copies held inside native
-libraries are outside that observation. BYOXPC uses its own bundle-local issuer,
+libraries are outside that observation. The declaration form on BYOXPC uses its
+own bundle-local issuer,
 [signed without the worker's entitlements](#install-a-byoxpc-runner).
 
 #### Actors: issue inside the sandbox and re-delegate
@@ -949,15 +951,21 @@ Example:
 <!-- BEGIN COPIED LIMITS -->
 
 A specimen that `libsandbox` would compile can still be refused here, or run
-with less evidence than it produced. This section lists every such limit with
-its value, what it counts and what happens at the boundary.
+with less evidence than it produced. This is the inventory of numeric capacities,
+budgets and evidence-retention bounds: what each counts and what happens at its
+boundary. Fitting these bounds does not establish that a request is meaningful
+or that evidence will be available. Request grammar, extension ownership and
+action order, receipt prerequisites and prediction eligibility still apply.
+A fitting query or complete record may supply no usable prediction.
 
-Capacity refusals carry `data.runner_result.admission_failure`, which names the
+Numeric capacity refusals carry `data.runner_result.admission_failure`, which names the
 `field`, the `actual` count, the `maximum` and the `unit`, with location details
 where available and `origin: "runner_host"`. Find that field in the "Refusal
 names" column of the Specimen admission table; the row says what was measured
 and which location fields are reported. To check a specimen before submitting
-it, compare it with the same rows.
+it, compare it with the same rows. Meaning refusals such as `repeated_consume`
+use `request_failure`; not every refusal supplies numeric counts. Its path is
+retained whole or withheld as null under the diagnostic bounds below.
 
 Request files must be UTF-8 JSON. A file containing invalid UTF-8 yields exit
 code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
@@ -965,6 +973,16 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 `admission_failure` to look up.
 
 ### How to read the tables
+
+An ordinary request has one worker. The declaration form adds a pre-worker
+issuer and permits one declaration, consume and release across its phases.
+The actor form is a separate public form, with
+up to <!-- span limits.actors.value -->8<!-- /span --> workers and <!-- span limits.actor_phases.value -->16<!-- /span --> phases globally,
+and aggregate issue/transfer/consume/release counts. It cannot be mixed
+with declarations. Source and parameter limits apply separately to each policy;
+the total action limit applies once to the whole specimen. Authority participation,
+including being a transfer recipient, excludes exec in that actor; a separate
+actor may exec.
 
 - Capacities are inclusive maxima unless the row says otherwise: a step ID
   of <!-- span limits.step_id.value -->63<!-- /span --> UTF-8 bytes fits, and any longer step ID exceeds its limit. UTF-8 counts measure decoded
@@ -977,6 +995,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   Mach time, which includes system sleep; host, validator and controller waits
   keep their own clocks, and no worker time is compared with them. Nominal waits
   can take longer than their listed duration; each row describes what expiry does.
+  Even elapsed deadlines do not preempt blocked native calls or guarantee final cleanup time.
 - The Control column describes `policy-witness` flags using four words.
   "Fixed" means no flag changes the value in this build. "Flag" names the flag
   that does. "Derived" means the value follows from another row.
@@ -994,10 +1013,13 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   compiled-object receipts. Excess can retain a prefix with a truncation marker
   or make capture unavailable, as the row describes. Attempt
   status and `sandbox_check` verdicts are unchanged by these evidence limits.
-- Diagnostic helpers lists the limits of `sbpl-check`, which runs only after an
-  XPC error. This is independent of the normal admission path, and the
-  helper's import inventory does not control how
-  `libsandbox` resolves or compiles imports.
+- Diagnostic helpers lists the limits of fallback `sbpl-check` calls after an
+  eligible terminal XPC error. These independent compile diagnostics can run
+  before host admission; they do not establish application. Actor fallback
+  associates each selected policy with its actor label when present. Malformed
+  requests can supply more policies than the admitted actor limit. Each helper's
+  retention cap therefore bounds neither their cumulative envelope nor process
+  memory. Its import inventory does not control compiler import resolution.
 
 <!-- BEGIN GENERATED LIMITS -->
 
@@ -1005,9 +1027,9 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 | Limit | Value | Refusal names | Counting and consequence | Control |
 | --- | --- | --- | --- | --- |
-| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` | Final SBPL source after augments. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Total actions and queries (`probe_steps`) | 256 items | `probe_plan` or `phases.actions` | Total ordinary pairs and extension lifecycle actions across the complete plan. Lifecycle actions occupy slots but supply no query; phases do not multiply this cap. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` | Entries in `policy.params`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` | Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Total actions and queries (`probe_steps`) | 256 items | `probe_plan` or `phases.actions` | Total ordinary pairs and extension lifecycle actions across the complete specimen, including all actor phases. A pair counts once; a lifecycle action occupies one slot but supplies no query. Neither phases nor actors multiply this cap. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` | Entries per policy, separately for each actor policy; not an aggregate across actors. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index` | Each `step_id`. A refused ID is identified by `step_index` and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Attempt target (`attempt_target`) | 511 UTF-8 bytes | `target`, with `step_id` and `step_index` | Each attempt target (path, service or sysctl name). For exec, this is also argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Supplied exec arguments (`exec_arguments`) | 15 items | `args` with unit `items`, with `step_id` and `step_index` | Arguments supplied in `attempt.args`; the exec target is the additional argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
@@ -1018,17 +1040,17 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Query filter value (`query_filter_value`) | 511 UTF-8 bytes | `sandbox_check.filter.value`, with `step_id` and `step_index` | Each `sandbox_check.filter.value` when present, including for `none` and unrecognized filter kinds. The query value and attempt target are counted separately, even when they name different paths. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | `sandbox_check.filter.kind`, `attempt.kind` or `attempt.action`, with `step_id` and `step_index` | Each `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`. Unknown labels within the capacity still receive a meaning refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Specimen ID (`specimen_id`) | 255 UTF-8 bytes | `specimen_id` | The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind` or `policy.format` | Each of `run_kind` and `policy.format`. A refused `run_kind` is omitted and a refused format reads `unknown`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Specimen phases (`phase_count`) | 8 items | `phases` | Explicit phases in one request; probe_plan normalizes to one phase. Excess returns admission_failure before any child. | Fixed. |
+| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind`, `policy.format` or actor sandbox labels | Each run_kind, policy.format, actors[].sandbox.mode and actors[].sandbox.policy.format. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Ordinary/declaration phases (`phase_count`) | 8 items | `phases` | Explicit phases in an ordinary or declaration request; probe_plan normalizes to one phase. Actor requests use actor_phases. Excess returns admission_failure before any child. | Fixed. |
 | Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
-| Extension declarations (`extension_declarations`) | 1 item | `extensions` | Across the complete specimen, including separate phases. Omitted actions are legal. Additional declarations return `admission_refused`. | Fixed. |
-| Consume actions (`extension_consumes`) | 1 item | `phases.actions.extension` | Across the complete specimen, including separate phases. Omitted actions are legal. A repeated consume returns `repeated_consume`. | Fixed. |
-| Release actions (`extension_releases`) | 1 item | `phases.actions.extension` | Across the complete specimen, including separate phases. Omitted actions are legal. A repeated release returns `repeated_release`. | Fixed. |
+| Declaration-form declarations (`extension_declarations`) | 1 item | `extensions` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. Additional declarations return `admission_refused`. | Fixed. |
+| Declaration-form consume actions (`extension_consumes`) | 1 item | `phases.actions.extension` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated consume returns `repeated_consume`. | Fixed. |
+| Declaration-form release actions (`extension_releases`) | 1 item | `phases.actions.extension` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated release returns `repeated_release`. | Fixed. |
 | Token and handle references (`extension_reference`) | 63 UTF-8 bytes | `extensions.token_ref` or `phases.actions.extension.token_ref` / `handle_ref` | Each nonempty local token or handle reference; embedded NUL is refused. Excess returns `admission_refused`; references must also satisfy declaration and action order. | Fixed. |
-| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.target` | Submitted target path, before host realpath preparation; excludes terminating NUL. This is separate from an ordinary attempt target. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
+| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.target` | Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
 | Specimen actors (`actors`) | 8 items | `actors` | Actor objects in one actor-form request; every phase names one of them. Excess returns `admission_refused` before any child. | Fixed. |
-| Actor-form phases (`actor_phases`) | 16 items | `phases` | Explicit phases in one actor-form request; each is one visit of its actor. Excess returns `admission_refused` before any child. | Fixed. |
+| Actor-form phases (`actor_phases`) | 16 items | `phases` | All explicit phases across the complete actor-form request, including empty visits; each visits one actor. Not a per-actor allowance. Excess returns `admission_refused` before any child. | Fixed. |
 | Extension issues (`actor_issues`) | 32 items | `phases[].actions[].extension` | Issue actions across the complete actor-form specimen; each assigns one token reference. Excess returns `admission_refused` before any child. | Fixed. |
 | Extension transfers (`actor_deliveries`) | 64 items | `phases[].actions[].extension` | Transfer actions across the complete actor-form specimen; each assigns one delivery reference. Excess returns `admission_refused` before any child. | Fixed. |
 | Extension consumes (`actor_handles`) | 64 items | `phases[].actions[].extension` | Consume actions across the complete actor-form specimen; each assigns one handle reference. Excess returns `admission_refused` before any child. | Fixed. |
@@ -1042,29 +1064,29 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | --- | --- | --- | --- |
 | Host reply flush delay (`host_exit_delay`) | 50 milliseconds | Delay scheduled once by the terminal execution or abandoned-reservation owner. The unsandboxed host schedules exit after the delay. An occupied host grants no further reservation; client acquisition can reconnect before submission. | Fixed. |
 | Runner verification wait (`runner_verify_wait`) | 5,000 milliseconds | Default allowance for the fixed runner verify specimen, shared by reservation acquisition and the execution reply wait. Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate. | Flag `--timeout-ms` on `runner verify`. |
-| Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence. | Fixed; internal driver controls may shorten it. |
-| Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
-| Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
-| Actor setup allowance (`actor_setup_allowance`) | 10,000 milliseconds | One aggregate allowance from the first actor launch to the last setup disposition, capping each policy delivery and readiness wait. An actor whose setup is unresolved at expiry is stopped and reported `setup_timeout`; independent actors keep their own dispositions. | Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain. |
-| Actor schedule allowance (`actor_execution_allowance`) | 120,000 milliseconds | One host allowance for the whole serial schedule, excluding measured validator collection; not one allowance per actor. Expiry ends the current visit (`arrival_timeout` or `completion_timeout`) and cancels the remaining schedule; every earlier publication is retained. | Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain. |
-| Actor collection allowance (`actor_collection_allowance`) | 30,000 milliseconds | Aggregate validator planning and collection allowance across every actor's phases. Exhaustion marks later phases `budget_exhausted`; earlier collections are retained. | Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain. |
-| Actor release wait (`actor_release_wait`) | 60,000 milliseconds | The worker's wait from a visit's arrival to the host's release of that visit's ordinal. Expiry refuses the visit with a published timing failure, as the single-worker release wait does. | Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain. |
-| Authority exchange allowance (`actor_exchange_allowance`) | 5,000 milliseconds | Each custody acknowledgement a worker awaits after publishing an issued token, each transfer request it awaits an answer to, and each recipient acknowledgement the host awaits. Expiry is a transport observation (`timeout` custody or a `host_timeout`/`recipient_timeout` transfer status), never a native result. | Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain. |
-| Actor lifetime cutoff (`actor_lifetime_cutoff`) | 180,000 milliseconds | One absolute continuous-clock cutoff shared by every actor, taken before the first launch; it includes parked waits, collection and sleep. A worker that reaches the cutoff publishes a timing failure and exits; a cutoff already past at launch refuses before any policy byte. | Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain. |
+| Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline per policy delivery starting immediately after spawn; partial writes and interrupted calls do not restart it. Actor delivery is also capped by the remaining aggregate setup allowance. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence. | Fixed; internal driver controls may shorten it. |
+| Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Elapsed monotonic wait after successful policy delivery and readiness-pipe setup, capped for an actor by remaining setup allowance. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
+| Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Elapsed monotonic publication wait for ordinary/declaration execution, starting after the readiness wait and excluding synchronous validator collection. Actor execution uses actor_execution_allowance instead. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed; `_test_overrides.worker_timeout_ms` replaces the ordinary/declaration default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance. |
+| Actor setup allowance (`actor_setup_allowance`) | 10,000 milliseconds | One aggregate elapsed monotonic allowance starting before authority-region preparation and ending at setup disposition, including launches, policy delivery and readiness. Remaining setup caps each subwait. An actor whose setup is unresolved at expiry is stopped and reported `setup_timeout`; independent actors keep their own dispositions. | Fixed. |
+| Actor schedule allowance (`actor_execution_allowance`) | 120,000 milliseconds | One elapsed monotonic allowance for the complete serial actor schedule after setup, excluding synchronous validator collection; not one allowance per actor. Expiry ends the current visit (`arrival_timeout` or `completion_timeout`) and cancels the remaining schedule; every earlier publication is retained. | Fixed. |
+| Actor collection allowance (`actor_collection_allowance`) | 30,000 milliseconds | One aggregate allowance for validator planning and synchronous collection across all actor phases. This is the actor counterpart of phase_collection_wait, not an additional pool. Exhaustion marks later phases `budget_exhausted`; earlier collections are retained. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
+| Actor release wait (`actor_release_wait`) | 60,000 milliseconds | The worker's wait from a visit's arrival to the host's release of that visit's ordinal. Expiry refuses the visit with a published timing failure, as the single-worker release wait does. | Fixed. |
+| Authority exchange allowance (`actor_exchange_allowance`) | 5,000 milliseconds | Each worker custody-acknowledgement or transfer-answer wait uses sampled continuous time; each host recipient-acknowledgement wait uses elapsed monotonic time, also capped by remaining schedule allowance. Expiry is a transport observation (`timeout` custody or a `host_timeout`/`recipient_timeout` transfer status), never a native result. | Fixed. |
+| Actor lifetime cutoff (`actor_lifetime_cutoff`) | 180,000 milliseconds | One absolute continuous-clock cutoff shared by all actors, calculated before setup. Parked waits, collection and system sleep advance this clock. An already-past cutoff refuses before policy reading; a worker that observes expiry at a checked activation, release or exchange wait reports a timing failure. Native calls and final cleanup can outlast it. | Fixed. |
 | Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Elapsed monotonic wait for an unreaped worker after the host stores an exit request. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
 | Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Sampled continuous time for each phase release after the worker arrives, converted once before application to a ceiling tick allowance. Continuous time includes system sleep. Expiry records the phase index and milliseconds and prevents its actions. An unusable sample, an earlier rejected sample or an unrepresentable plan exclusion records a local timing refusal with its reason instead; neither invents a native result or errno. Earlier published phase evidence remains. | Fixed. |
 | Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Informative allowance between the validator budgets and worker release wait. No separate timeout or refusal occurs at this value. | Not enforced; no flag. |
 | Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum proposed `_test_overrides.validator_io_timeout_ms`. Smaller supplied values propose 50 ms; the reply mirrors the supplied value. The remaining aggregate collection allowance caps the effective deadline, including below this floor. | Fixed. |
-| Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance. Received verdicts survive an I/O timeout; cleanup results remain reported. | Fixed. |
-| Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Nominal wait for validator exit after collection closes. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
+| Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance. Received verdicts survive an I/O timeout; cleanup results remain reported. | Fixed; `_test_overrides.validator_io_timeout_ms` changes the proposed deadline, floored at 50 ms without a ceiling. The aggregate remainder can cap the effective deadline below that floor. |
+| Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Elapsed monotonic wait for validator exit after collection closes. Subsequent termination and final reap can overrun it. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
 | Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Continuous time after successful spawn, limited by the remaining `exec_attempt_budget`. Expiry fails the attempt while preserving any observed natural exit code. An unusable sample or unrepresentable child deadline ends observation as a local timing fault with no errno. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped. | Fixed. |
-| Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Continuous time from the worker origin before setup, shared by exec steps, including worker setup and intervening work but excluding each acknowledged release wait. Continuous time includes system sleep. Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. An unusable sample refuses spawn with no errno, or after spawn records a local timing fault beside any native error; after a rejected sample, later spawns are refused. Blocking spawn and non-exec operations may outlast this allowance. | Fixed. |
+| Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Continuous time from each worker origin before setup, shared by that worker's exec steps. Includes setup and intervening work; excludes acknowledged release waits and, for actors, accepted parked activation waits. This per-worker budget is separate from the global actor schedule allowance. Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. An unusable sample refuses spawn with no errno, or after spawn records a local timing fault beside any native error; after a rejected sample, later spawns are refused. Blocking spawn and non-exec operations may outlast this allowance. | Fixed. |
 | Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Continuous-time allowance to confirm an exec child's exit after observation ends. Expiry, an unusable sample or a wait error leaves reaping unconfirmed and supplies no invented exit status; an unusable clock still permits the immediate exit check. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit. | Fixed. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | One absolute client allowance, including helper launch/stdin delivery, reservation acquisition and the execution reply wait. Direct helper invocation starts after reading input. Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
-| External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. Acquisition reaching an occupied or retiring host can retry without sending the specimen; the interval still controls launch pacing. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
-| Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
-| Issuer collection wait (`extension_issuer_wait`) | 5,000 milliseconds | Monotonic host wait starting after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; phase collection and worker waits have not started. Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait. | Fixed. |
+| External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. The setting controls launch pacing, not a guaranteed request-delivery time. Without the key launchd uses its ten-second default. Acquisition reaching an occupied or retiring host can retry without sending the specimen. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
+| Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic planning and collection time across ordinary/declaration phases. Actor form uses the single actor_collection_allowance pool. Remaining allowance caps each validator I/O deadline; cleanup and scheduling can overrun it. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
+| Issuer collection wait (`extension_issuer_wait`) | 5,000 milliseconds | Declaration form only: monotonic host wait after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; actor issue actions do not use this helper or allowance. Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait. | Fixed. |
 | Sysctl value-read destination (`sysctl_read_bytes`) | 4,096 bytes | Destination for one post-apply sysctlbyname value read with a non-null buffer; no sizing call or retry. Larger values can fail within this bound. Returned value bytes and post-call length are discarded; a failed call does not diagnose whether capacity was insufficient. | Fixed. |
 | Reservation lease (`reservation_lease`) | 5,000 milliseconds | Requested unused lease, capped by the host; the client requests no more than its remaining allowance. Expiry or owner disconnect retires the unused host. Submission checks expiry atomically and an old timer cannot terminate execution. | Fixed. No renewal. |
 | Reservation RPC wait (`reservation_rpc_wait`) | 5,000 milliseconds | Maximum wait for one reserve reply, also bounded by the original overall client deadline. Expiry abandons and invalidates that connection; acquisition may continue without submitting a specimen. | Fixed per-attempt ceiling. |
@@ -1078,11 +1100,11 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
 | Informative reply size bound (`runner_reply_maximum`) | 85,852,557 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 260,046,848 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
-| Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
+| Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from each sbpl-check invocation, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
 | Validator reply frame (`validator_reply_frame`) | 8,192 bytes | UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain. | Fixed. |
-| Validator records per query (`validator_records_per_query`) | 2 items | Retained-record allowance is twice the number of queries actually sent in that phase; at most 512 records across a production run. The first excess record produces a decode fault; no excess record enters association. | Fixed. |
-| Validator reply storage per query (`validator_reply_bytes_per_query`) | 16,384 bytes | Twice the frame bound per actual query; at most 4,194,304 retained stdout bytes across a production run. The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame. | Fixed. |
+| Validator records per query (`validator_records_per_query`) | 2 items | Retained-record allowance is twice the number of queries submitted to that phase collector, sized before writes; at most 512 records across a production run. The first excess record produces a decode fault; no excess record enters association. | Fixed. |
+| Validator reply storage per query (`validator_reply_bytes_per_query`) | 16,384 bytes | Twice the frame bound per query submitted to the phase collector, sized before writes; at most 4,194,304 retained stdout bytes across a production run. The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame. | Fixed. |
 | Validator step_id string (`validator_reply_step_id`) | 63 UTF-8 bytes | Bytes in a decoded validator step_id string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
 | Validator operation string (`validator_reply_operation`) | 127 UTF-8 bytes | Bytes in a decoded validator operation string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
 | Validator filter_type string (`validator_reply_filter_type`) | 63 UTF-8 bytes | Bytes in a decoded validator filter_type string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
@@ -1091,7 +1113,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Validator error string (`validator_reply_error`) | 511 UTF-8 bytes | Bytes in a decoded validator error string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
 | Transient token storage (`extension_token_storage`) | 16,384 bytes | Fixed token array including its terminating NUL; never part of a retained reply. Empty, oversized or malformed publications cannot supply a consumed token. | Fixed. |
 | Maximum token payload (`extension_token_payload`) | 16,383 bytes | Nonempty token bytes excluding the required trailing NUL. Larger native results report `token_oversized`; malformed delivery is unavailable. | Fixed. |
-| Transient extension channel (`extension_channel`) | 17,472 bytes | Logical mapped channel with header, resolved path and token array. The OS backing object may round its storage up. Insufficient backing size or invalid channel geometry cannot supply a token. | Fixed. |
+| Transient extension channel (`extension_channel`) | 17,472 bytes | Declaration-form logical mapped channel with header, resolved path and token array. The OS backing object may round its storage up; actor authority slots are separate. Insufficient backing size or invalid channel geometry cannot supply a token. | Fixed. |
 | Reservation control bytes (`reservation_control_bytes`) | 65,536 bytes | Encoded reservation request or control reply, before JSON decoding. Excess is a protocol failure. No oversized control can grant execution. | Fixed. |
 | Client error message (`client_error_message`) | 1,024 UTF-8 bytes | Retained error prose at a Unicode boundary. Excess is truncated with message_truncated; error stage, domain and native code remain separate observations. | Fixed. |
 | Client error domain (`client_error_domain`) | 128 UTF-8 bytes | Retained native error domain at a Unicode boundary. Excess is truncated with domain_truncated. No arbitrary userInfo dictionary is retained. | Fixed. |
@@ -1102,20 +1124,22 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Exec child output per stream (`exec_stream`) | 1,023 bytes | Retained stdout or stderr bytes for each exec child. An overflow marker occupies part of this allowance. Excess output is not retained. | Fixed. |
-| Primary worker diagnostic (`worker_diagnostic`) | 4,095 bytes | Retained primary diagnostic bytes. The reply reports retained length and truncation state; this is not a complete transcript. | Fixed. |
-| Optional compiled-object capture (`compiled_profile`) | 1,048,576 bytes | Raw bytecode bytes in an optional compiled-object receipt, before base64 encoding. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
+| Primary worker diagnostic (`worker_diagnostic`) | 4,095 bytes | Retained primary diagnostic bytes per worker, hence separately per actor. The reply reports retained length and truncation state; this is not a complete transcript. | Fixed. |
+| Optional compiled-object capture (`compiled_profile`) | 1,048,576 bytes | Raw bytecode bytes per optional compiled-object receipt before base64 encoding, separately for each opted-in apply actor. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
 | Worker observed path (`observed_path`) | 1,023 bytes | Retained bytes in each worker-observed path. Path observation can be absent or bounded; a host-side path diagnostic is a separate observation. | Fixed. |
 | Worker attempt error text (`attempt_error`) | 255 bytes | Retained bytes in each worker attempt error message. Error text is bounded; structured result and status fields remain separate. | Fixed. |
-| Phase records per worker region (`phase_records`) | 16 items | Fixed phase records in each worker's shared header. The legacy form admits eight phases (`phase_count`); the remaining records are internal support for the actor form under development and no public request reaches them. A worker refuses a header naming more phases than its records before application. | Fixed. |
+| Phase records per worker region (`phase_records`) | 16 items | Fixed phase records in each worker shared header. Ordinary/declaration requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records. A worker refuses a header naming more phases than its records before application. | Fixed. |
 | Authority slot storage (`authority_slot_bytes`) | 16,448 bytes | One token publication slot in an actor's authority region: a fixed header and the token buffer. A region holds one outbound slot per admitted issue and one inbound slot per admitted delivery to that actor, with distinct bounded transfer answer cells; nothing in it enters the reply. | Fixed. |
 | Phase publication storage (`phase_publications`) | 512 bytes | Sixteen fixed 32-byte phase records within each shared header, one per visit an actor can be activated in; the legacy form uses the first eight. The legacy and actor-form phase caps prevent excess publication storage. | Fixed. |
 | Fresh file-read prefix (`fresh_read_bytes`) | 64 bytes | At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix. Longer files remain readable experiments; the bounded result does not claim complete file contents. | Fixed. |
+| Request-failure path depth (`request_failure_path_components`) | 8 items | Components in a retained request_failure.path, including object keys and array positions. Excess withholds the entire path as null; no shortened location is substituted. | Fixed. |
+| Request-failure path component (`request_failure_path_component`) | 63 UTF-8 bytes | Each component in a retained request_failure.path. The separate parameter_key admission-record echo has its own larger bound. Excess withholds the entire path as null; no shortened location is substituted. | Fixed. |
 
 ### Diagnostic helpers
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| sbpl-check source admission (`helper_source`) | 4,194,304 bytes | Top-level source bytes read by the diagnostic helper; not the runner policy cap. policy_too_large with null compile and import_inventory groups; no compile verdict. | Fixed. |
+| sbpl-check source admission (`helper_source`) | 4,194,304 bytes | Source bytes in each diagnostic helper input, including independent actor-policy fallback inputs; not the runner policy cap or total fallback size. policy_too_large with null compile and import_inventory groups; no compile verdict. | Fixed. |
 | sbpl-check import inventory depth (`helper_import_depth`) | 8 levels | Import depth in the helper inventory, starting at 0. Depth 8 is the first depth replaced by a depth-limit diagnostic. The affected branch stops and `import_inventory.truncated` is set. This does not limit compilation of imports. | Fixed. |
 | sbpl-check import inventory count (`helper_import_count`) | 64 records | Import-inventory records, including unresolved and error records. Repeated files or names are listed once. Further inventory stops and `import_inventory.truncated` is set. This does not limit compilation of imports. | Fixed. |
 
@@ -1126,11 +1150,12 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 - Budgets nest, and one flag changes one of them. `--timeout-ms` sets
   `client_rpc_wait`, which also bounds external host re-acquisition. The worker polling
   window `worker_sentinel_wait`, the validator deadline `validator_io_wait`,
-  the release wait `worker_proceed_wait` and the exec budgets keep their own
-  values, so no number here is an end-to-end runtime. The reply records the
+  the release wait `worker_proceed_wait` and the per-worker exec budgets keep their own
+  values. Actor form instead uses one setup allowance and one schedule allowance
+  shared by all actors. No number here is an end-to-end runtime. The reply records the
   client span in `data.runner_client.started_at_unix_ms` and
   `ended_at_unix_ms`; an expired client wait yields `xpc_timeout`.
-- Extension issuance precedes worker creation.
+- Declaration-form extension issuance precedes worker creation.
   Its <!-- span limits.extension_issuer_wait.value_unit -->5,000 milliseconds<!-- /span -->
   wait starts after the issuer spawns; target preparation and the spawn call
   precede that clock. Issuer cleanup can overrun the wait. This work consumes
@@ -1138,6 +1163,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   budgets. A client timeout does not cancel issuance or its cleanup.
 - Phases share one total action/query capacity and a cumulative collection
   allowance of <!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span -->.
+  In actor form this is `actor_collection_allowance`, not a second pool.
+  The total-collection test override can reduce either form's pool.
   Each eligible phase gets a fresh validator; its I/O deadline is capped by the
   remaining allowance. Planning and cleanup consume this allowance, but cleanup
   and scheduling can overrun it. Exhaustion leaves later predictions unavailable
@@ -1145,27 +1172,32 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   own <!-- span limits.worker_proceed_wait.value_unit -->60,000 milliseconds<!-- /span -->
   release wait; stale releases cannot satisfy it. The host's sentinel polling
   excludes every synchronous collection, and the worker's exec budget excludes
-  every measured release wait. Client timeout still cancels none of this work.
-- Validator storage scales with queries actually sent, never with the phase
-  capacity multiplied by the action capacity. Frame and string rejection retain
+  every acknowledged release wait and each accepted actor activation wait.
+  Actor setup includes preparation before the first launch; its schedule allowance
+  excludes synchronous collection. The shared continuous lifetime cutoff is
+  sampled at checked waits, so blocked native calls and final cleanup can outlast
+  it. Client timeout still cancels none of this work.
+- Validator storage scales with the query list submitted to each phase collector
+  before writes, not the count of successfully written query lines or phase
+  capacity multiplied by action capacity. Expected and written bytes remain
+  separate observations. Frame and string rejection retain
   earlier complete records and bounded fault context; the stdout byte cutoff
   closes collection with `byte_limit` and discards any incomplete cutoff frame.
 - Output budgets mark, they never silently cut. Each receiver reports the
   budget it applied in `capture_limit_bytes` (`controller_output`,
   `policy_helper_output`). Output beyond it is marked truncated, and a
   truncated JSON stream is not parsed as a reply.
-- One refusal names the first failing field. When a specimen exceeds several
-  admission limits, the order is: top-level metadata (`specimen_id`,
-  `request_label`), extension declaration count and declaration strings, then
-  lifecycle-action strings and `test_override_path` executable overrides,
-  then phase count, total action count, phase identities
-  and parameter counts (`phase_count`, `probe_steps`, `phase_id`, `policy_parameters`), then worker strings
-  (`policy_source`, `step_id`, `attempt_target`, exec arguments, parameter keys
-  and values), then host query
-  fields (`query_operation`, `query_filter_value`, `probe_plan_label`). A
-  refused value is never echoed shortened: an oversized `specimen_id` is
-  replaced by `<admission_refused>`, an oversized `run_kind` is omitted and an
-  oversized `policy.format` reads `unknown`.
+- Capacity checking selects the first failing field after decoding. Common
+  checks visit top-level metadata, declaration count/strings, actor identity
+  and sandbox labels, phase actor identities/lifecycle strings, then executable
+  overrides. Ordinary/declaration checks then visit phase/action counts, phase
+  identities, parameter count, worker strings and query fields. Actor checks
+  instead visit actor/phase/action counts, phase identities, aggregate lifecycle
+  counts, each policy's source/parameters, ordinary worker strings and query
+  fields. Meaning validation follows capacity checking; decoding can refuse
+  malformed shapes earlier. A refused identity is never shortened into another:
+  an oversized `specimen_id` becomes `<admission_refused>`, an oversized
+  `run_kind` is omitted and an oversized legacy `policy.format` reads `unknown`.
 - The `policy_source`, `parameter_key`, `parameter_value`, `step_id`,
   `attempt_target`, `exec_argument`, `query_operation`, `query_filter_value`,
   `phase_id`, `extension_reference`, `extension_target` and `test_override_path`
@@ -1176,14 +1208,18 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   `probe_plan_label`) permit escaped NUL at this gate; their
   normal meaning rules still apply. Within the capacities above, other control
   characters and valid Unicode survive request transport unchanged.
-- Exec steps share a budget and each child has a deadline. `exec_attempt_budget`
-  bounds all exec steps of a plan together and `exec_child_wait` bounds each
+- Exec steps in each worker share a budget and each child has a deadline.
+  `exec_attempt_budget` bounds that worker's exec steps together and `exec_child_wait` bounds each
   child; neither has a flag. A step the exhausted budget refuses reports
   `exec_failed` with `ETIMEDOUT`, no `child_pid` and no sandbox attribution. A
   child cut by its deadline fails the attempt but keeps any exit code that was
   observed. A worker that dies first leaves the step's exec details
   unpublished, which establishes neither that no child spawned nor that cleanup
   succeeded.
+- Compiled-object receipts are bounded per opted-in policy, separately in each
+  apply actor's record. Capture requires a 32-character lowercase hexadecimal nonce, successful
+  application, completion, clean exit and matching identity/checksum. Capacity
+  alone does not make a receipt available; an unapplied actor has none.
 
 <!-- END COPIED LIMITS -->
 
@@ -2446,8 +2482,9 @@ can be listed, validated and removed, and it serves specimens that require no
 entitlements, but a specimen with `required_entitlements` is refused until the
 runner is reinstalled. Older records without issuer read-back similarly retain
 unknown issuer provenance and remain manageable. Selecting a current runner copy
-whose issuer file is missing refuses extension specimens with
-`extension_issuer_unavailable`; its ordinary specimens remain supported. An
+whose issuer file is missing refuses declaration-form extension specimens with
+`extension_issuer_unavailable`; ordinary and actor-form specimens do not depend
+on that helper. Actor issue actions run inside the selected actor worker. An
 older runner binary can refuse the request version or fields before reaching
 this capability check. `runner validate` checks any recorded helper
 against the current copy and reports missing or invalid code; `runner reconcile`

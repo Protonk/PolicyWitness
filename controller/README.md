@@ -115,9 +115,10 @@ belong to the separately dispatched `runner` commands; `bundle::read_bundle_info
 is used only by install.
 
 [`RunDependencies`](src/run_flow.rs) names the controllable app root, manifest
-loader, registry location and client invocation. Orchestration tests count
-manifest loads and client calls; the built-in selection control uses an app
-root without an Info.plist.
+loader, registry location, client invocation and fallback compiler invocation.
+Orchestration tests count manifest loads and client calls, and check fallback
+policy inputs, actor association and ordering without replacing transport
+evidence. The built-in selection control uses an app root without an Info.plist.
 
 ### Output contract
 

@@ -40,6 +40,18 @@ checks absence. A failed observation retains the name and cleanup receipt in the
 case artifacts. Each child is either already reaped by the host or independently
 terminated/reaped by the fixture, with host-reap evidence kept separate.
 
+The fixture receipt's `worker_observation` retains existing host output from
+either worker result branch: PID, ready-byte receipt, ready/sentinel/grace wait
+records, poll stop reason, exit request, termination request, reaping, exit code,
+termination signal, wait errors, cleanup trigger, grace end and collection basis.
+It is null when no worker output is available,
+including issuer scenarios; unavailable optional members are omitted. Encoding
+occurs after the lifecycle and cleanup observations. This adds no child
+instrumentation and preserves the 100 ms ready, 200 ms sentinel and 200 ms grace
+allowances. These records describe host observations; they do not establish why
+an independent child receipt is missing. The existing outcome and cleanup fields
+and checker assertions remain separate from these diagnostics.
+
 These are characterization controls. A passing case does not assert that every
 setup failure is refused safely. The checker also rejects independently altered
 receipts with missing injections, wrong children, missing reaping, unexpected

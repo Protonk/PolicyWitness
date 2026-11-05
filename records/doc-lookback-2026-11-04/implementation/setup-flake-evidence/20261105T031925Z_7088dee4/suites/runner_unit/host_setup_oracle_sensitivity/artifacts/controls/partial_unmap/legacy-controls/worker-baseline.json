@@ -1,0 +1,104 @@
+{
+  "events": [
+    {
+      "call": "shm",
+      "fd": 16
+    },
+    {
+      "call": "dup2",
+      "destination": 0,
+      "identity": {
+        "device": 0,
+        "fd": 19,
+        "inode": 13865933095429594213,
+        "mode": 4528,
+        "rc": 0
+      },
+      "source": 19
+    },
+    {
+      "call": "dup2",
+      "destination": 3,
+      "identity": {
+        "device": 0,
+        "fd": 16,
+        "inode": 0,
+        "mode": 384,
+        "rc": 0
+      },
+      "source": 16
+    },
+    {
+      "call": "dup2",
+      "destination": 4,
+      "identity": {
+        "device": 0,
+        "fd": 18,
+        "inode": 1413436332407813581,
+        "mode": 4528,
+        "rc": 0
+      },
+      "source": 18
+    },
+    {
+      "argc": 7,
+      "call": "spawn_reached"
+    },
+    {
+      "call": "native_spawn",
+      "pid": 352,
+      "rc": 0
+    },
+    {
+      "call": "munmap",
+      "rc": 0
+    }
+  ],
+  "fault": "baseline",
+  "fds_closed": true,
+  "fixture_names_removed": true,
+  "handles_remaining": 0,
+  "host_reaped": true,
+  "maps_remaining": 0,
+  "names_present_before_fixture_cleanup": [],
+  "outcome": "worker observation pid=352",
+  "owner": "worker",
+  "spawn_pid": 352,
+  "strings_remaining": 0,
+  "worker_observation": {
+    "cleanup_trigger": "deadline_expiry",
+    "collection_basis": "after_confirmed_reap",
+    "exit_requested": true,
+    "grace_end": "exhausted",
+    "grace_wait": {
+      "budget_ms": 200,
+      "clock_fault": false,
+      "elapsed_ms": 202,
+      "stop": "exhausted"
+    },
+    "poll_stop_reason": "sentinel_deadline",
+    "ready_byte_received": false,
+    "ready_wait": {
+      "budget_ms": 100,
+      "clock_fault": false,
+      "elapsed_ms": 100,
+      "stop": "deadline"
+    },
+    "reaped": true,
+    "sentinel_wait": {
+      "budget_ms": 200,
+      "clock_fault": false,
+      "elapsed_ms": 200,
+      "excluded_ms": 0,
+      "stop": "sentinel_deadline"
+    },
+    "term_signal": 9,
+    "termination_request": {
+      "rc": 0,
+      "signal": 9
+    },
+    "wait_errors": [],
+    "worker_pid": 352
+  },
+  "child": null
+}

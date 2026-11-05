@@ -1,0 +1,1027 @@
+diff --git a/controller/src/run_flow.rs b/controller/src/run_flow.rs
+index 7b4e6c3d..142d94cc 100644
+--- a/controller/src/run_flow.rs
++++ b/controller/src/run_flow.rs
+@@ -226,13 +226,15 @@ pub fn print_escaped_tool_error(error: String) -> Result<(), String> {
+ /// The dependencies a run acquires from its environment, named at the
+ /// boundaries the controlled orchestration tests observe: where the app root
+ /// is, how the evidence manifest is read, where the external registry lives
+-/// and how the client is invoked. Production binds the real ones; a test binds
+-/// counting or capturing closures around them and reads the rendered envelope.
++/// and how the client and fallback compiler are invoked. Production binds the
++/// real ones; a test binds counting or capturing closures around them and reads
++/// the rendered envelope.
+ struct RunDependencies<'a> {
+     pub app_root: &'a dyn Fn() -> Result<PathBuf, String>,
+     pub load_manifest: &'a dyn Fn(&Path) -> Result<EvidenceManifest, String>,
+     /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
+     pub registry_path: Option<&'a Path>,
++    pub policy_check: &'a dyn Fn(&str) -> Result<PolicyCheckCapture, String>,
+     pub client: &'a dyn Fn(
+         &str,
+         &str,
+@@ -248,6 +250,7 @@ impl RunDependencies<'static> {
+             load_manifest: &evidence::load_manifest,
+             registry_path: None,
+             client: &run_pw_runner_client,
++            policy_check: &run_policy_check,
+         }
+     }
+ }
+@@ -412,6 +415,7 @@ fn fallback_policy_check(
+ fn actor_fallback_checks(
+     client: &RunnerClientRun,
+     policies: &[(Option<String>, Value)],
++    run: &dyn Fn(&str) -> Result<PolicyCheckCapture, String>,
+ ) -> Option<Vec<ActorPolicyCheck>> {
+     if policies.is_empty() || !client.fallback_eligible() {
+         return None;
+@@ -423,8 +427,7 @@ fn actor_fallback_checks(
+                 let request = serde_json::json!({ "policy": policy }).to_string();
+                 ActorPolicyCheck {
+                     actor_id: actor_id.clone(),
+-                    policy_check: run_policy_check(&request)
+-                        .unwrap_or_else(PolicyCheckCapture::unavailable),
++                    policy_check: run(&request).unwrap_or_else(PolicyCheckCapture::unavailable),
+                 }
+             })
+             .collect(),
+@@ -739,8 +742,9 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
+         ReplyAdmission::DeliveryFailed(error) => ("tool_error", 2, error),
+         ReplyAdmission::Refused { outcome, error } => (outcome, 1, error),
+         ReplyAdmission::Admitted => {
+-            let policy_check = fallback_policy_check(&runner_client, || run_policy_check(&held));
+-            let actor_policy_checks = actor_fallback_checks(&runner_client, &actor_policies);
++            let policy_check = fallback_policy_check(&runner_client, || (deps.policy_check)(&held));
++            let actor_policy_checks =
++                actor_fallback_checks(&runner_client, &actor_policies, deps.policy_check);
+             let execution = complete_execution(ExecutionData {
+                 specimen,
+                 policy_check,
+@@ -757,11 +761,12 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
+     let mut data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
+     data.execution.policy_check =
+         fallback_policy_check(data.execution.runner_client.as_ref().unwrap(), || {
+-            run_policy_check(&held)
++            (deps.policy_check)(&held)
+         });
+     data.execution.actor_policy_checks = actor_fallback_checks(
+         data.execution.runner_client.as_ref().unwrap(),
+         &actor_policies,
++        deps.policy_check,
+     );
+     envelope(
+         json_contract::JsonResult::new(false, exit_code, Some(outcome), Some(error)),
+@@ -2022,7 +2027,7 @@ else:
+     }
+ 
+     // ---- Controlled orchestration --------------------------------------------
+-    // `run` with its production dependencies replaced at the four boundaries:
++    // `run` with its production dependencies replaced at the observed boundaries:
+     // a counting loader around the real manifest reader, a synthetic app root,
+     // an on-disk registry fixture and a capturing client that answers with a
+     // current-schema reply. Every assertion reads the rendered envelope or a
+@@ -2247,7 +2252,7 @@ else:
+             })
+         }
+ 
+-        /// Production orchestration with the four dependencies controlled.
++        /// Production orchestration with app, manifest, registry and client controlled.
+         fn observe(app: &Path, registry: Option<&Path>, args: &[&str]) -> Observed {
+             observe_reply(app, registry, args, controlled_reply())
+         }
+@@ -2294,6 +2299,7 @@ else:
+                 load_manifest: &load_manifest,
+                 registry_path: registry,
+                 client: &client,
++                policy_check: &run_policy_check,
+             };
+             let args: Vec<OsString> = args.iter().map(OsString::from).collect();
+             let output = run(&args, &deps).expect("run completes");
+@@ -2569,6 +2575,178 @@ else:
+             fs::remove_dir_all(&root).unwrap();
+         }
+ 
++        #[test]
++        fn actor_fallback_preserves_resolved_inputs_order_and_transport_evidence() {
++            // These are valid actor-form inputs, but the controlled client does
++            // not contact a host. Admitted terminal xpc_error authorizes only
++            // diagnostic compilation, not a claim of host request admission.
++            let root = scratch("actor-fallback");
++            let app = synthetic_app(&root);
++            install_manifest(&app, ManifestState::Valid);
++            write(
++                &app.join("Contents/Resources/Augments/read_control.sb"),
++                b"(deny file-read-data)",
++            );
++            let request = json!({
++                "schema_version": json_contract::REQUEST_SCHEMA_VERSION,
++                "specimen_id": "actor-fallback", "runner": {"mode": "standard"},
++                "actors": [
++                    {"actor_id": "zeta", "sandbox": {"mode": "apply", "policy": {
++                        "format": "sbpl", "sbpl_source": "(version 1) (allow default)",
++                        "augments": ["read_control"]}}},
++                    {"actor_id": "middle", "sandbox": {"mode": "unapplied"}},
++                    {"actor_id": "alpha", "sandbox": {"mode": "apply", "policy": {
++                        "format": "sbpl", "sbpl_source": "(version 1) (deny default)",
++                        "params": {"TAG": "alpha"}}}}
++                ],
++                "phases": [
++                    {"phase_id": "first", "actor_id": "zeta", "actions": []},
++                    {"phase_id": "second", "actor_id": "middle", "actions": []},
++                    {"phase_id": "third", "actor_id": "alpha", "actions": []}
++                ]
++            });
++            // Independent expected policy objects: do not use the resolver or
++            // collect expectations from the delivered request.
++            let zeta = json!({"format": "sbpl",
++                "sbpl_source": "(version 1) (allow default)\n(deny file-read-data)"});
++            let alpha = json!({"format": "sbpl",
++                "sbpl_source": "(version 1) (deny default)", "params": {"TAG": "alpha"}});
++            let mut expected = request.clone();
++            expected.as_object_mut().unwrap().remove("runner");
++            expected["actors"][0]["sandbox"]["policy"] = zeta.clone();
++            let path = root.join("request.json");
++            for label in [
++                "eligible",
++                "helper-unavailable",
++                "host-ok",
++                "host-xpc-error",
++                "missing-capture",
++                "delivery-failed",
++            ] {
++                write(&path, request.to_string().as_bytes());
++                let reply = match label {
++                    "host-ok" => Some(controlled_reply()),
++                    "host-xpc-error" => Some(json!({
++                        "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
++                        "normalized_outcome": "xpc_error", "error": "host body", "steps": []
++                    })),
++                    _ => None,
++                };
++                let mut capture = client_run(reply.as_ref());
++                if label == "missing-capture" {
++                    capture.transport = None;
++                    capture.transport_admission = "missing".into();
++                    capture.transport_error = Some("no complete client capture".into());
++                    capture.submission = "unknown".into();
++                } else if label == "delivery-failed" {
++                    capture.request_delivery.as_mut().unwrap().error = Some("Broken pipe".into());
++                }
++                let captured = serde_json::to_value(&capture).unwrap();
++                let pending = RefCell::new(Some((capture, reply.clone())));
++                let client_inputs = RefCell::new(Vec::new());
++                let helper_inputs = RefCell::new(Vec::new());
++                let helper_outputs = RefCell::new(Vec::new());
++                let client = |_: &str, held: &str, _: u64, _: &RunnerConnectionKind| {
++                    client_inputs.borrow_mut().push(held.to_owned());
++                    // A changed on-disk request must not replace either the
++                    // held whole request or the resolved actor policies.
++                    write(&path, b"request replaced after client invocation");
++                    Ok(pending.borrow_mut().take().unwrap())
++                };
++                let helper = |held: &str| {
++                    let index = helper_inputs.borrow().len();
++                    helper_inputs.borrow_mut().push(held.to_owned());
++                    let result = if index == 0 || (index == 2 && label == "helper-unavailable") {
++                        Err(format!("controlled helper failure {index}"))
++                    } else {
++                        let status = if index == 1 { "ok" } else { "compile_error" };
++                        Ok(PolicyCheckCapture {
++                            status: status.into(),
++                            tool_exit_code: if index == 1 { 0 } else { 1 },
++                            output: JsonOutputCapture::unavailable(
++                                format!("helper {index}"),
++                                crate::utils::HELPER_CAPTURE_BYTES,
++                            ),
++                            envelope: Some(json!({
++                                "schema_version": json_contract::SCHEMA_VERSION,
++                                "kind": "sbpl_check",
++                                "result": {"normalized_outcome": status},
++                                "data": {"controlled_call": index}
++                            })),
++                        })
++                    };
++                    let expected_capture = match &result {
++                        Ok(value) => serde_json::to_value(value).unwrap(),
++                        Err(error) => {
++                            serde_json::to_value(PolicyCheckCapture::unavailable(error.clone()))
++                                .unwrap()
++                        }
++                    };
++                    helper_outputs.borrow_mut().push(expected_capture);
++                    result
++                };
++                let deps = RunDependencies {
++                    app_root: &|| Ok(app.clone()),
++                    load_manifest: &evidence::load_manifest,
++                    registry_path: None,
++                    client: &client,
++                    policy_check: &helper,
++                };
++                let output = run(&[path.as_os_str().to_owned()], &deps).unwrap();
++                let (wire, exit_code) = envelope_of(&output);
++                let inputs = client_inputs.borrow();
++                assert_eq!(inputs.len(), 1, "{label}: no resubmission");
++                assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
++                assert_eq!(wire["data"]["runner_client"], captured, "{label}");
++                assert_eq!(wire["data"]["runner_result"], json!(reply), "{label}");
++                let eligible = matches!(label, "eligible" | "helper-unavailable");
++                let checks = helper_inputs.borrow();
++                if eligible {
++                    assert_eq!(exit_code, 1);
++                    assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
++                    assert_eq!(wire["result"]["error"], "controlled XPC error");
++                    assert!(wire["data"]["runner_result"].is_null());
++                    assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
++                    assert_eq!(
++                        *checks,
++                        vec![
++                            inputs[0].clone(),
++                            json!({"policy": zeta}).to_string(),
++                            json!({"policy": alpha}).to_string(),
++                        ],
++                        "{label}: whole held request, then policies in request order"
++                    );
++                    let outputs = helper_outputs.borrow();
++                    assert_eq!(wire["data"]["policy_check"], outputs[0]);
++                    assert_eq!(wire["data"]["policy_check"]["status"], "unavailable");
++                    assert_eq!(
++                        wire["data"]["actor_policy_checks"][0]["policy_check"]["status"],
++                        "ok"
++                    );
++                    assert_eq!(
++                        wire["data"]["actor_policy_checks"][1]["policy_check"]["status"],
++                        if label == "helper-unavailable" {
++                            "unavailable"
++                        } else {
++                            "compile_error"
++                        }
++                    );
++                    assert_eq!(
++                        wire["data"]["actor_policy_checks"],
++                        json!([
++                            {"actor_id": "zeta", "policy_check": outputs[1]},
++                            {"actor_id": "alpha", "policy_check": outputs[2]},
++                        ])
++                    );
++                } else {
++                    assert!(checks.is_empty(), "{label}: no helper invocation");
++                    assert!(wire["data"]["policy_check"].is_null());
++                    assert!(wire["data"].get("actor_policy_checks").is_none());
++                }
++            }
++            fs::remove_dir_all(&root).unwrap();
++        }
++
+         #[test]
+         fn byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines() {
+             let root = scratch("byoxpc");
+diff --git a/controller/tools/pw_probe_runner/pw_probe_runner_abi.h b/controller/tools/pw_probe_runner/pw_probe_runner_abi.h
+index e2c0185f..44e4e258 100644
+--- a/controller/tools/pw_probe_runner/pw_probe_runner_abi.h
++++ b/controller/tools/pw_probe_runner/pw_probe_runner_abi.h
+@@ -45,8 +45,8 @@
+ #define PW_SHM_ABI_MAGIC 0x50574944u
+ #define PW_SHM_ABI_IDENTITY_BYTES 32u
+ /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
+-#define PW_WORKER_ABI_IDENTITY_HEX "f4b1e49962cfcde77eca533542140f3679fad25d0d92e9694e9634f4b9bf4024"
+-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xf4, 0xb1, 0xe4, 0x99, 0x62, 0xcf, 0xcd, 0xe7, 0x7e, 0xca, 0x53, 0x35, 0x42, 0x14, 0x0f, 0x36, 0x79, 0xfa, 0xd2, 0x5d, 0x0d, 0x92, 0xe9, 0x69, 0x4e, 0x96, 0x34, 0xf4, 0xb9, 0xbf, 0x40, 0x24};
++#define PW_WORKER_ABI_IDENTITY_HEX "c1f66cc04bf60846bcddcee5d765e965d75c1e6a8d682d116f14439dc9b93bf7"
++static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xc1, 0xf6, 0x6c, 0xc0, 0x4b, 0xf6, 0x08, 0x46, 0xbc, 0xdd, 0xce, 0xe5, 0xd7, 0x65, 0xe9, 0x65, 0xd7, 0x5c, 0x1e, 0x6a, 0x8d, 0x68, 0x2d, 0x11, 0x6f, 0x14, 0x43, 0x9d, 0xc9, 0xb9, 0x3b, 0xf7};
+ /* END GENERATED WORKER IDENTITY */
+ 
+ /* Bounded so the host reserves a region of known size. 256 slots ×
+diff --git a/runner/Sources/PWRunnerCore/ActorPlan.swift b/runner/Sources/PWRunnerCore/ActorPlan.swift
+index 3bb733b1..672d4237 100644
+--- a/runner/Sources/PWRunnerCore/ActorPlan.swift
++++ b/runner/Sources/PWRunnerCore/ActorPlan.swift
+@@ -302,7 +302,7 @@ func actorAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailur
+             if var r = AdmissionStringRule(field: "key", maximum: parameterKeyAdmission.maximum, requiresCString: true).failure(param.key) {
+                 r.parameter_key = nil; return r
+             }
+-            if var r = AdmissionStringRule(field: "value", maximum: PWShmLayout.paramValueMax - 1, requiresCString: true).failure(param.value) {
++            if var r = AdmissionStringRule(field: prefix + "value", maximum: PWShmLayout.paramValueMax - 1, requiresCString: true).failure(param.value) {
+                 r.parameter_key = parameterKeyAdmission.safeEcho(param.key); return r
+             }
+         }
+diff --git a/runner/Sources/PWRunnerCore/CWorker.swift b/runner/Sources/PWRunnerCore/CWorker.swift
+index 864482ec..4de8c31d 100644
+--- a/runner/Sources/PWRunnerCore/CWorker.swift
++++ b/runner/Sources/PWRunnerCore/CWorker.swift
+@@ -48,8 +48,8 @@ import CryptoKit
+ /// rather than a runtime shm misalignment.
+ enum PWShmLayout {
+     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
+-    static let abiIdentityHex = "f4b1e49962cfcde77eca533542140f3679fad25d0d92e9694e9634f4b9bf4024"
+-    static let abiIdentity: [UInt8] = [0xf4, 0xb1, 0xe4, 0x99, 0x62, 0xcf, 0xcd, 0xe7, 0x7e, 0xca, 0x53, 0x35, 0x42, 0x14, 0x0f, 0x36, 0x79, 0xfa, 0xd2, 0x5d, 0x0d, 0x92, 0xe9, 0x69, 0x4e, 0x96, 0x34, 0xf4, 0xb9, 0xbf, 0x40, 0x24]
++    static let abiIdentityHex = "c1f66cc04bf60846bcddcee5d765e965d75c1e6a8d682d116f14439dc9b93bf7"
++    static let abiIdentity: [UInt8] = [0xc1, 0xf6, 0x6c, 0xc0, 0x4b, 0xf6, 0x08, 0x46, 0xbc, 0xdd, 0xce, 0xe5, 0xd7, 0x65, 0xe9, 0x65, 0xd7, 0x5c, 0x1e, 0x6a, 0x8d, 0x68, 0x2d, 0x11, 0x6f, 0x14, 0x43, 0x9d, 0xc9, 0xb9, 0x3b, 0xf7]
+     // END GENERATED WORKER IDENTITY
+ 
+     static let abiMagic: UInt32 = 0x50574944
+diff --git a/runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift b/runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift
+index b67ea433..b3c7eeb2 100644
+--- a/runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift
++++ b/runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift
+@@ -304,9 +304,11 @@ func requestCapacityFailure(_ record: PWRunnerAdmissionFailure, parsed: PWRunner
+     if record.field == "key" {
+         return PWRunnerRequestFailure(code: "admission_refused", path: nil)
+     }
+-    if record.field == "value" {
++    let actorParameterValue = path.count == 5 && path[0] == "actors"
++        && Int(path[1]) != nil && Array(path.suffix(3)) == ["sandbox", "policy", "value"]
++    if record.field == "value" || actorParameterValue {
+         guard let key = record.parameter_key else { return PWRunnerRequestFailure(code: "admission_refused", path: nil) }
+-        path = ["policy", "params", key]
++        path = actorParameterValue ? Array(path.dropLast()) + ["params", key] : ["policy", "params", key]
+     }
+     return PWRunnerRequestFailure(code: "admission_refused", path: path)
+ }
+diff --git a/runner/Tests/PWRunnerCoreTests/RequestContractTests.swift b/runner/Tests/PWRunnerCoreTests/RequestContractTests.swift
+index e7a6692a..368bb672 100644
+--- a/runner/Tests/PWRunnerCoreTests/RequestContractTests.swift
++++ b/runner/Tests/PWRunnerCoreTests/RequestContractTests.swift
+@@ -78,6 +78,66 @@ func runRequestContractTests(_ tk: TestKit) {
+         }
+     }
+     tk.group("accepted request contract") {
++        tk.run("actor parameter refusals retain policy ownership and safe keys") {
++            func request(_ params: [[String: String]]) throws -> PWRunnerRunSpec {
++                try decodeRequest([
++                    "schema_version": PWContract.requestSchema, "specimen_id": "actor-parameters",
++                    "actors": params.enumerated().map { index, values -> [String: Any] in
++                        ["actor_id": "a\(index)", "sandbox": ["mode": "apply", "policy": [
++                            "format": "sbpl", "sbpl_source": "(version 1) (allow default)", "params": values]]]
++                    },
++                    "phases": params.indices.map { ["phase_id": "p\($0)", "actor_id": "a\($0)", "actions": []] as [String: Any] }
++                ])
++            }
++            let exactKey = String(repeating: "é", count: 63) + "x" // 127 UTF-8 bytes.
++            let exactValue = String(repeating: "é", count: 191) + "x" // 383 bytes.
++            try expectNil(CWorkerOrchestrator.admissionFailure(for: request([[exactKey: exactValue], ["K": "ok"]])))
++            for (value, actual, maximum, unit) in [(exactValue + "x", 384, 383, "utf8_bytes"), ("bad\0value", 1, 0, "nul_bytes")] {
++                // The same key in multiple policies cannot identify its owner;
++                // actor order wins before sorted keys in a later policy.
++                let parsed = try request([[exactKey: "ok"], ["z": value, exactKey: value], ["a": value]])
++                guard let refused = CWorkerOrchestrator.admissionFailure(for: parsed) else { throw TestFailure(message: "value admitted") }
++                try expectEqual(refused.field, "actors.1.sandbox.policy.value")
++                try expectEqual(refused.actual, actual); try expectEqual(refused.maximum, maximum)
++                try expectEqual(refused.unit, unit)
++                // ASCII z sorts before é, independently of insertion order.
++                try expectEqual(refused.parameter_key, "z")
++                let reply = admissionRefusalReply(parsed: parsed, refused: refused, bundleId: nil)
++                try expectEqual(reply.request_failure?.path, ["actors", "1", "sandbox", "policy", "params", "z"])
++                try expectEqual(reply.steps.count, 0)
++                let safe = try request([["K": "ok"], [exactKey: value]])
++                let safeRecord = CWorkerOrchestrator.admissionFailure(for: safe)!
++                let safeReply = admissionRefusalReply(parsed: safe, refused: safeRecord, bundleId: nil)
++                try expectEqual(safeReply.admission_failure?.parameter_key, exactKey)
++                try expectNil(safeReply.request_failure?.path) // Path components have a separate 63-byte cap.
++                for keyBytes in [63, 64] {
++                    let key = String(repeating: "k", count: keyBytes)
++                    let bounded = try request([["K": "ok"], [key: value]])
++                    let record = CWorkerOrchestrator.admissionFailure(for: bounded)!
++                    let path = admissionRefusalReply(parsed: bounded, refused: record, bundleId: nil).request_failure?.path
++                    if keyBytes == 63 { try expectEqual(path, ["actors", "1", "sandbox", "policy", "params", key]) }
++                    else { try expectNil(path) }
++                }
++            }
++            for key in [exactKey + "x", "bad\0key"] {
++                let parsed = try request([["K": "ok"], [key: "bad\0value"]])
++                let refused = CWorkerOrchestrator.admissionFailure(for: parsed)!
++                try expectEqual(refused.field, "key")
++                try expectNil(refused.parameter_key)
++                try expectNil(admissionRefusalReply(parsed: parsed, refused: refused, bundleId: nil).request_failure?.path)
++            }
++            let counted = try request([["K": "ok"], Dictionary(uniqueKeysWithValues:
++                (0..<1025).map { ("K\($0)", "bad\0value") })])
++            let countRecord = CWorkerOrchestrator.admissionFailure(for: counted)!
++            try expectEqual(countRecord.field, "actors.1.sandbox.policy.params")
++            try expectEqual(countRecord.actual, 1025); try expectEqual(countRecord.maximum, 1024)
++            try expectNil(countRecord.parameter_key)
++            try expectEqual(requestCapacityFailure(countRecord, parsed: counted).path, ["actors", "1", "sandbox", "policy", "params"])
++            let legacy = try decodeRequest(replacing(requestFixture(), at: ["policy", "params"], with: ["K": "bad\0value"]))
++            let legacyRecord = CWorkerOrchestrator.admissionFailure(for: legacy)!
++            try expectEqual(legacyRecord.field, "value")
++            try expectEqual(requestCapacityFailure(legacyRecord, parsed: legacy).path, ["policy", "params", "K"])
++        }
+         tk.run("all declared input fields round-trip without losing supplied intent") {
+             let input = requestFixture()
+             let decoded = try decodeRequest(input)
+diff --git a/tests/fixtures/request_contract/examples.json b/tests/fixtures/request_contract/examples.json
+index da5affab..b646333a 100644
+--- a/tests/fixtures/request_contract/examples.json
++++ b/tests/fixtures/request_contract/examples.json
+@@ -27984,5 +27984,531 @@
+         ]
+       }
+     }
++  },
++  {
++    "id": "actor_parameter_value_nul",
++    "phase": "admission",
++    "lesson": "The rejected value names its exact actor and keeps a dotted parameter key as one path segment; the earlier file action never executes.",
++    "request": {
++      "schema_version": 5,
++      "specimen_id": "actor_parameter_value_nul",
++      "actors": [
++        {
++          "actor_id": "a0",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "K.dot": "ok"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a1",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "K.dot": "bad\u0000value"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a2",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "A": "bad\u0000later"
++              }
++            }
++          }
++        }
++      ],
++      "phases": [
++        {
++          "phase_id": "p0",
++          "actor_id": "a0",
++          "actions": [
++            {
++              "step_id": "effect",
++              "sandbox_check": {
++                "operation": "file-write-create",
++                "filter": {
++                  "kind": "path",
++                  "value": "$EFFECT"
++                }
++              },
++              "attempt": {
++                "kind": "file",
++                "action": "create",
++                "target": "$EFFECT"
++              }
++            }
++          ]
++        },
++        {
++          "phase_id": "p1",
++          "actor_id": "a1",
++          "actions": []
++        },
++        {
++          "phase_id": "p2",
++          "actor_id": "a2",
++          "actions": []
++        }
++      ]
++    },
++    "expected": {
++      "cli": {
++        "code": "admission_refused",
++        "path": [
++          "actors",
++          "1",
++          "sandbox",
++          "policy",
++          "params",
++          "K.dot"
++        ]
++      },
++      "xpc": {
++        "code": "admission_refused",
++        "path": [
++          "actors",
++          "1",
++          "sandbox",
++          "policy",
++          "params",
++          "K.dot"
++        ]
++      }
++    }
++  },
++  {
++    "id": "actor_parameter_value_bytes",
++    "phase": "admission",
++    "lesson": "The rejected value names its exact actor and keeps a dotted parameter key as one path segment; the earlier file action never executes.",
++    "request": {
++      "schema_version": 5,
++      "specimen_id": "actor_parameter_value_bytes",
++      "actors": [
++        {
++          "actor_id": "a0",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "K.dot": "ok"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a1",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "K.dot": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9xx"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a2",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "A": "bad\u0000later"
++              }
++            }
++          }
++        }
++      ],
++      "phases": [
++        {
++          "phase_id": "p0",
++          "actor_id": "a0",
++          "actions": [
++            {
++              "step_id": "effect",
++              "sandbox_check": {
++                "operation": "file-write-create",
++                "filter": {
++                  "kind": "path",
++                  "value": "$EFFECT"
++                }
++              },
++              "attempt": {
++                "kind": "file",
++                "action": "create",
++                "target": "$EFFECT"
++              }
++            }
++          ]
++        },
++        {
++          "phase_id": "p1",
++          "actor_id": "a1",
++          "actions": []
++        },
++        {
++          "phase_id": "p2",
++          "actor_id": "a2",
++          "actions": []
++        }
++      ]
++    },
++    "expected": {
++      "cli": {
++        "code": "admission_refused",
++        "path": [
++          "actors",
++          "1",
++          "sandbox",
++          "policy",
++          "params",
++          "K.dot"
++        ]
++      },
++      "xpc": {
++        "code": "admission_refused",
++        "path": [
++          "actors",
++          "1",
++          "sandbox",
++          "policy",
++          "params",
++          "K.dot"
++        ]
++      }
++    }
++  },
++  {
++    "id": "actor_parameter_exact_bytes",
++    "phase": "execution",
++    "lesson": "Parameter key and value bounds count UTF-8 bytes; exact bounds retain a file effect.",
++    "request": {
++      "schema_version": 5,
++      "specimen_id": "actor_parameter_exact_bytes",
++      "actors": [
++        {
++          "actor_id": "a0",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a1",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "K.dot": "ok"
++              }
++            }
++          }
++        }
++      ],
++      "phases": [
++        {
++          "phase_id": "p0",
++          "actor_id": "a0",
++          "actions": [
++            {
++              "step_id": "effect",
++              "sandbox_check": {
++                "operation": "file-write-create",
++                "filter": {
++                  "kind": "path",
++                  "value": "$EFFECT"
++                }
++              },
++              "attempt": {
++                "kind": "file",
++                "action": "create",
++                "target": "$EFFECT"
++              }
++            }
++          ]
++        },
++        {
++          "phase_id": "p1",
++          "actor_id": "a1",
++          "actions": []
++        }
++      ]
++    },
++    "expected": {
++      "cli": null,
++      "xpc": null
++    }
++  },
++  {
++    "id": "actor_parameter_key_bytes",
++    "phase": "admission",
++    "lesson": "A rejected key precedes its rejected value and is omitted from the diagnostic path; the earlier file action never executes.",
++    "request": {
++      "schema_version": 5,
++      "specimen_id": "actor_parameter_key_bytes",
++      "actors": [
++        {
++          "actor_id": "a0",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "K.dot": "ok"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a1",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9xx": "bad\u0000value"
++              }
++            }
++          }
++        }
++      ],
++      "phases": [
++        {
++          "phase_id": "p0",
++          "actor_id": "a0",
++          "actions": [
++            {
++              "step_id": "effect",
++              "sandbox_check": {
++                "operation": "file-write-create",
++                "filter": {
++                  "kind": "path",
++                  "value": "$EFFECT"
++                }
++              },
++              "attempt": {
++                "kind": "file",
++                "action": "create",
++                "target": "$EFFECT"
++              }
++            }
++          ]
++        },
++        {
++          "phase_id": "p1",
++          "actor_id": "a1",
++          "actions": []
++        }
++      ]
++    },
++    "expected": {
++      "cli": {
++        "code": "admission_refused",
++        "path": null
++      },
++      "xpc": {
++        "code": "admission_refused",
++        "path": null
++      }
++    }
++  },
++  {
++    "id": "actor_parameter_key_nul",
++    "phase": "admission",
++    "lesson": "A rejected key precedes its rejected value and is omitted from the diagnostic path; the earlier file action never executes.",
++    "request": {
++      "schema_version": 5,
++      "specimen_id": "actor_parameter_key_nul",
++      "actors": [
++        {
++          "actor_id": "a0",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "K.dot": "ok"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a1",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "bad\u0000key": "bad\u0000value"
++              }
++            }
++          }
++        }
++      ],
++      "phases": [
++        {
++          "phase_id": "p0",
++          "actor_id": "a0",
++          "actions": [
++            {
++              "step_id": "effect",
++              "sandbox_check": {
++                "operation": "file-write-create",
++                "filter": {
++                  "kind": "path",
++                  "value": "$EFFECT"
++                }
++              },
++              "attempt": {
++                "kind": "file",
++                "action": "create",
++                "target": "$EFFECT"
++              }
++            }
++          ]
++        },
++        {
++          "phase_id": "p1",
++          "actor_id": "a1",
++          "actions": []
++        }
++      ]
++    },
++    "expected": {
++      "cli": {
++        "code": "admission_refused",
++        "path": null
++      },
++      "xpc": {
++        "code": "admission_refused",
++        "path": null
++      }
++    }
++  },
++  {
++    "id": "actor_parameter_path_bound",
++    "phase": "admission",
++    "lesson": "A valid 64-byte parameter key remains available in the admission record, while the separate 63-byte diagnostic component bound withholds the whole path.",
++    "request": {
++      "schema_version": 5,
++      "specimen_id": "actor_parameter_path_bound",
++      "actors": [
++        {
++          "actor_id": "a0",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "K.dot": "ok"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a1",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "bad\u0000value"
++              }
++            }
++          }
++        },
++        {
++          "actor_id": "a2",
++          "sandbox": {
++            "mode": "apply",
++            "policy": {
++              "format": "sbpl",
++              "sbpl_source": "(version 1) (allow default)",
++              "params": {
++                "A": "bad\u0000later"
++              }
++            }
++          }
++        }
++      ],
++      "phases": [
++        {
++          "phase_id": "p0",
++          "actor_id": "a0",
++          "actions": [
++            {
++              "step_id": "effect",
++              "sandbox_check": {
++                "operation": "file-write-create",
++                "filter": {
++                  "kind": "path",
++                  "value": "$EFFECT"
++                }
++              },
++              "attempt": {
++                "kind": "file",
++                "action": "create",
++                "target": "$EFFECT"
++              }
++            }
++          ]
++        },
++        {
++          "phase_id": "p1",
++          "actor_id": "a1",
++          "actions": []
++        },
++        {
++          "phase_id": "p2",
++          "actor_id": "a2",
++          "actions": []
++        }
++      ]
++    },
++    "expected": {
++      "cli": {
++        "code": "admission_refused",
++        "path": null
++      },
++      "xpc": {
++        "code": "admission_refused",
++        "path": null
++      }
++    }
+   }
+ ]
+diff --git a/tests/lib/contract.py b/tests/lib/contract.py
+index a9c25b81..0acc78b7 100644
+--- a/tests/lib/contract.py
++++ b/tests/lib/contract.py
+@@ -11,5 +11,5 @@ RUNNER_PROTOCOL = 3
+ # END GENERATED CONTRACT VERSIONS
+ 
+ # BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
+-WORKER_IDENTITY = "f4b1e49962cfcde77eca533542140f3679fad25d0d92e9694e9634f4b9bf4024"
++WORKER_IDENTITY = "c1f66cc04bf60846bcddcee5d765e965d75c1e6a8d682d116f14439dc9b93bf7"
+ # END GENERATED WORKER IDENTITY
+diff --git a/tests/suites/runner_abi_layout/README.md b/tests/suites/runner_abi_layout/README.md
+index fd1522f7..bdd309c9 100644
+--- a/tests/suites/runner_abi_layout/README.md
++++ b/tests/suites/runner_abi_layout/README.md
+@@ -115,6 +115,10 @@ ordinal bump. See [the contract](../../../docs/CONTRACT.md#internal-hostworker-i
+ [capture.c](capture.c) exercises the production capture helper against
+ independently constructed bounded objects. It checks selected bytes, rejected
+ extents and unreadable inputs, plus parameter-digest sensitivity to changed
+-values and invariance under pair reordering. These controls compile or apply
++values and invariance under pair reordering. The exact-capacity fixture supplies
++an independently sized, readable 1 MiB payload and asserts captured status,
++length, complete byte equality and a checksum computed from the source before
++capture. A readable 1 MiB plus one byte object must be refused without copying
++payload bytes. These controls compile or apply
+ no sandbox policy; [runner_unit](../runner_unit/README.md) checks the Swift
+ receipt reader and its availability gates.
+diff --git a/tests/suites/runner_abi_layout/capture.c b/tests/suites/runner_abi_layout/capture.c
+index 00ecad81..b462ad96 100644
+--- a/tests/suites/runner_abi_layout/capture.c
++++ b/tests/suites/runner_abi_layout/capture.c
+@@ -3,7 +3,48 @@
+ #include <assert.h>
+ #include "pw_profile_capture.h"
+ 
++static void exact_capacity_capture(void) {
++    /* Keep the expected boundary independent of the implementation constant. */
++    enum { expected_capacity = 1024 * 1024 };
++    _Static_assert(PW_SHM_CAPTURE_BYTES == expected_capacity,
++                   "compiled capture capacity must remain one MiB");
++    unsigned char *bytes = malloc(expected_capacity + 1);
++    assert(bytes != NULL);
++    for (size_t i = 0; i < expected_capacity + 1; i++)
++        bytes[i] = (unsigned char)(i * 37u + (i >> 8) + (i >> 16));
++    /* Hash the independent source/extent before capture, never its output or
++     * reported length. CommonCrypto is the checksum primitive, not the code
++     * under test; this oracle checks capture's byte/extent selection. */
++    unsigned char expected_digest[32];
++    CC_SHA256(bytes, expected_capacity, expected_digest);
++    static unsigned char payload[expected_capacity + 1];
++    memset(payload, 0xa5, sizeof(payload));
++    unsigned char nonce[16] = {4,5,6};
++    struct { uint32_t type, padding; const void *bytes; size_t length; } profile =
++        {0,0,bytes,expected_capacity};
++    pw_shm_capture_t out = {0};
++    pw_capture_profile(&out, payload, &profile, "source", 6, NULL, 0, nonce);
++    assert(out.completed == 1 && out.status == 1 && out.worker_pid == getpid());
++    assert(out.profile_type == 0 && out.bytecode_length == expected_capacity);
++    assert(!memcmp(out.request_nonce, nonce, sizeof(nonce)));
++    assert(!memcmp(payload, bytes, expected_capacity));
++    assert(!memcmp(out.bytecode_sha256, expected_digest, sizeof(expected_digest)));
++    assert(payload[expected_capacity] == 0xa5);
++
++    /* The excessive extent is readable too: refusal must be about capacity,
++     * not an invalid pointer or a short allocation. Use a fresh receipt. */
++    profile.length = expected_capacity + 1;
++    memset(payload, 0xa5, sizeof(payload));
++    pw_shm_capture_t refused = {0};
++    pw_capture_profile(&refused, payload, &profile, "source", 6, NULL, 0, nonce);
++    assert(refused.completed == 1 && refused.status == 2);
++    assert(refused.bytecode_length == 0);
++    for (size_t i = 0; i < sizeof(payload); i++) assert(payload[i] == 0xa5);
++    free(bytes);
++}
++
+ int main(void) {
++    exact_capacity_capture();
+     static unsigned char payload[PW_SHM_CAPTURE_BYTES];
+     unsigned char bytes[] = {10,20,30,99};
+     unsigned char nonce[16] = {1,2,3};

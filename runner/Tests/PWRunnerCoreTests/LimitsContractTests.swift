@@ -39,7 +39,19 @@ func runLimitsContractTests(_ tk: TestKit) {
             }
             let rejected = decodeValidatorFrames(Data(repeating: 0xff, count: 1024))
             guard let fault = rejected.fault else { throw TestFailure(message: "invalid frame accepted") }
+            // Observe returned paths rather than restating the manifest's maxima.
+            let retainedDepths = (0...32).compactMap { count in
+                PWRunnerRequestFailure(code: "invalid_request", path: Array(repeating: "x", count: count)).path?.count
+            }
+            let retainedComponents = (0...256).compactMap { count in
+                PWRunnerRequestFailure(code: "invalid_request", path: [String(repeating: "x", count: count)]).path?.first?.utf8.count
+            }
+            guard let retainedDepth = retainedDepths.max(), let retainedComponentBytes = retainedComponents.max() else {
+                throw TestFailure(message: "request failure constructor retained no diagnostic paths")
+            }
             let observed: [String: Int] = [
+                "request_failure_path_components": retainedDepth,
+                "request_failure_path_component": retainedComponentBytes,
                 "policy_source": PWShmLayout.policyBytes - 1,
                 "probe_steps": PWShmLayout.maxSteps,
                 "phase_count": PWRunnerPhase.maximumCount,
@@ -138,6 +150,19 @@ func runLimitsContractTests(_ tk: TestKit) {
             // budget have different epochs and accounting, not one shared clock.
             try expectEqual(worker.sentinelTimeoutMs - attemptBudget, 5_000,
                             "exec attempt budget leaves the publication margin inside the worker window")
+        }
+        tk.run("request failure paths retain whole locations or withhold them") {
+            // Literal behavioral oracles remain independent of limits.json.
+            let eight = Array(repeating: "x", count: 8)
+            try expectEqual(PWRunnerRequestFailure(code: "invalid_request", path: eight).path, Optional(eight))
+            try expectTrue(PWRunnerRequestFailure(code: "invalid_request", path: eight + ["x"]).path == nil)
+            for component in [String(repeating: "x", count: 63), String(repeating: "é", count: 31) + "x"] {
+                let path = ["policy", "params", component]
+                try expectEqual(component.utf8.count, 63)
+                try expectEqual(PWRunnerRequestFailure(code: "invalid_request", path: path).path, Optional(path))
+                try expectTrue(PWRunnerRequestFailure(code: "invalid_request", path: ["policy", "params", component + "x"]).path == nil)
+            }
+            try expectTrue(PWRunnerRequestFailure(code: "invalid_request", path: nil).path == nil)
         }
         tk.run("rejected-frame context boundary retains raw prefix and loss metadata") {
             // Independent of limits.json: changing the inventory cannot change this oracle.

@@ -205,11 +205,16 @@ specimens sharing one aggregate fresh-read workload distributed over the
 actors, a workload at the aggregate action and phase limits over eight actors,
 and the principal re-delegation and calibration shapes with five further live
 actors servicing bounded ordinary phases. Every run must complete without
-budget exhaustion, and the largest charged interval in each accounting scope
-(setup, charged execution, aggregate collection, release wait, exchange wait
-and the lifetime total) must leave at least a quarter of its allowance. The
+budget exhaustion, and each measured interval must leave at least a quarter of
+the allowance it is compared against: setup, charged execution, aggregate
+collection, the host arrival-to-release proxy, host recipient wait, and setup
+plus elapsed schedule execution. The last measurement includes collection time
+but excludes final cleanup and the interval between cutoff creation and setup
+clock start; it is not a whole-lifetime measurement. Recipient wait does not
+measure the worker's custody-acknowledgement or transfer-answer waits. These
 intervals come from the reply's schedule, visit timing and transfer records:
 host scheduling and publication measurements, never native call latency. The
+finite workloads do not establish margins for every admitted composition. The
 eight-actor executions keep the chain and calibration assertions. `report.json`
 retains the hardware's CPU topology, OS, power and load, every measurement and
 margin, and the actor PIDs. A deliberately slow or hung specimen is a different

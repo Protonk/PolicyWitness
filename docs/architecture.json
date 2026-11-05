@@ -380,7 +380,7 @@
             "Language": "C",
             "Where": "inside the XPC bundle",
             "Started by": "the host",
-            "Sandboxed": "yes; applies the specimen policy to itself",
+            "Sandboxed": "applies its supplied policy once; an unapplied actor declares setup without application",
             "Native sandbox API": "sandbox_compile_string, params, sandbox_apply; sandbox_extension_consume and sandbox_extension_release; sandbox_extension_issue_file in an actor",
             "Lifetime": "one specimen in the single-worker form, or one actor of an actor-form specimen; one application (none for an unapplied actor) and all of its ordered visits; parked between visits; terminal publication exits without host permission"
           },
@@ -549,7 +549,7 @@
             "Started by": "the controller, only for an admitted client terminal xpc_error",
             "Sandboxed": "no",
             "Native sandbox API": "sandbox_compile_string and params; never applies",
-            "Lifetime": "one compile"
+            "Lifetime": "one compile per helper process; the controller invokes a helper for the held request and one for each selected actor policy, potentially before host admission"
           },
           "sources": [
             {
@@ -928,8 +928,8 @@
           "from": "worker",
           "to": "host",
           "kind": "channel",
-          "label": "immutable phase arrivals, acknowledgements and completions; numbered releases before actions; separate native call markers/results and fresh-read syscall observations",
-          "short": "shared-region evidence",
+          "label": "shared-region worker arrivals, acknowledgements, completions and native observations; reciprocal host numbered releases hold requested actions",
+          "short": "evidence and reciprocal release",
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -986,8 +986,8 @@
           "from": "worker",
           "to": "exec_child",
           "kind": "spawn",
-          "label": "posix_spawn after apply; stdout and stderr pipes into bounded slot buffers",
-          "short": "posix_spawn after apply",
+          "label": "posix_spawn inside an exec action after setup (after apply when supplied); stdout/stderr pipes into bounded slot buffers; excluded for authority-participating actors",
+          "short": "exec action after setup",
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_worker_exec.h",
@@ -1016,7 +1016,7 @@
           "from": "controller",
           "to": "sbpl_check",
           "kind": "spawn",
-          "label": "spawn only for an admitted client terminal xpc_error; held request in; helper envelope out",
+          "label": "spawn only for an admitted client terminal xpc_error; held-request diagnostic plus independently associated actor-policy diagnostics; host request admission may not have occurred",
           "short": "spawn on xpc_error only",
           "sources": [
             {
@@ -1080,7 +1080,7 @@
               "form": "test"
             }
           ],
-          "note": "Issuer wait {limit:extension_issuer_wait}; cleanup may overrun. Missing capability refuses extension specimens."
+          "note": "Declaration form only: issuer wait {limit:extension_issuer_wait}; cleanup may overrun. Missing capability refuses declaration-form extension specimens."
         },
         {
           "id": "T14",
@@ -1191,7 +1191,7 @@
               "form": "test"
             }
           ],
-          "note": "Exchange allowance {limit:actor_exchange_allowance} on each side; expiry is a transport status, never a native result. A later operation cannot reuse the expired operation's payload or answer cell."
+          "note": "Exchange allowance {limit:actor_exchange_allowance} on each side; expiry is a transport status, never a native result. A later operation cannot reuse the expired operation's payload or answer cell. Host answer and completed source action are separate observations; a source timeout can still complete its phase."
         },
         {
           "id": "T17",
@@ -1226,7 +1226,7 @@
               "form": "test"
             }
           ],
-          "note": "The host compares accepted recipient bytes with custody before settling the delivery as usable or withdrawn. Consumption requires usable settlement. Private custody is erased at last transfer; shared teardown erasure follows confirmed quiescence."
+          "note": "Recipient framing acknowledgement precedes host byte equality and usable/failed settlement, then the source answer. Consumption requires committed, accepted, usable settlement. Private custody erases at last declared transfer use, including failed delivery; shared teardown erasure requires a reaped or never-launched owner."
         }
       ]
     },
@@ -1463,7 +1463,7 @@
           "label": "compiled-object receipt (compiled_profile)",
           "kind": "record",
           "facts": {
-            "Owner": "the worker, before apply; admitted by the host",
+            "Owner": "the opted-in worker before apply; admitted by the host for that worker or apply actor",
             "Form": "opt-in copy of the compiled object with a nonce; CompiledProfileCapture names the worker producer and before_apply stage under its own schema_version"
           },
           "sources": [
@@ -1520,7 +1520,7 @@
           "kind": "record",
           "facts": {
             "Owner": "sbpl-check",
-            "Form": "envelope frame; kind sbpl_check"
+            "Form": "envelope frame; kind sbpl_check; independently compiled diagnostic associated with the selected policy, not application evidence"
           },
           "sources": [
             {
@@ -1688,7 +1688,7 @@
           "label": "normalized actor plan",
           "kind": "record",
           "facts": {
-            "Owner": "host normalization before any process work; shared by public admission, direct XPC and the scheduler",
+            "Owner": "host normalization before process work; admitted public actor requests dispatch to runActors and its serial scheduler",
             "Form": "actors, phases with actor and visit, tokens, deliveries and handles by reference with owners, producers and last uses"
           },
           "sources": [
@@ -2101,7 +2101,7 @@
           "from": "helper_envelope",
           "to": "envelope",
           "kind": "guard",
-          "label": "nested unchanged; admitted by kind and frame version",
+          "label": "nested unchanged and associated with the selected policy/actor; admitted by kind and frame version; per-helper retention is not a cumulative envelope or memory bound",
           "short": "nested; admitted by kind",
           "sources": [
             {
@@ -2195,7 +2195,7 @@
           "from": "profile_capture",
           "to": "reply",
           "kind": "guard",
-          "label": "admitted only after successful application, worker completion, PID, nonce, input identity and payload integrity checks",
+          "label": "admitted only after successful application, completion, PID, nonce, input identity and payload integrity checks for its producing worker/apply actor",
           "short": "admitted after apply and integrity",
           "sources": [
             {
@@ -2394,7 +2394,7 @@
           "to": "authority_region",
           "kind": "guard",
           "label": "an outbound token enters custody only with the expected framing, writer, action and token indexes, and only while the writer still stands behind it; a delivery is credited only when the recipient's accepted bytes equal the custody copy",
-          "short": "custody and delivery acceptance",
+          "short": "custody gates",
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
@@ -2415,7 +2415,8 @@
               "symbol": "runActorAuthorityTests",
               "form": "test"
             }
-          ]
+          ],
+          "note": "Recipient acceptance is framing only; host equality and usable settlement precede native consume. Source-observed answer and phase completion are separate gates."
         },
         {
           "id": "B19",
@@ -2449,7 +2450,8 @@
               "symbol": "runContractVersionTests",
               "form": "test"
             }
-          ]
+          ],
+          "note": "A failed exchange may still complete its action and phase; schedule advancement does not require all deliveries to succeed. No native permission or revocation follows from transport evidence."
         }
       ]
     },
@@ -6361,7 +6363,7 @@
           "from": "launchd",
           "to": "host",
           "kind": "launch",
-          "label": "start on demand for the Mach service; one launch per ThrottleInterval ({limit:byoxpc_throttle_interval}) between launches",
+          "label": "start on demand for the Mach service; configured ThrottleInterval {limit:byoxpc_throttle_interval} paces launches without guaranteeing request-delivery time",
           "short": "start on demand",
           "sources": [
             {
@@ -6572,7 +6574,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "eligible collection spawns the copy\u2019s bundle-local validator by default; an explicit override takes precedence",
+          "label": "eligible collection spawns the copy’s bundle-local validator by default; an explicit override takes precedence",
           "short": "spawn",
           "sources": [
             {
@@ -6771,7 +6773,7 @@
           "from": "host",
           "to": "issuer",
           "kind": "spawn",
-          "label": "copy-local issuer path; named extension capability refusal if missing",
+          "label": "declaration form uses copy-local issuer path; named declaration capability refusal if missing; actor issue runs in its own worker",
           "short": "spawn local issuer",
           "sources": [
             {
@@ -7146,7 +7148,7 @@
           "facts": {
             "Inventory ID": "S5",
             "Acquired by": "H: fcntl(F_DUPFD_CLOEXEC, 64)",
-            "When": "Before compilation",
+            "When": "Declaration form: before compilation",
             "Held across": "Through driver return",
             "Release / teardown action": "H defer close",
             "Authority": "Duplicate authority-bearing channel",
@@ -7205,7 +7207,7 @@
           "kind": "mixed",
           "facts": {
             "Inventory ID": "S7",
-            "Acquired by": "H: posix_spawn, nil attributes/envp",
+            "Acquired by": "H: posix_spawn; single-worker nil attributes/envp; actors explicit endpoints, CLOEXEC_DEFAULT and empty environment",
             "When": "Before compilation",
             "Held across": "Until exit; unconfirmed cleanup may outlive driver",
             "Release / teardown action": "Terminal publication: erase accepted token, release done, _exit; early return, cancellation, fatal signal or H termination; H waitpid observes reap",
@@ -7221,6 +7223,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "publish_done_and_exit"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "ActorSession"
             }
           ],
           "checks": [
@@ -7680,7 +7686,7 @@
           "facts": {
             "Inventory ID": "S13d",
             "Acquired by": "H checks adddup2(tokenFD, 5) before spawn",
-            "When": "Before compilation",
+            "When": "Declaration form: before compilation",
             "Held across": "Through extension preparation",
             "Release / teardown action": "prepare_extension closes once; early main refusals leave to exit",
             "Authority": "Map token channel",
@@ -7744,7 +7750,7 @@
           "kind": "mixed",
           "facts": {
             "Inventory ID": "S14b",
-            "Acquired by": "H spawn without CLOEXEC_DEFAULT",
+            "Acquired by": "Single-worker H spawn without CLOEXEC_DEFAULT; actor launch excludes unrequested descriptors",
             "When": "Before compilation",
             "Held across": "Until exit unless a file action overwrites number",
             "Release / teardown action": "No generic W sweep; exit",
@@ -7756,6 +7762,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
               "symbol": "runCWorker"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "POSIX_SPAWN_CLOEXEC_DEFAULT"
             }
           ],
           "checks": [
@@ -8089,7 +8099,7 @@
           "facts": {
             "Inventory ID": "S19",
             "Acquired by": "prepare_extension: dlsym(RTLD_DEFAULT)",
-            "When": "Before compilation",
+            "When": "Declaration form: before compilation",
             "Held across": "Later attempts/phases, until exit",
             "Release / teardown action": "Static storage at exit; no dynamic handle acquired here",
             "Authority": "Callable native consume/release, no pre-apply consumption",
@@ -8119,7 +8129,7 @@
           "facts": {
             "Inventory ID": "S20",
             "Acquired by": "prepare_extension: setrlimit(RLIMIT_CORE) after symbols resolve",
-            "When": "Before compilation",
+            "When": "Declaration form: before compilation",
             "Held across": "All later attempts/phases, until exit if call succeeds",
             "Release / teardown action": "No reset; exit",
             "Authority": "Restricts core dumping; missing symbols/setup failure qualify it",
@@ -8148,7 +8158,7 @@
           "facts": {
             "Inventory ID": "S21",
             "Acquired by": "prepare_extension: mmap(MAP_SHARED)",
-            "When": "Before compilation",
+            "When": "Declaration form: before compilation",
             "Held across": "Accepted mapping until exit, including after erase",
             "Release / teardown action": "Rejected mapping: erase/munmap; accepted: no explicit unmap",
             "Authority": "Read/erase token and inspect channel admission metadata",
@@ -8178,7 +8188,7 @@
           "facts": {
             "Inventory ID": "S22",
             "Acquired by": "prepare_extension: length/NUL/header inspection",
-            "When": "Before compilation",
+            "When": "Declaration form: before compilation",
             "Held across": "Until consume decision or ordinary departure after acceptance; fatal interruption may bypass cleanup",
             "Release / teardown action": "Full-buffer erase before done, early return or cancellation exit; no native release; separate host erasure remains",
             "Authority": "Consumable bearer token; validation does not consume it",
@@ -8901,9 +8911,9 @@
           "facts": {
             "Inventory ID": "S37",
             "Acquired by": "attempt_extension: consume result other than -1",
-            "When": "After apply within an attempt",
+            "When": "Declaration form: after apply within an attempt",
             "Held across": "Across attempts/phases; requested release is not proven revocation",
-            "Release / teardown action": "Explicit release action once if submitted/eligible; no automatic exit-time release call; OS teardown",
+            "Release / teardown action": "Declaration release_decided set before eligibility/native call; explicit release once if eligible; no automatic exit-time release call; OS teardown",
             "Authority": "Native extension access represented by handle; exact kernel state unobserved",
             "Reaches exec children": "No admitted exec+extension plan",
             "Role": "A + O"

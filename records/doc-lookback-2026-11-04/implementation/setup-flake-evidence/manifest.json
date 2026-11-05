@@ -1,0 +1,126 @@
+{
+  "recorded_utc": "2026-11-05T03:22:03.856020+00:00",
+  "observation_only_copies": true,
+  "ownership_note": "Original managed runs retain ownership. These copies are historical observations and establish no live process or resource-cleanup authority.",
+  "files": [
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/run.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/run.json",
+      "sha256": "cff3950b1d4df9636a8abaaf671f94fb9ba1632d2098fdada36522009aa8416b",
+      "copy_sha256": "cff3950b1d4df9636a8abaaf671f94fb9ba1632d2098fdada36522009aa8416b"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/test-console.log",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/test-console.log",
+      "sha256": "7618eb968f06f541b79e0615f180b8cca5020fd8c8b601e4d380b9cd777ae984",
+      "copy_sha256": "7618eb968f06f541b79e0615f180b8cca5020fd8c8b601e4d380b9cd777ae984"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/results.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/results.json",
+      "sha256": "288f88ad9bbcaf3cc7bdaac544a993df1d802cf847d83e107b072161d5669287",
+      "copy_sha256": "288f88ad9bbcaf3cc7bdaac544a993df1d802cf847d83e107b072161d5669287"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/inputs/inventory.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/inputs/inventory.json",
+      "sha256": "f2547e6bb7e13420a0f1b4a898cb80246e4bc2f2a0735a84095496400796e746",
+      "copy_sha256": "f2547e6bb7e13420a0f1b4a898cb80246e4bc2f2a0735a84095496400796e746"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_ready_direction/legacy-controls/worker-baseline.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_ready_direction/legacy-controls/worker-baseline.json",
+      "sha256": "8c2b4b935b24b3479cef71d3b3257b3a6be7a87d349253dab7e27faf16ecc208",
+      "copy_sha256": "8c2b4b935b24b3479cef71d3b3257b3a6be7a87d349253dab7e27faf16ecc208"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_ready_direction/legacy-controls/worker-baseline.json.oracle.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_ready_direction/legacy-controls/worker-baseline.json.oracle.json",
+      "sha256": "e933c9c87a1ec492022fe2c1584c4386e2b5d90b1898211225142ff45d0ffd7c",
+      "copy_sha256": "e933c9c87a1ec492022fe2c1584c4386e2b5d90b1898211225142ff45d0ffd7c"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_ready_direction/legacy-controls/build-receipt.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_ready_direction/legacy-controls/build-receipt.json",
+      "sha256": "cb71045587a4c9a6b374583a56ed97819658867d72f1b03f722a174030a84087",
+      "copy_sha256": "cb71045587a4c9a6b374583a56ed97819658867d72f1b03f722a174030a84087"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/partial_unmap/legacy-controls/worker-baseline.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/partial_unmap/legacy-controls/worker-baseline.json",
+      "sha256": "2afe44dd9dbb8a1af91d526a1864f96b906a64b78b352796301d087dce8dcb52",
+      "copy_sha256": "2afe44dd9dbb8a1af91d526a1864f96b906a64b78b352796301d087dce8dcb52"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/partial_unmap/legacy-controls/worker-baseline.json.oracle.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/partial_unmap/legacy-controls/worker-baseline.json.oracle.json",
+      "sha256": "5c3b127d22a5b23751346348c321bb68ec447781b16815d601f2dfb5f39b0b55",
+      "copy_sha256": "5c3b127d22a5b23751346348c321bb68ec447781b16815d601f2dfb5f39b0b55"
+    },
+    {
+      "run_id": "20261105T031925Z_7088dee4",
+      "original_path": "tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/partial_unmap/legacy-controls/build-receipt.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T031925Z_7088dee4/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/partial_unmap/legacy-controls/build-receipt.json",
+      "sha256": "32f3000c3e6a366c8e6b5774307632c4edfb35cb6c614b42fec4807724879bd0",
+      "copy_sha256": "32f3000c3e6a366c8e6b5774307632c4edfb35cb6c614b42fec4807724879bd0"
+    },
+    {
+      "run_id": "20261105T032015Z_f0ccd56a",
+      "original_path": "tests/out/runs/doc-lookback-repairs-07/run.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T032015Z_f0ccd56a/run.json",
+      "sha256": "92297610fe6f7edeaf4caf06efeb9d79bd71bbb70119ce0f1f3d5359a6a8667a",
+      "copy_sha256": "92297610fe6f7edeaf4caf06efeb9d79bd71bbb70119ce0f1f3d5359a6a8667a"
+    },
+    {
+      "run_id": "20261105T032015Z_f0ccd56a",
+      "original_path": "tests/out/runs/doc-lookback-repairs-07/test-console.log",
+      "copy_path": "implementation/setup-flake-evidence/20261105T032015Z_f0ccd56a/test-console.log",
+      "sha256": "f1e914e51fec44d233c36aad45f2d62b5a9e4460b5e07077e21c80771e9d3325",
+      "copy_sha256": "f1e914e51fec44d233c36aad45f2d62b5a9e4460b5e07077e21c80771e9d3325"
+    },
+    {
+      "run_id": "20261105T032015Z_f0ccd56a",
+      "original_path": "tests/out/runs/doc-lookback-repairs-07/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/results.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T032015Z_f0ccd56a/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/results.json",
+      "sha256": "97c8fe2c2dfdd218acdab43dd2cffbde29e4bcd00ff85f1b4f231d601bfa2628",
+      "copy_sha256": "97c8fe2c2dfdd218acdab43dd2cffbde29e4bcd00ff85f1b4f231d601bfa2628"
+    },
+    {
+      "run_id": "20261105T032015Z_f0ccd56a",
+      "original_path": "tests/out/runs/doc-lookback-repairs-07/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/inputs/inventory.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T032015Z_f0ccd56a/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/inputs/inventory.json",
+      "sha256": "f2547e6bb7e13420a0f1b4a898cb80246e4bc2f2a0735a84095496400796e746",
+      "copy_sha256": "f2547e6bb7e13420a0f1b4a898cb80246e4bc2f2a0735a84095496400796e746"
+    },
+    {
+      "run_id": "20261105T032015Z_f0ccd56a",
+      "original_path": "tests/out/runs/doc-lookback-repairs-07/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_shm_argv/legacy-controls/worker-baseline.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T032015Z_f0ccd56a/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_shm_argv/legacy-controls/worker-baseline.json",
+      "sha256": "d91f370287a6eb2899a65cf20e49cb2b4d7e5889490ada55101c34443a354021",
+      "copy_sha256": "d91f370287a6eb2899a65cf20e49cb2b4d7e5889490ada55101c34443a354021"
+    },
+    {
+      "run_id": "20261105T032015Z_f0ccd56a",
+      "original_path": "tests/out/runs/doc-lookback-repairs-07/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_shm_argv/legacy-controls/worker-baseline.json.oracle.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T032015Z_f0ccd56a/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_shm_argv/legacy-controls/worker-baseline.json.oracle.json",
+      "sha256": "0fec543e6f364ad72d46a48486bc8a0ab5c51eddb109d82744169467dfb7e09a",
+      "copy_sha256": "0fec543e6f364ad72d46a48486bc8a0ab5c51eddb109d82744169467dfb7e09a"
+    },
+    {
+      "run_id": "20261105T032015Z_f0ccd56a",
+      "original_path": "tests/out/runs/doc-lookback-repairs-07/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_shm_argv/legacy-controls/build-receipt.json",
+      "copy_path": "implementation/setup-flake-evidence/20261105T032015Z_f0ccd56a/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/wrong_shm_argv/legacy-controls/build-receipt.json",
+      "sha256": "0de7edcd656588ea7b3c98d53c597d86051a60805884c51d4b401b7aa35fc1ca",
+      "copy_sha256": "0de7edcd656588ea7b3c98d53c597d86051a60805884c51d4b401b7aa35fc1ca"
+    }
+  ]
+}

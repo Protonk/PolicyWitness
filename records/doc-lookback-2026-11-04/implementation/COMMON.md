@@ -1,0 +1,13 @@
+# Implementation preparation packet
+
+The user accepted the root READER-OUTFLOW-PLAN.md recommendations and explicitly chose to complete I1, I2 and I3 in the current tranche rather than defer them. Fresh implementation agents are authorized to edit their assigned source/test files; the initial review's read-only specialist rule no longer applies to these explicitly approved implementation assignments. All agents share one checkout; do not touch another agent's files or the coordinator's records.
+
+Current base HEAD: ea64218be2549fd034096f53ac23d79afac711ae. Initial review record: lookback-ea64218b, under records/doc-lookback-2026-11-04. Existing untracked outflow/records belong to coordinator. Read README.md, root AGENTS.md, CONTRIBUTING.md planning guidance, docs/AGENTS.md, records/AGENTS.md and applicable component/test AGENTS and README/suite references. Consult docs/CONTRACT.md for change/version rules. The investigation reports establish the problem; inspect current source yourself before editing.
+
+## Hard stop before execution
+
+User wants an easy pause to sleep the machine, after changes are prepared/reviewed but BEFORE build and tests. DO NOT run any build, test, native trial, smoke command, compiler, cargo check/test, formatter check, generator --check or test dispatcher (even --list). No background execution. Read source/manifests/case catalogs to prepare validation instead. Source editing, read-only git inspection and review are allowed. If an owning generator must write a derived input to make the patch build-ready, tell the coordinator the exact command and necessity; coordinator owns that preparation. Do not edit generated outputs manually. Do not stage/commit, touch the app or test evidence, install runners, alter locks, or spawn subagents.
+
+Work only on the exact files assigned in your task message. If another file is necessary, request a scope extension from coordinator before touching it. Do not expand product behavior or introduce new frameworks for the coverage-only tasks. Preserve independent expected values and assertions capable of detecting the reported mistake. Distinguish admission from native effects and diagnostic fallback from actual worker execution.
+
+Return a focused diff and concise report (only your assigned report artifact) describing source/contract judgment, acceptance assertions, why they are meaningful, changes, remaining risks, exact deferred build/test selectors and prerequisites. State explicitly that no build/tests ran. Coordinator reviews all changes before the sleep checkpoint; report readiness promptly. Use inert paths to sibling records and valid outward links per records/AGENTS.md.

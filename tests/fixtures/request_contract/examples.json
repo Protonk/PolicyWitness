@@ -27984,5 +27984,531 @@
         ]
       }
     }
+  },
+  {
+    "id": "actor_parameter_value_nul",
+    "phase": "admission",
+    "lesson": "The rejected value names its exact actor and keeps a dotted parameter key as one path segment; the earlier file action never executes.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "actor_parameter_value_nul",
+      "actors": [
+        {
+          "actor_id": "a0",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "K.dot": "ok"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a1",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "K.dot": "bad\u0000value"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a2",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "A": "bad\u0000later"
+              }
+            }
+          }
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "p0",
+          "actor_id": "a0",
+          "actions": [
+            {
+              "step_id": "effect",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "p1",
+          "actor_id": "a1",
+          "actions": []
+        },
+        {
+          "phase_id": "p2",
+          "actor_id": "a2",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "actors",
+          "1",
+          "sandbox",
+          "policy",
+          "params",
+          "K.dot"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "actors",
+          "1",
+          "sandbox",
+          "policy",
+          "params",
+          "K.dot"
+        ]
+      }
+    }
+  },
+  {
+    "id": "actor_parameter_value_bytes",
+    "phase": "admission",
+    "lesson": "The rejected value names its exact actor and keeps a dotted parameter key as one path segment; the earlier file action never executes.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "actor_parameter_value_bytes",
+      "actors": [
+        {
+          "actor_id": "a0",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "K.dot": "ok"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a1",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "K.dot": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9xx"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a2",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "A": "bad\u0000later"
+              }
+            }
+          }
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "p0",
+          "actor_id": "a0",
+          "actions": [
+            {
+              "step_id": "effect",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "p1",
+          "actor_id": "a1",
+          "actions": []
+        },
+        {
+          "phase_id": "p2",
+          "actor_id": "a2",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "actors",
+          "1",
+          "sandbox",
+          "policy",
+          "params",
+          "K.dot"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "actors",
+          "1",
+          "sandbox",
+          "policy",
+          "params",
+          "K.dot"
+        ]
+      }
+    }
+  },
+  {
+    "id": "actor_parameter_exact_bytes",
+    "phase": "execution",
+    "lesson": "Parameter key and value bounds count UTF-8 bytes; exact bounds retain a file effect.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "actor_parameter_exact_bytes",
+      "actors": [
+        {
+          "actor_id": "a0",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a1",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "K.dot": "ok"
+              }
+            }
+          }
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "p0",
+          "actor_id": "a0",
+          "actions": [
+            {
+              "step_id": "effect",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "p1",
+          "actor_id": "a1",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "actor_parameter_key_bytes",
+    "phase": "admission",
+    "lesson": "A rejected key precedes its rejected value and is omitted from the diagnostic path; the earlier file action never executes.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "actor_parameter_key_bytes",
+      "actors": [
+        {
+          "actor_id": "a0",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "K.dot": "ok"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a1",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9xx": "bad\u0000value"
+              }
+            }
+          }
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "p0",
+          "actor_id": "a0",
+          "actions": [
+            {
+              "step_id": "effect",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "p1",
+          "actor_id": "a1",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": null
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": null
+      }
+    }
+  },
+  {
+    "id": "actor_parameter_key_nul",
+    "phase": "admission",
+    "lesson": "A rejected key precedes its rejected value and is omitted from the diagnostic path; the earlier file action never executes.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "actor_parameter_key_nul",
+      "actors": [
+        {
+          "actor_id": "a0",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "K.dot": "ok"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a1",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "bad\u0000key": "bad\u0000value"
+              }
+            }
+          }
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "p0",
+          "actor_id": "a0",
+          "actions": [
+            {
+              "step_id": "effect",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "p1",
+          "actor_id": "a1",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": null
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": null
+      }
+    }
+  },
+  {
+    "id": "actor_parameter_path_bound",
+    "phase": "admission",
+    "lesson": "A valid 64-byte parameter key remains available in the admission record, while the separate 63-byte diagnostic component bound withholds the whole path.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "actor_parameter_path_bound",
+      "actors": [
+        {
+          "actor_id": "a0",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "K.dot": "ok"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a1",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "bad\u0000value"
+              }
+            }
+          }
+        },
+        {
+          "actor_id": "a2",
+          "sandbox": {
+            "mode": "apply",
+            "policy": {
+              "format": "sbpl",
+              "sbpl_source": "(version 1) (allow default)",
+              "params": {
+                "A": "bad\u0000later"
+              }
+            }
+          }
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "p0",
+          "actor_id": "a0",
+          "actions": [
+            {
+              "step_id": "effect",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "p1",
+          "actor_id": "a1",
+          "actions": []
+        },
+        {
+          "phase_id": "p2",
+          "actor_id": "a2",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": null
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": null
+      }
+    }
   }
 ]

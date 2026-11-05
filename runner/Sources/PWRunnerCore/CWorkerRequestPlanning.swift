@@ -304,9 +304,11 @@ func requestCapacityFailure(_ record: PWRunnerAdmissionFailure, parsed: PWRunner
     if record.field == "key" {
         return PWRunnerRequestFailure(code: "admission_refused", path: nil)
     }
-    if record.field == "value" {
+    let actorParameterValue = path.count == 5 && path[0] == "actors"
+        && Int(path[1]) != nil && Array(path.suffix(3)) == ["sandbox", "policy", "value"]
+    if record.field == "value" || actorParameterValue {
         guard let key = record.parameter_key else { return PWRunnerRequestFailure(code: "admission_refused", path: nil) }
-        path = ["policy", "params", key]
+        path = actorParameterValue ? Array(path.dropLast()) + ["params", key] : ["policy", "params", key]
     }
     return PWRunnerRequestFailure(code: "admission_refused", path: path)
 }

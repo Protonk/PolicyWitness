@@ -1,0 +1,162 @@
+{
+  "recorded_utc": "2026-11-05T05:09:43.249316+00:00",
+  "completed_stages": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "stage4_decisions": "I1-I3 implemented with direct passes and explicit applicability review; F1 deferred; D1-D5 implemented/regenerated and documentation validation passed",
+  "specialists_used": 23,
+  "baseline_files_changed": [
+    "docs/ARCHITECTURE.md",
+    "docs/WORKER.md",
+    "docs/LIMITS.md",
+    "docs/architecture.json",
+    "docs/limits.json",
+    "docs/PolicyWitness.md",
+    "docs/architecture-boundaries.svg",
+    "docs/architecture-byoxpc.svg",
+    "docs/architecture-topology.svg",
+    "docs/worker-capabilities.svg"
+  ],
+  "tests_run": [
+    {
+      "path": "tests/out/runs/doc-lookback-repairs-01",
+      "run_id": "20261105T025009Z_d5dead5d",
+      "case_outcome_counts": {
+        "fail": 1,
+        "pass": 82
+      },
+      "reruns": 0
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-repairs-02",
+      "run_id": "20261105T030143Z_908ddc80",
+      "case_outcome_counts": {
+        "fail": 1
+      },
+      "role": "one authorized focused rerun"
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-repairs-03",
+      "run_id": "20261105T030620Z_7f63d81d",
+      "case_outcome_counts": {
+        "pass": 1
+      },
+      "role": "authorized bounded flakiness characterization"
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-repairs-04",
+      "run_id": "20261105T030702Z_8928390b",
+      "case_outcome_counts": {
+        "pass": 1
+      },
+      "role": "authorized bounded flakiness characterization"
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-repairs-05",
+      "run_id": "20261105T031404Z_f3cd7dbb",
+      "case_outcome_counts": {
+        "pass": 2
+      },
+      "role": "one bounded validation/observation run after additive diagnostic fixture change"
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-repairs-06",
+      "run_id": "20261105T031925Z_7088dee4",
+      "case_outcome_counts": {
+        "fail": 1
+      },
+      "role": "final authorized instrumented observation, failure retained under deferred F1"
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-repairs-07",
+      "run_id": "20261105T032015Z_f0ccd56a",
+      "case_outcome_counts": {
+        "fail": 1
+      },
+      "role": "final authorized instrumented observation, failure retained under deferred F1"
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-docs-01",
+      "run_id": "20261105T043512Z_9e9ed163",
+      "case_outcome_counts": {
+        "fail": 1,
+        "pass": 3
+      },
+      "role": "first documentation validation; two citation-form defects corrected afterward; failure preserved, documentation cases superseded by docs-02"
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-docs-02",
+      "run_id": "20261105T044221Z_f559a79b",
+      "case_outcome_counts": {
+        "pass": 3
+      },
+      "completion": {
+        "completed": 3,
+        "selected": 3,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "role": "authorized documentation rerun before final readers; corrected candidate unchanged; zero recorded sleep"
+    },
+    {
+      "path": "tests/out/runs/doc-lookback-docs-03",
+      "run_id": "20261105T050537Z_eee41d84",
+      "case_outcome_counts": {
+        "pass": 2
+      },
+      "completion": {
+        "completed": 2,
+        "selected": 2,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "role": "final acceptance after R1 one-line wording correction; two passes, candidate unchanged, zero recorded sleep"
+    }
+  ],
+  "native_trials": [],
+  "builds_run": [
+    {
+      "build_number": 1121,
+      "status": "pass",
+      "transcript": "tests/out/runs/doc-lookback-repairs-01/build-console.log"
+    }
+  ],
+  "next_action": "User review immediately before plan/record retirement; preserve F1 handoff and unreplaced observations",
+  "pause_reason": "Final acceptance complete; user requested pause before retirement",
+  "outflow": "READER-OUTFLOW-PLAN.md",
+  "resume_record": "ACCEPTANCE.md",
+  "document_acceptance": {
+    "ARCHITECTURE": "accepted with R1 correction",
+    "WORKER": "accepted unchanged since final reading",
+    "LIMITS": "accepted unchanged since final reading"
+  },
+  "implementation_deferrals_accepted": [
+    {
+      "id": "F1",
+      "scope": "Investigate and stabilize host_setup_oracle_sensitivity independent observer startup/receipt lifecycle",
+      "authorization": "User authorized deferral if recurrence; runs06 and07 reproduced",
+      "not_deferred": [
+        "I1",
+        "I2",
+        "I3"
+      ],
+      "status": "open, deferred; does not block documentation tranche"
+    }
+  ],
+  "documentation_candidate_state": "acceptance/verification-03.json",
+  "final_reader_state": "final-readers/final-state.json",
+  "stage6_status": "complete; all three documents accepted, F1 remains deferred",
+  "active_builds_tests_or_readers": false,
+  "accepted_final_reader_dispositions": [
+    "R1 corrected and checked",
+    "R2 inventories retained",
+    "R3 evidence qualifications retained"
+  ],
+  "retirement_status": "held; no retirement or pruning performed"
+}

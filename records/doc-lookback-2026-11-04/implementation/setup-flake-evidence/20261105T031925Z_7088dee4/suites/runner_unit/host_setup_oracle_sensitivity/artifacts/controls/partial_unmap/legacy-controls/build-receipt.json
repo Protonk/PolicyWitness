@@ -1,0 +1,14 @@
+{
+  "scratch_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/scratch/build/partial_unmap",
+  "product_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/scratch/build/partial_unmap/out/Products/Debug/PWRunnerCoreTests",
+  "product_sha256": "24a537e9728146e053113cbfa2ded1a98d571ab4953b0486156e4658722f8629",
+  "query_argv": [
+    "swift",
+    "build",
+    "--package-path",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/artifacts/controls/partial_unmap/legacy-controls/runner",
+    "--scratch-path",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/doc-lookback-repairs-06/suites/runner_unit/host_setup_oracle_sensitivity/scratch/build/partial_unmap",
+    "--show-bin-path"
+  ]
+}

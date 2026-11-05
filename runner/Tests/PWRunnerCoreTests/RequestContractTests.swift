@@ -78,6 +78,66 @@ func runRequestContractTests(_ tk: TestKit) {
         }
     }
     tk.group("accepted request contract") {
+        tk.run("actor parameter refusals retain policy ownership and safe keys") {
+            func request(_ params: [[String: String]]) throws -> PWRunnerRunSpec {
+                try decodeRequest([
+                    "schema_version": PWContract.requestSchema, "specimen_id": "actor-parameters",
+                    "actors": params.enumerated().map { index, values -> [String: Any] in
+                        ["actor_id": "a\(index)", "sandbox": ["mode": "apply", "policy": [
+                            "format": "sbpl", "sbpl_source": "(version 1) (allow default)", "params": values]]]
+                    },
+                    "phases": params.indices.map { ["phase_id": "p\($0)", "actor_id": "a\($0)", "actions": []] as [String: Any] }
+                ])
+            }
+            let exactKey = String(repeating: "é", count: 63) + "x" // 127 UTF-8 bytes.
+            let exactValue = String(repeating: "é", count: 191) + "x" // 383 bytes.
+            try expectNil(CWorkerOrchestrator.admissionFailure(for: request([[exactKey: exactValue], ["K": "ok"]])))
+            for (value, actual, maximum, unit) in [(exactValue + "x", 384, 383, "utf8_bytes"), ("bad\0value", 1, 0, "nul_bytes")] {
+                // The same key in multiple policies cannot identify its owner;
+                // actor order wins before sorted keys in a later policy.
+                let parsed = try request([[exactKey: "ok"], ["z": value, exactKey: value], ["a": value]])
+                guard let refused = CWorkerOrchestrator.admissionFailure(for: parsed) else { throw TestFailure(message: "value admitted") }
+                try expectEqual(refused.field, "actors.1.sandbox.policy.value")
+                try expectEqual(refused.actual, actual); try expectEqual(refused.maximum, maximum)
+                try expectEqual(refused.unit, unit)
+                // ASCII z sorts before é, independently of insertion order.
+                try expectEqual(refused.parameter_key, "z")
+                let reply = admissionRefusalReply(parsed: parsed, refused: refused, bundleId: nil)
+                try expectEqual(reply.request_failure?.path, ["actors", "1", "sandbox", "policy", "params", "z"])
+                try expectEqual(reply.steps.count, 0)
+                let safe = try request([["K": "ok"], [exactKey: value]])
+                let safeRecord = CWorkerOrchestrator.admissionFailure(for: safe)!
+                let safeReply = admissionRefusalReply(parsed: safe, refused: safeRecord, bundleId: nil)
+                try expectEqual(safeReply.admission_failure?.parameter_key, exactKey)
+                try expectNil(safeReply.request_failure?.path) // Path components have a separate 63-byte cap.
+                for keyBytes in [63, 64] {
+                    let key = String(repeating: "k", count: keyBytes)
+                    let bounded = try request([["K": "ok"], [key: value]])
+                    let record = CWorkerOrchestrator.admissionFailure(for: bounded)!
+                    let path = admissionRefusalReply(parsed: bounded, refused: record, bundleId: nil).request_failure?.path
+                    if keyBytes == 63 { try expectEqual(path, ["actors", "1", "sandbox", "policy", "params", key]) }
+                    else { try expectNil(path) }
+                }
+            }
+            for key in [exactKey + "x", "bad\0key"] {
+                let parsed = try request([["K": "ok"], [key: "bad\0value"]])
+                let refused = CWorkerOrchestrator.admissionFailure(for: parsed)!
+                try expectEqual(refused.field, "key")
+                try expectNil(refused.parameter_key)
+                try expectNil(admissionRefusalReply(parsed: parsed, refused: refused, bundleId: nil).request_failure?.path)
+            }
+            let counted = try request([["K": "ok"], Dictionary(uniqueKeysWithValues:
+                (0..<1025).map { ("K\($0)", "bad\0value") })])
+            let countRecord = CWorkerOrchestrator.admissionFailure(for: counted)!
+            try expectEqual(countRecord.field, "actors.1.sandbox.policy.params")
+            try expectEqual(countRecord.actual, 1025); try expectEqual(countRecord.maximum, 1024)
+            try expectNil(countRecord.parameter_key)
+            try expectEqual(requestCapacityFailure(countRecord, parsed: counted).path, ["actors", "1", "sandbox", "policy", "params"])
+            let legacy = try decodeRequest(replacing(requestFixture(), at: ["policy", "params"], with: ["K": "bad\0value"]))
+            let legacyRecord = CWorkerOrchestrator.admissionFailure(for: legacy)!
+            try expectEqual(legacyRecord.field, "value")
+            try expectEqual(requestCapacityFailure(legacyRecord, parsed: legacy).path, ["policy", "params", "K"])
+        }
         tk.run("all declared input fields round-trip without losing supplied intent") {
             let input = requestFixture()
             let decoded = try decodeRequest(input)

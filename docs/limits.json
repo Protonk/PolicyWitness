@@ -8,7 +8,7 @@
       "value": 262143,
       "unit": "UTF-8 bytes",
       "refusal_field": "`policy.sbpl_source`",
-      "counting": "Final SBPL source after augments. Imported file contents are not added to this count.",
+      "counting": "Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -19,6 +19,10 @@
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
           "symbol": "workerAdmissionFailure"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "actorAdmissionFailure"
         }
       ],
       "checks": [
@@ -50,7 +54,7 @@
       "value": 256,
       "unit": "items",
       "refusal_field": "`probe_plan` or `phases.actions`",
-      "counting": "Total ordinary pairs and extension lifecycle actions across the complete plan. Lifecycle actions occupy slots but supply no query; phases do not multiply this cap.",
+      "counting": "Total ordinary pairs and extension lifecycle actions across the complete specimen, including all actor phases. A pair counts once; a lifecycle action occupies one slot but supplies no query. Neither phases nor actors multiply this cap.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -61,6 +65,10 @@
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
           "symbol": "workerAdmissionFailure"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "actorAdmissionFailure"
         }
       ],
       "checks": [
@@ -92,7 +100,7 @@
       "value": 1024,
       "unit": "items",
       "refusal_field": "`policy.params`",
-      "counting": "Entries in `policy.params`.",
+      "counting": "Entries per policy, separately for each actor policy; not an aggregate across actors.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -103,6 +111,10 @@
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
           "symbol": "workerAdmissionFailure"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "actorAdmissionFailure"
         }
       ],
       "checks": [
@@ -553,8 +565,8 @@
       "title": "Request labels",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`run_kind` or `policy.format`",
-      "counting": "Each of `run_kind` and `policy.format`. A refused `run_kind` is omitted and a refused format reads `unknown`.",
+      "refusal_field": "`run_kind`, `policy.format` or actor sandbox labels",
+      "counting": "Each run_kind, policy.format, actors[].sandbox.mode and actors[].sandbox.policy.format. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -596,7 +608,7 @@
       "value": 1023,
       "unit": "UTF-8 bytes",
       "refusal_field": "`_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path`",
-      "counting": "Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first.",
+      "counting": "Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -709,7 +721,7 @@
       "title": "Worker policy delivery",
       "value": 5000,
       "unit": "milliseconds",
-      "counting": "One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it.",
+      "counting": "One absolute monotonic deadline per policy delivery starting immediately after spawn; partial writes and interrupted calls do not restart it. Actor delivery is also capped by the remaining aggregate setup allowance.",
       "effect": "Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence.",
       "control": "Fixed; internal driver controls may shorten it.",
       "sources": [
@@ -746,7 +758,7 @@
       "title": "Worker readiness hint wait",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Nominal wait for the worker readiness hint.",
+      "counting": "Elapsed monotonic wait after successful policy delivery and readiness-pipe setup, capped for an actor by remaining setup allowance.",
       "effect": "Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues.",
       "control": "Fixed.",
       "sources": [
@@ -777,9 +789,9 @@
       "title": "Worker publication wait",
       "value": 120000,
       "unit": "milliseconds",
-      "counting": "Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit.",
+      "counting": "Elapsed monotonic publication wait for ordinary/declaration execution, starting after the readiness wait and excluding synchronous validator collection. Actor execution uses actor_execution_allowance instead.",
       "effect": "Expiry can yield `runner_timeout` with partial evidence and reported cleanup results.",
-      "control": "Fixed.",
+      "control": "Fixed; `_test_overrides.worker_timeout_ms` replaces the ordinary/declaration default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -808,9 +820,9 @@
       "title": "Actor setup allowance",
       "value": 10000,
       "unit": "milliseconds",
-      "counting": "One aggregate allowance from the first actor launch to the last setup disposition, capping each policy delivery and readiness wait.",
+      "counting": "One aggregate elapsed monotonic allowance starting before authority-region preparation and ending at setup disposition, including launches, policy delivery and readiness. Remaining setup caps each subwait.",
       "effect": "An actor whose setup is unresolved at expiry is stopped and reported `setup_timeout`; independent actors keep their own dispositions.",
-      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -835,7 +847,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The scheduler launches actors in order under one clock and polls every pending setup publication; a later actor can still launch while an earlier one is pending."
+      "behavior": "The scheduler launches actors in order under one clock and polls every pending setup publication; a later actor can still launch while an earlier one is pending. Finite normal-workload qualification measures setup elapsed time; it does not establish completion of every admitted workload."
     },
     {
       "id": "actor_execution_allowance",
@@ -843,9 +855,9 @@
       "title": "Actor schedule allowance",
       "value": 120000,
       "unit": "milliseconds",
-      "counting": "One host allowance for the whole serial schedule, excluding measured validator collection; not one allowance per actor.",
+      "counting": "One elapsed monotonic allowance for the complete serial actor schedule after setup, excluding synchronous validator collection; not one allowance per actor.",
       "effect": "Expiry ends the current visit (`arrival_timeout` or `completion_timeout`) and cancels the remaining schedule; every earlier publication is retained.",
-      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -870,7 +882,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Collection time is excluded through the same clock discipline as the single-worker sentinel wait."
+      "behavior": "Collection time is excluded through the same clock discipline as the single-worker sentinel wait. Qualification measures charged execution separately from elapsed execution; no production-duration expiry is established by those finite workloads."
     },
     {
       "id": "actor_collection_allowance",
@@ -878,9 +890,9 @@
       "title": "Actor collection allowance",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Aggregate validator planning and collection allowance across every actor's phases.",
+      "counting": "One aggregate allowance for validator planning and synchronous collection across all actor phases. This is the actor counterpart of phase_collection_wait, not an additional pool.",
       "effect": "Exhaustion marks later phases `budget_exhausted`; earlier collections are retained.",
-      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "control": "Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -899,7 +911,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Each phase plans its queries freshly against the active actor; the aggregate does not restart per actor."
+      "behavior": "Each phase plans its queries freshly against the active actor; the aggregate does not restart per actor. Qualification measures aggregate collection in finite normal workloads; the total override behavior is source-inspected."
     },
     {
       "id": "actor_release_wait",
@@ -909,7 +921,7 @@
       "unit": "milliseconds",
       "counting": "The worker's wait from a visit's arrival to the host's release of that visit's ordinal.",
       "effect": "Expiry refuses the visit with a published timing failure, as the single-worker release wait does.",
-      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -934,7 +946,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The same wait the legacy worker runs, started only after the activated actor arrives; parked time is not charged to it."
+      "behavior": "The same wait the legacy worker runs, started only after the activated actor arrives; parked time is not charged to it. Qualification uses host arrival-to-release as a proxy, not the worker's own sampled interval."
     },
     {
       "id": "actor_exchange_allowance",
@@ -942,9 +954,9 @@
       "title": "Authority exchange allowance",
       "value": 5000,
       "unit": "milliseconds",
-      "counting": "Each custody acknowledgement a worker awaits after publishing an issued token, each transfer request it awaits an answer to, and each recipient acknowledgement the host awaits.",
+      "counting": "Each worker custody-acknowledgement or transfer-answer wait uses sampled continuous time; each host recipient-acknowledgement wait uses elapsed monotonic time, also capped by remaining schedule allowance.",
       "effect": "Expiry is a transport observation (`timeout` custody or a `host_timeout`/`recipient_timeout` transfer status), never a native result.",
-      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
@@ -969,7 +981,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Both sides measure the exchange on their own clocks; the shared lifetime cutoff also bounds it."
+      "behavior": "Worker waits sample the shared lifetime cutoff when an answer is not already visible. The host recipient wait has its own clock. Timing qualification measures host recipient waits only; it does not measure every worker custody or answer wait."
     },
     {
       "id": "actor_lifetime_cutoff",
@@ -977,9 +989,9 @@
       "title": "Actor lifetime cutoff",
       "value": 180000,
       "unit": "milliseconds",
-      "counting": "One absolute continuous-clock cutoff shared by every actor, taken before the first launch; it includes parked waits, collection and sleep.",
-      "effect": "A worker that reaches the cutoff publishes a timing failure and exits; a cutoff already past at launch refuses before any policy byte.",
-      "control": "Fixed; the actor timing qualification case measures finite one-, three- and eight-actor workloads against this allowance on the recorded equipment and requires at least a quarter of it to remain.",
+      "counting": "One absolute continuous-clock cutoff shared by all actors, calculated before setup. Parked waits, collection and system sleep advance this clock.",
+      "effect": "An already-past cutoff refuses before policy reading; a worker that observes expiry at a checked activation, release or exchange wait reports a timing failure. Native calls and final cleanup can outlast it.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -1004,7 +1016,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Each actor's header carries the same raw `mach_continuous_time` cutoff; acknowledgements and heartbeats cannot extend it."
+      "behavior": "Actor headers carry the same mach_continuous_time cutoff. This is sampled enforcement, not an asynchronous timer: ordinary native calls and exec collection/reap do not check it. Acknowledgements cannot extend the cutoff. Qualification total is setup plus elapsed schedule execution, including collection during that execution but excluding final cleanup and the earlier cutoff-to-setup interval; it is not whole-lifetime measurement."
     },
     {
       "id": "worker_exit_grace",
@@ -1168,9 +1180,9 @@
       "title": "Validator I/O deadline",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Default elapsed monotonic deadline for one phase\u2019s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
+      "counting": "Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
       "effect": "Received verdicts survive an I/O timeout; cleanup results remain reported.",
-      "control": "Fixed.",
+      "control": "Fixed; `_test_overrides.validator_io_timeout_ms` changes the proposed deadline, floored at 50 ms without a ceiling. The aggregate remainder can cap the effective deadline below that floor.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -1199,7 +1211,7 @@
       "title": "Validator exit grace",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Nominal wait for validator exit after collection closes.",
+      "counting": "Elapsed monotonic wait for validator exit after collection closes. Subsequent termination and final reap can overrun it.",
       "effect": "Expiry requests `SIGKILL`. Termination and reap failures remain reported.",
       "control": "Fixed.",
       "sources": [
@@ -1267,7 +1279,7 @@
       "title": "Exec attempt budget",
       "value": 115000,
       "unit": "milliseconds",
-      "counting": "Continuous time from the worker origin before setup, shared by exec steps, including worker setup and intervening work but excluding each acknowledged release wait. Continuous time includes system sleep.",
+      "counting": "Continuous time from each worker origin before setup, shared by that worker's exec steps. Includes setup and intervening work; excludes acknowledged release waits and, for actors, accepted parked activation waits. This per-worker budget is separate from the global actor schedule allowance.",
       "effect": "Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. An unusable sample refuses spawn with no errno, or after spawn records a local timing fault beside any native error; after a rejected sample, later spawns are refused. Blocking spawn and non-exec operations may outlast this allowance.",
       "control": "Fixed.",
       "sources": [
@@ -1300,7 +1312,7 @@
           "form": "test"
         }
       ],
-      "behavior": "pw_clock_start records the worker origin before setup; pw_timing_setup converts the allowance to a ceiling tick count before policy reading or application and refuses an invalid timebase or unrepresentable duration with exit 12. wait_for_proceed adds each phase's measured wait once with checked addition. Exec attempts receive an absolute cutoff independent of the host polling clock. A local timing fault after spawn triggers cleanup. Blocking spawn and non-exec operations are not preemptible here. The production default sits a nominal 5,000 ms below worker_sentinel_wait; test equipment may shorten it independently and the specimen worker_timeout_ms override does not move it. Compiled values agree with the host configuration. Deterministic native controls vary spawn latency, release exclusion, intervening work, exact exhaustion, every timing stage, arithmetic refusals and cleanup. Real short-budget plans preserve completed prefix and trailing file effects through host assembly and serialization."
+      "behavior": "pw_clock_start records the worker origin before setup; pw_timing_setup converts the allowance to a ceiling tick count before policy reading or application and refuses an invalid timebase or unrepresentable duration with exit 12. wait_for_proceed adds each phase's measured wait once with checked addition. Exec attempts receive an absolute cutoff independent of the host polling clock. A local timing fault after spawn triggers cleanup. Blocking spawn and non-exec operations are not preemptible here. The production default sits a nominal 5,000 ms below worker_sentinel_wait; test equipment may shorten it independently and the specimen worker_timeout_ms override does not move it. Compiled values agree with the host configuration. Deterministic native controls vary spawn latency, release exclusion, intervening work, exact exhaustion, every timing stage, arithmetic refusals and cleanup. Real short-budget plans preserve completed prefix and trailing file effects through host assembly and serialization. wait_for_activation also adds the accepted parked interval once; that actor exclusion is source-inspected, not established by the legacy short-budget control."
     },
     {
       "id": "exec_reap_grace",
@@ -1420,7 +1432,7 @@
       "value": 1,
       "unit": "seconds",
       "counting": "`ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit.",
-      "effect": "A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. Acquisition reaching an occupied or retiring host can retry without sending the specimen; the interval still controls launch pacing.",
+      "effect": "The setting controls launch pacing, not a guaranteed request-delivery time. Without the key launchd uses its ten-second default. Acquisition reaching an occupied or retiring host can retry without sending the specimen.",
       "control": "Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement.",
       "sources": [
         {
@@ -1536,7 +1548,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer, lifecycle-event, fresh-read, fresh-write, exec-observation and actor components are added without reclaiming ordinary fields. Actor components use the union of encoded success, failure, interruption and capture fixtures: eight actor records with full compiled-profile payloads, sixteen phase overheads, every event, transfer and resource at its capacity, aggregate disposition entries and issues, and ordinary-step actor identities. Bounded echoed strings use maximal escaping, native scalars use 20 decimal bytes, fixed actor vocabulary has a checked 128-byte ASCII ceiling, and each array has an explicit capacity. The actor capture allowance is compared with production encoding of a maximum receipt; missing capture fixtures and unclassified or oversized arrays fail. Ordinary controls separately encode valid exec evidence and fresh-write evidence on every slot. Mutually exclusive fields remain counted, so this is an upper bound, not a reachable reply. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write, mixed native and actor capture workloads."
+      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer, lifecycle-event, fresh-read, fresh-write, exec-observation and actor components are added without reclaiming ordinary fields. Actor components use the union of encoded success, failure, interruption and capture fixtures: eight actor records with full compiled-profile payloads, sixteen phase overheads, every event, transfer and resource at its capacity, aggregate disposition entries and issues, and ordinary-step actor identities. Bounded echoed strings use maximal escaping, native scalars use 20 decimal bytes, fixed actor vocabulary has a checked 128-byte ASCII ceiling, and each array has an explicit capacity. The actor capture allowance is compared with production encoding of a maximum receipt; missing capture fixtures and unclassified or oversized arrays fail. Ordinary controls separately encode valid exec evidence and fresh-write evidence on every slot. Mutually exclusive fields remain counted, so this is an upper bound, not a reachable reply. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write, mixed native and actor capture workloads. Fixture-key classification does not prove that every future producer branch is represented; producer and fixture review remain necessary."
     },
     {
       "id": "controller_output",
@@ -1587,7 +1599,7 @@
       "title": "Policy helper output",
       "value": 8388608,
       "unit": "bytes",
-      "counting": "Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding.",
+      "counting": "Captured bytes per stdout or stderr stream from each sbpl-check invocation, before text decoding.",
       "effect": "Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
       "control": "Fixed.",
       "sources": [
@@ -1610,7 +1622,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget. Actor fallback can run before host admission and can accumulate more policies than the admitted actor count. Constructed orchestration controls establish helper input order/association and preserved transport evidence, not live helper invocation."
     },
     {
       "id": "validator_fault_context",
@@ -1686,7 +1698,7 @@
       "title": "Primary worker diagnostic",
       "value": 4095,
       "unit": "bytes",
-      "counting": "Retained primary diagnostic bytes.",
+      "counting": "Retained primary diagnostic bytes per worker, hence separately per actor.",
       "effect": "The reply reports retained length and truncation state; this is not a complete transcript.",
       "control": "Fixed.",
       "sources": [
@@ -1723,7 +1735,7 @@
       "title": "Optional compiled-object capture",
       "value": 1048576,
       "unit": "bytes",
-      "counting": "Raw bytecode bytes in an optional compiled-object receipt, before base64 encoding.",
+      "counting": "Raw bytecode bytes per optional compiled-object receipt before base64 encoding, separately for each opted-in apply actor.",
       "effect": "Oversized or unsupported objects leave capture unavailable without preventing policy application.",
       "control": "Fixed.",
       "sources": [
@@ -1752,7 +1764,7 @@
           "form": "control"
         }
       ],
-      "behavior": "Capture supports nonempty single-profile (type 0) objects; it runs before applying the same object. Failed capture leaves application unchanged. Independently constructed object controls cover exact, excessive and unsupported captures."
+      "behavior": "Capture supports nonempty single-profile (type 0) objects before applying the same object. Failed capture leaves application unchanged. Constructed readable-memory controls exercise exact 1 MiB capture, excessive and unsupported objects, with payload/digest and no-write assertions; this does not establish compilation or application of a 1 MiB policy. Host receipt checks separately require successful apply, completion, clean exit, identity and checksum."
     },
     {
       "id": "observed_path",
@@ -1822,7 +1834,7 @@
       "title": "sbpl-check source admission",
       "value": 4194304,
       "unit": "bytes",
-      "counting": "Top-level source bytes read by the diagnostic helper; not the runner policy cap.",
+      "counting": "Source bytes in each diagnostic helper input, including independent actor-policy fallback inputs; not the runner policy cap or total fallback size.",
       "effect": "policy_too_large with null compile and import_inventory groups; no compile verdict.",
       "control": "Fixed.",
       "sources": [
@@ -1912,16 +1924,20 @@
     {
       "id": "phase_count",
       "section": "admission",
-      "title": "Specimen phases",
+      "title": "Ordinary/declaration phases",
       "value": 8,
       "unit": "items",
-      "counting": "Explicit phases in one request; probe_plan normalizes to one phase.",
+      "counting": "Explicit phases in an ordinary or declaration request; probe_plan normalizes to one phase. Actor requests use actor_phases.",
       "effect": "Excess returns admission_failure before any child.",
       "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
           "symbol": "PWRunnerPhase"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorPlan.swift",
+          "symbol": "actorAdmissionFailure"
         }
       ],
       "checks": [
@@ -1938,7 +1954,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Explicit phases in one request; probe_plan normalizes to one phase. Excess returns admission_failure before any child.",
+      "behavior": "The ordinary/declaration phase cap is distinct from the global actor phase cap; both share the same per-worker record layout.",
       "refusal_field": "`phases`"
     },
     {
@@ -1979,7 +1995,7 @@
       "title": "Phase records per worker region",
       "value": 16,
       "unit": "items",
-      "counting": "Fixed phase records in each worker's shared header. The legacy form admits eight phases (`phase_count`); the remaining records are internal support for the actor form under development and no public request reaches them.",
+      "counting": "Fixed phase records in each worker shared header. Ordinary/declaration requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records.",
       "effect": "A worker refuses a header naming more phases than its records before application.",
       "control": "Fixed.",
       "sources": [
@@ -2037,7 +2053,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Published outbound bytes remain immutable until the host copies or rejects and erases them. Inbound consumption/erasure follows host settlement. Shared teardown erasure requires confirmed worker quiescence; private custody is erased independently. The layout suite compares compiled C geometry with the Swift mirror."
+      "behavior": "Published outbound bytes remain immutable until the host copies or rejects and erases them. Inbound consumption/erasure follows host settlement. Shared teardown erasure requires confirmed worker quiescence; private custody is erased independently. The layout suite compares compiled C geometry with the Swift mirror. Logical bytes per region are 1152 + (outbound + inbound) * 16448: header and fixed answer cells plus admitted slots. This derived geometry excludes page/allocation overhead; it is not an independently enforced byte cap."
     },
     {
       "id": "phase_publications",
@@ -2076,7 +2092,7 @@
       "title": "Aggregate phase collection allowance",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline.",
+      "counting": "Cumulative monotonic planning and collection time across ordinary/declaration phases. Actor form uses the single actor_collection_allowance pool. Remaining allowance caps each validator I/O deadline; cleanup and scheduling can overrun it.",
       "effect": "After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts.",
       "control": "Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond.",
       "sources": [
@@ -2138,7 +2154,7 @@
       "title": "Validator records per query",
       "value": 2,
       "unit": "items",
-      "counting": "Retained-record allowance is twice the number of queries actually sent in that phase; at most 512 records across a production run.",
+      "counting": "Retained-record allowance is twice the number of queries submitted to that phase collector, sized before writes; at most 512 records across a production run.",
       "effect": "The first excess record produces a decode fault; no excess record enters association.",
       "control": "Fixed.",
       "sources": [
@@ -2161,7 +2177,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Retained-record allowance is twice the number of queries actually sent in that phase; at most 512 records across a production run. The first excess record produces a decode fault; no excess record enters association."
+      "behavior": "Retained-record allowance is twice the number of queries submitted to that phase collector, sized before writes; at most 512 records across a production run. The first excess record produces a decode fault; no excess record enters association."
     },
     {
       "id": "validator_reply_bytes_per_query",
@@ -2169,7 +2185,7 @@
       "title": "Validator reply storage per query",
       "value": 16384,
       "unit": "bytes",
-      "counting": "Twice the frame bound per actual query; at most 4,194,304 retained stdout bytes across a production run.",
+      "counting": "Twice the frame bound per query submitted to the phase collector, sized before writes; at most 4,194,304 retained stdout bytes across a production run.",
       "effect": "The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame.",
       "control": "Fixed.",
       "sources": [
@@ -2192,7 +2208,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Twice the frame bound per actual query; at most 4,194,304 retained stdout bytes across a production run. The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame."
+      "behavior": "Twice the frame bound per query submitted to the phase collector, sized before writes; at most 4,194,304 retained stdout bytes across a production run. The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame."
     },
     {
       "id": "validator_reply_step_id",
@@ -2383,10 +2399,10 @@
     {
       "id": "extension_declarations",
       "section": "admission",
-      "title": "Extension declarations",
+      "title": "Declaration-form declarations",
       "value": 1,
       "unit": "items",
-      "counting": "Across the complete specimen, including separate phases. Omitted actions are legal.",
+      "counting": "Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate.",
       "effect": "Additional declarations return `admission_refused`.",
       "control": "Fixed.",
       "sources": [
@@ -2419,10 +2435,10 @@
     {
       "id": "extension_consumes",
       "section": "admission",
-      "title": "Consume actions",
+      "title": "Declaration-form consume actions",
       "value": 1,
       "unit": "items",
-      "counting": "Across the complete specimen, including separate phases. Omitted actions are legal.",
+      "counting": "Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate.",
       "effect": "A repeated consume returns `repeated_consume`.",
       "control": "Fixed.",
       "sources": [
@@ -2455,10 +2471,10 @@
     {
       "id": "extension_releases",
       "section": "admission",
-      "title": "Release actions",
+      "title": "Declaration-form release actions",
       "value": 1,
       "unit": "items",
-      "counting": "Across the complete specimen, including separate phases. Omitted actions are legal.",
+      "counting": "Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate.",
       "effect": "A repeated release returns `repeated_release`.",
       "control": "Fixed.",
       "sources": [
@@ -2530,7 +2546,7 @@
       "title": "Issuance target path",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "counting": "Submitted target path, before host realpath preparation; excludes terminating NUL. This is separate from an ordinary attempt target.",
+      "counting": "Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows.",
       "effect": "Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence.",
       "control": "Fixed.",
       "sources": [
@@ -2615,7 +2631,7 @@
       "value": 16,
       "unit": "items",
       "refusal_field": "`phases`",
-      "counting": "Explicit phases in one actor-form request; each is one visit of its actor.",
+      "counting": "All explicit phases across the complete actor-form request, including empty visits; each visits one actor. Not a per-actor allowance.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
       "sources": [
@@ -2982,7 +2998,7 @@
       "title": "Transient extension channel",
       "value": 17472,
       "unit": "bytes",
-      "counting": "Logical mapped channel with header, resolved path and token array. The OS backing object may round its storage up.",
+      "counting": "Declaration-form logical mapped channel with header, resolved path and token array. The OS backing object may round its storage up; actor authority slots are separate.",
       "effect": "Insufficient backing size or invalid channel geometry cannot supply a token.",
       "control": "Fixed.",
       "sources": [
@@ -3019,7 +3035,7 @@
       "title": "Issuer collection wait",
       "value": 5000,
       "unit": "milliseconds",
-      "counting": "Monotonic host wait starting after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; phase collection and worker waits have not started.",
+      "counting": "Declaration form only: monotonic host wait after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; actor issue actions do not use this helper or allowance.",
       "effect": "Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait.",
       "control": "Fixed.",
       "sources": [
@@ -3397,6 +3413,76 @@
         }
       ],
       "behavior": "Production constants and independent at/over-boundary controls retain actual decisions. Client controls exercise production session state; host controls exercise shared reservation state. These constructed controls do not establish live XPC delivery."
+    },
+    {
+      "id": "request_failure_path_components",
+      "section": "evidence",
+      "title": "Request-failure path depth",
+      "value": 8,
+      "unit": "items",
+      "counting": "Components in a retained request_failure.path, including object keys and array positions.",
+      "effect": "Excess withholds the entire path as null; no shortened location is substituted.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "symbol": "PWRunnerRequestFailure"
+        },
+        {
+          "path": "controller/src/request_patch.rs",
+          "symbol": "RequestError"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Constructed Swift paths derive the retained maximum and independently assert depth 8/9 and UTF-8 component 63/64 all-or-null boundaries. Actor parameter refusal controls cover component 63/64; Rust constructor parity is source-inspected."
+    },
+    {
+      "id": "request_failure_path_component",
+      "section": "evidence",
+      "title": "Request-failure path component",
+      "value": 63,
+      "unit": "UTF-8 bytes",
+      "counting": "Each component in a retained request_failure.path. The separate parameter_key admission-record echo has its own larger bound.",
+      "effect": "Excess withholds the entire path as null; no shortened location is substituted.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+          "symbol": "PWRunnerRequestFailure"
+        },
+        {
+          "path": "controller/src/request_patch.rs",
+          "symbol": "RequestError"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Constructed Swift paths derive the retained maximum and independently assert depth 8/9 and UTF-8 component 63/64 all-or-null boundaries. Actor parameter refusal controls cover component 63/64; Rust constructor parity is source-inspected."
     }
   ]
 }

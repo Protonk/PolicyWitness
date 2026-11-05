@@ -226,13 +226,15 @@ pub fn print_escaped_tool_error(error: String) -> Result<(), String> {
 /// The dependencies a run acquires from its environment, named at the
 /// boundaries the controlled orchestration tests observe: where the app root
 /// is, how the evidence manifest is read, where the external registry lives
-/// and how the client is invoked. Production binds the real ones; a test binds
-/// counting or capturing closures around them and reads the rendered envelope.
+/// and how the client and fallback compiler are invoked. Production binds the
+/// real ones; a test binds counting or capturing closures around them and reads
+/// the rendered envelope.
 struct RunDependencies<'a> {
     pub app_root: &'a dyn Fn() -> Result<PathBuf, String>,
     pub load_manifest: &'a dyn Fn(&Path) -> Result<EvidenceManifest, String>,
     /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
     pub registry_path: Option<&'a Path>,
+    pub policy_check: &'a dyn Fn(&str) -> Result<PolicyCheckCapture, String>,
     pub client: &'a dyn Fn(
         &str,
         &str,
@@ -248,6 +250,7 @@ impl RunDependencies<'static> {
             load_manifest: &evidence::load_manifest,
             registry_path: None,
             client: &run_pw_runner_client,
+            policy_check: &run_policy_check,
         }
     }
 }
@@ -412,6 +415,7 @@ fn fallback_policy_check(
 fn actor_fallback_checks(
     client: &RunnerClientRun,
     policies: &[(Option<String>, Value)],
+    run: &dyn Fn(&str) -> Result<PolicyCheckCapture, String>,
 ) -> Option<Vec<ActorPolicyCheck>> {
     if policies.is_empty() || !client.fallback_eligible() {
         return None;
@@ -423,8 +427,7 @@ fn actor_fallback_checks(
                 let request = serde_json::json!({ "policy": policy }).to_string();
                 ActorPolicyCheck {
                     actor_id: actor_id.clone(),
-                    policy_check: run_policy_check(&request)
-                        .unwrap_or_else(PolicyCheckCapture::unavailable),
+                    policy_check: run(&request).unwrap_or_else(PolicyCheckCapture::unavailable),
                 }
             })
             .collect(),
@@ -739,8 +742,9 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         ReplyAdmission::DeliveryFailed(error) => ("tool_error", 2, error),
         ReplyAdmission::Refused { outcome, error } => (outcome, 1, error),
         ReplyAdmission::Admitted => {
-            let policy_check = fallback_policy_check(&runner_client, || run_policy_check(&held));
-            let actor_policy_checks = actor_fallback_checks(&runner_client, &actor_policies);
+            let policy_check = fallback_policy_check(&runner_client, || (deps.policy_check)(&held));
+            let actor_policy_checks =
+                actor_fallback_checks(&runner_client, &actor_policies, deps.policy_check);
             let execution = complete_execution(ExecutionData {
                 specimen,
                 policy_check,
@@ -757,11 +761,12 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     let mut data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
     data.execution.policy_check =
         fallback_policy_check(data.execution.runner_client.as_ref().unwrap(), || {
-            run_policy_check(&held)
+            (deps.policy_check)(&held)
         });
     data.execution.actor_policy_checks = actor_fallback_checks(
         data.execution.runner_client.as_ref().unwrap(),
         &actor_policies,
+        deps.policy_check,
     );
     envelope(
         json_contract::JsonResult::new(false, exit_code, Some(outcome), Some(error)),
@@ -2022,7 +2027,7 @@ else:
     }
 
     // ---- Controlled orchestration --------------------------------------------
-    // `run` with its production dependencies replaced at the four boundaries:
+    // `run` with its production dependencies replaced at the observed boundaries:
     // a counting loader around the real manifest reader, a synthetic app root,
     // an on-disk registry fixture and a capturing client that answers with a
     // current-schema reply. Every assertion reads the rendered envelope or a
@@ -2247,7 +2252,7 @@ else:
             })
         }
 
-        /// Production orchestration with the four dependencies controlled.
+        /// Production orchestration with app, manifest, registry and client controlled.
         fn observe(app: &Path, registry: Option<&Path>, args: &[&str]) -> Observed {
             observe_reply(app, registry, args, controlled_reply())
         }
@@ -2294,6 +2299,7 @@ else:
                 load_manifest: &load_manifest,
                 registry_path: registry,
                 client: &client,
+                policy_check: &run_policy_check,
             };
             let args: Vec<OsString> = args.iter().map(OsString::from).collect();
             let output = run(&args, &deps).expect("run completes");
@@ -2565,6 +2571,178 @@ else:
                 "policy_sha256",
             ] {
                 assert!(check.get(key).is_none(), "{key} projection retired");
+            }
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
+        fn actor_fallback_preserves_resolved_inputs_order_and_transport_evidence() {
+            // These are valid actor-form inputs, but the controlled client does
+            // not contact a host. Admitted terminal xpc_error authorizes only
+            // diagnostic compilation, not a claim of host request admission.
+            let root = scratch("actor-fallback");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            write(
+                &app.join("Contents/Resources/Augments/read_control.sb"),
+                b"(deny file-read-data)",
+            );
+            let request = json!({
+                "schema_version": json_contract::REQUEST_SCHEMA_VERSION,
+                "specimen_id": "actor-fallback", "runner": {"mode": "standard"},
+                "actors": [
+                    {"actor_id": "zeta", "sandbox": {"mode": "apply", "policy": {
+                        "format": "sbpl", "sbpl_source": "(version 1) (allow default)",
+                        "augments": ["read_control"]}}},
+                    {"actor_id": "middle", "sandbox": {"mode": "unapplied"}},
+                    {"actor_id": "alpha", "sandbox": {"mode": "apply", "policy": {
+                        "format": "sbpl", "sbpl_source": "(version 1) (deny default)",
+                        "params": {"TAG": "alpha"}}}}
+                ],
+                "phases": [
+                    {"phase_id": "first", "actor_id": "zeta", "actions": []},
+                    {"phase_id": "second", "actor_id": "middle", "actions": []},
+                    {"phase_id": "third", "actor_id": "alpha", "actions": []}
+                ]
+            });
+            // Independent expected policy objects: do not use the resolver or
+            // collect expectations from the delivered request.
+            let zeta = json!({"format": "sbpl",
+                "sbpl_source": "(version 1) (allow default)\n(deny file-read-data)"});
+            let alpha = json!({"format": "sbpl",
+                "sbpl_source": "(version 1) (deny default)", "params": {"TAG": "alpha"}});
+            let mut expected = request.clone();
+            expected.as_object_mut().unwrap().remove("runner");
+            expected["actors"][0]["sandbox"]["policy"] = zeta.clone();
+            let path = root.join("request.json");
+            for label in [
+                "eligible",
+                "helper-unavailable",
+                "host-ok",
+                "host-xpc-error",
+                "missing-capture",
+                "delivery-failed",
+            ] {
+                write(&path, request.to_string().as_bytes());
+                let reply = match label {
+                    "host-ok" => Some(controlled_reply()),
+                    "host-xpc-error" => Some(json!({
+                        "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+                        "normalized_outcome": "xpc_error", "error": "host body", "steps": []
+                    })),
+                    _ => None,
+                };
+                let mut capture = client_run(reply.as_ref());
+                if label == "missing-capture" {
+                    capture.transport = None;
+                    capture.transport_admission = "missing".into();
+                    capture.transport_error = Some("no complete client capture".into());
+                    capture.submission = "unknown".into();
+                } else if label == "delivery-failed" {
+                    capture.request_delivery.as_mut().unwrap().error = Some("Broken pipe".into());
+                }
+                let captured = serde_json::to_value(&capture).unwrap();
+                let pending = RefCell::new(Some((capture, reply.clone())));
+                let client_inputs = RefCell::new(Vec::new());
+                let helper_inputs = RefCell::new(Vec::new());
+                let helper_outputs = RefCell::new(Vec::new());
+                let client = |_: &str, held: &str, _: u64, _: &RunnerConnectionKind| {
+                    client_inputs.borrow_mut().push(held.to_owned());
+                    // A changed on-disk request must not replace either the
+                    // held whole request or the resolved actor policies.
+                    write(&path, b"request replaced after client invocation");
+                    Ok(pending.borrow_mut().take().unwrap())
+                };
+                let helper = |held: &str| {
+                    let index = helper_inputs.borrow().len();
+                    helper_inputs.borrow_mut().push(held.to_owned());
+                    let result = if index == 0 || (index == 2 && label == "helper-unavailable") {
+                        Err(format!("controlled helper failure {index}"))
+                    } else {
+                        let status = if index == 1 { "ok" } else { "compile_error" };
+                        Ok(PolicyCheckCapture {
+                            status: status.into(),
+                            tool_exit_code: if index == 1 { 0 } else { 1 },
+                            output: JsonOutputCapture::unavailable(
+                                format!("helper {index}"),
+                                crate::utils::HELPER_CAPTURE_BYTES,
+                            ),
+                            envelope: Some(json!({
+                                "schema_version": json_contract::SCHEMA_VERSION,
+                                "kind": "sbpl_check",
+                                "result": {"normalized_outcome": status},
+                                "data": {"controlled_call": index}
+                            })),
+                        })
+                    };
+                    let expected_capture = match &result {
+                        Ok(value) => serde_json::to_value(value).unwrap(),
+                        Err(error) => {
+                            serde_json::to_value(PolicyCheckCapture::unavailable(error.clone()))
+                                .unwrap()
+                        }
+                    };
+                    helper_outputs.borrow_mut().push(expected_capture);
+                    result
+                };
+                let deps = RunDependencies {
+                    app_root: &|| Ok(app.clone()),
+                    load_manifest: &evidence::load_manifest,
+                    registry_path: None,
+                    client: &client,
+                    policy_check: &helper,
+                };
+                let output = run(&[path.as_os_str().to_owned()], &deps).unwrap();
+                let (wire, exit_code) = envelope_of(&output);
+                let inputs = client_inputs.borrow();
+                assert_eq!(inputs.len(), 1, "{label}: no resubmission");
+                assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
+                assert_eq!(wire["data"]["runner_client"], captured, "{label}");
+                assert_eq!(wire["data"]["runner_result"], json!(reply), "{label}");
+                let eligible = matches!(label, "eligible" | "helper-unavailable");
+                let checks = helper_inputs.borrow();
+                if eligible {
+                    assert_eq!(exit_code, 1);
+                    assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
+                    assert_eq!(wire["result"]["error"], "controlled XPC error");
+                    assert!(wire["data"]["runner_result"].is_null());
+                    assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
+                    assert_eq!(
+                        *checks,
+                        vec![
+                            inputs[0].clone(),
+                            json!({"policy": zeta}).to_string(),
+                            json!({"policy": alpha}).to_string(),
+                        ],
+                        "{label}: whole held request, then policies in request order"
+                    );
+                    let outputs = helper_outputs.borrow();
+                    assert_eq!(wire["data"]["policy_check"], outputs[0]);
+                    assert_eq!(wire["data"]["policy_check"]["status"], "unavailable");
+                    assert_eq!(
+                        wire["data"]["actor_policy_checks"][0]["policy_check"]["status"],
+                        "ok"
+                    );
+                    assert_eq!(
+                        wire["data"]["actor_policy_checks"][1]["policy_check"]["status"],
+                        if label == "helper-unavailable" {
+                            "unavailable"
+                        } else {
+                            "compile_error"
+                        }
+                    );
+                    assert_eq!(
+                        wire["data"]["actor_policy_checks"],
+                        json!([
+                            {"actor_id": "zeta", "policy_check": outputs[1]},
+                            {"actor_id": "alpha", "policy_check": outputs[2]},
+                        ])
+                    );
+                } else {
+                    assert!(checks.is_empty(), "{label}: no helper invocation");
+                    assert!(wire["data"]["policy_check"].is_null());
+                    assert!(wire["data"].get("actor_policy_checks").is_none());
+                }
             }
             fs::remove_dir_all(&root).unwrap();
         }
