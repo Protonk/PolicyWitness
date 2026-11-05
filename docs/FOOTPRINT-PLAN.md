@@ -24,8 +24,9 @@ Refresh the baseline and continue from reconciliation.
 Deliver the document, its generated DOT/SVG figures, registered tests and
 observer/checker controls, current native observations, completed cross-review
 and `records/FOOTPRINT-OUTFLOW.md`. Record reduction candidates for a separate
-effort starting from LIMITS and FOOTPRINT; do not design or implement those
-optimizations here. FOOTPRINT describes current behavior and carries no
+effort that will start from LIMITS and FOOTPRINT and try to make PW smaller and
+a quieter neighbor without changing what it claims; do not design or implement
+those optimizations here. FOOTPRINT describes current behavior and carries no
 forward-looking content.
 
 ## Common cases and accounting boundaries
@@ -79,8 +80,8 @@ footprint claim.
 Use subagents within the executing harness's concurrency (up to 32 authorized),
 with builds and tests serialized under the checkout lock.
 
-Assign one investigation owner per case and rotate those owners for review;
-each case receives one reviewer using a different accounting model.
+Assign one case owner per case and rotate those owners for review; each case
+receives one reviewer using a different accounting model.
 
 | Case | Investigation model and ownership | Reviewer |
 | --- | --- | --- |
@@ -93,13 +94,30 @@ acceptance. Review starts after the case's observations and draft are available;
 each reviewer reconstructs one consequential claim and checks interactions with
 the other two cases.
 
+A case owner receives its case section in stage 4, its row of the common-case
+table, its rows of the source-findings table, the receipt preamble that opens
+stage 4, the records directory path and its question from stage 2.
+
 The coordinator alone edits shared integration files such as
 `tests/catalog.json` and suite-wide documentation, unless explicitly handed to
 one owner. Assign diagram-manifest edits to one owner; this plan does not require
 generator changes. Agree the common measurement/identity interface and assign
-one author before case authors use it. Source edits may proceed in parallel in
+one author before case owners use it. Source edits may proceed in parallel in
 disjoint files; builds and test runs in one checkout remain serialized under
 the checkout lock. Separate worktrees are required for concurrent builds/tests.
+
+## Order of work
+
+| Stage | Output | Gate to the next stage |
+| --- | --- | --- |
+| 0. Baseline | Records baseline; corrected size receipts; chosen workloads | Documentation checks and both receipt cases pass on a current signed app |
+| 1. Reconcile | Working ledger with per-case claims; response representation ledger | Every source finding is confirmed, narrowed or turned into a question |
+| 2. Draft | Provisional FOOTPRINT with row IDs; one question per case; candidates ledger begun | `source_drift/generator_contract` passes on the provisional file |
+| 3. Diagrams | Manifest graphs citing existing assertions; rendered figures inspected | Generator check passes and row/element correspondence is inspected |
+| 4. Cycles | Three registered cases with receipts and controls; updated rows and figures | Each case passes its assertions and controls in fresh output |
+| 5. Integrate | Consolidated FOOTPRINT; reviewer dispositions; editorial pass | Each reviewer reconstructed one claim and disagreements are resolved |
+| 6. Verify | Targeted selection and default battery in fresh directories | All credited runs pass on the final inputs |
+| 7. Closeout | `records/FOOTPRINT-OUTFLOW.md` | Final delivery names FOOTPRINT, figures, test owners and the note |
 
 ## 0. Establish the execution baseline
 
@@ -124,9 +142,10 @@ errors alone.
 
 Keep planning/review materials in a task-owned
 `records/footprint-<date>/` directory: baseline, reconciliation/questions, the
-outflow-candidates ledger, review dispositions and acceptance. This plan is the
-only inbound documentation link owner for those records. Permanent FOOTPRINT
-content links to source and tests, not to planning records. Keep raw execution
+outflow-candidates ledger, encoded-structure findings, review dispositions and
+acceptance. This plan is the only inbound documentation link owner for those
+records. Permanent FOOTPRINT content links to source and tests, not to planning
+records. Keep raw execution
 evidence in fresh managed `tests/out/runs/` directories; identify locally
 available, gitignored evidence honestly. Inspect selections with `--list` before
 execution; a suite selector includes its opt-in members. Do not create output
@@ -174,13 +193,14 @@ session ownership and recovery helpers, including retaining unresolved cleanup.
 ## 1. Reconcile the existing findings
 
 Start with the source-findings table, checking its claims against the refreshed
-baseline and current assertions. Preserve these accounting distinctions:
+baseline and current assertions. Preserve these accounting models; the
+reviewer rotation names them:
 
-| Account | Reconstruction obligation |
+| Model | What it follows |
 | --- | --- |
-| O: objects and lifetimes | Identify backing objects, allocations, mappings, descriptors and processes. Follow acquisition, ownership, transfer, overlapping lifetimes and release evidence. |
-| W: work and amplification | Follow polling, process checks, repeated collection, encoding, transport, decoding and cleanup. Explain scaling with elapsed time, phases, actions, payload bytes and repeated runs. |
-| M: surrounding machine | Identify observable CPU activity, memory occupancy, capacity held and post-run state. Separate PW from observer/test demand and record what inspection can actually establish. |
+| Objects and lifetimes | Identify backing objects, allocations, mappings, descriptors and processes. Follow acquisition, ownership, transfer, overlapping lifetimes and release evidence. |
+| Work and amplification | Follow polling, process checks, repeated collection, encoding, transport, decoding and cleanup. Explain scaling with elapsed time, phases, actions, payload bytes and repeated runs. |
+| Machine demand | Identify observable CPU activity, memory occupancy, capacity held and post-run state. Separate PW from observer/test demand and record what inspection can actually establish. |
 
 For each case, retain in the working ledger:
 
@@ -197,8 +217,8 @@ and equal output artifacts with different
 surviving process trees. Record assumptions about shared backing and absence
 as questions until supported.
 
-The response owner also builds the representation/lifetime ledger here. Trace
-host collection and encoding, client capture, controller full collection,
+The Response case owner also builds the representation/lifetime ledger here.
+Trace host collection and encoding, client capture, controller full collection,
 parsing/decoding and final envelope rendering. Record creation and last-use
 boundaries, known overlaps and shared backing; include validator raw/decoded
 records where material. Mark unestablished relationships explicitly.
@@ -223,6 +243,19 @@ transport**, and **State remaining after a run**. Add the process, representatio
 or backing object directly to each row. Keep conditions alongside quantities,
 and mark each quantity's evidence class: measured, logical capacity,
 constructed bound or source-supported.
+
+Quantities in FOOTPRINT must pass the documentation drift checks, which read
+table cells and inline code as prose and flag any number followed by a byte or
+time unit unless a limit span owns it. Put units in column headers and bare
+integers in cells. In prose, quote durations and sizes through existing limit
+spans, or name them as `*_ns` and `*_bytes` identifiers whose values live in
+the cited receipt. Do not add FOOTPRINT lines to the prose baseline: its entries
+pin exact text and the release preflight refuses growth. Run
+`source_drift/generator_contract` as soon as the provisional file exists. Leave
+the README index and the architecture document graph untouched until
+integration; no drift check requires a new document to be indexed on creation.
+Record the check's assumption that every number in `docs/` is a limit as the
+first entry in the encoded-structure findings.
 
 For each test citation, identify the assertion supporting that row. Distinguish
 an asserted value or relation from a measured value whose receipt is checked
@@ -306,9 +339,9 @@ add them to the manifest when their supporting assertions exist.
 
 Reuse existing limit placeholders in graph facts and link FOOTPRINT prose to
 the relevant LIMITS rows. Keep measured observations distinct from manifest
-constants. Add the document to the README documentation index and the architecture
-document graph with an accurate reader purpose; avoid broad
-rewrites of LIMITS, WORKER or ARCHITECTURE.
+constants. At integration, add the document to the README documentation index
+and the architecture document graph with its finished reader purpose; avoid
+broad rewrites of LIMITS, WORKER or ARCHITECTURE.
 
 Generate with `tests/lib/python.sh docs/generate_architecture.py`, inspect every
 rendered SVG at readable size, and regenerate after changes. Use a local SVG
@@ -340,21 +373,29 @@ Required quantities cannot be unknown. Retain raw samples and every repetition.
 Each case specifies its additional schema and assertion contract. Quantities
 without a universal bound remain scoped observations.
 
+Each case below has the same three lists. Deterministic assertions decide the
+pass. The measured receipt schema names what is recorded, without a pass
+threshold. Controls that must fail are corrupted or incomplete inputs the
+checker must reject for the stated reason; they are not tests expected to fail.
+
 Register every added case in [catalog.json](../tests/catalog.json), with actual
 equipment, default membership and dependencies, and update owning suite READMEs,
 the suite map and relevant coverage/change-verification accounts. Keep cheap
 deterministic checker controls in the default battery. Repeated resource
 measurements may be opt-in because of their cost, but all three cases are
 mandatory for this plan's acceptance. Missing equipment is not a supported skip.
-For each case, implement its controls, run the case and controls through
-`tests/run.sh` in fresh output, then update the rows, diagram and citations from
-the retained results. Add newly supported relationships to the manifest and
-regenerate the figures as part of that update.
+For each case, implement its controls, then run the case and controls through
+`tests/run.sh` in fresh output: the coordinator runs them in this checkout, or
+the case owner runs them in its own worktree. Update the rows, diagram and
+citations from the retained results. Add newly supported relationships to the
+manifest and regenerate the figures as part of that update.
 
 ### Waiting: measured demand during an independently held phase
 
-Compare identified workers with an independently sleeping control over the same
-observation window.
+**Question.** How much CPU time accumulates during a validator-gate-acknowledged
+hold, and how does adding parked actors change demand? The source establishes
+active polling, not a utilization percentage, so compare identified workers with
+an independently sleeping control over the same observation window.
 
 Extend the acknowledged gate machinery in
 [check_ordering.py](../tests/suites/witness_contract/check_ordering.py) and the
@@ -435,9 +476,12 @@ as unverified; do not promise that this assertion detects every blocking wait.
 
 ### Response: coexistence and amplification, beyond retention size
 
-Restrict native memory observation to the controller. Host/client framework
-allocation, XPC backing and a pipeline-wide peak remain unresolved in version
-zero; do not build instrumented Swift binaries or stage rendezvous to resolve them.
+**Question.** What resident and physical-footprint bytes are observed in a fresh
+controller handling each small/large response, and which internal
+representations coexist despite the retention cap? Restrict native memory
+observation to the controller. Host/client framework allocation, XPC backing
+and a pipeline-wide peak remain unresolved in version zero; do not build
+instrumented Swift binaries or stage rendezvous to resolve them.
 
 Use the representation/lifetime ledger to locate the internal assertions.
 Register `witness_contract/response_footprint` for one external observer
@@ -513,8 +557,11 @@ framework storage and unobserved stage attribution unresolved.
 
 ### Aftermath: what PW leaves before the harness intervenes
 
-Distinguish ordinary asynchronous retirement, continuing submitted work,
-surviving descendants, unresolved cleanup and actual apparatus residue.
+**Question.** Which run-created apparatus resources remain at CLI return after
+ordinary completion and a post-invocation timeout, and what independent
+observations establish their end? Distinguish ordinary asynchronous retirement,
+continuing submitted work, surviving descendants, unresolved cleanup and actual
+apparatus residue.
 
 Register `run_effects/aftermath_footprint`, reusing
 [`RunCapture`](../tests/lib/run_capture.py), fixture process identities/exit
@@ -628,10 +675,9 @@ stays in records. Render again after final edits.
 
 ## 6. Verify the integrated result
 
-Use a fresh output directory and replace `<unique>` in the command before
-running it. Inspect the expanded selection with `--list`, including opt-in
-suite members and their prerequisites. The `run_effects` selection includes
-the new aftermath case. A representative final targeted selection is:
+Replace `<unique>` with a fresh name; stage 0's dispatcher rules apply. The
+`run_effects` selection includes the new aftermath case. A representative final
+targeted selection is:
 
 ```sh
 PW_TEST_OUT_DIR="tests/out/runs/footprint-targeted-<unique>" tests/run.sh \
