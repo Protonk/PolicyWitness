@@ -9,7 +9,7 @@ tests and live CLI/direct-XPC controls.
 
 The [user guide exercise](PolicyWitness.md#try-an-accepted-request-and-a-refusal)
 presents `create` and `capture_typo` as standalone commands. Keep its requests
-aligned with those corpus cases so readers can repeat the same experiment
+aligned with those corpus cases so readers can repeat the same exercise
 using the shipped app.
 
 ## Start with an observable instruction
@@ -259,8 +259,8 @@ filesystem state, permissions, available services, or kernel behavior.
 Compatibility has a direction: a newer build can preserve existing requests
 while an older build refuses a newly introduced field or action. The marker
 does not enumerate every build's capabilities. A capacity refusal never
-truncates a plan; automatically splitting one would also change its fresh-process
-experiment. The caller decides whether to revise it or use another build.
+truncates a plan; automatically splitting one would also change which actions
+share a process. The caller decides whether to revise it or use another build.
 
 ## Keeping the lesson honest
 

@@ -47,7 +47,7 @@ bytes. Its worker retains the current
 production ABI/source identity for transport, but the executable override and
 independent binary provenance identify the instrumentation. These substitutions
 establish boundary handling and publication, not policy effects of fabricated
-native return values. The ordinary signed experiment establishes native success.
+native return values. The ordinary signed run establishes native success.
 
 
 The worker erasure observer holds the mapped channel independently and scans

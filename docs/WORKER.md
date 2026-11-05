@@ -4,7 +4,7 @@ A worker must keep reporting under the policy it is testing while leaving the
 requested operations exposed to that policy. PolicyWitness prepares its report
 storage before application, then opens file targets, looks up Mach services and
 creates exec resources inside the attempts. Moving a target open across that
-boundary changes the experiment: a later read would exercise an already held
+boundary changes what the operation tests: a later read would exercise an already held
 descriptor, with the authority that acquiring it supplied.
 
 The boundary is policy application inside a running process. The executable,
@@ -461,7 +461,7 @@ and [ordering evidence states](../tests/FAILURE-PROPAGATION-CONTRACT.md#ordering
 define eligibility for `query_first` and what an acknowledged release
 establishes after abnormal exit.
 
-## Changes that change the experiment
+## Changes that change what a run establishes
 
 A proposed improvement can move authority or an observation across a boundary.
 These examples connect the implementation choice to the question being tested.
@@ -471,7 +471,7 @@ These examples connect the implementation choice to the question being tested.
 | Open a file target before apply or retain a read descriptor across extension phases | Exercises previously acquired authority | Fresh-read source and [extension controls](../tests/suites/witness_contract/README.md#native-extension-boundaries) put each acquisition inside its requested action. |
 | Prepare exec pipes and handles before apply | Moves setup outside the specimen's applied conditions | Per-attempt acquisition and [resource controls](../tests/suites/runner_c_worker_harness/README.md#exec-resources-are-per-attempt) retain that exposure. |
 | Consume a token during preparation or put its bytes in the evidence region | Moves the authority intervention earlier or gives reporting storage bearer authority | Preparation resolves symbols; the separate channel and requested lifecycle calls are covered by the [native boundary controls](../tests/suites/witness_contract/README.md#native-extension-boundaries). |
-| Retry with a changed target, extra authority or a friendlier policy, or reuse a worker for another specimen | Substitutes different experimental conditions | The driver launches a fresh worker for the submitted specimen. Interrupted I/O and process-observation loops retry within their existing protocols. |
+| Retry with a changed target, extra authority or a friendlier policy, or reuse a worker for another specimen | Changes the conditions of the run | The driver launches a fresh worker for the submitted specimen. Interrupted I/O and process-observation loops retry within their existing protocols. |
 | Insert `exec_baseline` automatically | Changes the tested policy, including its broad file-read allowance | [Augment composition](../runner/augments/README.md#exec_baseline-composition-limits) is explicit and recorded in resolved source. |
 | Move reply assembly into the worker | Couples reporting to specimen-controlled communication | The host reads released payload; [death before publication](../tests/suites/witness_contract/README.md#death-after-the-native-return-before-publication) preserves an independently observed effect with a withheld result. |
 

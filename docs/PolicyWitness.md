@@ -67,7 +67,7 @@ Run it:
 $PW run /tmp/pw_specimen_file_read_deny.json > /tmp/pw_result.json
 ```
 
-For an experiment that checks a file effect and then deliberately triggers a
+For an exercise that checks a file effect and then deliberately triggers a
 request refusal, see [Try an accepted request and a refusal](#try-an-accepted-request-and-a-refusal).
 
 ## Questions
@@ -138,7 +138,7 @@ can affect that difference.
 
 ### Can I evaluate specimens in parallel?
 
-Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs. If an experiment depends on timing, run the specimens separately. N.B. Runs through one installed [external runner](#external-runners-byoxpc) are serial and queue behind launchd's configured respawn throttle.
+Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs. Run specimens separately when you need to avoid timing interference between them. N.B. Runs through one installed [external runner](#external-runners-byoxpc) are serial and queue behind launchd's configured respawn throttle.
 
 <!-- END COPIED QUESTIONS -->
 
@@ -318,7 +318,7 @@ reach another object. Ordinary query and attempt targets stay as submitted.
 reads at most <!-- span limits.fresh_read_bytes.value -->64<!-- /span --> bytes
 once, and closes it. The returned bytes are a bounded prefix.
 
-For a directory write experiment, use the directory as the issuance target and
+To check directory writes, use the directory as the issuance target and
 `authority: "read_write"`. The policy must admit the selected extension class;
 for example, these rules restrict ordinary writes and permit the read-write
 extension's authority:
@@ -415,7 +415,7 @@ three fresh reads of the target with their actors' policies, and credit
 re-delegation only when the whole chain published: A's nonnull issue, custody,
 delivery to B, B's consume, B's nonnull issue, delivery to C and C's consume,
 with C's later read succeeding where its earlier read failed. A published NULL,
-a failed consume or a denied read is a legitimate result of the experiment; a
+a failed consume or a denied read is a legitimate result of the run; a
 missing publication is not a refusal. The shared coverage below says what each
 record establishes.
 
@@ -425,7 +425,7 @@ File sandbox extensions carry read or read-write authority for a path from an
 issuing process to a consuming process. PolicyWitness records their lifecycle
 alongside probes of file access.
 
-PolicyWitness accepts two routes for sandbox extension experiments.
+PolicyWitness accepts two request forms for specimens that use sandbox extensions.
 
 | Form | How authority enters | Processes | Fields |
 | --- | --- | --- | --- |
@@ -620,7 +620,7 @@ observation:
 | --- | --- | --- |
 | Syntax and structure | Broken JSON, an unknown field, or a string where `args` requires an array of strings. | Correct the request's spelling or shape. Optional nulls mean absence; names inside `policy.params` are caller data, but their values must be strings. |
 | Meaning | `args: []` on a file attempt, or duplicate step IDs. | The fields decode, but the submitted instruction is invalid. Correct their relationship or choose a supported operation. |
-| Capacity | A plan contains more steps than this build admits. | Inspect `admission_failure` for the field, actual count and maximum, and find the field in the Specimen admission table under [Limits](#limits). Revise the experiment or use a build with sufficient capacity; PW never truncates the plan. |
+| Capacity | A plan contains more steps than this build admits. | Inspect `admission_failure` for the field, actual count and maximum, and find the field in the Specimen admission table under [Limits](#limits). Revise the specimen or use a build with sufficient capacity; PW never truncates the plan. |
 | Observed effects | A valid create encounters a permission failure, or succeeds and produces a file. | Read the attempt evidence and inspect the target to establish what happened during execution. |
 
 Unknown attempt combinations and filter names refuse the whole specimen before
@@ -1141,7 +1141,7 @@ actor may exec.
 | Phase records per worker region (`phase_records`) | 16 items | Fixed phase records in each worker shared header. Ordinary/declaration requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records. A worker refuses a header naming more phases than its records before application. | Fixed. |
 | Authority slot storage (`authority_slot_bytes`) | 16,448 bytes | One token publication slot in an actor's authority region: a fixed header and the token buffer. A region holds one outbound slot per admitted issue and one inbound slot per admitted delivery to that actor, with distinct bounded transfer answer cells; nothing in it enters the reply. | Fixed. |
 | Phase publication storage (`phase_publications`) | 512 bytes | Sixteen fixed 32-byte phase records within each shared header, one per visit an actor can be activated in; the legacy form uses the first eight. The legacy and actor-form phase caps prevent excess publication storage. | Fixed. |
-| Fresh file-read prefix (`fresh_read_bytes`) | 64 bytes | At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix. Longer files remain readable experiments; the bounded result does not claim complete file contents. | Fixed. |
+| Fresh file-read prefix (`fresh_read_bytes`) | 64 bytes | At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix. Reads of longer files remain supported; the bounded result does not claim complete file contents. | Fixed. |
 | Request-failure path depth (`request_failure_path_components`) | 8 items | Components in a retained request_failure.path, including object keys and array positions. Excess withholds the entire path as null; no shortened location is substituted. | Fixed. |
 | Request-failure path component (`request_failure_path_component`) | 63 UTF-8 bytes | Each component in a retained request_failure.path. The separate parameter_key admission-record echo has its own larger bound. Excess withholds the entire path as null; no shortened location is substituted. | Fixed. |
 

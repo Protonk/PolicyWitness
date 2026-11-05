@@ -7,9 +7,9 @@ envelope.
 
 ## The Problem
 
-A query about a sandbox is not the same thing as attempting an operation inside it. `sandbox_check` answers questions about a live process, while an attempt takes place in a process that has already applied a policy it cannot remove. To put the two observations alongside one another, an experiment must keep the right process alive, establish their order, and recover its report even if the policy forbids ordinary communication. Preparation matters too: opening a resource before applying the sandbox can change what a later operation actually tests.
+A query about a sandbox is not the same thing as attempting an operation inside it. `sandbox_check` answers questions about a live process, while an attempt takes place in a process that has already applied a policy it cannot remove. To put the two observations alongside one another, the harness must keep the right process alive, establish their order, and recover its report even if the policy forbids ordinary communication. Preparation matters too: opening a resource before applying the sandbox can change what a later operation actually tests.
 
-Even a well-arranged experiment does not make its results self-interpreting. An operation can fail for reasons other than sandbox denial; success can depend on entitlements, inherited resources, and conditions outside the SBPL text. A `sandbox_check` answer and an attempt result may differ without establishing why, or appear to agree without proving that prediction and enforcement agree. 
+The resulting observations still require interpretation. An operation can fail for reasons other than sandbox denial; success can depend on entitlements, inherited resources, and conditions outside the SBPL text. A `sandbox_check` answer and an attempt result may differ without establishing why, or appear to agree without proving that prediction and enforcement agree.
 
 ## The Experiment
 
@@ -140,7 +140,7 @@ preserved release archives.
   - CLI contract and controller behavior: [controller/README.md](controller/README.md)
   - Runner service architecture: [runner/README.md](runner/README.md)
   - Architecture tour (one run in time, boundaries, the document graph): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-  - Worker tour (resources, authority and experimental constraints): [docs/WORKER.md](docs/WORKER.md)
+  - Worker tour (resources, authority and constraints): [docs/WORKER.md](docs/WORKER.md)
 - Contributing:
   - Working guidance: [AGENTS.md](AGENTS.md)
   - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)

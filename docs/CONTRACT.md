@@ -65,7 +65,7 @@ provenance. PW does not translate their judgments or normalize them into current
 records. Rerun the specimen with current PW to obtain usable current evidence.
 Comparisons of current-format runs, including runs on different macOS versions,
 remain useful; their worker identities need not match. Identity equality is a
-requirement between components of one worker execution, not between experiments.
+requirement between components of one worker execution, not between separate runs.
 
 Persisted runner-installation recovery is separate from run interpretation.
 An unsupported runner protocol prevents run/verify selection without preventing

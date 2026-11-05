@@ -3118,7 +3118,7 @@
       "value": 64,
       "unit": "bytes",
       "counting": "At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix.",
-      "effect": "Longer files remain readable experiments; the bounded result does not claim complete file contents.",
+      "effect": "Reads of longer files remain supported; the bounded result does not claim complete file contents.",
       "control": "Fixed.",
       "sources": [
         {

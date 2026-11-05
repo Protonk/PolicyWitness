@@ -6,7 +6,7 @@ File sandbox extensions carry read or read-write authority for a path from an
 issuing process to a consuming process. PolicyWitness records their lifecycle
 alongside probes of file access.
 
-PolicyWitness accepts two routes for sandbox extension experiments.
+PolicyWitness accepts two request forms for specimens that use sandbox extensions.
 
 | Form | How authority enters | Processes | Fields |
 | --- | --- | --- | --- |

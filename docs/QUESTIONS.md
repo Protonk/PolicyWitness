@@ -68,6 +68,6 @@ can affect that difference.
 
 ## Can I evaluate specimens in parallel?
 
-Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs. If an experiment depends on timing, run the specimens separately. N.B. Runs through one installed [external runner](PolicyWitness.md#external-runners-byoxpc) are serial and queue behind launchd's configured respawn throttle.
+Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs. Run specimens separately when you need to avoid timing interference between them. N.B. Runs through one installed [external runner](PolicyWitness.md#external-runners-byoxpc) are serial and queue behind launchd's configured respawn throttle.
 
 <!-- END SHARED QUESTIONS -->
