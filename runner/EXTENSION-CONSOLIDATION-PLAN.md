@@ -306,11 +306,59 @@ an independent ordering assertion. The native `issuer_exit` scenario in
 is supporting evidence for its own arrangement, not proof of this integrated
 scheduler guarantee.
 
+### Resolved launch and operation plan
+
+Resolve operation references and equipment through two preparation steps that
+produce one execution plan before any actor launches:
+
+1. **Normalize the specimen's meaning.** Assign stable, distinct internal
+   indices to actors, tokens, deliveries and handles. Represent extension
+   operations as Swift enum cases with exactly their required operands, such
+   as `consume(delivery: DeliveryIndex, handle: HandleIndex)` and
+   `release(handle: HandleIndex)`. Resolve ownership, phase placement and
+   last-use information during construction, then finalize the plan. Retain
+   submitted names as diagnostic/reply metadata. Phase actions must carry
+   resolved operations rather than optional request operands that translation
+   has to interpret again. These indices identify planned resources; native
+   token and handle availability remains an execution observation.
+2. **Bind the selected equipment.** Resolve each actor's admitted equipment
+   choice against the host's validated executable inventory. Bind the concrete
+   executable and inspected identity information needed for validation and
+   provenance to that actor's launch record, alongside its application mode,
+   policy and resolved operations. Missing or invalid selected equipment yields
+   an explicit preparation refusal before launch. Actual process identity and
+   native effects remain runtime observations. Keep filesystem/equipment work
+   out of pure request normalization; the equipment spelling, defaults and
+   signing arrangement still belong to the Stage 2 contract review.
+
+The scheduler receives the actor launch records, visit schedule and authority
+storage assignments derived from the same resolved relationships. Keep one
+authoritative resolved model; do not maintain separately mutable request-shaped
+actions and resource graphs that can disagree. Complete the actor-local slot
+and phase assignments during preparation. Encoding into C worker inputs then
+uses exhaustive operation switches, explicit operands and checked index
+conversions, with no string-reference lookup, zero-index substitution, default
+release operation or silently skipped action. An inconsistent internal plan
+produces an explicit preparation error before launch, distinct from malformed
+submitted input. Restrict construction and mutation to the preparation owner;
+keep these types small rather than adding a general planning framework.
+
+Authoritative host admission must return its accepted plan and carry it
+forward. Currently [requestMeaningFailure](Sources/PWRunnerCore/ProbeRunner.swift)
+normalizes to check the actor request, discards that result, and
+[CWorkerOrchestrator](Sources/PWRunnerCore/CWorkerOrchestrator.swift) normalizes
+again before execution. Remove that duplication and preserve the actual
+refusal on failure. Client validation and worker ABI/identity checks retain
+their independent boundary purposes. Original request metadata can remain
+available for reply construction; execution must obtain its operation and
+equipment meaning from the prepared plan.
+
 ### Open design decisions
 
-The following details still require contract review. Setup evidence has the
-accepted requirements above; the lifecycle packet fixes the default and
-candidate scope. Their representations and remaining choices stay open.
+The following details still require contract review. Setup evidence and the
+resolved execution plan have the accepted requirements above; the lifecycle
+packet fixes the default and candidate scope. Setup evidence representation,
+the public equipment contract and remaining lifecycle choices stay open.
 The simplification and test work below does not authorize resolving them
 implicitly by deleting evidence or copying
 old expectations into actor tests. Include their dispositions in the Stage 2
@@ -319,7 +367,6 @@ review packet before implementing dependent changes.
 | Decision | Current concern | Required disposition |
 | --- | --- | --- |
 | Actor authority-setup evidence representation | One automatic account must retain primary native, independent cleanup, per-operation availability and per-actor facts, with host/worker ownership intact. Required worker apparatus failure now has an accepted terminal boundary before policy processing. | Specify the bounded layout, publication boundary, reply landing paths and independent-reader rules implementing those requirements, including host recognition of terminal refusal before normal actor setup completion. Inventory and replace old failure assertions; do not reopen evidence retention or terminal flow by silently deleting them. |
-| Normalized execution instructions | `ActorTranslation` reconstructs references from optional strings, substitutes index zero for missing relationships and uses a default release branch. Equipment selection would add another resolved relationship. | Decide how the admitted plan represents operation operands and selected equipment, and how an inconsistent internal plan fails. No new representation or fallback policy is selected by this plan yet. |
 | Lifecycle and ownership | Eager setup, overlapping lifetimes and serial visits remain the default. The candidate adds an observed-termination dependency before a later visit, with no new extension operation or deferred subject setup. | Complete the lifecycle packet: choose termination versus clean completion, specify wait/eligibility evidence and failure behavior, and settle actor erasure assertions. Review one run in time in [ARCHITECTURE](../docs/ARCHITECTURE.md) and its [generator input](../docs/architecture.json), showing exit and cleanup during visits as well as remaining cleanup afterward. |
 
 **Exit:** a proposed authority arrangement grounded in the actual signing and
@@ -370,6 +417,11 @@ conversation. Include:
    claim ledger for the affected WORKER and ARCHITECTURE regions, using the
    execution guidance below; distinguish supported assertions from source-only
    facts and remaining gaps.
+8. The resolved execution plan's concrete types and ownership: normalization
+   returns typed operations and resource relationships; equipment binding
+   finishes per-actor launch records; the scheduler and ABI encoder consume
+   that plan. Identify the removed lookups/fallbacks, admission's retained
+   result and the preparation failures that prevent launch.
 
 Use the following map to start the ledger, then close it over references found
 in the current tree:
@@ -394,7 +446,8 @@ dependent on an open design decision unresolved until that decision is made.
 | --- | --- |
 | Remove the declaration execution path | Delete declaration preparation and `ExtensionSession`, `extensionRequested`/`extensionFD`, the old delivery publications and channel layout, the singleton native handle and its consume/release decision state, and the separate native consume/release implementation. Each extension operation has one dispatch path afterward. Retain the ordinary single-worker scheduling behavior. |
 | Collapse declaration admission and interpretation | Remove `extensionMeaningFailure`, declaration-only capacities and the declaration branches in Swift reply validation, Rust disposition interpretation and Python extension validation. Review surviving event fields for required actor ownership. Keep operation-specific optional evidence and genuinely shared limits. |
-| Narrow surviving interfaces | Review default Swift `internal` visibility and make implementation helpers private where their callers permit it; `ActorTranslation.extensionSlot` is an initial candidate. Remove unused parameters and duplicate form-specific wrappers. Keep the normalized-instruction design decision separate from this visibility cleanup. |
+| Resolve execution once | Have host admission retain its normalized plan, finalize typed operations and bind selected equipment before launch. Replace `ActorTranslation`'s semantic reconstruction with mechanical encoding of resolved operands. Remove repeated string lookups, zero-index/default-operation fallbacks and skipped-action paths; keep diagnostic names and runtime resource observations separately owned. |
+| Narrow surviving interfaces | Review default Swift `internal` visibility and make implementation helpers private where their callers permit it; the encoder replacing `ActorTranslation.extensionSlot` is an initial candidate. Restrict resolved-plan construction to its owner, and remove unused parameters and duplicate form-specific wrappers. |
 | Retire obsolete controls | Remove helper-specific reap-before-delivery controls, the old channel ABI tests and declaration-only preparation/status/cardinality expectations. Give each surviving publication, native interruption, reference or cleanup assertion an actor owner. General child cleanup and resource recovery remain covered. |
 | Consolidate current workloads | Combine useful `extensions_byoxpc` and `actors_byoxpc` workloads under one owned installation/session, retaining independent signing, live authority, provenance and restoration assertions. Remove the missing-issuer contrast and add missing-selected-equipment coverage. |
 | Extract shared test support and assertions | Move generic CLI capture support out of [check_extensions.py](../tests/suites/witness_contract/check_extensions.py). Give ordinary fresh-read/write and validator-ownership checks small non-declaration fixtures; they currently occur in [FreshWriteEvidenceTests](Tests/PWRunnerCoreTests/FreshWriteEvidenceTests.swift) and [blackbox extension controls](../tests/suites/blackbox_e2e/extension_controls.py). Retain live extension-dependent access checks separately. |
@@ -427,6 +480,7 @@ ownership and registration in the Stage 2 packet.
 | Control | Intended observation and initial owner |
 | --- | --- |
 | Production dispatch and targeted mutations | Extend `runner_c_worker_harness/actor_operations` to submit extension slots through `run_attempt`. Independently counted calls and handle observations must reject omitted or misrouted consume/release dispatch, even when the operation bodies remain correct. Compilation failure is not mutation detection. |
+| Resolved operation and equipment associations | Extend actor planning/translation controls with multiple tokens, deliveries and handles, nonzero resource indices, renamed/reordered actor declarations and empty revisits. Check that worker operands and custody assignments identify the intended resources and actors through the same prepared plan. Exercise remaining fallible preparation boundaries: missing equipment or inconsistent internal assignments must produce their own error before any spawn, without substitution or a fabricated request refusal. Pair these with the mixed-equipment and production-dispatch controls below. |
 | Individually unavailable native symbols | Adapt extension boundary controls to remove issue, consume and release symbols individually. Establish the affected operation's unavailable evidence and continued execution of unrelated supported operations. The old consume/release implementation required both symbols together; the actor implementation checks them separately. Preserve the availability observation through setup publication and independent reply readers. |
 | Primary setup failure plus independent cleanup failure | Adapt [check_extension_boundaries.py](../tests/suites/witness_contract/check_extension_boundaries.py)'s core-limit, metadata, mapping, close, combined metadata/cleanup and framing assertions, plus [extension control](../tests/fixtures/extension_controls/README.md) mode 118's missing API plus cleanup failure. Inject different primary/cleanup errors; include successful acquisition followed by failed cleanup, unmap failure and successful metadata followed by format rejection. Host region/private-custody allocation needs corresponding ownership/result checks at its own call boundary. |
 | Terminal authority refusal before policy application | Extend native setup controls through production `main`, independently observing entry to policy processing and `sandbox_apply`. Every required-apparatus refusal must retain its setup/cleanup facts with zero application calls and no visit activation. Include a setup-success control that reaches application and a mutation removing the terminal branch that must fail the call-entry assertion. Exercise host recognition before normal actor setup publication, including an interrupted policy transfer caused by the early exit; preserve both the worker refusal and observed transport facts. Keep missing-symbol continuation and host timeout with later application as distinct controls. |
@@ -456,7 +510,8 @@ revise this plan if its scope changes.
 ## Stage 3 — implement the accepted frontier and remove declarations
 
 Implement in dependency order: request/equipment contract and signing inventory;
-actor launch and provenance; reply producers and readers; declaration removal;
+resolved operations and equipment binding; actor launch and provenance;
+reply producers and readers; declaration removal;
 current fixtures and documentation. Intermediate local states can be incomplete,
 but the accepted tree must have one extension mechanism. Do not ship a
 compatibility wrapper around the old helper to finish this stage.
@@ -544,6 +599,9 @@ host authority preparation, actor population setup, serial visits across
 overlapping lifetimes, remaining cleanup/final observations and reply. Keep a
 short ordinary-worker route. Show the terminal authority-setup refusal branch
 before application and separate host setup deadlines from worker refusals.
+Describe admission as producing the resolved plan and equipment binding as
+finishing launch preparation; keep their planned identities distinct from
+subsequent process and native observations.
 Show exit and cleanup interleaved with visits;
 phase completion, `done`, exit/reap and host cleanup are separate events.
 Depict a termination dependency only after review, before dependent activation
@@ -707,6 +765,10 @@ The acceptance account must establish:
 - The accepted issuer/subject authority arrangements are selectable and
   evidenced, including the BYOXPC distinction. No historical translation or
   secondary extension implementation remains.
+- Host admission retains one resolved operation plan, and equipment binding
+  completes its actor launch records before execution. Scheduler, custody and
+  worker encoding consume those relationships without resolving request names
+  again or substituting an operation/resource on inconsistency.
 - Current producers, independent readers, fixtures and generated documentation
   agree with the selected schemas. A source search's remaining declaration
   references have a current negative-control or historical purpose.
