@@ -38,6 +38,8 @@ def main():
     data = envelope['data']
     client = data['runner_client']
     assert client['stdout_truncated'] is False and client['stdout_parse_error'] is None, client
+    reply = client['transport']['runner_reply']
+    assert reply['truncated'] is False and reply['bytes_received'] == reply['bytes_retained'], reply
     runner = data['runner_result']
     assert runner['normalized_outcome'] == 'ok', runner['normalized_outcome']
     assert runner['runner_subprocess']['exit_code'] == 0, runner['runner_subprocess']
@@ -52,9 +54,11 @@ def main():
             unspawned.append({'step_id': step['step_id'], 'attempt': attempt})
     (out / 'observations.json').write_text(json.dumps({
         'steps': STEPS, 'unspawned': unspawned,
-        'runner_reply_bytes': client['stdout_bytes_received']}, indent=2) + '\n')
+        'host_reply_bytes': reply['bytes_received'],
+        'client_stdout_bytes': client['stdout_bytes_received']}, indent=2) + '\n')
     assert not unspawned, f'{len(unspawned)} exec steps did not spawn a clean child; first: {unspawned[0]}'
-    print(f'all {STEPS} exec steps spawned and exited cleanly; reply {client["stdout_bytes_received"]} bytes', flush=True)
+    print(f'all {STEPS} exec steps spawned and exited cleanly; host reply {reply["bytes_received"]} bytes; '
+          f'client stdout {client["stdout_bytes_received"]} bytes', flush=True)
 
 
 if __name__ == '__main__':
