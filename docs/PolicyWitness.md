@@ -140,6 +140,10 @@ can affect that difference.
 
 Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs. Run specimens separately when you need to avoid timing interference between them. N.B. Runs through one installed [external runner](#external-runners-byoxpc) are serial and queue behind launchd's configured respawn throttle.
 
+### Are old versions of the app supported?
+
+In general, no. Using old releases of PolicyWitness, including and especially correlating output across schema versions, is a research problem for the user. The development repo carries release binaries and test evidence, but backwards compatibility is not a goal.
+
 <!-- END COPIED QUESTIONS -->
 
 ## Specimen format
