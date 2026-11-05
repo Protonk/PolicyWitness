@@ -26,11 +26,51 @@ reviewable accounts. Execution refreshes the baseline and starts at
 reconciliation; it does not repeat or claim a new independent-account gate.
 
 Deliver the document, its generated DOT/SVG figures, registered tests and
-observer/checker controls, current native observations, and completed cross-review.
-An optimization is not required. Findings may confirm behavior, narrow a claim,
-identify leakage or support later implementation work. Do not turn this into a
-general performance benchmark, a replacement limits inventory, an installation
-audit or an unrequested runtime redesign.
+observer/checker controls, current native observations, completed cross-review
+and the closeout outflow note described below. An optimization is not required.
+Findings may confirm behavior, narrow a claim, identify leakage or support later
+implementation work. Do not turn this into a general performance benchmark, a
+replacement limits inventory, an installation audit or an unrequested runtime
+redesign.
+
+## Outflow: later footprint reduction
+
+A later, separate effort will attempt perturbative reduction of PW's footprint,
+starting from [LIMITS](LIMITS.md) and FOOTPRINT. This plan performs and designs
+no optimization, and the prohibition above on runtime redesign stands. Two
+obligations prepare that effort without gating this one.
+
+- While investigating, each case owner appends to
+  `records/footprint-<date>/outflow-candidates.md`, one entry per noticed
+  perturbation: the row ID, the mechanism behind the demand, the imagined
+  change, the assertions expected to react, and the author's unverified opinion
+  on whether each assertion pins a documented promise or an incidental
+  structure. Record candidates when they are noticed, during measurement work.
+- At closeout the coordinator distills that ledger into
+  `records/FOOTPRINT-OUTFLOW.md`, in the shape of the existing outflow notes in
+  `records/`: recorded date and source revision; a status line stating deferred
+  investigation, not a plan, no gate and no release commitment; the question to
+  return to; what FOOTPRINT establishes, by row ID and without restatement; the
+  candidate list; and the boundaries retained, which are the
+  [core ideas](../AGENTS.md#core-ideas). An optimization that breaches them is a
+  redesign, not a reduction. The note is a closeout deliverable; its contents
+  are not acceptance conditions.
+
+FOOTPRINT itself carries no forward-looking content. What makes it the starting
+point is a rule in its reading guide: the test a row cites pins the recorded
+quantity or behavior, so a change to the mechanism should be expected to reach
+it. The citation column is therefore the enumerated set of expected test
+reactions. After a perturbation, a cited test that fails identifies a row to
+update; a failing test that no row cites and no LIMITS or user-guide passage
+promises is a finding about encoded structure. One entry is already known: the
+waiting assertion that the held worker's CPU delta exceeds the sleeping
+control's is a claim about the current polling wait and must fail if the worker
+blocks instead. Record it as a row to update, not a finding.
+
+This plan is the note's only inbound reference. When the plan retires, the note
+stands alone until a reduction plan links it. Whether the reduction agents
+receive the note is that plan's decision; withholding it lets the note serve as
+a control for what fresh readers of LIMITS and FOOTPRINT find.
 
 ## Common cases and accounting boundaries
 
@@ -119,9 +159,9 @@ actual inspected binaries and measurement conditions, not merely the source
 checkout's revision.
 
 Keep planning/review materials in a task-owned
-`records/footprint-<date>/` directory: baseline, reconciliation/questions,
-review dispositions and acceptance. This plan is the only inbound documentation
-link owner for those records. Permanent FOOTPRINT
+`records/footprint-<date>/` directory: baseline, reconciliation/questions, the
+outflow-candidates ledger, review dispositions and acceptance. This plan is the
+only inbound documentation link owner for those records. Permanent FOOTPRINT
 content links to source and tests, not to planning records. Keep raw execution
 evidence in fresh managed `tests/out/runs/` directories; identify locally
 available, gitignored evidence honestly. Do not use scratch as its sole store.
@@ -206,7 +246,9 @@ Draft three principal tables, using stable row IDs:
 
 The tables are **Waiting and retained resources**, **Response storage and
 transport**, and **State remaining after a run**. Add the process, representation
-or backing object directly to each row. Keep conditions alongside quantities.
+or backing object directly to each row. Keep conditions alongside quantities,
+and mark each quantity's evidence class: measured, logical capacity,
+constructed bound or source-supported.
 For aftermath, use explicit `present`, `absence confirmed` and `unknown` states
 with observation boundaries; zero is valid only for the inventoried category
 and observed interval. Retain the expected ending condition even when the
@@ -328,12 +370,14 @@ publications with generation identities; process presence alone is insufficient.
   busy-control and sleeping-control samples cover a matched held window, with
   endpoint sampling skew no greater than the declared accounting quantum.
 - Declare `hold_min_ns = max(1_000_000_000, 100 * accounting_quantum_ns)` before
-  execution. The reported running-process quantum is 10 ms; verify and record
-  the meter's resolution rather than treating it as universal. At that quantum
-  the minimum measured hold is one second. Use one- and three-second target
-  holds, increased before execution if resolution requires it, with three
-  repetitions each. Every credited actual interval meets the minimum and has
-  no system sleep; do not round a short interval into compliance.
+  execution. The reported running-process quantum is
+  `accounting_quantum_ns = 10_000_000`; verify and record the meter's
+  resolution rather than treating it as universal. At that quantum both terms
+  agree and `hold_min_ns` is the minimum measured hold. Use target holds of
+  `hold_min_ns` and `3 * hold_min_ns`, increased before execution if resolution
+  requires it, with three repetitions each. Every credited actual interval
+  meets the minimum and has no system sleep; do not round a short interval
+  into compliance.
 - Over each matched interval, total CPU delta for the busy control exceeds the
   sleeping control's delta. The held production worker's total CPU delta also
   exceeds the sleeping control's delta. These strict directional assertions
@@ -547,8 +591,10 @@ observation and separately recorded intervention outcome.
 
 After the three cycles, consolidate supported claims into FOOTPRINT. Its reading
 guide defines units, shared backing versus views, conditional quantities and
-presence/absence/unknown. Keep the three principal tables and small diagrams
-central. Add only interactions that change interpretation, such as:
+presence/absence/unknown, and states that a row's cited test pins the recorded
+quantity or behavior, so a change to the mechanism should be expected to reach
+it. Keep the three principal tables and small diagrams central. Add only
+interactions that change interpretation, such as:
 
 - Equal wait durations can have different worker/actor CPU demands.
 - Equal retained response bytes can conceal different full collection sizes,
@@ -672,6 +718,7 @@ superseded runs only through the helpers. Never unlink `tests/.checkout.lock`.
   remaining limited claims without disguising missing required execution.
 
 The final delivery names FOOTPRINT and its figures, states the three material
-findings at their measured scope, links the supporting test owners, and reports
-verification and unresolved limitations. It does not claim a universal memory
-ceiling, idle waiting, or complete teardown where the evidence establishes less.
+findings at their measured scope, links the supporting test owners, names the
+outflow note, and reports verification and unresolved limitations. It does not
+claim a universal memory ceiling, idle waiting, or complete teardown where the
+evidence establishes less.
