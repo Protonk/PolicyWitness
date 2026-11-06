@@ -81,7 +81,8 @@ def run_targets(pw, out, target_dir, session_state):
                              [probe('during', target), intervention('release', 'release')],
                              [probe('after', target)]], terminate_issuer=True)
     envelope, runner = capture(pw, out, 'lifecycle', spec, session_state=session_state)
-    assert runner['normalized_outcome'] == 'ok', runner
+    assert runner['normalized_outcome'] == 'finished', runner
+    assert envelope['result']['normalized_outcome'] == 'finished' and envelope['result']['ok'] is True, envelope['result']
     issue=assert_issuance(runner)
     assert issue['target']==str(target)
     actors={a['actor_id']:a for a in runner['actors']}

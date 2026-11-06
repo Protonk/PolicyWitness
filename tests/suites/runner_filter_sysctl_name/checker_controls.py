@@ -69,7 +69,7 @@ def current_reply(step_id, operation, value, sysctl, mach=False):
                                               "realpath_resolved": "/private/etc/hosts",
                                               "parent_realpath_resolved": "/private/etc/hosts"}
     reply = {
-        "schema_version": contract.RESPONSE_SCHEMA, "normalized_outcome": "ok", "rc": 0, "error": None,
+        "schema_version": contract.RESPONSE_SCHEMA, "normalized_outcome": "finished", "rc": 0, "error": None,
         "policy_format": "sbpl", "sandboxed_after_apply": True, "pid": 1234, "specimen_id": "control",
         "runner_subprocess": {"pid": 1234, "reaped": True, "exit_code": 0, "term_signal": None, "partial_steps": False,
                               "disposition": {"questions": {}, "steps": [], "issues": []},
@@ -255,7 +255,7 @@ def main():
         check("failed_result", broken, ("expected result.ok=true",), authored_host=False)
         broken, _ = mutate()
         broken["data"]["runner_result"]["normalized_outcome"] = "runner_failed"
-        check("failed_runner", broken, ("expected runner normalized_outcome=ok",))
+        check("failed_runner", broken, ("expected runner normalized_outcome=finished",))
         broken, _ = mutate()
         broken["data"]["runner_result"]["policy_format"] = "unrequested-format"
         check("wrong_policy_format", broken, ("expected policy_format='sbpl'",))

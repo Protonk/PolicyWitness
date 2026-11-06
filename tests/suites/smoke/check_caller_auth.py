@@ -56,7 +56,7 @@ def accepted(observation):
     assert observation['command']['returncode'] == 0, observation
     assert capture['terminal'] == 'runner_reply' and capture['submission']['state'] == 'invoked', capture
     assert observation['changed'] and observation['nonempty'], 'accepted request left no file effect'
-    assert result['normalized_outcome'] == 'ok' and result['rc'] == 0, result
+    assert result['normalized_outcome'] == 'finished' and result['rc'] == 0, result
     assert result['specimen_id'] == spec['specimen_id'] and result['bundle_id'] == observation['service'], result
     assert result.get('test_overrides') is None and len(result['steps']) == 1, result
     step = result['steps'][0]

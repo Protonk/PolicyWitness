@@ -50,8 +50,8 @@ env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 if env.get("result", {}).get("ok") is not True:
     raise SystemExit(f"expected ok=true, got {env.get('result')!r}")
 runner = env.get("data", {}).get("runner_result") or {}
-if runner.get("normalized_outcome") != "ok":
-    raise SystemExit(f"expected outcome=ok, got {runner.get('normalized_outcome')!r}")
+if runner.get("normalized_outcome") != "finished":
+    raise SystemExit(f"expected outcome=finished, got {runner.get('normalized_outcome')!r}")
 steps = runner.get("steps") or []
 if len(steps) != 1:
     raise SystemExit(f"expected 1 step, got {len(steps)}")

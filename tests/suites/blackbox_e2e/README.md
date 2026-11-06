@@ -26,6 +26,10 @@ A test passes only when the controller output matches the expected evidence
 bundle for every step. Failures include mismatched sandbox_check outcomes,
 attempt results, or comparison fields.
 
+Both run summaries must report `finished`, including cases with failed attempts.
+Independent controls replace either summary with the retired `ok` spelling and
+require its rejection without changing the per-attempt evidence.
+
 The checker collects errors across both evidence channels and all returned
 steps. An unexpected answer is a failure and cannot suppress validation
 of an attempt or a later step. The shell wrappers treat every nonzero checker

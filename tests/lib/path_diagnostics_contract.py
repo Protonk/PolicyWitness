@@ -21,7 +21,7 @@ def _reply_with(diagnostic):
                 comparison=dict(observation='unavailable', observation_basis='no_completed_worker_result',
                                 operation_relation='matched', target_relation='unresolved',
                                 order='unestablished', limitations=[]))
-    return dict(schema_version=contract.RESPONSE_SCHEMA, normalized_outcome='ok', steps=[step],
+    return dict(schema_version=contract.RESPONSE_SCHEMA, normalized_outcome='finished', steps=[step],
                 phases=[dict(phase_id='main', ordinal=1, action_ids=['path'], arrival_observed=False, completion_observed=False, collection_status='not_reached')])
 
 

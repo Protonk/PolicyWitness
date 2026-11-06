@@ -175,7 +175,7 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
         for mode in ["clean", "nonzero", "signal", "hang"] {
             tk.run("verdict then \(mode) retains actual disposition") {
                 let out = try validatorFixture(mode)
-                try assertValidatorDisposition(out, expected: mode == "clean" ? NormalizedOutcome.ok : NormalizedOutcome.validatorUnavailable)
+                try assertValidatorDisposition(out, expected: mode == "clean" ? NormalizedOutcome.finished : NormalizedOutcome.validatorUnavailable)
                 try expectEqual(out.reaped, true)
                 try expectEqual(out.exitCode, mode == "clean" ? 0 : mode == "nonzero" ? 23 : nil)
                 try expectEqual(out.termSignal, mode == "hang" ? SIGKILL : mode == "signal" ? SIGTERM : nil)
@@ -222,7 +222,7 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
                 return Darwin.waitpid(pid, status, options)
             }
             let out = try validatorFixture("clean", calls: calls)
-            try assertValidatorDisposition(out, expected: NormalizedOutcome.ok)
+            try assertValidatorDisposition(out, expected: NormalizedOutcome.finished)
             try expectEqual(out.waitErrors?.map { $0.errno }, [EINTR])
         }
         tk.run("I/O deadline retains the received verdict and cleanup observations") {

@@ -779,7 +779,7 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectTrue(out.done && out.reaped == true && out.slots.allSatisfy { $0.completed })
             try expectEqual(out.exitCode, Int32(0))
             try expectTrue(FileManager.default.fileExists(atPath: first) && FileManager.default.fileExists(atPath: last))
-            try expectEqual(classify(workerResult: .success(out), validatorResult: nil, expectedVerdictCount: 0).outcome, NormalizedOutcome.ok)
+            try expectEqual(classify(workerResult: .success(out), validatorResult: nil, expectedVerdictCount: 0).outcome, NormalizedOutcome.finished)
             let steps = buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan),
                 workerOutput: out, validatorOutput: nil)
             let wire = try pwRunnerDecodeJSON([PWRunnerStepResult].self, from: pwRunnerEncodeJSON(steps))

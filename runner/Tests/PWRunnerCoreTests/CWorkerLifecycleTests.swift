@@ -189,7 +189,7 @@ func runCWorkerReapedAcknowledgementControls(_ tk: TestKit) {
             try expectEqual(steps[0].comparison?.order, faultInjected ? "unestablished" : "query_first")
             try expectEqual(steps[0].comparison?.observation, fatal ? "unavailable" : "succeeded")
             let classification = classify(workerResult: result, validatorResult: .success(validator), expectedVerdictCount: 1)
-            try expectEqual(classification.outcome, (fatal || faultInjected) ? NormalizedOutcome.runnerFailed : NormalizedOutcome.ok)
+            try expectEqual(classification.outcome, (fatal || faultInjected) ? NormalizedOutcome.runnerFailed : NormalizedOutcome.finished)
             let encoded = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
             let subprocess = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: encoded)
             try expectEqual(subprocess.term_signal, fatal ? Int(SIGTERM) : nil)

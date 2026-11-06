@@ -205,7 +205,7 @@ def main():
         errors = consumer.validate(envelope)
         assert not errors, errors
         runner = envelope['data']['runner_result']
-        assert rc == 0 and runner['normalized_outcome'] == 'ok', runner
+        assert rc == 0 and runner['normalized_outcome'] == 'finished', runner
         sub = runner['runner_subprocess']
         assert sub['pid'] == worker['pid'] and sub['reaped'] is True, sub
         assert sub['exit_code'] == 0 and sub.get('term_signal') is None, sub

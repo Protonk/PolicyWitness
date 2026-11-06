@@ -74,7 +74,7 @@ def summarize_run(name, allow_write, run, rc, summary):
         envelope = run.load_json()
         assert envelope['result']['ok'] is True, name
         runner = envelope['data']['runner_result']
-        assert runner['normalized_outcome'] == 'ok', (name, runner['normalized_outcome'])
+        assert runner['normalized_outcome'] == 'finished', (name, runner['normalized_outcome'])
         assert runner.get('test_overrides') is None, name
         augmentation = envelope['data']['specimen']['policy']['augmentation']
         assert augmentation['status'] == 'applied' and augmentation['applied'] == ['exec_baseline'], name

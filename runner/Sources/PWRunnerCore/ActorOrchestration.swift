@@ -311,7 +311,7 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
 
     // ---- Aggregate outcome: actor failures in actor order, then validator
     // failures and collection exhaustion in schedule order, then cancellation.
-    var runOutcome = ClassifiedRun(outcome: NormalizedOutcome.ok, rc: 0, error: nil)
+    var runOutcome = ClassifiedRun(outcome: NormalizedOutcome.finished, rc: 0, error: nil)
     for (index, record) in outcome.actors.enumerated() where runOutcome.rc == 0 {
         let classified = classifyActor(record, applies: plan.actors[index].applies)
         if classified.rc != 0 {

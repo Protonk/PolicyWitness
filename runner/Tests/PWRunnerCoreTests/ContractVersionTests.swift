@@ -190,7 +190,7 @@ func replyShapeDocuments() throws -> [[String: Any]] {
         let record = resolveDisposition(out, plan: plan)
         let sub = buildWorkerSubprocess(out, disposition: record)
         let ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true)
-        let reply = PWRunnerRunResult(specimen_id: "shape", rc: 0, normalized_outcome: NormalizedOutcome.ok,
+        let reply = PWRunnerRunResult(specimen_id: "shape", rc: 0, normalized_outcome: NormalizedOutcome.finished,
             pid: Int(out.workerPid), policy_format: "sbpl", sandboxed_after_apply: out.applied,
             steps: buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan), workerOutput: out,
                                     validatorOutput: nil, ordering: ordering, disposition: record),

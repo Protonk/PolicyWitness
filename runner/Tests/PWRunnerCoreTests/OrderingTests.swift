@@ -52,7 +52,7 @@ func constructedPhase(_ out: CWorkerOutput?, ids: [String], validator: Validator
 
 private func orderingEnvelope(_ worker: CWorkerOutput?, _ validator: ValidatorOutput?) -> PWRunnerRunResult {
     let sub = worker.map(buildWorkerSubprocess)
-    return PWRunnerRunResult(specimen_id: "ordering", rc: 0, normalized_outcome: "ok", pid: 42,
+    return PWRunnerRunResult(specimen_id: "ordering", rc: 0, normalized_outcome: "finished", pid: 42,
         policy_format: "sbpl", sandboxed_after_apply: worker?.applied,
         steps: orderedSteps(worker, validator), runner_subprocess: sub,
         phases: [constructedPhase(worker, ids: ["s"], validator: validator)])
@@ -157,7 +157,7 @@ func runOrderingTests(_ tk: TestKit) {
                 let unneeded = try run(excluded, workerPath: worker, label: "no-eligible-query")
                 try expectTrue(calls.isEmpty)
                 try expectEqual(try String(contentsOf: effect, encoding: .utf8), "fixture-effect")
-                try expectEqual(unneeded.normalized_outcome, NormalizedOutcome.ok)
+                try expectEqual(unneeded.normalized_outcome, NormalizedOutcome.finished)
                 try expectNil(unneeded.reporting_failure)
                 try expectEqual(unneeded.phases.count, 1)
                 try expectEqual(unneeded.phases[0].collection_status, "not_needed")

@@ -43,7 +43,7 @@ def main():
         envelope = run.load_json()
     assert envelope['result']['ok'] is True
     runner = envelope['data']['runner_result']
-    assert runner['normalized_outcome'] == 'ok'
+    assert runner['normalized_outcome'] == 'finished'
     assert runner.get('test_overrides') is None
     assert runner['runner_subprocess']['exit_code'] == 0
     assert runner['phases'][0]['validator_subprocess']['exit_code'] == 0

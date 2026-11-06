@@ -111,7 +111,7 @@ def apparatus_complete(envelope, runner, spec, policies):
     for e in runner['extension_events']:
         assert e['result_published'] is True, e['step_id']
         assert e['actor_id'] == by_id(runner['phases'], 'phase_id', e['phase_id'])['actor_id'], e['step_id']
-    assert runner['normalized_outcome'] == 'ok', (runner['normalized_outcome'], runner.get('error'))
+    assert runner['normalized_outcome'] == 'finished', (runner['normalized_outcome'], runner.get('error'))
     return pids
 
 

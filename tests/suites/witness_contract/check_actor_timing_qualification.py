@@ -139,7 +139,7 @@ def margins(measured):
 
 
 def completed_without_exhaustion(envelope, runner, spec):
-    assert runner['execution_form'] == 'actors' and runner['normalized_outcome'] == 'ok', (runner['normalized_outcome'], runner.get('error'))
+    assert runner['execution_form'] == 'actors' and runner['normalized_outcome'] == 'finished', (runner['normalized_outcome'], runner.get('error'))
     witnessed, reason = worker_exit_witness(envelope)
     assert witnessed, reason
     assert runner['schedule'].get('cancelled') is None, runner['schedule']

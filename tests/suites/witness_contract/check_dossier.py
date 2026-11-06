@@ -151,7 +151,7 @@ class Witness:
     def ordinary(self):
         request = self.specimen('ordinary')
         rc, envelope, path = self.run('ordinary', request)
-        assert rc == 0 and envelope['result']['normalized_outcome'] == 'ok', envelope['result']
+        assert rc == 0 and envelope['result']['normalized_outcome'] == 'finished', envelope['result']
         specimen = self.common(envelope, 'ordinary')
         assert specimen['request_path'] == path, (specimen['request_path'], path)
         augmentation = specimen['policy']['augmentation']

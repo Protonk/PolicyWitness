@@ -83,7 +83,7 @@ assert not consumer.validate(env), consumer.validate(env)
 r = env["data"]["runner_result"]
 
 # Envelope shape: both subprocess records + override mirrored back.
-assert r["normalized_outcome"] == "ok", "outcome {0}".format(r["normalized_outcome"])
+assert r["normalized_outcome"] == "finished", "outcome {0}".format(r["normalized_outcome"])
 assert r["rc"] == 0
 assert r["phases"][0]["validator_subprocess"] is not None, "validator_subprocess missing"
 assert r["phases"][0]["validator_subprocess"]["exit_code"] == 0
@@ -167,7 +167,7 @@ r = env["data"]["runner_result"]
 # The run itself succeeded — both children completed cleanly.
 # The envelope carries the verdict AND the observation as separate
 # channels; the record relates them without attributing the failure.
-assert r["normalized_outcome"] == "ok", "outcome {0}".format(r["normalized_outcome"])
+assert r["normalized_outcome"] == "finished", "outcome {0}".format(r["normalized_outcome"])
 assert r["rc"] == 0
 assert r["runner_subprocess"]["exit_code"] == 0, "worker should clean-exit under (deny default)"
 
@@ -568,7 +568,7 @@ r = env["data"]["runner_result"]
 
 # Run itself completed cleanly — the worker spawned, applied the
 # policy, ran the attempt (which was denied), and exited.
-assert r["normalized_outcome"] == "ok", "outcome={0}".format(r["normalized_outcome"])
+assert r["normalized_outcome"] == "finished", "outcome={0}".format(r["normalized_outcome"])
 assert r["runner_subprocess"]["exit_code"] == 0, \
     "worker should clean-exit even when its attempt is denied"
 
@@ -635,7 +635,7 @@ PY
 # libSystem-dynamic helper run under minimal-deny.
 #
 # Asserts:
-#   - normalized_outcome == "ok"
+#   - normalized_outcome == "finished"
 #   - data.specimen.policy.augmentation applied == ["exec_baseline"],
 #     original_sha256 != applied_sha256
 #   - runner_result.policy_sha256 == applied_sha256
@@ -688,7 +688,7 @@ PY
   "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
-assert env["result"]["normalized_outcome"] == "ok", \
+assert env["result"]["normalized_outcome"] == "finished", \
     "top-level outcome={0}".format(env["result"]["normalized_outcome"])
 
 aug = env["data"]["specimen"]["policy"]["augmentation"]
@@ -795,7 +795,7 @@ import json, sys
 env = json.loads(open(sys.argv[1]).read())
 plan = json.loads(open(sys.argv[2]).read())["probe_plan"]
 runner = env["data"]["runner_result"]
-assert env["result"]["ok"] is True and runner["normalized_outcome"] == "ok"
+assert env["result"]["ok"] is True and runner["normalized_outcome"] == "finished"
 assert runner.get("test_overrides") is None
 assert [s["step_id"] for s in runner["steps"]] == [p["step_id"] for p in plan]
 for s, request in zip(runner["steps"], plan):
@@ -957,7 +957,7 @@ EOF
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
-assert r["normalized_outcome"] == "ok", "top-level outcome={0}".format(r["normalized_outcome"])
+assert r["normalized_outcome"] == "finished", "top-level outcome={0}".format(r["normalized_outcome"])
 
 steps = {s["step_id"]: s for s in r["steps"]}
 assert set(steps) == {"bare", "wild"}, "unexpected step ids: {0}".format(set(steps))
@@ -1072,7 +1072,7 @@ EOF
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
-assert r["normalized_outcome"] == "ok", "top-level outcome={0}".format(r["normalized_outcome"])
+assert r["normalized_outcome"] == "finished", "top-level outcome={0}".format(r["normalized_outcome"])
 steps = {s["step_id"]: s for s in r["steps"]}
 assert set(steps) == {"exists", "absent"}, "unexpected step ids: {0}".format(set(steps))
 

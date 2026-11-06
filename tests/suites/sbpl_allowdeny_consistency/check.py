@@ -59,7 +59,7 @@ def main():
         assert not consumer.validate(envelope), consumer.validate(envelope)
         assert envelope["kind"] == "run" and envelope["result"]["ok"] is True
         runner = envelope["data"]["runner_result"]
-        assert runner["normalized_outcome"] == "ok"
+        assert runner["normalized_outcome"] == "finished"
         assert runner["policy_format"] == "sbpl"
         assert runner["sandboxed_after_apply"] is True
         assert runner.get("test_overrides") is None

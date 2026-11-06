@@ -32,6 +32,11 @@ also cross this assembly boundary and independent consumers in `runner_unit`.
 
 ## Success criteria
 
+`finished_run_preserves_successful_and_failed_attempts` pins the run summary
+independently of successful, permission-failed and other-failed attempts. Only
+`finished` yields command success; the retired run spelling and failure summaries
+retain their evidence without yielding exit 0.
+
 - All unit tests pass (exit code 0) and the crate is rustfmt-clean.
 
 ## Fixtures

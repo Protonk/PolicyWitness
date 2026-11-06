@@ -29,7 +29,7 @@ scores a one-step probe plan.
 ## Success criteria
 
 - `result.ok == true`.
-- `runner_result.normalized_outcome == "ok"`.
+- `runner_result.normalized_outcome == "finished"`.
 - `runner_subprocess.term_signal == null` (no SIGPIPE) and `exit_code == 0`.
 - `validator_subprocess` present and exactly one scored step (the worker
   applied, so the validator ran).

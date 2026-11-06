@@ -891,7 +891,7 @@ fn equipment(runner: &Value, actors: &[Value], out: &mut Vec<String>) {
     if runtime_failed {
         issue(
             out,
-            runner["normalized_outcome"] != "ok"
+            runner["normalized_outcome"] != "finished"
                 && runner["preparation_failure"].is_null()
                 && runner["schedule"]["cancelled"]
                     .as_str()

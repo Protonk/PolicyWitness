@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory(prefix='pw-byoxpc-transfer-', dir='/private/tmp
     # The worker that holds the key true: admitted and the conditioned write completes.
     doc = run('granted-required', services['granted'], targets['granted'], required=[KEY])
     result = doc['data']['runner_result']
-    assert result['normalized_outcome'] == 'ok', result
+    assert result['normalized_outcome'] == 'finished', result
     step = result['steps'][0]
     assert step['sandbox_check']['outcome'] == 'allow' and step['attempt']['outcome'] == 'ok', step
     assert targets['granted'].read_bytes() == b'x', targets['granted'].read_bytes()
@@ -73,7 +73,7 @@ with tempfile.TemporaryDirectory(prefix='pw-byoxpc-transfer-', dir='/private/tmp
     # not grant the false-valued key: the conditioned write is denied.
     doc = run('denied-plain', services['denied'], targets['denied'])
     result = doc['data']['runner_result']
-    assert result['normalized_outcome'] == 'ok', result
+    assert result['normalized_outcome'] == 'finished', result
     step = result['steps'][0]
     assert step['sandbox_check']['outcome'] == 'deny' and step['attempt']['outcome'] == 'open_failed', step
     assert targets['denied'].read_bytes() == b'transfer-original\n'

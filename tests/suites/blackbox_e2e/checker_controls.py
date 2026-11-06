@@ -358,7 +358,7 @@ def consumer_controls(artifacts, current):
         r = runner(e)
         r.update(rc=1, normalized_outcome='runner_reporting_failed', error='host invariant rejected',
                  reporting_failure=dict(origin='runner_host', diagnostic='missing ordering', original_rc=0,
-                                        original_normalized_outcome='ok', original_error=None, evidence_retained=retained))
+                                        original_normalized_outcome='finished', original_error=None, evidence_retained=retained))
         e['result'].update(ok=False, exit_code=1, normalized_outcome='runner_reporting_failed')
         for step in r['steps']:
             step['comparison'] = None
@@ -392,7 +392,7 @@ def consumer_controls(artifacts, current):
     run_host('reporting_failure_minimal', minimal, lambda e: require(steps(e) == [], 'no steps without retention'))
     for name, change, diagnostic in [
         ('comparison_kept', lambda e: first(e).update(comparison=copy.deepcopy(first(current)['comparison'])), 'must withhold every comparison'),
-        ('ok_summary', lambda e: runner(e).update(normalized_outcome='ok'), 'reporting failure requires a failed summary'),
+        ('finished_summary', lambda e: runner(e).update(normalized_outcome='finished'), 'reporting failure requires a failed summary'),
         ('rc_zero', lambda e: runner(e).update(rc=0), 'reporting failure requires a failed summary'),
         ('missing_marker', lambda e: runner(e).pop('reporting_failure'), 'invalid reporting_failure diagnostics'),
         ('bad_marker', lambda e: runner(e).update(reporting_failure='invalid'), 'invalid reporting_failure diagnostics'),
@@ -617,6 +617,13 @@ def main():
             print(f"{name}: ok", flush=True)
 
     check("valid", baseline)
+    for label, summary, diagnostic in [
+        ('envelope', lambda e: e['result'], 'expected result.normalized_outcome=finished'),
+        ('runner', lambda e: e['data']['runner_result'], 'expected runner normalized_outcome=finished'),
+    ]:
+        retired = copy.deepcopy(baseline)
+        summary(retired)['normalized_outcome'] = 'ok'
+        check('retired_run_outcome_' + label, retired, (diagnostic,))
     consumer_controls(artifacts, baseline)
     exec_observation_controls(artifacts)
     mutation_order_controls(artifacts, baseline)

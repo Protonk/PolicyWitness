@@ -57,10 +57,11 @@ enum PWRunnerWire {
 // against it. docs/PolicyWitness.md should also list it in the "Run output"
 // section so callers can recognize it.
 enum NormalizedOutcome {
-    // Successful execution. The worker's status word cannot identify a failed
+    // Completed execution and required evidence collection, regardless of
+    // individual attempt success. The worker's status word cannot identify a failed
     // native operation; published preparation/application failures map to
     // runner_failed, and no precise apply-failure spelling exists.
-    static let ok = "ok"
+    static let finished = "finished"
 
     // ----- emitted by the host short-circuit (PWRunnerService.swift).
     // `bad_policy` is the host's pre-spawn structural check (computePolicyHash:
@@ -88,7 +89,7 @@ enum NormalizedOutcome {
     // prediction channel is a runner evidence failure even when the
     // observation channel completed. Consumers can opt to consume
     // the partial envelope as degraded evidence; the runner does not
-    // silently upgrade an attempts-only run to `ok`.
+    // silently upgrade an attempts-only run to `finished`.
     static let validatorSpawnFailed = "validator_spawn_failed"
     static let validatorNoReply = "validator_no_reply"
     static let validatorDecodeFailure = "validator_decode_failure"
@@ -155,7 +156,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 6
-    static let responseSchema: Int = 26
+    static let responseSchema: Int = 27
     static let runnerProtocol: Int = 3
 }
 // END GENERATED CONTRACT VERSIONS

@@ -7,15 +7,15 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 26, controller envelope 11, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 27, controller envelope 12, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
 | request schema (`request_schema`) | 6 | [`requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 26 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 11 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 27 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 12 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 | runner protocol (`runner_protocol`) | 3 | [`runnerProtocol`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RUNNER_PROTOCOL_VERSION`](../controller/src/json_contract.rs); [`RUNNER_PROTOCOL`](../tests/lib/contract.py); [`PWRunnerProtocolVersion`](../runner/Services/PWRunner/Info.plist) |
 <!-- END GENERATED CONTRACT TABLE -->
 

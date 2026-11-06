@@ -2123,7 +2123,8 @@
           "description": "Runner with caller-auth keys removed installs and verifies through the normal client",
           "requires": [
             "app",
-            "gui"
+            "gui",
+            "identity"
           ],
           "command": [
             "bash",

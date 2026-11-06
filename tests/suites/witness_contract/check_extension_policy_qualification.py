@@ -69,7 +69,7 @@ with tempfile.TemporaryDirectory(prefix='pw-policy-qualification-', dir='/privat
     # 2. Apply the exact bytes in a fresh worker and run a baseline fresh read.
     envelope, runner = capture(pw, out, 'apply', request('extension_policy_qualification', policy, target))
     record['commands'].append({'argv': [str(pw), 'run', str(out / 'apply' / 'specimen.json')], 'returncode': 0})
-    assert runner['normalized_outcome'] == 'ok', runner
+    assert runner['normalized_outcome'] == 'finished', runner
     assert runner['sandboxed_after_apply'] is True, runner.get('sandboxed_after_apply')
     assert runner['policy_sha256'] == policy_sha256, runner['policy_sha256']
     worker = runner['runner_subprocess']

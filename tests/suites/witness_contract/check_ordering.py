@@ -41,9 +41,9 @@ def ordering(runner, disposition='reaped'):
         validator_disposition=disposition, protocol_violations=[], worker_lifetime_established=True), runner['phases'][0]['ordering']
 
 
-def envelope(run, rc, spec, outcome='ok'):
+def envelope(run, rc, spec, outcome='finished'):
     value = run.load_json()
-    assert rc == (0 if outcome == 'ok' else 1), value
+    assert rc == (0 if outcome == 'finished' else 1), value
     runner = value['data']['runner_result']
     assert runner['normalized_outcome'] == outcome, runner
     assert runner.get('test_overrides') == spec.get('_test_overrides'), runner

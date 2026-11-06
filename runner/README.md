@@ -154,7 +154,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 26, controller envelope 11, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 27, controller envelope 12, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL

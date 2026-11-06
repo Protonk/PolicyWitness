@@ -33,7 +33,7 @@ def run_cli(pw, helper, out):
     assert run.returncode == 0, f'CLI exited {run.returncode}'
     envelope = json.loads((out / 'run.json').read_text())
     runner = envelope['data']['runner_result']
-    assert envelope['result']['ok'] is True and runner['normalized_outcome'] == 'ok', runner
+    assert envelope['result']['ok'] is True and runner['normalized_outcome'] == 'finished', runner
     assert runner.get('test_overrides') is None, runner
     assert [s['step_id'] for s in runner['steps']] == [s['step_id'] for s in plan], runner
     observations = []

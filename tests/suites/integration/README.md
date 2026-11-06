@@ -7,6 +7,8 @@ Rust integration tests that exercise the CLI contract against a built app.
 - Uses the resolved app/controller configuration from `tests/run.sh` to run specimens.
   Bundled `sbpl-check` comes from the same app.
 - Validates the controller envelope and runner result shape.
+- The denied file-read specimen reports `finished` at both run-summary levels
+  and exit 0 while retaining `open_failed` and a permission-failure observation.
 - Test source lives at `controller/integration/cli_contract.rs`.
 
 ## Success criteria

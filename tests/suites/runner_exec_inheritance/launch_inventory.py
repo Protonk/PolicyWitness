@@ -97,7 +97,7 @@ def observe(pw, out, boundary):
         boundary=boundary, worker_pid=pid, host_pid=host, observations=observations,
         boundary_basis='selected production sleep seam, source order and elapsed time; no shared-memory read',
     ), indent=2) + '\n')
-    assert rc == 0 and runner['normalized_outcome'] == 'ok', runner
+    assert rc == 0 and runner['normalized_outcome'] == 'finished', runner
     worker = runner['runner_subprocess']
     assert worker['pid'] == pid and worker['exit_code'] == 0 and worker['reaped'], worker
     assert worker['done_observed'] and worker['collection_basis'] == 'after_confirmed_reap', worker

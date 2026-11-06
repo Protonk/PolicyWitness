@@ -350,7 +350,7 @@ def build_envelope(obs, schema_version=contract.RESPONSE_SCHEMA, envelope_versio
     clauses = expected_error_clauses(claims)
     error = '; '.join(clauses) if clauses else None
     runner = {'schema_version': schema_version, 'specimen_id': 'constructed', 'rc': 0 if error is None else 1,
-              'normalized_outcome': 'runner_timeout' if clauses else 'ok', 'error': error, 'pid': 4242,
+              'normalized_outcome': 'runner_timeout' if clauses else 'finished', 'error': error, 'pid': 4242,
               'policy_format': 'sbpl', 'sandboxed_after_apply': True, 'steps': reply_steps, 'runner_subprocess': sub}
     diagnostics = {'process_disposition': projections['process_disposition'],
                    'termination_cause': projections['termination_cause'], 'stop_reason': projections['stop_reason'],

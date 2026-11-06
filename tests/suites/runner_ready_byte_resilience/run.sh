@@ -102,9 +102,9 @@ if env.get("result", {}).get("ok") is not True:
 
 runner = env.get("data", {}).get("runner_result") or {}
 outcome = runner.get("normalized_outcome")
-if outcome != "ok":
+if outcome != "finished":
     raise SystemExit(
-        f"expected normalized_outcome=ok after surviving the closed ready pipe (got {outcome!r})"
+        f"expected normalized_outcome=finished after surviving the closed ready pipe (got {outcome!r})"
     )
 
 # The worker must have survived and exited cleanly — NOT died of SIGPIPE (13).

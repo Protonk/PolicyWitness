@@ -409,7 +409,7 @@ class ReservationArrangement(Arrangement):
         driver.send('submit', 'execute', credential='grant', request=str(path))
         received = driver.event('execute', 'host_reply')
         reply = json.loads(base64.b64decode(received['data_base64'], validate=True))
-        assert not validate(reply) and reply['normalized_outcome'] == 'ok', reply
+        assert not validate(reply) and reply['normalized_outcome'] == 'finished', reply
         self.one_execution(name)
         assert generation(self.event(name, 'admission_claimed')['host']) == generation(owner)
         gate = self.control_gate('exit')
@@ -553,12 +553,12 @@ class ReservationArrangement(Arrangement):
         assert altered['equal_after_restoring_marker'] is True
         assert altered['original_marker'] == contract.RESPONSE_SCHEMA and altered['altered_marker'] == preserved['schema_version']
         encoded = self.event(name, 'reply_encoded')
-        assert encoded['reply_sha256'] == altered['original_sha256'] and encoded['encoded_outcome'] == 'ok', (encoded, altered)
+        assert encoded['reply_sha256'] == altered['original_sha256'] and encoded['encoded_outcome'] == 'finished', (encoded, altered)
         # The opaque reply is the real execution's reply: restoring the marker
         # yields a valid current reply with the one effect.
         restored = dict(preserved, schema_version=altered['original_marker'])
         assert not validate(restored), validate(restored)
-        assert restored['normalized_outcome'] == 'ok' and restored['steps'][0]['attempt']['outcome'] == 'ok', restored['steps']
+        assert restored['normalized_outcome'] == 'finished' and restored['steps'][0]['attempt']['outcome'] == 'ok', restored['steps']
         self.one_execution(name)
         assert len(self.events(name, 'request_received')) == 1, 'execution was replayed'
         assert not self.events(name, 'outgoing_marker_unaltered')

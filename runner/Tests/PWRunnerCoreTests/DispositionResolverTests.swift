@@ -237,7 +237,7 @@ func runDispositionResolverTests(_ tk: TestKit) {
             try expectEqual(claim(record, "final_status")?.answer, "exit_code", "the conflict is local to slot 1")
             try expectEqual(record.steps.map(lifecycleSummary), ["completed", "conflicting"])
             // The account encodes normally: a reported conflict is representable evidence.
-            let reply = PWRunnerRunResult(specimen_id: "c5", rc: 0, normalized_outcome: NormalizedOutcome.ok, pid: 4242,
+            let reply = PWRunnerRunResult(specimen_id: "c5", rc: 0, normalized_outcome: NormalizedOutcome.finished, pid: 4242,
                 policy_format: "sbpl", sandboxed_after_apply: true,
                 steps: buildStepResults(probePlan: [probe("first"), probe("second")],
                                         queryPlan: planValidatorQueries([probe("first"), probe("second")]),
@@ -368,7 +368,7 @@ func runDispositionResolverTests(_ tk: TestKit) {
             try expectEqual(claim(record, "progress_association")?.reason, "progress_unrecognized")
             try expectEqual(record.steps.map(lifecycleSummary), ["completed", "completed"])
             try expectEqual(classify(workerResult: .success(out), validatorResult: nil,
-                                     expectedVerdictCount: 0).outcome, NormalizedOutcome.ok)
+                                     expectedVerdictCount: 0).outcome, NormalizedOutcome.finished)
             let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: pwRunnerEncodeJSON(buildWorkerSubprocess(out)))
             try expectEqual(decoded.worker_evidence?.progress?.operation, 200, "the raw word survives")
             try expectEqual(decoded.partial_steps, false)
@@ -451,7 +451,7 @@ func runDispositionResolverTests(_ tk: TestKit) {
             let sub = buildWorkerSubprocess(out, disposition: record)
             let ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true)
             try expectFalse(dispositionIntegrityProblems(record, subprocess: sub, stepCount: 1).isEmpty)
-            let reply = PWRunnerRunResult(specimen_id: "invalid", rc: 0, normalized_outcome: NormalizedOutcome.ok, pid: 4242,
+            let reply = PWRunnerRunResult(specimen_id: "invalid", rc: 0, normalized_outcome: NormalizedOutcome.finished, pid: 4242,
                 policy_format: "sbpl", sandboxed_after_apply: true,
                 steps: buildStepResults(probePlan: [probe("a")], queryPlan: planValidatorQueries([probe("a")]),
                                         workerOutput: out, validatorOutput: nil,

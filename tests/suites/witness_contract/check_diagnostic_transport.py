@@ -123,7 +123,7 @@ def check_validator(pw, output, bad_tail):
         (output/'after.bin').write_bytes(after)
     assert after != b'before', 'actual worker effects were lost'
     assert rc == int(bad_tail), runner
-    assert runner['normalized_outcome'] == ('validator_decode_failure' if bad_tail else 'ok'), runner
+    assert runner['normalized_outcome'] == ('validator_decode_failure' if bad_tail else 'finished'), runner
     assert runner['sandboxed_after_apply'] is True and runner['runner_subprocess']['exit_code'] == 0, runner
     process = runner['phases'][0]['validator_subprocess']
     assert process['pid'] > 0 and process['pid'] != runner['runner_subprocess']['pid'], process

@@ -12,6 +12,11 @@ decision or establish why a signal was delivered. All independently confirmed
 worker slots, validator verdicts and process observations
 survive regardless of which observation determines the summary.
 
+`finished` records completed execution and required evidence collection under
+the criteria below. It can accompany successful attempts, permission failures
+or other operation failures. The controller reports `result.ok: true` and exit
+0 for `finished`; those fields do not summarize attempt success.
+
 In the table, A means an acquire observation of `applied`, D an acquire
 observation of `done`, and R the `apply_rc` status word. A publishes successful
 application; D publishes a terminal worker payload, including pre-apply failure.
@@ -63,16 +68,16 @@ which the child stopped.
 | A=true, D=true, R=0; exit grace expires and host requests termination | Completed report/slots survive; record cleanup request and result without inventing a sentinel deadline | `runner_failed`, even if the child subsequently exits 0 |
 | A=true, D=true, R=0; independently reaped nonzero exit or signal | Completed report/slots survive alongside abnormal disposition | `runner_failed` |
 | A=true, D=true, R=0; disposition unconfirmed or unrecovered wait error | Completed report/slots survive; exit/signal absent unless reaped | `runner_failed` |
-| A=true, D=true, R=0; reaped exit 0, no unresolved host fault or termination request | Worker completion confirmed; evaluate validator observations | Existing validator mapping, or `ok` when required evidence is complete |
+| A=true, D=true, R=0; reaped exit 0, no unresolved host fault or termination request | Worker completion confirmed; evaluate validator observations | Existing validator mapping, or `finished` when required evidence is complete |
 
 Summary precedence is: host rejection before spawn; published worker failure;
 host transfer failure; incomplete/malformed failure publication; inconsistent published
 worker state; published status-word worker failure; observed sentinel expiry; other
 worker incompletion/abnormal disposition/unresolved host error; validator
-failure; `ok`. A recovered EINTR alone is not a failed run. A cleanup request
+failure; `finished`. A recovered EINTR alone is not a failed run. A cleanup request
 without an observed sentinel expiry is not a timeout. This ordering selects
 the summary only; it does not discard another observer's evidence. The validator
-lifecycle and record-association requirements below also apply before `ok`.
+lifecycle and record-association requirements below also apply before `finished`.
 
 ## Reply construction failure
 
@@ -835,7 +840,7 @@ typed failure. `runner_failed` summarizes any published worker failure, includin
 observed apply/compile failures; the specific operation remains in the record.
 Failure records take precedence over later deadline/cleanup observations, all
 of which remain independently visible. Unknown progress alone implies no failure
-or success. A malformed/incomplete failure publication cannot yield `ok`.
+or success. A malformed/incomplete failure publication cannot yield `finished`.
 
 ### Missing step evidence
 

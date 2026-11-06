@@ -303,7 +303,7 @@ def _equipment(runner, actors):
             if execution.get('eligible') is not False:
                 errors.append('unmatched equipment permits activation')
             runtime_failed |= isinstance(actor.get('launch'), dict) and status in ('mismatched', 'inspection_failed')
-    if runtime_failed and (runner.get('normalized_outcome') == 'ok' or runner.get('preparation_failure') is not None or
+    if runtime_failed and (runner.get('normalized_outcome') == 'finished' or runner.get('preparation_failure') is not None or
             not bounded(obj(runner.get('schedule')).get('cancelled'), 64) or
             any(obj(p.get('ordering')).get('proceed_set') is True or obj(p.get('ordering')).get('proceed_observed') is True or p.get('activation_observation') is not None or p.get('arrival_observed') is not False or p.get('completion_observed') is not False or p.get('validator_subprocess') is not None or p.get('collection_status') != 'not_reached'
                 for p in map(obj, array(runner.get('phases'))))):

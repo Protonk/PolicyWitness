@@ -66,8 +66,8 @@ if env.get("result", {}).get("ok") is not True:
     raise SystemExit(f"expected top-level ok=true (got {env.get('result')!r})")
 
 runner = env.get("data", {}).get("runner_result") or {}
-if runner.get("normalized_outcome") != "ok":
-    raise SystemExit(f"expected runner normalized_outcome=ok (got {runner.get('normalized_outcome')!r})")
+if runner.get("normalized_outcome") != "finished":
+    raise SystemExit(f"expected runner normalized_outcome=finished (got {runner.get('normalized_outcome')!r})")
 # The point of this suite is the apply/isolation, so witness it: the worker
 # must report it actually self-applied the (deny default) policy, not merely
 # reply cleanly. Without this, a no-op / short-circuited sandbox_apply would

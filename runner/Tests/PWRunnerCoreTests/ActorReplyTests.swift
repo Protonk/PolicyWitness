@@ -254,7 +254,7 @@ func runActorReplyTests(_ tk: TestKit) {
             let bIssued = events[3].native_nonnull == true
             try expectEqual(resources.tokens[1].status, bIssued ? "issued" : "null")
             try expectEqual(transfers[1].status, bIssued ? "delivered" : "custody_unavailable")
-            try expectEqual(reply.normalized_outcome, NormalizedOutcome.ok, reply.error ?? "")
+            try expectEqual(reply.normalized_outcome, NormalizedOutcome.finished, reply.error ?? "")
             try expectEqual(reply.rc, 0)
             // Encode under the reply invariants and decode again.
             let data = try pwRunnerEncodeJSON(reply)

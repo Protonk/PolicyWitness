@@ -107,7 +107,7 @@ try:
     assert generation_state(generation(owner_generation)) == 'gone'
     assert recovered['runner_subprocess']['pid'] != owner['runner_subprocess']['pid']
     assert waiting_effect.read_bytes() == b'x'
-    assert owner['normalized_outcome'] == 'ok' and owner['runner_subprocess']['reaped'] is True, owner
+    assert owner['normalized_outcome'] == 'finished' and owner['runner_subprocess']['reaped'] is True, owner
     assert owner['test_overrides']['worker_post_apply_hang_ms'] == 15000
     assert owner['runner_subprocess']['pid'] == worker_children[0], 'host/child receipts disagree with replies'
     assert marker.read_bytes() == b'x' and not absent.exists()
@@ -120,7 +120,7 @@ try:
     time.sleep(respawn_wait)
     third, marker = launch('fresh')
     fresh = receive(third, 'fresh', 0)
-    assert fresh['normalized_outcome'] == 'ok' and marker.read_bytes() == b'x', fresh
+    assert fresh['normalized_outcome'] == 'finished' and marker.read_bytes() == b'x', fresh
     for name in ('owner', 'reacquired', 'fresh'):
         (out / (name + '.effect.bytes')).write_bytes((effects / name).read_bytes())
     (out/'receipts.json').write_text(json.dumps(dict(shared_host=pid, owner_worker=worker_children[0], fresh_worker=fresh['runner_subprocess']['pid'],

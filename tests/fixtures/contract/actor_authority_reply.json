@@ -1,9 +1,9 @@
 {
-  "schema_version": 26,
+  "schema_version": 27,
   "specimen_id": "extension_issuer_subject",
   "execution_form": "actors",
   "rc": 0,
-  "normalized_outcome": "ok",
+  "normalized_outcome": "finished",
   "pid": 12000,
   "equipment_inventory": {
     "path": "/Applications/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/Resources/worker-equipment.json",

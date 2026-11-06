@@ -153,7 +153,7 @@ def run(pw, out, session=None):
                  basis='owned paths observed before launch; baseline visit precedes issuance; subject lifetime spans issuance; no other writer'))
             envelope, final = execute(pw, out, root, ownership, case, request, paths, session)
             runner = envelope['data']['runner_result']
-            assert runner['normalized_outcome'] == 'ok'
+            assert runner['normalized_outcome'] == 'finished'
             issued = assert_issuance(runner)
             assert next(a for a in runner['actors'] if a['actor_id']=='subject')['applied']
             assert issued['extension_class'] == ('com.apple.app-sandbox.read' if authority=='read' else 'com.apple.app-sandbox.read-write')

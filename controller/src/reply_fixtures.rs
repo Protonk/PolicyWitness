@@ -208,7 +208,7 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
                     "association_issues": [], "records": own.iter().map(|s| record(s)).collect::<Vec<_>>()}})
         })
         .collect();
-    let ok = outcome == "ok";
+    let ok = outcome == "finished";
     json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION, "specimen_id": "controlled",
         "run_kind": null, "rc": if ok { 0 } else { 1 }, "normalized_outcome": outcome,
         "error": if ok { Value::Null } else { json!("controlled worker failure") },
@@ -229,7 +229,7 @@ pub(crate) fn reporting_failed(mut runner: Value) -> Value {
     runner["rc"] = json!(1);
     runner["error"] = json!("controlled reporting failure");
     runner["reporting_failure"] = json!({"origin": "runner_host", "diagnostic": "controlled",
-        "original_rc": 0, "original_normalized_outcome": "ok", "original_error": null,
+        "original_rc": 0, "original_normalized_outcome": "finished", "original_error": null,
         "evidence_retained": true});
     for step in runner["steps"].as_array_mut().unwrap() {
         step["comparison"] = Value::Null;

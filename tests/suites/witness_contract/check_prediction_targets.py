@@ -89,6 +89,8 @@ def main():
                 envelope, expected, policy_format='sbpl',
                 require_sandboxed_after_apply=True, require_policy_sha256=True)
             runner = envelope['data']['runner_result']
+            assert envelope['result']['normalized_outcome'] == 'finished', envelope['result']
+            assert runner['normalized_outcome'] == 'finished', runner
             assert runner['rc'] == 0 and runner.get('test_overrides') is None, runner
             assert runner['specimen_id'] == specimen['specimen_id'], runner
             worker = runner['runner_subprocess']

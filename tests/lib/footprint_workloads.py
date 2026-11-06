@@ -266,7 +266,7 @@ class HeldWorkload:
                 for _ in range(ready['queries']): self.gate.query(); self.gate.emit()
                 self.gate.finish()
         rc=self.run.wait(timeout=20); value=self.run.load_json(); assert rc==0 and not consumer.validate(value),value
-        runner=value['data']['runner_result']; assert runner['normalized_outcome']=='ok',runner
+        runner=value['data']['runner_result']; assert runner['normalized_outcome']=='finished',runner
         assert all(s['attempt']['outcome']=='ok' for s in runner['steps']),runner
         if not self.actor_host:
             ordering=runner['phases'][0]['ordering']

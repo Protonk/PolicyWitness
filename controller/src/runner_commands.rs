@@ -640,7 +640,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
             }
             crate::run_flow::ReplyAdmission::Admitted => {
                 let (pid, outcome) = project_verify_reply(runner_result.as_ref());
-                let code = if outcome == "ok" { 0 } else { 1 };
+                let code = if outcome == "finished" { 0 } else { 1 };
                 (pid, outcome, code, None)
             }
         };
@@ -990,9 +990,9 @@ mod verify_tests {
         );
         assert_eq!(
             project_verify_reply(Some(
-                &json!({"schema_version": current, "pid": 77, "normalized_outcome": "ok"})
+                &json!({"schema_version": current, "pid": 77, "normalized_outcome": "finished"})
             )),
-            (Some(77), "ok".to_string())
+            (Some(77), "finished".to_string())
         );
         assert_eq!(
             project_verify_reply(Some(&json!({"schema_version": current, "pid": 77}))),
@@ -1001,14 +1001,14 @@ mod verify_tests {
         for other in [current - 1, current + 1] {
             assert_eq!(
                 project_verify_reply(Some(
-                    &json!({"schema_version": other, "pid": 77, "normalized_outcome": "ok"})
+                    &json!({"schema_version": other, "pid": 77, "normalized_outcome": "finished"})
                 )),
                 (None, "unsupported_runner_response".to_string())
             );
         }
         for malformed in [
-            json!({"pid": 77, "normalized_outcome": "ok"}),
-            json!({"schema_version": current.to_string(), "pid": 77, "normalized_outcome": "ok"}),
+            json!({"pid": 77, "normalized_outcome": "finished"}),
+            json!({"schema_version": current.to_string(), "pid": 77, "normalized_outcome": "finished"}),
         ] {
             assert_eq!(
                 project_verify_reply(Some(&malformed)),

@@ -90,7 +90,7 @@ func runExecObservationTests(_ tk: TestKit) {
                         attempt: PWRunnerAttempt(kind: "exec", action: "spawn", target: "/usr/bin/true"))
                     let disposition = resolveDisposition(out, plan: [probe])
                     let phase = constructedPhase(out, ids: ["s"])
-                    let reply = PWRunnerRunResult(specimen_id: mode, rc: 0, normalized_outcome: "ok", pid: Int(out.workerPid),
+                    let reply = PWRunnerRunResult(specimen_id: mode, rc: 0, normalized_outcome: "finished", pid: Int(out.workerPid),
                         policy_format: "sbpl", sandboxed_after_apply: true,
                         steps: buildStepResults(probePlan: [probe], queryPlan: planValidatorQueries([probe]), workerOutput: out,
                             validatorOutput: nil, ordering: phase.ordering, disposition: disposition),

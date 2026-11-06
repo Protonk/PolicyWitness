@@ -168,13 +168,13 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
         ClassifyRow(label: "recovered EINTR does not fail a clean report",
                     worker: .success(workerOut(waitErrors: [PWRunnerWaitError(stage: "exit_grace", rc: -1, errno: EINTR)])),
                     validator: nil, expectedVerdictCount: 0,
-                    expected: NormalizedOutcome.ok),
+                    expected: NormalizedOutcome.finished),
 
         // ---- worker clean: validator-side classification ----
-        ClassifyRow(label: "worker ok, no probes sent (validator nil) → ok",
+        ClassifyRow(label: "worker complete, no probes sent (validator nil) → finished",
                     worker: .success(workerOut(done: true)),
                     validator: nil, expectedVerdictCount: 0,
-                    expected: NormalizedOutcome.ok),
+                    expected: NormalizedOutcome.finished),
         ClassifyRow(label: "validator read/write I/O fault → validator_no_reply",
                     worker: .success(workerOut(done: true)),
                     validator: .failure(error: .verdictReadFailed("read(verdicts): EIO"), partial: nil),
@@ -205,12 +205,12 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                     validator: .success(ValidatorOutput(validatorPid: 0, verdicts: [], exitCode: 0, reaped: true, waitErrors: [], expectedProbes: [])),
                     expectedVerdictCount: 1,
                     expected: NormalizedOutcome.validatorUnavailable),
-        // Clean exit, verdict count meets expectation (0 of 0) → ok.
-        ClassifyRow(label: "validator clean exit, full verdict count → ok",
+        // Clean exit, verdict count meets expectation (0 of 0) → finished.
+        ClassifyRow(label: "validator clean exit, full verdict count → finished",
                     worker: .success(workerOut(done: true)),
                     validator: .success(ValidatorOutput(validatorPid: 0, verdicts: [], exitCode: 0, reaped: true, waitErrors: [], expectedProbes: [])),
                     expectedVerdictCount: 0,
-                    expected: NormalizedOutcome.ok),
+                    expected: NormalizedOutcome.finished),
     ]
 
     tk.group("classify: worker/validator → normalized outcome") {

@@ -35,7 +35,7 @@ guards for the request-validation and comparison rules:
 2. **bare_deny_default** — the downstream bug-report shape: bare
    `(deny default)` with one file read. The C worker survives this
    policy. Asserts:
-   - run completes (`normalized_outcome == "ok"`, both children
+   - run completes (`normalized_outcome == "finished"`, both children
      clean-exited)
    - validator answered `deny`, attempt observed `open_failed` with
      `errno ∈ {EPERM=1, EACCES=13}`

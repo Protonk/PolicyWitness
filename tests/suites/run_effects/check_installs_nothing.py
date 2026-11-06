@@ -95,7 +95,7 @@ def main():
     envelope = run.load_json()
     assert envelope['result']['ok'] is True
     runner = envelope['data']['runner_result']
-    assert runner['normalized_outcome'] == 'ok' and runner.get('test_overrides') is None, runner
+    assert runner['normalized_outcome'] == 'finished' and runner.get('test_overrides') is None, runner
     print('registry, reported registry, and launchd plist directories are unchanged by a plain run', flush=True)
 
 

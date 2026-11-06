@@ -107,7 +107,7 @@ def main():
                 assert step['comparison']['observation_basis'] == 'no_completed_worker_result', step
             assert runner['runner_subprocess']['partial_steps'] is True
         else:
-            assert rc == 0 and runner['normalized_outcome'] == 'ok'
+            assert rc == 0 and runner['normalized_outcome'] == 'finished'
             assert last['attempt']['outcome'] == 'ok'
             assert attempt['child_pid'] == pids['P'] and attempt['child_exit_code'] == 0
             assert attempt['child_term_signal'] == 0

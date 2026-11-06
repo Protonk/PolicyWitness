@@ -17,6 +17,11 @@ assert 'PW_RUNNER_REGISTRY' not in os.environ
 state = json.loads((out / 'session.json').read_text())
 assert state['registry_path'] is None
 service = state['service_name']
+verified = json.loads((out / 'verify-connection/stdout').read_text())
+assert verified['kind'] == 'runner_verify' and verified['schema_version'] == contract.CONTROLLER_ENVELOPE, verified
+assert verified['result']['ok'] is True and verified['result']['normalized_outcome'] == 'finished', verified['result']
+assert verified['data']['normalized_outcome'] == 'finished', verified['data']
+assert verified['data']['runner_result']['normalized_outcome'] == 'finished', verified['data']['runner_result']
 listed = subprocess.run([pw, 'runner', 'list'], capture_output=True, timeout=30)
 (out / 'default-list.json').write_bytes(listed.stdout)
 assert listed.returncode == 0
@@ -42,4 +47,4 @@ result = subprocess.run([pw, 'run', str(path)], capture_output=True, timeout=60)
 assert result.returncode == 0, result.stderr
 doc = json.loads(result.stdout)
 assert not validate(doc), validate(doc)
-assert doc['data']['runner_result']['normalized_outcome'] == 'ok' and effect.exists()
+assert doc['data']['runner_result']['normalized_outcome'] == 'finished' and effect.exists()

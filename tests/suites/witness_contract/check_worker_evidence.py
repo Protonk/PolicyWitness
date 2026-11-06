@@ -44,7 +44,7 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
         assert process['reaped'] and process['exit_code'] == 0, process
         step = runner['steps'][0]
         assert rc == (0 if mode == 'success' else 1), envelope
-        assert runner['normalized_outcome'] == ('ok' if mode == 'success' else 'runner_failed'), runner
+        assert runner['normalized_outcome'] == ('finished' if mode == 'success' else 'runner_failed'), runner
         if mode == 'success':
             assert evidence['failure_state'] == 'absent' and evidence.get('failure') is None, evidence
             assert runner['sandboxed_after_apply'] is True, runner

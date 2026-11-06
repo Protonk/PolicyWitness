@@ -20,7 +20,7 @@ func ordinaryReadReplyFixture(published: Bool = true) -> PWRunnerRunResult {
     let phase = constructedPhase(out, ids: ["read"])
     let ordinary = buildStepResults(probePlan: [probe], queryPlan: planValidatorQueries([probe]), workerOutput: out,
         validatorOutput: nil, ordering: phase.ordering, disposition: disposition)
-    return PWRunnerRunResult(specimen_id: "constructed-ordinary-read", rc: 0, normalized_outcome: "ok", pid: 42,
+    return PWRunnerRunResult(specimen_id: "constructed-ordinary-read", rc: 0, normalized_outcome: "finished", pid: 42,
         policy_format: "sbpl", sandboxed_after_apply: true, steps: ordinary,
         runner_subprocess: buildWorkerSubprocess(out, disposition: disposition), phases: [phase])
 }

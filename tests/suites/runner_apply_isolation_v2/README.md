@@ -15,7 +15,7 @@ exercise populated attempt slots.
 
 ## Success criteria
 
-- `result.ok == true`, `runner_result.normalized_outcome == "ok"`.
+- `result.ok == true`, `runner_result.normalized_outcome == "finished"`.
 - The envelope and response use the currently supported contract versions.
 - `sandboxed_after_apply == true` and `steps == []`.
 - `runner_subprocess.exit_code == 0`, `term_signal == null`,

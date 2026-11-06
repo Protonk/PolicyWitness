@@ -336,6 +336,7 @@ steered-validator tests retain their separate contracts.
 
 The case checks step identity/order, raw attempt evidence, prediction and
 attempt paths, worker/validator completion, and the comparison record.
+Both run summaries must report `finished` beside the successful and denied writes.
 Shared black-box checks collect both prediction failures rather than stopping
 after the first mismatch. `RunCapture` retains each request, raw envelope,
 stderr, and capture metadata under `matching/` and `swapped/`; these directories
@@ -596,7 +597,7 @@ operation started.
 
 This is the one override-driven case exempt from the exact-outcome assertion in
 the `_test_overrides` recipe in [runner guidance](../../../runner/AGENTS.md).
-It checks that `normalized_outcome` excludes `ok` and `bad_policy`, and the
+It checks that `normalized_outcome` excludes `finished` and `bad_policy`, and the
 spellings `sandbox_apply_failed` and `runner_sandbox_denied` that no constant
 defines, rather than pinning one replacement outcome, so it protects the
 absence of library/policy claims across outcome renames; classifier tests pin

@@ -1192,7 +1192,7 @@ mod tests {
         // recognize is received unchanged: the version gate and the readers
         // decide later, never the transport.
         let mut replies = vec![
-            json!({"schema_version": current, "normalized_outcome": "ok", "steps": [{
+            json!({"schema_version": current, "normalized_outcome": "finished", "steps": [{
             "step_id": "spawn",
             "sandbox_check": {"outcome": "allow", "rc": 0, "native_rc": 0, "path_diagnostics": {
                 "input": "/submitted", "observer": "runner_host", "stage": "after_orchestration"}},

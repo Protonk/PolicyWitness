@@ -27,7 +27,7 @@ the run times out. Expectations are supplied by the test, not PW's response.
   than waiting for the worker's ~8s natural sleep. This is proven
   deterministically by the envelope — `runner_timeout` + `term_signal == 9`
   + no exit code — not by wall-clock: a worker that completed its
-  hang would have flipped `done` and clean-exited (`ok`, `exit_code == 0`).
+  hang would have flipped `done` and clean-exited (`finished`, `exit_code == 0`).
 - `term_signal == 9` (SIGKILL, host-issued). Host-issued termination is
   classified as `runner_timeout`.
 - All three cases use a 2-second worker deadline and an 8-second hang, leaving

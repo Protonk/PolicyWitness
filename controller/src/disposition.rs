@@ -2046,7 +2046,7 @@ mod tests {
                     case["name"],
                     issue
                 );
-                let mut runner = worker("ok", None);
+                let mut runner = worker("finished", None);
                 runner["steps"] = json!([{ "step_id": "exec", "attempt": attempt.clone() }]);
                 let issues = exec_observation_issues(&runner);
                 assert_eq!(issues.is_empty(), section == "valid", "{}", case["name"]);
@@ -2070,7 +2070,7 @@ mod tests {
         ))
         .unwrap();
         for case in cases.as_array().unwrap() {
-            let mut runner = worker("ok", None);
+            let mut runner = worker("finished", None);
             let phase = &mut runner["phases"][0];
             phase["collection_status"] = case["status"].clone();
             phase["ordering"]["validator_disposition"] = case["disposition"].clone();
@@ -2116,7 +2116,7 @@ mod tests {
 
     #[test]
     fn phase_collection_types_distinguish_malformed_from_optional_absence() {
-        let mut baseline = worker("ok", None);
+        let mut baseline = worker("finished", None);
         baseline["phases"][0]["collection_status"] = json!("not_reached");
         baseline["phases"][0]["ordering"]["validator_disposition"] = json!("not_invoked");
         baseline["phases"][0]["validator_subprocess"] = Value::Null;

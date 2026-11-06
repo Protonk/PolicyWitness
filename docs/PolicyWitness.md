@@ -1174,7 +1174,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 26, controller envelope 11, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 27, controller envelope 12, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner reply is the host's JSON: its `schema_version` is the response schema, and it
@@ -1958,10 +1958,14 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, o
 `setup_error`, `compile_error` and `ok` outcomes, see
 [SBPL check](#sbpl-check-sbpl-check)):
 
-- `ok` — worker completion and clean disposition are confirmed. Any invoked
+- `finished` — worker completion and clean disposition are confirmed. Any invoked
   validator also has confirmed clean disposition, valid received records for
   every requested step ID, and no transport, decoding, or association failure.
   Uniquely associated per-step diagnostics retain their per-step semantics.
+  Attempted operations can succeed or fail in a finished run; inspect each
+  step's `attempt` and `comparison` records for those observations. The controller
+  reports `result.normalized_outcome: "finished"`, `result.ok: true` and exit 0
+  for this execution status. None of these establishes that an attempt succeeded.
 - `runner_timeout` — the host observed exhaustion of its sentinel polling
   budget. This remains a timeout if the child voluntarily exits during grace;
   a cleanup termination request alone does not establish a deadline.
@@ -2384,7 +2388,7 @@ that template inherits the check, which constrains how you may sign it:
 
 - **Signed runner (default, recommended):** sign the copy with a **Developer ID
   whose Team ID matches the app** (so the runner's team equals `pw-runner-client`'s).
-  `runner verify` returns `ok`.
+  `runner verify` returns `finished`.
 - **Ad-hoc / local runner:** ad-hoc signatures have **no Team ID**, so a runner
   that keeps the caller-auth keys rejects every connection with
   `NSXPCConnectionInvalid` (reported as `normalized_outcome: xpc_error`). To run

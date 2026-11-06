@@ -55,7 +55,7 @@ def main():
             data = envelope['data']
             assert 'log_last' not in data, data.keys()
             runner = data['runner_result']
-            expected = 'runner_failed' if signaled else 'ok'
+            expected = 'runner_failed' if signaled else 'finished'
             assert runner['normalized_outcome'] == expected, runner
             assert envelope['result']['normalized_outcome'] == expected, envelope['result']
             assert envelope['result']['ok'] is (not signaled), envelope['result']

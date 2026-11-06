@@ -115,7 +115,7 @@ def request(name, override):
 
 def observe(name, override):
     envelope, runner = capture(pw, receipts, name, request(name, override), session_state=state)
-    assert runner['execution_form'] == 'actors' and runner['normalized_outcome'] == 'ok', (runner['normalized_outcome'], runner.get('error'))
+    assert runner['execution_form'] == 'actors' and runner['normalized_outcome'] == 'finished', (runner['normalized_outcome'], runner.get('error'))
     witnessed, reason = worker_exit_witness(envelope)
     assert witnessed, reason
     actor, = runner['actors']

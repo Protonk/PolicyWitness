@@ -83,7 +83,7 @@ def assert_composition(envelope, runner, spec, resources, prefix, failed_actor=N
     assert validate(envelope) == [], validate(envelope)
     assert check_record(envelope) == [], check_record(envelope)
     assert worker_exit_witness(envelope)[0], worker_exit_witness(envelope)
-    assert runner['normalized_outcome'] == ('runner_failed' if failed_actor else 'ok'), runner.get('error')
+    assert runner['normalized_outcome'] == ('runner_failed' if failed_actor else 'finished'), runner.get('error')
     got_actors = {a['actor_id']: a for a in runner['actors']}
     assert len(got_actors) == len(spec['actors']) == 4
     pids = {a['actor_id']: a['launch']['pid'] for a in runner['actors']}

@@ -288,7 +288,7 @@ finally:
 
 served = []
 for record in requests:
-    if record.get('outcome') == 'ok':
+    if record.get('outcome') == 'finished':
         record['host'], record['host_basis'] = served_host(record, hosts, workers + fork_children)
         served.append(record)
 attributions = {}
@@ -302,7 +302,7 @@ save(work / 'summary.json', summary)
 # Positive control: with a retirement handoff and no neighbor, each request
 # reached its own fresh host and produced its own effect.
 spaced = [by_name[n] for n in schedules['spaced']]
-assert all(r['outcome'] == 'ok' and r['effect_exists'] for r in spaced), [r['outcome'] for r in spaced]
+assert all(r['outcome'] == 'finished' and r['effect_exists'] for r in spaced), [r['outcome'] for r in spaced]
 assert len({r['host'] for r in spaced}) == 3 and None not in {r['host'] for r in spaced}, [r['host'] for r in spaced]
 # A failed acquisition invokes no specimen, independently witnessed by its
 # separate target. An invoked request is never inferred absent from an error.
@@ -322,7 +322,7 @@ for record in requests:
         assert attribution['cause'] in ('session_claim', 'neighbor_claim'), (record['name'], attempt, attribution)
         key = attribution['host']
         attributions[f"{record['name']}:{index}"] = attribution
-        if record['outcome'] == 'ok':
+        if record['outcome'] == 'finished':
             assert record['host'] != key, ('executed on an occupied generation', record)
             assert generation_state(key) == 'gone', ('occupied generation did not retire', key)
 for name in schedules['spaced']:
@@ -331,7 +331,7 @@ for names in [schedules['public_back_to_back'], [schedules['foreign_held']['refu
               [row['session'] for row in schedules['throttle_queue']],
               [name for pair in schedules['direct_after_reply'] for name in pair]]:
     records = [by_name[name] for name in names]
-    assert all(r['outcome'] == 'ok' and r['effect_exists'] for r in records), records
+    assert all(r['outcome'] == 'finished' and r['effect_exists'] for r in records), records
 
 def attributed_to(name, holder):
     return any(k.startswith(name + ':') and v.get('holder') == holder for k, v in attributions.items())

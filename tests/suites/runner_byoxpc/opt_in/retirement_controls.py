@@ -349,7 +349,7 @@ class Arrangement:
         returned = self.event(name, 'orchestration_returned')
         spawned = self.event(name, 'worker_spawned')
         assert returned.get('worker_reaped') is True and returned['worker_pid'] == spawned['worker']['pid'], returned
-        assert returned['outcome'] == 'ok' and returned['rc'] == 0, returned
+        assert returned['outcome'] == 'finished' and returned['rc'] == 0, returned
         self.gone(spawned['worker'], 'independent worker generation exit: ' + name)
         return returned
 
@@ -403,7 +403,7 @@ class Arrangement:
         self.event(owner, 'admission_claimed')
         self.worker_reaped(owner)
         self.effect(owner, b'x')
-        assert self.event(owner, 'reply_encoded')['encoded_outcome'] == 'ok'
+        assert self.event(owner, 'reply_encoded')['encoded_outcome'] == 'finished'
         if self.name == 'lost_execution_reply':
             assert gate['boundary'] == 'reply'
             assert not self.events(owner, 'reply_invocation') and not self.events(owner, 'exit_scheduled')
@@ -422,7 +422,7 @@ class Arrangement:
         else:
             assert gate['boundary'] == 'exit'
             first_result = self.receive(first)
-            assert first[1]['returncode'] == 0 and first_result['normalized_outcome'] == 'ok', first_result
+            assert first[1]['returncode'] == 0 and first_result['normalized_outcome'] == 'finished', first_result
             self.event(owner, 'reply_returned')
             second = self.launch(next_name, effect=True)
             reply_gate = self.event(next_name, 'gate_wait')

@@ -173,7 +173,7 @@ def admission(pw, out):
                     assert runner['test_overrides'][field.split('.')[1]] == request['_test_overrides'][field.split('.')[1]], runner
             else:
                 assert runner.get('admission_failure') is None, runner
-                assert runner['normalized_outcome'] == 'ok' and rc == 0, runner
+                assert runner['normalized_outcome'] == 'finished' and rc == 0, runner
                 assert runner['runner_subprocess']['reaped'] is True, runner
                 if field == 'specimen_id': assert runner['specimen_id'] == text, runner
                 if field == 'run_kind': assert runner['run_kind'] == text, runner
@@ -282,7 +282,7 @@ def validator(pw, out, mode):
             rc, runner = run(pw, case_out, request)
             assert runner.get('test_overrides') == request.get('_test_overrides'), runner
             if case == 'real_control':
-                assert rc == 0 and runner['normalized_outcome'] == 'ok', runner
+                assert rc == 0 and runner['normalized_outcome'] == 'finished', runner
                 assert all(path.read_bytes() != b'before' for path in paths), 'completed file effects absent'
                 process = runner['phases'][0]['validator_subprocess']
                 assert process['reaped'] is True and process['exit_code'] == 0, process
@@ -337,20 +337,20 @@ def validator(pw, out, mode):
             assert [s['step_id'] for s in steps] == ['first', 'middle', 'last'], steps
             assert all(s['attempt']['result_source'] == 'worker' and s['attempt']['rc'] == 0 for s in steps), steps
             if case == 'real_removed':
-                assert rc == 0 and runner['normalized_outcome'] == 'ok', runner
+                assert rc == 0 and runner['normalized_outcome'] == 'finished', runner
                 assert process['expected_step_ids'] == ['first', 'middle', 'last'], process
                 assert process['association_issues'] == [], process
                 assert steps[2]['sandbox_check']['result_source'] == 'validator', steps[2]
                 assert steps[2]['sandbox_check']['outcome'] == process['records'][2]['outcome'], steps[2]
             elif case == 'diagnostic':
-                assert rc == 0 and runner['normalized_outcome'] == 'ok', runner
+                assert rc == 0 and runner['normalized_outcome'] == 'finished', runner
                 assert process['records'][-1]['outcome'] == 'future_937', process
                 assert '97319' in process['records'][-1]['raw_line'], process
                 assert steps[2]['sandbox_check']['rc'] == -1 and steps[2]['sandbox_check']['result_source'] == 'validator', steps[2]
                 assert steps[2]['sandbox_check']['native_rc'] is None, steps[2]
                 assert steps[2]['comparison']['order'] == 'unestablished', steps[2]
             else:
-                assert rc == 1 and runner['normalized_outcome'] != 'ok', runner
+                assert rc == 1 and runner['normalized_outcome'] != 'finished', runner
                 missing = 0 if case == 'duplicate' else 2
                 for i, step in enumerate(steps):
                     if i == missing or (case == 'duplicate' and i == 2):
@@ -395,7 +395,7 @@ def query_planning(pw, out):
                 'attempt': {'kind': 'file', 'action': 'create', 'target': str(target)}}
             request['probe_plan'] = ([request['probe_plan'][0]] if mixed else []) + [create]
             rc, runner = run(pw, out / ('mixed-create' if mixed else 'all-excluded-create'), request)
-            assert rc == 0 and runner['normalized_outcome'] == 'ok', runner
+            assert rc == 0 and runner['normalized_outcome'] == 'finished', runner
             assert target.exists(), 'create effect absent'
             step = runner['steps'][-1]
             assert step['attempt']['result_source'] == 'worker' and step['attempt']['rc'] == 0, step

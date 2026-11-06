@@ -70,7 +70,7 @@ def main():
     envelope = run.load_json()
     assert envelope["result"]["ok"] is True
     runner = envelope["data"]["runner_result"]
-    assert runner["normalized_outcome"] == "ok" and runner.get("test_overrides") is None
+    assert runner["normalized_outcome"] == "finished" and runner.get("test_overrides") is None
     assert runner["pid"] == runner["runner_subprocess"]["pid"] == worker_pid
     assert runner["runner_subprocess"]["exit_code"] == 0
     assert len(runner["steps"]) == 3

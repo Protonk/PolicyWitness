@@ -492,7 +492,7 @@ func runReplyFailureTests(_ tk: TestKit) {
                 var bad = failure
                 switch defect {
                 case "comparison": bad.steps[0].comparison = try replyFixture().steps[0].comparison
-                case "outcome": bad.normalized_outcome = "ok"
+                case "outcome": bad.normalized_outcome = "finished"
                 case "rc": bad.rc = 0
                 case "diagnostic": bad.reporting_failure?.diagnostic = ""
                 default: bad.reporting_failure = nil

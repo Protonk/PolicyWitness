@@ -103,7 +103,7 @@ def main():
             observed = effect.is_file()
             (case / 'effect.json').write_text(json.dumps(dict(observed=observed, expected=expected['xpc'] is None)) + '\n')
             if expected['xpc'] is None:
-                assert reply['normalized_outcome'] == 'ok' and observed, (example['id'], reply)
+                assert reply['normalized_outcome'] == 'finished' and observed, (example['id'], reply)
                 created = reply['steps'][0] if 'actors' not in specimen else next(s for s in reply['steps'] if s['step_id'] == 'effect')
                 assert created['attempt']['outcome'] == 'ok', created
                 if example.get('prediction'):
@@ -176,7 +176,7 @@ def main():
             reply = host_reply(json.loads((case / 'reply.json').read_text()))
             assert reply['schema_version'] == RESPONSE_SCHEMA, reply
             if error is None:
-                assert reply['normalized_outcome'] == 'ok' and effect.is_file(), reply
+                assert reply['normalized_outcome'] == 'finished' and effect.is_file(), reply
                 effect.unlink()
             else:
                 assert reply['normalized_outcome'] == 'bad_request' and error in reply['error'], reply

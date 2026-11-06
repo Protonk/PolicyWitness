@@ -14,7 +14,7 @@ column says why, and names the closest unit or harness coverage.
 
 | outcome | emitted by | primary suite/case | notes |
 | --- | --- | --- | --- |
-| `ok` | C worker (pw-probe-runner) + validator (sb_api_validator) joined by `CWorkerOrchestrator` | `runner_apply_isolation_v2`, `runner_apply_isolation_v3`, `integration`, `runner_use_c_worker`, others | The happy path; covered everywhere. |
+| `finished` | C worker (pw-probe-runner) + validator (sb_api_validator) joined by `CWorkerOrchestrator` | `runner_apply_isolation_v2`, `runner_apply_isolation_v3`, `integration`, `runner_use_c_worker`, others | The happy path; covered everywhere. |
 | `bad_policy` | defensive host policy-hash failure (`computePolicyHash`) | `runner_unit` (`EnvelopeInvariantTests`) | Public admission refuses missing source or wrong format as `bad_request` before this boundary. A published compilation/setup/application failure maps to `runner_failed`. |
 | `bad_request` | controller syntax/version/selector/augment checks + host closed request decode + `CWorkerOrchestrator.admissionFailure(for:)` (capacity first) + `requestMeaningFailure` | `runner_outcome_bad_request/accepted_input_contract`, `runner_unit`, `runner_use_c_worker.duplicate_step_id_rejected`, `failure_boundaries.admission` | Structured `request_failure` names the refusal and location. Unknown filters, unsupported attempt pairs, duplicate IDs and inapplicable fields refuse the whole specimen before children. Known unavailable predictions retain their per-step observations. |
 | `worker_spawn_failed` | host (PWRunnerService) | `runner_outcome_worker_spawn_failed` | Driven via `_test_overrides.worker_executable_path`. |

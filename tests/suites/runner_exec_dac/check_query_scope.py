@@ -98,7 +98,7 @@ def main():
             assert not consumer.validate(envelope), consumer.validate(envelope)
             consumer_evidence[name] = consumer.steps(envelope)
             assert rc == 0 and envelope['result']['ok'] is True, (name, envelope)
-            assert runner['normalized_outcome'] == 'ok'
+            assert runner['normalized_outcome'] == 'finished'
             assert runner.get('test_overrides') is None
             assert runner['runner_subprocess']['exit_code'] == 0
             assert runner['phases'][0]['validator_subprocess']['exit_code'] == 0

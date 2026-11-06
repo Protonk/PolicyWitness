@@ -149,6 +149,8 @@ fn specimen_smoke_file_read_deny() {
         .and_then(|v| v.get("runner_result"))
         .cloned()
         .expect("missing data.runner_result");
+    assert_eq!(envelope["result"]["normalized_outcome"], "finished");
+    assert_eq!(runner["normalized_outcome"], "finished");
     let steps = runner
         .get("steps")
         .and_then(|v| v.as_array())
@@ -158,7 +160,9 @@ fn specimen_smoke_file_read_deny() {
     let step = &steps[0];
     let sb = step.get("sandbox_check").cloned().unwrap_or_default();
     assert_eq!(sb.get("outcome").and_then(|v| v.as_str()), Some("deny"));
-    assert!(step["attempt"].is_object());
+    assert_eq!(step["attempt"]["outcome"], "open_failed");
+    assert_ne!(step["attempt"]["rc"], 0);
+    assert_eq!(step["comparison"]["observation"], "permission_failure");
 }
 
 static SBPL_CHECK_REQUESTS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
@@ -802,8 +806,8 @@ fn augment_applied_records_the_applied_augmentation() {
         envelope
             .pointer("/result/normalized_outcome")
             .and_then(|v| v.as_str()),
-        Some("ok"),
-        "augmented run did not reach ok: envelope={envelope}"
+        Some("finished"),
+        "augmented run did not finish: envelope={envelope}"
     );
 
     let aug = envelope

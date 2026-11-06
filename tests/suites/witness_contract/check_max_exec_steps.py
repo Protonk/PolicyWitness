@@ -41,7 +41,7 @@ def main():
     reply = client['transport']['runner_reply']
     assert reply['truncated'] is False and reply['bytes_received'] == reply['bytes_retained'], reply
     runner = data['runner_result']
-    assert runner['normalized_outcome'] == 'ok', runner['normalized_outcome']
+    assert runner['normalized_outcome'] == 'finished', runner['normalized_outcome']
     assert runner['runner_subprocess']['exit_code'] == 0, runner['runner_subprocess']
     assert [step['step_id'] for step in runner['steps']] == ids, 'step identity or count lost'
     unspawned = []

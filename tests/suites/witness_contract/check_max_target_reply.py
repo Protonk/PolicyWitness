@@ -125,7 +125,7 @@ def request_steps(request):
 
 
 def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=False, exec_output=None):
-    assert runner['normalized_outcome'] == 'ok', runner['normalized_outcome']
+    assert runner['normalized_outcome'] == 'finished', runner['normalized_outcome']
     assert runner.get('admission_failure') is None, runner.get('admission_failure')
     assert [step['step_id'] for step in runner['steps']] == [step['step_id'] for step in request_steps(request)]
     errors = consumer.validate(runner)

@@ -395,7 +395,7 @@ func classify(
             return ClassifiedRun(outcome: NormalizedOutcome.validatorUnavailable, rc: 1,
                                  error: "validator not invoked; expected \(expectedVerdictCount) query results")
         }
-        return ClassifiedRun(outcome: NormalizedOutcome.ok, rc: 0, error: nil)
+        return ClassifiedRun(outcome: NormalizedOutcome.finished, rc: 0, error: nil)
 
     case .failure(let err, _):
         switch err {
@@ -443,6 +443,6 @@ func classify(
             return ClassifiedRun(outcome: NormalizedOutcome.validatorUnavailable, rc: 1,
                                  error: "validator: " + problems.joined(separator: "; "))
         }
-        return ClassifiedRun(outcome: NormalizedOutcome.ok, rc: 0, error: nil)
+        return ClassifiedRun(outcome: NormalizedOutcome.finished, rc: 0, error: nil)
     }
 }

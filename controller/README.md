@@ -90,7 +90,7 @@ diagnostic, without inventing a validator subprocess or verdict.
 
 | Exit | Meaning |
 | --- | --- |
-| `0` | `result.ok=true`. |
+| `0` | `result.ok=true`, `result.normalized_outcome="finished"`: execution and required evidence collection completed; individual attempts can fail. |
 | `1` | Runner-reported failure, `bad_request`, or unreadable/unsupported reply. Malformed request JSON, versions, selectors and augments are `bad_request`, including controller refusals before XPC. `data.request_failure` carries the structured refusal. |
 | `2` | Usage or tool failure: missing/unreadable request, unavailable runner, manifest failure or request-delivery failure. The run envelope retains the dossier collected so far and any client capture already obtained. |
 
@@ -120,7 +120,7 @@ evidence. The built-in selection control uses an app root without an Info.plist.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 26, controller envelope 11, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 27, controller envelope 12, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field

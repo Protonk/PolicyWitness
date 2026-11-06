@@ -19,10 +19,10 @@ from lifecycle_contract import CAUSE_LABELS
 import consumer
 
 OVERRIDES = {'worker_pre_ready_hang_ms': 10000, 'worker_timeout_ms': 200}
-# `ok` and `bad_policy` are live outcomes. The other two spellings have no
+# `finished` and `bad_policy` are live outcomes. The other two spellings have no
 # constant; they stay forbidden so no producer can reintroduce a library or
 # sandbox-cause claim under them.
-FORBIDDEN_OUTCOMES = {'ok', 'sandbox_apply_failed', 'bad_policy', 'runner_sandbox_denied'}
+FORBIDDEN_OUTCOMES = {'finished', 'sandbox_apply_failed', 'bad_policy', 'runner_sandbox_denied'}
 
 
 def library_claims(value, path='runner'):
@@ -137,7 +137,7 @@ def common_evidence(envelope, rc, specimen, failure):
             assert attempt['errno'] is None, attempt
             assert attempt['requested_path'] == submitted['attempt']['target'], attempt
     else:
-        assert runner['normalized_outcome'] == 'ok', runner
+        assert runner['normalized_outcome'] == 'finished', runner
         assert runner['sandboxed_after_apply'] is True, runner
         assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
         assert worker['partial_steps'] is False, worker

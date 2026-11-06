@@ -1,6 +1,6 @@
 {
   "bundle_id": "com.policywitness.policy-witness.PWRunner",
-  "normalized_outcome": "ok",
+  "normalized_outcome": "finished",
   "phases": [
     {
       "action_ids": [
@@ -378,7 +378,7 @@
     }
   },
   "sandboxed_after_apply": true,
-  "schema_version": 26,
+  "schema_version": 27,
   "specimen_id": "M01",
   "steps": [
     {

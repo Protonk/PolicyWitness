@@ -78,7 +78,7 @@ def main():
                 (p.get('validator_subprocess') or {}).get('reaped') is True for p in reply['phases']) and (
                 len(receipts) == len(phases) and all(r.get('native_validator_reaped') is True for r in receipts))
             assert owner['children_confirmed'], 'owned PW cleanup uncertain; preserve workspace'
-            assert result.returncode == 0 and reply['normalized_outcome']=='ok', reply
+            assert result.returncode == 0 and reply['normalized_outcome']=='finished', reply
             assert consumer.validate(envelope)==[], consumer.validate(envelope)
             assert len(receipts)==len(phases)
             assert {r['target_pid'] for r in receipts}=={process['pid']}

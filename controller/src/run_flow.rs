@@ -785,7 +785,7 @@ fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
             .and_then(|r| r.get("request_failure"))
             .cloned();
     }
-    let ok = runner_outcome == "ok";
+    let ok = runner_outcome == "finished";
     let exit_code = if ok { 0 } else { 1 };
 
     let client_output = data.runner_client.as_ref().map(|c| &c.output);
@@ -892,6 +892,31 @@ mod tests {
     }
 
     #[test]
+    fn finished_run_preserves_successful_and_failed_attempts() {
+        let steps = vec![
+            step("allowed", "open_read", "/allowed", "succeeded"),
+            step("denied", "open_read", "/denied", "permission_failure"),
+            step("missing", "open_read", "/missing", "other_failure"),
+        ];
+        for outcome in ["finished", "ok", "runner_failed", "validator_unavailable"] {
+            let reply = reply_with(outcome, None, steps.clone());
+            let (result, data, code) =
+                execution_envelope(complete_execution(execution_data(Some(reply.clone()))));
+            let wire: Value = serde_json::from_str(
+                &json_contract::render_envelope("run", result, &data).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(code, if outcome == "finished" { 0 } else { 1 });
+            assert_eq!(wire["result"]["ok"], outcome == "finished");
+            assert_eq!(wire["result"]["normalized_outcome"], outcome);
+            assert_eq!(wire["data"]["runner_result"], reply);
+            assert_eq!(reply["steps"][0]["attempt"]["outcome"], "ok");
+            assert_eq!(reply["steps"][1]["attempt"]["outcome"], "open_failed");
+            assert_eq!(reply["steps"][2]["attempt"]["errno"], 2);
+        }
+    }
+
+    #[test]
     fn execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields() {
         let rows = vec![
             step("a", "open_write", "/attempt", "permission_failure"),
@@ -905,7 +930,7 @@ mod tests {
                     row["phase_id"] = json!(format!("phase{i}"));
                 }
             }
-            let success = reply_with("ok", None, steps.clone());
+            let success = reply_with("finished", None, steps.clone());
             let failed = reply_with("runner_failed", Some(9), steps);
             let mut no_pid = success.clone();
             no_pid["runner_subprocess"]
@@ -946,7 +971,7 @@ mod tests {
 
     #[test]
     fn malformed_phase_claims_withhold_projection_and_preserve_raw_reply() {
-        let mut baseline = worker("ok", None);
+        let mut baseline = worker("finished", None);
         baseline["phases"][0]["collection_status"] = json!("not_reached");
         baseline["phases"][0]["validator_subprocess"] = Value::Null;
         baseline["phases"][0]["ordering"]["validator_disposition"] = json!("not_invoked");
@@ -1344,7 +1369,7 @@ for control in json.load(sys.stdin):
             ("phase2-expiry", "runner_failed"),
             ("phase2-expiry-delayed-host", "runner_failed"),
             ("sticky-provenance", "runner_failed"),
-            ("arithmetic-local", "ok"),
+            ("arithmetic-local", "finished"),
         ] {
             replies.push((name.to_string(), outcome));
         }
@@ -1354,7 +1379,7 @@ for control in json.load(sys.stdin):
             assert_eq!(reply["normalized_outcome"], outcome, "{name}");
             let (result, data, code) =
                 execution_envelope(complete_execution(execution_data(Some(reply.clone()))));
-            assert_eq!(code, if outcome == "ok" { 0 } else { 1 }, "{name}");
+            assert_eq!(code, if outcome == "finished" { 0 } else { 1 }, "{name}");
             let wire: Value = serde_json::from_str(
                 &json_contract::render_envelope("run", result, &data).unwrap(),
             )
@@ -1584,8 +1609,8 @@ else:
     #[test]
     fn delivery_failure_takes_precedence_and_retains_the_client_frame_unread() {
         let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
-        let reply = worker("ok", None);
-        let unsupported = json!({"schema_version": current + 1, "normalized_outcome": "ok"});
+        let reply = worker("finished", None);
+        let unsupported = json!({"schema_version": current + 1, "normalized_outcome": "finished"});
         let mut broken = client_run(Some(&reply));
         broken.request_delivery = Some(RequestDelivery {
             bytes_written: 1,
@@ -1680,7 +1705,7 @@ else:
         assert_eq!(serde_json::to_value(&failed_client).unwrap(), before);
         let mut invoked = 0;
         for reply in [
-            worker("ok", None),
+            worker("finished", None),
             worker("runner_failed", Some(9)),
             worker("xpc_timeout", None),
             xpc_error.clone(),
@@ -2253,7 +2278,7 @@ else:
         fn controlled_reply() -> Value {
             json!({
                 "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
-                "normalized_outcome": "ok", "rc": 0, "pid": 77,
+                "normalized_outcome": "finished", "rc": 0, "pid": 77,
                 "specimen_id": "controlled", "steps": [],
             })
         }
@@ -2409,7 +2434,7 @@ else:
             let (wire, exit_code) = envelope_of(&observed.output);
             assert_eq!(exit_code, 0);
             assert_eq!(wire["result"]["ok"], true);
-            assert_eq!(wire["result"]["normalized_outcome"], "ok");
+            assert_eq!(wire["result"]["normalized_outcome"], "finished");
             let specimen = &wire["data"]["specimen"];
             // App provenance consumed the same load: it names the loaded path.
             assert_eq!(
@@ -3045,7 +3070,7 @@ else:
                 ok: true,
                 rc: Some(0),
                 exit_code: Some(0),
-                normalized_outcome: Some("ok".into()),
+                normalized_outcome: Some("finished".into()),
                 errno: Some(0),
                 error: Some("constructed".into()),
                 stderr: Some("".into()),
@@ -3246,7 +3271,7 @@ else:
             };
             let reply = json!({
                 "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
-                "normalized_outcome": "ok", "rc": 0, "pid": 42, "steps": [],
+                "normalized_outcome": "finished", "rc": 0, "pid": 42, "steps": [],
             });
             let data = RunData {
                 execution: ExecutionData {

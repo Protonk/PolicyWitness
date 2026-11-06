@@ -63,7 +63,7 @@ def main():
             assert rc == 0, f"specimen failed instead of continuing: CLI exit {rc}"
             envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert envelope['result']['ok'] is True and runner['normalized_outcome'] == 'ok'
+            assert envelope['result']['ok'] is True and runner['normalized_outcome'] == 'finished'
             assert runner.get('test_overrides') is None
             assert runner['runner_subprocess']['exit_code'] == 0
             assert runner['runner_subprocess'].get('term_signal') is None

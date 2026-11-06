@@ -54,6 +54,10 @@ ad-hoc runner with a unique `com.policywitness.test.*` service in a unique direc
 under `/private/tmp`, so launching it does not depend on Desktop/Documents
 privacy consent when the checkout or artifacts live there. Its modified plist,
 signing output, and install/verify/remove results stay in the case artifacts.
+The renamed source is resealed with the app's Developer ID before installation,
+keeping its host and worker teams consistent for source verification. The public
+installer then converts the complete copy to ad-hoc signatures and refreshes its
+equipment inventory; the case therefore requires the matching signing identity.
 Exit cleanup removes the service before deleting the temporary bundle; a failed
 service removal retains the bundle and fails the case.
 
@@ -125,7 +129,7 @@ absence. Unseen samples and missed short-lived processes do not establish exit.
 A bounded post-sequence observation retains direct exits for every seen
 generation before session cleanup. Missing exits, invalid envelopes, interrupted
 logging or watchdog intervention make the experiment incomplete. Host outcomes and client transport terminals are counted separately, including
-`ok`, `xpc_error` and `xpc_timeout`, without a required success ratio or causal
+`finished`, `xpc_error` and `xpc_timeout`, without a required success ratio or causal
 interpretation. A transport failure need not contain a host result.
 
 `retirement/` retains every request and raw capture, per-request observations,

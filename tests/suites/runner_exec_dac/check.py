@@ -55,7 +55,7 @@ def main():
         assert rc == 0 and envelope["result"]["ok"] is True, (name, rc, envelope)
         assert not consumer.validate(envelope), (name, consumer.validate(envelope))
         runner = envelope["data"]["runner_result"]
-        assert runner["normalized_outcome"] == "ok"
+        assert runner["normalized_outcome"] == "finished"
         assert runner.get("test_overrides") is None
         assert len(runner["steps"]) == 1
         step = runner["steps"][0]

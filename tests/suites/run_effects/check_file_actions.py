@@ -121,7 +121,7 @@ def main():
         envelope = run.load_json()
         assert envelope['kind'] == 'run' and envelope['result']['ok'] is True, name
         runner = envelope['data']['runner_result']
-        assert runner['normalized_outcome'] == 'ok', (name, runner['normalized_outcome'])
+        assert runner['normalized_outcome'] == 'finished', (name, runner['normalized_outcome'])
         assert runner.get('test_overrides') is None, name
         assert len(runner['steps']) == 1, name
         step = runner['steps'][0]

@@ -103,14 +103,16 @@ def validate_run_shape(run, expected_steps, *, policy_format=None,
         errors.append("result is not an object")
     elif result.get("ok") is not True:
         errors.append(f"expected result.ok=true (got {result.get('ok')!r})")
+    if isinstance(result, dict) and result.get("normalized_outcome") != "finished":
+        errors.append(f"expected result.normalized_outcome=finished (got {result.get('normalized_outcome')!r})")
     data = run.get("data")
     if not isinstance(data, dict):
         return errors + ["data is not an object"], []
     runner = data.get("runner_result")
     if not isinstance(runner, dict):
         return errors + ["missing data.runner_result"], []
-    if runner.get("normalized_outcome") != "ok":
-        errors.append(f"expected runner normalized_outcome=ok (got {runner.get('normalized_outcome')!r})")
+    if runner.get("normalized_outcome") != "finished":
+        errors.append(f"expected runner normalized_outcome=finished (got {runner.get('normalized_outcome')!r})")
     if policy_format and runner.get("policy_format") != policy_format:
         errors.append(f"expected policy_format={policy_format!r} (got {runner.get('policy_format')!r})")
     if require_sandboxed_after_apply and runner.get("sandboxed_after_apply") is not True:
