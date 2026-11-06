@@ -15,6 +15,11 @@ investigate mechanisms, without reproducing their tours. The document must
 distinguish measured consumption, logical capacity, constructed bounds and
 source-supported mechanisms.
 
+Cover ordinary specimens and actor extension specimens in the same three cases.
+Extension coverage follows the additional regions, private custody, deliveries
+and native handles through their own lifetimes; it does not attempt to measure
+private kernel extension storage or infer revocation from a release result.
+
 Preparation used three independent, read-only scouts against commit
 `2022f3261e7a2c9e59db35d245525443ddd444ad`. Their full reports were not preserved
 in the repository; the source-findings table retains their reconciled summary.
@@ -36,9 +41,9 @@ assignment determines depth, not permission to omit the other two cases.
 
 | Case | Required scope | Required distinctions |
 | --- | --- | --- |
-| Waiting | Begin with an identified worker that has arrived at a phase boundary while requested attempts remain paused. Follow worker, host, validator and any parked actors through release, expiry and cancellation. | Elapsed time versus CPU time; requested-action quiescence versus process activity; objects held versus work performed; exit request versus observed exit/reap. |
-| Response storage and transport | Follow publications through host collection, reply construction and encoding, XPC, client capture, controller collection and decoding, envelope rendering and disposal. Compare a small admitted workload with a large reachable workload. | Configured capacity, synthesized encoded bound, actual encoded bytes, retained bytes, allocation size/capacity, virtual mappings and live-memory observations. Establish coexistence and backing identity before adding quantities. |
-| Aftermath | Compare starting state, CLI return and the relevant resource-specific teardown boundaries for ordinary completion and at least one failed/interrupted path. Observe before harness cleanup. | Requested specimen effects, requested output artifacts, pre-existing installation state, PW apparatus resources and observer resources; presence, confirmed absence and unknown inspection. |
+| Waiting | Begin with an identified worker that has arrived at a phase boundary while requested attempts remain paused. Follow worker, host, validator and parked actors through release, expiry and cancellation, including a hold with established extension custody, delivery and a candidate native handle. | Elapsed time versus CPU time; requested-action quiescence versus process activity; objects held versus work performed; exit request versus observed exit/reap. |
+| Response storage and transport | Follow publications through host collection, reply construction and encoding, XPC, client capture, controller collection and decoding, envelope rendering and disposal. Compare small and large ordinary workloads with a reachable actor-extension workload. | Configured capacity, synthesized encoded bound, actual encoded bytes, retained bytes, allocation size/capacity, virtual mappings and live-memory observations. Establish coexistence and backing identity before adding quantities; authority bytes never become reply payload. |
+| Aftermath | Compare starting state, CLI return and resource-specific teardown for ordinary and actor-extension completion and post-invocation timeout. Observe before harness cleanup. | Requested specimen effects, requested output artifacts, pre-existing installation state, PW apparatus resources and observer resources; presence, confirmed absence and unknown inspection; byte erasure, mapping disposal, native release, exit and reap. |
 
 Use each resource's own ending condition. Examples include closing the last
 descriptor, unmapping a view, dropping a copied representation, an identified
@@ -51,6 +56,10 @@ In particular, a numbered release ends the hold, not the evidence mapping's
 lifetime. The host's launch-only evidence descriptor closes after spawn, its
 mapping ends at session teardown, and worker references end independently at
 process exit. Waiting rows and diagrams must preserve these separate endings.
+For extensions, an erased slot or private custody buffer can remain mapped;
+delivery settlement and byte erasure do not end a consumed native handle.
+Record native release results separately from process exit and from any later
+file-access observation. The footprint account makes no kernel revocation claim.
 
 ## Source findings that constrain the proposal
 
@@ -60,6 +69,7 @@ These are starting points for verification, not newly measured consumption.
 | --- | --- | --- |
 | Release and parked-actor waits poll continuously, including batches of ARM `yield` hints; the host uses separate sleeping/polling loops. | [`wait_for_proceed`, `wait_for_activation`, `cpu_relax`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`ActorScheduler`](../runner/Sources/PWRunnerCore/ActorScheduler.swift); [proceed controls](../tests/suites/runner_c_worker_harness/README.md). | An unchanged target and a held phase establish paused requested actions, not low CPU. Measure CPU over an independently established hold. |
 | Each worker gets a fixed evidence region, initialized even for a small plan. Host and worker map one backing object. | [`PWShmLayout`](../runner/Sources/PWRunnerCore/CWorker.swift), [`ActorSession`](../runner/Sources/PWRunnerCore/ActorSession.swift), [ABI golden](../tests/fixtures/contract/abi_layout.txt). | Derive logical geometry from current layout evidence. Do not count aliases as separate backing objects or call logical bytes resident memory. Include authority regions only where used. |
+| An authority-bearing actor plan prepares a separate authority region for every actor, including zero-slot actors, and a private host buffer for every admitted token before launching workers. Last-use erasure leaves allocations in place until teardown; native handles have independent lifetimes. | [`AuthorityCustody`, `ActorAuthorityRegion`, `TokenCustody`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift), [`prepare_authority`, `attempt_extension_consume_actor`, `erase_authority`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [worker resource inventory](WORKER.md#detailed-capability-inventory), [authority controls](../tests/suites/runner_c_worker_harness/README.md). | Account separately for evidence backing, authority backing, host custody copies, logical slot capacity, actual token lengths and candidate handles. Use metadata and scoped controls; never dump bearer bytes to measure them. |
 | Collected host values can overlap their source mapping, but sessions tear down before later reply assembly/encoding stages. | [`ActorSession.collectOutput` / `tearDown`](../runner/Sources/PWRunnerCore/ActorSession.swift), [`finish`](../runner/Sources/PWRunnerCore/ActorScheduler.swift), [`CWorkerOrchestrator`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift). | Construct a stage/lifetime account before calculating totals; do not add all representations from the whole run. |
 | The controller collects complete child stdout/stderr before applying retention limits. Parsed capture, base64 text, decoded host bytes and parsed host objects overlap at particular stages. | [`run_with_stdin` / `capture_json_output`](../controller/src/utils.rs), [`parse_runner_client_output`](../controller/src/runner_client.rs), [`render_envelope` / `sort_value`](../controller/src/json_contract.rs). | The cap is a retention bound, not a streaming-memory bound. Final envelope construction and pretty-printing need their own accounting. |
 | The synthesized maximum is a conservative constructed reply, not a reachable workload or a memory peak. The live-size receipts record host reply bytes and client stdout bytes separately. | [`ReplyMaximumTests`](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift), [`ReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift), [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py), [check_max_exec_steps.py](../tests/suites/witness_contract/check_max_exec_steps.py). | Compare `host_reply_bytes` (`runner_client.transport.runner_reply.bytes_received`) with the synthesized host bound and `client_stdout_bytes` (`runner_client.stdout_bytes_received`, the versioned capture with its base64 reply) with the controller allowance. Keep both counts in every new receipt. |
@@ -180,12 +190,41 @@ Choose these concrete workloads before measurement:
   version of the escaped exec workload. The ordinary phase cap is
   eight; sixteen phases requires actor form.
   The synthesized maximal reply remains a separate constructed control.
+- **Actor response:** also reuse `extension_action_maximum`, built by
+  `actor_maximum` in `check_max_target_reply.py`: eight actors, sixteen phases,
+  256 aggregate actions, 32 issues, 64 transfers, 64 consumes, 64 releases and
+  32 ordinary reads. Retain its actor identities, equal settled deliveries,
+  native results, known-byte reads, setup/equipment evidence and available
+  per-actor profile receipts. This measures a different reachable response;
+  neither it nor the ordinary exec workload is a universal memory maximum.
 - **Waiting variation:** one worker, followed by a legal multi-actor specimen
   with constant aggregate requested actions and additional parked workers.
   Confirm their actual activation/arrival states before comparison.
-- **Aftermath variation:** ordinary small-run completion; a controlled client
-  timeout after invocation while collection is held; and the existing known
-  descendant-survival/worker-death controls as observer challenges.
+- **Actor lifecycle:** use a compact two-actor specimen built with
+  [extension_actors.py](../tests/lib/extension_actors.py): an unapplied,
+  unentitled issuer and an applied selected subject with the ordinary allow
+  policy. Issue one read token and transfer a first delivery; let the subject
+  consume it in a separate visit. Hold the subject's next read-bearing phase
+  at validator acknowledgement, with a second consume of that delivery and
+  release of both handles still pending. Include `open_write` against a separate
+  owned, nonempty marker in that held phase so its unchanged bytes and later
+  truncation independently witness requested-action ordering. A later issuer
+  visit transfers the same token again, followed by the subject's final consume
+  and release.
+  Thus the hold retains private custody for a later transfer, settled inbound
+  bytes for a later consume, a candidate handle and a parked issuer. Reuse this
+  schedule for waiting and aftermath; participating actors do not exec.
+- **Aftermath variation:** ordinary small-run and actor-lifecycle completion;
+  a controlled client timeout after invocation during each form's held
+  collection; and the existing known descendant-survival/worker-death controls
+  as observer challenges. The actor timeout must reach the established
+  custody/delivery/handle hold, not merely actor setup.
+
+Use the actor lifecycle to observe apparatus lifetimes, not to attribute access
+to extensions: the ordinary allow policy keeps that separate question out of
+this measurement. Its chosen read still returns independently known bytes.
+Keep the ordinary actor-count comparison separate from adding extension actions;
+the latter changes both work and storage and cannot isolate the cost per actor.
 
 Treat installed BYOXPC services, bundles and registry entries as baseline.
 If a fixture needs an installation, inventory it before the specimen and keep
@@ -224,6 +263,10 @@ Trace host collection and encoding, client capture, controller full collection,
 parsing/decoding and final envelope rendering. Record creation and last-use
 boundaries, known overlaps and shared backing; include validator raw/decoded
 records where material. Mark unestablished relationships explicitly.
+For actor replies, trace setup/equipment, actor/phase, extension-event, transfer
+and resource records through the same stages. The authority channels carry
+bearer bytes outside this response path; their metadata and lifetime ledger
+must not imply that those bytes are encoded or copied into the reply.
 
 ## 2. Draft questions, rows and relationships
 
@@ -297,13 +340,14 @@ observation does not establish that it occurred.
 Set one material question per case, starting from these:
 
 - **Waiting:** How much CPU time accumulates during a validator-gate-acknowledged
-  hold, and how does adding parked actors change demand?
+  hold, how does adding parked actors change demand, and which extension
+  resources persist during the actor-lifecycle hold?
 - **Response:** What resident and physical-footprint bytes are observed in a
-  fresh controller handling each small/large response, and which internal
-  representations coexist despite the retention cap?
+  fresh controller handling the ordinary and actor-extension responses, and
+  which internal representations coexist despite the retention cap?
 - **Aftermath:** Which run-created apparatus resources remain at CLI return
-  after ordinary completion and a post-invocation timeout, and what independent
-  observations establish their end?
+  after completion and a post-invocation timeout in each form, and which
+  observations establish their distinct endings?
 
 Refine a question where reconciliation found a more consequential uncertainty.
 The provisional tables record claims, missing evidence and the observation
@@ -336,16 +380,19 @@ graph IDs and hyphenated file stems, initially:
 
 - `footprint_waiting` / `footprint-waiting`: worker polling, host/validator work,
   shared backing and views, protocol descriptors, parked actors where applicable,
-  and release, expiry and cancellation edges.
+  retained authority/custody and candidate handles, and release, expiry and
+  cancellation edges. Distinguish phase release from native handle release.
 - `footprint_response` / `footprint-response`: source mappings and copied host
   values, reply objects, encoded host bytes, XPC, client base64/capture,
   controller raw collection, parsed/decoded forms and final envelope. Split
-  host/client from controller if one figure makes overlaps unreadable.
+  host/client from controller if one figure makes overlaps unreadable. Include
+  actor metadata; label authority channels as outside the encoded response.
 - `footprint_aftermath` / `footprint-aftermath`: baseline objects,
   run-introduced/changed objects, independent completion boundaries, expected
   end events, observed remaining state and separately marked later harness
-  interventions. It may extend the other lifetime diagrams where that avoids
-  duplication.
+  interventions, including separate authority erasure, unmapping and native
+  release observations. It may extend the other lifetime diagrams where that
+  avoids duplication.
 
 Preserve existing Helvetica typography, light process/storage colors, named
 clusters, short edge labels, stable IDs and linked citation tables. Identify
@@ -401,6 +448,10 @@ unknown optional quantities are null with a reason, never zero or omitted.
 Required quantities cannot be unknown. Retain raw samples and every repetition.
 Each case specifies its additional schema and assertion contract. Quantities
 without a universal bound remain scoped observations.
+Extension observations retain only lengths, capacities, references and
+publication/ownership metadata, never bearer bytes, previews or token hashes.
+Use the existing synthetic-authority controls for byte equality and erasure
+sensitivity; they do not authorize reading live authority bytes into receipts.
 
 Each case below has the same three lists. Deterministic assertions decide the
 pass. The measured receipt schema names what is recorded, without a pass
@@ -423,9 +474,10 @@ regenerate the figures as part of that update.
 ### Waiting: measured demand during an independently held phase
 
 **Question.** How much CPU time accumulates during a validator-gate-acknowledged
-hold, and how does adding parked actors change demand? The source establishes
-active polling, not a utilization percentage, so compare identified workers with
-an independently sleeping control over the same observation window.
+hold, how does adding parked actors change demand, and which extension
+resources persist during the actor-lifecycle hold? The source establishes active
+polling, not a utilization percentage, so compare identified workers with an
+independently sleeping control over the same observation window.
 
 Extend the acknowledged gate machinery in
 [check_ordering.py](../tests/suites/witness_contract/check_ordering.py) and the
@@ -436,13 +488,24 @@ collection to worker arrival. Describe that source-qualified connection, not a
 direct external read of `phase.arrived`. Actor comparisons additionally need a
 host/harness snapshot of acquire-loaded setup, activation, arrival and progress
 publications with generation identities; process presence alone is insufficient.
+For the actor-lifecycle hold, extend that snapshot with custody and delivery
+publication metadata and the earlier consume result. Record its internal scope
+separately from the external CPU and file observations; a later reply cannot
+substitute for the required held-state observation.
 
 **Deterministic assertions**
 
 - Gate acknowledgement precedes the measured hold; repeated independent target
-  reads remain unchanged and the exec rendezvous remains absent until release.
+  reads remain unchanged and, for exec workloads, the rendezvous remains absent
+  until release. The actor lifecycle's marker remains unchanged until release.
   The expected effects occur afterward. These assertions concern the selected
   actions, not absence of all syscalls.
+- The actor hold names both live generations, the parked issuer and arrived
+  subject, accepted custody, equal settled first delivery and a published
+  candidate-producing consume with its release still pending. Later declared
+  uses explain retained custody and inbound bytes; no planned reference or
+  process presence alone establishes these states. The final reply must retain
+  the expected transfers, consumes, releases and known-byte read.
 - Every required start/end CPU sample succeeds and names the same live process
   generation. Per-process user/system counters are nondecreasing. The worker,
   busy-control and sleeping-control samples cover a matched held window, with
@@ -473,14 +536,19 @@ publications with generation identities; process presence alone is insufficient.
 - `processes[]`: role, PID and generation identity at both endpoints,
   `user_cpu_ns` and `system_cpu_ns` before/after, derived deltas, sample times
   and native return/error. Worker and both controls are required; host,
-  validator and parked actors have separate records when measured.
+  validator and parked actors have separate records when measured. Every actor
+  included in a CPU comparison needs matched endpoint samples.
 - `conditions`: accounting quantum and its calibration evidence, power state,
   system-sleep observation, repetitions, sample cadence and endpoint skew.
   `observer`: its own CPU delta and cadence. Keep sparse/dense sampling checks
   separate so observer work is not attributed to PW.
 - `actor_states[]`, when comparing actors: generation, setup/activation/arrival/
   acknowledgement/progress publications and observation boundary. Record the
-  internal scope; report aggregate CPU only for the identified processes.
+  internal scope; report aggregate CPU only for the identified processes. For
+  the actor lifecycle include `authority_resources[]`: per-actor region geometry
+  and shared-view identity, per-token custody capacity and accepted length,
+  delivery settlement/last-use metadata, and candidate handle/release state.
+  Distinguish observed publications from source-derived allocation lifetimes.
 
 **Controls that must fail**
 
@@ -491,6 +559,10 @@ publications with generation identities; process presence alone is insufficient.
 - A receipt presenting process presence as parked-state proof or observer CPU
   as worker CPU. Valid busy/sleeping and held/released fixtures must pass before
   these corrupted observations can establish checker sensitivity.
+- An actor hold taken before its consume, a missing or withdrawn delivery,
+  custody already erased at last transfer, or an already attempted release
+  reported as pending; an erased buffer classified as unmapped. Reject swapped
+  actor/token/delivery references and bearer-byte content in a receipt.
 - The existing premature-effect variants in
   `witness_contract/order_barrier_mutations`, required for the changed hold
   observer by [ordering-control guidance](../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls).
@@ -507,8 +579,8 @@ as unverified; do not promise that this assertion detects every blocking wait.
 ### Response: coexistence and amplification, beyond retention size
 
 **Question.** What resident and physical-footprint bytes are observed in a fresh
-controller handling each small/large response, and which internal
-representations coexist despite the retention cap? Restrict native memory
+controller handling the ordinary and actor-extension responses, and which
+internal representations coexist despite the retention cap? Restrict native memory
 observation to the controller. Host/client framework allocation, XPC backing
 and a pipeline-wide peak remain unresolved in version zero; do not build
 instrumented Swift binaries or stage rendezvous to resolve them.
@@ -529,9 +601,14 @@ nor internal test instrumentation is credited as production memory.
 
 **Deterministic assertions**
 
-- Both workloads are admitted and contain every expected action, output and
-  applicable receipt; retain the existing round-trip/effect checks. Refused or
+- All selected workloads are admitted and contain every expected action, output
+  and applicable receipt; retain the existing round-trip/effect checks. Refused or
   truncated output cannot masquerade as a small response.
+- The actor workload retains the full `actor_maximum` assertions: actor/phase and
+  action counts, native issue/consume/release results, both acknowledgements and
+  equal settlement for every transfer, resource associations, known-byte reads,
+  eligible equipment, reaped actors and applicable profile receipts. Separate
+  its reply metadata from logical authority/custody capacities outside the wire.
 - Strictly decoded base64 length equals retained host bytes, and its SHA-256
   equals the captured host hash for an untruncated reply. Received and retained
   host counts agree; actual host bytes fit the synthesized host bound. Client
@@ -547,7 +624,7 @@ nor internal test instrumentation is credited as production memory.
   generation, with increasing timestamps, both named metrics present in bytes,
   and at least two samples during its verified lifetime. Required inspection
   errors or missing coverage fail observation rather than yielding zero memory.
-  No ordering of small/large memory values or fixed byte threshold is required.
+  No ordering of workload memory values or fixed byte threshold is required.
 
 **Measured receipt schema and conditions**
 
@@ -555,6 +632,11 @@ nor internal test instrumentation is credited as production memory.
   synthesized host bound, host received/retained bytes and hash, base64 character
   count, client stdout/stderr received/retained bytes and allowances, and final
   envelope bytes. Identify each representation; preserve actual wire counts.
+- `actor_workload`, when applicable: planned/observed actor, phase, action,
+  token, delivery and handle counts; per-actor profile receipt bytes; and
+  per-owner evidence, authority and private custody geometry with its derivation.
+  Count shared backing once and host/worker views separately. Candidate handle
+  counts and fixed handle-table capacity are not kernel-memory measurements.
 - `controller`: PID/generation, executable hash, observed launch/exit and sample
   interval. `samples[]`: bracket timestamps, native return/error,
   `ri_resident_size`, `ri_phys_footprint`. `conditions`: requested/actual cadence,
@@ -572,6 +654,9 @@ nor internal test instrumentation is credited as production memory.
 - Swapped host/client-stream counters; incorrect retained length/hash; invalid
   base64; missing output/actions/required receipt; truncation; or the synthesized
   bound presented as measured bytes. Valid receipts must first be accepted.
+- Missing actor setup/equipment, event, transfer, resource or profile evidence;
+  incorrect reference/count associations; shared views counted as distinct
+  backing objects; or token capacity presented as measured reply payload.
 - An omitted/reordered internal boundary, wrong length, capacity below length,
   or a claimed overlap after the source buffer has been dropped. Reuse existing
   receiver rejection controls; do not add another synthetic producer family.
@@ -588,10 +673,10 @@ framework storage and unobserved stage attribution unresolved.
 ### Aftermath: what PW leaves before the harness intervenes
 
 **Question.** Which run-created apparatus resources remain at CLI return after
-ordinary completion and a post-invocation timeout, and what independent
-observations establish their end? Distinguish ordinary asynchronous retirement,
-continuing submitted work, surviving descendants, unresolved cleanup and actual
-apparatus residue.
+completion and a post-invocation timeout in ordinary and actor-extension forms,
+and what independent observations establish their end? Distinguish asynchronous
+retirement, continuing submitted work, surviving descendants, unresolved cleanup
+and actual apparatus residue.
 
 Register `run_effects/aftermath_footprint`, reusing
 [`RunCapture`](../tests/lib/run_capture.py), fixture process identities/exit
@@ -607,6 +692,21 @@ resulting completion. Audit context-manager/finally behavior so `RunCapture.clos
 tree-control release and staging cleanup cannot erase the primary observation.
 Use the existing setup/descriptor controls for component facts that public CLI
 inspection cannot establish, and label that narrower scope.
+Run the actor-lifecycle specimen both to completion and with the client timing
+out during its established extension hold. Inventory all actor evidence and
+authority regions, launch descriptors, private custody buffers and worker
+handle-table storage. Keep the requested native handle lifecycle distinct from
+that apparatus storage. Reuse the waiting snapshot for held publication state;
+observe every launched actor's generation and exit independently. Public
+inspection may leave particular mappings or erasure unknown; cite the existing
+host setup, authority binding, handoff and terminal-erasure controls for their
+narrower component claims, not as observations of this run's cleanup.
+The waiting case's final-reply requirement applies to its completed run. A
+timed-out client may never receive the actor's eventual reply: the aftermath
+case requires the live held-state snapshot and independent process observations,
+and records unavailable terminal metadata as unknown. Later assisted completion
+does not retroactively supply a reply or autonomous teardown observation at
+CLI return.
 
 **Deterministic assertions**
 
@@ -615,10 +715,12 @@ inspection cannot establish, and label that narrower scope.
   None is omitted or unclassified. Absence requires identity-qualified evidence;
   failed inspection is unknown, and name absence does not prove unmapped backing.
 - Baseline, CLI return and resource-specific ending observations are separately
-  identified. Ordinary completion has an identified worker and independent exit
-  observation. The timeout path establishes invocation and the held worker before
-  timeout, then observes that worker still present at CLI return. Missing these
-  required observations fails the case rather than passing an all-unknown ledger.
+  identified. Each completion path has identified workers and independent exit
+  observations. Each timeout path establishes invocation and the held worker
+  before timeout, then observes that worker still present at CLI return. The
+  actor path also establishes the parked issuer and required extension hold
+  state. Missing these required observations fails the case rather than passing
+  an all-unknown ledger.
 - The primary pre-intervention snapshot finishes before every post-return harness
   intervention begins, on one declared observer clock. A later snapshot that
   follows gate release, signalling or cleanup is explicitly marked assisted and
@@ -626,16 +728,20 @@ inspection cannot establish, and label that narrower scope.
 - The known-survivor control is classified present before fixture cleanup; a
   leader's exit cannot classify its descendant absent. Pre-existing registration,
   requested effects/output and observer artifacts keep their proper categories.
-- Choose and record N before execution. Every one of N ordinary runs has its own
-  resource identities and boundary counts; distinguish overlapping retirement,
-  accumulation and unknowns. Do not require zero residue to obtain a pass, but
-  retain failures of subsequent harness cleanup and durable recovery ownership.
+- Choose and record N before execution for each completion form. Every one of
+  those runs has its own resource identities and boundary counts; distinguish
+  overlapping retirement, accumulation and unknowns. Do not require zero residue
+  to obtain a pass, but retain failures of subsequent harness cleanup and durable
+  recovery ownership.
 
 **Measured receipt schema and conditions**
 
 - `inventory[]`: stable object ID, type, owner/ownership basis, creation or
   pre-existence evidence, process generation or file/object identity, and category
   (`baseline`, `specimen_effect`, `requested_output`, `apparatus`, `observer`).
+  Actor entries carry actor/token/delivery/handle references where applicable,
+  shared backing/view relationships and logical capacity separately from
+  published token length or candidate handle count.
 - `snapshots[]`: boundary, start/end observer timestamps, CLI-return-relative
   elapsed time, assisted/unassisted status, and one state/evidence/native-error
   entry per inventoried object. Include the expected ending event and whether
@@ -658,13 +764,19 @@ inspection cannot establish, and label that narrower scope.
 - A reused PID or changed file identity treated as the original object; a live
   descendant classified absent from its leader's exit; the known survivor missed;
   a baseline registration counted as run-created residue.
+- A missing actor or authority object; host detachment classified as shared-byte
+  erasure; native release classified as token erasure or handle-table disposal;
+  last-use byte erasure classified as unmapping; or a component control's cleanup
+  receipt substituted for this run's unresolved ending observation.
 - Missing snapshot/intervention timestamps, a primary snapshot taken after an
   intervention, or an assisted final clean directory substituted for pre-cleanup
   state. Exercise premature cleanup as well as malformed ledger controls.
 
 Keep requested effects and exec descendants visible even when they are not
 apparatus leaks. Shared authority erasure still requires a reaped or
-never-launched owner. Update aftermath rows/diagrams/citations with the original
+never-launched owner; the host can unmap its own view while withholding erasure
+for an unresolved worker. Native release leaves the fixed worker handle table
+in place until exit. Update aftermath rows/diagrams/citations with the original
 observation and separately recorded intervention outcome.
 
 ## 5. Integrate, rotate review and edit
@@ -680,6 +792,9 @@ Add only interactions that change interpretation, such as:
 - Equal wait durations can have different worker/actor CPU demands.
 - Equal retained response bytes can conceal different full collection sizes,
   representation overlap and encoding work.
+- Equal erased-byte counts can coexist with different mapped capacity and
+  candidate handle histories; byte erasure, native release and disposal have
+  different owners and endings.
 - Identical output artifacts can coexist with different surviving processes;
   CLI timeout and CLI success both need resource-specific end observations.
 
@@ -690,6 +805,9 @@ evidence using the rotated accounting model. Require a concrete missing quantity
 owner, interval or observation, or an explanation of why the evidence supports
 the claim despite the alternative perspective. Each also checks effects
 on the other two cases. Record agreement only at the claim's actual scope.
+At least one reconstruction follows the actor lifecycle across the held state,
+reply metadata and post-return observations, checking that authority storage
+was neither omitted nor counted as encoded response bytes.
 
 For each row/diagram pair ask whether the table erased an owner, copy,
 overlapping lifetime, activity or release condition, and whether the diagram
@@ -721,6 +839,7 @@ PW_TEST_OUT_DIR="tests/out/runs/footprint-targeted-<unique>" tests/run.sh \
   --case witness_contract/max_targets_reply_survives \
   --case witness_contract/max_exec_steps_spawn \
   --case witness_contract/order_barrier_mutations \
+  --case witness_contract/extension_boundaries \
   --suite source_drift
 ```
 
@@ -728,6 +847,10 @@ Add `failure_boundaries` and applicable validator/consumer suites if admission
 or receiver behavior changes; use coordinated selection from [tests/AGENTS.md](../tests/AGENTS.md),
 not a narrower memory-only check. Do not treat constructed receiver stress as
 evidence of a reachable specimen.
+The selected runner suites also include authority binding, actor operations,
+terminal erasure, host setup/launch-descriptor controls and actor handoff
+mutations. Retain their assertion scopes separately from the new live actor
+observations; the maximum-reply case includes `extension_action_maximum`.
 
 Check generated documents with:
 
@@ -784,6 +907,11 @@ its agents receive the note. Keep all forward-looking content in these records.
 - The source-findings summary was reconciled against the current baseline.
 - Waiting, response and aftermath each completed assessment, question,
   sensitivity-controlled test, native execution and coupled table/diagram update.
+- Actor extensions receive required live coverage: the established
+  custody/delivery/handle hold, the reachable actor response workload, and
+  completion plus held post-invocation timeout before harness intervention.
+  Authority resources and candidate handles retain their owners and distinct
+  ending conditions; source/component evidence remains labeled at its scope.
 - Each new case satisfies its deterministic assertions, complete receipt schema
   and positive/rejected controls; no recorder-only case receives passing credit.
 - The footprint manifest owns every quantity FOOTPRINT states; its generator,
