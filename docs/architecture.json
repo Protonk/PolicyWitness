@@ -6778,6 +6778,7 @@
             "s26a",
             "s28",
             "a1",
+            "a7",
             "a2",
             "a3",
             "a4",
@@ -7600,7 +7601,14 @@
               "symbol": "prepare_authority"
             }
           ],
-          "checks": [],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test",
+              "scope": "Missing issue, consume and release lookups yield the respective unavailable operations; consume absence preserves the available release setup cell, without inspecting private loader state."
+            }
+          ],
           "note": "Private loader/library internals remain unobserved."
         },
         {
@@ -7623,7 +7631,20 @@
               "symbol": "prepare_authority"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test",
+              "scope": "Native-call controls independently read a zero soft core limit, and injected setrlimit refusal retains its primary result; successful hard-limit readback and later invariance remain source-only."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/check_terminal_erasure.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Production worker main makes no policy read/compile/apply calls after terminal required-setup refusal, while retaining primary and cleanup failures; the continuation mutation violates that assertion."
+            }
+          ]
         },
         {
           "id": "s23",
@@ -8329,7 +8350,20 @@
               "symbol": "attempt_extension_release_actor"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/actor_operations.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Production bodies and run_attempt dispatch bind distinct synthetic consume results to named handles and release the matching handle once; omitted, misrouted and crossed dispatch fail without establishing kernel authority or revocation."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/check_terminal_erasure.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Production-main scenarios count no native release except the explicit-release action; token-byte erasure and process termination do not establish kernel revocation."
+            }
+          ]
         },
         {
           "id": "n5",
@@ -8743,7 +8777,63 @@
               "symbol": "ActorAuthorityRegion"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Copied host acquisition paths independently check descriptor/mapping cleanup and preserve an unlink-failure name until fixture cleanup; they do not observe a shipped run at CLI return."
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test",
+              "scope": "An independent mapping of seeded slots observes erasure only for declared quiescent owners and preservation across repeated finish for unknown owners; the control does not establish a live reap."
+            }
+          ]
+        },
+        {
+          "id": "a7",
+          "label": "Host authority launch\nduplicate",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "A7",
+            "Acquired by": "ActorSession duplicates the authority-region descriptor with F_DUPFD_CLOEXEC and minimum fd 64",
+            "When": "Host preparation before worker compilation/application",
+            "Held across": "Spawn setup through spawn return or failure cleanup",
+            "Release / teardown action": "Host closeAuthorityDuplicate closes the launch duplicate; worker fd 5 closes independently in prepare_authority after mapping",
+            "Authority": "Host-owned reference to the same authority object; spawn dup2 supplies worker fd 5",
+            "Reaches exec children": "Only explicit worker fd 5; high duplicate is close-on-exec and authority-participating actor cannot exec",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "F_DUPFD_CLOEXEC"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "closeAuthorityDuplicate"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_authority"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Requested authority dup2 destinations match child descriptor metadata and owned setup resources close on the exercised paths; metadata does not establish shared backing identity."
+            },
+            {
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "An injected authority-duplication failure prevents launch, and a read-only fixture endpoint remains separate at fd 5 in extension_delivery; this does not establish authority-region backing identity."
+            }
+          ]
         },
         {
           "id": "a2",
@@ -8769,7 +8859,26 @@
               "symbol": "erase_authority"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/authority_binding.sh",
+              "symbol": "authority_binding",
+              "form": "test",
+              "scope": "Production worker setup maps a fixture-created region, including page-rounded maximum geometry, and rejects changed owner/action/delivery assignments; shared observations cover those two fixture views."
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "check_setup_failure",
+              "form": "test",
+              "scope": "Controlled setup refusals retain exact primary and independent cleanup-cell results, suppress application and later native attempts, and retain observed reap; private runtime allocations remain unobserved."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/check_terminal_erasure.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Seeded full-capacity settled inbound bytes are erased before done on the exercised production-main departures while outbound/unsettled bytes remain; fatal interruption can leave bytes, so exit alone does not establish erasure."
+            }
+          ]
         },
         {
           "id": "a3",
@@ -8791,7 +8900,14 @@
               "symbol": "attempt_extension_issue"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test",
+              "scope": "Controlled native issuance observes returned token bytes and erasure of the inspected allocation; free ordering and the uninspected oversized tail remain source-only."
+            }
+          ]
         },
         {
           "id": "a4",
@@ -8799,10 +8915,10 @@
           "kind": "authority",
           "facts": {
             "Inventory ID": "A4",
-            "Acquired by": "AuthorityCustody copies accepted outbound bytes and erases shared source",
-            "When": "After committed issue publication",
-            "Held across": "Declared transfers through last use",
-            "Release / teardown action": "Private erasure at last use/teardown independent of worker publication",
+            "Acquired by": "TokenCustody maps a private buffer; AuthorityCustody later copies accepted outbound bytes and erases the shared source",
+            "When": "Mapping before first actor launch; population after committed issue publication",
+            "Held across": "Mapping until teardown; accepted bytes until last declared transfer or teardown",
+            "Release / teardown action": "Private bytes erased at last use/teardown independently of worker publication; mapping unmapped at teardown",
             "Authority": "Deliberately supplied bearer bytes",
             "Reaches exec children": "No authority-participating actor exec",
             "Role": "A"
@@ -8811,9 +8927,20 @@
             {
               "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
               "symbol": "AuthorityCustody"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "TokenCustody"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/runner_unit/actor_handoff_mutations.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Independent synthetic payload comparisons and outbound erasure observations accept the baseline and reject outbound aliasing and premature erasure; these controls make no native extension calls."
+            }
+          ]
         },
         {
           "id": "a5",
@@ -8839,7 +8966,26 @@
               "symbol": "attempt_extension_consume_actor"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/authority_binding.sh",
+              "symbol": "authority_binding",
+              "form": "test",
+              "scope": "Assigned owner/action/delivery mismatches are rejected and consume waits for accepted host settlement; worker cleanup preserves unsettled inbound bytes and clears settled bytes."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/check_terminal_erasure.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Seeded full-capacity settled inbound bytes are erased before done on the exercised production-main departures while outbound/unsettled bytes remain; fatal interruption can leave bytes, so exit alone does not establish erasure."
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test",
+              "scope": "The live actor schedule checks copied/equal delivery, recipient and matching source acknowledgements, and parked acceptance before the recipient visit; source-acknowledgement controls reject incomplete or mismatched publications."
+            }
+          ]
         },
         {
           "id": "a6",
@@ -8849,7 +8995,7 @@
             "Inventory ID": "A6",
             "Acquired by": "Host creates bounded trailer; worker publishes operation cells and terminal decision",
             "When": "Before compilation/application and terminal cleanup",
-            "Held across": "Host evidence mapping through reply",
+            "Held across": "Host evidence mapping through session collection/teardown; decoded setup values continue into reply",
             "Release / teardown action": "Evidence mapping teardown; no token bytes",
             "Authority": "Reporting apparatus with separate native and publication facts",
             "Reaches exec children": "No authority-participating actor exec",
@@ -8863,9 +9009,36 @@
             {
               "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
               "symbol": "decodeAuthoritySetup"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "finish"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "tearDown"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "check_setup_failure",
+              "form": "test",
+              "scope": "Controlled setup refusals retain exact primary and independent cleanup-cell results, suppress application and later native attempts, and retain observed reap; private runtime allocations remain unobserved."
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test",
+              "scope": "Constructed release-published cleanup cells decode before the terminal setup decision with their native result and cleanup role, while invalid cell flags are rejected; this is receiver eligibility, not a live publication-order measurement."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/check_terminal_erasure.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Production worker main makes no policy read/compile/apply calls after terminal required-setup refusal, while retaining primary and cleanup failures; the continuation mutation violates that assertion."
+            }
+          ]
         }
       ],
       "edges": [
@@ -9742,7 +9915,20 @@
               "symbol": "prepare_authority"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Copied host acquisition paths independently check descriptor/mapping cleanup and preserve an unlink-failure name until fixture cleanup; they do not observe a shipped run at CLI return."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/authority_binding.sh",
+              "symbol": "authority_binding",
+              "form": "test",
+              "scope": "Production worker setup maps a fixture-created region, including page-rounded maximum geometry, and rejects changed owner/action/delivery assignments; shared observations cover those two fixture views."
+            }
+          ]
         },
         {
           "id": "W58",
@@ -9757,7 +9943,14 @@
               "symbol": "AuthorityCustody"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/runner_unit/actor_handoff_mutations.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Independent synthetic payload comparisons and outbound erasure observations accept the baseline and reject outbound aliasing and premature erasure; these controls make no native extension calls."
+            }
+          ]
         },
         {
           "id": "W59",
@@ -9772,7 +9965,20 @@
               "symbol": "serviceTransfer"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test",
+              "scope": "The live actor schedule checks copied/equal delivery, recipient and matching source acknowledgements, and parked acceptance before the recipient visit; source-acknowledgement controls reject incomplete or mismatched publications."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/authority_binding.sh",
+              "symbol": "authority_binding",
+              "form": "test",
+              "scope": "Production recipient controls reject changed assignments and prevent consume or erasure before host settlement; synthetic bytes establish channel ownership, not native authority."
+            }
+          ]
         },
         {
           "id": "W60",
@@ -9787,7 +9993,14 @@
               "symbol": "attempt_extension_consume_actor"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/actor_operations.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Production bodies and run_attempt dispatch bind distinct synthetic consume results to named handles and release the matching handle once; omitted, misrouted and crossed dispatch fail without establishing kernel authority or revocation."
+            }
+          ]
         },
         {
           "id": "W61",
@@ -9802,7 +10015,58 @@
               "symbol": "decodeAuthoritySetup"
             }
           ],
-          "checks": []
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "check_setup_failure",
+              "form": "test",
+              "scope": "Controlled setup refusals retain exact primary and independent cleanup-cell results, suppress application and later native attempts, and retain observed reap; private runtime allocations remain unobserved."
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test",
+              "scope": "Constructed release-published cleanup cells decode before the terminal setup decision with their native result and cleanup role, while invalid cell flags are rejected; this is receiver eligibility, not a live publication-order measurement."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/check_terminal_erasure.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Production worker main makes no policy read/compile/apply calls after terminal required-setup refusal, while retaining primary and cleanup failures; the continuation mutation violates that assertion."
+            }
+          ]
+        },
+        {
+          "id": "W62",
+          "from": "a7",
+          "to": "a2",
+          "kind": "prepares",
+          "label": "Duplicate to worker fd 5; close host launch reference",
+          "short": "Supply worker fd 5",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "authority_spawn_dup2"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "closeAuthorityDuplicate"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Requested authority dup2 destinations match child descriptor metadata and owned setup resources close on the exercised paths; metadata does not establish shared backing identity."
+            },
+            {
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "An injected authority-duplication failure prevents launch, and a read-only fixture endpoint remains separate at fd 5 in extension_delivery; this does not establish authority-region backing identity."
+            }
+          ]
         }
       ]
     }
