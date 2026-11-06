@@ -105,6 +105,8 @@ if get_option('xpc')
     'runner/Sources/PWRunnerCore/PWRunnerRequest.swift',
     'runner/Sources/PWRunnerCore/PWRunnerExtension.swift',
     'runner/Sources/PWRunnerCore/PWRunnerActors.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerEquipment.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift',
     'runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift',
     'runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift',
     'runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift',
@@ -134,7 +136,8 @@ if get_option('xpc')
     'runner/Sources/PWRunnerCore/ActorScheduler.swift',
     'runner/Sources/PWRunnerCore/AuthorityCustody.swift',
     'runner/Sources/PWRunnerCore/ActorOrchestration.swift',
-    'runner/Sources/PWRunnerCore/ExtensionIssuer.swift',
+    'runner/Sources/PWRunnerCore/ActorEquipment.swift',
+    'runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift',
     'runner/Sources/PWRunnerCore/MonotonicDeadline.swift',
     'runner/Sources/PWRunnerCore/ValidatorClient.swift',
     'runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift',
@@ -177,11 +180,4 @@ pw_probe_runner = executable('pw-probe-runner',
   files('controller/tools/pw_probe_runner/pw_probe_runner.c'),
   c_args: c_executable_flags,
   link_args: c_arch + ['-lsandbox', macos_version_min],
-  override_options: executable_options)
-
-# Separate ordinary-authority issuer, embedded and signed without worker entitlements.
-pw_extension_issuer = executable('pw-extension-issuer',
-  files('controller/tools/pw_probe_runner/pw_extension_issuer.c'),
-  c_args: c_executable_flags,
-  link_args: c_arch + [macos_version_min],
   override_options: executable_options)

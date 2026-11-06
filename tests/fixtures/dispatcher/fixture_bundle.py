@@ -33,7 +33,7 @@ FILES = ['Contents/MacOS/' + name for name in
          ('policy-witness', 'pw-runner-client', 'sbpl-check')]
 XPC = 'Contents/XPCServices/PWRunner.xpc'
 FILES += [XPC + '/Contents/MacOS/' + name for name in
-          ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer')]
+          ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-probe-runner-unentitled')]
 HOST = XPC + '/Contents/MacOS/PWRunner'
 WORKER = XPC + '/Contents/MacOS/pw-probe-runner'
 CONTROLLER = FILES[0]

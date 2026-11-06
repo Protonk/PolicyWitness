@@ -396,7 +396,7 @@ func runReplyFailureTests(_ tk: TestKit) {
     tk.group("host reply failure contract") {
         tk.run("malformed request diagnostics do not echo unbounded dictionary keys") {
             let key = String(repeating: "é", count: 32_768)
-            let malformed: [String: Any] = ["schema_version": 5, "specimen_id": "decode",
+            let malformed: [String: Any] = ["schema_version": PWContract.requestSchema, "specimen_id": "decode",
                 "policy": ["format": "sbpl", "sbpl_source": "(version 1)", "params": [key: [1, 2]]],
                 "probe_plan": []]
             let data = try JSONSerialization.data(withJSONObject: malformed)
@@ -564,7 +564,6 @@ func runReplyFailureTests(_ tk: TestKit) {
         }
         tk.run("every stored result field has a coding key and survives a populated round trip") {
             var result = try replyFixture()
-            result.extensions = []
             result.extension_events = []
             result.execution_form = "single_worker"
             result.actors = []
@@ -572,6 +571,16 @@ func runReplyFailureTests(_ tk: TestKit) {
             result.resources = PWRunnerResourceTables(tokens: [], deliveries: [], handles: [])
             result.schedule = PWRunnerScheduleRecord(setup_wait: nil, execution_wait: nil, lifetime_budget_ms: PWActorLimits.lifetimeMs,
                                                      collection_budget_ms: PWActorLimits.collectionMs, cancelled: nil)
+            // The deliberately degraded broad fixture retains every stored
+            // member. It makes no claim that actor apparatus belongs to an
+            // ordinary execution or that a refusal coexists with effects.
+            result.preparation_failure = PWRunnerPreparationFailure(stage: "equipment", code: "equipment_binding_refused",
+                actor_id: "A", binding_ref: "selected", reason: "missing")
+            result.equipment_inventory = PWRunnerEquipmentInventory(path: "/constructed/worker-equipment.json", status: "unobserved")
+            result.equipment_bindings = []
+            result.equipment_entitlements = []
+            result.authority_setup = PWRunnerAuthoritySetup(host: PWRunnerAuthorityHost(
+                run: PWRunnerAuthorityScope(disposition: "not_attempted")), workers: [])
             result.steps[0].comparison = nil
             result = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(result))
             let labels = Set(Mirror(reflecting: result).children.compactMap { $0.label })

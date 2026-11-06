@@ -28,8 +28,8 @@ introspection is a script error, never a pass.
   compared as repository-relative paths: the `PWRunner` target carries the
   core files plus the service entry point, `PWCWorkerShim` the shim's C
   files, `pw-runner-client` the shared contract sources, session and entry point,
-  and `pw-probe-runner`, `sb_api_validator` and `pw-extension-issuer` their
-  known entry sources. A missing, duplicated or unexpected target is
+  and the selected/unentitled `pw-probe-runner` targets and `sb_api_validator`
+  their known entry sources. A missing, duplicated or unexpected target is
   named.
 - Discovery is recursive under the target dirs
   (`Sources/PWRunnerCore`, `Sources/PWCWorkerShim`), so moving a file
@@ -71,7 +71,7 @@ restore the complete baseline. File mutations also place each extension API
 in the Swift host and C shim to exercise source-scope discovery.
 Computed library/symbol names and complete Swift/C analysis are outside this
 check. The companion [artifact check](../preflight/README.md) inspects the
-shipped host's undefined symbols; the production C worker, validator and issuer retain
+shipped host's undefined symbols; the production C worker and validator retain
 their sandbox API calls outside this source scope. Both checks look at symbols
 and literal lookup forms rather than file paths because libsandbox is resident
 in the dyld shared cache on a current macOS install: none of

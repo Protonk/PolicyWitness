@@ -63,9 +63,8 @@ struct PWRunnerRunSpec: Codable {
     var policy: PWRunnerPolicySpec?
     private var ordinaryPlan: [PWRunnerProbeStep]?
     var phases: [PWRunnerPhase]?
-    var extensions: [PWRunnerExtensionDeclaration]?
     /// The actor form: mutually exclusive with `policy`, `probe_plan` and
-    /// `extensions`; requires `phases` naming an actor each.
+    /// requires `phases` naming an actor each.
     var actors: [PWRunnerActor]?
     var isActorForm: Bool { actors != nil }
     var probe_plan: [PWRunnerProbeStep] {
@@ -95,7 +94,6 @@ struct PWRunnerRunSpec: Codable {
         policy: PWRunnerPolicySpec?,
         probe_plan: [PWRunnerProbeStep] = [],
         phases: [PWRunnerPhase]? = nil,
-        extensions: [PWRunnerExtensionDeclaration]? = nil,
         actors: [PWRunnerActor]? = nil,
         _test_overrides: PWRunnerTestOverrides? = nil
     ) {
@@ -105,13 +103,12 @@ struct PWRunnerRunSpec: Codable {
         self.policy = policy
         self.ordinaryPlan = phases == nil && actors == nil ? probe_plan : nil
         self.phases = phases
-        self.extensions = extensions
         self.actors = actors
         self._test_overrides = _test_overrides
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, policy, probe_plan, phases, extensions, actors, _test_overrides
+        case schema_version, specimen_id, run_kind, policy, probe_plan, phases, actors, _test_overrides
     }
 
     init(from decoder: Decoder) throws {
@@ -146,26 +143,14 @@ struct PWRunnerRunSpec: Codable {
             policy = try c.decodeIfPresent(PWRunnerPolicySpec.self, forKey: .policy)
             if policy != nil { throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["policy"]) }
         }
-        extensions = try c.decodeIfPresent([PWRunnerExtensionDeclaration].self, forKey: .extensions)
         phases = try c.decodeIfPresent([PWRunnerPhase].self, forKey: .phases)
         ordinaryPlan = try c.decodeIfPresent([PWRunnerProbeStep].self, forKey: .probe_plan)
         if actors == nil {
             guard (phases == nil) != (ordinaryPlan == nil) else {
                 throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["phases"])
             }
-            // The legacy operations name a handle; refuse its absence at decode
-            // time, as the closed object did before the operands became optional.
-            for (pi, phase) in (phases ?? []).enumerated() {
-                for (ai, action) in phase.actions.enumerated() {
-                    if case .extensionAction(let value) = action, value.intervention.handle_ref == nil {
-                        throw PWRunnerRequestFailure(code: "missing_field",
-                            path: ["phases", String(pi), "actions", String(ai), "extension", "handle_ref"])
-                    }
-                }
-            }
         } else {
             if ordinaryPlan != nil { throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["probe_plan"]) }
-            if extensions != nil { throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["extensions"]) }
             if phases == nil { throw PWRunnerRequestFailure(code: "actors_require_phases", path: ["phases"]) }
         }
         _test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: ._test_overrides)
@@ -179,7 +164,6 @@ struct PWRunnerRunSpec: Codable {
         try c.encodeIfPresent(policy, forKey: .policy)
         try c.encodeIfPresent(ordinaryPlan, forKey: .probe_plan)
         try c.encodeIfPresent(phases, forKey: .phases)
-        try c.encodeIfPresent(extensions, forKey: .extensions)
         try c.encodeIfPresent(actors, forKey: .actors)
         try c.encodeIfPresent(_test_overrides, forKey: ._test_overrides)
     }
@@ -211,22 +195,25 @@ struct PWRunnerPhase: Codable {
     /// The actor form names the one actor this phase activates; the legacy form
     /// refuses the field as inapplicable.
     var actor_id: String?
-    init(phase_id: String, actions: [PWRunnerPhaseAction], actor_id: String? = nil) {
-        self.phase_id = phase_id; self.actions = actions; self.actor_id = actor_id
+    var after_termination: PWRunnerAfterTermination?
+    init(phase_id: String, actions: [PWRunnerPhaseAction], actor_id: String? = nil, after_termination: PWRunnerAfterTermination? = nil) {
+        self.phase_id = phase_id; self.actions = actions; self.actor_id = actor_id; self.after_termination = after_termination
     }
-    enum CodingKeys: String, CodingKey, CaseIterable { case phase_id, actor_id, actions }
+    enum CodingKeys: String, CodingKey, CaseIterable { case phase_id, actor_id, actions, after_termination }
     init(from decoder: Decoder) throws {
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
         phase_id = try c.decode(String.self, forKey: .phase_id)
         actor_id = try c.decodeIfPresent(String.self, forKey: .actor_id)
         actions = try c.decode([PWRunnerPhaseAction].self, forKey: .actions)
+        after_termination = c.contains(.after_termination) ? try c.decode(PWRunnerAfterTermination.self, forKey: .after_termination) : nil
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(phase_id, forKey: .phase_id)
         try c.encodeIfPresent(actor_id, forKey: .actor_id)
         try c.encode(actions, forKey: .actions)
+        try c.encodeIfPresent(after_termination, forKey: .after_termination)
     }
 }
 
@@ -248,7 +235,7 @@ struct PWRunnerPhase: Codable {
 struct PWRunnerTestOverrides: Codable {
     var worker_executable_path: String?
     var worker_timeout_ms: Int?
-    var issuer_executable_path: String?
+    var actor_equipment_executable_paths: [String: String]?
     var validator_executable_path: String?
     var validator_total_timeout_ms: Int?
     var validator_io_timeout_ms: Int?
@@ -260,7 +247,7 @@ struct PWRunnerTestOverrides: Codable {
     init(
         worker_executable_path: String? = nil,
         worker_timeout_ms: Int? = nil,
-        issuer_executable_path: String? = nil,
+        actor_equipment_executable_paths: [String: String]? = nil,
         validator_executable_path: String? = nil,
         validator_io_timeout_ms: Int? = nil,
         validator_total_timeout_ms: Int? = nil,
@@ -271,7 +258,7 @@ struct PWRunnerTestOverrides: Codable {
     ) {
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
-        self.issuer_executable_path = issuer_executable_path
+        self.actor_equipment_executable_paths = actor_equipment_executable_paths
         self.validator_executable_path = validator_executable_path
         self.validator_total_timeout_ms = validator_total_timeout_ms
         self.validator_io_timeout_ms = validator_io_timeout_ms
@@ -282,7 +269,7 @@ struct PWRunnerTestOverrides: Codable {
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case worker_executable_path, worker_timeout_ms, issuer_executable_path, validator_executable_path, validator_io_timeout_ms, validator_total_timeout_ms
+        case worker_executable_path, worker_timeout_ms, actor_equipment_executable_paths, validator_executable_path, validator_io_timeout_ms, validator_total_timeout_ms
         case worker_post_apply_hang_ms, worker_post_apply_kill_signal, worker_pre_ready_hang_ms, worker_kill_before_publish_slot
     }
 
@@ -300,7 +287,15 @@ struct PWRunnerTestOverrides: Codable {
         }
         worker_executable_path = try c.decodeIfPresent(String.self, forKey: .worker_executable_path)
         worker_timeout_ms = try optionalInteger(.worker_timeout_ms)
-        issuer_executable_path = try c.decodeIfPresent(String.self, forKey: .issuer_executable_path)
+        actor_equipment_executable_paths = c.contains(.actor_equipment_executable_paths)
+            ? try c.decode([String: String].self, forKey: .actor_equipment_executable_paths) : nil
+        if let paths = actor_equipment_executable_paths {
+            let path = decoder.codingPath.map { $0.stringValue } + ["actor_equipment_executable_paths"]
+            if paths.isEmpty { throw PWRunnerRequestFailure(code: "empty_equipment_overrides", path: path) }
+            for key in paths.keys.sorted() where key != "selected" && key != "unentitled" {
+                throw PWRunnerRequestFailure(code: "unknown_field", path: path + [key])
+            }
+        }
         validator_executable_path = try c.decodeIfPresent(String.self, forKey: .validator_executable_path)
         validator_total_timeout_ms = try optionalInteger(.validator_total_timeout_ms)
         validator_io_timeout_ms = try optionalInteger(.validator_io_timeout_ms)

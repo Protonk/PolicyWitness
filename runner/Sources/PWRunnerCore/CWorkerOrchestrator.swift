@@ -44,11 +44,12 @@ enum CWorkerOrchestrator {
         policyHash: String,
         bundleId: String?,
         workerExecutablePath: String,
-        validatorExecutablePath: String
+        validatorExecutablePath: String,
+        equipmentBundleURL: URL = Bundle.main.bundleURL
     ) -> PWRunnerRunResult {
         run(parsed: parsed, policyHash: policyHash, bundleId: bundleId,
             workerExecutablePath: workerExecutablePath, validatorExecutablePath: validatorExecutablePath,
-            validatorSpawn: nativeValidatorSpawn)
+            validatorSpawn: nativeValidatorSpawn, equipmentBundleURL: equipmentBundleURL)
     }
 
     // Tests substitute native validator launch or child-process calls; worker
@@ -60,23 +61,31 @@ enum CWorkerOrchestrator {
         workerExecutablePath: String,
         validatorExecutablePath: String,
         validatorSpawn: @escaping ValidatorSpawnCall,
-        validatorProcessCalls: @escaping (Int) -> ChildProcessCalls = { _ in ChildProcessCalls() }
+        validatorProcessCalls: @escaping (Int) -> ChildProcessCalls = { _ in ChildProcessCalls() },
+        equipmentBundleURL: URL = Bundle.main.bundleURL
     ) -> PWRunnerRunResult {
-        if let refused = admissionFailure(for: parsed) {
+        switch admitSpecimen(parsed) {
+        case .capacity(let refused):
             return admissionRefusalReply(parsed: parsed, refused: refused, bundleId: bundleId, policyHash: policyHash)
-        }
-        if let failure = requestMeaningFailure(parsed) {
+        case .refused(let failure):
             return requestRefusalReply(parsed: parsed, failure: failure, bundleId: bundleId, policyHash: policyHash)
+        case .accepted(let admitted):
+            return run(admitted: admitted, policyHash: policyHash, bundleId: bundleId,
+                workerExecutablePath: workerExecutablePath, validatorExecutablePath: validatorExecutablePath,
+                validatorSpawn: validatorSpawn, validatorProcessCalls: validatorProcessCalls, equipmentBundleURL: equipmentBundleURL)
         }
-        // The actor form is scheduled by its own driver.
-        if parsed.isActorForm {
-            guard case .success(let plan) = normalizeActorPlan(parsed) else {
-                return requestRefusalReply(parsed: parsed,
-                    failure: PWRunnerRequestFailure(code: "missing_field", path: ["actors"]), bundleId: bundleId, policyHash: policyHash)
-            }
+    }
+
+    static func run(admitted: AdmittedSpecimen, policyHash: String, bundleId: String?,
+                    workerExecutablePath: String, validatorExecutablePath: String,
+                    validatorSpawn: @escaping ValidatorSpawnCall = nativeValidatorSpawn,
+                    validatorProcessCalls: @escaping (Int) -> ChildProcessCalls = { _ in ChildProcessCalls() },
+                    equipmentBundleURL: URL = Bundle.main.bundleURL) -> PWRunnerRunResult {
+        let parsed = admitted.request
+        if let plan = admitted.actorPlan {
             return runActors(parsed: parsed, plan: plan, bundleId: bundleId, workerExecutablePath: workerExecutablePath,
-                             validatorExecutablePath: validatorExecutablePath, validatorSpawn: validatorSpawn,
-                             validatorProcessCalls: validatorProcessCalls)
+                validatorExecutablePath: validatorExecutablePath, validatorSpawn: validatorSpawn,
+                validatorProcessCalls: validatorProcessCalls, equipmentBundleURL: equipmentBundleURL)
         }
         guard let policy = parsed.policy else {
             return requestRefusalReply(parsed: parsed,
@@ -86,26 +95,7 @@ enum CWorkerOrchestrator {
         // ---- translation: request → driver inputs ------------------------
         let phases = parsed.executionPhases
         let actions = phases.flatMap { $0.actions }
-        let workerSlots = actions.map { action -> CWorkerSlotInput in
-            switch action {
-            case .probe(let probe): return makeWorkerSlot(stepID: probe.step_id, attempt: probe.attempt)
-            case .extensionAction(let value):
-                return CWorkerSlotInput(stepId: value.step_id,
-                    attemptKind: value.intervention.operation == "consume" ? .extensionConsume : .extensionRelease,
-                    target: value.intervention.operation == "consume" ? (value.intervention.token_ref ?? "") : (value.intervention.handle_ref ?? ""))
-            }
-        }
-        let session = parsed.extensions?.first.map { ExtensionSession(declaration: $0,
-            executable: parsed._test_overrides?.issuer_executable_path ?? defaultIssuerExecutablePath()) }
-        if session?.capabilityUnavailable == true {
-            var reply = requestRefusalReply(parsed: parsed,
-                failure: PWRunnerRequestFailure(code: session?.record.issuance_status == "native_api_unavailable"
-                    ? "extension_api_unavailable" : "extension_issuer_unavailable", path: ["extensions"]),
-                bundleId: bundleId, policyHash: policyHash)
-            session?.erase()
-            reply.extensions = session.map { [$0.record] }
-            return reply
-        }
+        let workerSlots = actions.compactMap { $0.probe }.map { makeWorkerSlot(stepID: $0.step_id, attempt: $0.attempt) }
         let workerParams = workerParamsFromPolicy(policy)
         var offset = 0
         let phaseInputs = phases.map { phase -> CWorkerPhaseInput in
@@ -118,7 +108,7 @@ enum CWorkerOrchestrator {
         // smaller deadline fires before any real worker can complete
         // its post-apply work and would just generate spurious
         // runner_timeouts.
-        var workerInput = CWorkerInput(
+        let workerInput = CWorkerInput(
             workerExecutablePath: workerExecutablePath,
             policy: policy.sbpl_source ?? "",
             params: workerParams,
@@ -135,8 +125,6 @@ enum CWorkerOrchestrator {
             captureNonce: policy.capture_nonce
         )
 
-        workerInput.extensionRequested = session != nil
-        workerInput.extensionFD = session?.deliveryDescriptor
 
         // Fresh planning occurs only after this phase's arrival. Each synchronous
         // collection closes before the driver's guarded ordinal release.
@@ -219,35 +207,6 @@ enum CWorkerOrchestrator {
         let topPid: Int = workerOutput.map { Int($0.workerPid) } ?? Int(getpid())
         let runnerSubprocess = workerOutput.map { buildWorkerSubprocess($0, disposition: disposition) }
 
-        var events: [PWRunnerExtensionEvent] = []
-        if !refused {
-            for phase in phases {
-                for action in phase.actions {
-                    guard case .extensionAction(let value) = action else { continue }
-                    let slot = workerOutput?.slots.first { $0.stepId == value.step_id }
-                    let record = disposition?.steps.first { $0.step_id == value.step_id }
-                    let published = slot?.completed == true
-                    let native = published ? slot?.nativeResult : nil
-                    let reason = published ? [1: "token_unavailable", 2: "handle_unavailable", 3: "native_api_unavailable", 4: "repeated_action"][Int(slot?.unavailableCode ?? 0)] : nil
-                    events.append(PWRunnerExtensionEvent(phase_id: phase.phase_id, step_id: value.step_id,
-                        operation: value.intervention.operation, token_ref: value.intervention.token_ref,
-                        handle_ref: value.intervention.handle_ref, call_boundary_observed: slot?.callBoundary ?? false,
-                        result_published: published, status: !published ? "unresolved" : native != nil ? "returned" : reason != nil ? "unavailable" : "invalid",
-                        native_result: native, errno: native != nil ? slot?.nativeErrno : nil,
-                        unavailable_reason: reason, lifecycle: record.flatMap(attemptLifecycle)))
-                }
-            }
-        }
-        if let session {
-            if let delivery = workerOutput?.extensionDelivery {
-                let observation = extensionDeliveryObservation(delivery)
-                session.record.delivery_status = observation.status
-                session.record.delivery_failure = observation.failure
-                session.record.delivery_cleanup_failure = observation.cleanup
-                if observation.status == "delivered" { session.record.delivered_bytes = delivery.deliveredBytes }
-            }
-            session.erase()
-        }
         return PWRunnerRunResult(
             specimen_id: parsed.specimen_id,
             run_kind: parsed.run_kind,
@@ -262,8 +221,6 @@ enum CWorkerOrchestrator {
             steps: stepResults,
             runner_subprocess: runnerSubprocess,
             phases: phaseResults,
-            extensions: session.map { [$0.record] },
-            extension_events: session == nil ? nil : events,
             test_overrides: parsed._test_overrides,
             compiled_profile: workerOutput?.profileCapture,
             admission_failure: admissionFailure
@@ -276,10 +233,6 @@ enum CWorkerOrchestrator {
     /// The XPC service binary itself lives at
     /// `<this xpc service>/Contents/MacOS/<service-name>` — Bundle.main
     /// resolves to the service bundle. Sibling resolution.
-    static func defaultIssuerExecutablePath() -> String {
-        Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/pw-extension-issuer").path
-    }
-
     static func defaultWorkerExecutablePath() -> String {
         let bundleURL = Bundle.main.bundleURL
         return bundleURL

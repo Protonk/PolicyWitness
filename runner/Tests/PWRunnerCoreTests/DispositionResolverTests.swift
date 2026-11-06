@@ -263,6 +263,38 @@ func runDispositionResolverTests(_ tk: TestKit) {
             try expectEqual(steps[0].attempt.result_source, "synthetic")
             try expectEqual(steps[0].attempt.missing_reason, "slot_absent")
         }
+        tk.run("indexed activation waits preserve prior results and require terminal negative evidence") {
+            for stage: UInt32 in [1, 2] {
+                for first: UInt32 in [0, 1, 2] {
+                    let slots = [slot("a", completed: first > 0), slot("b", completed: first > 1)]
+                    let out = constructed(slots: slots, progress: progressWord(13, stage, index: first))
+                    let record = resolveDisposition(out, plan: [probe("a"), probe("b")])
+                    try expectEqual(claim(record, "progress_association")?.answer, "none")
+                    try expectEqual(record.issues.count, 0)
+                    for i in 0..<2 {
+                        try expectEqual(lifecycleSummary(record.steps[i]), i < Int(first) ? "completed" : "not_reached")
+                    }
+                    var live = out
+                    live.collectionBasis = "execution_may_continue"
+                    live.reaped = false
+                    let partial = resolveDisposition(live, plan: [probe("a"), probe("b")])
+                    for i in 0..<2 {
+                        try expectEqual(lifecycleSummary(partial.steps[i]), i < Int(first) ? "completed" : "unresolved")
+                    }
+                }
+            }
+            var rawMismatch = progressWord(13, 1, index: 0)
+            rawMismatch.raw = progressWord(13, 1, index: 1).raw
+            for invalid in [progressWord(13, 1, index: 3), rawMismatch] {
+                let record = resolveDisposition(constructed(slots: [slot("a", completed: true), slot("b", completed: false)], progress: invalid), plan: [probe("a"), probe("b")])
+                try expectEqual(claim(record, "progress_association")?.answer, "invalid")
+                try expectEqual(lifecycleSummary(record.steps[0]), "completed")
+                try expectEqual(lifecycleSummary(record.steps[1]), "unresolved")
+            }
+            let empty = resolveDisposition(constructed(slots: [], progress: progressWord(13, 2, index: 0)), plan: [])
+            try expectEqual(claim(empty, "progress_association")?.answer, "none")
+            try expectEqual(empty.steps.count, 0)
+        }
         tk.run("progress association checks the encoded word and non-indexed operation identity") {
             var mismatched = progressWord(9, 1, index: 0)
             mismatched.raw = progressWord(9, 1, index: 1).raw

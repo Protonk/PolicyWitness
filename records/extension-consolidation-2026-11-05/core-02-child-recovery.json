@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "purpose": "Read-only recovery inspection after core-02 host crash; no process signaling",
+  "run": "tests/out/runs/extension-consolidation-core-02",
+  "crash_location": "ActorScheduler.observeTermination.finish during runTerminationGateBoundaryControl",
+  "candidate": {
+    "pid": 2144,
+    "ppid": 1,
+    "state": "R",
+    "start_time_local": "Fri Nov 6 06:33:37 2026",
+    "command_name": "pw-probe-runner"
+  },
+  "attribution": {
+    "state": "consistent_but_not_proven",
+    "basis": "Core run started at 06:33:02 local; crash was after source native reap and before dependent activation. No retained launch PID ties candidate 2144 conclusively to that dependent.",
+    "signal_authorized_by_this_receipt": false
+  },
+  "observations": [
+    {
+      "kind": "sandbox_process_inventory",
+      "result": "operation not permitted",
+      "action": "repeated same read-only inventory outside automation sandbox"
+    },
+    {
+      "kind": "outside_sandbox_process_inventory",
+      "returncode": 0,
+      "matching_lines": [
+        "2144 1 R Fri Nov 6 06:33:37 2026 pw-probe-runner"
+      ]
+    },
+    {
+      "kind": "outside_sandbox_repeated_process_inventory",
+      "returncode": 0,
+      "matching_lines": [
+        "2144 1 R Fri Nov 6 06:33:37 2026 pw-probe-runner"
+      ]
+    },
+    {
+      "kind": "outside_sandbox_pid_inspection",
+      "command": "ps -p 2144 -o pid=,ppid=,stat=,etime=,lstart=,command=",
+      "returncode": 1,
+      "output": ""
+    },
+    {
+      "kind": "outside_sandbox_final_process_inventory",
+      "command": "ps -axo pid=,ppid=,stat=,lstart=,comm= | rg 'pw-probe-runner|PWRunnerCoreTests'",
+      "returncode": 1,
+      "output": "",
+      "time_basis": "preceded immediately by date -u output 2026-11-06T14:37:54Z"
+    }
+  ],
+  "source_findings": {
+    "execution_allowance_ms": 120000,
+    "actor_lifetime_ms": 180000,
+    "limit_source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift: PWActorLimits.lifetimeMs",
+    "publication": "ActorScheduler computes continuousCutoff(afterMs: input.lifetimeMs), assigns actorInput.lifetimeCutoffTicks before ActorSession writes the shared header.",
+    "worker_check": "Worker translates absolute continuous ticks relative to origin. wait_for_activation checks cutoff on each sample, publishes PW_FAILURE_LIFETIME_CUTOFF and exits through publish_done_and_exit.",
+    "inference": "Candidate disappearance is consistent with the 180-second lifetime cutoff; no indefinite parked-loop defect established."
+  },
+  "recovery": {
+    "signals_sent": [],
+    "current_matching_process_inventory": "empty",
+    "native_wait_observed": false,
+    "exit_status": null,
+    "exit_cause": "unobserved",
+    "action_required_from_this_observation": false
+  },
+  "limits": "Process-table absence is a current absence observation, not an owned wait/reap result or proof that the lifetime cutoff caused departure. No artifact or cleanup ownership record was deleted."
+}

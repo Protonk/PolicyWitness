@@ -25,7 +25,7 @@ from pathlib import Path
 policy = {"specimen": "(version 2)\n(deny default)\n(allow file-read-data)",
           "neighbour": "(version 2)\n(allow default)"}[sys.argv[2]]
 spec = {
-    "schema_version": 5,
+    "schema_version": 6,
     "specimen_id": "witness_contract_verdicts" if sys.argv[2] == "specimen" else "witness_contract_verdicts_allow_default",
     "policy": {"format": "sbpl", "sbpl_source": policy},
     "probe_plan": [{

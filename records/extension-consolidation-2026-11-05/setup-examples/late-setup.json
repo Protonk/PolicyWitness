@@ -1,0 +1,533 @@
+{
+  "example_kind": "constructed proposed authority_setup object and associated assessments; not a full response",
+  "proposed_request_schema": 6,
+  "proposed_response_schema": 26,
+  "authority_setup": {
+    "host": {
+      "run": {
+        "disposition": "ready",
+        "operations": [
+          {
+            "slot": 0,
+            "operation": "core_limit",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 0
+          }
+        ]
+      },
+      "regions": [
+        {
+          "actor_id": "issuer",
+          "actor_index": 0,
+          "disposition": "ready",
+          "operations": [
+            {
+              "slot": 0,
+              "operation": "shm_open",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 10
+            },
+            {
+              "slot": 1,
+              "operation": "shm_unlink",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0
+            },
+            {
+              "slot": 2,
+              "operation": "fd_cloexec",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0
+            },
+            {
+              "slot": 3,
+              "operation": "ftruncate",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0,
+              "value": 17600
+            },
+            {
+              "slot": 4,
+              "operation": "mmap",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "mapping",
+              "value": 17600
+            },
+            {
+              "slot": 5,
+              "operation": "header_initialize",
+              "role": "setup",
+              "state": "performed",
+              "native_kind": "memory"
+            },
+            {
+              "slot": 6,
+              "operation": "authority_duplicate",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 64
+            },
+            {
+              "slot": 7,
+              "operation": "authority_spawn_dup2",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "error_code",
+              "native_rc": 0
+            },
+            {
+              "slot": 8,
+              "operation": "close_launch_duplicate",
+              "role": "cleanup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0
+            },
+            {
+              "slot": 9,
+              "operation": "close_original_descriptor",
+              "role": "cleanup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0
+            },
+            {
+              "slot": 10,
+              "operation": "shared_clear",
+              "role": "cleanup",
+              "state": "performed",
+              "native_kind": "memory",
+              "value": 16384
+            },
+            {
+              "slot": 11,
+              "operation": "munmap",
+              "role": "cleanup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0,
+              "value": 17600
+            }
+          ],
+          "ownership": {
+            "object_name": "released",
+            "descriptor": "released",
+            "mapping": "released",
+            "shared_erasure": "performed"
+          }
+        },
+        {
+          "actor_id": "subject",
+          "actor_index": 1,
+          "disposition": "ready",
+          "operations": [
+            {
+              "slot": 0,
+              "operation": "shm_open",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 11
+            },
+            {
+              "slot": 1,
+              "operation": "shm_unlink",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0
+            },
+            {
+              "slot": 2,
+              "operation": "fd_cloexec",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0
+            },
+            {
+              "slot": 3,
+              "operation": "ftruncate",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0,
+              "value": 17600
+            },
+            {
+              "slot": 4,
+              "operation": "mmap",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "mapping",
+              "value": 17600
+            },
+            {
+              "slot": 5,
+              "operation": "header_initialize",
+              "role": "setup",
+              "state": "performed",
+              "native_kind": "memory"
+            },
+            {
+              "slot": 6,
+              "operation": "authority_duplicate",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 64
+            },
+            {
+              "slot": 7,
+              "operation": "authority_spawn_dup2",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "error_code",
+              "native_rc": 0
+            },
+            {
+              "slot": 8,
+              "operation": "close_launch_duplicate",
+              "role": "cleanup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0
+            },
+            {
+              "slot": 9,
+              "operation": "close_original_descriptor",
+              "role": "cleanup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0
+            },
+            {
+              "slot": 10,
+              "operation": "shared_clear",
+              "role": "cleanup",
+              "state": "performed",
+              "native_kind": "memory",
+              "value": 16384
+            },
+            {
+              "slot": 11,
+              "operation": "munmap",
+              "role": "cleanup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0,
+              "value": 17600
+            }
+          ],
+          "ownership": {
+            "object_name": "released",
+            "descriptor": "released",
+            "mapping": "released",
+            "shared_erasure": "performed"
+          }
+        }
+      ],
+      "custody": [
+        {
+          "token_ref": "token",
+          "token_index": 0,
+          "disposition": "ready",
+          "operations": [
+            {
+              "slot": 0,
+              "operation": "mmap",
+              "role": "setup",
+              "state": "succeeded",
+              "native_kind": "mapping",
+              "value": 16384
+            },
+            {
+              "slot": 1,
+              "operation": "final_erase",
+              "role": "cleanup",
+              "state": "performed",
+              "native_kind": "memory",
+              "value": 16384
+            },
+            {
+              "slot": 2,
+              "operation": "munmap",
+              "role": "cleanup",
+              "state": "succeeded",
+              "native_kind": "integer",
+              "native_rc": 0,
+              "value": 16384
+            }
+          ],
+          "ownership": {
+            "mapping": "released",
+            "private_erasure": "performed"
+          }
+        }
+      ]
+    },
+    "workers": [
+      {
+        "actor_id": "issuer",
+        "actor_index": 0,
+        "required": true,
+        "publication": "observed",
+        "disposition": "ready",
+        "operations": [
+          {
+            "slot": 0,
+            "operation": "issue_symbol",
+            "role": "setup",
+            "state": "available",
+            "native_kind": "symbol"
+          },
+          {
+            "slot": 1,
+            "operation": "consume_symbol",
+            "role": "setup",
+            "state": "available",
+            "native_kind": "symbol"
+          },
+          {
+            "slot": 2,
+            "operation": "release_symbol",
+            "role": "setup",
+            "state": "available",
+            "native_kind": "symbol"
+          },
+          {
+            "slot": 3,
+            "operation": "core_limit",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 0
+          },
+          {
+            "slot": 4,
+            "operation": "descriptor_presence",
+            "role": "setup",
+            "state": "accepted",
+            "native_kind": "validation"
+          },
+          {
+            "slot": 5,
+            "operation": "fstat",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 0,
+            "value": 32768
+          },
+          {
+            "slot": 6,
+            "operation": "page_size",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 16384
+          },
+          {
+            "slot": 7,
+            "operation": "object_size",
+            "role": "setup",
+            "state": "accepted",
+            "native_kind": "validation",
+            "value": 32768
+          },
+          {
+            "slot": 8,
+            "operation": "mmap",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "mapping",
+            "value": 32768
+          },
+          {
+            "slot": 9,
+            "operation": "descriptor_close",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 0
+          },
+          {
+            "slot": 10,
+            "operation": "header_binding",
+            "role": "setup",
+            "state": "accepted",
+            "native_kind": "validation"
+          },
+          {
+            "slot": 11,
+            "operation": "terminal_owned_inbound_clear",
+            "role": "cleanup",
+            "state": "performed",
+            "native_kind": "memory",
+            "value": 0
+          }
+        ],
+        "ownership": {
+          "descriptor": "released",
+          "mapping": "held",
+          "shared_erasure": "performed"
+        }
+      },
+      {
+        "actor_id": "subject",
+        "actor_index": 1,
+        "required": true,
+        "publication": "observed",
+        "disposition": "ready",
+        "operations": [
+          {
+            "slot": 0,
+            "operation": "issue_symbol",
+            "role": "setup",
+            "state": "available",
+            "native_kind": "symbol"
+          },
+          {
+            "slot": 1,
+            "operation": "consume_symbol",
+            "role": "setup",
+            "state": "available",
+            "native_kind": "symbol"
+          },
+          {
+            "slot": 2,
+            "operation": "release_symbol",
+            "role": "setup",
+            "state": "available",
+            "native_kind": "symbol"
+          },
+          {
+            "slot": 3,
+            "operation": "core_limit",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 0
+          },
+          {
+            "slot": 4,
+            "operation": "descriptor_presence",
+            "role": "setup",
+            "state": "accepted",
+            "native_kind": "validation"
+          },
+          {
+            "slot": 5,
+            "operation": "fstat",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 0,
+            "value": 32768
+          },
+          {
+            "slot": 6,
+            "operation": "page_size",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 16384
+          },
+          {
+            "slot": 7,
+            "operation": "object_size",
+            "role": "setup",
+            "state": "accepted",
+            "native_kind": "validation",
+            "value": 32768
+          },
+          {
+            "slot": 8,
+            "operation": "mmap",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "mapping",
+            "value": 32768
+          },
+          {
+            "slot": 9,
+            "operation": "descriptor_close",
+            "role": "setup",
+            "state": "succeeded",
+            "native_kind": "integer",
+            "native_rc": 0
+          },
+          {
+            "slot": 10,
+            "operation": "header_binding",
+            "role": "setup",
+            "state": "accepted",
+            "native_kind": "validation"
+          },
+          {
+            "slot": 11,
+            "operation": "terminal_owned_inbound_clear",
+            "role": "cleanup",
+            "state": "performed",
+            "native_kind": "memory",
+            "value": 0
+          }
+        ],
+        "ownership": {
+          "descriptor": "released",
+          "mapping": "held",
+          "shared_erasure": "performed"
+        }
+      }
+    ]
+  },
+  "actors": [
+    {
+      "actor_id": "issuer",
+      "index": 0,
+      "mode": "unapplied",
+      "setup_status": "unapplied_declared",
+      "application_count": 0,
+      "application": {
+        "state": "not_requested",
+        "basis": "unapplied_declaration"
+      }
+    },
+    {
+      "actor_id": "subject",
+      "index": 1,
+      "mode": "apply",
+      "setup_status": "setup_timeout",
+      "applied": true,
+      "application_count": 1,
+      "application": {
+        "state": "observed",
+        "basis": "applied_publication"
+      }
+    }
+  ],
+  "phase_assessment": {
+    "actor_id": "subject",
+    "activation_stored": false,
+    "collection_invoked": false,
+    "release_stored": false,
+    "end_reason": "actor_unavailable"
+  },
+  "termination_context": {
+    "subject_reaped": true,
+    "subject_done_observed": true,
+    "note": "The final acquire snapshot retained late setup and application; the host setup deadline remains settled."
+  }
+}

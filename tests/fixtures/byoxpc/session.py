@@ -5,6 +5,8 @@ file is durable before any signing or installation. Tool injection is a Python
 test boundary only; the CLI always uses the real commands.
 """
 import json
+import hashlib
+import re
 import os
 from pathlib import Path
 import plistlib
@@ -42,12 +44,48 @@ def entitlements(target, out, label, invoke):
     return value
 
 
-HELPERS = ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer')
+HELPERS = ('PWRunner', 'pw-probe-runner', 'pw-probe-runner-unentitled', 'sb_api_validator')
 
 
 def binary_entitlements(bundle, out, label, invoke):
     """Each embedded executable's entitlements, read back separately."""
     return {name: entitlements(bundle / 'Contents/MacOS' / name, out, f'{label}-{name}', invoke) for name in HELPERS}
+
+
+def equipment_inventory(bundle, out, label, invoke):
+    """Independently bind the sealed two-role inventory to actual signed bytes."""
+    from contract import RUNNER_PROTOCOL, WORKER_IDENTITY
+    path = bundle / 'Contents/Resources/worker-equipment.json'
+    assert path.is_file() and not path.is_symlink() and path.resolve().is_relative_to(bundle.resolve()), path
+    raw = path.read_bytes()
+    assert len(raw) <= 1_048_576, 'equipment inventory exceeds input bound'
+    value = json.loads(raw)
+    assert set(value) == {'schema_version', 'runner_protocol', 'worker_identity', 'unsigned_worker_sha256', 'workers'}, value
+    assert type(value['schema_version']) is int and value['schema_version'] == 1
+    assert value['runner_protocol'] == RUNNER_PROTOCOL and value['worker_identity'] == WORKER_IDENTITY, value
+    assert re.fullmatch('[0-9a-f]{64}', value['unsigned_worker_sha256'])
+    assert isinstance(value['workers'], list) and len(value['workers']) == 2
+    seen = set()
+    for row in value['workers']:
+        assert set(row) == {'role', 'relative_path', 'sha256', 'cdhash', 'identifier', 'team_id', 'entitlements_xml'}, row
+        role = row['role']
+        assert role in ('selected', 'unentitled') and role not in seen, row
+        seen.add(role)
+        expected = 'Contents/MacOS/pw-probe-runner' + ('-unentitled' if role == 'unentitled' else '')
+        assert row['relative_path'] == expected
+        binary = bundle / expected
+        assert binary.is_file() and not binary.is_symlink() and binary.resolve().is_relative_to(bundle.resolve())
+        assert row['sha256'] == hashlib.sha256(binary.read_bytes()).hexdigest(), ('equipment signed hash mismatch', role)
+        sig = signature(binary, out / (label + '-signature-' + role), invoke=invoke)
+        team = None if sig['TeamIdentifier'] == 'not set' else sig['TeamIdentifier']
+        assert row['cdhash'] == sig['CDHash'] and row['identifier'] == sig['Identifier'] and row['team_id'] == team
+        assert isinstance(row['entitlements_xml'], str) and len(row['entitlements_xml'].encode()) <= 65_536
+        expected_entitlements = plistlib.loads(row['entitlements_xml'].encode())
+        observed = entitlements(binary, out, label + '-entitlements-' + role, invoke) or {}
+        assert isinstance(expected_entitlements, dict) and expected_entitlements == observed
+        assert role != 'unentitled' or not observed, 'unentitled equipment carries entitlements'
+    save(out / (label + '.json'), value)
+    return value
 
 
 def service_present(state, out, label, invoke):
@@ -128,6 +166,7 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     assert team not in ('', 'not set') and source_sig['TeamIdentifier'] == team, 'runner/client teams differ'
     assert not source_sig['adhoc'] and source_sig['runtime'], source_sig
     source_entitlements = entitlements(source, out, 'source-entitlements', invoke)
+    source_equipment = equipment_inventory(source, out, 'source-equipment', invoke)
     # The supplied plist is what the installer embeds; by default the source's
     # own entitlements, otherwise the caller's dictionary, saved beside the receipts.
     supplied = source_entitlements if supplied_entitlements is None else dict(supplied_entitlements)
@@ -152,13 +191,23 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
         info.pop('PWRunnerAllowedIdentifiers', None)
     info_path.write_bytes(plistlib.dumps(info))
     save(out / 'staged-info.json', info)
+    # Renaming Info.plist invalidates the copied service seal. Re-seal this
+    # owned, never-launched source with the known Developer ID before the
+    # public installer independently verifies its source inventory and seal.
+    reseal = ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp', '-s', identity]
+    if source_entitlements is not None:
+        source_plist = staging / 'source-entitlements.plist'
+        source_plist.write_bytes(plistlib.dumps(source_entitlements))
+        reseal += ['--entitlements', source_plist]
+    tool(out, 'reseal-renamed-source', reseal + [bundle], invoke=invoke, timeout=90)
+    tool(out, 'verify-renamed-source', ['/usr/bin/codesign', '--verify', '--deep', '--strict', bundle], invoke=invoke)
     argv = [pw, 'runner', 'install', '--bundle', bundle, '--kind', 'byoxpc', '--scope', 'user']
     argv += ['--identity', '-', '--allow-adhoc'] if variant == 'adhoc_noauth' else ['--identity', identity]
     if supplied is not None:
         entitlement_path = staging / 'entitlements.plist'
         entitlement_path.write_bytes(plistlib.dumps(supplied))
         argv += ['--entitlements', entitlement_path]
-    # The public installer owns the one signing operation. It may bootstrap
+    # The public installer owns installed worker signing and inventory rewrite. It may bootstrap
     # after persisting pending ownership; arm cleanup before invoking it.
     state['install_attempted'] = True
     persist_state(state, receipt)
@@ -184,22 +233,28 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
         assert sig['TeamIdentifier'] == team and not sig['adhoc'] and sig.get('Timestamp'), sig
     assert entitlements(bundle, out, 'staged-entitlements', invoke) == supplied, 'entitlements changed'
     # The installer signs the embedded worker with the supplied entitlements
-    # and the validator and issuer with the identity alone before sealing the bundle, so
+    # and the unentitled worker and validator with the identity alone before sealing the bundle, so
     # their bytes change; read each binary back separately instead.
     embedded = binary_entitlements(bundle, out, 'staged', invoke)
     assert embedded['PWRunner'] == supplied, ('host entitlements', embedded['PWRunner'])
     assert embedded['pw-probe-runner'] == supplied, ('worker entitlements', embedded['pw-probe-runner'])
     assert embedded['sb_api_validator'] is None, ('validator entitlements', embedded['sb_api_validator'])
-    assert embedded['pw-extension-issuer'] is None, ('issuer entitlements', embedded['pw-extension-issuer'])
-    for helper in ('pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer'):
+    assert embedded['pw-probe-runner-unentitled'] is None, ('unentitled worker entitlements', embedded['pw-probe-runner-unentitled'])
+    for helper in ('pw-probe-runner', 'pw-probe-runner-unentitled', 'sb_api_validator'):
         helper_sig = signature(bundle / 'Contents/MacOS' / helper, out / ('staged-signature-' + helper), invoke=invoke)
         if variant == 'adhoc_noauth':
             assert helper_sig['adhoc'], (helper, helper_sig)
         else:
             assert helper_sig['TeamIdentifier'] == team and not helper_sig['adhoc'], (helper, helper_sig)
-    for field, expected in (('entitlements', supplied), ('worker_entitlements', supplied), ('validator_entitlements', None), ('issuer_entitlements', None)):
+    for field, expected in (('entitlements', supplied), ('worker_entitlements', supplied), ('validator_entitlements', None), ('unentitled_worker_entitlements', None)):
         keys = sorted(expected) if expected else []
         assert record[field]['keys'] == keys and record[field]['error'] is None, (field, record.get(field))
+    installed_equipment = equipment_inventory(bundle, out, 'installed-equipment', invoke)
+    assert installed_equipment['unsigned_worker_sha256'] == source_equipment['unsigned_worker_sha256']
+    assert installed_equipment['worker_identity'] == source_equipment['worker_identity']
+    assert record['worker_equipment_inventory'] == installed_equipment
+    assert record['source_worker_equipment_inventory'] == source_equipment
+    assert record['unentitled_worker_sha256'] == next(r['sha256'] for r in installed_equipment['workers'] if r['role'] == 'unentitled')
     # Record every runner-related process alive before the connection, so a
     # host claimed by a foreign client is attributable from the artifacts.
     tool(out, 'processes-before-verify', ['/bin/ps', '-axo', 'pid=,ppid=,lstart=,comm='], invoke=invoke, check=False)

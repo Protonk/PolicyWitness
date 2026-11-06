@@ -93,6 +93,40 @@ do {
                    marker='CONTROL_REJECTED: handoff copy preserves first issue bytes' if alias else 'HANDOFF_COPY_ACCEPTED')
 
 
+def gate_variant(out,scratch,removed):
+    out.mkdir(parents=True)
+    package=out/'runner'
+    shutil.copytree(ROOT/'runner/Sources',package/'Sources')
+    shutil.copyfile(ROOT/'runner/Package.swift',package/'Package.swift')
+    tests=package/'Tests/PWRunnerCoreTests';tests.mkdir(parents=True)
+    for name in ('TestKit.swift','ActorSchedulerTests.swift'):
+        shutil.copyfile(ROOT/'runner/Tests/PWRunnerCoreTests'/name,tests/name)
+    (tests/'main.swift').write_text(r'''import Darwin
+import Foundation
+@testable import PWRunnerCore
+do {
+    try runTerminationGateBoundaryControl()
+    print("TERMINATION_GATE_ACCEPTED")
+} catch let failure as TestFailure {
+    print("CONTROL_REJECTED: " + failure.message)
+    exit(73)
+} catch { print("UNEXPECTED_FAILURE: \(error)"); exit(74) }
+''')
+    if removed:
+        mutate(package/'Sources/PWRunnerCore/ActorScheduler.swift',
+            '            if let dependency=entry.terminationDependency {\n                var gate=observeTermination',
+            '            if let dependency=entry.terminationDependency, false {\n                var gate=observeTermination',out)
+    command(out,'build',['swift','build','--package-path',str(package),'--scratch-path',str(scratch),'--product','PWRunnerCoreTests'])
+    product=record_build(package,out,scratch,'PWRunnerCoreTests',swift_command=['swift'])
+    # Copied #filePath is not the repository equipment root. Bind the exact
+    # existing app explicitly and retain its identity in the fixture receipt.
+    app=Path(os.environ.get('PW_APP_DIR',str(ROOT/'dist/PolicyWitness.app'))).resolve()
+    worker=app/'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
+    save(out/'equipment.json',dict(path=str(worker),sha256=digest(worker)))
+    return command(out,'run',['/usr/bin/env','PW_APP_DIR='+str(app),str(product)],expected=73 if removed else 0,
+        marker='CONTROL_REJECTED: termination gate precedes dependent collection' if removed else 'TERMINATION_GATE_ACCEPTED')
+
+
 def c_variant(out, scratch, variant):
     out.mkdir(parents=True)
     scratch.mkdir(parents=True)
@@ -127,6 +161,7 @@ def main(out, scratch):
     out.mkdir(parents=True)
     inputs = [ROOT / 'runner/Package.swift', ROOT / 'runner/Tests/PWRunnerCoreTests/TestKit.swift',
               ROOT / 'runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift',
+              ROOT / 'runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift',
               ROOT / 'tests/fixtures/extension_controls/authority_binding.c', Path(__file__), Path(__file__).with_suffix('.sh'),
               ROOT / 'tests/lib/build_receipt.py']
     inputs += [p for p in (ROOT / 'runner/Sources').rglob('*') if p.is_file()]
@@ -138,11 +173,15 @@ def main(out, scratch):
         name = 'swift_alias' if alias else 'swift_baseline'
         results[name] = swift_variant(out / name, scratch / name, alias)
         save(out / 'results.json', results)
+    for removed in (False,True):
+        name='gate_removed' if removed else 'gate_baseline'
+        results[name]=gate_variant(out/name,scratch/name,removed)
+        save(out/'results.json',results)
     for variant in ('baseline', 'shared_answer', 'early_erase'):
         name = 'c_' + variant
         results[name] = c_variant(out / name, scratch / name, variant)
         save(out / 'results.json', results)
-    print('Two baselines passed; outbound alias, shared answer and early erasure failed their designated observations.')
+    print('Three baselines passed; outbound alias, removed termination gate, shared answer and early erasure failed designated observations.')
 
 
 if __name__ == '__main__':

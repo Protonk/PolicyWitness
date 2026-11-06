@@ -110,7 +110,6 @@ SB_API_VALIDATOR_BIN="${MESON_BUILD_DIR}/sb_api_validator"
 # bundle and built-in vs BYOXPC runners both pick up the correct
 # copy. The single output is copied into each XPC service.
 PW_PROBE_RUNNER_BIN="${MESON_BUILD_DIR}/pw-probe-runner"
-PW_EXTENSION_ISSUER_BIN="${MESON_BUILD_DIR}/pw-extension-issuer"
 
 # Swift NSXPCConnection client embedded at the app's top level.
 PW_RUNNER_CLIENT_BIN="${MESON_BUILD_DIR}/pw-runner-client"
@@ -529,7 +528,7 @@ meson compile -C "${MESON_BUILD_DIR}"
 # the selected SDK.
 echo "==> Checking the configured native source lists and the identity closure against the tree"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}"
-NATIVE_OUTPUTS=("${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}" "${PW_EXTENSION_ISSUER_BIN}")
+NATIVE_OUTPUTS=("${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}")
 if [[ "${BUILD_XPC}" == "1" ]]; then
   NATIVE_OUTPUTS+=("${PW_RUNNER_CLIENT_BIN}")
   for svc_name in "${XPC_SERVICE_NAMES[@]}"; do
@@ -650,9 +649,9 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     cp "${SB_API_VALIDATOR_BIN}" "${svc_bundle}/Contents/MacOS/sb_api_validator"
     chmod +x "${svc_bundle}/Contents/MacOS/sb_api_validator"
 
-    # The issuer has its own ordinary authority and transient token channel.
-    cp "${PW_EXTENSION_ISSUER_BIN}" "${svc_bundle}/Contents/MacOS/pw-extension-issuer"
-    chmod +x "${svc_bundle}/Contents/MacOS/pw-extension-issuer"
+    # Both actor equipment roles use copies of the same unsigned worker.
+    cp "${PW_PROBE_RUNNER_BIN}" "${svc_bundle}/Contents/MacOS/pw-probe-runner-unentitled"
+    chmod +x "${svc_bundle}/Contents/MacOS/pw-probe-runner-unentitled"
   done
 else
   echo "==> Skipping embedded XPC build (BUILD_XPC=0)"
@@ -685,11 +684,16 @@ GENERATED_WORKER_IDENTITY="$(/usr/bin/sed -nE 's/^WORKER_IDENTITY = "([0-9a-f]{6
 # beside a file that is not code.
 sign_macho() {
   local target="$1"
+  local signing_entitlements="${2:-}"
   if ! /usr/bin/file -b "${target}" 2>/dev/null | /usr/bin/grep -q "Mach-O"; then
     echo "ERROR: ${target} is missing or not a Mach-O; the signing list names only executables" 1>&2
     exit 2
   fi
-  codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"
+  if [[ -n "${signing_entitlements}" ]]; then
+    codesign --force --options runtime --timestamp --entitlements "${signing_entitlements}" -s "${IDENTITY}" "${target}"
+  else
+    codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"
+  fi
 }
 
 echo "==> Codesigning embedded MacOS tools"
@@ -709,9 +713,15 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     # hashes. Without this, codesign may refuse to validate the
     # sealed bundle because the helpers carry no signature when the
     # seal is computed.
-    sign_macho "${svc_bundle}/Contents/MacOS/pw-probe-runner"
+    sign_macho "${svc_bundle}/Contents/MacOS/pw-probe-runner" "${svc_entitlements}"
     sign_macho "${svc_bundle}/Contents/MacOS/sb_api_validator"
-    sign_macho "${svc_bundle}/Contents/MacOS/pw-extension-issuer"
+    sign_macho "${svc_bundle}/Contents/MacOS/pw-probe-runner-unentitled"
+
+    # This service-local inventory records signed worker bytes and is covered
+    # by the enclosing service seal. It contains no circular host-code hash.
+    "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/build_equipment.py" \
+      --bundle "${svc_bundle}" --unsigned-worker "${PW_PROBE_RUNNER_BIN}" \
+      --worker-identity "${GENERATED_WORKER_IDENTITY}"
 
     codesign --force --options runtime --timestamp \
       --entitlements "${svc_entitlements}" \

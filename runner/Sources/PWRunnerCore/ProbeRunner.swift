@@ -93,7 +93,17 @@ func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
             }
         }
     }
-    if let failure = extensionMeaningFailure(spec) { return failure }
+    if spec._test_overrides?.actor_equipment_executable_paths != nil {
+        return PWRunnerRequestFailure(code: "inapplicable_field", path: ["_test_overrides", "actor_equipment_executable_paths"])
+    }
+    for (pi, phase) in spec.executionPhases.enumerated() {
+        if phase.after_termination != nil {
+            return PWRunnerRequestFailure(code: "inapplicable_field", path: ["phases", String(pi), "after_termination"])
+        }
+        for (ai, action) in phase.actions.enumerated() where action.probe == nil {
+            return PWRunnerRequestFailure(code: "inapplicable_field", path: ["phases", String(pi), "actions", String(ai), "extension"])
+        }
+    }
     if var failure = sandboxCheckFailure(spec.probe_plan) {
         if let path = failure.path, path.count >= 2, let index = Int(path[1]) {
             failure.path = spec.probePath(index) + path.dropFirst(2)
@@ -177,55 +187,34 @@ let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
           filterKind: PWRunnerWire.sandboxFilterLocalName),
 ]
 
-// Fixed one-token/one-handle semantics; no general dependency graph.
-func extensionMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
-    func fail(_ code: String, _ path: [String]) -> PWRunnerRequestFailure { .init(code: code, path: path) }
-    let declarations = spec.extensions ?? []
-    if !declarations.isEmpty && spec.phases == nil { return fail("extensions_require_phases", ["extensions"]) }
-    if let declaration = declarations.first, declaration.token_ref.isEmpty {
-        return fail("empty_reference", ["extensions", "0", "token_ref"])
-    }
-    for (index, declaration) in declarations.enumerated() {
-        if !["read", "read_write"].contains(declaration.effectiveAuthority) {
-            return fail("unsupported_extension_authority", ["extensions", String(index), "authority"])
+
+/// The only production semantic-admission boundary. The accepted actor table
+/// is carried through service orchestration instead of reconstructed there.
+struct AdmittedSpecimen {
+    let request: PWRunnerRunSpec
+    let actorPlan: ActorPlan?
+}
+enum SpecimenAdmission {
+    case accepted(AdmittedSpecimen)
+    case capacity(PWRunnerAdmissionFailure)
+    case refused(PWRunnerRequestFailure)
+}
+func admitSpecimen(_ request: PWRunnerRunSpec) -> SpecimenAdmission {
+    if let capacity = CWorkerOrchestrator.admissionFailure(for: request) { return .capacity(capacity) }
+    if request.isActorForm {
+        if request._test_overrides?.worker_executable_path != nil {
+            return .refused(PWRunnerRequestFailure(code: "inapplicable_field", path: ["_test_overrides", "worker_executable_path"]))
         }
-    }
-    if !declarations.isEmpty && spec.probe_plan.contains(where: { $0.attempt.kind == "exec" }) {
-        return fail("extension_exec_unsupported", ["phases"])
-    }
-    var identities = Set<String>()
-    var consumedHandle: String?
-    var releaseSeen = false
-    for (pi, phase) in spec.executionPhases.enumerated() {
-        for (ai, action) in phase.actions.enumerated() {
-            let path = spec.phases == nil ? ["probe_plan", String(ai)] : ["phases", String(pi), "actions", String(ai)]
-            if !identities.insert(action.stepID).inserted { return fail("duplicate_step_id", path + ["step_id"]) }
-            guard case .extensionAction(let value) = action else { continue }
-            if value.step_id.isEmpty { return fail("empty_step_id", path + ["step_id"]) }
-            let op = value.intervention
-            for (key, operand) in [("family", op.family), ("target", op.target), ("authority", op.authority),
-                                   ("recipient", op.recipient), ("delivery_ref", op.delivery_ref)] where operand != nil {
-                return fail("inapplicable_field", path + ["extension", key])
-            }
-            guard let handle = op.handle_ref else { return fail("missing_field", path + ["extension", "handle_ref"]) }
-            if handle.isEmpty { return fail("empty_reference", path + ["extension", "handle_ref"]) }
-            switch op.operation {
-            case "consume":
-                if consumedHandle != nil { return fail("repeated_consume", path + ["extension"]) }
-                guard let token = declarations.first?.token_ref, op.token_ref == token else {
-                    return fail("unknown_token_reference", path + ["extension", "token_ref"])
-                }
-                if handle == token { return fail("duplicate_reference", path + ["extension", "handle_ref"]) }
-                consumedHandle = handle
-            case "release":
-                if releaseSeen { return fail("repeated_release", path + ["extension"]) }
-                if op.token_ref != nil { return fail("inapplicable_field", path + ["extension", "token_ref"]) }
-                guard let consumed = consumedHandle else { return fail("release_before_consume", path + ["extension"]) }
-                if handle != consumed { return fail("unknown_handle_reference", path + ["extension", "handle_ref"]) }
-                releaseSeen = true
-            default: return fail("unsupported_extension_action", path + ["extension", "operation"])
+        for (role, path) in (request._test_overrides?.actor_equipment_executable_paths ?? [:]).sorted(by: { $0.key < $1.key }) {
+            if !path.hasPrefix("/") {
+                return .refused(PWRunnerRequestFailure(code: "relative_equipment_path", path: ["_test_overrides", "actor_equipment_executable_paths", role]))
             }
         }
+        switch normalizeActorPlan(request) {
+        case .success(let plan): return .accepted(AdmittedSpecimen(request: request, actorPlan: plan))
+        case .failure(let failure): return .refused(failure)
+        }
     }
-    return nil
+    if let failure = requestMeaningFailure(request) { return .refused(failure) }
+    return .accepted(AdmittedSpecimen(request: request, actorPlan: nil))
 }

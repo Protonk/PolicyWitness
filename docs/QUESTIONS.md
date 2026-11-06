@@ -46,7 +46,7 @@ PolicyWitness supports imports the same way `sandbox-exec` does — `(import "na
 
 ## Can PolicyWitness test sandbox-extension behavior?
 
-Yes. See [EXTENSIONS.md](EXTENSIONS.md) for supported extension operations and authority types.
+Yes. Use an unapplied, unentitled actor to issue and transfer a token to an applied, selected actor, then compare fresh access before consumption, during use and after release. Add actors to test re-delegation. Unapplied does not mean unrestricted; signing observations do not establish effective authority. See [EXTENSIONS.md](EXTENSIONS.md) for operations and evidence limits.
 
 ## Which happens first, the prediction or the attempt?
 

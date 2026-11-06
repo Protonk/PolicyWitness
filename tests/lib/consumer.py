@@ -594,7 +594,7 @@ def _validate_reply(runner):
 
 
 ACTOR_SETUP_STATUSES = ('not_launched', 'launch_refused', 'transfer_failed', 'applied', 'unapplied_declared',
-                        'setup_failed', 'exited_before_setup', 'setup_timeout')
+                        'setup_failed', 'exited_before_setup', 'setup_timeout', 'authority_setup_failed')
 
 
 def _validate_actors(runner, failed_reporting, steps_value):
@@ -640,7 +640,7 @@ def _validate_actors(runner, failed_reporting, steps_value):
                 errors.append('actor subprocess lacks its matching launch record')
             errors.extend(_validate_worker(runner, sub, failed_reporting,
                                            [s for s in steps_value if s.get('actor_id') == actor_id]))
-        elif launch is not None or setup in ('applied', 'unapplied_declared', 'setup_failed', 'exited_before_setup', 'transfer_failed'):
+        elif launch is not None or setup in ('applied', 'unapplied_declared', 'setup_failed', 'authority_setup_failed', 'exited_before_setup', 'transfer_failed'):
             errors.append('actor setup claims a process that has no subprocess record')
         visits = actor.get('visits')
         if not isinstance(visits, list) or any(type(v) is not int or v < 1 for v in visits):
@@ -777,6 +777,9 @@ def _validate_phases(runner):
     step_ids = [x.get('step_id') for x in steps]
     event_ids = [x.get('step_id') for x in events]
     all_ids = step_ids + event_ids
+    from actor_evidence import preparation_failure_valid
+    if preparation_failure_valid(runner):
+        return errors
     if len(actions) > 256 or any(not isinstance(x, str) for x in all_ids) or \
             sorted(actions) != sorted(x for x in all_ids if isinstance(x, str)) or \
             [x for x in actions if x in step_ids] != step_ids or [x for x in actions if x in event_ids] != event_ids or \
@@ -872,7 +875,7 @@ def _validate_envelope(document):
         if not isinstance(host, dict) or any(k not in host for k in ('macos_version', 'macos_build', 'kernel_release', 'arch')):
             errors.append('invalid data.specimen.host')
         binaries = specimen.get('binaries')
-        if not isinstance(binaries, dict) or any(k not in binaries for k in ('service', 'worker', 'validator')):
+        if not isinstance(binaries, dict) or any(k not in binaries for k in ('service', 'worker', 'validator', 'unentitled_worker')):
             errors.append('invalid data.specimen.binaries')
         else:
             for role, record in binaries.items():

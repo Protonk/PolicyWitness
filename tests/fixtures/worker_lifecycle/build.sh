@@ -13,9 +13,6 @@ compile_output() {
   WARM_UP+=("${output}" "${status}")
 }
 
-compile_output 92 "${OUTPUT}.issuer" -std=c11 -Wall -Wextra -Wno-deprecated-declarations -O2 \
-  -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
-  "${ROOT_DIR}/controller/tools/pw_probe_runner/pw_extension_issuer.c" -lsandbox
 compile_output 90 "${OUTPUT}" -std=c11 -Wall -Wextra -Werror -O2 \
   -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
   "${ROOT_DIR}/tests/fixtures/worker_lifecycle/worker.c" -lsandbox

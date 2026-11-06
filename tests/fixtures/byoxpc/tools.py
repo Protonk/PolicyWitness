@@ -1,5 +1,6 @@
 """Independent fake OS/CLI commands with durable receipts; never calls real tools."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import plistlib
@@ -36,7 +37,16 @@ if argv[0] == '/usr/bin/ditto':
     shutil.copytree(argv[1], argv[2], symlinks=True)
     finish()
 if argv[0] == '/usr/bin/codesign':
-    assert '-s' not in argv, 'fixture must delegate signing to the public installer'
+    if '-s' in argv:
+        assert Path(argv[-1]) == bundle and argv[argv.index('-s') + 1] == 'fixture identity'
+        assert not state['loaded'] and not any(r['service_name'] == service for r in state['runners']), 'renamed source resealed after installation'
+        assert '--force' in argv and '--timestamp' in argv and '--options' in argv
+        if mode == 'source_reseal_failure':
+            finish(17)
+        executable = bundle / 'Contents/MacOS/PWRunner'
+        executable.write_bytes(executable.read_bytes() + b' renamed-source-seal')
+        state['renamed_source_sealed'] = True
+        finish()
     target = Path(argv[-1])
     staged = target == bundle or target.is_relative_to(bundle)
     if '--verify' in argv:
@@ -57,20 +67,21 @@ if argv[0] == '/usr/bin/codesign':
         ent = config['entitlements']
         if mode == 'changed_entitlements' and staged:
             ent = {'unexpected': True}
-        if target.name in ('sb_api_validator', 'pw-extension-issuer'):
+        if target.name in ('sb_api_validator', 'pw-probe-runner-unentitled'):
             # These helpers receive the identity without the worker plist.
             ent = None
-        if mode == 'issuer_entitlements' and staged and target.name == 'pw-extension-issuer':
+        if mode == 'unentitled_entitlements' and staged and target.name == 'pw-probe-runner-unentitled':
             ent = {'unexpected': True}
         if ent is not None:
             sys.stdout.buffer.write(plistlib.dumps(ent))
             sys.stdout.buffer.flush()
         finish()
-    identifier = service if staged else 'pw-runner-client' if target.name == 'pw-runner-client' else 'fixture.source'
+    identifier = service if staged and target.name == 'PWRunner.xpc' else 'pw-runner-client' if target.name == 'pw-runner-client' else 'fixture.source'
     team = 'not set' if mode == 'adhoc_noauth' and staged else 'WRONG' if mode == 'wrong_team' and staged else 'FIXTURETEAM'
     if mode == 'adhoc_noauth' and staged:
         print('Signature=adhoc', file=sys.stderr)
-    print(f'Identifier={identifier}\nTeamIdentifier={team}\nCDHash=fixture\n'
+    cdhash = 'a' * 40
+    print(f'Identifier={identifier}\nTeamIdentifier={team}\nCDHash={cdhash}\n'
           'CodeDirectory flags=0x10000(runtime)\nTimestamp=fixture timestamp', file=sys.stderr)
     finish()
 if argv[0] == '/bin/launchctl':
@@ -109,6 +120,7 @@ if argv[2] == 'install':
     if '--entitlements' in argv:
         receipt['entitlements'] = plistlib.loads(Path(argv[argv.index('--entitlements') + 1]).read_bytes())
     assert receipt.get('entitlements') == config['entitlements'], 'entitlements were not preserved'
+    assert state.get('renamed_source_sealed'), 'installer accepted unsealed renamed source'
     if mode in ('sign_failure', 'uncertain_no_record'):
         finish(17)
     executable = bundle / 'Contents/MacOS/PWRunner'
@@ -120,7 +132,18 @@ if argv[2] == 'install':
                                'granted': sorted(k for k, v in (value or {}).items() if v is True), 'error': None}
     record = {'id': 'owned-id', 'service_name': service, 'scope': 'user', 'bundle_path': str(bundle), 'state': 'pending',
               'entitlements': read_back(embedded), 'worker_entitlements': read_back(embedded),
-              'validator_entitlements': read_back(None), 'issuer_entitlements': read_back(None)}
+              'validator_entitlements': read_back(None), 'unentitled_worker_entitlements': read_back(None)}
+    inventory_path = bundle / 'Contents/Resources/worker-equipment.json'
+    source_inventory = json.loads(inventory_path.read_text())
+    current_inventory = json.loads(inventory_path.read_text())
+    for row in current_inventory['workers']:
+        row['sha256'] = hashlib.sha256((bundle / row['relative_path']).read_bytes()).hexdigest()
+        row['team_id'] = None if mode == 'adhoc_noauth' else 'WRONG' if mode == 'wrong_team' else 'FIXTURETEAM'
+        row['entitlements_xml'] = plistlib.dumps((embedded or {}) if row['role'] == 'selected' else {}).decode()
+    inventory_path.write_text(json.dumps(current_inventory))
+    record['worker_equipment_inventory'] = current_inventory
+    record['source_worker_equipment_inventory'] = source_inventory
+    record['unentitled_worker_sha256'] = next(r['sha256'] for r in current_inventory['workers'] if r['role'] == 'unentitled')
     state['runners'].append(record)
     plist.parent.mkdir(parents=True, exist_ok=True)
     plist.write_bytes(plistlib.dumps({'Label': service, 'ProgramArguments': [str(executable), '--mach-service', service],

@@ -1,5 +1,5 @@
 {
-  "controller_envelope": 10,
+  "controller_envelope": 11,
   "shape": {
     "envelope": {
       "build": "object",
@@ -353,19 +353,19 @@
       "rel_path": "string"
     },
     "envelope.data.specimen.binaries": {
-      "issuer": "object",
       "service": "object",
+      "unentitled_worker": "object",
       "validator": "object",
       "worker": "object"
     },
-    "envelope.data.specimen.binaries.issuer": {
+    "envelope.data.specimen.binaries.service": {
       "actual_sha256": "string",
       "baseline_sha256": "string",
       "path": "string",
       "reason": "string",
       "verification": "string"
     },
-    "envelope.data.specimen.binaries.service": {
+    "envelope.data.specimen.binaries.unentitled_worker": {
       "actual_sha256": "string",
       "baseline_sha256": "string",
       "path": "string",
@@ -424,12 +424,12 @@
       "runner_bundle_path": "string",
       "runner_entitlements": "object",
       "runner_executable_path": "string",
-      "runner_issuer_entitlements": "object",
-      "runner_issuer_signature": "object",
       "runner_kind": "string",
       "runner_registry_id": "string",
       "runner_service_name": "string",
       "runner_signature": "object",
+      "runner_unentitled_worker_entitlements": "object",
+      "runner_unentitled_worker_signature": "object",
       "runner_validator_entitlements": "object",
       "runner_validator_signature": "object",
       "runner_worker_entitlements": "object",
@@ -441,20 +441,20 @@
       "keys": "array",
       "raw_plist": "string"
     },
-    "envelope.data.specimen.runner_provenance.runner_issuer_entitlements": {
-      "error": "string",
-      "granted": "array",
-      "keys": "array",
-      "raw_plist": "string"
-    },
-    "envelope.data.specimen.runner_provenance.runner_issuer_signature": {
+    "envelope.data.specimen.runner_provenance.runner_signature": {
       "adhoc": "boolean",
       "cdhash": "string",
       "identity": "string",
       "team_id": "string",
       "valid": "boolean"
     },
-    "envelope.data.specimen.runner_provenance.runner_signature": {
+    "envelope.data.specimen.runner_provenance.runner_unentitled_worker_entitlements": {
+      "error": "string",
+      "granted": "array",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_unentitled_worker_signature": {
       "adhoc": "boolean",
       "cdhash": "string",
       "identity": "string",

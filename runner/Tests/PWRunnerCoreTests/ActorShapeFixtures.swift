@@ -99,7 +99,7 @@ private func actorOutput(_ input: CWorkerInput, index: Int, applies: Bool, failu
 
 private func failedSetupOutput(_ input: CWorkerInput, index: Int) -> CWorkerOutput {
     var output = actorOutput(input, index: index, applies: true)
-    output.applied = false; output.applyRC = -1; output.actorSetup = 0; output.activationObserved = 0
+    output.applied = false; output.applyRC = 0; output.actorSetup = 0; output.activationObserved = 0
     output.slots = input.slots.map { CWorkerSlotResult(stepId: $0.stepId, rc: 0, errnoVal: 0, completed: false) }
     output.phases = input.phases.map { _ in CWorkerPhaseOutput() }
     output.proceedSet = false; output.proceedObserved = false; output.proceedOwnershipEstablished = false; output.hookInvoked = false
@@ -116,7 +116,7 @@ private func failedSetupOutput(_ input: CWorkerInput, index: Int) -> CWorkerOutp
 func actorShapeDocuments() throws -> [[String: Any]] {
     let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(actorRequest().utf8))
     guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "shape request refused") }
-    let translation = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: "/constructed/pw-probe-runner")
+    let translation = try ActorTranslation(plan: plan, parsed: parsed, workerExecutablePaths: Array(repeating: "/constructed/pw-probe-runner", count: plan.actors.count))
     func visits(_ reasons: [String]) -> [ActorVisitRecord] {
         plan.phases.map { phase in
             var visit = ActorVisitRecord(phaseIndex: phase.index, actorIndex: phase.actorIndex, visit: phase.visit - 1)
@@ -156,9 +156,10 @@ func actorShapeDocuments() throws -> [[String: Any]] {
             guard outcome.visits.first(where: { $0.phaseIndex == phase.index })?.collectionInvoked == true else { return "not_reached" }
             return queryPlans[phase.index].contains { $0.probe != nil } ? "collected" : "not_needed"
         }
-        let reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+        var reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
             queryPlans: queryPlans,
             validatorResults: plan.phases.map { _ in nil }, collectionStatuses: statuses, bundleId: "shape")
+        attachConstructedActorAccounts(&reply, plan: plan, outcome: outcome)
         return try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply)) as! [String: Any]
     }
     let assemble = { (outcome: ActorScheduleOutcome) throws -> [String: Any] in
@@ -323,8 +324,8 @@ func actorShapeDocuments() throws -> [[String: Any]] {
     guard case .success(let capturePlan) = normalizeActorPlan(captureRequest) else {
         throw TestFailure(message: "actor capture shape request refused")
     }
-    let captureTranslation = ActorTranslation(plan: capturePlan, parsed: captureRequest,
-        workerExecutablePath: "/constructed/pw-probe-runner")
+    let captureTranslation = try ActorTranslation(plan: capturePlan, parsed: captureRequest,
+        workerExecutablePaths: Array(repeating: "/constructed/pw-probe-runner", count: capturePlan.actors.count))
     let bytecode = Data([10, 20, 30])
     func capturedProfile(_ index: Int) -> CompiledProfileCapture {
         let input = captureTranslation.inputs[index]
@@ -347,5 +348,261 @@ func actorShapeDocuments() throws -> [[String: Any]] {
         reason: "successful_application_unconfirmed", worker_pid: Int(outputs[2].workerPid))
     documents.append(try assembleUsing(unavailableCapture, parsed: captureRequest,
         plan: capturePlan, translation: captureTranslation))
+    // Reference-only termination evidence: source activation, owned reap and
+    // gate capture share the source observation order. The dependent activation
+    // has its own capture. No native process is launched by this companion.
+    var gated = captured
+    let sourcePID = Int(outputs[0].workerPid)
+    let reap = PWOwnedReapObservation(pid: sourcePID, native_rc: Int32(sourcePID), raw_status: 0,
+        stage: "termination_gate", observed_ns: 200, ownership_unbroken: true,
+        departure_requested: false, capture_ordinal: 2)
+    gated.actors[0].output!.ownedReap = reap
+    gated.visits[2].activationObservation = PWRunnerActorActivation(capture_ordinal: 1, observed_ns: 100)
+    gated.visits[3].activationObservation = PWRunnerActorActivation(capture_ordinal: 4, observed_ns: 300)
+    gated.visits[3].terminationGate = ActorTerminationGateRecord(sourceActorIndex: 0, sourceFinalPhaseIndex: 2,
+        outcome: "satisfied", wait: PWHostWait(budget_ms: 5000, elapsed_ms: 1, stop: "satisfied",
+            native_errno: nil, clock_fault: false), observation: reap, activationEligible: true, captureOrdinal: 3)
+    let gatedDocument = try assembleUsing(gated, parsed: captureRequest, plan: capturePlan, translation: captureTranslation)
+    documents.append(gatedDocument)
+
+    // Full bounded setup operation shapes, including native return, independent
+    // errno, detail/value, custody association and manual recovery ownership.
+    // These are constructed accounts, not a native apparatus-success assertion.
+    var accounted = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
+        from: JSONSerialization.data(withJSONObject: gatedDocument))
+    accounted.authority_setup!.host.run.operations = [PWRunnerAuthorityOperation(slot: 0, operation: "core_limit",
+        role: "setup", state: "succeeded", native_kind: "integer", native_rc: 0, errno: nil,
+        detail: "constructed core-limit observation", value: 0)]
+    accounted.authority_setup!.host.regions = plan.actors.map { actor in
+        PWRunnerAuthorityScope(actor_id: actor.id, actor_index: actor.index, required: true,
+            disposition: "ready", operations: [
+                PWRunnerAuthorityOperation(slot: 0, operation: "shm_open", role: "setup", state: "succeeded",
+                    native_kind: "integer", native_rc: 64, errno: nil, detail: nil, value: nil),
+                PWRunnerAuthorityOperation(slot: 1, operation: "shm_unlink", role: "setup", state: "succeeded",
+                    native_kind: "integer", native_rc: 0, errno: nil, detail: nil, value: nil),
+                PWRunnerAuthorityOperation(slot: 10, operation: "shared_clear", role: "cleanup", state: "performed",
+                    native_kind: "memory", native_rc: nil, errno: nil, detail: nil, value: 4096)],
+            ownership: ["object_name":"released", "descriptor":"released", "mapping":"released", "shared_erasure":"performed"])
+    }
+    accounted.authority_setup!.host.custody = plan.tokens.enumerated().map { index, token in
+        PWRunnerAuthorityScope(token_ref: token.ref, token_index: index, required: true,
+            disposition: "ready", operations: [
+                PWRunnerAuthorityOperation(slot: 0, operation: "mmap", role: "setup", state: "succeeded",
+                    native_kind: "mapping", native_rc: nil, errno: nil, detail: nil, value: nil),
+                PWRunnerAuthorityOperation(slot: 1, operation: "final_erase", role: "cleanup", state: "performed",
+                    native_kind: "memory", native_rc: nil, errno: nil, detail: nil, value: 4096)],
+            ownership: ["mapping":"released", "private_erasure":"performed"])
+    }
+    for index in accounted.authority_setup!.workers.indices {
+        accounted.authority_setup!.workers[index].operations = [
+            PWRunnerAuthorityOperation(slot: 0, operation: "issue_symbol", role: "setup", state: "available",
+                native_kind: "symbol", native_rc: nil, errno: nil, detail: nil, value: nil),
+            PWRunnerAuthorityOperation(slot: 10, operation: "header_binding", role: "setup", state: "accepted",
+                native_kind: "validation", native_rc: nil, errno: nil, detail: nil, value: nil),
+            PWRunnerAuthorityOperation(slot: 11, operation: "terminal_owned_inbound_clear", role: "cleanup", state: "performed",
+                native_kind: "memory", native_rc: nil, errno: nil, detail: nil, value: 4096)]
+        accounted.authority_setup!.workers[index].ownership = ["descriptor":"released", "mapping":"released", "shared_erasure":"performed"]
+    }
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(accounted)) as! [String: Any])
+
+    var apparatusRefusal = complete
+    apparatusRefusal.actors = plan.actors.map { record($0.index, status: .launchRefused, output: nil) }
+    apparatusRefusal.visits = visits(Array(repeating: "actor_unavailable", count: plan.phases.count))
+    apparatusRefusal.custody = []; apparatusRefusal.transfers = []
+    apparatusRefusal.cancelled = "authority_setup_failed"
+    var recovery = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
+        from: JSONSerialization.data(withJSONObject: assemble(apparatusRefusal)))
+    recovery.authority_setup!.host.run.disposition = "failed"
+    recovery.authority_setup!.host.regions = [PWRunnerAuthorityScope(actor_id: "A", actor_index: 0,
+        required: true, disposition: "failed", primary_operation: 1, operations: [
+            PWRunnerAuthorityOperation(slot: 0, operation: "shm_open", role: "setup", state: "succeeded",
+                native_kind: "integer", native_rc: 64, errno: nil, detail: nil, value: nil),
+            PWRunnerAuthorityOperation(slot: 1, operation: "shm_unlink", role: "setup", state: "failed",
+                native_kind: "integer", native_rc: -1, errno: 1, detail: "constructed unlink refusal", value: nil)],
+        ownership: ["object_name":"unresolved", "descriptor":"released", "mapping":"not_acquired", "shared_erasure":"not_present"],
+        cleanup_reference: PWAuthorityCleanupReference(name: "/pw-shape-owned", host_pid: 42, session_nonce: 99))]
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(recovery)) as! [String: Any])
+    var preparation = recovery
+    preparation.preparation_failure = PWRunnerPreparationFailure(stage: "resolved_plan", code: "inconsistent_assignment",
+        actor_id: "A", binding_ref: "selected", reason: "constructed assignment mismatch")
+    preparation.steps = []; preparation.extension_events = []; preparation.transfers = []
+    preparation.resources = PWRunnerResourceTables(tokens: [], deliveries: [], handles: [])
+    preparation.authority_setup!.host = PWRunnerAuthorityHost(run: PWRunnerAuthorityScope(disposition: "not_attempted"))
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(preparation)) as! [String: Any])
+    // Explicit selectors and fixture overrides are authored provenance. Both
+    // production rows remain visible; override rows receive no packaged credit.
+    var explicit = accounted
+    let fixturePaths = ["selected":"/constructed/selected-fixture", "unentitled":"/constructed/unentitled-fixture"]
+    explicit.test_overrides = PWRunnerTestOverrides(actor_equipment_executable_paths: fixturePaths)
+    for role in ["selected", "unentitled"] {
+        var binding = explicit.equipment_bindings!.first { $0.binding_id == role }!
+        binding.binding_id = "override-" + role; binding.source = "test_override"
+        binding.implementation_identity = "unverified_fixture"; binding.relative_path = nil
+        binding.expected_sha256 = nil; binding.expected_cdhash = nil; binding.entitlements_match = nil
+        binding.path = fixturePaths[role]!; binding.entitlements_ref = "binding-override-" + role
+        explicit.equipment_bindings!.append(binding)
+        explicit.equipment_entitlements!.append(PWRunnerEquipmentEntitlements(entitlements_id: binding.entitlements_ref!,
+            source: "binding", binding_ref: binding.binding_id, status: "observed", raw_plist: "<plist version=\"1.0\"><dict/></plist>"))
+    }
+    for index in explicit.actors!.indices {
+        let role = index == 0 ? "unentitled" : "selected"
+        explicit.actors![index].equipment!.requested = role
+        explicit.actors![index].equipment!.resolved = role
+        explicit.actors![index].equipment!.binding_ref = "override-" + role
+        explicit.actors![index].equipment!.execution.path = fixturePaths[role]!
+        explicit.actors![index].equipment!.execution.parent_pid = explicit.actors![index].launch?.parent_pid
+        let readback = explicit.equipment_entitlements!.firstIndex { $0.entitlements_id == "execution-\(index)" }!
+        explicit.equipment_entitlements![readback].binding_ref = "override-" + role
+    }
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(explicit)) as! [String: Any])
+
+    let signingError = PWRunnerEquipmentError(operation: "worker_entitlements", domain: NSOSStatusErrorDomain,
+        code: -67000, message: "constructed signing readback failure")
+    var bindingRefusal = preparation
+    bindingRefusal.preparation_failure = PWRunnerPreparationFailure(stage: "equipment", code: "equipment_binding_refused",
+        binding_ref: "unentitled", reason: "entitlements_unreadable")
+    bindingRefusal.equipment_bindings![1].status = "refused"
+    bindingRefusal.equipment_bindings![1].reason = "entitlements_unreadable"
+    bindingRefusal.equipment_bindings![1].error = signingError
+    bindingRefusal.equipment_bindings![1].entitlements_match = nil
+    bindingRefusal.equipment_entitlements![1].status = "failed"
+    bindingRefusal.equipment_entitlements![1].raw_plist = nil
+    bindingRefusal.equipment_entitlements![1].error = signingError
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(bindingRefusal)) as! [String: Any])
+    var inventoryRefusal = preparation
+    inventoryRefusal.preparation_failure = PWRunnerPreparationFailure(stage: "equipment", code: "equipment_binding_refused", reason: "signature_invalid")
+    inventoryRefusal.equipment_inventory = PWRunnerEquipmentInventory(path: "/constructed/Contents/Resources/worker-equipment.json",
+        status: "refused", seal_osstatus: -67000, reason: "signature_invalid",
+        error: PWRunnerEquipmentError(operation: "service_seal", domain: NSOSStatusErrorDomain, code: -67000,
+            message: "constructed service signature failure"))
+    inventoryRefusal.equipment_bindings = []; inventoryRefusal.equipment_entitlements = []
+    for index in inventoryRefusal.actors!.indices {
+        inventoryRefusal.actors![index].equipment!.requirements_status = "unobserved"
+        inventoryRefusal.actors![index].equipment!.missing_requirements = nil
+    }
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(inventoryRefusal)) as! [String: Any])
+
+    var coreFailure = recovery
+    coreFailure.authority_setup!.host.regions = []
+    coreFailure.authority_setup!.host.run = PWRunnerAuthorityScope(disposition: "failed", primary_operation: 0,
+        operations: [PWRunnerAuthorityOperation(slot: 0, operation: "core_limit", role: "setup", state: "failed",
+            native_kind: "integer", native_rc: -1, errno: 1, detail: "constructed core-limit failure", value: nil)])
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(coreFailure)) as! [String: Any])
+    var custodyCleanup = accounted
+    custodyCleanup.rc = 1; custodyCleanup.normalized_outcome = "runner_failed"
+    custodyCleanup.authority_setup!.host.custody[0].disposition = "failed"
+    custodyCleanup.authority_setup!.host.custody[0].primary_operation = 2
+    custodyCleanup.authority_setup!.host.custody[0].operations.append(PWRunnerAuthorityOperation(slot: 2,
+        operation: "munmap", role: "cleanup", state: "failed", native_kind: "integer", native_rc: -1, errno: 22,
+        detail: "constructed custody cleanup failure", value: nil))
+    custodyCleanup.authority_setup!.host.custody[0].ownership["mapping"] = "unresolved"
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(custodyCleanup)) as! [String: Any])
+
+    var workerSetupFailure = faulted
+    var terminalOutput = failedSetupOutput(translation.inputs[2], index: 2)
+    terminalOutput.workerEvidence?.progress = nil
+    terminalOutput.workerEvidence?.failure_publication = 0
+    terminalOutput.workerEvidence?.failure_state = "absent"
+    terminalOutput.workerEvidence?.failure = nil
+    terminalOutput.workerEvidence?.diagnostic = PWWorkerDiagnostic(state: 0, status: "absent", length: 0, text: nil)
+    terminalOutput.authoritySetup = PWRunnerAuthorityScope(actor_index: 2, required: true, publication: "observed",
+        disposition: "terminal_required_failure", primary_operation: 9, operations: [
+            PWRunnerAuthorityOperation(slot: 9, operation: "descriptor_close", role: "setup", state: "failed",
+                native_kind: "integer", native_rc: -1, errno: 9, detail: "constructed descriptor close failure", value: nil)],
+        ownership: ["descriptor":"unresolved", "mapping":"released", "shared_erasure":"not_present"])
+    workerSetupFailure.actors[2] = record(2, status: .setupFailed, output: terminalOutput)
+    documents.append(try assemble(workerSetupFailure))
+
+    // Integrity contradictions are retained only by the explicit degraded
+    // reporting path. They do not become normal apparatus success evidence.
+    var integrity = accounted
+    integrity.authority_setup!.host.run.integrity_errors = ["constructed_integrity_failure"]
+    integrity.authority_setup!.host.regions[0].integrity_errors = ["constructed_integrity_failure"]
+    integrity.authority_setup!.host.custody[0].integrity_errors = ["constructed_integrity_failure"]
+    integrity.authority_setup!.workers[0].integrity_errors = ["constructed_integrity_failure"]
+    documents.append(try JSONSerialization.jsonObject(with: pwRunnerReplyData(integrity)) as! [String: Any])
+
+    // A failed native wait at the dependency boundary carries errno without
+    // inventing a reap. Later cleanup cannot turn this gate into satisfied.
+    let gateRequest = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data("""
+        {"schema_version": \(PWContract.requestSchema), "specimen_id":"constructed-gate-failure",
+         "actors":[{"actor_id":"A","sandbox":{"mode":"unapplied"}},
+                   {"actor_id":"B","sandbox":{"mode":"apply","policy":{"format":"sbpl","sbpl_source":"(version 1)(allow default)"}}}],
+         "phases":[{"phase_id":"source","actor_id":"A","actions":[]},
+                   {"phase_id":"dependent","actor_id":"B","after_termination":{"actor_id":"A"},"actions":[]}]}
+        """.utf8))
+    guard case .success(let gatePlan) = normalizeActorPlan(gateRequest) else { throw TestFailure(message: "gate shape request refused") }
+    let gateTranslation = try ActorTranslation(plan: gatePlan, parsed: gateRequest,
+        workerExecutablePaths: Array(repeating: "/constructed/pw-probe-runner", count: 2))
+    var sourceOutput = actorOutput(gateTranslation.inputs[0], index: 0, applies: false)
+    sourceOutput.reaped = false; sourceOutput.exitCode = nil; sourceOutput.exitRequested = false
+    sourceOutput.pollStopReason = "wait_error"; sourceOutput.cleanupTrigger = "wait_error"
+    sourceOutput.graceEnd = "wait_error"; sourceOutput.graceWait = nil
+    sourceOutput.collectionBasis = "execution_may_continue"
+    sourceOutput.waitErrors = [PWRunnerWaitError(stage: "termination_gate", rc: -1, errno: ECHILD)]
+    var dependentOutput = actorOutput(gateTranslation.inputs[1], index: 1, applies: true)
+    dependentOutput.phases = [CWorkerPhaseOutput()]; dependentOutput.done = false
+    dependentOutput.proceedSet = false; dependentOutput.proceedObserved = false
+    dependentOutput.proceedOwnershipEstablished = false; dependentOutput.hookInvoked = false
+    dependentOutput.activationObserved = 0
+    var sourceVisit = ActorVisitRecord(phaseIndex: 0, actorIndex: 0, visit: 0)
+    sourceVisit.activationStored = true; sourceVisit.activationObservation = PWRunnerActorActivation(capture_ordinal: 1, observed_ns: 100)
+    sourceVisit.arrivalObserved = true; sourceVisit.collectionInvoked = true; sourceVisit.collectionClosed = true
+    sourceVisit.releaseStored = true; sourceVisit.acknowledgementObserved = true; sourceVisit.completionObserved = true
+    sourceVisit.endReason = "completed"
+    var blockedVisit = ActorVisitRecord(phaseIndex: 1, actorIndex: 1, visit: 0)
+    blockedVisit.endReason = "termination_dependency:ownership_lost"
+    blockedVisit.terminationGate = ActorTerminationGateRecord(sourceActorIndex: 0, sourceFinalPhaseIndex: 0,
+        outcome: "ownership_lost", wait: PWHostWait(budget_ms: 5000, elapsed_ms: 1, stop: "ownership_lost",
+            native_errno: ECHILD, clock_fault: false), activationEligible: false, captureOrdinal: 2)
+    let gateFailure = ActorScheduleOutcome(actors: [record(0, status: .unappliedDeclared, output: sourceOutput),
+        record(1, status: .applied, output: dependentOutput)], visits: [sourceVisit, blockedVisit], lifetimeCutoffTicks: 1,
+        setupWait: nil, executionWait: nil, cancelled: "termination_dependency:ownership_lost")
+    documents.append(try assembleUsing(gateFailure, parsed: gateRequest, plan: gatePlan, translation: gateTranslation))
     return documents
+}
+
+/// Explicitly constructed signature/setup observations for encoder controls.
+/// This helper never participates in the runtime's binding or inspection path.
+func attachConstructedActorAccounts(_ reply: inout PWRunnerRunResult, plan: ActorPlan, outcome: ActorScheduleOutcome) {
+    let hash = String(repeating: "a", count: 64), cdhash = String(repeating: "b", count: 40)
+    let xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict/></plist>"
+    reply.equipment_inventory = PWRunnerEquipmentInventory(path: "/constructed/Contents/Resources/worker-equipment.json",
+        status: "verified", sha256: hash, schema_version: 1, worker_identity: hash, unsigned_worker_sha256: hash, seal_osstatus: 0)
+    reply.equipment_bindings = ["selected", "unentitled"].map { role in
+        let relative = "Contents/MacOS/" + (role == "selected" ? "pw-probe-runner" : "pw-probe-runner-unentitled")
+        return PWRunnerEquipmentBinding(binding_id: role, role: role, source: "packaged", implementation_identity: "inventory_verified",
+            relative_path: relative, path: "/constructed/" + relative, status: "bound", expected_sha256: hash,
+            expected_cdhash: cdhash, sha256: hash, cdhash: cdhash, identifier: "constructed.worker", team_id: "TEAM",
+            entitlements_ref: "binding-" + role, signature_osstatus: 0, entitlements_match: true)
+    }
+    reply.equipment_entitlements = ["selected", "unentitled"].map { role in
+        PWRunnerEquipmentEntitlements(entitlements_id: "binding-" + role, source: "binding", binding_ref: role,
+            status: "observed", raw_plist: xml)
+    }
+    var workers: [PWRunnerAuthorityScope] = []
+    for actor in plan.actors {
+        let record = outcome.actors[actor.index]
+        var equipment = PWRunnerActorEquipment(requested: actor.equipment, resolved: actor.equipment ?? "selected",
+            binding_ref: actor.equipment ?? "selected", required_entitlements: actor.requiredEntitlements,
+            requirements_status: "satisfied", missing_requirements: [])
+        if record.setupStatus.usable, let pid = record.pid {
+            let binding = reply.equipment_bindings!.first { $0.binding_id == equipment.binding_ref }!
+            equipment.execution = PWRunnerEquipmentExecution(status: "matched", pid: Int(pid), observed_at_monotonic_ns: 100,
+                path: binding.path, cdhash: cdhash, identifier: binding.identifier, team_id: binding.team_id,
+                entitlements_ref: "execution-\(actor.index)", native_observations:
+                    ["guest_code", "dynamic_validity", "associated_static_code", "signing_information"].map {
+                        PWRunnerEquipmentNativeObservation(operation: $0, attempted: true, osstatus: 0)
+                    }, reason: nil, eligible: true)
+            reply.equipment_entitlements!.append(PWRunnerEquipmentEntitlements(entitlements_id: "execution-\(actor.index)",
+                source: "execution", binding_ref: equipment.binding_ref, actor_id: actor.id, status: "observed", raw_plist: xml))
+        } else { equipment.execution.reason = record.pid == nil ? "not_launched" : "setup_unavailable" }
+        reply.actors![actor.index].equipment = equipment
+        workers.append(record.output?.authoritySetup ?? PWRunnerAuthorityScope(actor_id: actor.id, actor_index: actor.index,
+            required: plan.authorityRequired, publication: record.pid == nil ? "not_observed" : "observed",
+            disposition: record.pid == nil ? nil : plan.authorityRequired ? "ready" : "not_required"))
+    }
+    reply.authority_setup = outcome.authoritySetup ?? PWRunnerAuthoritySetup(host: PWRunnerAuthorityHost(
+        run: PWRunnerAuthorityScope(disposition: plan.authorityRequired ? "ready" : "not_required")), workers: workers)
+    reply.authority_setup?.bind(actorIDs: plan.actors.map { $0.id }, tokenRefs: plan.tokens.map { $0.ref })
 }

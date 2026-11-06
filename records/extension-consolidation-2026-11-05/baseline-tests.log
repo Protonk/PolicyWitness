@@ -1,0 +1,55 @@
+==> [selection] runner_c_worker_harness/terminal_erasure
+==> [runner_c_worker_harness/terminal_erasure] start
+==> [runner_c_worker_harness/terminal_erasure] observe full accepted buffers and the done-store boundary; reject shortened and reversed erasure
+==> [runner_c_worker_harness/terminal_erasure] pass: independent full-capacity and done-boundary erasure; ordinary exits preserved; both mutations rejected
+==> [selection] runner_c_worker_harness/authority_binding
+==> [runner_c_worker_harness/authority_binding] start
+==> [runner_c_worker_harness/authority_binding] compile the production recipient with a counted consume boundary
+==> [runner_c_worker_harness/authority_binding] reject wrong associations; bind delayed answers and immutable payloads to their operations
+==> [runner_c_worker_harness/authority_binding] pass: assigned deliveries, delayed answers, payload ownership and host settlement observed independently
+==> [selection] runner_c_worker_harness/actor_operations
+==> [runner_c_worker_harness/actor_operations] start
+==> [runner_c_worker_harness/actor_operations] count explicit native-operation boundaries and reject skipped calls, wrong delivery and inherited-descriptor reads
+==> [runner_c_worker_harness/actor_operations] pass: baseline passed and five disposable source mutations failed at their designated independent observation
+==> [selection] smoke/specimen_file_read_deny
+==> [smoke/specimen_file_read_deny] start
+==> [smoke/specimen_file_read_deny] run request via policy-witness
+==> [smoke/specimen_file_read_deny] pass: run smoke ok
+==> [selection] smoke/specimen_file_read_deny_standard
+==> [smoke/specimen_file_read_deny_standard] start
+==> [smoke/specimen_file_read_deny_standard] run request via policy-witness (standard default)
+==> [smoke/specimen_file_read_deny_standard] pass: run smoke ok (standard default)
+==> [selection] smoke/runner_caller_auth
+==> [smoke/runner_caller_auth] start
+==> [smoke/runner_caller_auth] compare restricted and relaxed authorization using identical client bytes
+==> [smoke/runner_caller_auth] pass: caller authorization enforced; routing, signing, file effects, and rejection controls verified
+==> [selection] witness_contract/extension_redelegation
+==> [witness_contract/extension_redelegation] start
+==> [witness_contract/extension_redelegation] run the principal three-actor re-delegation specimen, its positive calibration and four narrow contrasts through the CLI
+==> [witness_contract/extension_redelegation] pass: principal re-delegation credited; calibration exercised issue, transfer, consume and fresh access; 4 contrasts recorded (actors {'A': 82975, 'B': 82976, 'C': 82977})
+==> [selection] witness_contract/actor_compositions
+==> [witness_contract/actor_compositions] start
+==> [witness_contract/actor_compositions] exercise two issuers, fan-out, repeated handles, self-transfer and empty revisits through the public actor form
+==> [witness_contract/actor_compositions] pass: four public compositions preserve resource associations, independent progress after recipient failure and per-actor compiled-profile receipts
+==> [selection] witness_contract/extensions_byoxpc
+==> [witness_contract/extensions_byoxpc] start
+==> [witness_contract/extensions_byoxpc] install an owned runner; read back issuer and worker authority independently
+==> [witness_contract/extensions_byoxpc] repeat native lifecycle, placement, omission and target preparation through BYOXPC
+==> [witness_contract/extensions_byoxpc] repeat directory modification, exclusive creation and independent persistence through BYOXPC
+==> [witness_contract/extensions_byoxpc] repeat independent unlink, fresh unavailable planning and later native query through BYOXPC
+==> [witness_contract/extensions_byoxpc] exercise maximum ordinary, phased, fresh-read/write, lifecycle and escaped-output replies through BYOXPC
+==> [witness_contract/extensions_byoxpc] remove only the owned installed issuer, observe refusal and validation, then restore exact bytes
+==> [witness_contract/extensions_byoxpc] pass: BYOXPC native lifecycle and ordinary phase controls pass with separate issuer authority and verified cleanup
+==> [selection] witness_contract/actors_byoxpc
+==> [witness_contract/actors_byoxpc] start
+==> [witness_contract/actors_byoxpc] install an owned runner with the selected app's own worker entitlements
+==> [witness_contract/actors_byoxpc] repeat the principal re-delegation, calibration and contrasts through the owned runner's selected worker
+==> [witness_contract/actors_byoxpc] hold the installed issuer aside: the declaration form is refused, the actor form issues and consumes with no helper, exact bytes restored
+==> [witness_contract/actors_byoxpc] an unapplied actor on an App Sandbox-signed copy of the worker inherits that restriction; the ordinary worker is the baseline
+==> [witness_contract/actors_byoxpc] pass: BYOXPC actor re-delegation, no-issuer contrast and inherited-restriction control pass with verified cleanup
+==> [selection] runner_byoxpc/entitlement_readback
+==> [runner_byoxpc/entitlement_readback] start
+==> [runner_byoxpc/entitlement_readback] install an owned runner with a supplied entitlements plist
+==> [runner_byoxpc/entitlement_readback] read the host's, the worker's and the validator's entitlements and signatures back from the installed copy and the registry
+==> [runner_byoxpc/entitlement_readback] pass: the installed worker holds the supplied entitlements; the registry records every binary's read-back; service removal verified
+Test run summary: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-baseline-20261105/run.json

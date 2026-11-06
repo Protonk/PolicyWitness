@@ -116,6 +116,8 @@ struct PWRunnerPhaseResult: Codable {
     var actor_id: String? = nil
     var actor_visit: Int? = nil
     var visit_timing: PWRunnerVisitTiming? = nil
+    var termination_gate: PWRunnerTerminationGate? = nil
+    var activation_observation: PWRunnerActorActivation? = nil
 
     var collectionEvidenceConsistent: Bool {
         let disposition = ordering?.validator_disposition
@@ -164,7 +166,6 @@ struct PWRunnerRunResult: Codable {
     var admission_failure: PWRunnerAdmissionFailure?
     var request_failure: PWRunnerRequestFailure?
     var phases: [PWRunnerPhaseResult]
-    var extensions: [PWRunnerExtensionRecord]?
     var extension_events: [PWRunnerExtensionEvent]?
     var test_overrides: PWRunnerTestOverrides?
     var reporting_failure: PWRunnerReportingFailure?
@@ -174,6 +175,11 @@ struct PWRunnerRunResult: Codable {
     var transfers: [PWRunnerTransferRecord]?
     var resources: PWRunnerResourceTables?
     var schedule: PWRunnerScheduleRecord?
+    var preparation_failure: PWRunnerPreparationFailure?
+    var equipment_inventory: PWRunnerEquipmentInventory?
+    var equipment_bindings: [PWRunnerEquipmentBinding]?
+    var equipment_entitlements: [PWRunnerEquipmentEntitlements]?
+    var authority_setup: PWRunnerAuthoritySetup?
 
     init(
         schema_version: Int = PWContract.responseSchema,
@@ -190,7 +196,6 @@ struct PWRunnerRunResult: Codable {
         steps: [PWRunnerStepResult],
         runner_subprocess: PWRunnerSubprocess? = nil,
         phases: [PWRunnerPhaseResult] = [],
-        extensions: [PWRunnerExtensionRecord]? = nil,
         extension_events: [PWRunnerExtensionEvent]? = nil,
         test_overrides: PWRunnerTestOverrides? = nil,
         compiled_profile: CompiledProfileCapture? = nil,
@@ -214,7 +219,6 @@ struct PWRunnerRunResult: Codable {
         self.sandboxed_after_apply = sandboxed_after_apply
         self.steps = steps
         self.runner_subprocess = runner_subprocess
-        self.extensions = extensions
         self.extension_events = extension_events
         self.phases = phases
         self.test_overrides = test_overrides
@@ -222,8 +226,9 @@ struct PWRunnerRunResult: Codable {
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, compiled_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, phases, extensions, extension_events, test_overrides, reporting_failure
+        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, compiled_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, phases, extension_events, test_overrides, reporting_failure
         case execution_form, actors, transfers, resources, schedule
+        case preparation_failure, equipment_inventory, equipment_bindings, equipment_entitlements, authority_setup
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -254,7 +259,6 @@ struct PWRunnerRunResult: Codable {
         runner_subprocess = try c.decodeIfPresent(PWRunnerSubprocess.self, forKey: .runner_subprocess)
         admission_failure = try c.decodeIfPresent(PWRunnerAdmissionFailure.self, forKey: .admission_failure)
         request_failure = try c.decodeIfPresent(PWRunnerRequestFailure.self, forKey: .request_failure)
-        extensions = try c.decodeIfPresent([PWRunnerExtensionRecord].self, forKey: .extensions)
         extension_events = try c.decodeIfPresent([PWRunnerExtensionEvent].self, forKey: .extension_events)
         phases = try c.decode([PWRunnerPhaseResult].self, forKey: .phases)
         test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
@@ -264,6 +268,18 @@ struct PWRunnerRunResult: Codable {
         transfers = try c.decodeIfPresent([PWRunnerTransferRecord].self, forKey: .transfers)
         resources = try c.decodeIfPresent(PWRunnerResourceTables.self, forKey: .resources)
         schedule = try c.decodeIfPresent(PWRunnerScheduleRecord.self, forKey: .schedule)
+        preparation_failure = try c.decodeIfPresent(PWRunnerPreparationFailure.self, forKey: .preparation_failure)
+        equipment_inventory = try c.decodeIfPresent(PWRunnerEquipmentInventory.self, forKey: .equipment_inventory)
+        equipment_bindings = try c.decodeIfPresent([PWRunnerEquipmentBinding].self, forKey: .equipment_bindings)
+        equipment_entitlements = try c.decodeIfPresent([PWRunnerEquipmentEntitlements].self, forKey: .equipment_entitlements)
+        authority_setup = try c.decodeIfPresent(PWRunnerAuthoritySetup.self, forKey: .authority_setup)
+        let keys = try decoder.container(keyedBy: RequestKey.self)
+        if keys.contains(RequestKey(stringValue: "extensions")) {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "retired extensions field"))
+        }
+        if reporting_failure == nil, let problem = extensionEvidenceProblem() {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: problem))
+        }
         if reporting_failure == nil {
             for step in steps {
                 if let problem = step.attempt.execObservationEvidenceProblem() {
@@ -296,7 +312,7 @@ struct PWRunnerRunResult: Codable {
                   !failure.diagnostic.isEmpty, !failure.original_normalized_outcome.isEmpty,
                   steps.allSatisfy({ $0.comparison == nil }),
                   failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && phases.isEmpty &&
-                    (extensions ?? []).isEmpty && (extension_events ?? []).isEmpty) else {
+                    (extension_events ?? []).isEmpty) else {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "reporting failure requires a failed summary and no comparison claims"))
             }
@@ -348,7 +364,7 @@ struct PWRunnerRunResult: Codable {
             let phaseCap = execution_form == "actors" ? PWActorLimits.phases : PWRunnerPhase.maximumCount
             guard phases.count <= phaseCap, Set(phaseIDs).count == phases.count,
                   Set(actionIDs).count == actionIDs.count, actionIDs.count <= 256,
-                  Set(allIDs).count == allIDs.count, Set(actionIDs) == Set(allIDs),
+                  Set(allIDs).count == allIDs.count, (preparation_failure != nil || Set(actionIDs) == Set(allIDs)),
                   actionIDs.filter({ stepIDs.contains($0) }) == stepIDs,
                   actionIDs.filter({ eventIDs.contains($0) }) == eventIDs,
                   (runner_subprocess == nil || !phases.isEmpty) else {
@@ -440,7 +456,6 @@ struct PWRunnerRunResult: Codable {
         try c.encodeIfPresent(admission_failure, forKey: .admission_failure)
         try c.encodeIfPresent(request_failure, forKey: .request_failure)
         try c.encode(phases, forKey: .phases)
-        try c.encodeIfPresent(extensions, forKey: .extensions)
         try c.encodeIfPresent(extension_events, forKey: .extension_events)
         try c.encodeIfPresent(test_overrides, forKey: .test_overrides)
         try c.encodeIfPresent(reporting_failure, forKey: .reporting_failure)
@@ -449,6 +464,11 @@ struct PWRunnerRunResult: Codable {
         try c.encodeIfPresent(transfers, forKey: .transfers)
         try c.encodeIfPresent(resources, forKey: .resources)
         try c.encodeIfPresent(schedule, forKey: .schedule)
+        try c.encodeIfPresent(preparation_failure, forKey: .preparation_failure)
+        try c.encodeIfPresent(equipment_inventory, forKey: .equipment_inventory)
+        try c.encodeIfPresent(equipment_bindings, forKey: .equipment_bindings)
+        try c.encodeIfPresent(equipment_entitlements, forKey: .equipment_entitlements)
+        try c.encodeIfPresent(authority_setup, forKey: .authority_setup)
     }
 
 }
@@ -460,9 +480,94 @@ extension PWRunnerRunResult {
     /// native status is published only by the shape it claims.
     func actorExtensionEvidenceProblem() -> String? {
         let events = extension_events ?? []
-        guard let actors, !actors.isEmpty, actors.count <= PWActorLimits.actors, extensions == nil,
+        guard let actors, !actors.isEmpty, actors.count <= PWActorLimits.actors,
               runner_subprocess == nil, policy_sha256 == nil, sandboxed_after_apply == nil else { return "actor form carries singular projections" }
         guard let resources, let transfers else { return "actor form lacks resource or transfer tables" }
+        guard let equipment_inventory, let equipment_bindings, let equipment_entitlements, let authority_setup,
+              actors.allSatisfy({ $0.equipment != nil && $0.application != nil }) else { return "actor form lacks setup/equipment/application account" }
+        if let problem = pwRunnerEquipmentProblems(inventory: equipment_inventory, bindings: equipment_bindings,
+            entitlements: equipment_entitlements, actors: actors.compactMap { $0.equipment },
+            actorIDs: actors.map { $0.actor_id }, actorPIDs: actors.map { $0.launch?.pid }).first { return problem }
+        if let problem = authoritySetupIntegrityErrors(authority_setup, actorIDs: actors.map { $0.actor_id },
+            tokenRefs: resources.tokens.map { $0.token_ref }).first { return problem }
+        for (index, actor) in actors.enumerated() {
+            if let problem = actorApplicationIntegrityErrors(actor.application!, mode: actor.mode, launched: actor.launch != nil,
+                applied: actor.applied == true, evidence: actor.subprocess?.worker_evidence,
+                authority: authority_setup.workers.indices.contains(index) ? authority_setup.workers[index] : nil).first { return problem }
+            if let reap = actor.owned_reap {
+                guard reap.pid > 0, reap.native_rc == reap.pid, reap.capture_ordinal > 0,
+                      reap.raw_status >= 0, reap.pid == actor.launch?.pid,
+                      reap.pid == actor.subprocess?.pid, actor.subprocess?.reaped == true,
+                      !reap.stage.isEmpty, reap.stage.utf8.count <= 64 else { return "owned reap process association" }
+                let signal = Int(reap.raw_status & 0x7f)
+                if signal == 0 {
+                    guard actor.subprocess?.exit_code == Int((reap.raw_status >> 8) & 0xff),
+                          actor.subprocess?.term_signal == nil else { return "owned reap exit status" }
+                } else {
+                    guard signal != 0x7f, actor.subprocess?.term_signal == signal,
+                          actor.subprocess?.exit_code == nil else { return "owned reap signal status" }
+                }
+            }
+        }
+        if let failure = preparation_failure {
+            guard ((failure.stage == "resolved_plan" && failure.code == "inconsistent_assignment")
+                || (failure.stage == "equipment" && failure.code == "equipment_binding_refused")),
+                normalized_outcome == NormalizedOutcome.runnerFailed, rc == 1, request_failure == nil,
+                actors.allSatisfy({ $0.launch == nil && $0.subprocess == nil && $0.setup_status == "launch_refused" }),
+                steps.isEmpty, events.isEmpty, transfers.isEmpty, resources.tokens.isEmpty,
+                resources.deliveries.isEmpty, resources.handles.isEmpty,
+                authority_setup.host.run.disposition == "not_attempted",
+                authority_setup.host.regions.isEmpty, authority_setup.host.custody.isEmpty,
+                phases.allSatisfy({ !$0.arrival_observed && !$0.completion_observed && $0.collection_status == "not_reached" })
+                else { return "preparation refusal contains execution evidence" }
+        }
+        let failedInspection = actors.contains { actor in
+            guard let equipment = actor.equipment else { return false }
+            return ["mismatched", "inspection_failed"].contains(equipment.execution.status)
+                || (equipment.execution.status == "unobserved" && !["not_launched", "setup_unavailable"].contains(equipment.execution.reason ?? ""))
+        }
+        if failedInspection {
+            // An earlier setup/quiescence cancellation remains the first cause;
+            // a later inspection failure is retained without replacing it.
+            guard schedule?.cancelled?.isEmpty == false,
+                phases.allSatisfy({ !$0.arrival_observed && !$0.completion_observed && $0.visit_timing == nil
+                    && $0.activation_observation == nil && $0.collection_status == "not_reached"
+                    && $0.ordering?.proceed_set != true && $0.ordering?.proceed_observed != true })
+                else { return "equipment execution failure did not cancel all activation" }
+        }
+        for (index, phase) in phases.enumerated() {
+            if let activation = phase.activation_observation, activation.capture_ordinal == 0 { return "invalid phase activation observation" }
+            guard let gate = phase.termination_gate else { continue }
+            guard let source = actors.first(where: { $0.actor_id == gate.source_actor_id }), source.actor_id != phase.actor_id,
+                  let final = phases.lastIndex(where: { $0.actor_id == source.actor_id }), final < index,
+                  phases[final].phase_id == gate.source_final_phase_id else { return "termination gate source association" }
+            if let reference = gate.observation {
+                guard let reap = source.owned_reap, let capture = gate.capture_ordinal,
+                      reference.capture_ordinal > 0, reference.capture_ordinal == reap.capture_ordinal,
+                      reference.capture_ordinal < capture else { return "termination gate reap reference" }
+            }
+            if let problem = terminationGateIntegrityErrors(gate,
+                activationStored: phase.activation_observation != nil || phase.visit_timing != nil || phase.arrival_observed,
+                collectionInvoked: phase.collection_status != "not_reached",
+                releaseStored: phase.ordering?.proceed_set == true || phase.ordering?.proceed_observed == true).first { return problem }
+            if gate.outcome == "satisfied" {
+                guard let reap = source.owned_reap, let activation = phases[final].activation_observation,
+                      let capture = gate.capture_ordinal, gate.observation?.capture_ordinal == reap.capture_ordinal,
+                      activation.capture_ordinal < reap.capture_ordinal, reap.capture_ordinal < capture,
+                      reap.ownership_unbroken, !reap.departure_requested,
+                      ["schedule", "termination_gate"].contains(reap.stage),
+                      let activatedAt = activation.observed_ns, let reapedAt = reap.observed_ns,
+                      activatedAt <= reapedAt else { return "termination gate lacks natural owned reap after final activation" }
+                if let dependentAt = phase.activation_observation?.observed_ns, dependentAt < reapedAt {
+                    return "dependent activation precedes owned termination"
+                }
+            }
+            if gate.activation_eligible {
+                guard let dependent = actors.first(where: { $0.actor_id == phase.actor_id }),
+                      ["applied", "unapplied_declared"].contains(dependent.setup_status),
+                      dependent.equipment?.execution.eligible == true else { return "termination gate eligibility lacks independent setup" }
+            }
+        }
         guard resources.tokens.count <= PWActorLimits.issues, resources.deliveries.count <= PWActorLimits.deliveries,
               resources.handles.count <= PWActorLimits.handles, transfers.count <= PWActorLimits.deliveries,
               events.count <= PWActorLimits.issues + 2 * PWActorLimits.deliveries + PWActorLimits.handles + PWActorLimits.releases
@@ -639,85 +744,9 @@ extension PWRunnerRunResult {
 
     func extensionEvidenceProblem() -> String? {
         if execution_form == "actors" { return actorExtensionEvidenceProblem() }
-        let events = extension_events ?? []
-        let declarations = extensions ?? []
-        if declarations.count > PWExtensionLimits.declarations || events.count > PWExtensionLimits.consumes + PWExtensionLimits.releases || (!events.isEmpty && declarations.count != 1) { return "extension record capacity or association" }
-        let ids = phases.flatMap { $0.action_ids }
-        var consume: PWRunnerExtensionEvent?
-        var released = false
-        for event in events {
-            func validReference(_ value: String) -> Bool { !value.isEmpty && value.utf8.count <= PWExtensionLimits.referenceBytes && !value.utf8.contains(0) }
-            guard let handle = event.handle_ref, validReference(handle), handle != declarations.first?.token_ref else { return "extension handle reference" }
-            guard let phase = phases.first(where: { $0.phase_id == event.phase_id }), phase.action_ids.contains(event.step_id) else { return "extension event phase association" }
-            if event.operation == "consume" {
-                if consume != nil || event.token_ref != declarations.first?.token_ref { return "extension consume reference" }
-                consume = event
-            } else if event.operation == "release" {
-                guard !released, let prior = consume, prior.handle_ref == event.handle_ref, event.token_ref == nil,
-                      let first = ids.firstIndex(of: prior.step_id), let second = ids.firstIndex(of: event.step_id), first < second else { return "extension release reference/order" }
-                released = true
-                if event.status == "returned" && (prior.status != "returned" || prior.native_result == nil || prior.native_result == -1) { return "release lacks an observed consume handle" }
-                if let value = event.native_result, value < Int64(Int32.min) || value > Int64(Int32.max) { return "release result is not native int" }
-            } else { return "unknown extension operation" }
-            if let disposition = runner_subprocess?.disposition?.steps.first(where: { $0.step_id == event.step_id }) {
-                if event.result_published != (disposition.slot == "completed") || event.lifecycle?.boundary != disposition.questions["step_boundary_reached"] || event.lifecycle?.result != disposition.questions["step_result_published"] {
-                    return "extension publication disagrees with disposition"
-                }
-            } else if runner_subprocess != nil || event.call_boundary_observed || event.result_published || event.lifecycle != nil { return "extension event lacks disposition" }
-            switch event.status {
-            case "returned":
-                if !event.result_published || !event.call_boundary_observed || event.native_result == nil || event.errno == nil || (event.errno ?? 0) < 0 || event.unavailable_reason != nil { return "native extension result lacks publication" }
-                if event.operation == "consume" && declarations.first?.delivery_status != "delivered" { return "consumption lacks delivery" }
-            case "unavailable":
-                if !event.result_published || event.call_boundary_observed || event.native_result != nil || event.errno != nil || !["token_unavailable", "handle_unavailable", "native_api_unavailable", "repeated_action"].contains(event.unavailable_reason ?? "") { return "unavailable extension action fabricates a call" }
-            case "unresolved":
-                if event.result_published || event.native_result != nil || event.errno != nil || event.unavailable_reason != nil { return "unpublished extension result must stay unresolved" }
-            default: return "invalid extension event status"
-            }
-            if (event.result_published || event.call_boundary_observed) && (phase.ordering?.proceed_observed != true || sandboxed_after_apply != true) { return "extension publication lacks application and phase acknowledgement" }
-        }
-        for declaration in declarations {
-            guard ["com.apple.app-sandbox.read", "com.apple.app-sandbox.read-write"].contains(declaration.extension_class) else {
-                return "invalid extension declaration class"
-            }
-            if declaration.issuance_status == "issuer_result_missing" {
-                guard let issuer = declaration.issuer, !issuer.result_published,
-                      issuer.native_nonnull == nil, issuer.errno == nil, issuer.token_length == nil,
-                      issuer.uid == nil, issuer.euid == nil, issuer.gid == nil, issuer.egid == nil else {
-                    return "missing issuer result carries publication or payload"
-                }
-            }
-            if declaration.issuance_status == "issuer_abnormal_exit" {
-                guard let issuer = declaration.issuer, issuer.result_published,
-                      issuer.call_boundary_observed, issuer.native_nonnull == true,
-                      issuer.reaped == true, let length = issuer.token_length,
-                      length > 0 && length < PWExtensionLimits.tokenBytes,
-                      (issuer.term_signal != nil || (issuer.exit_code != nil && issuer.exit_code != 0)),
-                      declaration.delivery_status != "delivered" else { return "abnormal issuer exit lacks publication and reap" }
-            }
-            if declaration.issuance_status == "issued" {
-                guard declaration.preparation_status == "prepared", declaration.resolved_target != nil,
-                      declaration.identity != nil, declaration.issuer?.call_boundary_observed == true,
-                      declaration.issuer?.native_nonnull == true, declaration.issuer?.result_published == true,
-                      declaration.issuer?.reaped == true, declaration.issuer?.exit_code == 0,
-                      declaration.issuer?.term_signal == nil, let length = declaration.issuer?.token_length,
-                      length > 0 && length < PWExtensionLimits.tokenBytes else { return "issuance lacks bounded native result and issuer reap" }
-            }
-            guard PWExtensionDelivery.recordStatuses.contains(declaration.delivery_status) else { return "unknown delivery status" }
-            if PWExtensionDelivery.failureStatuses.contains(declaration.delivery_status) {
-                guard let failure = declaration.delivery_failure else { return "delivery failure lacks its account" }
-                if let issue = failure.problem(status: declaration.delivery_status) { return issue }
-                if declaration.delivery_status == "channel_rejected" && declaration.issuance_status != "issued" { return "channel rejection without an issued token" }
-            } else if declaration.delivery_failure != nil { return "delivery failure account without a failure status" }
-            if let cleanup = declaration.delivery_cleanup_failure,
-               let issue = cleanup.problem(status: declaration.delivery_status) { return issue }
-            if declaration.delivery_status != "delivered" && declaration.delivered_bytes != nil { return "undelivered extension carries delivered byte count" }
-            if declaration.delivery_status == "delivered" {
-                guard declaration.issuance_status == "issued", let bytes = declaration.delivered_bytes,
-                      bytes > 0 && bytes < PWExtensionLimits.tokenBytes, bytes == declaration.issuer?.token_length,
-                      declaration.issuer?.native_nonnull == true, declaration.issuer?.result_published == true,
-                      declaration.issuer?.reaped == true, declaration.issuer?.exit_code == 0 else { return "delivery lacks bounded issuance and issuer reap" }
-            }
+        if !(extension_events ?? []).isEmpty { return "authority events require actor form" }
+        if equipment_inventory != nil || equipment_bindings != nil || equipment_entitlements != nil || authority_setup != nil || preparation_failure != nil {
+            return "actor evidence in ordinary reply"
         }
         return nil
     }

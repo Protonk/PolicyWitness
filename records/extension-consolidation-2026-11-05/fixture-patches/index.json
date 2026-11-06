@@ -1,0 +1,41 @@
+{
+  "scope": "Exact applied or prepared fixture patches. Application chronology is in the candidate account; presence alone does not mean applied or executed.",
+  "files": [
+    {
+      "path": "fixture-patches/pw-equipment01-corrections.patch",
+      "sha256": "c744620672634c9e4449f16517cd112925424ed68616ea6910ccddde183af543"
+    },
+    {
+      "path": "fixture-patches/pw-build-refusal-locale-control.patch",
+      "sha256": "6f2872b3eb0b706e0a99c8dc0b0a539d4d11077188286769b250d67ad171bc0f"
+    },
+    {
+      "path": "fixture-patches/pw-registry-reservation-corrections.patch",
+      "sha256": "f13dd308a875055945e5ec3e109f5cd81aacf092c564dab533fef9bd0dee7c7b"
+    },
+    {
+      "path": "fixture-patches/pw-order-equipment.patch",
+      "sha256": "20764066eb1c78dd40611a4b817ac2d556003c20f16c1426145cf500dd14fb8e"
+    },
+    {
+      "path": "fixture-patches/pw-build-refusal-native-output-set.patch",
+      "sha256": "a306e52179f61d9731a5b28834796eb61bb7a7709ec38956e03dd9eb4e9bfd1b"
+    },
+    {
+      "path": "fixture-patches/pw-equipment02-provenance.patch",
+      "sha256": "7328b7341a8d645c45cd86bf2e15f73e0f23caac807df737f0b75e847e44a23c"
+    },
+    {
+      "path": "fixture-patches/pw-current-equipment-wording.patch",
+      "sha256": "4db35ffe85a68d5544fa55a4d11c1912c403cc335db6212f4246b6a7d3444527"
+    },
+    {
+      "path": "fixture-patches/pw-owned-exit-inspection.patch",
+      "sha256": "45ea684b7c74a4ff4f5313d78fd542f4e31ea8880003240144087b245e2cebe2"
+    },
+    {
+      "path": "fixture-patches/pw-diagnostic-incompatible.patch",
+      "sha256": "3492db9850385c750d450e0588f1325645977c4998f9a738369f2b6562156d16"
+    }
+  ]
+}

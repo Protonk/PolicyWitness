@@ -24,7 +24,7 @@ from run_capture import RunCapture
 SERVICE_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner'
 WORKER_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
 VALIDATOR_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator'
-ISSUER_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-extension-issuer'
+UNENTITLED_WORKER_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled'
 SOURCE = '(version 1)\n(allow default)\n'
 TEMP_REQUEST_DIR = Path(tempfile.gettempdir()) / 'policy-witness'
 
@@ -83,7 +83,7 @@ class Witness:
         self.temp_before = temp_request_files()
 
     def specimen(self, name, *, policy=None, plan=None, overrides=None):
-        request = {'schema_version': 5, 'specimen_id': 'dossier-' + name,
+        request = {'schema_version': contract.REQUEST_SCHEMA, 'specimen_id': 'dossier-' + name,
                    'policy': policy if policy is not None else {'format': 'sbpl', 'sbpl_source': SOURCE},
                    'probe_plan': plan if plan is not None else []}
         if self.byoxpc:
@@ -129,7 +129,7 @@ class Witness:
         assert provenance == {'evidence_manifest_path': str(self.manifest_path), 'evidence_verify': None}, provenance
 
     def builtin_binaries(self, specimen):
-        assert specimen['binaries'] == {'service': None, 'worker': None, 'validator': None, 'issuer': None}, specimen['binaries']
+        assert specimen['binaries'] == {'service': None, 'worker': None, 'validator': None, 'unentitled_worker': None}, specimen['binaries']
         provenance = specimen['runner_provenance']
         assert provenance['runner_kind'] == 'standard', provenance
         assert provenance['runner_service_name'] == self.entries[SERVICE_REL]['bundle_id'], provenance
@@ -293,7 +293,7 @@ class Witness:
                 assert specimen['policy']['augmentation']['status'] == 'not_requested', specimen['policy']
                 assert specimen['policy']['imports']['status'] == 'complete', specimen['policy']
                 assert specimen['runner_provenance'] is None
-                for role in ('service', 'worker', 'validator', 'issuer'):
+                for role in ('service', 'worker', 'validator', 'unentitled_worker'):
                     record = specimen['binaries'][role]
                     assert record['verification'] == 'unavailable' and record['path'] is None, (name, role, record)
                     assert envelope['result']['error'] in record['reason'] or 'not found' in record['reason'], record
@@ -301,7 +301,7 @@ class Witness:
                 assert specimen['policy']['augmentation']['status'] == 'not_applicable', (name, specimen['policy'])
                 assert specimen['policy']['imports']['status'] == 'not_applicable', (name, specimen['policy'])
                 assert specimen['runner_provenance'] is None
-                assert all(specimen['binaries'][role]['verification'] == 'unavailable' for role in ('service', 'worker', 'validator', 'issuer'))
+                assert all(specimen['binaries'][role]['verification'] == 'unavailable' for role in ('service', 'worker', 'validator', 'unentitled_worker'))
             if name == 'missing_argument':
                 assert specimen['app_provenance'] is None or 'evidence_manifest_path' in specimen['app_provenance']
             self.no_temp_request(name)
@@ -348,7 +348,7 @@ class Witness:
             request = self.specimen('override-manifest', overrides={'validator_executable_path': str(self.app / VALIDATOR_REL)})
             rc, envelope, _ = self.run('override_manifest', request)
             specimen = self.common(envelope, 'override_manifest')
-            assert specimen['binaries'] == {'service': None, 'worker': None, 'validator': None, 'issuer': None}, specimen['binaries']
+            assert specimen['binaries'] == {'service': None, 'worker': None, 'validator': None, 'unentitled_worker': None}, specimen['binaries']
             self.record('executable_overrides', baseline=baseline)
         finally:
             shutil.rmtree(work, ignore_errors=True)
@@ -362,12 +362,12 @@ class Witness:
         listing = json.loads(subprocess.run([self.pw, 'runner', 'list'], capture_output=True, check=True, timeout=30).stdout)
         record = next(r for r in listing['data']['runners'] if r['id'] == self.byoxpc['runner_id'])
         for field in ('signature', 'entitlements', 'worker_signature', 'worker_entitlements',
-                      'validator_signature', 'validator_entitlements', 'issuer_signature', 'issuer_entitlements'):
+                      'validator_signature', 'validator_entitlements', 'unentitled_worker_signature', 'unentitled_worker_entitlements'):
             assert provenance['runner_' + field] == record[field], (field, provenance.get('runner_' + field), record.get(field))
         assert provenance['runner_worker_entitlements']['keys'] == provenance['runner_entitlements']['keys'], provenance
         assert provenance['runner_validator_entitlements'] == {'raw_plist': None, 'keys': [], 'granted': [], 'error': None}, provenance
         for role, rel, name in (('service', SERVICE_REL, 'PWRunner'), ('worker', WORKER_REL, 'pw-probe-runner'),
-                                ('validator', VALIDATOR_REL, 'sb_api_validator'), ('issuer', ISSUER_REL, 'pw-extension-issuer')):
+                                ('validator', VALIDATOR_REL, 'sb_api_validator'), ('unentitled_worker', UNENTITLED_WORKER_REL, 'pw-probe-runner-unentitled')):
             record = specimen['binaries'][role]
             path = bundle / 'Contents/MacOS' / name
             assert record['path'] == str(path), (role, record)

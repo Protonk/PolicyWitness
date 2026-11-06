@@ -1,0 +1,26 @@
+{
+  "build": {
+    "commit": "4cd1d6c7f14e3ebacfd2dda219dda85967f64680",
+    "describe": "v0.3.4-59-g4cd1d6c7",
+    "number": "1140",
+    "version": "0.3.4"
+  },
+  "data": {
+    "pending_cleanup": [],
+    "runners": [],
+    "schema_version": 1
+  },
+  "generated_at_unix_ms": 1793925969592,
+  "kind": "runner_registry",
+  "result": {
+    "errno": null,
+    "error": null,
+    "exit_code": 0,
+    "normalized_outcome": "ok",
+    "ok": true,
+    "rc": null,
+    "stderr": null,
+    "stdout": null
+  },
+  "schema_version": 10
+}

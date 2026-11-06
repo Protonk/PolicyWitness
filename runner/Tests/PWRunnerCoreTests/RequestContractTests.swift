@@ -60,9 +60,11 @@ func runRequestContractTests(_ tk: TestKit) {
                 let failure: PWRunnerRequestFailure?
                 do {
                     let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
-                    if let capacity = CWorkerOrchestrator.admissionFailure(for: parsed) {
-                        failure = requestCapacityFailure(capacity, parsed: parsed)
-                    } else { failure = requestMeaningFailure(parsed) }
+                    switch admitSpecimen(parsed) {
+                    case .accepted: failure = nil
+                    case .capacity(let capacity): failure = requestCapacityFailure(capacity, parsed: parsed)
+                    case .refused(let refusal): failure = refusal
+                    }
                 } catch { failure = requestDecodeFailure(error) }
                 let expectations = example["expected"] as! [String: Any]
                 // Capability refusals occur after admission in the live host.

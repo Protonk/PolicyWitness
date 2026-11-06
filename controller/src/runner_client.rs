@@ -15,7 +15,7 @@ use crate::utils::{
     JsonOutputCapture, RequestDelivery, capture_json_output, now_unix_ms, run_with_stdin,
 };
 
-const REPLY_CAPTURE_BYTES: usize = 84 * 1024 * 1024;
+const REPLY_CAPTURE_BYTES: usize = 92 * 1024 * 1024;
 const CONTROL_BYTES: u64 = 64 * 1024;
 const ATTEMPT_LIMIT: usize = 256;
 

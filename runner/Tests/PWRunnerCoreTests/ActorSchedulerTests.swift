@@ -86,9 +86,195 @@ private func actorDescriptors(_ pid: pid_t) throws -> Set<Int32> {
     return Set(stride(from: 0, to: Int(bytes) / 4, by: 2).map { entries[$0] })
 }
 
+/// Invoked separately by the disposable removed-gate mutation. The witness is
+/// the real waitpid return before dependent collection, not the gate's label.
+func runTerminationGateBoundaryControl() throws {
+    var source=actorInput(policy:allowAll,visits:[(0,[])])
+    source.postApplyHangMs=2000
+    let subject=actorInput(policy:allowAll,visits:[(1,[read("dependent",hosts)])])
+    var entries=schedule([[0],[1]])
+    entries[1].terminationDependency=ActorTerminationDependency(sourceActorIndex:0,sourceFinalPhaseIndex:0)
+    var calls=ChildProcessCalls(), sourcePID:pid_t=0
+    var nativeReaps=Set<pid_t>(), collectionSawOwnedReap=false, collected=false
+    calls.wait={ pid,status,options in
+        let rc=Darwin.waitpid(pid,status,options)
+        if rc==pid { nativeReaps.insert(pid) }
+        return rc
+    }
+    let outcome=ActorScheduler.run(ActorScheduleInput(actors:[source,subject],applies:[true,true],schedule:entries),processCalls:calls) { phase,_,pid in
+        if phase==0 { sourcePID=pid }
+        if phase==1 { collected=true; collectionSawOwnedReap=nativeReaps.contains(sourcePID) }
+    }
+    try expectTrue(collected,"dependent collection must be reached")
+    try expectTrue(collectionSawOwnedReap,"termination gate precedes dependent collection")
+    try expectTrue(outcome.actors.allSatisfy{$0.quiescence=="reaped"},"all owned children reaped")
+}
+
 func runActorSchedulerTests(_ tk: TestKit) {
     let workerPresent = FileManager.default.isExecutableFile(atPath: equipment("pw-probe-runner"))
     tk.group("actor scheduler: owned sessions and the serial schedule") {
+        tk.run("owned exit before equipment inspection suppresses lookup and all activation") {
+            let actors = [actorInput(policy: allowAll, visits: [(0, [read("first", hosts)])]),
+                          actorInput(policy: allowAll, visits: [(1, [read("exited", hosts)])])]
+            var input = ActorScheduleInput(actors: actors, applies: [true, true], schedule: schedule([[0], [1]]))
+            var calls = ChildProcessCalls()
+            var nativeReaps: [pid_t: Int32] = [:]
+            calls.wait = { pid, status, options in
+                let rc = Darwin.waitpid(pid, status, options)
+                if rc == pid { nativeReaps[pid] = status.pointee }
+                return rc
+            }
+            var scheduler: ActorScheduler!
+            defer { scheduler = nil }
+            var inspected: [Int] = []
+            var exitedPID: pid_t = 0
+            var reapBeforeInspection = false
+            input.didSetUp = { index, _ in
+                inspected.append(index)
+                if index == 0, let child = scheduler.sessions[1] {
+                    exitedPID = child.pid
+                    // Both workers have published usable setup. Request departure
+                    // through the owned session and retain its real waitpid result
+                    // before the scheduler reaches that child's inspection turn.
+                    // Never query a reaped PID or infer exit from a liveness probe.
+                    child.requestExit()
+                    child.finishCleanup()
+                    reapBeforeInspection = nativeReaps[child.pid] != nil
+                }
+                return nil
+            }
+            scheduler = ActorScheduler(input, processCalls: calls)
+            var collected = false
+            let result = scheduler.run { _, _, _ in collected = true }
+            try expectTrue(exitedPID > 0 && reapBeforeInspection, "owned native reap must precede the inspection turn")
+            try expectEqual(inspected, [0], "the reaped child's inspection callback must remain unreached")
+            try expectEqual(result.actors[1].equipmentFailure, "process_unavailable")
+            try expectEqual(result.cancelled, "equipment_execution_process_unavailable")
+            try expectEqual(result.actors.map { $0.setupStatus }, [.applied, .applied])
+            try expectEqual(result.actors.map { $0.applicationCount }, [1, 1])
+            try expectTrue(result.actors.allSatisfy { $0.output?.applied == true })
+            let reap = result.actors[1].output?.ownedReap
+            try expectEqual(reap?.pid, Int(exitedPID))
+            try expectEqual(reap?.native_rc, exitedPID)
+            try expectEqual(reap?.raw_status, nativeReaps[exitedPID])
+            try expectEqual(reap?.departure_requested, true)
+            try expectFalse(collected)
+            try expectEqual(result.visits.count, 2)
+            try expectTrue(result.visits.allSatisfy {
+                !$0.activationStored && !$0.arrivalObserved && !$0.collectionInvoked && !$0.releaseStored
+            })
+            try expectTrue(result.actors.allSatisfy { $0.quiescence == "reaped" })
+            // This is actual exit-before-inspection suppression, not evidence
+            // of a Security.framework lookup failure against an exited PID.
+        }
+        tk.run("termination gate ordering has an independent native reap witness") {
+            try runTerminationGateBoundaryControl()
+        }
+        tk.run("termination dependency observes a natural owned reap before dependent collection") {
+            for signal in [Int32(0),SIGKILL] {
+                var issuer=actorInput(policy:allowAll,visits:[(0,[])])
+                if signal != 0 { issuer.postApplyKillSignal=Int(signal) }
+                let subject=actorInput(policy:allowAll,visits:[(1,[read("subject",hosts)])])
+                var entries=schedule([[0],[1]])
+                entries[1].terminationDependency=ActorTerminationDependency(sourceActorIndex:0,sourceFinalPhaseIndex:0)
+                var calls=ChildProcessCalls()
+                var sourcePID:pid_t=0, reaped=Set<pid_t>()
+                calls.wait={ pid,status,options in
+                    let rc=Darwin.waitpid(pid,status,options)
+                    if rc==pid { reaped.insert(pid) }
+                    return rc
+                }
+                var orderingObserved=false
+                let result=ActorScheduler.run(ActorScheduleInput(actors:[issuer,subject],applies:[true,true],schedule:entries),processCalls:calls) { phase,_,pid in
+                    if phase==0 { sourcePID=pid }
+                    if phase==1 { orderingObserved=reaped.contains(sourcePID) }
+                }
+                try expectTrue(orderingObserved,"independent native reap must precede dependent collection")
+                try expectEqual(result.visits[1].terminationGate?.outcome,"satisfied")
+                let activation=result.visits[0].activationObservation!
+                let reap=result.actors[0].output!.ownedReap!
+                let captured=result.visits[1].terminationGate!.captureOrdinal!
+                try expectTrue(activation.capture_ordinal<reap.capture_ordinal && reap.capture_ordinal<captured)
+                try expectTrue(activation.observed_ns!<=reap.observed_ns!)
+                try expectTrue(result.visits[1].releaseStored)
+                try expectEqual(result.visits[1].terminationGate?.observation?.departure_requested,false)
+                if signal != 0 { try expectEqual(result.actors[0].output?.termSignal,signal) }
+            }
+        }
+        tk.run("termination gate final accounting can withhold activation after a native reap") {
+            for finalClock in ["late", "unavailable"] {
+                var source=actorInput(policy:allowAll,visits:[(0,[])])
+                // Final completion precedes this native sleep, so the first
+                // successful source wait belongs to the termination gate.
+                source.postApplyHangMs=1000
+                let dependent=actorInput(policy:allowAll,visits:[(1,[read("held",hosts)])])
+                var entries=schedule([[0],[1]])
+                entries[1].terminationDependency=ActorTerminationDependency(sourceActorIndex:0,sourceFinalPhaseIndex:0)
+                var calls=ChildProcessCalls()
+                var sourcePID:pid_t=0, nativeReap:pid_t=0
+                var samplesAfterReap=0, injections=0
+                var offset:UInt64=0
+                calls.wait={ pid,status,options in
+                    let rc=Darwin.waitpid(pid,status,options)
+                    if pid==sourcePID && rc==pid { nativeReap=rc }
+                    return rc
+                }
+                calls.clock={
+                    if nativeReap>0 {
+                        samplesAfterReap += 1
+                        // The first sample timestamps the immutable reap; the
+                        // second passes the gate's absolute-deadline check.
+                        // Only the final HostWaitClock.record sample changes.
+                        if samplesAfterReap==3 {
+                            injections += 1
+                            if finalClock=="unavailable" { return nil }
+                            offset=UInt64(PWActorLimits.terminationMs+1000)*1_000_000
+                        }
+                    }
+                    return MonotonicDeadline.now().map{$0+offset}
+                }
+                let result=ActorScheduler.run(ActorScheduleInput(actors:[source,dependent],applies:[true,true],schedule:entries),processCalls:calls) { phase,_,pid in
+                    if phase==0 { sourcePID=pid }
+                }
+                let gate=result.visits[1].terminationGate!
+                try expectEqual(injections,1,"final-accounting clock substitution must be reached exactly once")
+                try expectEqual(gate.observation?.stage,"termination_gate","the independent native reap must be captured inside the gate")
+                try expectEqual(gate.observation?.native_rc,nativeReap)
+                try expectTrue(nativeReap>0)
+                try expectEqual(gate.observation,result.actors[0].output?.ownedReap,"final accounting retains the immutable native reap")
+                try expectEqual(gate.outcome,finalClock=="late" ? "timed_out":"clock_unavailable")
+                try expectEqual(gate.wait?.stop,gate.outcome)
+                if finalClock=="late" {
+                    try expectTrue(gate.wait!.elapsed_ms!>UInt64(gate.wait!.budget_ms))
+                    try expectFalse(gate.wait!.clock_fault)
+                } else {
+                    try expectNil(gate.wait?.elapsed_ms)
+                    try expectTrue(gate.wait!.clock_fault)
+                }
+                try expectFalse(gate.activationEligible)
+                try expectFalse(result.visits[1].activationStored)
+                try expectFalse(result.visits[1].collectionInvoked)
+                try expectFalse(result.visits[1].releaseStored)
+                try expectTrue(result.actors.allSatisfy{$0.quiescence=="reaped"})
+            }
+        }
+        tk.run("termination gate timeout cannot be repaired by final cleanup") {
+            var issuer=actorInput(policy:allowAll,visits:[(0,[])])
+            issuer.postApplyHangMs=1000
+            let subject=actorInput(policy:allowAll,visits:[(1,[read("subject",hosts)])])
+            var entries=schedule([[0],[1]])
+            entries[1].terminationDependency=ActorTerminationDependency(sourceActorIndex:0,sourceFinalPhaseIndex:0)
+            var input=ActorScheduleInput(actors:[issuer,subject],applies:[true,true],schedule:entries)
+            input.executionAllowanceMs=50
+            let result=ActorScheduler.run(input) { _,_,_ in }
+            try expectEqual(result.visits[0].completionObserved,true)
+            try expectEqual(result.visits[1].terminationGate?.outcome,"timed_out")
+            try expectFalse(result.visits[1].activationStored)
+            try expectFalse(result.visits[1].collectionInvoked)
+            try expectFalse(result.visits[1].releaseStored)
+            try expectEqual(result.actors[0].quiescence,"reaped")
+            try expectEqual(result.visits[1].terminationGate?.outcome,"timed_out")
+        }
         tk.run("actor launch excludes an inheritable host descriptor and original evidence endpoints") {
             let fd = open("/dev/null", O_RDONLY)
             try expectTrue(fd >= 0)
@@ -317,7 +503,19 @@ func runActorSchedulerTests(_ tk: TestKit) {
             try expectEqual(a.applicationCount, 0)
             try expectEqual(a.quiescence, "reaped")
             try expectEqual(a.stopReason, "setup_failed")
-            try expectTrue(a.output!.done && !a.output!.applied && a.output!.applyRC == -1)
+            try expectTrue(a.output!.done && !a.output!.applied)
+            try expectEqual(a.output!.workerEvidence?.failure_state,"published")
+            let failure=a.output!.workerEvidence!.failure!
+            try expectEqual(failure.operation,UInt32(5))
+            try expectEqual(failure.code,UInt32(1))
+            try expectEqual(failure.native_kind,UInt32(2))
+            try expectEqual(failure.native_result,Int32(0))
+            try expectNil(failure.errno)
+            try expectEqual(a.output!.applyRC,0,"compiler-null refusal does not decode a native apply return")
+            let application=actorApplicationAssessment(mode:"apply",launched:true,applied:false,
+                evidence:a.output!.workerEvidence,authority:a.output!.authoritySetup)
+            try expectEqual(application.state,"not_attempted")
+            try expectEqual(application.basis,"terminal_compile_refusal")
             try expectEqual(a.output!.actorSetup, 0)
             try expectTrue(a.output!.slots.allSatisfy { !$0.completed })
             try expectEqual(b.setupStatus, .applied)

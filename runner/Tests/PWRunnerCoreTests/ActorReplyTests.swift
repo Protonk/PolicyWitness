@@ -20,6 +20,34 @@ private func equipment(_ name: String) -> String {
     return app + "/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/" + name
 }
 
+private func actorServiceBundle() -> URL {
+    URL(fileURLWithPath: equipment("pw-probe-runner")).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+}
+
+private func checkedActorSchedule(_ source: ActorScheduleInput, plan: ActorPlan) throws -> (ActorScheduleOutcome, ActorEquipmentPreparation) {
+    let equipment = ActorEquipmentPreparation.bind(bundleURL: actorServiceBundle(), actors: plan.actors.map {
+        ActorEquipmentRequest(actorID: $0.id, index: $0.index, requested: $0.equipment, requiredEntitlements: $0.requiredEntitlements)
+    })
+    try expectNil(equipment.failure, "signed equipment refused")
+    var input = source
+    input.didSetUp = { index, pid in equipment.inspect(actorIndex: index, pid: pid, ownershipConfirmed: true) }
+    return (ActorScheduler.run(input) { _, _, _ in }, equipment)
+}
+private func attachObservedEquipment(_ reply: inout PWRunnerRunResult, _ equipment: ActorEquipmentPreparation, _ outcome: ActorScheduleOutcome) {
+    reply.equipment_inventory = equipment.inventory; reply.equipment_bindings = equipment.bindings
+    reply.equipment_entitlements = equipment.entitlements
+    for index in outcome.actors.indices {
+        if let failure = outcome.actors[index].equipmentFailure, equipment.actors[index].execution.status == "matched" {
+            equipment.actors[index].execution.status = "inspection_failed"
+            equipment.actors[index].execution.reason = failure; equipment.actors[index].execution.eligible = false
+        }
+        if equipment.actors[index].execution.status == "unobserved", outcome.actors[index].pid != nil {
+            equipment.actors[index].execution.reason = outcome.actors[index].equipmentFailure ?? "setup_unavailable"
+        }
+        reply.actors?[index].equipment = equipment.actors[index]
+    }
+}
+
 private func corpusRequest(_ id: String, effect: String) throws -> PWRunnerRunSpec {
     let url = repoRoot().appendingPathComponent("tests/fixtures/request_contract/examples.json")
     let corpus = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [[String: Any]]
@@ -64,7 +92,7 @@ func runActorReplyTests(_ tk: TestKit) {
             defer { close(fd); name.withCString { _ = shm_unlink($0) } }
             let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
             let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: "", bundleId: "test",
-                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"))
+                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
             try expectTrue(reply.rc != 0)
             try expectTrue(reply.error?.contains("authority setup") == true, reply.error ?? "")
             try expectTrue(reply.actors!.allSatisfy { $0.launch == nil && $0.subprocess == nil && $0.setup_status == "launch_refused" })
@@ -76,16 +104,17 @@ func runActorReplyTests(_ tk: TestKit) {
         tk.run("native issue interrupted before result publication leaves the token unresolved") {
             let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
             guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "request refused") }
-            let translation = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: equipment("pw-probe-runner"))
+            let translation = try ActorTranslation(plan: plan, parsed: parsed, workerExecutablePaths: Array(repeating: equipment("pw-probe-runner"), count: plan.actors.count))
             var inputs = translation.inputs
             inputs[0].killBeforePublishSlot = 0
             let input = ActorScheduleInput(actors: inputs, applies: plan.actors.map { $0.applies },
                 schedule: plan.phases.map { ActorScheduleEntry(phaseIndex: $0.index, actorIndex: $0.actorIndex, visit: $0.visit - 1) },
                 authority: translation.authority)
-            let outcome = ActorScheduler.run(input) { _, _, _ in }
-            let reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+            let (outcome, boundEquipment) = try checkedActorSchedule(input, plan: plan)
+            var reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
                 queryPlans: plan.phases.map { _ in [] }, validatorResults: plan.phases.map { _ in nil },
                 collectionStatuses: outcome.visits.map { $0.collectionInvoked ? "not_needed" : "not_reached" }, bundleId: "test")
+            attachObservedEquipment(&reply, boundEquipment, outcome)
             let event = reply.extension_events!.first { $0.step_id == "a_issue" }!
             try expectTrue(event.call_boundary_observed)
             try expectFalse(event.result_published)
@@ -98,15 +127,16 @@ func runActorReplyTests(_ tk: TestKit) {
         tk.run("host delivery survives source death before its transfer result publication") {
             let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
             guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "request refused") }
-            let translation = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: equipment("pw-probe-runner"))
+            let translation = try ActorTranslation(plan: plan, parsed: parsed, workerExecutablePaths: Array(repeating: equipment("pw-probe-runner"), count: plan.actors.count))
             var inputs = translation.inputs
             inputs[0].killBeforePublishSlot = 1
             let input = ActorScheduleInput(actors: inputs, applies: plan.actors.map { $0.applies },
                 schedule: translation.schedule, authority: translation.authority)
-            let outcome = ActorScheduler.run(input) { _, _, _ in }
-            let reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+            let (outcome, boundEquipment) = try checkedActorSchedule(input, plan: plan)
+            var reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
                 queryPlans: plan.phases.map { _ in [] }, validatorResults: plan.phases.map { _ in nil },
                 collectionStatuses: outcome.visits.map { $0.collectionInvoked ? "not_needed" : "not_reached" }, bundleId: "test")
+            attachObservedEquipment(&reply, boundEquipment, outcome)
             let source = reply.extension_events!.first { $0.step_id == "a_to_b" }!
             try expectFalse(source.result_published)
             try expectEqual(source.status, "unresolved")
@@ -119,17 +149,18 @@ func runActorReplyTests(_ tk: TestKit) {
         tk.run("late application remains observed after setup timed out without permitting its phases") {
             let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
             guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "request refused") }
-            let translation = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: equipment("pw-probe-runner"))
+            let translation = try ActorTranslation(plan: plan, parsed: parsed, workerExecutablePaths: Array(repeating: equipment("pw-probe-runner"), count: plan.actors.count))
             var inputs = translation.inputs
             inputs[1].preReadyHangMs = 150
             inputs[1].exitGraceMs = 1000
             var input = ActorScheduleInput(actors: inputs, applies: plan.actors.map { $0.applies },
                 schedule: translation.schedule, authority: translation.authority)
             input.setupAllowanceMs = 40
-            let outcome = ActorScheduler.run(input) { _, _, _ in }
-            let reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+            let (outcome, boundEquipment) = try checkedActorSchedule(input, plan: plan)
+            var reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
                 queryPlans: plan.phases.map { _ in [] }, validatorResults: plan.phases.map { _ in nil },
                 collectionStatuses: outcome.visits.map { $0.collectionInvoked ? "not_needed" : "not_reached" }, bundleId: "test")
+            attachObservedEquipment(&reply, boundEquipment, outcome)
             try expectEqual(reply.actors![1].setup_status, "setup_timeout")
             try expectEqual(reply.actors![1].applied, true)
             try expectEqual(reply.actors![1].application_count, 1)
@@ -144,12 +175,11 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectNil(CWorkerOrchestrator.admissionFailure(for: parsed))
             try expectNil(requestMeaningFailure(parsed))
             let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: "", bundleId: "test",
-                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"))
+                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
             try expectEqual(reply.execution_form, "actors")
             try expectNil(reply.policy_sha256)
             try expectNil(reply.policy_format)
             try expectNil(reply.runner_subprocess)
-            try expectNil(reply.extensions)
             // Actors: three distinct processes, the apply actors applied once with
             // their own hashes, the unapplied actor without an application claim.
             guard let actors = reply.actors, actors.count == 3 else { throw TestFailure(message: "expected three actor records") }
@@ -292,7 +322,7 @@ func runActorReplyTests(_ tk: TestKit) {
             """
             let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
             let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: "", bundleId: nil,
-                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"))
+                workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
             try expectEqual(reply.normalized_outcome, NormalizedOutcome.runnerFailed)
             try expectTrue(reply.error?.hasPrefix("actor broken:") == true, reply.error ?? "")
             let actors = reply.actors ?? []

@@ -1,7 +1,7 @@
 """Native source controls: the configured-directory reading build.sh uses, on the real Meson boundary.
 
 What Meson evaluated must be the tree, and what the compiler consumed for the worker must be in the identity.
-`xpc=false` configures and compiles only the C executables (the worker, the validator and the extension issuer),
+`xpc=false` configures and compiles only the two C executables (the worker and the validator),
 so these controls need no Swift discovery. The unmodified manifest passes; a worker declaration pointing at a
 substitute file, present on disk so Meson accepts it, is refused by name; a worker include reaching outside the
 digest's directories through a symlinked directory, or by a relative path, is refused by the closure check, and

@@ -153,11 +153,11 @@ func associateProgress(_ progress: PWWorkerProgress?, planCount: Int) -> Progres
     case 9:
         guard let index = progress.index, Int(index) < planCount else { return .invalid }
         return .stepIndex(Int(index), ProtocolPosition(order: order, index: Int(index), stage: stage))
-    case 11 where progress.index != nil:
+    case 11 where progress.index != nil, 13 where progress.index != nil:
         guard let index = progress.index, Int(index) <= planCount,
               let attemptOrder = PWDisposition.protocolOrder.firstIndex(of: 9) else { return .invalid }
-        // Waiting is before the first action of this phase, even after a prior
-        // phase's completed actions. Neither wait marker establishes entry.
+        // Activation and release waits precede this visit's first action,
+        // even after earlier visits completed. Neither stage establishes entry.
         return .none(ProtocolPosition(order: attemptOrder, index: Int(index), stage: 0))
     case 4:
         guard let index = progress.index else { return .invalid }

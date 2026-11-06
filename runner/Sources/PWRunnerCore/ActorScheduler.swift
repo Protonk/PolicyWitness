@@ -23,6 +23,7 @@ struct ActorScheduleEntry {
     let phaseIndex: Int
     let actorIndex: Int
     let visit: Int
+    var terminationDependency: ActorTerminationDependency? = nil
 }
 
 struct ActorScheduleInput {
@@ -37,6 +38,7 @@ struct ActorScheduleInput {
     var lifetimeMs = PWActorLimits.lifetimeMs
     /// The admitted tokens and deliveries; nil when no actor issues or transfers.
     var authority: AuthorityPlan? = nil
+    var didSetUp: ((_ actorIndex: Int, _ pid: pid_t) -> String?)? = nil
 }
 
 /// Why one actor's setup ended, decided from its own publications.
@@ -47,6 +49,7 @@ enum ActorSetupStatus: String {
     case applied = "applied"
     case unappliedDeclared = "unapplied_declared"
     case setupFailed = "setup_failed"
+    case authoritySetupFailed = "authority_setup_failed"
     case exitedBeforeSetup = "exited_before_setup"
     case setupTimeout = "setup_timeout"
 
@@ -68,6 +71,7 @@ struct ActorSessionRecord {
     var quiescence = "never_launched"
     /// The host's authority region setup for this actor: mapped, or the failure.
     var authorityRegion: String?
+    var equipmentFailure: String? = nil
 }
 
 struct ActorVisitRecord {
@@ -75,6 +79,7 @@ struct ActorVisitRecord {
     let actorIndex: Int
     let visit: Int
     var activationStored = false
+    var activationObservation: PWRunnerActorActivation? = nil
     var arrivalObserved = false
     var collectionInvoked = false
     var collectionClosed = false
@@ -91,6 +96,7 @@ struct ActorVisitRecord {
     var collectionMs: UInt64?
     var arrivalToReleaseMs: UInt64?
     var releaseToCompletionMs: UInt64?
+    var terminationGate: ActorTerminationGateRecord? = nil
 }
 
 struct ActorScheduleOutcome {
@@ -104,6 +110,7 @@ struct ActorScheduleOutcome {
     /// Host custody and transfer observations, in the order they were serviced.
     var custody: [CustodyObservation] = []
     var transfers: [TransferObservation] = []
+    var authoritySetup: PWRunnerAuthoritySetup? = nil
 }
 
 /// Collection against the active actor: global phase index, actor index and
@@ -118,6 +125,8 @@ final class ActorScheduler {
     private(set) var visits: [ActorVisitRecord] = []
     private var stopped: [Bool]
     private var cancelled: String?
+    private var setupStartedNs: UInt64?
+    private var setupDeadlineNs: UInt64?
     let lifetimeCutoffTicks: UInt64
     private(set) var custody: AuthorityCustody?
 
@@ -148,12 +157,40 @@ final class ActorScheduler {
     }
 
     func run(collect: ActorCollectionHook) -> ActorScheduleOutcome {
-        let setupWait = launchAndSetUp()
+        var setupWait = launchAndSetUp()
+        // Inspect only usable, still-owned live workers. An inspection refusal is
+        // an equipment failure, not a rewrite of the worker's setup publication.
+        if let inspect=input.didSetUp {
+            for index in sessions.indices where records[index].setupStatus.usable {
+                guard let session=sessions[index] else { continue }
+                if let before=calls.clock(),let start=setupStartedNs,let end=setupDeadlineNs,before>=start {
+                    if before>=end { records[index].equipmentFailure="inspection_deadline" }
+                    else if session.waitChild(stage:"equipment_inspection") != .pending {
+                        records[index].equipmentFailure=session.ownershipUnbroken ? "process_unavailable":"ownership_unresolved"
+                    } else {
+                        records[index].equipmentFailure=inspect(index,session.pid)
+                        if let after=calls.clock(),after>=before {
+                            if after>=end && records[index].equipmentFailure==nil { records[index].equipmentFailure="inspection_deadline" }
+                        } else if records[index].equipmentFailure==nil { records[index].equipmentFailure="inspection_deadline" }
+                    }
+                } else { records[index].equipmentFailure="inspection_deadline" }
+                if let failure=records[index].equipmentFailure,cancelled==nil { cancelled="equipment_execution_"+failure }
+            }
+            if let finish=calls.clock(),let start=setupStartedNs,finish>=start { setupWait.elapsed_ms=(finish-start)/1_000_000 }
+            else { setupWait.elapsed_ms=nil;setupWait.clock_fault=true }
+            if records.contains(where:{$0.equipmentFailure != nil}) { setupWait.stop="equipment_inspection_failed" }
+        }
         let executionWait = walkSchedule(collect: collect)
         finish()
         return ActorScheduleOutcome(actors: records, visits: visits, lifetimeCutoffTicks: lifetimeCutoffTicks,
                                     setupWait: setupWait, executionWait: executionWait, cancelled: cancelled,
-                                    custody: custody?.custody ?? [], transfers: custody?.transfers ?? [])
+                                    custody: custody?.custody ?? [], transfers: custody?.transfers ?? [],
+                                    authoritySetup: PWRunnerAuthoritySetup(
+                                        host:custody?.setupObservation ?? PWRunnerAuthorityHost(run:PWRunnerAuthorityScope(disposition:"not_required")),
+                                        workers:records.map { record in
+                                            record.output?.authoritySetup ?? PWRunnerAuthorityScope(actor_index:record.index,
+                                                required:input.authority != nil,publication:"not_observed",ownership:["descriptor":"not_acquired","mapping":"not_acquired","shared_erasure":"not_present"])
+                                        }))
     }
 
     // MARK: - Setup
@@ -163,6 +200,9 @@ final class ActorScheduler {
     /// the others from launching.
     private func launchAndSetUp() -> PWHostWait {
         var clock = HostWaitClock(milliseconds: input.setupAllowanceMs, pollNs: 1_000_000, calls: calls)
+        setupStartedNs=clock.started
+        setupDeadlineNs=clock.started.map { $0 > UInt64.max-clock.budgetNs ? UInt64.max:$0+clock.budgetNs }
+
         // Every authority region and custody buffer exists before the first
         // launch, with core dumps disabled in this host first.
         if let plan = input.authority {
@@ -189,10 +229,13 @@ final class ActorScheduler {
             actorInput.actorMode = input.applies[index] ? 1 : 2
             actorInput.lifetimeCutoffTicks = lifetimeCutoffTicks
             actorInput.authorityFD = custody?.descriptor(for: index)
+            actorInput.authorityRequired = input.authority != nil
+            actorInput.authorityRecorder = custody?.recorder(for:index)
             let session = ActorSession(actorInput, processCalls: calls,
                 setupRemainingMs: { Int((clock.remainingNs() ?? 0) / 1_000_000) })
             custody?.closeDescriptor(for: index)
             guard session.spawned else {
+                session.tearDown()
                 records[index].setupStatus = .launchRefused
                 records[index].launchFailure = session.failure
                 continue
@@ -240,6 +283,9 @@ final class ActorScheduler {
     /// The worker's own setup publication, or nil while it is still pending.
     private func setupDisposition(_ session: ActorSession) -> ActorSetupStatus? {
         guard session.identityMatches else { return nil }
+        let authority=session.authoritySetupObservation
+        if authority.integrity_errors != nil { return .setupFailed }
+        if authority.disposition=="terminal_required_failure" { return .authoritySetupFailed }
         switch session.actorSetup {
         case 1:
             return session.appliedObserved && session.applyRCIsZero ? .applied : .setupFailed
@@ -262,6 +308,10 @@ final class ActorScheduler {
         var stop = "schedule_complete"
         for entry in input.schedule {
             var visit = ActorVisitRecord(phaseIndex: entry.phaseIndex, actorIndex: entry.actorIndex, visit: entry.visit)
+            if let dependency=entry.terminationDependency {
+                visit.terminationGate=ActorTerminationGateRecord(sourceActorIndex:dependency.sourceActorIndex,
+                    sourceFinalPhaseIndex:dependency.sourceFinalPhaseIndex)
+            }
             defer { visits.append(visit) }
             if let cancelled {
                 visit.endReason = "cancelled:" + cancelled
@@ -283,7 +333,18 @@ final class ActorScheduler {
                 visit.endReason = "visit_out_of_range"
                 continue
             }
-            session.activate(globalPhase: UInt32(entry.phaseIndex + 1))
+            if let dependency=entry.terminationDependency {
+                var gate=observeTermination(dependency,remainingMs:Int((clock.remainingNs() ?? 0)/1_000_000))
+                gate.activationEligible=gate.outcome=="satisfied"
+                visit.terminationGate=gate
+                if !gate.activationEligible {
+                    visit.endReason="termination_dependency:"+gate.outcome
+                    cancelled=visit.endReason
+                    stop="dependency_failed"
+                    continue
+                }
+            }
+            visit.activationObservation=session.activate(globalPhase: UInt32(entry.phaseIndex + 1))
             visit.activationStored = true
             let activatedAt = calls.clock()
             var arrivedAt: UInt64? = nil
@@ -406,6 +467,62 @@ final class ActorScheduler {
         return clock.record(stop: stop, excluded: true)
     }
 
+    /// Natural owned termination only. This method never requests departure.
+    private func observeTermination(_ dependency: ActorTerminationDependency, remainingMs: Int) -> ActorTerminationGateRecord {
+        var result=ActorTerminationGateRecord(sourceActorIndex:dependency.sourceActorIndex,sourceFinalPhaseIndex:dependency.sourceFinalPhaseIndex)
+        let budget=min(PWActorLimits.terminationMs,max(0,remainingMs))
+        var wait=HostWaitClock(milliseconds:budget,pollNs:1_000_000,calls:calls)
+        let deadline=MonotonicDeadline(milliseconds:budget,clock:calls.clock)
+        let source=sessions.indices.contains(dependency.sourceActorIndex) ? sessions[dependency.sourceActorIndex]:nil
+        var lastRemaining: UInt64? = nil
+        func sample() -> UInt64? {
+            guard let value=deadline.sample()?.remaining else { return nil }
+            if let previous=lastRemaining,value>previous { return nil }
+            lastRemaining=value;return value
+        }
+        func finish(_ reason:String)->ActorTerminationGateRecord {
+            result.outcome=reason;result.wait=wait.record(stop:reason)
+            result.captureOrdinal=source?.process.nextCaptureOrdinal()
+            if reason=="satisfied" {
+                if result.wait?.clock_fault==true || result.wait?.elapsed_ms==nil {
+                    result.outcome="clock_unavailable"
+                } else if let elapsed=result.wait?.elapsed_ms, elapsed>UInt64(max(0,budget)) {
+                    result.outcome="timed_out"
+                }
+                let terminalOutcome=result.outcome
+                result.wait?.stop=terminalOutcome
+            }
+            return result
+        }
+        guard let source,
+              let activation=visits.first(where:{$0.phaseIndex==dependency.sourceFinalPhaseIndex && $0.actorIndex==dependency.sourceActorIndex && $0.activationStored})?.activationObservation else {
+            return finish("source_unavailable")
+        }
+        guard budget>0 else { return finish("execution_allowance_exhausted") }
+        while true {
+            guard let before=sample() else { return finish("clock_unavailable") }
+            if before==0 { return finish("timed_out") }
+            guard source.ownershipUnbroken && source.process.ownershipUnbroken else { return finish("ownership_lost") }
+            if source.process.ownedReap == nil && source.process.departureRequested { return finish("source_departure_requested") }
+            let observation=source.waitChild(stage:"termination_gate")
+            // A late native reap remains a fact but cannot reopen this gate.
+            result.observation=source.process.ownedReap
+            guard let after=sample() else { return finish("clock_unavailable") }
+            if after==0 { return finish("timed_out") }
+            switch observation {
+            case .failed: return finish("ownership_lost")
+            case .reaped:
+                guard let reaped=result.observation, reaped.ownership_unbroken else { return finish("ownership_lost") }
+                if reaped.departure_requested { return finish("source_departure_requested") }
+                guard let reapedAt=reaped.observed_ns,let activatedAt=activation.observed_ns else { return finish("clock_unavailable") }
+                guard reaped.capture_ordinal>activation.capture_ordinal && reapedAt>=activatedAt else { return finish("source_unavailable") }
+                return finish("satisfied")
+            case .pending: break
+            }
+            if wait.expiredAfterSleeping() { return finish("timed_out") }
+        }
+    }
+
     // MARK: - Termination
 
     /// Request exit, grace, kill if needed and reap one actor; record how
@@ -434,6 +551,9 @@ final class ActorScheduler {
             }
             let output = session.collectOutput()
             records[index].output = output
+            if records[index].setupStatus == .transferFailed && output.authoritySetup?.disposition == "terminal_required_failure" {
+                records[index].setupStatus = .authoritySetupFailed
+            }
             // A setup deadline controls eligibility, not whether a later
             // application publication is an observed native fact.
             records[index].applicationCount = output.applied ? 1 : 0

@@ -1,0 +1,151 @@
+{
+  "schema_version": 6,
+  "specimen_id": "extension_mixed_equipment_byoxpc",
+  "actors": [
+    {
+      "actor_id": "issuer",
+      "equipment": "unentitled",
+      "sandbox": {
+        "mode": "unapplied"
+      }
+    },
+    {
+      "actor_id": "subject",
+      "equipment": "selected",
+      "sandbox": {
+        "mode": "apply",
+        "policy": {
+          "format": "sbpl",
+          "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+        }
+      },
+      "required_entitlements": [
+        "com.apple.security.cs.allow-jit"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "phase_id": "baseline",
+      "actor_id": "subject",
+      "actions": [
+        {
+          "step_id": "read_before",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "supply",
+      "actor_id": "issuer",
+      "actions": [
+        {
+          "step_id": "issue",
+          "extension": {
+            "operation": "issue",
+            "family": "file",
+            "authority": "read",
+            "target": "/private/tmp/pw-extension-review/target.txt",
+            "token_ref": "t"
+          }
+        },
+        {
+          "step_id": "transfer",
+          "extension": {
+            "operation": "transfer",
+            "token_ref": "t",
+            "recipient": "subject",
+            "delivery_ref": "d"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "consume",
+      "actor_id": "subject",
+      "actions": [
+        {
+          "step_id": "consume",
+          "extension": {
+            "operation": "consume",
+            "delivery_ref": "d",
+            "handle_ref": "h"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "access",
+      "actor_id": "subject",
+      "actions": [
+        {
+          "step_id": "read_after",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "release",
+      "actor_id": "subject",
+      "actions": [
+        {
+          "step_id": "release",
+          "extension": {
+            "operation": "release",
+            "handle_ref": "h"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "after_release",
+      "actor_id": "subject",
+      "actions": [
+        {
+          "step_id": "read_after_release",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        }
+      ]
+    }
+  ],
+  "runner": {
+    "mode": "byoxpc",
+    "service": "com.policywitness.review",
+    "required_entitlements": [
+      "com.apple.security.cs.allow-jit"
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "archive": "extension-consolidation-abi-01-failures.tar.gz",
+  "artifact_integrity": null,
+  "bytes": 60540,
+  "case_outcome_counts": {
+    "fail": 1
+  },
+  "case_results": [
+    {
+      "context": "standard",
+      "id": "runner_abi_layout/c_swift_layout_agreement",
+      "reason": "layout check failed: ABI layout changed (PW_SHM_AUTHORITY_SETUP_BYTES, PW_SHM_REGION_BYTES, offsetof.pw_shm_header_t.extension_delivered_bytes, offsetof.pw_shm_header_t.extension_delivery_cleanup_errno, offsetof.pw_shm_header_t.extension_delivery_cleanup_stage, offsetof.pw_shm_header_t.extension_delivery_errno, offsetof.pw_shm_header_t.extension_delivery_native_rc, offsetof.pw_shm_header_t.extension_delivery_published, offsetof.pw_shm_header_t.extension_delivery_stage, offsetof.pw_shm_header_t.extension_delivery_status, offsetof.pw_shm_header_t.extension_requested, region.authority_setup_offset); review the diff, then replace /Users/raccoon/Desktop/Security/PolicyWitness/tests/fixtures/contract/abi_layout.txt with /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-abi-01/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/abi_layout.candidate.txt",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    }
+  ],
+  "completion": {
+    "completed": 1,
+    "selected": 1,
+    "skipped": 0,
+    "unrun": 0
+  },
+  "files": [
+    {
+      "bytes": 4110,
+      "path": "dispatch.json",
+      "sha256": "258552d70f485e834bd9236992f0e40f4cdfafdf3757ae6a3a13ef17b24856a6"
+    },
+    {
+      "bytes": 2740,
+      "path": "events.jsonl",
+      "sha256": "a7d66a6b47619e23b1cc77ef1ad926dbdbc150ffee8eadb4cc8c55e01d23a328"
+    },
+    {
+      "bytes": 214,
+      "path": "owner.json",
+      "sha256": "1c70c0da2fc02b15c26e70dd039e7ec18c43716fda2286a4340a26624398d279"
+    },
+    {
+      "bytes": 96684,
+      "path": "plan.json",
+      "sha256": "8e180877177e32877f7ad8aed269a1feb1d4db2be9fc61592b098b1bd45160bd"
+    },
+    {
+      "bytes": 205055,
+      "path": "run.json",
+      "sha256": "ed290acfeb82c995fd560c3728dd4e48598bd6610769814a68e3c95cdec81c2f"
+    },
+    {
+      "bytes": 7790,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/abi_layout.candidate.txt",
+      "sha256": "c186932a1b8bf29bd032e69eb77b55c675fa89f899fcde1d87e2fd9c4460c896"
+    },
+    {
+      "bytes": 880,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/layout-check.err",
+      "sha256": "5c5dfd935ee7519d02011c81e99d335ed8d617353b57d8f1c5d9191f4b107cf6"
+    },
+    {
+      "bytes": 33512,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer",
+      "sha256": "7e69eea1a435768bf84f09e1d057ff09e05ad34bf3f0debeefe3a5efeaa334e8"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 7878,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer.out",
+      "sha256": "890eea0f911475e32fc2a4afed508dfdb08abd85c9f675d547a2301f0ade49f5"
+    },
+    {
+      "bytes": 2740,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/events.jsonl",
+      "sha256": "a7d66a6b47619e23b1cc77ef1ad926dbdbc150ffee8eadb4cc8c55e01d23a328"
+    },
+    {
+      "bytes": 1470,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/report.json",
+      "sha256": "c5e97e70f763b3468e80587919c5caad3f602bf2433bb9a5674a086d4bfa03ef"
+    }
+  ],
+  "original_root": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-abi-01",
+  "ownership": "Identified copies do not relocate active ownership or establish resource settlement.",
+  "run_id": "20261106T142636Z_8e392b29",
+  "scope": "Run metadata and complete nonpassing case observations; passed case raw output omitted.",
+  "sha256": "d11bfef7bfcb87fc8d1b53655e9d330a59afed988ddda9e3dd25ee538d0de930"
+}

@@ -225,11 +225,23 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGTERM)
             try expectNil(out.terminationRequest)
         }
-        tk.run("published coarse failure survives cleanup termination") {
+        tk.run("done and cleanup termination cannot publish a coarse apply-failure scalar") {
             let out = try lifecycleFixture("reported_failure_hang")
             try expectFalse(out.applied)
             try expectTrue(out.done)
-            try expectEqual(out.applyRC, Int32(-1))
+            // This ABI fixture writes apply_rc=-1 and done, but publishes no
+            // native failure cell. Preserve done/cleanup; withhold attribution.
+            try expectEqual(out.applyRC,Int32(0))
+            try expectEqual(out.applyErrno,Int32(0))
+            try expectEqual(out.workerEvidence?.failure_state,"absent")
+            try expectNil(out.workerEvidence?.failure)
+            let application=actorApplicationAssessment(mode:"apply",launched:true,applied:false,
+                evidence:out.workerEvidence,authority:out.authoritySetup)
+            try expectEqual(application.state,"unobserved")
+            try expectEqual(application.basis,"no_eligible_apply_publication")
+            let classified=classify(workerResult:.success(out),validatorResult:nil,expectedVerdictCount:0)
+            try expectEqual(classified.outcome,NormalizedOutcome.runnerFailed)
+            try expectContains(classified.error ?? "","without an observed application")
             try expectFalse(out.slots[0].completed)
             try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGKILL)
             try expectEqual(out.terminationRequest?.rc, 0)

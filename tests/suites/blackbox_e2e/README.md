@@ -55,20 +55,14 @@ and does not skip the case.
 ## Fixtures
 
 - Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`
-- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/response25/valid_run.json`
-  and `response25/missing_path_run.json`
-- `response25/extension_run.json` and `extension_specimen.json`: the unmodified
-  public CLI extension capture and its exact request, from `witness_contract/extensions`.
-- `response25/issuer_abnormal_run.json` and its specimen: unmodified combined-fault
-  capture with independently observed issuer publication followed by abnormal exit.
-
-The `response25/` envelopes are unmodified captures from the corresponding
-current-producer cases; each carries its own build stamp, binary hashes and
-worker source identity. Their sibling `valid_specimen.json` and
-`missing_path_specimen.json` files are the exact submitted requests. Refresh
-each envelope and specimen together from a passing live case. Superseded
-acceptance captures remain available in Git; previous-envelope rejection uses
-constructed controls.
+- Current checker/comparison input: `tests/fixtures/blackbox_e2e/checker/current/constructed_run.json`.
+  It authors ordinary current-contract evidence with hypothetical identities and
+  unavailable artifact verification; it supplies no native or signed-candidate credit.
+- The menagerie `constructed_missing_path_baseline()` authors missing-path,
+  invalid Mach-name and allowed-read facts used by both checker control suites.
+- `response25/` and earlier directories retain unmodified historical captures
+  and exact requests. Current readers refuse their versions; they are not semantic
+  acceptance baselines. Live BBX-001/002 and witness cases supply candidate evidence.
 
 The shared `contract/compiled_profile.json` corpus checks the nested receipt
 version, worker producer and before-apply stage. Missing or contradictory
@@ -76,19 +70,19 @@ context is refused; unavailable receipts cannot claim capture context.
 Swift and Rust controls read the same independently authored cases.
 
 Fresh-write controls construct accepted and rejected native observations beside
-the retained extension capture. They require operation-specific metadata,
+the ordinary current-contract model. They require operation-specific metadata,
 unattempted-field absence, native errno association and the first actual failure
 in call order. Short writes fail without an invented errno; pre-open metadata
 remains diagnostic. Combined omissions stay visible. These controls establish
 reader interpretation, while `witness_contract/extension_directory` supplies
 independent live filesystem effects.
 
-`checker_controls` runs without the app, before the live cases. Its checked-in
-live envelope passes BBX-001's expectations. Controlled changes must fail:
+`checker_controls` runs without the app, before the live cases. Its authored current
+ordinary envelope passes BBX-001's expectations. Controlled changes must fail:
 an incorrect later attempt, a prediction mismatch, both together, both on the
 same step, malformed evidence channels, duplicate IDs, and reordered steps.
 The hand-reviewed `contract/phase_collection.json` cases append an empty phase
-to the retained extension capture, leaving its action evidence untouched.
+to the ordinary current model, leaving its action evidence untouched.
 The consumer and lifecycle oracle must accept compatible failed collections
 and reject contradictory status, process, spawn and reap evidence.
 Combined failures must report each independent problem, so changing a skip
@@ -120,8 +114,8 @@ self-check also run here: every hand-reviewed example row is reproduced by the
 claim tables, a record built from it is accepted, its mutations are rejected with
 the expected rule, and the core D-model evaluates totally. These are constructed
 controls; they establish interpretation, not live reachability.
-The expected-fixture controls accept `tests/fixtures/disposition/response25/a1_expected.json`
-(a live envelope of the a1 specimen at the current contract), require only an
+The expected-fixture controls accept `tests/fixtures/disposition/current/constructed_deadline.json`
+(an authored current two-step deadline model), require only an
 unsupported-envelope version error from the lifecycle adapter, oracle and
 consumer for a constructed empty frame, and reject named mutations of the accepted
 baseline (missing disposition record, request removed while the cause is kept,
@@ -187,17 +181,15 @@ are constructed inputs, without historical helper fixtures or schema readers.
 
 Lifecycle projections select only execution diagnostic fields.
 
-Native extension controls reject invented call/results, missing or mismatched
-token/handle references, phase and disposition association faults, unsupported
-integer representations, and delivery without bounded issuance and a confirmed
-issuer reap. Fresh-read controls reject byte-count/content mismatches and
-read/stat/close evidence after a failed open. A positive native-refusal control
-retains successful access evidence independently of the unavailable release.
-Missing-issuer-result controls reject publication and payload contradictions,
-retain pre-call and cleanup observations without a result, and accept published
-results alongside timeout or wait-error statuses.
-The separate lifecycle oracle checks the native-event mutations as well as the
-ordinary action account; no constructed mutation establishes a native effect.
+The independent actor-account corpus checks fixed setup cells, primary and
+cleanup failures, application bases, sealed versus instrumented equipment,
+static/live entitlement requirements and source-owned termination gates.
+Its projections are subaccount inputs rather than full wire-valid replies;
+Rust/Python validators and Swift pure DTO helpers own that scope. Ordinary
+fresh-read controls retain byte-count/content and read/stat/close evidence checks.
+Fresh-write controls retain operation-specific call order and first-failure rules.
+The lifecycle oracle preserves validator owner/PID and ordinary action claims.
+Constructed mutations establish interpretation, not native effects.
 
 Phase collection controls reject mistyped containers, ordering and disposition
 values without treating them as absent. An empty spawn-failure object is rejected

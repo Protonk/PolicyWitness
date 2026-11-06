@@ -1056,8 +1056,8 @@
       "variants": [
         "full"
       ],
-      "reads": "each service's Info.plist and builddir/ host, the worker, validator and issuer",
-      "writes": "each service bundle: its stamped Info.plist, the host with its dSYM in inspection builds, the worker, validator and issuer",
+      "reads": "each service's Info.plist and builddir/ host, the common worker and validator",
+      "writes": "each service bundle: its stamped Info.plist, the host with its dSYM in inspection builds, two copies of the common worker and the validator",
       "refusals": [],
       "sources": [
         {
@@ -1221,11 +1221,12 @@
       "variants": [
         "full"
       ],
-      "reads": "each service's Entitlements.plist, admitted before the first check, and the assembled bundle",
-      "writes": "signatures on the nested helpers, then each service seal",
+      "reads": "each service's Entitlements.plist, the common unsigned worker and verified generated worker identity, and the assembled bundle",
+      "writes": "selected worker signature with service entitlements, unentitled worker and validator signatures without supplied entitlements, service-local worker-equipment.json from signed artifacts, then each service seal",
       "refusals": [
         "sign_target_not_macho",
-        "codesign_failed"
+        "codesign_failed",
+        "equipment_inventory_failed"
       ],
       "sources": [
         {
@@ -3943,6 +3944,42 @@
           "coverage": "helper"
         }
       ]
+    },
+    {
+      "id": "equipment_inventory_failed",
+      "message": "equipment inventory: generated identity, signed role observation, bounded entitlement serialization, common worker hash or inventory publication failed",
+      "kind": "propagated",
+      "steps": [
+        "sign_services"
+      ],
+      "status": "2",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "build_equipment.py"
+        },
+        {
+          "path": "tests/build_equipment.py",
+          "symbol": "ERROR: equipment inventory:"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_equipment_inventory_helper_refuses_without_publishing",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
     }
   ],
   "signing": [
@@ -4025,7 +4062,7 @@
       "id": "sig_worker",
       "target": "${svc_bundle}/Contents/MacOS/pw-probe-runner",
       "kind": "signature",
-      "entitlements": null,
+      "entitlements": "${svc_entitlements}",
       "loop": "XPC_SERVICE_NAMES",
       "step": "sign_services",
       "variants": [
@@ -4096,8 +4133,8 @@
       ]
     },
     {
-      "id": "sig_issuer",
-      "target": "${svc_bundle}/Contents/MacOS/pw-extension-issuer",
+      "id": "sig_unentitled_worker",
+      "target": "${svc_bundle}/Contents/MacOS/pw-probe-runner-unentitled",
       "kind": "signature",
       "entitlements": null,
       "loop": "XPC_SERVICE_NAMES",
@@ -4114,7 +4151,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "${svc_bundle}/Contents/MacOS/pw-extension-issuer"
+          "symbol": "${svc_bundle}/Contents/MacOS/pw-probe-runner-unentitled"
         }
       ],
       "checks": [
@@ -5091,6 +5128,32 @@
           "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
           "form": "test",
           "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_equipment",
+      "command": "tests/build_equipment.py --bundle",
+      "step": "sign_services",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "build_equipment.py"
+        },
+        {
+          "path": "tests/build_equipment.py",
+          "symbol": "main"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
         }
       ]
     },

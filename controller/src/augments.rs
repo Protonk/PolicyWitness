@@ -480,7 +480,7 @@ mod tests {
         let app = tempdir("actors");
         write_augment(&app, "exec_baseline", "; fragment\n");
         let mut req = json!({
-            "schema_version": 5, "specimen_id": "a",
+            "schema_version": 6, "specimen_id": "a",
             "actors": [
                 {"actor_id": "A", "sandbox": {"mode": "unapplied"}},
                 {"actor_id": "B", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1)", "augments": ["exec_baseline"]}}},

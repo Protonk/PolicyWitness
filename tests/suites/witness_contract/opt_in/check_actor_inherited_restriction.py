@@ -5,7 +5,7 @@ is unrestricted. This control places an owned copy of the installed worker in
 a minimal bundle (the App Sandbox initializer takes its container identifier
 from the signature's bundle identifier and aborts a bare executable), signs it
 with the App Sandbox entitlement under a fixed test identifier, and launches it
-through the owned host with the request's worker override. The same unapplied request
+through the owned host with an explicit selected-equipment test override. The same unapplied request
 runs on the ordinary installed worker as the baseline, and the test process
 reads the target itself. Under the restricted worker the test-owned target read
 fails while a system file the App Sandbox permits still reads; the validator's
@@ -24,10 +24,12 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import tempfile
 
 HERE = Path(__file__).resolve()
 sys.path[:0] = [str(HERE.parents[1]), str(HERE.parents[3] / 'lib')]
-from check_extensions import ROOT, capture  # noqa: E402
+ROOT = HERE.parents[4]
+from witness_capture import capture  # noqa: E402
 import extension_actors  # noqa: E402
 from contract import REQUEST_SCHEMA  # noqa: E402
 from worker_exit_witness import worker_exit_witness  # noqa: E402
@@ -62,11 +64,19 @@ restricted = bundle_copy / 'Contents/MacOS/pw-probe-runner'
 shutil.copyfile(installed, restricted)
 restricted.chmod(0o755)
 assert hashlib.sha256(restricted.read_bytes()).hexdigest() == hashlib.sha256(installed.read_bytes()).hexdigest()
-ownership = dict(kind='restricted-worker-control', workspace=str(workspace), identifier=identifier,
+ownership = dict(kind='restricted-worker-control', workspace=str(workspace), artifacts=str(receipts),
+                 run_id=os.environ.get('PW_TEST_RUN_ID'), identifier=identifier,
                  container=str(container), container_before=container_before, container_after=None,
                  container_removed=None, removal_error=None)
-session.save(workspace / 'ownership.json', ownership)
-session.save(receipts / 'ownership.json', ownership)
+# Keep a separate durable receipt when this run could create a new container.
+# Verified runner removal may delete session staging; it does not settle this
+# independently owned resource or authorize deletion of a preexisting one.
+recovery_root = None if container_before else Path(tempfile.mkdtemp(prefix='pw-container-recovery-', dir='/private/tmp'))
+ownership['state_path'] = str((recovery_root or workspace) / 'ownership.json')
+ownership['recovery_state'] = 'not_owned_preexisting' if container_before else 'pending_observation'
+session.persist_state(ownership, receipts / 'ownership.json')
+if recovery_root is not None:
+    session.save(workspace / 'ownership.json', ownership)
 base = session.entitlements(installed, receipts, 'installed-worker-entitlements', command) or {}
 assert base.get(SANDBOX_KEY) is not True, ('installed worker is already sandboxed', base)
 supplied = dict(base, **{SANDBOX_KEY: True})
@@ -78,6 +88,9 @@ readback = session.entitlements(restricted, receipts, 'restricted-worker-entitle
 assert readback == supplied, (readback, supplied)
 signed = signature(restricted, receipts / 'restricted-signature')
 assert signed['Identifier'] == identifier, signed
+ownership['signed_worker_sha256'] = hashlib.sha256(restricted.read_bytes()).hexdigest()
+ownership['signature_identifier'] = signed['Identifier']
+session.persist_state(ownership, receipts / 'ownership.json')
 command(receipts / 'verify-restricted', ['/usr/bin/codesign', '--verify', '--strict', '--verbose=2', bundle_copy])
 
 targets = staging / 'actor-targets'
@@ -91,11 +104,12 @@ read = extension_actors.read_probe
 
 def request(name, override):
     spec = {'schema_version': REQUEST_SCHEMA, 'specimen_id': name,
-            'actors': [extension_actors.unapplied_actor('R')],
+            'actors': [dict(extension_actors.unapplied_actor('R'), equipment='selected')],
             'phases': [{'phase_id': 'reads', 'actor_id': 'R',
                         'actions': [read('owned_target', target), read('system_file', AVAILABLE)]}]}
     if override:
-        spec['_test_overrides'] = {'worker_executable_path': str(restricted)}
+        spec['_test_overrides'] = {'actor_equipment_executable_paths': {'selected': str(restricted)}}
+        spec['actors'][0]['equipment'] = 'selected'
     return spec
 
 
@@ -107,6 +121,9 @@ def observe(name, override):
     actor, = runner['actors']
     assert actor['setup_status'] == 'unapplied_declared' and actor.get('applied') is None, actor
     assert actor['subprocess']['reaped'] and actor['subprocess']['exit_code'] == 0, actor
+    ownership.setdefault('workers', []).append(dict(case=name, pid=actor['launch']['pid'],
+        reaped=actor['subprocess']['reaped'], exit_code=actor['subprocess']['exit_code']))
+    session.persist_state(ownership, receipts / 'ownership.json')
     steps = {s['step_id']: s for s in runner['steps']}
     for step in steps.values():
         assert step['attempt']['result_source'] == 'worker', step
@@ -116,6 +133,7 @@ def observe(name, override):
                          query=s['sandbox_check']['outcome'], query_pid=s['sandbox_check']['pid'])
            for step_id, s in steps.items()}
     row['actor'] = dict(pid=actor['launch']['pid'], setup_status=actor['setup_status'],
+                        equipment=actor['equipment'],
                         worker=envelope['data']['specimen']['binaries'].get('worker'),
                         inherited_descriptors=actor['launch']['inherited_descriptors'])
     return row, steps
@@ -144,14 +162,22 @@ try:
     observations['restricted'] = restricted_row
 finally:
     ownership['container_after'] = container.exists()
-    if ownership['container_after']:
+    if ownership['container_after'] and not ownership['container_before']:
         removal = subprocess.run(['/bin/rm', '-rf', str(container)], capture_output=True, text=True, timeout=30)
         ownership['container_removed'] = not container.exists()
         ownership['removal_error'] = removal.stderr.strip() or None
     else:
         ownership['container_removed'] = False
+        if ownership['container_before']:
+            ownership['removal_error'] = 'preexisting container; cleanup is not owned by this run'
+    ownership['recovery_state'] = ('not_owned_preexisting' if ownership['container_before'] else
+                                   'unresolved_manual' if ownership['container_after'] and not ownership['container_removed'] else 'settled')
+    session.persist_state(ownership, receipts / 'ownership.json')
     session.save(workspace / 'ownership.json', ownership)
-    session.save(receipts / 'ownership.json', ownership)
+    if recovery_root is not None and ownership['recovery_state'] == 'settled':
+        # Only this receipt and its uniquely created parent are owned here.
+        Path(ownership['state_path']).unlink()
+        recovery_root.rmdir()
 save(receipts / 'observations.json', dict(identifier=identifier, entitlements=supplied, available_path=AVAILABLE,
                                          target=str(target), observations=observations))
 print('unapplied actor on the App Sandbox worker: owned target read refused (errno %s) and queried deny, system file read '

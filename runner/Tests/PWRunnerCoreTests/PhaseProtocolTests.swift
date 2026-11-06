@@ -29,8 +29,8 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 .deletingLastPathComponent().deletingLastPathComponent()
             let fixtures = root.appendingPathComponent("tests/fixtures")
             let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent(
-                "blackbox_e2e/checker/response25/issuer_abnormal_run.json"))) as! [String: Any]
-            let baseline = (envelope["data"] as! [String: Any])["runner_result"]!
+                "contract/ordinary_phase_reply.json"))) as! [String: Any]
+            let baseline = envelope
             let cases = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent(
                 "contract/evidence_types.json"))) as! [[String: Any]]
             func replace(_ value: Any, path: ArraySlice<String>, with replacement: Any) -> Any {
@@ -45,7 +45,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 return object
             }
             for row in cases {
-                var raw = baseline
+                var raw: Any = baseline
                 for patch in row["patches"] as! [[String: Any]] {
                     raw = replace(raw, path: (patch["path"] as! String).split(separator: "/").map(String.init)[...], with: patch["value"]!)
                 }
@@ -63,8 +63,8 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 .deletingLastPathComponent().deletingLastPathComponent()
             let fixtures = root.appendingPathComponent("tests/fixtures")
             let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf:
-                fixtures.appendingPathComponent("blackbox_e2e/checker/response25/extension_run.json"))) as! [String: Any]
-            let raw = (envelope["data"] as! [String: Any])["runner_result"] as! [String: Any]
+                fixtures.appendingPathComponent("contract/ordinary_phase_reply.json"))) as! [String: Any]
+            let raw = envelope
             let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
             let cases = try JSONSerialization.jsonObject(with: Data(contentsOf:
                 fixtures.appendingPathComponent("contract/phase_collection.json"))) as! [[String: Any]]
@@ -103,8 +103,8 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
                 .deletingLastPathComponent().deletingLastPathComponent()
             let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent(
-                "tests/fixtures/blackbox_e2e/checker/response25/extension_run.json"))) as! [String: Any]
-            let raw = (envelope["data"] as! [String: Any])["runner_result"] as! [String: Any]
+                "tests/fixtures/contract/ordinary_phase_reply.json"))) as! [String: Any]
+            let raw = envelope
             let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
             try expectEqual(baseline.phases.count, 3)
             // Every phase queries the same path under a different action ID.

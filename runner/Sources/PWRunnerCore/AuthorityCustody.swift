@@ -67,18 +67,26 @@ struct AuthorityPlanToken {
     /// The issuing actor's slot of the token's last declared use: its final
     /// transfer, or the issue itself when it is never transferred.
     let lastUseSlot: Int
+    let outboundPosition: Int
 }
 struct AuthorityPlanDelivery {
     let index: Int
     let tokenIndex: Int
     let sourceActorIndex: Int
     let recipientActorIndex: Int
+    let inboundPosition: Int
     /// The transfer action's slot within the source actor.
     let slot: Int
+    init(index:Int,tokenIndex:Int,sourceActorIndex:Int,recipientActorIndex:Int,slot:Int,inboundPosition:Int) {
+        self.index=index;self.tokenIndex=tokenIndex;self.sourceActorIndex=sourceActorIndex
+        self.recipientActorIndex=recipientActorIndex;self.slot=slot;self.inboundPosition=inboundPosition
+    }
 }
 struct AuthorityPlan {
-    var tokens: [AuthorityPlanToken]
-    var deliveries: [AuthorityPlanDelivery]
+    let tokens: [AuthorityPlanToken]
+    let deliveries: [AuthorityPlanDelivery]
+    let inboundCounts: [Int]
+    let outboundCounts: [Int]
 }
 
 /// One token's host custody account.
@@ -128,27 +136,44 @@ final class ActorAuthorityRegion {
     private(set) var descriptor: Int32 = -1
     private(set) var base: UnsafeMutablePointer<UInt8>?
     private(set) var failure: String?
+    let setup: AuthoritySetupRecorder
+    private var tornDown = false
 
     init(actorIndex: Int, inboundCount: Int, outboundCount: Int, sessionNonce: UInt64) {
         self.actorIndex = actorIndex
         self.inboundCount = inboundCount
         self.outboundCount = outboundCount
         bytes = PWAuthorityLayout.headerBytes + (inboundCount + outboundCount) * PWAuthorityLayout.slotBytes
+        setup = AuthoritySetupRecorder(capacity:16,actor:actorIndex)
+        setup.scope.ownership=["object_name":"not_acquired","descriptor":"not_acquired","mapping":"not_acquired","shared_erasure":"not_present"]
         let name = String("/pw_au_\(getpid())_\(actorIndex)".prefix(31))
         let fd = name.withCString { pw_cworker_shm_open_create($0, 0o600) }
-        guard fd >= 0 else { failure = "shm_open: " + String(cString: strerror(errno)); return }
-        guard name.withCString({ shm_unlink($0) }) == 0 else {
-            failure = "shm_unlink \(name): " + String(cString: strerror(errno)); close(fd); return
+        let openedErrno=errno
+        setup.integer(0,"shm_open",fd,openedErrno)
+        guard fd >= 0 else { setup.fail(0); failure="shm_open: errno=\(openedErrno)"; return }
+        descriptor=fd
+        setup.scope.ownership["descriptor"]="held"
+        setup.scope.ownership["object_name"]="held"
+        let unlinked=name.withCString { shm_unlink($0) }, unlinkErrno=errno
+        setup.integer(1,"shm_unlink",unlinked,unlinkErrno)
+        guard unlinked==0 else {
+            setup.fail(1); failure="shm_unlink: errno=\(unlinkErrno)"
+            setup.scope.ownership["object_name"]="unresolved"
+            setup.scope.cleanup_reference=PWAuthorityCleanupReference(name:name,host_pid:Int(getpid()),session_nonce:sessionNonce)
+            closeDescriptor(); return
         }
-        guard fcntl(fd, F_SETFD, FD_CLOEXEC) == 0 else {
-            failure = "FD_CLOEXEC: " + String(cString: strerror(errno)); close(fd); return
-        }
-        guard ftruncate(fd, off_t(bytes)) == 0 else {
-            failure = "ftruncate: " + String(cString: strerror(errno)); close(fd); return
-        }
-        guard let mapped = mmap(nil, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0), mapped != MAP_FAILED else {
-            failure = "mmap: " + String(cString: strerror(errno)); close(fd); return
-        }
+        setup.scope.ownership["object_name"]="released"
+        let flags=fcntl(fd,F_SETFD,FD_CLOEXEC), flagsErrno=errno
+        setup.integer(2,"fd_cloexec",flags,flagsErrno)
+        guard flags==0 else { setup.fail(2);failure="FD_CLOEXEC: errno=\(flagsErrno)";closeDescriptor();return }
+        let sized=ftruncate(fd,off_t(bytes)), sizeErrno=errno
+        setup.integer(3,"ftruncate",sized,sizeErrno,value:UInt64(bytes))
+        guard sized==0 else { setup.fail(3);failure="ftruncate: errno=\(sizeErrno)";closeDescriptor();return }
+        let mapping=mmap(nil,bytes,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0), mapErrno=errno
+        let mapOK=mapping != nil && mapping != MAP_FAILED
+        setup.record(4,"mmap",mapOK ? "succeeded":"failed",kind:"mapping",error:mapOK ? nil:mapErrno,value:UInt64(bytes))
+        guard mapOK, let mapped=mapping else { setup.fail(4);failure="mmap: errno=\(mapErrno)";closeDescriptor();return }
+        setup.scope.ownership["mapping"]="held"
         memset(mapped, 0, bytes)
         descriptor = fd
         let raw = mapped.assumingMemoryBound(to: UInt8.self)
@@ -162,6 +187,8 @@ final class ActorAuthorityRegion {
         writeU64(raw, offset: PWAuthorityLayout.sessionNonceOffset, sessionNonce)
         writeU32(raw, offset: PWAuthorityLayout.inboundCountOffset, UInt32(inboundCount))
         writeU32(raw, offset: PWAuthorityLayout.outboundCountOffset, UInt32(outboundCount))
+        setup.record(5,"header_initialize","performed",kind:"memory")
+        setup.scope.disposition="ready"
     }
 
     func outbound(_ index: Int) -> UnsafeMutablePointer<UInt8>? {
@@ -179,7 +206,12 @@ final class ActorAuthorityRegion {
 
     /// The host keeps its mapping; the descriptor is needed only until spawn.
     func closeDescriptor() {
-        if descriptor >= 0 { close(descriptor); descriptor = -1 }
+        if descriptor >= 0 {
+            let fd=descriptor; descriptor = -1
+            let rc=close(fd), saved=errno
+            setup.integer(9,"close_original_descriptor",rc,saved,cleanup:true)
+            setup.scope.ownership["descriptor"]=rc==0 ? "released":"unresolved"
+        }
     }
 
     func eraseAll() {
@@ -191,12 +223,21 @@ final class ActorAuthorityRegion {
     }
 
     func tearDown(quiescent: Bool = true) {
-        // A live actor may still be writing an unpublished outbound slot or
-        // consuming its owned inbound bytes. Unknown termination grants no
-        // authority to erase that actor's shared memory under it.
-        if quiescent { eraseAll() }
-        if let base { _ = munmap(UnsafeMutableRawPointer(base), bytes) }
-        base = nil
+        guard !tornDown else { return }
+        tornDown=true
+        if base != nil {
+            if quiescent {
+                eraseAll()
+                setup.record(10,"shared_clear","performed",kind:"memory",value:UInt64((inboundCount+outboundCount)*PWAuthorityLayout.tokenBytes),cleanup:true)
+                setup.scope.ownership["shared_erasure"]="performed"
+            } else { setup.scope.ownership["shared_erasure"]="withheld_not_quiescent" }
+        }
+        if let base {
+            let rc=munmap(UnsafeMutableRawPointer(base),bytes), saved=errno
+            setup.integer(11,"munmap",rc,saved,cleanup:true,value:UInt64(bytes))
+            setup.scope.ownership["mapping"]=rc==0 ? "released":"unresolved"
+            if rc==0 { self.base=nil }
+        }
         closeDescriptor()
     }
 
@@ -212,13 +253,20 @@ final class TokenCustody {
     private(set) var length = 0
     private(set) var accepted = false
     private(set) var erased = false
+    let setup: AuthoritySetupRecorder
+    private var finished=false
 
     init(tokenIndex: Int) {
         self.tokenIndex = tokenIndex
-        if let mapped = mmap(nil, PWAuthorityLayout.tokenBytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0), mapped != MAP_FAILED {
-            buffer = mapped
-            memset(mapped, 0, PWAuthorityLayout.tokenBytes)
-        }
+        setup=AuthoritySetupRecorder(capacity:4,token:tokenIndex)
+        setup.scope.ownership=["mapping":"not_acquired","private_erasure":"not_present"]
+        let mapped=mmap(nil,PWAuthorityLayout.tokenBytes,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANON,-1,0), saved=errno
+        let ok=mapped != nil && mapped != MAP_FAILED
+        setup.record(0,"mmap",ok ? "succeeded":"failed",kind:"mapping",error:ok ? nil:saved,value:UInt64(PWAuthorityLayout.tokenBytes))
+        if ok,let mapped {
+            buffer=mapped; memset(mapped,0,PWAuthorityLayout.tokenBytes)
+            setup.scope.disposition="ready";setup.scope.ownership["mapping"]="held"
+        } else { setup.fail(0) }
     }
 
     var available: Bool { buffer != nil }
@@ -260,16 +308,26 @@ final class TokenCustody {
         accepted = false
     }
 
-    deinit {
-        erase()
-        if let buffer { _ = munmap(buffer, PWAuthorityLayout.tokenBytes) }
+    func finish() {
+        guard !finished else { return };finished=true
+        if let buffer {
+            erase()
+            setup.record(1,"final_erase","performed",kind:"memory",value:UInt64(PWAuthorityLayout.tokenBytes),cleanup:true)
+            setup.scope.ownership["private_erasure"]="performed"
+            let rc=munmap(buffer,PWAuthorityLayout.tokenBytes), saved=errno
+            setup.integer(2,"munmap",rc,saved,cleanup:true,value:UInt64(PWAuthorityLayout.tokenBytes))
+            setup.scope.ownership["mapping"]=rc==0 ? "released":"unresolved"
+            if rc==0 { self.buffer=nil }
+        }
     }
+    deinit { finish() }
 }
 
 final class AuthorityCustody {
     let plan: AuthorityPlan
     let calls: ChildProcessCalls
     let sessionNonce: UInt64
+    let setup = AuthoritySetupRecorder(capacity:4)
     private(set) var regions: [ActorAuthorityRegion]
     private(set) var tokens: [TokenCustody]
     /// Each delivery's inbound slot within its recipient's region.
@@ -285,24 +343,17 @@ final class AuthorityCustody {
         // Core dumps are disabled in the custody-owning host before any token
         // can arrive; a failure here is recorded by the first region.
         var core = rlimit(rlim_cur: 0, rlim_max: 0)
-        let coreLimited = setrlimit(RLIMIT_CORE, &core) == 0
-        let coreErrno = errno
+        let coreRC=setrlimit(RLIMIT_CORE,&core), coreErrno=errno
+        let coreLimited=coreRC==0
+        setup.integer(0,"core_limit",coreRC,coreErrno)
+        if coreLimited { setup.scope.disposition="ready" } else { setup.fail(0) }
         let nonce = UInt64.random(in: UInt64.min...UInt64.max)
         sessionNonce = nonce
-        var inboundCounts = Array(repeating: 0, count: actorCount)
-        var outboundCounts = Array(repeating: 0, count: actorCount)
-        var slotOfToken: [Int] = []
-        for token in plan.tokens {
-            slotOfToken.append(outboundCounts[token.actorIndex])
-            outboundCounts[token.actorIndex] += 1
-        }
-        outboundSlotOfToken = slotOfToken
-        var slotOfDelivery: [Int] = []
-        for delivery in plan.deliveries {
-            slotOfDelivery.append(inboundCounts[delivery.recipientActorIndex])
-            inboundCounts[delivery.recipientActorIndex] += 1
-        }
-        inboundSlotOfDelivery = slotOfDelivery
+        let inboundCounts=plan.inboundCounts, outboundCounts=plan.outboundCounts
+        let slotOfToken=plan.tokens.map { $0.outboundPosition }
+        let slotOfDelivery=plan.deliveries.map { $0.inboundPosition }
+        outboundSlotOfToken=slotOfToken
+        inboundSlotOfDelivery=slotOfDelivery
         // No region may carry a token while this host could dump core. Setup
         // failure prevents the scheduler from launching this authority session.
         coreLimitFailure = coreLimited ? nil : "setrlimit(RLIMIT_CORE): " + String(cString: strerror(coreErrno))
@@ -574,9 +625,16 @@ final class AuthorityCustody {
     func finish(quiescentActors: Set<Int>? = nil) {
         if finished { return }
         finished = true
-        for token in tokens { token.erase() }
+        for token in tokens { token.finish() }
         for i in custody.indices { custody[i].erased = true }
         for region in regions { region.tearDown(quiescent: quiescentActors?.contains(region.actorIndex) ?? true) }
+    }
+
+    var setupObservation: PWRunnerAuthorityHost {
+        PWRunnerAuthorityHost(run:setup.scope,regions:regions.map { $0.setup.scope },custody:tokens.map { $0.setup.scope })
+    }
+    func recorder(for actor: Int) -> AuthoritySetupRecorder? {
+        regions.indices.contains(actor) ? regions[actor].setup:nil
     }
 
     deinit { finish() }

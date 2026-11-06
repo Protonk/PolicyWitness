@@ -26,11 +26,29 @@ private func decodeActorForm(_ text: String) throws -> PWRunnerRunSpec {
 private func draftRefusal(_ text: String) -> PWRunnerRequestFailure? {
     do {
         let parsed = try decodeActorForm(text)
-        if let capacity = CWorkerOrchestrator.admissionFailure(for: parsed) {
-            return requestCapacityFailure(capacity, parsed: parsed)
+        switch admitSpecimen(parsed) {
+        case .accepted: return nil
+        case .capacity(let capacity): return requestCapacityFailure(capacity, parsed: parsed)
+        case .refused(let failure): return failure
         }
-        return requestMeaningFailure(parsed)
     } catch { return requestDecodeFailure(error) }
+}
+
+private func replacingAssignments(_ plan: ActorPlan, actors: [ActorPlanActor]? = nil, tokens: [ActorPlanToken]? = nil,
+                                  phases: [ActorPlanPhase]? = nil) -> ActorPlan {
+    ActorPlan(actors: actors ?? plan.actors, phases: phases ?? plan.phases, tokens: tokens ?? plan.tokens,
+        deliveries: plan.deliveries, handles: plan.handles, slotOfStep: plan.slotOfStep,
+        inboundCounts: plan.inboundCounts, outboundCounts: plan.outboundCounts,
+        localSlotOfGlobal: plan.localSlotOfGlobal)
+}
+
+private func expectAssignmentRefusal(_ plan: ActorPlan, parsed: PWRunnerRunSpec) throws {
+    try expectTrue(!actorPlanAssignmentsConsistent(plan))
+    do {
+        _ = try ActorTranslation(plan: plan, parsed: parsed,
+            workerExecutablePaths: Array(repeating: "/unused", count: plan.actors.count))
+        throw TestFailure(message: "inconsistent admitted assignments reached translation")
+    } catch PWRunnerPreparationFailureError.inconsistentAssignment {}
 }
 
 func runActorPlanTests(_ tk: TestKit) {
@@ -42,29 +60,31 @@ func runActorPlanTests(_ tk: TestKit) {
             try expectNil(parsed.policy)
             try expectEqual(parsed.actors?.map { $0.actor_id }, ["A", "B", "C"])
         }
-        tk.run("legacy requests decode unchanged beside the actor form") {
-            let legacy = """
-            {"schema_version": \(PWContract.requestSchema), "specimen_id": "legacy",
-             "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
-             "phases": [{"phase_id": "p", "actions": [{"step_id": "c", "extension": {"operation": "consume", "token_ref": "t", "handle_ref": "h"}}]}],
-             "extensions": [{"token_ref": "t", "target": "/etc/hosts"}]}
+        tk.run("ordinary requests remain valid and declaration fields are unknown even when null") {
+            let ordinary = """
+            {"schema_version": \(PWContract.requestSchema), "specimen_id": "ordinary",
+             "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"}, "probe_plan": []}
             """
-            let parsed = try decodeActorForm(legacy)
-            try expectFalse(parsed.isActorForm)
-            try expectNil(requestMeaningFailure(parsed))
-            // A legacy phase naming an actor is inapplicable; an actor-only operand too.
-            let withActor = legacy.replacingOccurrences(of: "\"phase_id\": \"p\",", with: "\"phase_id\": \"p\", \"actor_id\": \"A\",")
-            try expectEqual(requestMeaningFailure(try decodeActorForm(withActor))?.code, "inapplicable_field")
-            try expectEqual(requestMeaningFailure(try decodeActorForm(withActor))?.path, ["phases", "0", "actor_id"])
-            let withDelivery = legacy.replacingOccurrences(of: "\"handle_ref\": \"h\"}", with: "\"handle_ref\": \"h\", \"delivery_ref\": \"d\"}")
-            try expectEqual(requestMeaningFailure(try decodeActorForm(withDelivery))?.code, "inapplicable_field")
-            // A missing legacy handle still fails at decode time.
-            let noHandle = legacy.replacingOccurrences(of: ", \"handle_ref\": \"h\"", with: "")
-            do { _ = try decodeActorForm(noHandle); throw TestFailure(message: "missing handle admitted") }
-            catch let failure as PWRunnerRequestFailure {
-                try expectEqual(failure.code, "missing_field")
-                try expectEqual(failure.path, ["phases", "0", "actions", "0", "extension", "handle_ref"])
+            try expectNil(requestMeaningFailure(try decodeActorForm(ordinary)))
+            for field in ["null", "[]"] {
+                let removed = ordinary.dropLast() + ", \"extensions\": " + field + "}"
+                try expectEqual(draftRefusal(removed)?.code, "unknown_field")
+                try expectEqual(draftRefusal(removed)?.path, ["extensions"])
             }
+        }
+        tk.run("actor requirement limits count UTF8 bytes and permit exact capacities") {
+            let base = try actorCorpus().first { $0["id"] as! String == "actors_redelegation" }!
+            var parsed = try decodeActorForm(corpusText(base))
+            for key in [String(repeating: "a", count: 255), String(repeating: "é", count: 127) + "a"] {
+                parsed.actors![0].required_entitlements = [key] + (1..<64).map { "key-\($0)" }
+                if case .accepted = admitSpecimen(parsed) {} else { throw TestFailure(message: "exact requirement capacity refused") }
+                parsed.actors![0].required_entitlements[0] += "a"
+                guard case .capacity(let refused) = admitSpecimen(parsed) else { throw TestFailure(message: "excess bytes admitted") }
+                try expectEqual(refused.maximum, 255)
+            }
+            parsed.actors![0].required_entitlements = (0..<65).map { "key-\($0)" }
+            guard case .capacity(let refused) = admitSpecimen(parsed) else { throw TestFailure(message: "excess requirements admitted") }
+            try expectEqual(refused.maximum, 64)
         }
     }
     tk.group("actor form corpus") {
@@ -119,6 +139,93 @@ func runActorPlanTests(_ tk: TestKit) {
             try expectEqual(selfPlan.delivery("da")?.recipientActorIndex, 0)
             try expectEqual(selfPlan.token("ta")?.deliveries, ["db", "da"])
         }
+        tk.run("translation refuses a token last use shortened before remaining transfers") {
+            let example = try actorCorpus().first { $0["id"] as! String == "self_transfer" }!
+            let parsed = try decodeActorForm(corpusText(example))
+            guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "refused") }
+            try expectTrue(actorPlanAssignmentsConsistent(plan))
+            _ = try ActorTranslation(plan: plan, parsed: parsed,
+                workerExecutablePaths: Array(repeating: "/unused", count: plan.actors.count))
+            let index = plan.tokens.firstIndex { $0.ref == "ta" }!
+            let token = plan.tokens[index]
+            let transfers = plan.deliveries.filter { $0.tokenIndex.rawValue == index }
+            try expectTrue(transfers.count > 1)
+            for shortened in [token.slot, transfers.first!.slot] {
+                try expectTrue(shortened < token.lastUseSlot)
+                var tokens = plan.tokens
+                tokens[index] = ActorPlanToken(ref: token.ref, actorIndex: token.actorIndex, stepID: token.stepID,
+                    slot: token.slot, phaseIndex: token.phaseIndex, family: token.family, target: token.target,
+                    authority: token.authority, outboundPosition: token.outboundPosition,
+                    deliveries: token.deliveries, lastUseSlot: shortened)
+                try expectAssignmentRefusal(replacingAssignments(plan, tokens: tokens), parsed: parsed)
+            }
+        }
+        tk.run("translation refuses extra authority actions using existing definitions") {
+            let example = try actorCorpus().first { $0["id"] as! String == "actors_redelegation" }!
+            let parsed = try decodeActorForm(corpusText(example))
+            guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "refused") }
+            try expectTrue(actorPlanAssignmentsConsistent(plan))
+            let phaseIndex = plan.phases.lastIndex { $0.actions.contains { $0.probe != nil } }!
+            let phase = plan.phases[phaseIndex]
+            let actionIndex = phase.actions.firstIndex { $0.probe != nil }!
+            let original = phase.actions[actionIndex]
+            let operations: [ResolvedExtensionOperation] = [
+                .issue(token: TokenIndex(rawValue: 0)),
+                .transfer(token: TokenIndex(rawValue: 0), delivery: DeliveryIndex(rawValue: 0),
+                    recipient: ActorIndex(rawValue: plan.deliveries[0].recipientActorIndex)),
+                .consume(delivery: plan.handles[0].deliveryIndex, handle: HandleIndex(rawValue: 0), lastDeliveryUse: false),
+                .release(handle: HandleIndex(rawValue: 0))
+            ]
+            for operation in operations {
+                var actions = phase.actions
+                actions[actionIndex] = ResolvedAction(stepID: original.stepID, globalSlot: original.globalSlot,
+                    actorLocalSlot: original.actorLocalSlot, body: .authority(operation))
+                var phases = plan.phases
+                phases[phaseIndex] = ActorPlanPhase(id: phase.id, index: phase.index, actorIndex: phase.actorIndex,
+                    visit: phase.visit, firstSlot: phase.firstSlot, endSlot: phase.endSlot, actions: actions,
+                    afterTermination: phase.afterTermination)
+                try expectAssignmentRefusal(replacingAssignments(plan, phases: phases), parsed: parsed)
+            }
+        }
+        tk.run("orchestration preserves inconsistent index refusal even when equipment is unavailable") {
+            let example = try actorCorpus().first { $0["id"] as! String == "actors_redelegation" }!
+            let parsed = try decodeActorForm(corpusText(example))
+            guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "refused") }
+            var malformed: [ActorPlan] = []
+            for invalidIndex in [-1, plan.actors.count] {
+                var actors = plan.actors
+                let actor = actors[0]
+                actors[0] = ActorPlanActor(id: actor.id, index: invalidIndex, applies: actor.applies,
+                    policy: actor.policy, equipment: actor.equipment, requiredEntitlements: actor.requiredEntitlements,
+                    participates: actor.participates, slots: actor.slots, visits: actor.visits)
+                malformed.append(replacingAssignments(plan, actors: actors))
+                var phases = plan.phases
+                let phase = phases[0]
+                phases[0] = ActorPlanPhase(id: phase.id, index: phase.index, actorIndex: invalidIndex,
+                    visit: phase.visit, firstSlot: phase.firstSlot, endSlot: phase.endSlot,
+                    actions: phase.actions, afterTermination: phase.afterTermination)
+                malformed.append(replacingAssignments(plan, phases: phases))
+            }
+            let absentBundle = FileManager.default.temporaryDirectory.appendingPathComponent("pw-no-equipment-" + UUID().uuidString)
+            for invalid in malformed {
+                let reply = CWorkerOrchestrator.run(admitted: AdmittedSpecimen(request: parsed, actorPlan: invalid),
+                    policyHash: "", bundleId: "test", workerExecutablePath: "/unused-worker",
+                    validatorExecutablePath: "/unused-validator", equipmentBundleURL: absentBundle)
+                try expectEqual(reply.preparation_failure?.stage, "resolved_plan")
+                try expectEqual(reply.preparation_failure?.code, "inconsistent_assignment")
+                try expectEqual(reply.equipment_inventory?.status, "refused")
+                try expectEqual(reply.actors?.map { $0.actor_id }, parsed.actors?.map { $0.actor_id })
+                try expectEqual(reply.actors?.map { $0.index }, Array(plan.actors.indices))
+                try expectTrue(reply.actors!.allSatisfy { $0.launch == nil && $0.subprocess == nil && $0.setup_status == "launch_refused" })
+                try expectEqual(reply.phases.map { $0.actor_id }, parsed.phases!.map { $0.actor_id })
+                try expectEqual(reply.phases.map { $0.action_ids }, parsed.phases!.map { $0.actions.map { $0.stepID } })
+                try expectTrue(reply.phases.allSatisfy { $0.collection_status == "not_reached" && $0.activation_observation == nil })
+                try expectTrue(reply.steps.isEmpty && reply.extension_events!.isEmpty && reply.resources!.tokens.isEmpty)
+                let encoded = try pwRunnerEncodeJSON(reply)
+                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
+                try expectEqual(decoded.preparation_failure?.code, "inconsistent_assignment")
+            }
+        }
         tk.run("empty visits retain their actor-local position before another actor's action") {
             let text = """
             {"schema_version": \(PWContract.requestSchema), "specimen_id": "empty_visits",
@@ -137,7 +244,7 @@ func runActorPlanTests(_ tk: TestKit) {
             let parsed = try decodeActorForm(text)
             try expectNil(requestMeaningFailure(parsed))
             guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "empty visits refused") }
-            let translated = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: "/unused")
+            let translated = try ActorTranslation(plan: plan, parsed: parsed, workerExecutablePaths: Array(repeating: "/unused", count: plan.actors.count))
             try expectEqual(translated.inputs[0].phases.map { $0.firstSlot }, [0, 1, 1])
             try expectEqual(translated.inputs[0].phases.map { $0.endSlot }, [1, 1, 2])
             try expectEqual(translated.inputs[1].phases.map { $0.firstSlot }, [0, 1])
@@ -147,7 +254,7 @@ func runActorPlanTests(_ tk: TestKit) {
         tk.run("actor-form capacities are the declared limits") {
             try expectEqual(PWActorLimits.actions, PWShmLayout.maxSteps)
             try expectEqual(PWActorLimits.identifierBytes, PWExtensionLimits.referenceBytes)
-            try expectEqual(PWActorLimits.targetBytes, PWExtensionLimits.targetBytes)
+            try expectEqual(PWActorLimits.targetBytes, PWShmLayout.extTargetBytes - 1)
             try expectTrue(PWActorLimits.phases > PWRunnerPhase.maximumCount)
         }
     }

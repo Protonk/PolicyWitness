@@ -13,23 +13,80 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response25/missing_path_run.json"
+BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/current/constructed_run.json"
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from blackbox import recapture_host_reply
+
+
+def constructed_missing_path_baseline():
+    """Author current ordinary evidence, never upgrade or relabel a live capture.
+
+    The current constructed carrier supplies unrelated protocol/lifecycle shape.
+    Every changed operation, native-shaped result, relation and query association
+    below is authored control input, not an observed filesystem or Mach effect.
+    """
+    baseline = json.loads(BASELINE.read_text())
+    runner = baseline['data']['runner_result']
+    runner['specimen_id'] = 'constructed_missing_path_controls'
+    runner['policy_sha256'] = 'a' * 64
+    allowed = copy.deepcopy(runner['steps'][0])
+    allowed['step_id'] = 'fs_read_allowed'
+    target = '/constructed/allowed-read'
+    allowed['attempt'].update(requested_action='open_read', requested_path=target, observed_path=target)
+    allowed['attempt']['path_diagnostics'] = dict(input=target, observer='runner_host',
+        stage='after_orchestration', same_as_input=['realpath_resolved', 'parent_realpath_resolved'])
+    allowed['sandbox_check'].update(operation='file-read-data', filter_value=target)
+    allowed['sandbox_check']['path_diagnostics'] = dict(input=target, observer='runner_host',
+        stage='after_orchestration', same_as_input=['realpath_resolved'], firmlink_resolved=None)
+
+    missing = copy.deepcopy(allowed)
+    missing['step_id'] = 'fs_read_missing'
+    absent = '/constructed/absent-read'
+    missing['attempt'].update(rc=1, errno=2, outcome='open_failed', observed_path=None,
+        requested_path=absent, error='open(O_RDONLY): No such file or directory')
+    missing['attempt']['path_diagnostics'] = dict(input=absent, observer='runner_host',
+        stage='after_orchestration', realpath_resolved=None, same_as_input=['parent_realpath_resolved'])
+    missing['sandbox_check'].update(rc=-1, native_rc=None, errno=None, filter_type_id=None,
+        filter_value=absent, outcome='prediction_unavailable', result_source='synthetic',
+        missing_reason='query_not_requested', error='constructed path unavailable at query planning')
+    missing['sandbox_check']['path_diagnostics'] = dict(input=absent, observer='runner_host',
+        stage='after_orchestration', realpath_resolved=None, firmlink_resolved=None, same_as_input=[])
+    missing['comparison'].update(observation='other_failure', observation_basis='completed_worker_status',
+        order='unestablished', limitations=['query_plan:path_unresolved_at_planning'])
+
+    mach = copy.deepcopy(runner['steps'][2])
+    mach['step_id'] = 'mach_lookup_invalid'
+    service = 'com.example.policywitness.invalid'
+    mach['attempt'].update(requested_path=service, error='bootstrap_look_up: kr=1102')
+    mach['sandbox_check'].update(filter_value=service, rc=0, native_rc=0, errno=0, outcome='allow')
+    mach['comparison'].update(observation='other_failure', observation_basis='completed_worker_status')
+    runner['steps'] = [missing, mach, allowed]
+    ids = [step['step_id'] for step in runner['steps']]
+    phase = runner['phases'][0]
+    phase['action_ids'] = ids
+    for index, row in enumerate(runner['runner_subprocess']['disposition']['steps']):
+        row.update(index=index, step_id=ids[index])
+    validator = phase['validator_subprocess']
+    validator['expected_step_ids'] = ids[1:]
+    validator['records'] = []
+    for step in [mach, allowed]:
+        query = step['sandbox_check']
+        raw = dict(kind='sb_api_validator_verdict', schema_version=1, step_id=step['step_id'],
+            operation=query['operation'], filter_type='PATH' if query['filter_kind']=='path' else 'GLOBAL_NAME',
+            filter_type_id=query['filter_type_id'], filter_value=query['filter_value'],
+            rc=query['native_rc'], errno=query['errno'], outcome=query['outcome'], error=None)
+        row = {key:value for key,value in raw.items() if key not in ('kind','schema_version','error')}
+        row['raw_line'] = json.dumps(raw, separators=(',', ':'))
+        validator['records'].append(row)
+    validator['stdout_bytes_received'] = sum(len(row['raw_line'].encode())+1 for row in validator['records'])
+    recapture_host_reply(baseline)
+    return baseline, {'target': target}
 
 
 def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
-    captured = json.loads(BASELINE.read_text())
-    baseline = copy.deepcopy(captured)
-    submitted = json.loads(BASELINE.with_name("missing_path_specimen.json").read_text())
-    allowed_read = next(step["attempt"] for step in submitted["probe_plan"]
-                        if step["step_id"] == "fs_read_allowed")
-    baseline["data"]["runner_result"]["policy_sha256"] = "a" * 64
-    # The hash is authored test evidence; preserve the received capture and
-    # encode the constructed baseline's host record in its own carrier.
-    recapture_host_reply(baseline)
+    baseline, allowed_read = constructed_missing_path_baseline()
     expectations = {
         "blackbox_e2e": {
             "policy_format": "sbpl", "require_sandboxed_after_apply": True,

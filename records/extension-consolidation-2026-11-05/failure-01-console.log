@@ -1,0 +1,29 @@
+==> [selection] failure_boundaries/admission
+==> [failure_boundaries/admission] start
+==> [failure_boundaries/admission] check admission through the signed CLI
+==> [failure_boundaries/admission] pass: admission: owning observer, retained evidence and unavailable channels verified
+==> [selection] failure_boundaries/validator_frames
+==> [failure_boundaries/validator_frames] start
+==> [failure_boundaries/validator_frames] check validator_frames through the signed CLI
+==> [failure_boundaries/validator_frames] pass: validator_frames: owning observer, retained evidence and unavailable channels verified
+==> [selection] failure_boundaries/validator_association
+==> [failure_boundaries/validator_association] start
+==> [failure_boundaries/validator_association] check validator_association through the signed CLI
+==> [failure_boundaries/validator_association] pass: validator_association: owning observer, retained evidence and unavailable channels verified
+==> [selection] failure_boundaries/validator_overlong_request
+==> [failure_boundaries/validator_overlong_request] start
+==> [failure_boundaries/validator_overlong_request] check validator_overlong_request through the signed CLI
+==> [failure_boundaries/validator_overlong_request] pass: validator_overlong_request: owning observer, retained evidence and unavailable channels verified
+==> [selection] failure_boundaries/fallback_helper
+==> [failure_boundaries/fallback_helper] start
+==> [failure_boundaries/fallback_helper] check fallback_helper through the signed CLI
+==> [failure_boundaries/fallback_helper] pass: fallback_helper: owning observer, retained evidence and unavailable channels verified
+==> [selection] failure_boundaries/validator_removed_target
+==> [failure_boundaries/validator_removed_target] start
+==> [failure_boundaries/validator_removed_target] check validator_removed_target through the signed CLI
+==> [failure_boundaries/validator_removed_target] pass: validator_removed_target: owning observer, retained evidence and unavailable channels verified
+==> [selection] failure_boundaries/validator_control_characters
+==> [failure_boundaries/validator_control_characters] start
+==> [failure_boundaries/validator_control_characters] check validator_control_characters through the signed CLI
+==> [failure_boundaries/validator_control_characters] pass: validator_control_characters: owning observer, retained evidence and unavailable channels verified
+Test run summary: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-failure-01/run.json

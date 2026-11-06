@@ -1,0 +1,2347 @@
+{
+  "cases": [
+    {
+      "command": [
+        "bash",
+        "tests/suites/runner_abi_layout/run.sh"
+      ],
+      "context": "standard",
+      "default": true,
+      "depends_on": [],
+      "description": "C and Swift layout agree; bounded compiled-object capture controls pass",
+      "id": "runner_abi_layout/c_swift_layout_agreement",
+      "report_suite": "runner_abi_layout",
+      "requires": [
+        "clang"
+      ],
+      "selection": "requested",
+      "skip_reasons": [],
+      "suite": "runner_abi_layout",
+      "test_id": "c_swift_layout_agreement"
+    }
+  ],
+  "configuration": {
+    "app_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+    "out_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/default",
+    "pw_bin": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "python": {
+      "path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+      "version": "3.14.9"
+    },
+    "quiet": false
+  },
+  "containing_suites": {
+    "runner_abi_layout": [
+      "runner_abi_layout/c_swift_layout_agreement"
+    ]
+  },
+  "execution_contract": {
+    "identity": "a45f3a89565a43a717a3d355f31ac8d174b4cb032dc9c078aed55f97643ceb21",
+    "profile": "pw-family-evidence-1",
+    "required_families": [],
+    "selected": [
+      {
+        "engine": "legacy",
+        "id": "runner_abi_layout/c_swift_layout_agreement"
+      }
+    ],
+    "source": {
+      "catalog": {
+        "schema_version": 1,
+        "suites": {
+          "blackbox_e2e": {
+            "cases": [
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/blackbox_e2e/comparison_controls.sh"
+                ],
+                "description": "Envelope comparisons reject structural and command changes while allowing provenance-matched relocation",
+                "id": "comparison_controls",
+                "requires": []
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/blackbox_e2e/native_comparison_controls.sh"
+                ],
+                "description": "Structural executable comparison names dynamic-library version and name, platform version, section-size and sandbox-import differences",
+                "id": "native_comparison_controls",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/blackbox_e2e/checker_controls.sh"
+                ],
+                "description": "Checker and consumer controls reject lost distinctions, removed keys, unsupported versions and invalid records",
+                "id": "checker_controls"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/blackbox_e2e/bbx_001.sh"
+                ],
+                "id": "BBX-001"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/blackbox_e2e/bbx_002.sh"
+                ],
+                "id": "BBX-002"
+              }
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "blackbox_menagerie": {
+            "cases": [
+              {
+                "description": "Both checker CLIs retain evidence failures and correct step attribution",
+                "id": "validation_controls",
+                "requires": []
+              },
+              {
+                "description": "strict subpath allow under /private/tmp/strict_ok with alias boundary",
+                "id": "core_strict_tmp",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "description": "deny-default profile that only allows file-read*",
+                "id": "core_read_only",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "description": "mach-lookup allow/deny plus non-sandbox failure",
+                "id": "core_mach_simple",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "description": "alias-only /tmp literals (canonicalization boundary)",
+                "id": "opt_vfs_tmp_only",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "description": "canonical-only /private/tmp literals",
+                "id": "opt_vfs_private_tmp_only",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "description": "allow both alias and canonical spellings",
+                "id": "opt_vfs_both_paths",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "description": "require-any literals + explicit deny on alias",
+                "id": "opt_metafilter_any",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "description": "subpath allow on /tmp alias",
+                "id": "opt_bucket5_subpath",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/blackbox_menagerie/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "dispatcher": {
+            "cases": [
+              {
+                "description": "requested suite exits, case reports, and lifecycle evidence determine one result",
+                "id": "controls"
+              },
+              {
+                "description": "Every selection retains its own accounting; incomplete or ambiguous results cannot report success",
+                "id": "accounting_controls"
+              },
+              {
+                "description": "Interrupting ordinary cases stops their process tree, preserves evidence, and accounts for queued work",
+                "id": "cancellation_controls"
+              },
+              {
+                "description": "Public selectors, inspection, configuration, and completion agree with independent execution receipts",
+                "id": "selection_controls"
+              },
+              {
+                "description": "Reject invalid artifacts, executables outside the arm64 output target included, before app-dependent cases and detect mutation after passing or failing tests",
+                "id": "artifact_controls"
+              },
+              {
+                "description": "Retained inventories, managed run ownership and checkout serialization protect execution evidence",
+                "id": "retention_controls"
+              },
+              {
+                "default": false,
+                "description": "pytest family ownership, accounting and integration controls",
+                "id": "pytest_controls",
+                "requires": [
+                  "clang",
+                  "pytest"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/dispatcher/run.sh"
+            ],
+            "requires": [
+              "clang"
+            ]
+          },
+          "exec_fixture": {
+            "cases": [
+              {
+                "description": "fixture controls distinguish independent process trees, output/status, inherited resources, and invalid reports",
+                "id": "controls"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/exec_fixture/run.sh"
+            ],
+            "requires": [
+              "clang"
+            ]
+          },
+          "failure_boundaries": {
+            "cases": [
+              {
+                "description": "Every capacity limit (worker shared-memory, host-only query strings and labels, top-level and test-seam strings) reports capacity or native-NUL limits before semantic validation; simultaneous violations produce bounded refusals",
+                "id": "admission"
+              },
+              {
+                "description": "Valid prefix survives UTF-8 and structural rejection; unfamiliar diagnostic remains accepted",
+                "id": "validator_frames"
+              },
+              {
+                "description": "Duplicate and unexpected IDs cannot hide missing predictions or trap the join",
+                "id": "validator_association"
+              },
+              {
+                "description": "An overlong query is refused at admission before any attempt; the largest admitted probe line stays inside the native validator cap",
+                "id": "validator_overlong_request"
+              },
+              {
+                "description": "Shipped sbpl-check retains its independent 4 MiB admission refusal",
+                "id": "fallback_helper"
+              },
+              {
+                "description": "Received prediction survives completed unlink; step association uses submitted IDs",
+                "id": "validator_removed_target"
+              },
+              {
+                "description": "Control characters in paths and step IDs round-trip through the real validator as escaped JSON; every prediction and file effect survives",
+                "id": "validator_control_characters"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/failure_boundaries/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "integration": {
+            "cases": [
+              {
+                "description": "Rust CLI integration batch against the selected app",
+                "id": "cli.integration"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/integration/run.sh"
+            ],
+            "requires": [
+              "app",
+              "cargo"
+            ]
+          },
+          "opt_in": {
+            "include": [
+              "preflight/signed_artifact_controls",
+              "preflight/build_guard_controls",
+              "preflight/build_refusal_controls",
+              "preflight/translated_build_refusal_controls",
+              "preflight/build_toolchain_switch_controls",
+              "runner_exec_inheritance/mutation_controls",
+              "smoke/runner_caller_auth",
+              "runner_byoxpc/runner_auth_external",
+              "runner_byoxpc/runner_install",
+              "runner_byoxpc/specimen_file_read_deny",
+              "runner_byoxpc/core_strict_tmp",
+              "runner_byoxpc/core_read_only",
+              "runner_byoxpc/core_mach_simple",
+              "runner_byoxpc/opt_vfs_tmp_only",
+              "runner_byoxpc/opt_vfs_private_tmp_only",
+              "runner_byoxpc/opt_vfs_both_paths",
+              "runner_byoxpc/opt_metafilter_any",
+              "runner_byoxpc/opt_bucket5_subpath",
+              "runner_byoxpc/BBX-001",
+              "runner_byoxpc/BBX-002",
+              "witness_contract/order_barrier_mutations",
+              "witness_contract/dossier_witness_byoxpc",
+              "runner_byoxpc/registry_recovery",
+              "runner_byoxpc/default_location",
+              "runner_byoxpc/single_use",
+              "runner_byoxpc/retirement_observations",
+              "runner_byoxpc/reservation_controls",
+              "runner_byoxpc/bad_neighbor_claims",
+              "runner_byoxpc/entitlement_readback",
+              "runner_byoxpc/entitlement_transfer",
+              "sandbox_extensions_native/feasibility",
+              "sandbox_extensions_native/directory",
+              "witness_contract/actors_byoxpc",
+              "witness_contract/path_query_observations",
+              "witness_contract/path_query_integrated",
+              "runner_c_worker_harness/native_clock",
+              "runner_exec_inheritance/launch_inventory",
+              "runner_unit/host_setup_oracle_sensitivity",
+              "runner_unit/reaped_ack_mutation",
+              "runner_unit/exec_reader_mutations",
+              "runner_unit/actor_handoff_mutations",
+              "runner_exec_lifecycle/closed_streams_leader_exit",
+              "runner_exec_inheritance/closed_worker_stderr",
+              "dispatcher/pytest_controls"
+            ]
+          },
+          "preflight": {
+            "cases": [
+              {
+                "description": "Require complete bundle layout, valid signatures, and matching embedded evidence hashes",
+                "id": "codesign.preflight"
+              },
+              {
+                "description": "Lock claims are admitted only by a live owner's handoff, holds outlive killed owners while protected children run, direct Python preserves caller environments and missing or changed witnesses refuse before writes and helpers write only owned, admitted paths; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns; the output target check decides real thin, fat, foreign-architecture and malformed Mach-O fixtures read independently, and its weakened copies fail; SDK entry guards refuse before downstream work and shim-probe containment gates preserve exec restrictions and reject missing observations",
+                "id": "build_provenance_controls",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "default": true,
+                "description": "The unchanged build script refuses each early fault before the step it protects, offline: builder, knobs, arguments, interpreter, plist minimum, build directory, identity, stale identity, architecture, build-document, contract and guide copies, and the make entry",
+                "id": "build_entry_controls",
+                "requires": []
+              },
+              {
+                "default": true,
+                "description": "meson.build's fixed policy assertions refuse every poisoned option by name before compiling, a removed assertion fails its control and is named by the rule, and the output-target assertion refuses an x86_64 host",
+                "id": "native_policy_controls",
+                "requires": [
+                  "meson",
+                  "clang",
+                  "swift"
+                ]
+              },
+              {
+                "default": true,
+                "description": "The configured directory build.sh reads evaluates the tree: a substituted worker file, symlinked, relative and absolute include escapes and a copied checkout are each refused by name",
+                "id": "native_source_controls",
+                "requires": [
+                  "meson",
+                  "clang"
+                ]
+              },
+              {
+                "default": false,
+                "description": "Real codesign accepts the intact copy and rejects damaged or validly re-signed stale evidence; validly signed x86_64 and universal code fails for architecture, with a contradicting record a separate fault",
+                "id": "signed_artifact_controls",
+                "requires": [
+                  "app",
+                  "identity"
+                ]
+              },
+              {
+                "default": false,
+                "description": "Wrong Cargo and native minima, wrong-SDK outputs and outputs outside the arm64 output target stop before assembly, each by its own check; an ad hoc helper and a helper, service or app seal without a secure timestamp pass deep verification but stop before packaging, in both build variants",
+                "id": "build_guard_controls",
+                "requires": [
+                  "app",
+                  "identity",
+                  "cargo",
+                  "meson",
+                  "clang",
+                  "swift"
+                ]
+              },
+              {
+                "default": false,
+                "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects, the native builder refusal under an unreadable hw.optional.arm64 ahead of every other admission check and the held checkout lock; the fresh-mode state sequence, lock ownership and lifetime, path admission, the output target at every checked boundary, the package target guard and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control; a contained shim positive control requires a PID-attributed installation-service denial from unified logging",
+                "id": "build_refusal_controls",
+                "requires": [
+                  "app",
+                  "identity",
+                  "cargo",
+                  "meson",
+                  "clang",
+                  "swift",
+                  "pytest"
+                ]
+              },
+              {
+                "default": false,
+                "description": "Under Rosetta the unchanged build script run by a translated shell and make build run by a translated make refuse at admission naming sysctl.proc_translated=1, in both variants, ahead of --help, bad arguments and knobs, a missing tracked input, an invalid SDK request and a held checkout lock, with no wrapped tool call and no session, cache or distribution change; make given an invalid SDKROOT refuses at parse time without entering the script",
+                "id": "translated_build_refusal_controls",
+                "requires": [
+                  "rosetta"
+                ]
+              },
+              {
+                "default": false,
+                "description": "A real DEVELOPER_DIR switch between Xcode and the Command Line Tools: reuse under the stamped toolchain passes, reuse under the other refuses by the fields that differ, fresh mode recovers",
+                "id": "build_toolchain_switch_controls",
+                "requires": [
+                  "app",
+                  "identity",
+                  "cargo",
+                  "meson",
+                  "clang",
+                  "swift"
+                ]
+              },
+              {
+                "description": "Installation refuses, and validation reports, a never-launched copy whose worker or issuer code changed after sealing",
+                "id": "byoxpc_verification_controls",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "description": "Uncertain Apple replies stop continuation; archive checks use the extracted app and preserve inputs",
+                "id": "release_controls",
+                "requires": []
+              },
+              {
+                "description": "Real hung release commands stop within their deadline, preserve output, and leave no live child or retry",
+                "id": "release_deadline_controls",
+                "requires": []
+              },
+              {
+                "description": "Tag preflight, release archiving with retention, and GitHub publication verify their inputs offline and refuse mismatches",
+                "id": "release_publish_controls",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "description": "Release cleanup keeps the latest release and newest local output, protects active and recovery work, and resumes interrupted deletion",
+                "id": "release_rotation_controls",
+                "requires": [
+                  "clang"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/preflight/run.sh"
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          },
+          "run_capture": {
+            "cases": [
+              {
+                "description": "capture preserves raw evidence and distinguishes CLI results from harness intervention",
+                "id": "controls"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/run_capture/run.sh"
+            ],
+            "requires": []
+          },
+          "run_effects": {
+            "cases": [
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/run_effects/checker_controls.sh"
+                ],
+                "description": "effect expectations accept the right fabricated observation and reject each wrong one",
+                "id": "checker_controls",
+                "requires": []
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/run_effects/file_actions_have_exact_effects.sh"
+                ],
+                "description": "each file attempt action has one exact externally observed effect; denied twins leave targets identical",
+                "id": "file_actions_have_exact_effects",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/run_effects/exec_helper_effect_is_real.sh"
+                ],
+                "description": "an allowed exec helper's own file write is real; a denied helper runs but leaves no file",
+                "id": "exec_helper_effect_is_real"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/run_effects/run_installs_nothing.sh"
+                ],
+                "description": "a plain run adds no launchd plist and leaves the runner registry unchanged",
+                "id": "run_installs_nothing",
+                "requires": [
+                  "app"
+                ]
+              }
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          },
+          "runner_abi_layout": {
+            "cases": [
+              {
+                "description": "C and Swift layout agree; bounded compiled-object capture controls pass",
+                "id": "c_swift_layout_agreement"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_abi_layout/run.sh"
+            ],
+            "requires": [
+              "clang"
+            ]
+          },
+          "runner_apply_isolation_v2": {
+            "cases": [
+              {
+                "description": "v2 deny-default worker replied through unsandboxed host",
+                "id": "deny_default_v2_worker_reply"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_apply_isolation_v2/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_apply_isolation_v3": {
+            "cases": [
+              {
+                "description": "v3 deny-default worker replied through unsandboxed host",
+                "id": "deny_default_v3_worker_reply"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_apply_isolation_v3/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_byoxpc": {
+            "cases": [
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/default_location.sh"
+                ],
+                "description": "Install, run and remove through the default registry and user plist locations",
+                "id": "default_location",
+                "requires": [
+                  "app",
+                  "gui",
+                  "identity"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/retirement_observations.sh"
+                ],
+                "default": false,
+                "description": "Complete a bounded 48-request retirement observation with preserved outcomes and process/log evidence; passing does not establish BYOXPC reliability",
+                "id": "retirement_observations",
+                "requires": [
+                  "app",
+                  "gui",
+                  "identity"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/reservation_controls.sh"
+                ],
+                "default": false,
+                "description": "Controlled reservation lifetime, acquisition reply loss, execution reply loss, helper capture loss and an altered outgoing response-schema marker after one real execution, with independent effects and no replay",
+                "id": "reservation_controls",
+                "requires": [
+                  "app",
+                  "gui",
+                  "identity",
+                  "swift",
+                  "clang",
+                  "meson"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.sh"
+                ],
+                "description": "Re-acquire occupied hosts with attributed refusals, bounded waiting and exactly-once effects",
+                "id": "bad_neighbor_claims",
+                "requires": [
+                  "app",
+                  "gui",
+                  "identity"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/single_use.sh"
+                ],
+                "description": "Two authorized clients share one host claim; owner-only retirement and fresh host",
+                "id": "single_use",
+                "requires": [
+                  "app",
+                  "gui",
+                  "identity"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh"
+                ],
+                "description": "The supplied entitlements plist reaches the installed worker and the registry records every binary's read-back",
+                "id": "entitlement_readback",
+                "requires": [
+                  "app",
+                  "gui",
+                  "identity"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh"
+                ],
+                "description": "required_entitlements admits the worker that holds the key true, refuses the false-valued one by name, and only the admitted worker completes the conditioned write",
+                "id": "entitlement_transfer",
+                "requires": [
+                  "app",
+                  "gui",
+                  "identity"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh"
+                ],
+                "description": "Runner with caller-auth keys removed installs and verifies through the normal client",
+                "id": "runner_auth_external",
+                "requires": [
+                  "app",
+                  "gui"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh"
+                ],
+                "description": "Durable pending ownership, atomic registry changes and live cleanup recovery",
+                "id": "registry_recovery"
+              },
+              {
+                "description": "Install and verify a team-matched external runner",
+                "id": "runner_install",
+                "requires": [
+                  "app",
+                  "gui",
+                  "identity"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "specimen_file_read_deny"
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "core_strict_tmp",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "core_read_only",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "core_mach_simple",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "opt_vfs_tmp_only",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "opt_vfs_private_tmp_only",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "opt_vfs_both_paths",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "opt_metafilter_any",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "opt_bucket5_subpath",
+                "skip_reasons": [
+                  "annotated_mismatch_absent"
+                ]
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "BBX-001"
+              },
+              {
+                "depends_on": [
+                  "runner_byoxpc/runner_install"
+                ],
+                "id": "BBX-002"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_byoxpc/run.sh"
+            ],
+            "context": "byoxpc",
+            "default": false,
+            "requires": [
+              "app",
+              "gui"
+            ]
+          },
+          "runner_c_worker_harness": {
+            "cases": [
+              {
+                "description": "worker refused with exit_code=4; no ready/applied/done",
+                "id": "abi_mismatch_refused"
+              },
+              {
+                "description": "worker survived (deny default); slot reports kernel deny errno=1",
+                "id": "bare_deny_default"
+              },
+              {
+                "description": "worker reported compile failure (apply_rc=-1, done) and clean-exited",
+                "id": "compile_failure"
+              },
+              {
+                "description": "Allowed create produces the independently observed target file",
+                "id": "create_allow"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_c_worker_harness/fresh_write.sh"
+                ],
+                "description": "Production fresh-write syscall ordering, separate native failures, short writes, creation absence and combined-failure preservation",
+                "id": "fresh_write",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "description": "Independent full-capacity and done-boundary token erasure, preserved departures and rejected mutations",
+                "id": "terminal_erasure",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "description": "worker exits after done without an exit request, including an empty phase",
+                "id": "terminal_exit_without_request"
+              },
+              {
+                "description": "ready+applied+done+clean_exit; /etc/hosts opened (observed=/private/etc/hosts)",
+                "id": "happy_default_allow"
+              },
+              {
+                "description": "256 slots completed across the full shared-memory region under deny-default",
+                "id": "max_slots_deny_default"
+              },
+              {
+                "description": "worker refused with exit_code=8; no ready/applied/done",
+                "id": "param_count_overflow_refused"
+              },
+              {
+                "description": "TARGET=/private/etc round-tripped; kernel denied /etc/hosts with errno=1",
+                "id": "params_round_trip"
+              },
+              {
+                "description": "worker refused with exit_code=7; no ready/applied/done",
+                "id": "policy_overflow_refused"
+              },
+              {
+                "description": "worker refused an embedded NUL in the policy with exit_code=9 and published the byte offset; no prefix compiled",
+                "id": "policy_nul_refused"
+              },
+              {
+                "description": "A policy cut after a complete form and followed by EOF is refused before compile: the header's expected length (43) tells the 28-byte prefix apart from a complete shorter submission, the EOF receipt reports 28, and the refusal (code 13, exit 11) names that count; no readiness, application or attempt",
+                "id": "policy_truncated_prefix"
+              },
+              {
+                "description": "The same 43-byte submission delivered intact applies and the kernel denies the /etc/hosts open the prefix allowed; the EOF receipt equals the expectation",
+                "id": "policy_whole_submission"
+              },
+              {
+                "description": "A valid source with multibyte UTF-8 is counted in bytes by the expectation and the receipt (40 for 37 characters) and applies normally",
+                "id": "policy_utf8_bytes"
+              },
+              {
+                "description": "A valid source padded to exactly PW_SHM_POLICY_BYTES - 1 bytes is accepted after EOF, acknowledged with that count and applied",
+                "id": "policy_at_capacity"
+              },
+              {
+                "description": "An empty source with a zero expectation passes the length check (zero is compared, not unset), publishes a zero receipt and reaches ordinary compilation handling",
+                "id": "policy_empty_expected"
+              },
+              {
+                "description": "A header expectation of PW_SHM_POLICY_BYTES cannot fit the source buffer: refused on the header operation with code 12 and exit 10 before any policy byte is read; no EOF receipt",
+                "id": "policy_expectation_out_of_range_refused"
+              },
+              {
+                "description": "One byte past the source capacity with the expectation pinned at the capacity still reaches the read overflow refusal (code 2, exit 7) and publishes no EOF receipt",
+                "id": "policy_capacity_plus_one_refused"
+              },
+              {
+                "description": "A pipe carrying the submission plus a (deny default) tail is refused for length in the other direction: receipt 43 against an expectation of 28, code 13, exit 11",
+                "id": "policy_overdelivered_refused"
+              },
+              {
+                "description": "Empty EOF against a nonzero expectation is a length refusal naming zero received bytes (code 13, exit 11) with a zero receipt",
+                "id": "policy_empty_short_refused"
+              },
+              {
+                "description": "A 28-byte delivery against a zero expectation is a length refusal naming 28 received bytes (code 13, exit 11); zero is compared, not treated as unset",
+                "id": "policy_zero_expected_refused"
+              },
+              {
+                "description": "worker refused with exit_code=5; no ready/applied/done",
+                "id": "prepared_unset_refused"
+              },
+              {
+                "description": "host SIGKILL fallback reaps a worker stalled before done",
+                "id": "sigkill_fallback"
+              },
+              {
+                "description": "worker refused with exit_code=6; no ready/applied/done",
+                "id": "step_count_overflow_refused"
+              },
+              {
+                "description": "unlink removed the target under (allow default)",
+                "id": "unlink_allow"
+              },
+              {
+                "description": "unlink denied (errno=1); target survived under (deny default)",
+                "id": "unlink_deny"
+              },
+              {
+                "description": "32 exec slots with a system import and surrounding reads all spawn and exit cleanly under a 64-descriptor hard ceiling; pipes and spawn handles exist only inside each attempt",
+                "id": "exec_pipes_per_attempt"
+              },
+              {
+                "description": "One exec slot under bare (deny default): post-apply pipe and spawn-handle setup succeeds and the attempt fails at posix_spawn with EPERM/EACCES and child_pid=0",
+                "id": "exec_setup_post_apply_denied"
+              },
+              {
+                "description": "A one-second exec attempt budget with the default deadline spawns one helper bounded by the remainder, refuses five exec steps before spawn, and still completes the trailing read",
+                "id": "exec_attempt_budget_remainder"
+              },
+              {
+                "description": "A 1.5-second exec attempt budget with 500 ms deadlines kills several helpers at their deadline, then refuses the rest before spawn; done publishes near the budget edge",
+                "id": "exec_attempt_budget_sequence"
+              },
+              {
+                "description": "Seam-built production worker stores into a capture page unbacked at the ready byte and at its applied word before release, after deny-default v1/v2/v3 application; the host reads the word back. Host- and worker-pretouched controls publish but fail the first-touch condition; the shipped worker's resident pages are recorded for these runs only. A failed publication, a failed condition and a failed residency corroboration are reported apart; none alone establishes sandbox causation.",
+                "id": "first_touch_after_apply"
+              },
+              {
+                "description": "Worker release barrier: proceed never set",
+                "id": "proceed_never_set"
+              },
+              {
+                "description": "Worker release barrier: proceed late after expiry",
+                "id": "proceed_late_after_expiry"
+              },
+              {
+                "description": "Worker release barrier: proceed before applied",
+                "id": "proceed_before_applied"
+              },
+              {
+                "description": "Worker release barrier: proceed delayed observed quiescence",
+                "id": "proceed_delayed_observed_quiescence"
+              },
+              {
+                "description": "Worker release barrier: proceed under bare deny default",
+                "id": "proceed_under_bare_deny_default"
+              },
+              {
+                "description": "Worker release barrier: proceed wait budget short",
+                "id": "proceed_wait_budget_short"
+              },
+              {
+                "description": "Worker release barrier: proceed wait budget long",
+                "id": "proceed_wait_budget_long"
+              },
+              {
+                "description": "Worker release barrier: proceed expiry release boundary",
+                "id": "proceed_expiry_release_boundary"
+              },
+              {
+                "description": "Worker refuses and exits without a host release or exit request; harness owns reap",
+                "id": "proceed_without_host_release"
+              },
+              {
+                "description": "Worker release barrier: max slots proceed",
+                "id": "max_slots_proceed"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_c_worker_harness/authority_binding.sh"
+                ],
+                "description": "Recipient snapshots delivery ownership before application and rejects wrong source, action or resource before consumption",
+                "id": "authority_binding",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_c_worker_harness/actor_operations.sh"
+                ],
+                "description": "Count actual extension calls and fresh opens in production C bodies; omitted calls, crossed delivery and inherited-descriptor substitutions fail designated observations",
+                "id": "actor_operations",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "description": "Worker activation barrier: the named ordinal activates a parked apply actor",
+                "id": "activation_named_ordinal"
+              },
+              {
+                "description": "Worker activation barrier: an activated deny-default actor is denied after release",
+                "id": "activation_under_deny_default"
+              },
+              {
+                "description": "Worker activation barrier: a greater ordinal is refused without arrival",
+                "id": "activation_greater_ordinal"
+              },
+              {
+                "description": "Worker activation barrier: the lifetime cutoff ends a parked wait with a published failure",
+                "id": "activation_withheld_cutoff"
+              },
+              {
+                "description": "Worker activation barrier: an exit request ends a parked wait without publication",
+                "id": "activation_cancel_while_parked"
+              },
+              {
+                "description": "Worker activation barrier: a cutoff already past refuses at clock setup",
+                "id": "activation_cutoff_past"
+              },
+              {
+                "description": "Worker setup modes: an unapplied actor declares itself and applies nothing",
+                "id": "unapplied_actor_reads"
+              },
+              {
+                "description": "Worker setup modes: an unapplied actor's deny-default text is never applied",
+                "id": "unapplied_under_deny_default"
+              },
+              {
+                "description": "Production sysctl read supplies one non-null 4096-byte destination, retains status and errno, and rejects a shortened-capacity mutation",
+                "id": "sysctl_read_capacity",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "description": "production continuous-time helpers: ceiling allowances, checked arithmetic, sample validation and setup refusal publications",
+                "id": "clock_arithmetic"
+              },
+              {
+                "description": "production proceed wait: sampled-time precedence, fail-closed samples, exact exclusions and scheduled race limits",
+                "id": "proceed_precedence"
+              },
+              {
+                "description": "deterministic deadline, independent pipe/exit and native cleanup-failure controls",
+                "engine": "pytest",
+                "id": "exec_control_states",
+                "module": "tests/suites/runner_c_worker_harness/test_exec_control_states.py"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_c_worker_harness/opt_in/native_clock.sh"
+                ],
+                "default": false,
+                "description": "Production continuous-clock helpers stay usable in fresh processes under deny-default profiles; the old clock is recorded beside them",
+                "id": "native_clock",
+                "requires": [
+                  "clang"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_c_worker_harness/run.sh"
+            ],
+            "requires": [
+              "app",
+              "clang",
+              "worker"
+            ]
+          },
+          "runner_exec_dac": {
+            "cases": [
+              {
+                "description": "Direct execution and PW both reject a non-executable helper with EACCES and succeed after execute permission is restored; the failed attempt keeps its raw evidence and a permission-failure record with no sandbox attribution",
+                "id": "execute_permission_controls_spawn"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_exec_dac/run.sh"
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          },
+          "runner_exec_inheritance": {
+            "cases": [
+              {
+                "description": "three CLI exec children report a complete, clean process state",
+                "id": "cli"
+              },
+              {
+                "description": "worker received canary environment and descriptor; its exec children inherited neither",
+                "id": "contaminated_worker"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_exec_inheritance/opt_in/mutations.sh"
+                ],
+                "default": false,
+                "description": "Disposable workers with environment and descriptor leaks fail the unchanged inheritance oracle",
+                "id": "mutation_controls",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "default": false,
+                "depends_on": [
+                  "runner_exec_inheritance/contaminated_worker"
+                ],
+                "description": "Observe production worker descriptors, environment and optional task inventories before and after apply; retain observer limitations",
+                "id": "launch_inventory",
+                "requires": [
+                  "app",
+                  "worker"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_exec_inheritance/closed_worker_stderr.sh"
+                ],
+                "default": false,
+                "description": "Observe exec-child stderr with the unchanged worker launched with fd 2 closed, beside an open-stdio baseline",
+                "id": "closed_worker_stderr",
+                "requires": [
+                  "app",
+                  "worker",
+                  "clang"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_exec_inheritance/run.sh"
+            ],
+            "requires": [
+              "app",
+              "clang",
+              "worker"
+            ]
+          },
+          "runner_exec_lifecycle": {
+            "cases": [
+              {
+                "description": "timed-out process group stopped; output survived and the next write completed",
+                "id": "timeout_preserves_output_and_continues"
+              },
+              {
+                "description": "pipe EOF does not kill a live helper",
+                "id": "closed_streams_continue"
+              },
+              {
+                "description": "an exited leader does not suppress deadline cleanup of descendants",
+                "id": "leader_exit_descendant"
+              },
+              {
+                "description": "worker death preserves completed effects and leaves unpublished exec status unknown",
+                "id": "worker_dies_during_exec"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh"
+                ],
+                "default": false,
+                "description": "Observe a same-group descendant surviving normal leader and stream completion, then independently release and confirm fixture cleanup",
+                "id": "closed_streams_leader_exit",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_exec_lifecycle/run.sh"
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          },
+          "runner_filter_iokit_registry_entry_class": {
+            "cases": [
+              {
+                "description": "prediction_unavailable surfaced; attempt observed",
+                "id": "prediction_unavailable_attempt_observed"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_filter_iokit_registry_entry_class/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_filter_iokit_user_client_class": {
+            "cases": [
+              {
+                "description": "iokit_user_client_class: prediction_unavailable surfaced; attempt observed",
+                "id": "prediction_unavailable_attempt_observed"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_filter_iokit_user_client_class/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_filter_local_name": {
+            "cases": [
+              {
+                "description": "local_name: prediction_unavailable surfaced; the lookup the rule names still completed",
+                "id": "prediction_unavailable_attempt_observed"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_filter_local_name/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_filter_sysctl_name": {
+            "cases": [
+              {
+                "description": "all four filter adapters accept valid evidence and reject broken channels",
+                "id": "checker_controls",
+                "requires": []
+              },
+              {
+                "description": "sysctl_name: prediction_unavailable surfaced; sysctl attempt observed",
+                "id": "prediction_unavailable_attempt_observed"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_filter_sysctl_name/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_live_worker_identity": {
+            "cases": [
+              {
+                "description": "OS-observed worker identity and independent predictions match PW; host remains unrestricted",
+                "id": "independent_worker_and_host_queries"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_live_worker_identity/run.sh"
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          },
+          "runner_mach_service_liveness": {
+            "cases": [
+              {
+                "description": "PWRunner stayed alive under --mach-service (bound a mach-service listener)",
+                "id": "pwrunner_survives_mach_service_launch"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_mach_service_liveness/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_outcome_bad_request": {
+            "cases": [
+              {
+                "description": "missing required filter.value surfaced as bad_request",
+                "id": "missing_required_filter_value"
+              },
+              {
+                "description": "Swift decode failure surfaced as bad_request",
+                "id": "swift_decode_failure"
+              },
+              {
+                "description": "Current requests execute; invalid versions, unknown fields and malformed intent refuse before attempts",
+                "id": "accepted_input_contract"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_outcome_bad_request/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_outcome_runner_timeout": {
+            "cases": [
+              {
+                "description": "host SIGKILL timeout with explicit empty steps, no validator, and both overrides honored",
+                "id": "host_kills_hung_worker"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_outcome_runner_timeout/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_outcome_validator_no_reply": {
+            "cases": [
+              {
+                "description": "Real validator I/O timeout releases attempts, retains one ordered prediction and independent file effects",
+                "id": "validator_io_deadline_releases_worker"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_outcome_validator_no_reply/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_outcome_worker_spawn_failed": {
+            "cases": [
+              {
+                "description": "worker_spawn_failed propagated end-to-end with override reflected",
+                "id": "posix_spawn_enoent_propagates_to_outcome"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_outcome_worker_spawn_failed/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_ready_byte_resilience": {
+            "cases": [
+              {
+                "description": "worker survived closed ready pipe, applied, and scored the probe",
+                "id": "slow_compile_ready_byte_survives_sigpipe"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_ready_byte_resilience/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "runner_specimen_isolation": {
+            "cases": [
+              {
+                "description": "overlapping specimens retain their own processes, effects, and evidence; swap controls rejected",
+                "id": "overlapping_runs_keep_evidence_separate"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_specimen_isolation/run.sh"
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          },
+          "runner_unit": {
+            "cases": [
+              {
+                "description": "Swift runner unit-test batch",
+                "id": "pwrunner_core_unit_executable"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/client_session_controls.sh"
+                ],
+                "description": "Production client session controls for bounded reservation, absolute deadline and no replay after invocation",
+                "id": "client_session_controls",
+                "requires": [
+                  "swift",
+                  "meson"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/build_receipt_controls.sh"
+                ],
+                "description": "Constructed layouts require a real product under case scratch, outside retained output, with no package build tree",
+                "id": "build_receipt_controls",
+                "requires": []
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/service_admission_controls.sh"
+                ],
+                "description": "Service seams detect original per-connection admission and refusal exit defects in disposable source copies",
+                "id": "service_admission_controls",
+                "requires": [
+                  "swift"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/sleep_record_controls.sh"
+                ],
+                "description": "TestKit records system sleep per case from substituted clock readings without changing outcomes or the lines its log readers parse",
+                "id": "sleep_record_controls",
+                "requires": [
+                  "swift"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/host_setup_controls.sh"
+                ],
+                "description": "Native setup faults and actual descriptor collisions in disposable host sources, with independent child receipts and rejected checker controls",
+                "id": "host_setup_controls",
+                "requires": [
+                  "swift",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/launch_descriptor_controls.sh"
+                ],
+                "description": "Independent true-object/decoy challenges, exact descriptor reuse and setup refusals establish the host evidence descriptor's launch-only ownership",
+                "id": "launch_descriptor_controls",
+                "requires": [
+                  "app",
+                  "swift",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/opt_in/exec_reader_mutations.sh"
+                ],
+                "default": false,
+                "description": "Disposable Swift source defects expose unpublished exec payload and invent cleanup absence; unchanged reader assertions reject both",
+                "id": "exec_reader_mutations",
+                "requires": [
+                  "swift",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/opt_in/reaped_ack_mutation.sh"
+                ],
+                "default": false,
+                "description": "Unseen clean and fatal acknowledgements lose ordering credit when final reconciliation is removed; broken ownership stays unqualified",
+                "id": "reaped_ack_mutation",
+                "requires": [
+                  "swift",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/host_setup_oracle_sensitivity.sh"
+                ],
+                "default": false,
+                "description": "Characterize setup-oracle blind spots with disposable wrong-endpoint, wrong-argument and partial-unmap variants plus independent native observations",
+                "id": "host_setup_oracle_sensitivity",
+                "requires": [
+                  "swift",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_unit/actor_handoff_mutations.sh"
+                ],
+                "default": false,
+                "description": "Disposable outbound alias, shared answer and early erasure mutations fail designated independent observations while unmodified baselines pass",
+                "id": "actor_handoff_mutations",
+                "requires": [
+                  "swift",
+                  "clang",
+                  "app"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_unit/run.sh"
+            ],
+            "requires": [
+              "app",
+              "swift",
+              "clang",
+              "cargo"
+            ]
+          },
+          "runner_use_c_worker": {
+            "cases": [
+              {
+                "description": "file/access failure surfaces as access_failed with errno preserved",
+                "id": "access_failure_classified"
+              },
+              {
+                "description": "bug-report (deny default) shape: worker survives, deny answer beside a permission_failure observation with no sandbox attribution",
+                "id": "bare_deny_default"
+              },
+              {
+                "description": "duplicate step_id \u2192 bad_request before spawn (no XPC crash)",
+                "id": "duplicate_step_id_rejected"
+              },
+              {
+                "description": "exec args, output, and nonzero status survive; the following exec completes",
+                "id": "exec_attempt_args_and_stderr_round_trip"
+              },
+              {
+                "description": "oversized stdout truncated with [truncated] marker",
+                "id": "exec_attempt_stdout_truncation_marker"
+              },
+              {
+                "description": "augmented exec under (deny default) reached ok via exec_baseline",
+                "id": "exec_attempt_with_baseline_succeeds"
+              },
+              {
+                "description": "unaugmented exec under (deny default) \u2192 posix_spawn EPERM/EACCES with child_pid=0",
+                "id": "exec_attempt_without_baseline_fails_cleanly"
+              },
+              {
+                "description": "C-worker path produces the complete current envelope; allow answer beside a succeeded observation, matched and same_submitted, query_first",
+                "id": "happy_default_allow"
+              },
+              {
+                "description": "(op,filter) in prediction_unavailable set: answer synthesized with query_plan:prediction_unavailable_pair",
+                "id": "prediction_unavailable_pair"
+              },
+              {
+                "description": "path filter unresolved \u2192 prediction_unavailable with populated diagnostic",
+                "id": "sandbox_check_path_unresolved_prediction_unavailable"
+              },
+              {
+                "description": "sandbox_check.pid is the worker PID on both validator-backed and synthesized verdicts",
+                "id": "sandbox_check_pid_matches_worker"
+              },
+              {
+                "description": "bare check operation surfaces as unsupported_operation with populated diagnostic",
+                "id": "sandbox_check_unsupported_operation_diagnostic"
+              },
+              {
+                "description": "unsupported attempt refuses the whole specimen before children",
+                "id": "unsupported_attempt_rejected"
+              },
+              {
+                "description": "worker timeout preserves the completed write, its file effect and its succeeded record",
+                "id": "worker_timeout_ms_honored"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_use_c_worker/run.sh"
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          },
+          "runner_validator_failure": {
+            "cases": [
+              {
+                "description": "validator fixture returns the specified partial transcript and drains all probes",
+                "id": "transcript_controls",
+                "requires": []
+              },
+              {
+                "description": "partial verdicts retain step identity; three completed attempts survive validator degradation",
+                "id": "validator_decode_failure_reports_degraded"
+              },
+              {
+                "description": "partial verdicts retain step identity; three completed attempts survive validator degradation",
+                "id": "validator_unavailable_reports_degraded"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/runner_validator_failure/signal.sh"
+                ],
+                "description": "SIGKILL after one verdict preserves partial ordered evidence and independent writes",
+                "id": "validator_killed_mid_stream",
+                "requires": [
+                  "app"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/runner_validator_failure/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "sandbox_extensions_native": {
+            "cases": [
+              {
+                "default": false,
+                "description": "Independent signed native extension lifecycle, access controls, issuer lifetime, token confinement and allocation observations",
+                "id": "feasibility"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/sandbox_extensions_native/directory.sh"
+                ],
+                "default": false,
+                "description": "Independent directory read-write extension, existing-file modification, exclusive child creation and external persistence controls",
+                "id": "directory"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/sandbox_extensions_native/run.sh"
+            ],
+            "requires": [
+              "clang",
+              "identity"
+            ]
+          },
+          "sbpl_allowdeny_consistency": {
+            "cases": [
+              {
+                "description": "allowed writes changed real bytes; denied files survived both parameter bindings",
+                "id": "sbpl_allowdeny_v1"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/sbpl_allowdeny_consistency/sbpl_allowdeny_v1.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "shell_helpers": {
+            "cases": [
+              {
+                "description": "shell helpers retain diagnostics and case identity; failures prevent later stages",
+                "id": "controls"
+              },
+              {
+                "description": "result helpers preserve terminal evidence, literal data, logging, and exit behavior",
+                "id": "finalizers"
+              },
+              {
+                "description": "optimized Python is rejected; normal assertion failures remain test failures",
+                "id": "python_startup"
+              },
+              {
+                "description": "a case and its child see the pinned 3.14 interpreter, no witnessed name, no site-packages and no path outside the tree; PYTHONPATH refuses",
+                "id": "interpreter_boundary"
+              },
+              {
+                "description": "wrappers preserve child order, streams, phase boundaries, and failing status",
+                "id": "script_groups"
+              },
+              {
+                "description": "worker cases share setup; equipment failures stop before assertions and preserve evidence",
+                "id": "worker_setup"
+              },
+              {
+                "description": "BYOXPC staging preserves the source, owns partial installation, and verifies cleanup",
+                "id": "byoxpc_setup"
+              },
+              {
+                "description": "The required barrier mutation wrapper fails without a signing identity before any builder executes",
+                "id": "mutation_prerequisites"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/shell_helpers/run.sh"
+            ],
+            "requires": []
+          },
+          "smoke": {
+            "cases": [
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/smoke/pw_specimen_smoke.sh"
+                ],
+                "description": "Ordinary deny specimen returns the expected verdict and observed attempt",
+                "id": "specimen_file_read_deny"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/smoke/pw_specimen_smoke_standard.sh"
+                ],
+                "description": "Explicit standard runner returns the expected file denial",
+                "id": "specimen_file_read_deny_standard"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/smoke/pw_runner_caller_auth.sh"
+                ],
+                "default": false,
+                "description": "Built-in caller authorization changes real file effects; paired clients and missing-service controls prove the route",
+                "id": "runner_caller_auth",
+                "requires": [
+                  "app",
+                  "identity"
+                ]
+              }
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "source_drift": {
+            "cases": [
+              {
+                "description": "Runner sources, test registry, shared outcome vocabularies and the CLI usage/README surface agree",
+                "id": "runner_source_manifests_agree",
+                "requires": [
+                  "meson"
+                ]
+              },
+              {
+                "description": "Limits inventory, copied questions and guide agree; standalone, staging, stale-input and link controls pass",
+                "id": "limits_documentation"
+              },
+              {
+                "description": "Contract version manifest and every generated copy agree; generator, stale-copy and build-refusal controls pass",
+                "id": "contract_versions"
+              },
+              {
+                "description": "Architecture manifest, dot files, SVG stamps and document regions agree; citation, stale-copy and refusal controls pass",
+                "id": "architecture_documentation"
+              },
+              {
+                "description": "Build manifest, dot file, SVG stamp and document regions agree with build.sh; grounding rules over the script, meson.build, the Makefile, the inventories and the baseline, their banner gate, parser refusals and mutation controls pass",
+                "id": "build_documentation"
+              },
+              {
+                "description": "Uniform generator ownership, citation and prose contracts with mutation controls",
+                "id": "generator_contract"
+              },
+              {
+                "description": "Markdown reader controls, vendored parser bytes and the parser import boundary",
+                "id": "markdown_reader"
+              },
+              {
+                "description": "Build, test and release ancestry uses direct Python; wrapper shebangs agree and independent weakening controls reject shim and bare Python commands",
+                "id": "direct_python_start"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/source_drift/run.sh"
+            ],
+            "requires": []
+          },
+          "unit": {
+            "cases": [
+              {
+                "description": "Rust controller and helper unit-test batch",
+                "id": "rust.unit"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/unit/fmt.sh"
+                ],
+                "description": "Controller crate is rustfmt-clean",
+                "id": "rust.fmt",
+                "requires": [
+                  "cargo"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/unit/disposition_reds.sh"
+                ],
+                "description": "Disposition controller regressions by exact name: status conflict, record projection and withholding; every selected test must pass",
+                "id": "rust.disposition_reds",
+                "requires": [
+                  "cargo"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/unit/byoxpc_reds.sh"
+                ],
+                "description": "BYOXPC selection controller tests by exact name: a false-valued required entitlement is refused, naming the worker and the key; every selected test must pass",
+                "id": "rust.byoxpc_reds",
+                "requires": [
+                  "cargo"
+                ]
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/unit/run.sh"
+            ],
+            "requires": [
+              "cargo"
+            ]
+          },
+          "validator_batch_mode": {
+            "cases": [
+              {
+                "description": "10 verdicts validated (3 allow + 1 deny + 1 unsupported_operation + 1 bad_filter + 4 parse_error)",
+                "id": "batch_ndjson_roundtrip"
+              },
+              {
+                "description": "The production validator source, compiled with a recording sandbox_check, issues every batch and per-probe query with SANDBOX_CHECK_NO_REPORT and an intact filter id",
+                "id": "predictions_do_not_report"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/validator_batch_mode/run.sh"
+            ],
+            "requires": [
+              "app"
+            ]
+          },
+          "validator_bridge": {
+            "cases": [
+              {
+                "description": "Independent native allow/deny/NONE oracle and acknowledged query, emission, closure and disconnect controls",
+                "id": "protocol_controls"
+              }
+            ],
+            "command": [
+              "bash",
+              "tests/suites/validator_bridge/run.sh"
+            ],
+            "requires": [
+              "clang"
+            ]
+          },
+          "witness_contract": {
+            "cases": [
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/happy_path_baseline.sh"
+                ],
+                "id": "happy_path_baseline"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/attempt_outcome_matrix_enforced.sh"
+                ],
+                "id": "attempt_outcome_matrix_enforced",
+                "requires": []
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/bug_report_returns_attempts.sh"
+                ],
+                "id": "bug_report_returns_attempts"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/bug_report_returns_verdicts.sh"
+                ],
+                "id": "bug_report_returns_verdicts"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/debuggable_mode_rejected.sh"
+                ],
+                "id": "debuggable_mode_rejected"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/comparison_matrix.sh"
+                ],
+                "description": "The S, B and C specimens of tests/fixtures/comparison/matrix.json produce the reviewed comparison record, raw fields and file effects on every live row",
+                "id": "comparison_matrix"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/dossier_witness.sh"
+                ],
+                "description": "data.specimen reports the submitted policy, imports, host facts, runner, manifest and binaries as independently observed; controller refusals keep the uniform envelope and no run writes a temporary request",
+                "id": "dossier_witness"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/create_existing_file_preserves_contents.sh"
+                ],
+                "description": "create preserves existing bytes and identities while enforcing write permission",
+                "id": "create_existing_file_preserves_contents"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/queries_precede_attempts.sh"
+                ],
+                "description": "Native queries precede read/unlink of one target, retaining allow answers beside succeeded observations and independent host nonresolution",
+                "id": "queries_precede_attempts"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/worker_termination.sh"
+                ],
+                "description": "Independent denied writes and unrelated self-signal preserve worker disposition, reaping, phase ordering and execution evidence",
+                "id": "worker_termination"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/instrumentation_field_rejected.sh"
+                ],
+                "id": "instrumentation_field_rejected"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/shm_sentinel_under_deny_default.sh"
+                ],
+                "id": "shm_sentinel_under_deny_default",
+                "requires": [
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/validator_spawn_failed_reports_degraded.sh"
+                ],
+                "id": "validator_spawn_failed_reports_degraded"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/validator_subprocess_populated.sh"
+                ],
+                "id": "validator_subprocess_populated"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/worker_post_apply_hang_seam.sh"
+                ],
+                "description": "Host timeout preserves allowed/denied writes, independent file effects and limited comparison evidence",
+                "id": "worker_post_apply_hang_seam"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/worker_attempt_in_flight_at_deadline.sh"
+                ],
+                "description": "Host deadline, SIGKILL request and reaped signal during an in-flight FIFO open project to host_sentinel_deadline; completed prefix and voluntary exit survive; lifecycle claims agree with the independent oracle",
+                "id": "worker_attempt_in_flight_at_deadline"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/worker_killed_before_slot_publication.sh"
+                ],
+                "description": "SIGKILL after a slot's native return and before its publication: the created file is observed independently while the reply withholds the result as no_completed_result with started_without_result, keeps the completed prefix and marks the rest not reached",
+                "id": "worker_killed_before_slot_publication"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/prediction_target_is_independent_of_attempt_target.sh"
+                ],
+                "description": "Swapping real validator query targets reverses predictions while independently observed write effects stay fixed",
+                "id": "prediction_target_is_independent_of_attempt_target"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/pre_apply_failure_reports_no_policy_verdict.sh"
+                ],
+                "description": "Pre-apply deadline makes no library or policy claim; the same un-overridden specimen supplies real allow/deny controls and both runs require signal null",
+                "id": "pre_apply_failure_reports_no_policy_verdict"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/worker_progress_and_failure.sh"
+                ],
+                "description": "Worker progress and operation failure publications survive the real host and CLI; unfamiliar codes remain opaque",
+                "id": "worker_progress_and_failure",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/worker_sparse_failure.sh"
+                ],
+                "description": "Real source guard and competing EPIPE retain partial evidence; failed mapping and completed-probe failures remain observable",
+                "id": "worker_sparse_failure",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/unfamiliar_diagnostic_transport.sh"
+                ],
+                "description": "Two unfamiliar payloads survive worker and validator forwarding with structural and independent failure controls",
+                "id": "unfamiliar_diagnostic_transport",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/queries_use_a_pre_attempt_interval.sh"
+                ],
+                "description": "Planning exclusions and native predictions survive create/unlink/read/recreate plans without certifying later state or identity",
+                "id": "queries_use_a_pre_attempt_interval"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/attempt_effects_wait_for_collection.sh"
+                ],
+                "description": "Independent file bytes and helper connections show unlink and exec wait for acknowledged collection closure",
+                "id": "attempt_effects_wait_for_collection",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/query_interval_is_not_a_snapshot.sh"
+                ],
+                "description": "Native queries straddle an independently observed removal while retaining order and state/identity limits",
+                "id": "query_interval_is_not_a_snapshot",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/external_mutation_between_query_and_attempt.sh"
+                ],
+                "description": "Removal after a native allow receipt yields an ordered ENOENT read recorded as other_failure beside the allow answer",
+                "id": "external_mutation_between_query_and_attempt",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/max_steps_ordered.sh"
+                ],
+                "description": "All 256 distinct-target predictions precede attempts; independent bytes verify allowed writes and denied-write preservation",
+                "id": "max_steps_ordered"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/max_targets_reply_survives.sh"
+                ],
+                "description": "Admitted maximum-size ordinary, phased, fresh-read and lifecycle workloads return intact, including control-character escaping; oversized query values and filter/attempt labels are refused at admission",
+                "id": "max_targets_reply_survives",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/max_exec_steps_spawn.sh"
+                ],
+                "description": "Every exec step of a 256-step plan spawns a clean child; the worker raises its descriptor limit to fit the plan",
+                "id": "max_exec_steps_spawn"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/deny_default_ordered.sh"
+                ],
+                "description": "Allowed and denied reads retain ordered native predictions under a deny-default policy",
+                "id": "deny_default_ordered"
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/opt_in/mutations.sh"
+                ],
+                "default": false,
+                "description": "Disposable worker and host release bypasses cause early component and independent CLI effects",
+                "id": "order_barrier_mutations",
+                "requires": [
+                  "app",
+                  "clang",
+                  "swift",
+                  "identity",
+                  "meson"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh"
+                ],
+                "default": false,
+                "description": "The dossier of a run selected through an owned BYOXPC runner reports the installed bundle's binaries hashed against the shipped baselines",
+                "id": "dossier_witness_byoxpc",
+                "requires": [
+                  "app",
+                  "identity",
+                  "gui"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/phases.sh"
+                ],
+                "description": "Fresh per-phase planning after independent unlink, separate live collections, aggregate timeout, byte cutoff and reader rejection controls",
+                "id": "phases",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/extension_directory.sh"
+                ],
+                "description": "Directory read-write authority, fresh modification and exclusive creation, independent persistence and missing-publication controls",
+                "id": "extension_directory",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/extensions.sh"
+                ],
+                "description": "Native issuance, consume handle and release with phase-local predictions and fresh descriptor evidence",
+                "id": "extensions",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/extension_policy_qualification.sh"
+                ],
+                "description": "The principal re-delegation specimen's consumed-extension issuance policy compiles with sbpl-check and applies once in a fresh worker, with a denied baseline read and a readable control",
+                "id": "extension_policy_qualification",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/extension_redelegation.sh"
+                ],
+                "description": "The principal three-actor re-delegation specimen through the CLI: distinct fresh processes, exact policies applied once, every native call, custody, transfer, consume and read published or specifically unavailable, re-delegation credited only on the complete chain; with a positive calibration and four narrow contrasts",
+                "id": "extension_redelegation",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/actor_compositions.sh"
+                ],
+                "description": "Public actor compositions preserve distinct resources across multiple issuers, fan-out, repeated handles, self-transfer, empty revisits and renamed actor declarations and failed-recipient isolation",
+                "id": "actor_compositions",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/actor_timing_qualification.sh"
+                ],
+                "description": "Finite actor-form workloads on the signed candidate: three matched rounds of one, three and eight actors with a constant aggregate workload, the aggregate action and phase limits over eight actors, and the eight-actor re-delegation and calibration shapes complete with at least a quarter of every actor-form allowance remaining at the largest charged interval",
+                "id": "actor_timing_qualification",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/extension_boundaries.sh"
+                ],
+                "description": "Native issuer faults and consume/release interruption with independent transient-token confinement and descriptor observations",
+                "id": "extension_boundaries",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/extension_combinations.sh"
+                ],
+                "description": "Matrix-driven issuer publication/exit, interrupted delivery and same/cross-phase native failures with token confinement",
+                "id": "extension_combinations",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/opt_in/actors_byoxpc.sh"
+                ],
+                "default": false,
+                "description": "One owned BYOXPC session: signed mixed actor equipment, substitution controls, lifecycle, directory effects, ordinary phases, maximal replies, re-delegation calibration, inherited restriction, provenance, missing-role refusal and verified service cleanup",
+                "id": "actors_byoxpc",
+                "requires": [
+                  "app",
+                  "identity",
+                  "clang",
+                  "gui"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/opt_in/path_query_observations.sh"
+                ],
+                "default": false,
+                "description": "Exploratory shipped-validator path queries against signed native targets, independent file effects, path resolution and same-worker unlink/recreate",
+                "id": "path_query_observations",
+                "requires": [
+                  "app",
+                  "clang",
+                  "identity"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/opt_in/path_query_integrated.sh"
+                ],
+                "default": false,
+                "description": "Observe extra native queries against actual PW workers while preserving host-planned replies and independent file effects",
+                "id": "path_query_integrated",
+                "requires": [
+                  "app"
+                ]
+              }
+            ],
+            "include": [
+              "runner_validator_failure/validator_decode_failure_reports_degraded",
+              "runner_validator_failure/validator_unavailable_reports_degraded"
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          }
+        }
+      },
+      "catalog_sha256": "cc86907466119d5a63361d05bd16c4694eb746296af09d46e9628a3ba21496fb",
+      "reader_sha256": "877c853db5c3f37784a592dc5237e4485e469809f531ef345b3a6ce1e56f2d06"
+    }
+  },
+  "schema_version": 1,
+  "selection": {
+    "cases": [],
+    "mode": "explicit",
+    "suites": [
+      "runner_abi_layout"
+    ]
+  }
+}

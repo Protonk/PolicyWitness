@@ -21,12 +21,42 @@ extension CWorkerOrchestrator {
         workerExecutablePath: String,
         validatorExecutablePath: String,
         validatorSpawn: @escaping ValidatorSpawnCall,
-        validatorProcessCalls: @escaping (Int) -> ChildProcessCalls
+        validatorProcessCalls: @escaping (Int) -> ChildProcessCalls,
+        equipmentBundleURL: URL = Bundle.main.bundleURL
     ) -> PWRunnerRunResult {
-        let translation = ActorTranslation(plan: plan, parsed: parsed, workerExecutablePath: workerExecutablePath)
+        let assignmentsConsistent = actorPlanAssignmentsConsistent(plan)
+        let equipmentRequests = assignmentsConsistent ? plan.actors.map {
+            ActorEquipmentRequest(actorID: $0.id, index: $0.index, requested: $0.equipment, requiredEntitlements: $0.requiredEntitlements)
+        } : (parsed.actors ?? []).enumerated().map { index, actor in
+            // Refusal metadata comes from the admitted request, never the
+            // invalid indices. This path cannot proceed to translation.
+            ActorEquipmentRequest(actorID: actor.actor_id, index: index, requested: actor.equipment,
+                requiredEntitlements: actor.required_entitlements)
+        }
+        let equipment = ActorEquipmentPreparation.bind(bundleURL: equipmentBundleURL, actors: equipmentRequests,
+            overrides: parsed._test_overrides?.actor_equipment_executable_paths ?? [:])
+        guard assignmentsConsistent else {
+            return actorPreparationRefusal(parsed: parsed, equipment: equipment, bundleId: bundleId,
+                failure: PWRunnerPreparationFailure(stage: "resolved_plan", code: "inconsistent_assignment"))
+        }
+        guard let paths = equipment.executablePaths else {
+            return actorPreparationRefusal(parsed: parsed, equipment: equipment, bundleId: bundleId,
+                failure: PWRunnerPreparationFailure(stage: "equipment", code: "equipment_binding_refused",
+                    actor_id: equipment.failure?.actor_id, binding_ref: equipment.failure?.binding_ref, reason: equipment.failure?.reason))
+        }
+        let translation: ActorTranslation
+        do { translation = try ActorTranslation(plan: plan, parsed: parsed, workerExecutablePaths: paths) }
+        catch {
+            return actorPreparationRefusal(parsed: parsed, equipment: equipment, bundleId: bundleId,
+                failure: PWRunnerPreparationFailure(stage: "resolved_plan", code: "inconsistent_assignment"))
+        }
         var input = ActorScheduleInput(actors: translation.inputs, applies: plan.actors.map { $0.applies },
                                        schedule: translation.schedule)
         input.authority = translation.authority
+        let inspectionDeadline = MonotonicDeadline.now().map { $0 + UInt64(PWActorLimits.lifetimeMs) * 1_000_000 }
+        input.didSetUp = { index, pid in
+            equipment.inspect(actorIndex: index, pid: pid, ownershipConfirmed: true, deadlineNs: inspectionDeadline)
+        }
 
         // Fresh planning after each arrival; every collection closes before the
         // scheduler's guarded release. One aggregate allowance across actors.
@@ -62,9 +92,32 @@ extension CWorkerOrchestrator {
             collectionStatuses[index] = "collected"
         }
 
-        return assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
-                                  queryPlans: queryPlans, validatorResults: validatorResults,
-                                  collectionStatuses: collectionStatuses, bundleId: bundleId)
+        var reply = assembleActorReply(parsed: parsed, plan: plan, translation: translation, outcome: outcome,
+            queryPlans: queryPlans, validatorResults: validatorResults,
+            collectionStatuses: collectionStatuses, bundleId: bundleId)
+        for index in outcome.actors.indices {
+            if let failure = outcome.actors[index].equipmentFailure, equipment.actors[index].execution.status == "matched" {
+                equipment.actors[index].execution.status = "inspection_failed"
+                equipment.actors[index].execution.reason = failure
+                equipment.actors[index].execution.eligible = false
+            }
+            if equipment.actors[index].execution.status == "unobserved", outcome.actors[index].pid != nil {
+                equipment.actors[index].execution.reason = outcome.actors[index].equipmentFailure ?? "setup_unavailable"
+                if outcome.actors[index].equipmentFailure != nil {
+                    equipment.actors[index].execution.pid = outcome.actors[index].pid.map(Int.init)
+                }
+            }
+            reply.actors?[index].equipment = equipment.actors[index]
+            reply.actors?[index].application = actorApplicationAssessment(mode: plan.actors[index].applies ? "apply" : "unapplied",
+                launched: outcome.actors[index].pid != nil, applied: outcome.actors[index].output?.applied == true,
+                evidence: outcome.actors[index].output?.workerEvidence, authority: outcome.actors[index].output?.authoritySetup)
+        }
+        reply.equipment_inventory = equipment.inventory
+        reply.equipment_bindings = equipment.bindings
+        reply.equipment_entitlements = equipment.entitlements
+        reply.authority_setup = outcome.authoritySetup
+        reply.authority_setup?.bind(actorIDs: plan.actors.map { $0.id }, tokenRefs: plan.tokens.map { $0.ref })
+        return reply
     }
 }
 
@@ -81,101 +134,133 @@ struct ActorTranslation {
     /// Actor-local phase input per global phase.
     let phaseInputs: [CWorkerPhaseInput]
 
-    init(plan: ActorPlan, parsed: PWRunnerRunSpec, workerExecutablePath: String) {
+    init(plan: ActorPlan, parsed: PWRunnerRunSpec, workerExecutablePaths: [String]) throws {
+        func require(_ condition: Bool) throws {
+            if !condition { throw PWRunnerPreparationFailureError.inconsistentAssignment }
+        }
+        try require(actorPlanAssignmentsConsistent(plan))
+        let actions = plan.phases.flatMap { $0.actions }
+        try require(workerExecutablePaths.count == plan.actors.count && actions.count == plan.actionCount
+            && plan.localSlotOfGlobal.count == actions.count && plan.inboundCounts.count == plan.actors.count
+            && plan.outboundCounts.count == plan.actors.count)
         var local: [Int: (actor: Int, slot: Int)] = [:]
         for actor in plan.actors {
-            for (position, globalSlot) in actor.slots.enumerated() { local[globalSlot] = (actor.index, position) }
+            try require(plan.actors.indices.contains(actor.index))
+            for (position, global) in actor.slots.enumerated() {
+                try require(actions.indices.contains(global) && actions[global].globalSlot == global
+                    && actions[global].actorLocalSlot == position && plan.localSlotOfGlobal[global] == position
+                    && local[global] == nil)
+                local[global] = (actor.index, position)
+            }
         }
+        try require(local.count == actions.count)
         self.local = local
-        let actionsBySlot: [Int: PWRunnerPhaseAction] = Dictionary(uniqueKeysWithValues:
-            plan.phases.flatMap { phase in phase.actions.enumerated().map { (phase.firstSlot + $0.offset, $0.element) } })
-        var phaseInputs: [CWorkerPhaseInput] = []
         var inputs: [CWorkerInput] = []
         for actor in plan.actors {
             var slots: [CWorkerSlotInput] = []
-            for globalSlot in actor.slots {
-                guard let action = actionsBySlot[globalSlot] else { continue }
-                switch action {
-                case .probe(let probe):
-                    slots.append(makeWorkerSlot(stepID: probe.step_id, attempt: probe.attempt))
-                case .extensionAction(let value):
-                    slots.append(ActorTranslation.extensionSlot(value, plan: plan, globalSlot: globalSlot))
+            for global in actor.slots {
+                let action = actions[global]
+                switch action.body {
+                case .probe(let probe, let kind):
+                    var slot = makeWorkerSlot(stepID: probe.step_id, attempt: probe.attempt)
+                    slot.attemptKind = kind
+                    slots.append(slot)
+                case .authority(let operation):
+                    slots.append(try Self.extensionSlot(operation, stepID: action.stepID, plan: plan))
                 }
             }
             var phases: [CWorkerPhaseInput] = []
             for phaseIndex in actor.visits {
+                try require(plan.phases.indices.contains(phaseIndex))
                 let phase = plan.phases[phaseIndex]
-                // Empty visits have no global action of their own: firstSlot
-                // can name the next actor's action. Partition this actor's
-                // slots using its accumulated offset instead.
+                try require(phase.actorIndex == actor.index && phase.visit == phases.count + 1)
                 let first = phases.last?.endSlot ?? 0
-                let input = CWorkerPhaseInput(firstSlot: first, endSlot: first + phase.actions.count, globalPhase: phaseIndex + 1)
-                phases.append(input)
+                phases.append(CWorkerPhaseInput(firstSlot: first, endSlot: first + phase.actions.count, globalPhase: phaseIndex + 1))
             }
+            try require(phases.last?.endSlot == slots.count)
             let policy = actor.policy
-            var input = CWorkerInput(workerExecutablePath: workerExecutablePath,
-                                     policy: policy?.sbpl_source ?? "",
-                                     params: policy.map(workerParamsFromPolicy) ?? [],
-                                     slots: slots, phases: phases,
-                                     sentinelTimeoutMs: PWActorLimits.executionMs,
-                                     captureCompiledProfile: policy?.capture_compiled_profile == true,
-                                     captureNonce: policy?.capture_nonce)
+            var input = CWorkerInput(workerExecutablePath: workerExecutablePaths[actor.index],
+                policy: policy?.sbpl_source ?? "", params: policy.map(workerParamsFromPolicy) ?? [], slots: slots, phases: phases,
+                sentinelTimeoutMs: PWActorLimits.executionMs,
+                postApplyHangMs: parsed._test_overrides?.worker_post_apply_hang_ms,
+                postApplyKillSignal: parsed._test_overrides?.worker_post_apply_kill_signal,
+                preReadyHangMs: parsed._test_overrides?.worker_pre_ready_hang_ms,
+                killBeforePublishSlot: parsed._test_overrides?.worker_kill_before_publish_slot,
+                captureCompiledProfile: policy?.capture_compiled_profile == true, captureNonce: policy?.capture_nonce)
             input.proceedWaitMs = PWActorLimits.releaseWaitMs
+            input.authorityRequired = plan.authorityRequired
             inputs.append(input)
         }
+        var phaseInputs: [CWorkerPhaseInput] = []
+        var schedule: [ActorScheduleEntry] = []
         for phase in plan.phases {
-            let actor = plan.actors[phase.actorIndex]
-            let position = actor.visits.firstIndex(of: phase.index) ?? 0
-            phaseInputs.append(inputs[phase.actorIndex].phases[position])
+            try require(inputs.indices.contains(phase.actorIndex) && inputs[phase.actorIndex].phases.indices.contains(phase.visit - 1))
+            phaseInputs.append(inputs[phase.actorIndex].phases[phase.visit - 1])
+            var entry = ActorScheduleEntry(phaseIndex: phase.index, actorIndex: phase.actorIndex, visit: phase.visit - 1)
+            if let source = phase.afterTermination {
+                try require(plan.actors.indices.contains(source))
+                guard let final = plan.actors[source].visits.last, final < phase.index else {
+                    throw PWRunnerPreparationFailureError.inconsistentAssignment
+                }
+                entry.terminationDependency = ActorTerminationDependency(sourceActorIndex: source, sourceFinalPhaseIndex: final)
+            }
+            schedule.append(entry)
         }
-        self.phaseInputs = phaseInputs
-        self.inputs = inputs
-        schedule = plan.phases.map { ActorScheduleEntry(phaseIndex: $0.index, actorIndex: $0.actorIndex, visit: $0.visit - 1) }
-        if plan.tokens.isEmpty && plan.deliveries.isEmpty {
-            authority = nil
-        } else {
-            authority = AuthorityPlan(
-                tokens: plan.tokens.enumerated().map { index, token in
-                    AuthorityPlanToken(index: index, actorIndex: token.actorIndex, slot: local[token.slot]?.slot ?? 0,
-                                       lastUseSlot: local[token.lastUseSlot]?.slot ?? 0)
-                },
-                deliveries: plan.deliveries.enumerated().map { index, delivery in
-                    AuthorityPlanDelivery(index: index, tokenIndex: plan.tokens.firstIndex { $0.ref == delivery.tokenRef } ?? 0,
-                                          sourceActorIndex: delivery.sourceActorIndex, recipientActorIndex: delivery.recipientActorIndex,
-                                          slot: local[delivery.slot]?.slot ?? 0)
-                })
+        self.phaseInputs = phaseInputs; self.inputs = inputs; self.schedule = schedule
+        if !plan.authorityRequired { authority = nil; return }
+        for token in plan.tokens {
+            try require(plan.actors.indices.contains(token.actorIndex) && local[token.slot]?.actor == token.actorIndex
+                && local[token.lastUseSlot]?.actor == token.actorIndex && token.outboundPosition >= 0
+                && token.outboundPosition < plan.outboundCounts[token.actorIndex])
         }
+        for delivery in plan.deliveries {
+            try require(plan.tokens.indices.contains(delivery.tokenIndex.rawValue)
+                && plan.actors.indices.contains(delivery.recipientActorIndex)
+                && local[delivery.slot]?.actor == delivery.sourceActorIndex && delivery.inboundPosition >= 0
+                && delivery.inboundPosition < plan.inboundCounts[delivery.recipientActorIndex])
+        }
+        authority = AuthorityPlan(
+            tokens: plan.tokens.enumerated().map { index, token in
+                AuthorityPlanToken(index: index, actorIndex: token.actorIndex, slot: plan.localSlotOfGlobal[token.slot],
+                    lastUseSlot: plan.localSlotOfGlobal[token.lastUseSlot], outboundPosition: token.outboundPosition)
+            }, deliveries: plan.deliveries.enumerated().map { index, delivery in
+                AuthorityPlanDelivery(index: index, tokenIndex: delivery.tokenIndex.rawValue,
+                    sourceActorIndex: delivery.sourceActorIndex, recipientActorIndex: delivery.recipientActorIndex,
+                    slot: plan.localSlotOfGlobal[delivery.slot], inboundPosition: delivery.inboundPosition)
+            }, inboundCounts: plan.inboundCounts, outboundCounts: plan.outboundCounts)
     }
 
-    static func extensionSlot(_ action: PWRunnerExtensionAction, plan: ActorPlan, globalSlot: Int) -> CWorkerSlotInput {
-        let op = action.intervention
+    private static func extensionSlot(_ operation: ResolvedExtensionOperation, stepID: String, plan: ActorPlan) throws -> CWorkerSlotInput {
         var operands = CWorkerExtensionOperands()
         let kind: PWAttemptKind
-        switch op.operation {
-        case "issue":
-            kind = .extensionIssue
-            let token = plan.token(op.token_ref ?? "")
-            operands.tokenIndex = UInt32(plan.tokens.firstIndex { $0.ref == op.token_ref } ?? 0)
-            operands.authority = token?.authority == "read_write" ? 1 : 0
-            operands.target = token?.target ?? op.target ?? ""
-        case "transfer":
-            kind = .extensionTransfer
-            operands.tokenIndex = UInt32(plan.tokens.firstIndex { $0.ref == op.token_ref } ?? 0)
-            operands.deliveryIndex = UInt32(plan.deliveries.firstIndex { $0.ref == op.delivery_ref } ?? 0)
-            operands.recipientIndex = UInt32(plan.delivery(op.delivery_ref ?? "")?.recipientActorIndex ?? 0)
-        case "consume":
-            kind = .extensionConsume
-            let delivery = plan.delivery(op.delivery_ref ?? "")
-            operands.deliveryIndex = UInt32(plan.deliveries.firstIndex { $0.ref == op.delivery_ref } ?? 0)
-            operands.handleIndex = UInt32(plan.handles.firstIndex { $0.ref == op.handle_ref } ?? 0)
-            operands.lastUse = delivery?.lastUseSlot == globalSlot
-        default:
-            kind = .extensionRelease
-            operands.handleIndex = UInt32(plan.handles.firstIndex { $0.ref == op.handle_ref } ?? 0)
+        switch operation {
+        case .issue(let index):
+            guard plan.tokens.indices.contains(index.rawValue) else { throw PWRunnerPreparationFailureError.inconsistentAssignment }
+            let token = plan.tokens[index.rawValue]
+            kind = .extensionIssue; operands.tokenIndex = UInt32(index.rawValue)
+            operands.authority = token.authority == "read_write" ? 1 : 0; operands.target = token.target
+        case .transfer(let token, let delivery, let recipient):
+            guard plan.tokens.indices.contains(token.rawValue), plan.deliveries.indices.contains(delivery.rawValue),
+                  plan.actors.indices.contains(recipient.rawValue), plan.deliveries[delivery.rawValue].tokenIndex == token,
+                  plan.deliveries[delivery.rawValue].recipientActorIndex == recipient.rawValue else {
+                throw PWRunnerPreparationFailureError.inconsistentAssignment
+            }
+            kind = .extensionTransfer; operands.tokenIndex = UInt32(token.rawValue)
+            operands.deliveryIndex = UInt32(delivery.rawValue); operands.recipientIndex = UInt32(recipient.rawValue)
+        case .consume(let delivery, let handle, let lastUse):
+            guard plan.deliveries.indices.contains(delivery.rawValue), plan.handles.indices.contains(handle.rawValue),
+                  plan.handles[handle.rawValue].deliveryIndex == delivery else { throw PWRunnerPreparationFailureError.inconsistentAssignment }
+            kind = .extensionConsume; operands.deliveryIndex = UInt32(delivery.rawValue)
+            operands.handleIndex = UInt32(handle.rawValue); operands.lastUse = lastUse
+        case .release(let handle):
+            guard plan.handles.indices.contains(handle.rawValue) else { throw PWRunnerPreparationFailureError.inconsistentAssignment }
+            kind = .extensionRelease; operands.handleIndex = UInt32(handle.rawValue)
         }
-        return CWorkerSlotInput(stepId: action.step_id, attemptKind: kind, target: "", extensionOperands: operands)
+        return CWorkerSlotInput(stepId: stepID, attemptKind: kind, target: "", extensionOperands: operands)
     }
 }
+
+enum PWRunnerPreparationFailureError: Error { case inconsistentAssignment }
 
 // MARK: - Classification
 
@@ -219,7 +304,8 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
                         collectionStatuses: [String], bundleId: String?) -> PWRunnerRunResult {
     let outputs = outcome.actors.map { $0.output }
     let dispositions = outputs.map { $0.map { resolveDisposition($0, plan: nil) } }
-    func stepID(ofGlobalSlot slot: Int) -> String? { plan.slotOfStep.first { $0.value == slot }?.key }
+    let actionNames = plan.phases.flatMap { $0.actions.map { $0.stepID } }
+    func stepID(ofGlobalSlot slot: Int) -> String? { actionNames.indices.contains(slot) ? actionNames[slot] : nil }
     func slotResult(actor: Int, step: String) -> CWorkerSlotResult? { outputs[actor]?.slots.first { $0.stepId == step } }
     func dispositionStep(actor: Int, step: String) -> PWDispositionStep? { dispositions[actor]?.steps.first { $0.step_id == step } }
 
@@ -268,9 +354,16 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
             validator_spawn_failure: spawnFailure)
         result.actor_id = actor.id
         result.actor_visit = phase.visit
+        result.activation_observation = visit?.activationObservation
         if let visit, visit.activationStored {
             result.visit_timing = PWRunnerVisitTiming(activation_to_arrival_ms: visit.activationToArrivalMs, collection_ms: visit.collectionMs,
                                                       arrival_to_release_ms: visit.arrivalToReleaseMs, release_to_completion_ms: visit.releaseToCompletionMs)
+        }
+        if let gate = visit?.terminationGate {
+            result.termination_gate = PWRunnerTerminationGate(source_actor_id: plan.actors[gate.sourceActorIndex].id,
+                source_final_phase_id: plan.phases[gate.sourceFinalPhaseIndex].id, outcome: gate.outcome,
+                wait: gate.wait, observation: gate.observation.map { PWOwnedReapReference(capture_ordinal: $0.capture_ordinal) },
+                activation_eligible: gate.activationEligible, capture_ordinal: gate.captureOrdinal)
         }
         phaseResults.append(result)
         if runOutcome.rc == 0 {
@@ -285,35 +378,45 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
         }
         // ---- Extension events for this phase's actions.
         for action in phase.actions {
-            guard case .extensionAction(let value) = action else { continue }
-            let op = value.intervention
-            let slot = slotResult(actor: actorIndex, step: value.step_id)
+            guard case .authority(let operation) = action.body else { continue }
+            let name: String
+            var token: ActorPlanToken?
+            var deliveryRef: String?
+            var handleRef: String?
+            switch operation {
+            case .issue(let index): name = "issue"; token = plan.tokens[index.rawValue]
+            case .transfer(let index, let delivery, _):
+                name = "transfer"; token = plan.tokens[index.rawValue]; deliveryRef = plan.deliveries[delivery.rawValue].ref
+            case .consume(let delivery, let handle, _):
+                name = "consume"; deliveryRef = plan.deliveries[delivery.rawValue].ref; handleRef = plan.handles[handle.rawValue].ref
+            case .release(let handle): name = "release"; handleRef = plan.handles[handle.rawValue].ref
+            }
+            let slot = slotResult(actor: actorIndex, step: action.stepID)
             let published = slot?.completed == true
             let native = published ? slot?.nativeResult : nil
             let reason = published ? unavailableReasons[slot?.unavailableCode ?? 0] : nil
             let publication = published ? slot?.extensionPublication : nil
             var status: String
             if !published { status = "unresolved" }
-            else if op.operation == "transfer" { status = PWTransferAck.names[publication?.transferStatus ?? 0] ?? "invalid" }
+            else if name == "transfer" { status = PWTransferAck.names[publication?.transferStatus ?? 0] ?? "invalid" }
             else if native != nil { status = "returned" }
             else if reason != nil { status = "unavailable" }
             else { status = "invalid" }
-            let token = op.token_ref.flatMap { plan.token($0) }
-            var event = PWRunnerExtensionEvent(phase_id: phase.id, step_id: value.step_id, operation: op.operation,
-                token_ref: op.token_ref, handle_ref: op.handle_ref, call_boundary_observed: slot?.callBoundary ?? false,
+            var event = PWRunnerExtensionEvent(phase_id: phase.id, step_id: action.stepID, operation: name,
+                token_ref: token?.ref, handle_ref: handleRef, call_boundary_observed: slot?.callBoundary ?? false,
                 result_published: published, status: status, native_result: native,
                 errno: native != nil ? slot?.nativeErrno : nil, unavailable_reason: reason,
-                lifecycle: dispositionStep(actor: actorIndex, step: value.step_id).flatMap(attemptLifecycle))
+                lifecycle: dispositionStep(actor: actorIndex, step: action.stepID).flatMap(attemptLifecycle))
             event.actor_id = actor.id
             event.family = "file"
-            if op.operation == "issue" {
+            if name == "issue" {
                 event.target = token?.target
                 event.extension_class = token?.authority == "read_write" ? "com.apple.app-sandbox.read-write" : "com.apple.app-sandbox.read"
                 event.flags = 0
                 event.native_nonnull = native.map { $0 == 1 }
                 event.token_length = publication.map { Int($0.tokenLength) }
             }
-            if op.operation == "transfer" || op.operation == "consume" { event.delivery_ref = op.delivery_ref }
+            if name == "transfer" || name == "consume" { event.delivery_ref = deliveryRef }
             events.append(event)
         }
     }
@@ -336,7 +439,10 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
                 inherited_descriptors: record.authorityRegion == "mapped" ? [0, 3, 4, 5] : [0, 3, 4]) },
             subprocess: output.map { buildWorkerSubprocess($0, disposition: dispositions[actor.index]) },
             compiled_profile: output?.profileCapture,
-            visits: actor.visits.map { $0 + 1 })
+            visits: actor.visits.map { $0 + 1 },
+            application: actorApplicationAssessment(mode: actor.applies ? "apply" : "unapplied", launched: record.pid != nil,
+                applied: output?.applied == true, evidence: output?.workerEvidence, authority: output?.authoritySetup),
+            owned_reap: output?.ownedReap)
     }
 
     // ---- Transfers and resources.
@@ -372,11 +478,11 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
         if let observation { status = PWTransferAck.names[observation.acknowledgement] ?? "invalid" }
         else if slot?.completed == true { status = unavailableReasons[slot?.unavailableCode ?? 0] ?? "unrequested" }
         else { status = unpublishedResourceStatus(dispositionStep(actor: delivery.sourceActorIndex, step: delivery.stepID)) }
-        let token = plan.tokens.firstIndex { $0.ref == delivery.tokenRef }
+        let token = delivery.tokenIndex.rawValue
         return PWRunnerDeliveryRecord(delivery_ref: delivery.ref, token_ref: delivery.tokenRef,
             source_actor_id: plan.actors[delivery.sourceActorIndex].id, recipient_actor_id: plan.actors[delivery.recipientActorIndex].id,
             step_id: delivery.stepID, status: status,
-            delivered_length: observation?.acknowledgement == PWTransferAck.delivered ? token.flatMap { t in outcome.custody.first { $0.tokenIndex == t }?.length } : nil,
+            delivered_length: observation?.acknowledgement == PWTransferAck.delivered ? outcome.custody.first { $0.tokenIndex == token }?.length : nil,
             equality: observation?.equality, last_use_step_id: stepID(ofGlobalSlot: delivery.lastUseSlot))
     }
     let handleRecords: [PWRunnerHandleRecord] = plan.handles.map { handle in
@@ -402,9 +508,11 @@ func assembleActorReply(parsed: PWRunnerRunSpec, plan: ActorPlan, translation: A
         rc: runOutcome.rc, normalized_outcome: runOutcome.outcome, error: runOutcome.error,
         pid: Int(getpid()), bundle_id: bundleId, policy_format: nil, policy_sha256: nil,
         sandboxed_after_apply: nil, steps: stepResults, runner_subprocess: nil, phases: phaseResults,
-        extensions: nil, extension_events: events, test_overrides: parsed._test_overrides)
+        extension_events: events, test_overrides: parsed._test_overrides)
     reply.execution_form = "actors"
     reply.actors = actors
+    reply.authority_setup = outcome.authoritySetup
+    reply.authority_setup?.bind(actorIDs: plan.actors.map { $0.id }, tokenRefs: plan.tokens.map { $0.ref })
     reply.transfers = transfers
     reply.resources = PWRunnerResourceTables(tokens: tokenRecords, deliveries: deliveryRecords, handles: handleRecords)
     reply.schedule = PWRunnerScheduleRecord(setup_wait: outcome.setupWait, execution_wait: outcome.executionWait,
@@ -419,4 +527,47 @@ private func unwrapValidatorOutput(_ result: ValidatorClientResult?) -> Validato
     case .success(let out): return out
     case .failure(_, let partial): return partial
     }
+}
+
+private func actorPreparationRefusal(parsed: PWRunnerRunSpec, equipment: ActorEquipmentPreparation,
+                                     bundleId: String?, failure: PWRunnerPreparationFailure) -> PWRunnerRunResult {
+    var reply = PWRunnerRunResult(specimen_id: parsed.specimen_id, run_kind: parsed.run_kind,
+        rc: 1, normalized_outcome: NormalizedOutcome.runnerFailed, error: "actor preparation refused: " + failure.code,
+        pid: Int(getpid()), bundle_id: bundleId, policy_format: nil, steps: [], extension_events: [], test_overrides: parsed._test_overrides)
+    reply.execution_form = "actors"
+    reply.preparation_failure = failure
+    // The execution assignments may be exactly what failed. Project only
+    // identity/policy metadata from the already-admitted request for this
+    // before-launch account; do not normalize or reconstruct an execution plan.
+    let actors = parsed.actors ?? []
+    let phases = parsed.phases ?? []
+    reply.actors = actors.enumerated().map { index, actor in
+        PWRunnerActorResult(actor_id: actor.actor_id, index: index, mode: actor.applies ? "apply" : "unapplied",
+            policy_format: actor.sandbox.policy?.format, policy_sha256: actor.sandbox.policy.flatMap { try? computePolicyHash($0) },
+            setup_status: "launch_refused", application_count: 0,
+            visits: phases.enumerated().compactMap { $0.element.actor_id == actor.actor_id ? $0.offset + 1 : nil },
+            equipment: equipment.actors.indices.contains(index) ? equipment.actors[index] : nil,
+            application: actorApplicationAssessment(mode: actor.applies ? "apply" : "unapplied", launched: false,
+                applied: false, evidence: nil, authority: nil))
+    }
+    reply.phases = phases.enumerated().map { index, phase in
+        var row = PWRunnerPhaseResult(phase_id: phase.phase_id, ordinal: index + 1,
+            action_ids: phase.actions.map { $0.stepID }, arrival_observed: false, completion_observed: false, collection_status: "not_reached")
+        row.actor_id = phase.actor_id
+        row.actor_visit = phases.prefix(index + 1).filter { $0.actor_id == phase.actor_id }.count
+        return row
+    }
+    reply.transfers = []
+    reply.resources = PWRunnerResourceTables(tokens: [], deliveries: [], handles: [])
+    reply.schedule = PWRunnerScheduleRecord(lifetime_budget_ms: PWActorLimits.lifetimeMs,
+        collection_budget_ms: PWActorLimits.collectionMs, cancelled: "preparation_refused")
+    reply.equipment_inventory = equipment.inventory; reply.equipment_bindings = equipment.bindings
+    reply.equipment_entitlements = equipment.entitlements
+    let authorityRequired = phases.contains { phase in
+        phase.actions.contains { if case .extensionAction = $0 { return true }; return false }
+    }
+    reply.authority_setup = PWRunnerAuthoritySetup(host: PWRunnerAuthorityHost(run: PWRunnerAuthorityScope(disposition: "not_attempted")),
+        workers: actors.enumerated().map { PWRunnerAuthorityScope(actor_id: $0.element.actor_id,
+            actor_index: $0.offset, required: authorityRequired, publication: "not_observed") })
+    return reply
 }

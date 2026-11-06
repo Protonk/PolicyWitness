@@ -37,7 +37,9 @@ for name,anchor,replacement,reason in mutations:
     assert '[host single use admission]' in log and 'tests passed' in log, (name,'build/equipment failure')
     if reason:
         assert run.returncode!=0 and reason in log, (name,'original regression not detected',log)
-    else: assert run.returncode==0 and '3/3 tests passed' in log, log
+    else:
+        assert run.returncode==0 and '5/5 tests passed' in log, log
+        assert '[host semantic admission ownership]' in log, log
     results.append(dict(control=name,exit_code=run.returncode,expected_failure=reason))
 service.write_text(fixed)
 (out/'results.json').write_text(json.dumps(results,indent=2)+'\n')

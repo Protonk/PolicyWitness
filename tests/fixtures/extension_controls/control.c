@@ -1,4 +1,4 @@
-/* Controlled native entrypoints in the production issuer/worker. The observer
+/* Controlled native entrypoints in the production actor workers. The observer
  * is test-owned POSIX shared memory, never a file containing token bytes.
  * Production binaries compile none of this instrumentation. */
 #include <dlfcn.h>
@@ -13,7 +13,7 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "pw_extension_channel.h"
+#include "pw_authority_region.h"
 
 #ifndef PW_CONTROL_MODE
 #error PW_CONTROL_MODE is required
@@ -38,7 +38,8 @@ typedef struct {
 } observer_t;
 _Static_assert(offsetof(observer_t, token) == 128, "test observer token offset");
 static observer_t *observer;
-static pw_extension_channel_t *worker_channel_observation;
+static pw_authority_slot_t *worker_slot_observation;
+static char *issuer_allocation;
 static void *native_lookup(void *library, const char *name) { return dlsym(library, name); }
 static int native_unmap(void *p, size_t n) { return munmap(p, n); }
 
@@ -77,38 +78,31 @@ static char *controlled_issue(const char *, const char *, uint32_t);
 static int64_t controlled_consume(const char *);
 static int controlled_release(int64_t);
 static void *controlled_lookup(void *, const char *);
-static int controlled_unmap(void *, size_t);
 static void controlled_erase(void *, size_t);
-static void *controlled_memchr(const void *, int, size_t);
 static int controlled_setrlimit(int, const struct rlimit *);
 static int controlled_fstat(int, struct stat *);
 static void *controlled_mmap(size_t, int);
 static int controlled_close(int);
+static void controlled_publish(pw_authority_slot_t *);
+static void controlled_inbound(pw_authority_slot_t *);
+static void controlled_published(void *);
+static _Noreturn void controlled_exit(int);
 
+#define _exit controlled_exit
 #define pw_extension_erase controlled_erase
-
-#if defined(PW_CONTROL_ISSUER)
 #define dlsym controlled_lookup
-#define munmap controlled_unmap
-#include "pw_extension_issuer.c"
-#undef dlsym
-#undef munmap
-#else
-#define dlsym controlled_lookup
-#define memchr controlled_memchr
 #define PW_EXTENSION_OBSERVE(stage, release, result) interrupted((stage), (release), (result))
-/* Local preparation failures and channel rejections: exactly one native call
- * of prepare_extension is substituted per mode; every other call is real, so
- * the production path decides the published status, stage and native result. */
 #define PW_EXTENSION_SETRLIMIT(resource, limit) controlled_setrlimit((resource), (limit))
 #define PW_EXTENSION_FSTAT(fd, metadata) controlled_fstat((fd), (metadata))
 #define PW_EXTENSION_MMAP(length, fd) controlled_mmap((length), (fd))
 #define PW_EXTENSION_CLOSE(fd) controlled_close(fd)
+#define PW_AUTHORITY_PUBLISH_OBSERVE(slot) controlled_publish(slot)
+#define PW_INBOUND_OBSERVE(slot) controlled_inbound(slot)
+#define PW_ATTEMPT_PUBLISHED(slot) controlled_published(slot)
 #include "pw_probe_runner.c"
 #undef dlsym
-#undef memchr
-#endif
 #undef pw_extension_erase
+#undef _exit
 
 static char *(*native_issue)(const char *, const char *, uint32_t);
 static int64_t (*native_consume)(const char *);
@@ -122,20 +116,17 @@ static int vector_excludes(char **values, const char *token) {
 
 static void controlled_erase(void *bytes, size_t length) {
     pw_extension_erase(bytes, length);
+    observe_setup();
     int clear = 1;
-#if defined(PW_CONTROL_ISSUER)
-    /* Issuer strings are separate allocations; length is their known bound. */
-    for (size_t i = 0; i < length; ++i) if (((unsigned char *)bytes)[i]) clear = 0;
-    observer->issuer_token_erased = clear;
-#else
-    /* Independently held mapped channel: neither the erase argument, the
-     * token's reported length nor its first NUL defines this scan's bound. */
-    if (!worker_channel_observation || bytes != worker_channel_observation->token) _exit(85);
-    for (size_t i = 0; i < sizeof(worker_channel_observation->token); ++i)
-        if ((unsigned char)worker_channel_observation->token[i]) clear = 0;
-    if (!clear) observer->reserved[4]++;
-    observer->worker_token_erased = clear && !observer->reserved[4];
-#endif
+    if (bytes == issuer_allocation) {
+        for (size_t i=0;i<length;i++) if (((unsigned char *)bytes)[i]) clear=0;
+        observer->issuer_token_erased=clear;
+    }
+    if (worker_slot_observation && bytes==worker_slot_observation->token) {
+        for (size_t i=0;i<PW_EXTENSION_TOKEN_BYTES;i++) if (worker_slot_observation->token[i]) clear=0;
+        if (!clear) observer->reserved[4]++;
+        observer->worker_token_erased=clear && !observer->reserved[4];
+    }
 }
 
 static void *controlled_lookup(void *library, const char *name) {
@@ -152,6 +143,7 @@ static void *controlled_lookup(void *library, const char *name) {
         return symbol ? (void *)controlled_consume : NULL;
     }
     if (strcmp(name, "sandbox_extension_release") == 0) {
+        if (PW_CONTROL_MODE == 205) return NULL;
         native_release = (int (*)(int64_t))symbol;
         return symbol ? (void *)controlled_release : NULL;
     }
@@ -163,27 +155,28 @@ static char *controlled_issue(const char *kind, const char *path, uint32_t flags
     struct rlimit limit;
     observer->issuer_core_disabled = getrlimit(RLIMIT_CORE, &limit) == 0 && limit.rlim_cur == 0;
     errno = 0;
-    observer->issuer_channel_closed = fcntl(3, F_GETFD) == -1 && errno == EBADF;
+    observer->issuer_channel_closed = fcntl(5, F_GETFD) == -1 && errno == EBADF;
     if (PW_CONTROL_MODE == 1) { errno = EACCES; return NULL; }
     if (PW_CONTROL_MODE == 2) {
         char *value = malloc(PW_EXTENSION_TOKEN_BYTES + 1);
         if (!value) _exit(84);
         memset(value, 'x', PW_EXTENSION_TOKEN_BYTES); value[PW_EXTENSION_TOKEN_BYTES] = 0;
-        errno = 0; return value;
+        issuer_allocation=value; errno = 0; return value;
     }
-    if (PW_CONTROL_MODE == 3) { errno = 0; return calloc(1, 1); }
+    if (PW_CONTROL_MODE == 3) { errno = 0; issuer_allocation=calloc(1,1); return issuer_allocation; }
     if (PW_CONTROL_MODE == 16) {
         char *value = malloc(PW_EXTENSION_TOKEN_BYTES);
         if (!value) _exit(84);
         memset(value, 'x', PW_EXTENSION_TOKEN_BYTES - 1);
         value[PW_EXTENSION_TOKEN_BYTES - 1] = 0;
-        errno = 0; return value;
+        issuer_allocation=value; errno = 0; return value;
     }
     if (PW_CONTROL_MODE == 4) _exit(87);
     if (PW_CONTROL_MODE == 5) { sleep(30); _exit(88); }
     errno = 0;
     char *value = native_issue(kind, path, flags);
     int saved = errno;
+    issuer_allocation=value;
     if (value) {
         observer->issuer_argv_clean = vector_excludes(*_NSGetArgv(), value);
         observer->issuer_env_clean = vector_excludes(*_NSGetEnviron(), value);
@@ -197,48 +190,63 @@ static char *controlled_issue(const char *kind, const char *path, uint32_t flags
     return value;
 }
 
-static int controlled_unmap(void *p, size_t n) {
-    pw_extension_channel_t *channel = p;
-    if (n == PW_EXTENSION_CHANNEL_BYTES) {
-        /* Deliberately violate the immutable publication protocol. Host reaping
-         * precedes delivery, so it must inspect the final malformed transport. */
-        switch (PW_CONTROL_MODE) {
-        case 7: channel->token_length = PW_EXTENSION_TOKEN_BYTES; break;
-        case 8: if (channel->token_length) channel->token[channel->token_length - 1] = 0; break;
-        case 9: channel->token[channel->token_length] = 'x'; break;
-        case 10:
-            pw_extension_erase(channel->token, sizeof(channel->token));
-            strcpy(channel->token, "controlled-invalid-token");
-            channel->token_length = (uint32_t)strlen(channel->token);
-            break;
-        case 11: channel->magic ^= 1; break;
-        case 12: channel->pid += 1; break;
-        case 13: atomic_store_explicit(&channel->completed, 0, memory_order_release); break;
-        case 14: channel->status = 99; break;
-        case 15: atomic_store_explicit(&channel->call_boundary, 0, memory_order_release); break;
-        case 17:
-            observer->reserved[0] = atomic_load_explicit(&channel->completed, memory_order_acquire);
-            _exit(87);
-        default: break;
-        }
+static _Noreturn void controlled_exit(int status) {
+    if ((PW_CONTROL_MODE==18 || PW_CONTROL_MODE==19 || PW_CONTROL_MODE==20) && status==0 && g_hdr) {
+        observe_setup();
+        observer->reserved[5]=atomic_load_explicit(&g_hdr->done,memory_order_acquire);
+        observer->reserved[6]=atomic_load_explicit(&g_hdr->phases[g_hdr->phase_count-1].completed,memory_order_acquire);
+        if (PW_CONTROL_MODE==20) _exit(87);
+        // The actual process stays alive after its final phase and done stores.
+        // Only a native owned reap can release the dependent actor's gate.
+        sleep(PW_CONTROL_MODE==18 ? 1:10);
     }
-    return native_unmap(p, n);
+    _exit(status);
 }
 
-static void *controlled_memchr(const void *bytes, int value, size_t length) {
-#if !defined(PW_CONTROL_ISSUER)
-    if (PW_CONTROL_MODE == 106 && extension_channel && bytes == extension_channel->token) {
-        /* Delivery is a mapped channel, not a stream copy. Stop halfway through
-         * framing validation, after mapping/FD close and before publication. */
-        size_t prefix = length / 2;
-        observer->reserved[0] = (uint32_t)prefix;
-        observer->reserved[1] = memchr(bytes, value, prefix) == NULL;
-        interrupted(4, 0, 0);
-        kill(getpid(), SIGKILL);
-        _exit(83);
+static void controlled_publish(pw_authority_slot_t *slot) {
+    switch (PW_CONTROL_MODE) {
+    case 7: slot->token_length=PW_EXTENSION_TOKEN_BYTES; break;
+    case 8: if(slot->token_length) slot->token[slot->token_length-1]=0; break;
+    case 9: slot->token[slot->token_length]='x'; break;
+    case 10:
+        /* Corrupt authority bytes without contradicting the independently
+           published issue length. This reaches native consume with valid
+           framing; changing the length would instead falsify custody evidence. */
+        if (slot->token_length>0 && slot->token_length<PW_EXTENSION_TOKEN_BYTES) {
+            memset(slot->token,'x',slot->token_length);
+            slot->token[slot->token_length]=0;
+        }
+        break;
+    case 11: slot->magic^=1; break;
+    case 12: slot->writer_actor+=1; break;
+    case 13: /* Die before the release publication; the host must not read fields. */
+        observer->reserved[0]=atomic_load_explicit(&slot->committed,memory_order_acquire); _exit(87);
+    case 14: slot->family=99; break;
+    case 15: slot->operation_index+=1; break;
+    default: break;
     }
-#endif
-    return memchr(bytes, value, length);
+}
+static void controlled_published(void *raw) {
+    pw_shm_slot_t *slot=raw;
+    if (PW_CONTROL_MODE==17 && slot->attempt_kind==PW_ATTEMPT_EXTENSION_ISSUE) {
+        observer->reserved[0]=atomic_load_explicit(&slot->completed,memory_order_acquire);
+        _exit(87);
+    }
+}
+static void controlled_inbound(pw_authority_slot_t *slot) {
+    worker_slot_observation=slot;
+    if (slot->token_length>0 && slot->token_length<PW_EXTENSION_TOKEN_BYTES-1 && slot->token[slot->token_length]==0) {
+        memset(slot->token+slot->token_length+1,0xa5,PW_EXTENSION_TOKEN_BYTES-slot->token_length-1);
+        observer->reserved[2]=slot->token[PW_EXTENSION_TOKEN_BYTES-1]!=0;
+        observer->reserved[3]=PW_EXTENSION_TOKEN_BYTES;
+    }
+    if (PW_CONTROL_MODE==106) {
+        unsigned prefix=slot->token_length/2;
+        observer->reserved[0]=prefix; observer->reserved[1]=memchr(slot->token,0,prefix)==NULL;
+        interrupted(4,0,0); kill(getpid(),SIGKILL); _exit(83);
+    }
+    if (PW_CONTROL_MODE==116) slot->token_length=0;
+    if (PW_CONTROL_MODE==117) slot->token_length=PW_EXTENSION_TOKEN_BYTES;
 }
 
 static int controlled_setrlimit(int resource, const struct rlimit *limit) {
@@ -257,23 +265,12 @@ static int controlled_fstat(int fd, struct stat *metadata) {
 static void *controlled_mmap(size_t length, int fd) {
     if (PW_CONTROL_MODE == 109) { errno = ENODEV; return MAP_FAILED; }  /* nothing mapped */
     void *p = mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (p == MAP_FAILED || length != PW_EXTENSION_CHANNEL_BYTES) return p;
-    /* The host already validated and passed this channel; the worker's own
-     * inspection must reject the mutated view it maps. */
-    pw_extension_channel_t *channel = p;
-    worker_channel_observation = channel;
-    if (channel->token_length < sizeof(channel->token) - 1 && channel->token[channel->token_length] == 0) {
-        memset(channel->token + channel->token_length + 1, 0xa5,
-               sizeof(channel->token) - channel->token_length - 1);
-        observer->reserved[2] = channel->token[sizeof(channel->token) - 1] != 0;
-        observer->reserved[3] = sizeof(channel->token);
-    }
+    if (p == MAP_FAILED) return p;
+    pw_authority_region_t *region=p;
     switch (PW_CONTROL_MODE) {
-    case 113: channel->magic ^= 1; break;
-    case 114: atomic_store_explicit(&channel->completed, 0, memory_order_release); break;
-    case 115: channel->status = 99; break;
-    case 116: channel->token_length = 0; break;
-    case 117: channel->token_length = PW_EXTENSION_TOKEN_BYTES; break;
+    case 113: region->magic^=1; break;
+    case 114: region->identity[0]^=1; break;
+    case 115: region->actor_index+=1; break;
     default: break;
     }
     return p;

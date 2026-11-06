@@ -1,0 +1,260 @@
+{
+  "archive": "extension-consolidation-core-01-failures.tar.gz",
+  "artifact_integrity": {
+    "app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+    "harness_errors": [],
+    "report_dir": "artifact-integrity",
+    "unchanged": true,
+    "valid_before": true
+  },
+  "bytes": 403232,
+  "case_outcome_counts": {
+    "fail": 3,
+    "pass": 2
+  },
+  "case_results": [
+    {
+      "context": "standard",
+      "id": "unit/rust.unit",
+      "reason": "cargo test --bins failed",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "unit/rust.fmt",
+      "reason": "cargo fmt --check reported differences; run cargo fmt in controller/",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "unit/rust.disposition_reds",
+      "reason": "all 4 disposition tests pass",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "unit/rust.byoxpc_reds",
+      "reason": "all 2 BYOXPC selection tests pass",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "runner_unit/pwrunner_core_unit_executable",
+      "reason": "PWRunnerCoreTests exited rc=1; tail: 648 |                 try expectEqual(buildOrdering(out, validatorOutput: v, hasQueries: true).validator_disposition, \\\"unconfirmed\\\")\n649 |                 var step = orderingStep(operation: \\\"hang\\\")\n\n/Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift:50:27: error: cannot assign value of type 'Any' to type '[String : Any]'\n 48 |                 var raw = baseline\n 49 |                 for patch in row[\\\"patches\\\"] as! [[String: Any]] {\n 50 |                     raw = replace(raw, path: (patch[\\\"path\\\"] as! String).split(separator: \\\"/\\\").map(String.init)[...], with: patch[\\\"value\\\"]!)\n    |                           `- error: cannot assign value of type 'Any' to type '[String : Any]'\n 51 |                 }\n 52 |                 var accepted = false\n\n[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>\nFailed frontend command:\n/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ActorAccountTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ActorPlanTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ActorShapeFixtures.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/AttemptOutcomeMappingTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/AugmentTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/CWorkerClockTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/CWorkerTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/DiagnosticTransportTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/EnvelopeInvariantTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ExecObservationTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/FilterKindValidationTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/FreshWriteEvidenceTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ListenerConfigTests.swift -primary-file /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/OrderingTests.swift -primary-file /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/PathDiagnosticsTests.swift -primary-file /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift -primary-file /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/PredictionUnavailableTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/RequestContractTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/TestKit.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/ValidatorStartGate.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Tests/PWRunnerCoreTests/main.swift -supplementary-output-file-map /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/supplementaryOutputs-17 -target arm64-apple-macos26.0 -disable-cross-import-overlay-search -swift-module-cross-import Darwin /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Darwin.swiftcrossimport/xlocale.swiftoverlay -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins/libFoundationMacros.dylib\\#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/bin/swift-plugin-server\\#FoundationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins/libObservationMacros.dylib\\#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/bin/swift-plugin-server\\#ObservationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins/libSwiftMacros.dylib\\#/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/bin/swift-plugin-server\\#SwiftMacros -disable-implicit-swift-modules -Xcc -fno-implicit-modules -Xcc -fno-implicit-module-maps -explicit-swift-module-map-file /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PWRunnerCoreTests-dependencies-1.json -Xllvm -aarch64-use-tbi -enable-objc-interop -stack-check -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk -I /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Products/Debug/PackageFrameworks -F /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -module-cache-path /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/SwiftExplicitPrecompiledModules -no-color-diagnostics -Xcc -fno-color-diagnostics -enable-testing -g -debug-info-format\\=dwarf -dwarf-version\\=5 -swift-version 5 -Onone -D SWIFT_PACKAGE -D DEBUG -D Xcode -serialize-debugging-options -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/raccoon/Desktop/Security/PolicyWitness -enable-anonymous-context-mangled-names -file-compilation-dir /Users/raccoon/Desktop/Security/PolicyWitness -Xcc -fmodule-map-file\\=/Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/GeneratedModuleMaps/PWCWorkerShim.modulemap -Xcc -D_LIBCPP_HARDENING_MODE\\=_LIBCPP_HARDENING_MODE_DEBUG -Xcc -ivfsstatcache -Xcc /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/SDKStatCaches.noindex/macosx27.2-26B118-a0facfad118c1a7a18f0aad9463f6549a7ff82d74745d5ef33555b35c4238456.sdkstatcache -Xcc -fmodules-prune-interval\\=86400 -Xcc -fmodules-prune-after\\=345600 -Xcc -I/Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWCWorkerShim/include -Xcc -I/Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Products/Debug/include -Xcc -I/Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/DerivedSources-normal/arm64 -Xcc -I/Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/DerivedSources/arm64 -Xcc -I/Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\\=1 -no-auto-bridging-header-chaining -module-name PWRunnerCoreTests -package-name runner -const-gather-protocols-file /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PWRunnerCoreTests_const_extract_protocols.json -disable-clang-spi -clang-target arm64-apple-macos27.2 -target-sdk-version 27.2 -target-sdk-name macosx27.2 -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -o /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/OrderingTests.o -o /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PathDiagnosticsTests.o -o /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PhaseProtocolTests.o -o /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PolicyTransferTests.o -debug-module-path /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out/Intermediates.noindex/PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PWRunnerCoreTests.swiftmodule -index-unit-output-path /PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/OrderingTests.o -index-unit-output-path /PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PathDiagnosticsTests.o -index-unit-output-path /PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PhaseProtocolTests.o -index-unit-output-path /PWRunnerCore.build/Debug/PWRunnerCoreTests-p.build/Objects-normal/arm64/PolicyTransferTests.o -index-store-path /Users/raccoon/Desktop/Security/PolicyWitness/runner/.build/out -index-system-modules\nerror: Build failed",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    }
+  ],
+  "completion": {
+    "completed": 5,
+    "selected": 5,
+    "skipped": 0,
+    "unrun": 0
+  },
+  "files": [
+    {
+      "bytes": 5758,
+      "path": "artifact-integrity/after.json",
+      "sha256": "5c5fc9b617df267dd746199339429144edbcc7487c2bea3cec26c42e0a8aada7"
+    },
+    {
+      "bytes": 5758,
+      "path": "artifact-integrity/before.json",
+      "sha256": "5c5fc9b617df267dd746199339429144edbcc7487c2bea3cec26c42e0a8aada7"
+    },
+    {
+      "bytes": 3,
+      "path": "artifact-integrity/changes.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "bytes": 9693,
+      "path": "artifact-integrity/inspection.json",
+      "sha256": "c5ec6319f442faa9d262d1c3ca2c42eb3a2397af63aaf1013797241e989f25ff"
+    },
+    {
+      "bytes": 34486,
+      "path": "dispatch.json",
+      "sha256": "070e27c740b210a68534737cf702cca85e16caca9216a87869fbd07d02020377"
+    },
+    {
+      "bytes": 17356,
+      "path": "events.jsonl",
+      "sha256": "af5385cd5e6590105c338eee047c2c14a8b9b049e42631c1a0940b924658a894"
+    },
+    {
+      "bytes": 215,
+      "path": "owner.json",
+      "sha256": "0ab6b4d5253e3655145e82b04def2bea2b9c1a3367df342aedff11c8a4d27141"
+    },
+    {
+      "bytes": 99219,
+      "path": "plan.json",
+      "sha256": "d216ea1b4239205d9b8a338cf54e8090dbb58b623c99f755e80c3567ee24a9ad"
+    },
+    {
+      "bytes": 264611,
+      "path": "run.json",
+      "sha256": "71b74a4a13a4a8cfce17e52bc9b9d19b10cc411879bd8ad356f34ef36813c350"
+    },
+    {
+      "bytes": 1029,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/lifecycle-fixture-build.log",
+      "sha256": "72e589b5a209be10327c3eda7fad421901c3ae1796465f1b59a6dd4a745b508e"
+    },
+    {
+      "bytes": 16758,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/pwrunner_core_tests.log",
+      "sha256": "e9c95003f29bf5edf09a1062aa93dd5b085d3e42c0e02a22f12aab64edd1ae29"
+    },
+    {
+      "bytes": 34776,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture",
+      "sha256": "bcae3ff9c13aaae09080704ca75b554c6dfc76c89a59cc0e9e20f2cd0cf24c3b"
+    },
+    {
+      "bytes": 71976,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.apply-failure",
+      "sha256": "5a245e27207c4900529d92d948ea4c4e6cd4a683a97bb20c82ebed9517e6370a"
+    },
+    {
+      "bytes": 72056,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-arith",
+      "sha256": "11b3e57c5f8f6cce0a92c081e80cb9e16b41b73eeee44bde5882022015e6a1e4"
+    },
+    {
+      "bytes": 72472,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-expire2",
+      "sha256": "f0301597dee5b85309d54f04b123ef4310b25bd2e7d9fcf78ce3f97496c5baf7"
+    },
+    {
+      "bytes": 72024,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-failure",
+      "sha256": "b55921a73ff33272c4570f6ea3d893602fa03c09b366a574fc220196744ff61e"
+    },
+    {
+      "bytes": 72032,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-failure-later",
+      "sha256": "194193eb8071f92c436762d6da4bb2104ffe0c0dead2ad723a4117c23e959b41"
+    },
+    {
+      "bytes": 72424,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-phase2",
+      "sha256": "2f9e27ecdece53cd0609674496b938735b9a51391a08c1eaa44621c0f2d13db0"
+    },
+    {
+      "bytes": 34752,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-setup-failure",
+      "sha256": "584a16771c44734a037c7220a6d0a9ffc336886d3842c23f02849e97cb7ee84f"
+    },
+    {
+      "bytes": 72024,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-sticky",
+      "sha256": "b3b4353f96395966b11a89e9b79d19774697c7b7d4a71933bfb658827b744c5d"
+    },
+    {
+      "bytes": 72016,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-unrepresentable",
+      "sha256": "39e888851030dc40acc45afa177b51708d66d3e35bea8e66d4f347e4d21823e0"
+    },
+    {
+      "bytes": 72008,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-zero-factor",
+      "sha256": "2e996590f85ee0d75f2a2a55fac550bf5e855796097d6696175f625b9ef611f1"
+    },
+    {
+      "bytes": 34792,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.identity-mismatch",
+      "sha256": "f88284cbdc243352a58e2a4109b58fa4ea6614400d552441e55597c1d9bee864"
+    },
+    {
+      "bytes": 72056,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.map-failure",
+      "sha256": "a8fa85db1c48b850bf4f4fdcc8ebbac7ad880a0adf0b09984b72e4a882089cd7"
+    },
+    {
+      "bytes": 71800,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.params-CREATE",
+      "sha256": "b683cfa48c1dd637de4010f6dfed7af84fdd72baeadd152b3bc27f9a762db972"
+    },
+    {
+      "bytes": 72000,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.params-SET",
+      "sha256": "d5b0f0a3cd32352ef70a30c0d4a2dd7b2750312a7ece47068a656bd86105abfc"
+    },
+    {
+      "bytes": 72056,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.read-failure",
+      "sha256": "190b81182cc97428e6a847f642cc8e1ca32861faf23e0a16ed63fb1ac0ccfdfc"
+    },
+    {
+      "bytes": 34864,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.validator",
+      "sha256": "fe9fa8803a2011fd98e0d4b2e2514974ee17fb2d572d4e2ee55944c721616630"
+    },
+    {
+      "bytes": 72056,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.worker-limits",
+      "sha256": "b2a9381ba3547216b7d8d0c315838ab95009bda72d496cc42555aa811c842576"
+    },
+    {
+      "bytes": 13340,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/events.jsonl",
+      "sha256": "b77fccaf316b7289b170b63ad7f08b6b1bdfcffd854d00fe43f35029624e6685"
+    },
+    {
+      "bytes": 12538,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/report.json",
+      "sha256": "2260d692b2034fd4b939c75b6722161794dfad523f6d4b5b3f48fae4780c9e59"
+    },
+    {
+      "bytes": 30913,
+      "path": "suites/unit/rust.fmt/artifacts/cargo-fmt-check.log",
+      "sha256": "84f088aa1f80d6462c1fa551604fceeb4eac893d00e25a5a75456a16bb6f45d3"
+    },
+    {
+      "bytes": 996,
+      "path": "suites/unit/rust.fmt/events.jsonl",
+      "sha256": "a07bf50714307f4d8693fa05322ca8188474733b670f84363a85af32f2ae8e39"
+    },
+    {
+      "bytes": 581,
+      "path": "suites/unit/rust.fmt/report.json",
+      "sha256": "2f01502e1d58a6d0f2f4ee9644d1355dedba3dfbe59ad85fdfa9f692cb7dee89"
+    },
+    {
+      "bytes": 23604,
+      "path": "suites/unit/rust.unit/artifacts/cargo-test-bins.log",
+      "sha256": "de5551c032df8ac45049832e0cb9708f936e94906a285a2ccd0c7ccaf40bdbca"
+    },
+    {
+      "bytes": 15336,
+      "path": "suites/unit/rust.unit/artifacts/envelope_shape.candidate.json",
+      "sha256": "93d8125db55983506945fc7fab4895788b3dc1bb1f7738d5833e64a51d15a8c0"
+    },
+    {
+      "bytes": 948,
+      "path": "suites/unit/rust.unit/events.jsonl",
+      "sha256": "dcc445d180d09b68c4ceb232550318e5aafcf317f39607bb96817b441f24d487"
+    },
+    {
+      "bytes": 540,
+      "path": "suites/unit/rust.unit/report.json",
+      "sha256": "d02dac440d0fb457753662b338fef2f559a138cf01ff3706011e22224885ead5"
+    }
+  ],
+  "original_root": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-core-01",
+  "ownership": "Identified copies do not relocate active ownership or establish resource settlement.",
+  "run_id": "20261106T143145Z_42dd5893",
+  "scope": "Run metadata and complete nonpassing case observations; passed case raw output omitted.",
+  "sha256": "1f792d35e8d43b905cf4231491f61857895cec94261a0b88ab3cea9d81880c5b"
+}

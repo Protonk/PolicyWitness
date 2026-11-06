@@ -24,6 +24,9 @@ enum PWActorLimits {
     static let releaseWaitMs = 60_000
     static let exchangeMs = 5_000
     static let lifetimeMs = 180_000
+    static let requiredEntitlements = 64
+    static let entitlementKeyBytes = 255
+    static let terminationMs = 5_000
 }
 
 struct PWRunnerActorSandbox: Codable {
@@ -44,15 +47,41 @@ struct PWRunnerActorSandbox: Codable {
 struct PWRunnerActor: Codable {
     var actor_id: String
     var sandbox: PWRunnerActorSandbox
-    init(actor_id: String, sandbox: PWRunnerActorSandbox) { self.actor_id = actor_id; self.sandbox = sandbox }
-    enum CodingKeys: String, CodingKey, CaseIterable { case actor_id, sandbox }
+    var equipment: String?
+    var required_entitlements: [String]
+    init(actor_id: String, sandbox: PWRunnerActorSandbox, equipment: String? = nil, required_entitlements: [String] = []) {
+        self.actor_id = actor_id; self.sandbox = sandbox; self.equipment = equipment
+        self.required_entitlements = required_entitlements
+    }
+    enum CodingKeys: String, CodingKey, CaseIterable { case actor_id, sandbox, equipment, required_entitlements }
     init(from decoder: Decoder) throws {
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
         actor_id = try c.decode(String.self, forKey: .actor_id)
         sandbox = try c.decode(PWRunnerActorSandbox.self, forKey: .sandbox)
+        equipment = c.contains(.equipment) ? try c.decode(String.self, forKey: .equipment) : nil
+        required_entitlements = c.contains(.required_entitlements) ? try c.decode([String].self, forKey: .required_entitlements) : []
     }
     var applies: Bool { sandbox.mode == PWRunnerActorSandbox.modeApply }
+}
+
+struct PWRunnerAfterTermination: Codable {
+    let actor_id: String
+    enum CodingKeys: String, CodingKey, CaseIterable { case actor_id }
+    init(actor_id: String) { self.actor_id = actor_id }
+    init(from decoder: Decoder) throws {
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        actor_id = try c.decode(String.self, forKey: .actor_id)
+    }
+}
+
+struct PWRunnerPreparationFailure: Codable {
+    var stage: String
+    var code: String
+    var actor_id: String?
+    var binding_ref: String?
+    var reason: String?
 }
 
 // MARK: - Authority exchange vocabulary (shared with the reply's readers)
@@ -103,6 +132,9 @@ struct PWRunnerActorResult: Codable {
     var subprocess: PWRunnerSubprocess?
     var compiled_profile: CompiledProfileCapture?
     var visits: [Int]
+    var equipment: PWRunnerActorEquipment? = nil
+    var application: PWRunnerActorApplication? = nil
+    var owned_reap: PWOwnedReapObservation? = nil
 }
 
 /// Token, delivery and handle tables, keyed by the request's references.

@@ -26,7 +26,7 @@ control must lose actual worker completion. A separate read-only executable
 descriptor exercises fd 5 delivery; this is not extension-token consumption.
 
 Earlier setup controls replace `ftruncate`, both `mmap` refusal forms, both
-pipes, checked pipe flags and extension duplication with EIO. Native spawn
+pipes, checked pipe flags and authority descriptor duplication with EIO. Native spawn
 refusal uses a missing executable. All retain one successful original close
 and no invented child. `mapping.c` inspects the complete acquired VM range
 immediately before/after the real production unmap, using `mach_vm_region` and

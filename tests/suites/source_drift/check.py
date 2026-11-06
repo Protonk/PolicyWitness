@@ -770,7 +770,7 @@ def check_prediction_unavailable_agreement(tree: repository_tree.Tree) -> list[P
 #
 # The host must not link, load or call libsandbox. Every native sandbox
 # operation belongs to the worker (pw-probe-runner), validator
-# (sb_api_validator), or extension issuer (pw-extension-issuer). The host
+# (sb_api_validator). Both signed worker roles share the same native source. The host
 # joins their observations without executing their sandbox API work. The
 # companion binary check is
 # tests/lib/artifact.py (`nm -u` on the shipped PWRunner).
@@ -1157,7 +1157,7 @@ RULES = (
          inputs=(required(MESON_BUILD), required(MESON_OPTIONS), directory(CORE_DIR, (".swift",)),
                  *(directory(shim, (".c",)) for shim in SHIM_DIRS),
                  *(required(path) for path in (native_sources.API, native_sources.SERVICE_MAIN, native_sources.CLIENT_MAIN,
-                                               native_sources.WORKER, native_sources.VALIDATOR, native_sources.ISSUER))),
+                                               native_sources.WORKER, native_sources.VALIDATOR))),
          helpers=("tests/lib/native_sources.py",)),
     Rule("readmes_present", check_readmes_present,
          inputs=(members(SUITES_DIR), pattern(f"{SUITES_DIR}/*/README.md"))),

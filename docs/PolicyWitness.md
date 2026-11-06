@@ -41,7 +41,7 @@ Create a specimen:
 ```sh
 cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "specimen_id": "file_read_deny",
   "policy": {
     "format": "sbpl",
@@ -116,7 +116,7 @@ PolicyWitness supports imports the same way `sandbox-exec` does — `(import "na
 
 ### Can PolicyWitness test sandbox-extension behavior?
 
-Yes. See [EXTENSIONS.md](#sandbox-extensions) for supported extension operations and authority types.
+Yes. Use an unapplied, unentitled actor to issue and transfer a token to an applied, selected actor, then compare fresh access before consumption, during use and after release. Add actors to test re-delegation. Unapplied does not mean unrestricted; signing observations do not establish effective authority. See [EXTENSIONS.md](#sandbox-extensions) for operations and evidence limits.
 
 ### Which happens first, the prediction or the attempt?
 
@@ -159,13 +159,12 @@ Top-level fields:
 - Exactly one non-null plan form: `probe_plan` (array of paired steps) or
   `phases` (ordered array of phase objects)
 - `runner`: object (optional; select runner mode and external runners)
-- `extensions`: array (optional; file-extension declaration, requires `phases`)
 
 Minimal skeleton (copy/paste):
 
 ```json
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "specimen_id": "skeleton",
   "runner": { "mode": "standard" },
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
@@ -175,7 +174,7 @@ Minimal skeleton (copy/paste):
 Notes:
 - The [accepted input contract](CONTRACT.md#accepted-input-contract) rejects
   unsupported request versions, unknown fields and wrong types explicitly.
-  Optional nulls mean absence; parameter names inside `policy.params` remain
+  Optional nulls generally mean absence; actor equipment/requirements, termination dependencies and the actor equipment override map reject null. Parameter names inside `policy.params` remain
   caller-defined. Runtime capacity limits are checked separately.
 - All path rules live inside `policy.sbpl_source`.
 - `probe_plan` may be empty when you only want to exercise sandbox
@@ -194,7 +193,7 @@ the phase array itself must be nonempty.
 
 ```json
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "specimen_id": "two_reads",
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
   "phases": [
@@ -230,44 +229,9 @@ At most <!-- span limits.phase_count.value -->8<!-- /span --> phases and <!-- sp
 
 ### Sandbox extensions
 
-A declaration-form extension specimen declares a local token reference, target
-path and optional authority, then places native consume/release actions in
-explicit phases. The issuer prepares
-one token outside the specimen sandbox under ordinary authority. `read` selects
-`com.apple.app-sandbox.read`; `read_write` selects
-`com.apple.app-sandbox.read-write`. Absent or null authority means `read`.
-The worker applies the submitted policy once and keeps that policy
-through every phase. Record native issuance, consumption and release alongside
-fresh-descriptor file operations to observe access at each stage.
+Extension specimens use actors. Start with an unapplied issuer using `unentitled` equipment and a subject using `selected` equipment under its submitted policy. Equipment selects the signed worker copy; sandbox mode selects whether that process applies an SBPL policy. An unapplied actor may still inherit restrictions. A worker's signing readback does not establish its effective authority.
 
-| Input | Meaning |
-| --- | --- |
-| `extensions: [{"token_ref": "token", "target": "/absolute/path"}]` | A local reference and issuance target; raw token bytes and caller-selected classes are not accepted. |
-| `authority: "read_write"` in that declaration | Select native read-write authority for the resolved target, including a directory. Only `read` and `read_write` are admitted. |
-| `{"step_id": "consume", "extension": {"operation": "consume", "token_ref": "token", "handle_ref": "handle"}}` | Consume the declared token and associate an observed native handle with a distinct local reference. |
-| `{"step_id": "release", "extension": {"operation": "release", "handle_ref": "handle"}}` | Release the earlier consume result if it supplied a handle. No token reference belongs on release. |
-
-The limits are <!-- span limits.extension_declarations.value -->1<!-- /span -->
-declaration, <!-- span limits.extension_consumes.value -->1<!-- /span --> consume
-and <!-- span limits.extension_releases.value -->1<!-- /span --> release across
-the entire specimen. References are nonempty and at most <!-- span limits.extension_reference.value -->63<!-- /span --> UTF-8 bytes.
-Declaration targets have their own <!-- span limits.extension_target.value -->1,023<!-- /span -->-byte cap, distinct
-from ordinary attempt targets. References and paths cannot contain NUL.
-Unknown references, duplicate token/handle names, release before consume,
-repeated actions, unknown fields and mixing an extension declaration with exec
-are refused before execution. Additional declarations are refused even when
-placed in separate phases. The lifecycle actions share the total action cap.
-
-Omitting consumption or release is allowed. Issuance/delivery without consumption,
-consumption without release, and phases containing only lifecycle actions retain
-those distinctions. An action is either an ordinary query/attempt pair or a
-lifecycle action. Lifecycle actions carry available native results and
-publication evidence. Query collection closes before any of that phase's actions,
-including when collection fails. A read after a consume in the same phase has
-any received prediction from before the consume. Place the read in a later phase
-to collect again.
-
-Use an investigator-owned file in a temporary directory for a repeatable example:
+This two-actor specimen reads an owned file before consumption, issues and transfers a token, consumes it, reads again, releases the native handle, then makes another fresh read. Each read opens a new descriptor. The last read records the result after release without assuming revocation.
 
 ```sh
 PW=/Applications/PolicyWitness.app/Contents/MacOS/policy-witness
@@ -275,97 +239,44 @@ PW_EXTENSION_DIR=$(mktemp -d /private/tmp/pw-extension.XXXXXX)
 printf 'extension witness\n' > "$PW_EXTENSION_DIR/target"
 cat > "$PW_EXTENSION_DIR/request.json" <<JSON
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "specimen_id": "extension_lifecycle",
-  "policy": {
-    "format": "sbpl",
-    "sbpl_source": "(version 1)(allow default)(deny file-read-data)(allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
-  },
-  "extensions": [{"token_ref": "token", "target": "$PW_EXTENSION_DIR/target"}],
+  "actors": [
+    {"actor_id": "issuer", "equipment": "unentitled", "sandbox": {"mode": "unapplied"}},
+    {"actor_id": "subject", "equipment": "selected", "sandbox": {"mode": "apply", "policy": {
+      "format": "sbpl", "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"}}}
+  ],
   "phases": [
-    {"phase_id": "before", "actions": [
-      {"step_id": "read_before",
-       "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}},
-       "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}},
-      {"step_id": "consume", "extension": {"operation": "consume", "token_ref": "token", "handle_ref": "handle"}}
-    ]},
-    {"phase_id": "consumed", "actions": [
-      {"step_id": "read_consumed",
-       "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}},
-       "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}},
-      {"step_id": "release", "extension": {"operation": "release", "handle_ref": "handle"}}
-    ]},
-    {"phase_id": "released", "actions": [
-      {"step_id": "read_released",
-       "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}},
-       "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}}
-    ]}
+    {"phase_id": "before", "actor_id": "subject", "actions": [{"step_id": "read_before", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}}]},
+    {"phase_id": "supply", "actor_id": "issuer", "actions": [
+      {"step_id": "issue", "extension": {"operation": "issue", "family": "file", "authority": "read", "target": "$PW_EXTENSION_DIR/target", "token_ref": "token"}},
+      {"step_id": "deliver", "extension": {"operation": "transfer", "token_ref": "token", "recipient": "subject", "delivery_ref": "delivery"}}]},
+    {"phase_id": "consume", "actor_id": "subject", "actions": [
+      {"step_id": "consume_token", "extension": {"operation": "consume", "delivery_ref": "delivery", "handle_ref": "handle"}}]},
+    {"phase_id": "during", "actor_id": "subject", "actions": [
+      {"step_id": "read_during", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}},
+      {"step_id": "release", "extension": {"operation": "release", "handle_ref": "handle"}}]},
+    {"phase_id": "after", "actor_id": "subject", "actions": [{"step_id": "read_after", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}}]}
   ]
 }
 JSON
 "$PW" run "$PW_EXTENSION_DIR/request.json" > "$PW_EXTENSION_DIR/run.json"
 ```
 
-Inspect `extensions`, `extension_events`, `phases` and `steps` under
-`data.runner_result`. Compare successful `fresh_read.content_hex` with the file's
-known bytes, and retain failed reads and the native release result independently.
-The example's phase names describe action placement. Keep the request, file
-and envelope together when investigating the result.
+`read_write` selects the native read-write class and can name a directory. Issue passes the submitted absolute path unchanged with flags zero. Raw token bytes never appear in retained output. A published native result does not by itself establish file access or revocation: use the separate fresh reads and the actor's baseline.
 
-Target preparation records the submitted path, `realpath` result and metadata
-before issuance. Admission accepts targets regardless of owner or file type,
-including symlinks. Resolution/metadata failure is retained as preparation
-evidence. A symlink can resolve successfully, and replacement after preparation
-can make later access
-reach another object. Ordinary query and attempt targets stay as submitted.
-`read_fresh` opens in the worker after application, records descriptor metadata,
-reads at most <!-- span limits.fresh_read_bytes.value -->64<!-- /span --> bytes
-once, and closes it. The returned bytes are a bounded prefix.
+Omitting `equipment` selects `selected`; explicit null is rejected. Optional actor `required_entitlements` is a list of unique entitlement keys that must each have boolean value `true` in that actor's bound and observed live code. Its default is an empty list; explicit null is rejected. This is independent of the controller's `runner.required_entitlements`, which preflights only the selected runner worker. The host verifies both production equipment artifacts against its sealed service-local inventory before launching any actor and inspects each usable actor's owned live code before any scheduled activation. Missing or mismatched equipment never substitutes the other role.
 
-To check directory writes, use the directory as the issuance target and
-`authority: "read_write"`. The policy must admit the selected extension class;
-for example, these rules restrict ordinary writes and permit the read-write
-extension's authority:
+For a specimen that needs the issuer gone before consumption, add `"after_termination": {"actor_id": "issuer"}` to the `consume` phase. The source actor's last scheduled visit must precede the gated phase. The host waits for natural terminal completion and confirmed reaping before activation and query collection; it does not kill the source to satisfy the gate. The normal example has no such dependency.
 
-```scheme
-(deny file-write*)
-(allow file-write* (extension "com.apple.app-sandbox.read-write"))
-```
-
-`write_fresh` opens an existing target without implicit truncation, explicitly
-truncates it to zero, writes the fixed byte `x`, and closes it. `create_fresh`
-attempts exclusive creation with mode argument 0600, then writes `x` and closes.
-It records `lstat` immediately before opening; this observation does not suppress
-the exclusive open. Use distinct unused child names across phases and record
-absence before issuance when testing creation. A child's absent path can leave
-its planned prediction unavailable. Inspect independent contents and directory
-entries to establish effects and persistence after release or worker exit;
-native release alone does not establish revocation or undo completed writes.
-
-A declaration-form request to a current runner bundle without the issuer returns
-`bad_request` with `extension_issuer_unavailable`; an issuer without the native issuance API returns
-`extension_api_unavailable`. Native refusal,
-issuer death, timeout, malformed publication and unconfirmed cleanup retain their
-own issuance evidence and withhold delivery. Worker-side API absence is an
-unavailable lifecycle action. An issued token and a delivered token remain
-separate observations. Raw token bytes travel only through a bounded transient
-channel, never the request, argv, environment, reply or ordinary diagnostics.
-A worker delivery failure is `channel_rejected` or `local_setup_failed`, and
-its `delivery_failure` account names the failing stage with the native return
-and saved errno when a native call supplied them; a cleanup failure after the
-first failure is recorded separately and never changes the status.
-The host clears its own mapping before replying. Copies held inside native
-libraries are outside that observation. The declaration form on BYOXPC uses its
-own bundle-local issuer,
-[signed without the worker's entitlements](#install-a-byoxpc-runner).
+Actor setup automatically reports bounded apparatus operations and their publication. Required apparatus failures stop before compilation/application; missing private extension symbols instead make their actions unavailable. A missing terminal setup publication does not prove application never happened. Read application observations, setup decisions and process disposition separately.
 
 #### Actors: issue inside the sandbox and re-delegate
 
 The actor form puts issuance inside a sandboxed process. Replace `policy` with
 `actors`, give every phase an `actor_id`, and place `issue`, `transfer`,
 `consume` and `release` actions in the phases of the actor that performs them.
-An `unapplied` actor runs under the runner's ordinary authority and can supply
-the first token; an `apply` actor applies its own policy once. Actors are
+An `unapplied` actor skips policy application and can request issuance under its actual inherited conditions; an `apply` actor applies its own policy once. Actors are
 fresh processes that stay alive across their visits; one is active per phase
 and the others are parked. The request below is the shared corpus's principal
 specimen: `A` issues a read token for a file and transfers it to `B`; `B`,
@@ -382,10 +293,10 @@ T="$PW_ACTOR_DIR/target"
 READ='"sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "'"$T"'"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "'"$T"'"}'
 cat > "$PW_ACTOR_DIR/request.json" <<JSON
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "specimen_id": "extension_redelegation",
   "actors": [
-    {"actor_id": "A", "sandbox": {"mode": "unapplied"}},
+    {"actor_id": "A", "equipment": "unentitled", "sandbox": {"mode": "unapplied"}},
     {"actor_id": "B", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source":
       "(version 1) (allow default) (deny file-read-data) (deny file-write*) (deny file-issue-extension) (allow file-read-data (extension \"com.apple.app-sandbox.read\")) (allow file-issue-extension (require-all (extension-class \"com.apple.app-sandbox.read\") (extension \"com.apple.app-sandbox.read\")))"}}},
     {"actor_id": "C", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source":
@@ -429,18 +340,22 @@ File sandbox extensions carry read or read-write authority for a path from an
 issuing process to a consuming process. PolicyWitness records their lifecycle
 alongside probes of file access.
 
-PolicyWitness accepts two request forms for specimens that use sandbox extensions.
+Extension specimens use actors: one fresh worker per named process, with explicit `issue`, `transfer`, `consume` and `release` actions. Start with an unapplied, unentitled issuer and an applied, selected subject. Add a third actor when testing whether a subject that consumed a token can issue a new one and transfer it onward. Every actor owns at least one phase; issuance takes place inside that actor after its own setup.
 
-| Form | How authority enters | Processes | Fields |
-| --- | --- | --- | --- |
-| Declaration | A fresh helper outside the specimen sandbox issues one token before the worker exists; the host delivers it to the one worker over a transient channel. | One worker under one policy, plus the issuer. | `policy`, `extensions: [{token_ref, target, authority}]`, explicit `phases` with `consume` and `release` actions. |
-| Actors | An actor issues a token itself, after its own setup, and transfers it explicitly to another actor through host custody. | One fresh worker per actor; an actor is `apply` (its own policy) or `unapplied` (the runner's ordinary authority). Every declared actor owns at least one phase. | `actors: [{actor_id, sandbox: {mode, policy}}]`, explicit `phases` each naming an `actor_id`, with `issue`, `transfer`, `consume` and `release` actions. |
+Each actor chooses `equipment: "selected"` (the default) or `"unentitled"`, independently of `sandbox.mode`. Both are signed copies of the same compiled worker. The selected copy carries the runner's supplied entitlements; the unentitled copy has an empty entitlement dictionary. Neither name establishes effective authority: an unapplied actor can inherit restrictions, and signing entitlements are associated code metadata. Optional actor `required_entitlements` require boolean `true` in that actor's selected equipment and live signing readback. The controller's `runner.required_entitlements` remains a separate preflight on the selected runner worker.
 
-The declaration form answers "what does a consumed token do under this
-policy". The actor form also answers "can a process that consumed a token
-issue another one for the same file, and can a third process use it": the
-re-delegation question, which needs issuance to happen inside the sandboxed
-process rather than in a helper.
+The service validates its own seal, its sealed `Contents/Resources/worker-equipment.json`, and both production worker artifacts before launching any actor. The inventory binds roles to relative paths, signed hashes, CDHashes, identifiers, teams, entitlements and the compiled worker ABI/build identity. There is no fallback between roles. After usable setup and before any activation or query collection, the host inspects the owned live process and matches its associated code to the binding. An inspection failure cancels scheduled activations while preserving any application already observed. Setup-failed or unlaunched actors remain unavailable without turning their missing inspection into a failure of healthy actors.
+
+Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
+
+A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. Expiry or an unusable dependency withholds that phase; cleanup and previously published facts retain their own meanings. The reply retains `actors[].owned_reap` and phase `activation_observation`; the gate references the source reap by `capture_ordinal`. Missing clock timestamps retain facts without establishing gate order.
+
+#### Request forms
+
+| Form | Available operations |
+| --- | --- |
+| Actor specimen | Ordinary probes and explicit issue, transfer, consume and release actions. Equipment and policy application are selected per actor. |
+| Ordinary single-worker specimen | Ordinary probes and phases without extension actions. |
 
 #### Supported families and native calls
 
@@ -449,9 +364,7 @@ process rather than in a helper.
 | `file` | `read` | `com.apple.app-sandbox.read` | `sandbox_extension_issue_file(class, path, 0)` | `sandbox_extension_consume(token)` | `sandbox_extension_release(handle)` |
 | `file` | `read_write` | `com.apple.app-sandbox.read-write` | the same call with the read-write class | the same | the same |
 
-Issuance uses flags zero. The declaration form resolves its target with
-`realpath` before issuance and records both paths; the actor form passes the
-submitted absolute path unchanged.
+Issuance uses flags zero and passes the submitted absolute path unchanged.
 
 #### Operations and references
 
@@ -459,7 +372,7 @@ submitted absolute path unchanged.
 | --- | --- | --- | --- |
 | `issue` | an actor | `family`, `authority`, absolute `target`, new `token_ref` | a token the host takes into custody when the native call returns one |
 | `transfer` | the actor that issued the token | `token_ref`, `recipient` actor, new `delivery_ref` | a delivery the recipient accepts while parked or during its own wait |
-| `consume` | the recipient of a delivery (actor form) or the one worker (declaration form) | `delivery_ref` or `token_ref`, new `handle_ref` | a candidate handle when the native call returns one |
+| `consume` | the recipient of a delivery | `delivery_ref`, new `handle_ref` | a candidate handle when the native call returns one |
 | `release` | the actor that consumed | `handle_ref` | the native release result |
 
 References are specimen-local names. Each `token_ref`, `delivery_ref` and
@@ -534,7 +447,7 @@ extension events stay outside the query/attempt comparison.
 
 | Situation | Reading |
 | --- | --- |
-| Required authority-region or custody setup fails | The host refuses launch, or stops the affected worker before releasing a phase; the run records an apparatus failure. This is distinct from missing native symbols or a native refusal. |
+| Required authority-region or custody setup fails | Host preparation refuses launch, or automatic worker setup records a terminal apparatus failure before policy compilation/application. This is distinct from missing native symbols or a native refusal. |
 | An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are `actor_unavailable`; other actors' evidence stands. The run is `runner_failed`. |
 | An application is published during cleanup after setup expires | Setup stays `setup_timeout` and its visits remain unavailable; `applied` and `application_count` retain the later observed application. |
 | An actor dies during a visit | The visit records how it ended; the scheduler establishes the actor is reaped before activating anyone else; later visits of that actor are unavailable. |
@@ -556,7 +469,7 @@ PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
 PW_EXAMPLE_DIR=$(mktemp -d /private/tmp/pw-input.XXXXXX)
 cat > "$PW_EXAMPLE_DIR/request.json" <<JSON
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "specimen_id": "request-grammar",
   "policy": {
     "format": "sbpl",
@@ -979,7 +892,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 The Refusal names column gives literal `admission_failure.field` values, except
 where it explicitly names a `request_failure` code and path instead. In indexed
-patterns, replace `{actor}`, `{phase}`, `{action}` and `{declaration}` with the
+patterns, replace `{actor}`, `{phase}` and `{action}` with the
 zero-based decimal position in that request array; an action position is local
 to its phase. Braces are notation, not emitted text: for example,
 `actors.{actor}.sandbox.policy.sbpl_source` can emit
@@ -988,12 +901,11 @@ A `request_failure.path` is a separate array of string components, subject to
 the diagnostic retention bounds; it is not the `admission_failure.field`.
 For numeric refusals, names following “with” identify separate admission-record fields.
 
-An ordinary request has one worker. The declaration form adds a pre-worker
-issuer and permits one declaration, consume and release across its phases.
-The actor form is a separate public form, with
+An ordinary request has one worker and no extension actions. Extension
+specimens use the actor form, with
 up to <!-- span limits.actors.value -->8<!-- /span --> workers and <!-- span limits.actor_phases.value -->16<!-- /span --> phases globally,
-and aggregate issue/transfer/consume/release counts. It cannot be mixed
-with declarations. Source and parameter limits apply separately to each policy;
+and aggregate issue/transfer/consume/release counts. The `extensions` field is
+refused, including null. Source and parameter limits apply separately to each policy;
 the total action limit applies once to the whole specimen. Authority participation,
 including being a transfer recipient, excludes exec in that actor; a separate
 actor may exec.
@@ -1055,14 +967,10 @@ actor may exec.
 | Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | `sandbox_check.filter.kind`, `attempt.kind` or `attempt.action`, with `step_id` and `step_index` | Each `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`. Unknown labels within the capacity still receive a meaning refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Specimen ID (`specimen_id`) | 255 UTF-8 bytes | `specimen_id` | The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind`, `policy.format`, `actors.{actor}.sandbox.mode`, `actors.{actor}.sandbox.policy.format`, `phases.{phase}.actions.{action}.extension.operation`, `phases.{phase}.actions.{action}.extension.family` or `phases.{phase}.actions.{action}.extension.authority` | Each run_kind, policy.format, actors[].sandbox.mode, actors[].sandbox.policy.format and extension-action operation, family or authority label. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.issuer_executable_path` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Ordinary/declaration phases (`phase_count`) | 8 items | `phases` | Explicit phases in an ordinary or declaration request; probe_plan normalizes to one phase. Actor requests use actor_phases. Excess returns admission_failure before any child. | Fixed. |
+| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.actor_equipment_executable_paths.{role}` | Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Actor equipment overrides are keyed by selected or unentitled role. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Ordinary phases (`phase_count`) | 8 items | `phases` | Explicit phases in an ordinary request; probe_plan normalizes to one phase. Actor requests use actor_phases. Excess returns admission_failure before any child. | Fixed. |
 | Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id`, with `index` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
-| Declaration-form declarations (`extension_declarations`) | 1 item | `extensions` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. Additional declarations return `admission_refused`. | Fixed. |
-| Declaration-form consume actions (`extension_consumes`) | 1 item | No `admission_failure.field`; `request_failure.code: repeated_consume`, with `request_failure.path: ["phases", "{phase}", "actions", "{action}", "extension"]` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated consume returns `repeated_consume`. | Fixed. |
-| Declaration-form release actions (`extension_releases`) | 1 item | No `admission_failure.field`; `request_failure.code: repeated_release`, with `request_failure.path: ["phases", "{phase}", "actions", "{action}", "extension"]` | Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate. A repeated release returns `repeated_release`. | Fixed. |
-| Extension references and recipients (`extension_reference`) | 63 UTF-8 bytes | `extensions.{declaration}.token_ref`, `phases.{phase}.actions.{action}.extension.token_ref`, `phases.{phase}.actions.{action}.extension.handle_ref`, `phases.{phase}.actions.{action}.extension.delivery_ref` or `phases.{phase}.actions.{action}.extension.recipient` | Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL. Excess returns `admission_refused`; references must also satisfy declaration and action order. | Fixed. |
-| Issuance target path (`extension_target`) | 1,023 UTF-8 bytes | `extensions.{declaration}.target` | Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows. Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence. | Fixed. |
+| Extension references and recipients (`extension_reference`) | 63 UTF-8 bytes | `phases.{phase}.actions.{action}.extension.token_ref`, `.handle_ref`, `.delivery_ref` or `.recipient` | Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL. Excess returns `admission_refused`; references must also satisfy actor resource ownership and action order. | Fixed. |
 | Specimen actors (`actors`) | 8 items | `actors` | Actor objects in one actor-form request; every phase names one of them. Excess returns `admission_refused` before any child. | Fixed. |
 | Actor-form phases (`actor_phases`) | 16 items | `phases` | All explicit phases across the complete actor-form request, including empty visits; each visits one actor. Not a per-actor allowance. Excess returns `admission_refused` before any child. | Fixed. |
 | Extension issues (`actor_issues`) | 32 items | `extension.issue` | Issue actions across the complete actor-form specimen; each assigns one token reference. Excess returns `admission_refused` before any child. | Fixed. |
@@ -1071,6 +979,8 @@ actor may exec.
 | Extension releases (`actor_releases`) | 64 items | `extension.release` | Release actions across the complete actor-form specimen; at most one per handle. Excess returns `admission_refused` before any child. | Fixed. |
 | Actor identifier (`actor_id`) | 63 UTF-8 bytes | `actors.{actor}.actor_id` or `phases.{phase}.actor_id` | Each actor declaration identifier and phase actor reference; nonempty, no NUL. Extension transfer recipient identifiers use the extension_reference row. Excess returns `admission_refused`; empty or duplicate identifiers are request refusals. | Fixed. |
 | Issue target (`extension_issue_target`) | 1,023 UTF-8 bytes | `phases.{phase}.actions.{action}.extension.target` | Absolute path an issue action submits; passed to the native call unchanged. Excess returns `admission_refused`; a relative target is a request refusal. | Fixed. |
+| Actor entitlement requirements (`actor_required_entitlements`) | 64 items | `actors.{actor}.required_entitlements` | Unique nonempty required boolean entitlement keys per actor. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
+| Actor entitlement requirement key (`actor_entitlement_key`) | 255 UTF-8 bytes | `actors.{actor}.required_entitlements.{key}` | Each actor requirement key, excluding NUL. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
 
 ### Execution budgets
 
@@ -1080,7 +990,7 @@ actor may exec.
 | Runner verification wait (`runner_verify_wait`) | 5,000 milliseconds | Default allowance for the fixed runner verify specimen, shared by reservation acquisition and the execution reply wait. Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate. | Flag `--timeout-ms` on `runner verify`. |
 | Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline per policy delivery starting immediately after spawn; partial writes and interrupted calls do not restart it. Actor delivery is also capped by the remaining aggregate setup allowance. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence. | Fixed; internal driver controls may shorten it. |
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Elapsed monotonic wait after successful policy delivery and readiness-pipe setup, capped for an actor by remaining setup allowance. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
-| Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Elapsed monotonic publication wait for ordinary/declaration execution, starting after the readiness wait and excluding synchronous validator collection. Actor execution uses actor_execution_allowance instead. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed; `_test_overrides.worker_timeout_ms` replaces the ordinary/declaration default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance. |
+| Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Elapsed monotonic publication wait for ordinary execution, starting after the readiness wait and excluding synchronous validator collection. Actor execution uses actor_execution_allowance instead. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed; `_test_overrides.worker_timeout_ms` replaces the ordinary default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance. |
 | Actor setup allowance (`actor_setup_allowance`) | 10,000 milliseconds | One aggregate elapsed monotonic allowance starting before authority-region preparation and ending at setup disposition, including launches, policy delivery and readiness. Remaining setup caps each subwait. An actor whose setup is unresolved at expiry is stopped and reported `setup_timeout`; independent actors keep their own dispositions. | Fixed. |
 | Actor schedule allowance (`actor_execution_allowance`) | 120,000 milliseconds | One elapsed monotonic allowance for the complete serial actor schedule after setup, excluding synchronous validator collection; not one allowance per actor. Expiry ends the current visit (`arrival_timeout` or `completion_timeout`) and cancels the remaining schedule; every earlier publication is retained. | Fixed. |
 | Actor collection allowance (`actor_collection_allowance`) | 30,000 milliseconds | One aggregate allowance for validator planning and synchronous collection across all actor phases. This is the actor counterpart of phase_collection_wait, not an additional pool. Exhaustion marks later phases `budget_exhausted`; earlier collections are retained. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
@@ -1099,21 +1009,21 @@ actor may exec.
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | One absolute client allowance, including helper launch/stdin delivery, reservation acquisition and the execution reply wait. Direct helper invocation starts after reading input. Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
 | External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. The setting controls launch pacing, not a guaranteed request-delivery time. Without the key launchd uses its ten-second default. Acquisition reaching an occupied or retiring host can retry without sending the specimen. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
-| Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic planning and collection time across ordinary/declaration phases. Actor form uses the single actor_collection_allowance pool. Remaining allowance caps each validator I/O deadline; cleanup and scheduling can overrun it. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
-| Issuer collection wait (`extension_issuer_wait`) | 5,000 milliseconds | Declaration form only: monotonic host wait after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; actor issue actions do not use this helper or allowance. Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait. | Fixed. |
+| Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic planning and collection time across ordinary phases. Actor form uses the single actor_collection_allowance pool. Remaining allowance caps each validator I/O deadline; cleanup and scheduling can overrun it. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
 | Sysctl value-read destination (`sysctl_read_bytes`) | 4,096 bytes | Destination for one post-apply sysctlbyname value read with a non-null buffer; no sizing call or retry. Larger values can fail within this bound. Returned value bytes and post-call length are discarded; a failed call does not diagnose whether capacity was insufficient. | Fixed. |
 | Reservation lease (`reservation_lease`) | 5,000 milliseconds | Requested unused lease, capped by the host; the client requests no more than its remaining allowance. Expiry or owner disconnect retires the unused host. Submission checks expiry atomically and an old timer cannot terminate execution. | Fixed. No renewal. |
 | Reservation RPC wait (`reservation_rpc_wait`) | 5,000 milliseconds | Maximum wait for one reserve reply, also bounded by the original overall client deadline. Expiry abandons and invalidates that connection; acquisition may continue without submitting a specimen. | Fixed per-attempt ceiling. |
 | Reservation acquisition attempts (`reservation_attempts`) | 256 items | Every opened acquisition attempt, including transport failures and occupied replies. Exhaustion ends acquisition explicitly at attempt_limit with no submission; it can precede the overall timeout. Every attempted acquisition stays in the capture. | Fixed. |
 | Reservation retry delay (`reservation_retry_delay`) | 100 milliseconds | Minimum delay between a failed/occupied attempt and another connection, within the remaining allowance. No delay after a successful grant. Scheduling may take longer; neither waiting nor progress renews the deadline. | Fixed minimum. |
+| Actor termination dependency wait (`actor_termination_wait`) | 5,000 milliseconds | Maximum wait before a dependent phase, additionally capped by remaining execution and lifetime allowances. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
 
 ### Queries and transport
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 85,852,557 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
-| Runner client output (`controller_output`) | 260,046,848 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
+| Informative reply size bound (`runner_reply_maximum`) | 94,205,342 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Runner client output (`controller_output`) | 285,212,672 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from each sbpl-check invocation, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
 | Validator reply frame (`validator_reply_frame`) | 8,192 bytes | UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain. | Fixed. |
@@ -1127,11 +1037,11 @@ actor may exec.
 | Validator error string (`validator_reply_error`) | 511 UTF-8 bytes | Bytes in a decoded validator error string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
 | Transient token storage (`extension_token_storage`) | 16,384 bytes | Fixed token array including its terminating NUL; never part of a retained reply. Empty, oversized or malformed publications cannot supply a consumed token. | Fixed. |
 | Maximum token payload (`extension_token_payload`) | 16,383 bytes | Nonempty token bytes excluding the required trailing NUL. Larger native results report `token_oversized`; malformed delivery is unavailable. | Fixed. |
-| Transient extension channel (`extension_channel`) | 17,472 bytes | Declaration-form logical mapped channel with header, resolved path and token array. The OS backing object may round its storage up; actor authority slots are separate. Insufficient backing size or invalid channel geometry cannot supply a token. | Fixed. |
 | Reservation control bytes (`reservation_control_bytes`) | 65,536 bytes | Encoded reservation request or control reply, before JSON decoding. Excess is a protocol failure. No oversized control can grant execution. | Fixed. |
 | Client error message (`client_error_message`) | 1,024 UTF-8 bytes | Retained error prose at a Unicode boundary. Excess is truncated with message_truncated; error stage, domain and native code remain separate observations. | Fixed. |
 | Client error domain (`client_error_domain`) | 128 UTF-8 bytes | Retained native error domain at a Unicode boundary. Excess is truncated with domain_truncated. No arbitrary userInfo dictionary is retained. | Fixed. |
-| Client host reply retention (`client_reply_retention`) | 88,080,384 bytes | Host result bytes retained before base64 encoding in the client capture. Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct. | Fixed; must cover the informative maximal reply. |
+| Client host reply retention (`client_reply_retention`) | 96,468,992 bytes | Host result bytes retained before base64 encoding in the client capture. Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct. | Fixed; must cover the informative maximal reply. |
+| Authority setup encoded reserve (`authority_setup_reply`) | 524,288 bytes | Conservative JSON allowance for host run, eight regions, thirty-two custody slots and eight workers; at most 388 operation cells. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
 
 ### Evidence capture
 
@@ -1142,12 +1052,21 @@ actor may exec.
 | Optional compiled-object capture (`compiled_profile`) | 1,048,576 bytes | Raw bytecode bytes per optional compiled-object receipt before base64 encoding, separately for each opted-in apply actor. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
 | Worker observed path (`observed_path`) | 1,023 bytes | Retained bytes in each worker-observed path. Path observation can be absent or bounded; a host-side path diagnostic is a separate observation. | Fixed. |
 | Worker attempt error text (`attempt_error`) | 255 bytes | Retained bytes in each worker attempt error message. Error text is bounded; structured result and status fields remain separate. | Fixed. |
-| Phase records per worker region (`phase_records`) | 16 items | Fixed phase records in each worker shared header. Ordinary/declaration requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records. A worker refuses a header naming more phases than its records before application. | Fixed. |
+| Phase records per worker region (`phase_records`) | 16 items | Fixed phase records in each worker shared header. Ordinary requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records. A worker refuses a header naming more phases than its records before application. | Fixed. |
 | Authority slot storage (`authority_slot_bytes`) | 16,448 bytes | One token publication slot in an actor's authority region: a fixed header and the token buffer. A region holds one outbound slot per admitted issue and one inbound slot per admitted delivery to that actor, with distinct bounded transfer answer cells; nothing in it enters the reply. | Fixed. |
 | Phase publication storage (`phase_publications`) | 512 bytes | Sixteen fixed 32-byte phase records within each shared header, one per visit an actor can be activated in; the legacy form uses the first eight. The legacy and actor-form phase caps prevent excess publication storage. | Fixed. |
 | Fresh file-read prefix (`fresh_read_bytes`) | 64 bytes | At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix. Reads of longer files remain supported; the bounded result does not claim complete file contents. | Fixed. |
 | Request-failure path depth (`request_failure_path_components`) | 8 items | Components in a retained request_failure.path, including object keys and array positions. Excess withholds the entire path as null; no shortened location is substituted. | Fixed. |
 | Request-failure path component (`request_failure_path_component`) | 63 UTF-8 bytes | Each component in a retained request_failure.path. The separate parameter_key admission-record echo has its own larger bound. Excess withholds the entire path as null; no shortened location is substituted. | Fixed. |
+| Worker authority setup trailer (`authority_setup_trailer`) | 832 bytes | 64-byte header plus sixteen 48-byte independently published operation cells. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
+| Worker authority setup operation cells (`authority_setup_cells`) | 16 items | Fixed operation slots per worker trailer, including separate cleanup facts. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
+| Equipment entitlement readback (`equipment_entitlement_bytes`) | 65,536 UTF-8 bytes | UTF-8 XML payload in each entitlement readback row. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
+| Equipment static binding records (`equipment_static_bindings`) | 4 items | Two required packaged roles and at most two explicit role overrides. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
+| Equipment live inspections (`equipment_live_inspections`) | 8 items | One inspection per usable actor, before any schedule activation. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
+| Equipment entitlement records (`equipment_entitlement_records`) | 12 items | Four static and eight live readbacks at the maximum actor and override population. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
+| Sealed worker equipment inventory (`equipment_inventory_bytes`) | 1,048,576 bytes | Complete service-local inventory bytes read before actor preparation. A larger input is refused without selecting equipment. An observation exceeding this bound cannot establish eligible actor equipment. | Fixed. |
+| Equipment diagnostic (`equipment_diagnostic_bytes`) | 1,024 UTF-8 bytes | Each equipment diagnostic is bounded before it enters a reply; longer observations retain a bounded diagnostic. An observation exceeding this bound cannot establish eligible actor equipment. | Fixed. |
+| Equipment metadata record (`equipment_metadata_bytes`) | 32,768 bytes | Encoded static-binding or live-execution metadata record, separate from its referenced entitlement plist. An observation exceeding this bound cannot establish eligible actor equipment. | Fixed. |
 
 ### Diagnostic helpers
 
@@ -1169,12 +1088,11 @@ actor may exec.
   shared by all actors. No number here is an end-to-end runtime. The reply records the
   client span in `data.runner_client.started_at_unix_ms` and
   `ended_at_unix_ms`; an expired client wait yields `xpc_timeout`.
-- Declaration-form extension issuance precedes worker creation.
-  Its <!-- span limits.extension_issuer_wait.value_unit -->5,000 milliseconds<!-- /span -->
-  wait starts after the issuer spawns; target preparation and the spawn call
-  precede that clock. Issuer cleanup can overrun the wait. This work consumes
-  the client's reply window but none of the later worker or phase collection
-  budgets. A client timeout does not cancel issuance or its cleanup.
+- Actor setup and signed-code inspection precede schedule activation and share
+  `actor_setup_allowance`. A termination dependency waits at most <!-- span limits.actor_termination_wait.value_unit -->5,000 milliseconds<!-- /span -->
+  within the remaining schedule and lifetime allowances. Cleanup can outlast a
+  wait; a later cleanup reap never turns a timed-out dependency into permission
+  to activate its phase.
 - Phases share one total action/query capacity and a cumulative collection
   allowance of <!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span -->.
   In actor form this is `actor_collection_allowance`, not a second pool.
@@ -1202,9 +1120,9 @@ actor may exec.
   `policy_helper_output`). Output beyond it is marked truncated, and a
   truncated JSON stream is not parsed as a reply.
 - Capacity checking selects the first failing field after decoding. Common
-  checks visit top-level metadata, declaration count/strings, actor identity
-  and sandbox labels, phase actor identities/lifecycle strings, then executable
-  overrides. Ordinary/declaration checks then visit phase/action counts, phase
+  checks visit top-level metadata, actor identity and sandbox labels, phase
+  actor and termination-dependency identities/lifecycle strings, then executable
+  overrides. Ordinary checks then visit phase/action counts, phase
   identities, parameter count, worker strings and query fields. Actor checks
   instead visit actor/phase/action counts, phase identities, aggregate lifecycle
   counts, each policy's source/parameters, ordinary worker strings and query
@@ -1214,7 +1132,7 @@ actor may exec.
   `run_kind` is omitted and an oversized legacy `policy.format` reads `unknown`.
 - The `policy_source`, `parameter_key`, `parameter_value`, `step_id`,
   `attempt_target`, `exec_argument`, `query_operation`, `query_filter_value`,
-  `phase_id`, `extension_reference`, `extension_target` and `test_override_path`
+  `phase_id`, `extension_reference`, `extension_issue_target` and `test_override_path`
   limits also reject embedded NUL, as do lifecycle-action identities and operation
   labels. For a string within
   its byte capacity, that refusal reports unit `nul_bytes`, maximum 0 and the
@@ -1248,7 +1166,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 26, controller envelope 11, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner reply is the host's JSON: its `schema_version` is the response schema, and it
@@ -1633,12 +1551,12 @@ remain in the caller's specimen.
   `hw.machine`; null when a read fails. These describe the host environment.
 - `runner_provenance`: the selected runner's `runner_kind`, bundle identity
   and path, service name, executable path, `runner_registry_id` for an
-  installed BYOXPC runner, and the host's, worker's, validator's and issuer's
+  installed BYOXPC runner, and the host's, selected worker's, unentitled worker's and validator's
   signature metadata and entitlements read back separately
   (`runner_signature`/`runner_entitlements`, `runner_worker_signature`/
   `runner_worker_entitlements`, `runner_validator_signature`/
-  `runner_validator_entitlements`, `runner_issuer_signature`/
-  `runner_issuer_entitlements`). Each entitlement object lists `keys` and
+  `runner_validator_entitlements`, `runner_unentitled_worker_signature`/
+  `runner_unentitled_worker_entitlements`). Each entitlement object lists `keys` and
   `granted`, the keys whose value is `true`. The built-in runner's helpers are
   described from the evidence manifest and carry no signature metadata.
 - `app_provenance`: `evidence_manifest_path`, the app evidence manifest the
@@ -1646,7 +1564,7 @@ remain in the caller's specimen.
   `evidence_verify`, the verification report when `PW_VERIFY_EVIDENCE`
   requested one (null otherwise). The object is null when the manifest could
   not be parsed.
-- `binaries.service`, `binaries.worker`, `binaries.validator` and `binaries.issuer`: null when
+- `binaries.service`, `binaries.worker`, `binaries.validator` and `binaries.unentitled_worker`: null when
   the selected binary is the manifest's entry for that role, so the manifest's
   hash already describes it. Otherwise (a `_test_overrides` executable path or
   a BYOXPC copy) an object with `path`, `actual_sha256`, `baseline_sha256`
@@ -1677,60 +1595,17 @@ The lifecycle [example](#sandbox-extensions) returns these records under
 
 | Record | Fields and supported reading |
 | --- | --- |
-| `extensions[]` | `token_ref`, `extension_class`, `submitted_target`, optional `resolved_target` and `identity`, preparation status/errno, `issuance_status`, optional `issuer`, `delivery_status`, optional `delivered_bytes`, and `host_buffer_erased`. Target identity includes device, inode, mode, UID and GID at preparation time. |
-| `extensions[].issuer` | Selected executable, PID and UID/EUID/GID/EGID, call marker and result publication, pointer nonnullness, errno and token length, plus independent spawn, termination, wait and reap observations. No token or pointer value is exposed. |
-| `extension_events[]` | `phase_id`, `step_id`, operation and references, `call_boundary_observed`, `result_published`, status, optional `native_result`, errno, unavailability reason and lifecycle claims. Actor-form events add `actor_id`, `family`, `delivery_ref`, and for an issue the submitted `target`, `extension_class`, `flags`, `native_nonnull` and `token_length`; a transfer event's status is the host's acknowledgement and it carries no native result. |
-| `transfers[]` | Actor form: `phase_id`, `step_id`, source and recipient actors, `token_ref`, `delivery_ref`, `request_published`, `custody_status`, `copy_status`, `equality`, `recipient_acknowledged`, `source_acknowledged`, `status` and the sender's lifecycle claims. |
-| `resources` | Actor form: `tokens[]` (reference, issuing actor and step, family, status, token length, last declared use), `deliveries[]` (reference, token, source and recipient actors, step, status, delivered length, equality, last declared use) and `handles[]` (reference, delivery, consuming actor and step, status, raw native handle, other handles with the same raw value, release step and whether release was attempted). |
+| `extension_events[]` | `phase_id`, `step_id`, operation and references, `call_boundary_observed`, `result_published`, status, optional `native_result`, errno, unavailability reason and lifecycle claims. Events carry `actor_id`, `family`, `delivery_ref`, and for an issue the submitted `target`, `extension_class`, `flags`, `native_nonnull` and `token_length`; a transfer event's status is the host's acknowledgement and it carries no native result. |
+| `transfers[]` | `phase_id`, `step_id`, source and recipient actors, `token_ref`, `delivery_ref`, `request_published`, `custody_status`, `copy_status`, `equality`, `recipient_acknowledged`, `source_acknowledged`, `status` and the sender's lifecycle claims. |
+| `resources` | `tokens[]` (reference, issuing actor and step, family, status, token length, last declared use), `deliveries[]` (reference, token, source and recipient actors, step, status, delivered length, equality, last declared use) and `handles[]` (reference, delivery, consuming actor and step, status, raw native handle, other handles with the same raw value, release step and whether release was attempted). |
 | `steps[].attempt.fresh_read` | `open_rc` / `open_errno`, `stat_rc` / `stat_errno`, optional descriptor identity, `read_rc` / `read_errno`, `close_rc` / `close_errno` and `content_hex`. Each errno belongs to its failed syscall; successful read count determines the hex length. |
 | `steps[].attempt.fresh_write` | Separate `open_rc` / `open_errno`, optional `truncate_rc` / `truncate_errno`, `write_rc` / `write_errno`, `close_rc` / `close_errno`, and metadata observations described below. Unattempted calls are absent. |
 
-`issuance_status: issued` requires published bounded token evidence and a clean,
-confirmed issuer exit. `issuer_abnormal_exit` retains that publication alongside
-an observed nonzero exit or signal and withholds delivery. An interrupted worker
-can leave `delivery_status: not_observed` despite completed issuance. Consumption
-has its own record in `extension_events`.
+A published nonnull issue becomes usable only after host custody accepts it. Transfer, recipient acknowledgement and consume remain separate observations. Consumption has its own record in `extension_events`.
 
 <!-- BEGIN COPIED EXTENSION STATUSES -->
 
-Issuance and delivery are separate observations. Only `issued` makes the token
-channel eligible for worker delivery. Other issuance statuses withhold it;
-none establishes consumption, effective permission or revocation. Read spawn,
-termination, wait and reap fields independently: a status does not substitute
-for cleanup evidence.
-
-| Issuance status | Publication and supported meaning |
-| --- | --- |
-| `not_started` | Issuance did not start, including when target preparation failed. No issuer result is supplied. |
-| `issuer_unavailable` | The selected issuer executable was unavailable. Preparation and issuance did not start; capability refusal prevents a worker run. |
-| `channel_setup_failed` | Host setup of the transient channel or its descriptor failed before issuer launch. No issuer result is supplied. |
-| `spawn_failed` | Spawn setup or `posix_spawn` failed. The issuer record retains the spawn failure; no child PID or native result is inferred. |
-| `issuer_timeout` | The issuer wait expired without a more specific publication status. Publication may be present; termination requests and final reap observations remain separate. |
-| `issuer_wait_error` | The issuer wait failed without a more specific publication status. Publication may be present; the wait error does not establish child exit. |
-| `issuer_result_missing` | The issuer was reaped without result publication. `result_published` is false, with no native result, errno, token length or published authority IDs. A pre-call marker and exit/signal observation may remain. |
-| `issuer_abnormal_exit` | A bounded token result was published, but the issuer was reaped with a nonzero exit or signal. Publication is retained and delivery withheld. |
-| `native_api_unavailable` | The issuer published that at least one required extension API (issue, consume or release) was unavailable, without a native call. Capability refusal prevents a worker run; cleanup remains independently recorded. |
-| `native_refusal` | The issuer published a null native return and its errno. This observation does not establish why issuance was refused or whether cleanup was clean. |
-| `token_oversized` | A nonnull native return supplied an empty token or no terminator within the token buffer bound. The issuer published that rejection; no deliverable token length is supplied. |
-| `invalid_transport` | Publication was observed, but its header, state/marker relationship or token length failed host validation. Fields from an invalid header are not treated as native results. |
-| `issued` | The issuer published a nonnull native result with a bounded token length and was cleanly reaped. The worker still must validate the channel and publish its own delivery observation. |
-
-Published API unavailability, native refusal, token rejection or invalid transport
-has its own issuance status even if the host wait also timed out or failed.
-For a valid bounded token result, a wait timeout or error withholds delivery and
-keeps that wait status; clean and abnormal reaps distinguish `issued` from
-`issuer_abnormal_exit`.
-
-| Delivery status | Worker observation and supported meaning |
-| --- | --- |
-| `not_observed` | No worker delivery publication was collected. This includes no worker or interruption before publication; it does not negate completed issuance. |
-| `delivered` | The worker published successful channel validation; `delivered_bytes` matches the issued token length. This does not establish a consume call or result. |
-| `token_unavailable` | The worker published that no token descriptor was supplied. No delivered byte count is supplied. |
-| `channel_rejected` | The worker inspected the channel and rejected it. `delivery_failure.stage` is `channel_size` (a successful `fstat` reported an object smaller than the channel; `native_rc` 0 and no errno), `channel_header` (magic, completion or status) or `channel_token` (length, terminator or embedded NUL). Format rejections carry no native result. No delivered byte count is supplied. |
-| `local_setup_failed` | A local native call before channel validation failed. `delivery_failure.stage` is `core_limit` (`setrlimit`), `descriptor_metadata` (`fstat`), `mapping` (`mmap`) or `descriptor_close` (`close`), with that call's `native_rc` and the errno saved immediately after it. The channel contents were not judged. No delivered byte count is supplied. |
-| `native_api_unavailable` | The worker published that consume or release API support was unavailable. No delivered byte count is supplied. |
-
-In the actor form, host custody and explicit transfer have their own statuses.
+Host custody and explicit transfer have their own statuses.
 A custody status describes the host's acceptance of the bytes an actor
 published after a nonnull native issue; a transfer status describes the host's
 answer to the sending actor and is never a native result.
@@ -1741,7 +1616,8 @@ answer to the sending actor and is never a native result.
 | `issued_uncustodied` | The native issue returned nonnull but the host rejected, timed out on or never saw the publication; the token's transfers read `custody_unavailable`. |
 | `null` | The native issue returned NULL with its errno. No custody exists. |
 | `unavailable` | The issue was not called; the event's `unavailable_reason` says why. |
-| `not_reached` | The issue action never published a result. |
+| `not_reached` | Independent progress and slot evidence supports that the issue action's boundary was not reached. |
+| `unresolved` | No eligible complete result establishes the issue state; absence of publication alone does not prove the action was never called. |
 
 | Transfer status | Host observation and supported meaning |
 | --- | --- |
@@ -1754,18 +1630,14 @@ answer to the sending actor and is never a native result.
 | `host_timeout`, `clock_fault` | The sending worker's own wait for the host's answer expired or lost its clock; the host's record may still carry an answer. |
 | `copy_mismatch` | The recipient acknowledged bytes that no longer equalled custody; the delivery was withdrawn. |
 
-An actor event's `unavailable_reason` adds `authority_channel_unavailable` (the
-worker could not map its authority region) and `delivery_unavailable` (the
-named delivery was never accepted by this actor) to the legacy reasons.
+An event can report `authority_channel_unavailable` when its worker cannot use the
+assigned authority region, or `delivery_unavailable` when the named delivery
+was not accepted. Individually unavailable issue, consume and release symbols
+produce operation-specific `native_api_unavailable` decisions; supported
+unrelated operations remain observable. These are no-call decisions, not
+native denial results.
 
 <!-- END COPIED EXTENSION STATUSES -->
-
-When native API support is unavailable, an optional `delivery_cleanup_failure`
-records a failed descriptor close independently of that primary status. It has
-`stage: "descriptor_close"` and the saved native `errno`. Its absence means no
-cleanup failure was reported, not proof that cleanup succeeded. For
-`channel_rejected` and `local_setup_failed`, cleanup observations remain in
-`delivery_failure.cleanup_stage` and `cleanup_errno`.
 
 An event status of `returned` requires native result publication; consumption's
 signed handle value of -1 supplies no handle. Release's native result stays
@@ -1778,8 +1650,7 @@ slots can therefore describe unavailable actions without implying a native call.
 A failed fresh open has no stat/read/close evidence. A completed fresh read keeps
 the first failure in syscall order as the aggregate `read_failed` outcome;
 missing action publication supplies no fresh-read payload. Returned bytes are a
-bounded prefix. Issuer and worker identities describe their observed authority
-separately. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)
+bounded prefix. Actor equipment, native actions and fresh access retain their separate observations. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)
 defines producer and reader validation.
 
 For `write_fresh` and `create_fresh`, `fresh_write` retains each actual syscall
@@ -2346,11 +2217,10 @@ not the exec descendants.
 ### Running specimens in parallel
 
 A run uses a controller and a separate `pw-runner-client` to acquire a fresh
-XPC host. After admission, an ordinary or declaration specimen uses one fresh
+XPC host. After admission, an ordinary specimen uses one fresh
 worker; an actor specimen uses one fresh worker per actor, retained across
 that actor's phases. Each eligible phase gets a fresh validator; a phase with
-no eligible queries creates none. The declaration form also uses a transient
-issuer before worker creation. Exec attempts can create children, and a
+no eligible queries creates none. Exec attempts can create children, and a
 terminal XPC error can trigger independent `sbpl-check` helpers. These processes
 have different lifetimes, so there is no fixed process count per run. Concurrent
 runs add to per-user process-table pressure. A failed worker or validator spawn
@@ -2433,6 +2303,8 @@ BYOXPC is the only external runner kind.
 
 ### Install a BYOXPC runner
 
+Installation verifies the source bundle's existing seal and complete service-local worker inventory before changing bytes. Start from an intact built service. If you change `CFBundleIdentifier` or caller-authentication keys in its `Info.plist`, reseal that source service with your signing identity before installation, for example `codesign --force --options runtime --sign "$IDENTITY" "$BYO"`. Preserve the nested workers and inventory; the installer separately signs the selected worker with your requested entitlements and regenerates signing observations before its final seal. A modified source with a stale or invalid seal is refused.
+
 This sequence is the one the project's own tests exercise and is the
 recommended starting point. Adjust `APP` to wherever `PolicyWitness.app` is
 installed.
@@ -2471,9 +2343,9 @@ Notes:
   supplied entitlements are re-embedded into the binary.
 - The installer signs the copy's embedded worker
   (`Contents/MacOS/pw-probe-runner`) with the identity and the supplied plist,
-  its validator (`Contents/MacOS/sb_api_validator`) and issuer
-  (`Contents/MacOS/pw-extension-issuer`) with the identity alone,
-  and then the enclosing bundle with both. The worker is the process the
+  its validator (`Contents/MacOS/sb_api_validator`) and unentitled worker
+  (`Contents/MacOS/pw-probe-runner-unentitled`) with the identity alone,
+  refreshes the sealed worker equipment inventory, and then signs the enclosing bundle with both. The worker is the process the
   specimen policy is applied to, so the plist you supply is what the kernel
   consults for that policy's `require-entitlement` rules. A copy missing
   a required helper is refused.
@@ -2491,25 +2363,9 @@ plist creation completes installation; loaded state is reported separately.
 Errors after the pending save retain ownership for recovery. Pending runners
 can be listed, inspected and removed, but cannot be selected for specimens.
 
-The registry record reads each binary back separately (`codesign -d
---entitlements` and `codesign -dv`): `signature`
-and `entitlements` describe the host executable, `worker_signature` and
-`worker_entitlements` the worker, `validator_signature` and
-`validator_entitlements` the validator, and `issuer_signature` /
-`issuer_entitlements` the issuer. Each entitlement object lists `keys`
-(every key the plist names) and `granted` (the keys whose value is `true`).
-A record written by an earlier policy-witness carries no worker read-back: it
-can be listed, validated and removed, and it serves specimens that require no
-entitlements, but a specimen with `required_entitlements` is refused until the
-runner is reinstalled. Older records without issuer read-back similarly retain
-unknown issuer provenance and remain manageable. Selecting a current runner copy
-whose issuer file is missing refuses declaration-form extension specimens with
-`extension_issuer_unavailable`; ordinary and actor-form specimens do not depend
-on that helper. Actor issue actions run inside the selected actor worker. An
-older runner binary can refuse the request version or fields before reaching
-this capability check. `runner validate` checks any recorded helper
-against the current copy and reports missing or invalid code; `runner reconcile`
-reports installation state. Reinstall to refresh recorded provenance.
+The registry reads each binary back separately using `codesign`: `signature` and `entitlements` describe the host, `worker_signature` and `worker_entitlements` the selected worker, `unentitled_worker_signature` and `unentitled_worker_entitlements` the unentitled worker, and `validator_signature` and `validator_entitlements` the validator. Each entitlement object lists all `keys` and the `granted` keys whose values are boolean `true`. Current and source worker equipment inventory snapshots retain installation provenance; execution verifies the service-local sealed inventory against current bytes.
+
+Historical registry records remain available for list, reconcile and removal even when their protocol or inventory is unsupported for execution. Unknown historical observations remain unknown; they do not authorize substitution or bypass current equipment validation. `runner validate` checks the current copy and reports failures; `runner reconcile` reports installation state. Reinstall a current service to refresh its provenance.
 
 ### Caller authentication and ad-hoc signing
 
@@ -2597,7 +2453,7 @@ Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
 
 ```json
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "specimen_id": "byoxpc_smoke",
   "policy": {
     "format": "sbpl",
@@ -2649,16 +2505,7 @@ Modifying commands use a stable advisory lock beside the registry and atomic
 JSON replacement. One registry admits one modifier at a time; read-only commands
 remain available. Never remove the lock file while a command might hold it.
 
-`runner validate` verifies each registry entry's bundle recursively, then the
-host, worker and validator individually. It also checks the issuer when the file
-is present or the registry already records issuer evidence. It re-reads those
-signatures and entitlement sets, and reports `invalid` (records with a failure)
-and `failures` rows naming the record and binary (`bundle`, `host`, `worker`,
-`validator` or `issuer`). An older record and bundle with no issuer retain unknown
-issuer evidence; a recorded issuer that disappears fails validation.
-The host's recorded `signature.valid` follows the recursive
-check; each helper's follows its own. Use `runner reconcile` to compare
-installation state with launchctl and `LaunchAgents/`.
+`runner validate` verifies each registry entry's bundle recursively and the host, both current worker variants and validator individually. It also verifies the sealed equipment inventory against the current role artifacts. Historical issuer observations remain inspectable for legacy recovery. The command retains signature and entitlement readbacks and reports failed records in `invalid` and per-binary or `equipment_inventory` failure rows. A valid signature alone does not excuse a stale inventory. Use `runner reconcile` to compare installation state with launchctl and `LaunchAgents/`.
 
 `runner status`, `runner verify`, and `runner remove` emit an envelope with
 `result.normalized_outcome = "not_found"` and exit code 2 when the lookup key

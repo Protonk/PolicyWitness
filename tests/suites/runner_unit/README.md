@@ -74,6 +74,21 @@ ordinary encode/roundtrip carries valid collection/request/reap evidence on all
 
 ## Success criteria
 
+`ActorEquipmentTests` checks inventory/path binding, independently bounded
+readbacks, per-actor requirements and live inspection eligibility. Real
+filesystem symlink/directory/nonexecutable controls use an injected valid seal
+to isolate path refusals. False, absent and unreadable inspection records remain
+constructed controls. Four separate Security-call seams exercise the actual
+failure branches and retained call prefixes; they do not claim native platform
+outages. Signed artifacts and public mixed equipment are checked separately by
+preflight and BYOXPC cases.
+`ActorSchedulerTests` separately requests an owned worker's departure after
+usable setup, observes its actual native reap, and checks that its later
+equipment inspection callback and all scheduled activation remain unreached.
+This establishes exit-before-inspection suppression, not a Security lookup
+against a reused or reaped PID. Deterministic clock/ownership substitutions
+remain separate controls.
+
 - The test executable exits 0 and its final stdout line matches
   `^\d+/\d+ tests passed$`.
 
@@ -224,10 +239,11 @@ completion withhold the bytecode. The
 [ABI suite](../runner_abi_layout/README.md#compiled-object-capture) separately
 checks the C capture helper against constructed objects.
 
-`ExtensionEvidenceTests` also run the native issuer with the host-owned channel.
-They inspect physical zeroization and descriptor closure, and substitute failed
-wait/kill observations after independent test cleanup to verify that published
-issuance cannot supply a delivery descriptor without confirmed host reaping.
+`ExtensionEvidenceTests` validates the shared authority setup, application and
+gate evidence. Actor authority controls inspect full buffer erasure and preserve
+unknown-quiescence storage, while actor scheduler controls independently observe
+owned reap before dependent collection and keep a timed-out gate closed after
+final cleanup.
 
 The combined-phase driver control (`PhaseProtocolTests`, matrix M08) retains a
 validator deadline, failed termination and unconfirmed reap while its late write
@@ -306,8 +322,11 @@ copy must preserve the first issue's bytes while a later issue is published.
 Aliasing the later outbound slot to the first must fail that exact observation.
 C controls independently reject a shared answer cell and premature outbound
 erasure. Compilation errors or unrelated failures do not establish sensitivity.
-This opt-in control requires Swift and clang, with synthetic authority instead
-of native extension calls. It retains
+A removed termination gate must fail an independent native reap observation
+before dependent collection; the source remains alive after its final phase.
+This opt-in control requires the built app, Swift and clang. Handoff controls
+use synthetic authority; the gate control uses fresh signed workers and no
+native extension calls. It retains
 source edits, build receipts and assertion logs, with build products in scratch.
 
 ## Host setup oracle sensitivity (opt-in)

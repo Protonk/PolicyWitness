@@ -1,4 +1,4 @@
-/* Production operation dispatch with counted extension callbacks and a real
+/* Direct operation bodies and production dispatch with counted callbacks and a real
  * fresh file open. Synthetic tokens establish call/association boundaries,
  * never kernel authority. An inherited descriptor names the same file, so
  * matching read bytes alone cannot distinguish the disposable reuse mutant. */
@@ -52,18 +52,19 @@ static int64_t counted_consume(const char *token) {
     consumed++;
     require(!strcmp(token, "synthetic-delivery-Y"), "consume selects the named delivery");
     errno = 0;
-    return 202;
+    return consumed == 1 ? 202 : 303;
 }
 
 static int counted_release(int64_t handle) {
     released++;
-    require(handle == 202, "release receives its owned candidate handle");
+    require(handle == (released == 1 ? 202 : 303),
+            released == 1 ? "release receives its owned candidate handle" : "dispatch release receives its own distinct handle");
     errno = 0;
     return 0;
 }
 
 int main(void) {
-    size_t bytes = PW_AUTHORITY_REGION_BYTES(1, 2);
+    size_t bytes = PW_AUTHORITY_REGION_BYTES(2, 2);
     char region_path[] = "/private/tmp/pw-operation-region.XXXXXX";
     int region_fd = mkstemp(region_path);
     require(region_fd >= 0 && unlink(region_path) == 0 && ftruncate(region_fd, (off_t)bytes) == 0,
@@ -72,15 +73,18 @@ int main(void) {
     require(host != MAP_FAILED, "map authority equipment");
     host->magic = PW_AUTHORITY_MAGIC;
     memcpy(host->identity, PW_WORKER_ABI_IDENTITY, sizeof(host->identity));
-    host->actor_index = 0; host->outbound_count = 1; host->inbound_count = 2;
+    host->actor_index = 0; host->outbound_count = 2; host->inbound_count = 2;
     pw_authority_slot_t *out = pw_authority_outbound(host, 0);
     out->writer_actor = 0; out->operation_index = 0; out->resource_index = 5;
+    pw_authority_slot_t *dispatch_out = pw_authority_outbound(host, 1);
+    dispatch_out->writer_actor = 0; dispatch_out->operation_index = 17; dispatch_out->resource_index = 13;
     for (unsigned i = 0; i < 2; i++) {
         pw_authority_slot_t *in = pw_authority_inbound(host, i);
         in->writer_actor = 1; in->operation_index = 8 + i; in->resource_index = 3 + 4 * i;
     }
     pw_shm_header_t header = {0};
     header.actor_mode = PW_ACTOR_MODE_UNAPPLIED; header.actor_index = 0;
+    pw_authority_setup_t setup={0}; setup.required=1;g_setup=&setup;
     prepare_authority(&header, region_fd);
     require(header.authority_status == PW_AUTHORITY_SETUP_MAPPED, "prepare authority equipment");
     g_hdr = &header;
@@ -112,6 +116,36 @@ int main(void) {
     attempt_extension_release_actor(&release);
     require(released == 1, "release native call executed exactly once");
     require(release.native_result_valid == 1 && release.native_result == 0, "release publishes its own native result");
+    /* Keep the direct-body controls above: they establish callback bodies and
+     * payload ownership. These fresh slots enter the real run_attempt switch,
+     * with distinct nonzero issue, delivery and handle operands. No dispatcher
+     * is substituted and no callback count is inferred from completed/status. */
+    pw_shm_slot_t dispatch_issue = {0};
+    dispatch_issue.attempt_kind = PW_ATTEMPT_EXTENSION_ISSUE;
+    dispatch_issue.ext_token_index = 13;
+    strcpy(dispatch_issue.ext_target, "/controlled/issue");
+    run_attempt(&dispatch_issue, &timing, 3, 17, 0);
+    require(issued == 2 && consumed == 1 && released == 1, "dispatch issue calls only its native issue boundary");
+    require(atomic_load(&dispatch_issue.completed) == 1 && atomic_load(&dispatch_issue.call_boundary) == 1
+            && dispatch_issue.native_result_valid == 1 && dispatch_issue.native_result == 0
+            && dispatch_issue.native_errno == EACCES, "dispatch issue publishes its own native refusal");
+    pw_shm_slot_t dispatch_consume = {0};
+    dispatch_consume.attempt_kind = PW_ATTEMPT_EXTENSION_CONSUME;
+    dispatch_consume.ext_delivery_index = 7; dispatch_consume.ext_handle_index = 27;
+    run_attempt(&dispatch_consume, &timing, 3, 18, 0);
+    require(issued == 2 && consumed == 2 && released == 1, "dispatch consume calls only its native consume boundary");
+    require(atomic_load(&dispatch_consume.completed) == 1 && atomic_load(&dispatch_consume.call_boundary) == 1
+            && dispatch_consume.native_result_valid == 1 && dispatch_consume.native_result == 303
+            && handle_valid[27] && handle_table[27] == 303 && handle_table[9] == 202,
+            "dispatch consume binds the distinct result to its named handle");
+    pw_shm_slot_t dispatch_release = {0};
+    dispatch_release.attempt_kind = PW_ATTEMPT_EXTENSION_RELEASE;
+    dispatch_release.ext_handle_index = 27;
+    run_attempt(&dispatch_release, &timing, 3, 19, 0);
+    require(issued == 2 && consumed == 2 && released == 2, "dispatch release calls only its native release boundary");
+    require(atomic_load(&dispatch_release.completed) == 1 && atomic_load(&dispatch_release.call_boundary) == 1
+            && dispatch_release.native_result_valid == 1 && dispatch_release.native_result == 0,
+            "dispatch release publishes its own native result");
     erase_authority();
     munmap(authority, bytes); authority = NULL;
     munmap(host, bytes);
@@ -137,6 +171,6 @@ int main(void) {
     require(fresh_opens == 1, "fresh read executes its own open");
     require(read_slot.access_open_rc == fresh_descriptor && fresh_descriptor != inherited_fd
             && inherited_survived && fresh_closed, "fresh read owns and closes only its new descriptor");
-    puts("issue/consume/release calls, delivery/handle associations and fresh descriptor ownership observed");
+    puts("direct bodies and run_attempt dispatch: issue/consume/release calls, distinct delivery/handle associations and fresh descriptor ownership observed");
     return 0;
 }

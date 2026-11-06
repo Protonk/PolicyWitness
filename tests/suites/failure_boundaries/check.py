@@ -14,7 +14,7 @@ from run_capture import RunCapture
 
 
 def specimen():
-    return {'schema_version': 5, 'specimen_id': 'failure-boundaries',
+    return {'schema_version': 6, 'specimen_id': 'failure-boundaries',
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-read-data',
                 'filter': {'kind': 'path', 'value': '/etc/hosts'}},
@@ -67,14 +67,16 @@ def admission(pw, out):
             'sandbox_check.filter.kind': 127, 'attempt.kind': 127, 'attempt.action': 127,
             'specimen_id': 255, 'run_kind': 63, 'policy.format': 63,
             '_test_overrides.worker_executable_path': 1023,
-            '_test_overrides.issuer_executable_path': 1023,
+            '_test_overrides.actor_equipment_executable_paths.selected': 1023,
+            '_test_overrides.actor_equipment_executable_paths.unentitled': 1023,
             '_test_overrides.validator_executable_path': 1023}
     # At-limit strings that pass admission but cannot run: the format is not sbpl
     # and the seam paths do not exist. Each fails later, in its own way.
     later = {'policy.format': 'bad_request', 'sandbox_check.filter.kind': 'bad_request',
              'attempt.kind': 'bad_request', 'attempt.action': 'bad_request',
              '_test_overrides.worker_executable_path': 'worker_spawn_failed',
-             '_test_overrides.issuer_executable_path': 'bad_request',
+             '_test_overrides.actor_equipment_executable_paths.selected': 'runner_failed',
+             '_test_overrides.actor_equipment_executable_paths.unentitled': 'runner_failed',
              '_test_overrides.validator_executable_path': 'validator_spawn_failed'}
     top_level = ('specimen_id', 'run_kind', 'policy.format') + tuple(f for f in caps if f.startswith('_test_overrides.'))
     for field, maximum in caps.items():
@@ -109,11 +111,12 @@ def admission(pw, out):
                 remaining = actual - 1
                 tail = ('é' * (remaining // 2) + 'x' * (remaining % 2)) if variant.startswith('unicode') else 'x' * remaining
                 if field.startswith('_test_overrides.'):
-                    request['_test_overrides'] = {field.split('.')[1]: '/' + tail}
-                    if field == '_test_overrides.issuer_executable_path':
-                        request['phases'] = [{'phase_id': 'main', 'actions': request.pop('probe_plan')}]
-                        request['extensions'] = [{'token_ref': 'token', 'target': '/etc/hosts'}]
-                    assert len(request['_test_overrides'][field.split('.')[1]].encode()) == actual
+                    set_field(request, field, '/' + tail)
+                    if '.actor_equipment_executable_paths.' in field:
+                        request['actors'] = [{'actor_id': 'subject', 'equipment': field.rsplit('.', 1)[1],
+                                              'sandbox': {'mode': 'apply', 'policy': request.pop('policy')}}]
+                        request['phases'] = [{'phase_id': 'main', 'actor_id': 'subject', 'actions': request.pop('probe_plan')}]
+                    assert len(('/' + tail).encode()) == actual
                 else:
                     step['sandbox_check']['filter']['value'] = '/' + tail
                     assert len(step['sandbox_check']['filter']['value'].encode()) == actual
@@ -152,16 +155,20 @@ def admission(pw, out):
                 if field == 'run_kind': assert runner.get('run_kind') is None, runner
                 if field == 'policy.format': assert runner['policy_format'] == 'unknown', runner
                 if field.startswith('_test_overrides.'):
-                    assert (runner.get('test_overrides') or {}).get(field.split('.')[1]) is None, runner
+                    echoed = (runner.get('test_overrides') or {}).get(field.split('.')[1])
+                    if '.actor_equipment_executable_paths.' in field: echoed = (echoed or {}).get(field.rsplit('.', 1)[1])
+                    assert echoed is None, runner
             elif field in later:
                 assert runner.get('admission_failure') is None, runner
                 assert rc == 1 and runner['normalized_outcome'] == later[field], runner
                 if later[field] == 'bad_request':
                     code = {'policy.format': 'unsupported_policy_format', 'sandbox_check.filter.kind': 'unknown_filter_kind',
-                            'attempt.kind': 'unsupported_attempt', 'attempt.action': 'unsupported_attempt',
-                            '_test_overrides.issuer_executable_path': 'extension_issuer_unavailable'}[field]
+                            'attempt.kind': 'unsupported_attempt', 'attempt.action': 'unsupported_attempt'}[field]
                     assert runner['request_failure']['code'] == code, runner
                     assert runner['steps'] == [] and runner.get('runner_subprocess') is None and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
+                if '.actor_equipment_executable_paths.' in field:
+                    assert runner['preparation_failure']['code'] == 'equipment_binding_refused', runner
+                    assert all(a.get('launch') is None for a in runner['actors']), runner
                 if field.startswith('_test_overrides.'):
                     assert runner['test_overrides'][field.split('.')[1]] == request['_test_overrides'][field.split('.')[1]], runner
             else:

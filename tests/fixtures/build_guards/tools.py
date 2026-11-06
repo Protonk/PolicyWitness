@@ -16,12 +16,14 @@ Every call runs the real tool otherwise, with the checkout lock descriptors
 the claim names passed on as every protected launch must, and records a
 receipt naming what was injected. The script's own checks make every refusal.
 """
+import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 
 
 def lock_fds():
@@ -37,6 +39,14 @@ def lock_fds():
     return tuple(sorted(set(found)))
 
 
+def inventory_snapshot(bundle):
+    path = bundle / 'Contents/Resources/worker-equipment.json'
+    if not path.exists():
+        return None
+    data = path.read_bytes()
+    return dict(sha256=hashlib.sha256(data).hexdigest(), manifest=json.loads(data))
+
+
 def main():
     tool = Path(sys.argv[0]).name
     config = json.loads(Path(os.environ['PW_BUILD_GUARD_CONFIG']).read_text())
@@ -48,7 +58,22 @@ def main():
     if tool == 'codesign' and override and '--force' in args and target == Path(override['target']):
         argv = ['/usr/bin/codesign', *override['argv'], str(target)]
         injected.append(dict(kind='codesign', target=str(target), argv=argv))
+    # Observe the real calls, including both sides of the final inner signing
+    # operation. A file present only at seal entry was emitted in that interval;
+    # reading source order alone cannot establish this execution fact.
+    equipment = None
+    if tool == 'codesign' and '--force' in args and target is not None:
+        bundle = next((p for p in (target, *target.parents) if p.suffix == '.xpc'), None)
+        if bundle is not None:
+            equipment = dict(bundle=str(bundle), before=inventory_snapshot(bundle))
+            if target.name in ('pw-probe-runner', 'pw-probe-runner-unentitled'):
+                equipment['input_sha256'] = hashlib.sha256(target.read_bytes()).hexdigest()
+                equipment['unsigned_worker_sha256'] = hashlib.sha256(Path(config['unsigned_worker']).read_bytes()).hexdigest()
+    started_ns = time.monotonic_ns()
     result = subprocess.run(argv, pass_fds=lock_fds())
+    finished_ns = time.monotonic_ns()
+    if equipment is not None:
+        equipment['after'] = inventory_snapshot(Path(equipment['bundle']))
     if result.returncode == 0:
         for replacement in config.get('replacements', []):
             if replacement['tool'] != tool or not args or args[0] != replacement['first']:
@@ -65,7 +90,8 @@ def main():
                 path.chmod(0o755)
                 injected.append(dict(kind='replacement', target=str(path), source=replacement['source']))
     with Path(config['receipt']).open('a') as stream:
-        stream.write(json.dumps(dict(tool=tool, args=args, executed=argv, status=result.returncode, injected=injected)) + '\n')
+        stream.write(json.dumps(dict(tool=tool, args=args, executed=argv, status=result.returncode, injected=injected, equipment=equipment,
+                                     started_ns=started_ns, finished_ns=finished_ns)) + '\n')
     return result.returncode
 
 

@@ -47,7 +47,7 @@ PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
 
 cat > /tmp/file_read_deny.json <<'JSON'
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "specimen_id": "file_read_deny",
   "policy": {
     "format": "sbpl",
@@ -112,7 +112,8 @@ The app contains:
   - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host per specimen and one fresh worker per sandboxed process it names, with a fresh validator per eligible phase)
     - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched per eligible phase for sandbox_check verdicts)
-    - `Contents/MacOS/pw-extension-issuer` (ordinary-authority file-extension issuer with a transient token channel)
+    - `Contents/MacOS/pw-probe-runner-unentitled` (the same worker implementation, signed with empty entitlements)
+    - `Contents/Resources/worker-equipment.json` (the service-sealed worker role, signing and build inventory)
   - `Contents/Resources/Evidence/*` (generated evidence: `manifest.json` with hashes and entitlements, `symbols.json`, and `provenance.json`, the build's record of its tools, configuration, directories and outputs)
 
 The [build tour](docs/BUILD.md) describes the toolchain, build settings,

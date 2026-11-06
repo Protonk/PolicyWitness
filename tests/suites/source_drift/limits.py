@@ -137,22 +137,20 @@ class LimitsDocumentationTests(receipts.TestCase):
         tables = {table.header[0].text: table for table in markdown_reader.parse(shared).tables}
 
         def statuses(table):
-            return {cells[0].text for cells in table.rows if cells[0].code == [cells[0].text]}
-        self.assertEqual(statuses(tables['Issuance status']), {
-            'not_started', 'issuer_unavailable', 'channel_setup_failed', 'spawn_failed',
-            'issuer_timeout', 'issuer_wait_error', 'issuer_result_missing', 'issuer_abnormal_exit',
-            'native_api_unavailable', 'native_refusal', 'token_oversized', 'invalid_transport', 'issued'})
-        self.assertEqual(statuses(tables['Delivery status']), {
-            'not_observed', 'delivered', 'token_unavailable', 'channel_rejected', 'native_api_unavailable',
-            'local_setup_failed'})
+            return {code for cells in table.rows for code in cells[0].code}
+        self.assertEqual(statuses(tables['Custody status']), {
+            'issued', 'issued_uncustodied', 'null', 'unavailable', 'not_reached', 'unresolved'})
+        self.assertEqual(statuses(tables['Transfer status']), {
+            'delivered', 'custody_unavailable', 'recipient_rejected', 'recipient_timeout',
+            'recipient_unavailable', 'request_invalid', 'host_timeout', 'clock_fault', 'copy_mismatch'})
 
     def test_extension_status_copy_rejects_staleness_and_missing_regions_without_writes(self):
         for filename, mutate, recoverable in [
-            (generator.CONTRACT_NAME, lambda t: t.replace('Only `issued` makes', 'Only the status `issued` makes', 1), True),
-            ('docs/PolicyWitness.md', lambda t: t.replace('Only `issued` makes', 'Only the status `issued` makes', 1), True),
+            (generator.CONTRACT_NAME, lambda t: t.replace('This is not consumption.', 'This is not native consumption.', 1), True),
+            ('docs/PolicyWitness.md', lambda t: t.replace('This is not consumption.', 'This is not native consumption.', 1), True),
             (generator.CONTRACT_NAME, lambda t: t.replace(generator.EXTENSION_END, ''), False),
             ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_EXTENSION_END, ''), False),
-            (generator.CONTRACT_NAME, lambda t: t.replace('| Delivery status |', '| Missing table |'), False),
+            (generator.CONTRACT_NAME, lambda t: t.replace('| Transfer status |', '| Missing table |'), False),
         ]:
             with self.subTest(filename=filename, mutation=mutate):
                 root = self.checkout()
@@ -336,15 +334,15 @@ class LimitsDocumentationTests(receipts.TestCase):
                     self.assertEqual(destination.read_text(), 'previous release guide')
 
     def test_constructs_in_comments_or_code_satisfy_no_structural_check(self):
-        tables = ('| Issuance status | Meaning |\n| --- | --- |\n| `issued` | x |\n\n'
-                  '| Delivery status | Meaning |\n| --- | --- |\n| `delivered` | y |\n')
+        tables = ('| Custody status | Meaning |\n| --- | --- |\n| `issued` | x |\n\n'
+                  '| Transfer status | Meaning |\n| --- | --- |\n| `delivered` | y |\n')
         guide = f'{generator.GUIDE_EXTENSION_START}\n{generator.GUIDE_EXTENSION_END}'
 
         def contract(body):
             return f'{generator.EXTENSION_START}\n{body}\n{generator.EXTENSION_END}'
         generator.update_guide_extension_statuses(guide, contract(tables))
-        for body in ('<!--\n' + tables + '-->', '```text\n' + tables + '```', '`| Issuance status |` `| Delivery status |`'):
-            with self.subTest(body=body), self.assertRaisesRegex(ValueError, 'issuance and delivery tables'):
+        for body in ('<!--\n' + tables + '-->', '```text\n' + tables + '```', '`| Custody status |` `| Transfer status |`'):
+            with self.subTest(body=body), self.assertRaisesRegex(ValueError, 'custody and transfer tables'):
                 generator.update_guide_extension_statuses(guide, contract(body))
 
         def rules(body):

@@ -1,0 +1,145 @@
+==> [selection] runner_outcome_bad_request/accepted_input_contract
+==> [runner_outcome_bad_request/accepted_input_contract] start
+==> [runner_outcome_bad_request/accepted_input_contract] exercise current inputs and explicit refusals through CLI and direct XPC
+==> [runner_outcome_bad_request/accepted_input_contract] pass: current requests execute; malformed intent refuses before attempts
+==> [selection] runner_validator_failure/transcript_controls
+==> [runner_validator_failure/transcript_controls] start
+==> [runner_validator_failure/transcript_controls] verify the checked-in validator transcripts directly
+==> [runner_validator_failure/transcript_controls] pass: validator fixture returns the specified partial transcript and drains all probes
+==> [selection] runner_validator_failure/validator_decode_failure_reports_degraded
+==> [runner_validator_failure/validator_decode_failure_reports_degraded] start
+==> [runner_validator_failure/validator_decode_failure_reports_degraded] reverse two verdicts, then malformed; preserve completed evidence and its step association
+==> [runner_validator_failure/validator_decode_failure_reports_degraded] pass: partial verdicts retain step identity; three completed attempts survive validator degradation
+==> [selection] runner_validator_failure/validator_unavailable_reports_degraded
+==> [runner_validator_failure/validator_unavailable_reports_degraded] start
+==> [runner_validator_failure/validator_unavailable_reports_degraded] reverse two verdicts, then eof; preserve completed evidence and its step association
+==> [runner_validator_failure/validator_unavailable_reports_degraded] pass: partial verdicts retain step identity; three completed attempts survive validator degradation
+==> [selection] runner_validator_failure/validator_killed_mid_stream
+==> [runner_validator_failure/validator_killed_mid_stream] start
+==> [runner_validator_failure/validator_killed_mid_stream] real signal after one verdict; observe writes before decoding
+==> [runner_validator_failure/validator_killed_mid_stream] pass: signal, partial verdict, ordered release and independent effects retained
+==> [selection] blackbox_e2e/comparison_controls
+==> [blackbox_e2e/comparison_controls] start
+==> [blackbox_e2e/comparison_controls] reject structural and command changes while allowing corroborated relocation
+==> [blackbox_e2e/comparison_controls] pass: envelope comparison preserves structure and command semantics
+==> [selection] blackbox_e2e/native_comparison_controls
+==> [blackbox_e2e/native_comparison_controls] start
+==> [blackbox_e2e/native_comparison_controls] name dynamic-library, platform-version, size and sandbox-import differences between executables
+==> [blackbox_e2e/native_comparison_controls] pass: structural comparison names library, version, size and import differences
+==> [selection] blackbox_e2e/checker_controls
+==> [blackbox_e2e/checker_controls] start
+==> [blackbox_e2e/checker_controls] verify that prediction failures cannot hide attempt or correlation failures
+valid: ok
+77 independent actor setup/equipment/application/gate controls checked
+/private/tmp/pw-bbx.to0A9F/allow-write/existing.txt: ordered and unordered unlink rows keep their records
+missing-service client capture records no invocation: xpc_timeout
+cleanup witness controls: ok
+reaped: elapsed 0.00s
+client_timeout: elapsed 0.00s
+unreaped: elapsed 0.00s
+malformed_reap: elapsed 0.00s
+removal_error: elapsed 0.00s
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/blackbox_e2e/checker_controls.py", line 709, in <module>
+    main()
+    ~~~~^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/blackbox_e2e/checker_controls.py", line 626, in main
+    run_controls(artifacts)
+    ~~~~~~~~~~~~^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/blackbox_e2e/disposition_controls.py", line 327, in run_controls
+    expected_fixture_controls(out / 'fixtures')
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/blackbox_e2e/disposition_controls.py", line 249, in expected_fixture_controls
+    assert not validate(expected), validate(expected)
+           ^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ['blocked_read: firmlink_resolved with identical UTF-8 bytes must be listed in same_as_input', 'later_read: realpath_resolved with identical UTF-8 bytes must be listed in same_as_input', 'later_read: firmlink_resolved with identical UTF-8 bytes must be listed in same_as_input', 'later_read: attempt realpath_resolved with identical UTF-8 bytes must be listed in same_as_input', 'later_read: attempt parent_realpath_resolved with identical UTF-8 bytes must be listed in same_as_input']
+FAIL: [blackbox_e2e/checker_controls] blackbox checker controls failed
+==> [selection] blackbox_e2e/BBX-001
+==> [blackbox_e2e/BBX-001] start
+==> [blackbox_e2e/BBX-001] SBPL params + deny-signal on file-write
+==> [blackbox_e2e/BBX-001] pass: blackbox e2e ok
+==> [selection] blackbox_e2e/BBX-002
+==> [blackbox_e2e/BBX-002] start
+==> [blackbox_e2e/BBX-002] plain SBPL + negative controls
+==> [blackbox_e2e/BBX-002] pass: blackbox e2e ok
+==> [selection] witness_contract/dossier_witness
+==> [witness_contract/dossier_witness] start
+==> [witness_contract/dossier_witness] the specimen dossier against the request that ran, host facts and manifest read independently, executable overrides, refusals and the stdin delivery receipt
+==> [witness_contract/dossier_witness] pass: data.specimen reports the submitted policy, host, runner, manifest and binaries as independently observed; refusals keep the uniform envelope
+==> [selection] witness_contract/max_targets_reply_survives
+==> [witness_contract/max_targets_reply_survives] start
+==> [witness_contract/max_targets_reply_survives] long-target, escaped-path, fresh-read, lifecycle and exec replies; admission refusal of oversized query values and filter/attempt labels
+denied_ascii: host reply 1450759 bytes; client stdout 1935194 bytes; refused at admission=False
+allowed_escaped: host reply 1939975 bytes; client stdout 2587482 bytes; refused at admission=False
+independent_query: host reply 1826055 bytes; client stdout 2435586 bytes; refused at admission=False
+eight_phase_maximum: host reply 1830373 bytes; client stdout 2441346 bytes; refused at admission=False
+fresh_read_maximum: host reply 1772773 bytes; client stdout 2364546 bytes; refused at admission=False
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/check_max_target_reply.py", line 461, in <module>
+    main()
+    ~~~~^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/check_max_target_reply.py", line 387, in main
+    observations.append(run_case(pw, out, 'extension_action_maximum', mixed))
+                        ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/check_max_target_reply.py", line 331, in run_case
+    check_reply(data['runner_result'], request, **expectations)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/check_max_target_reply.py", line 185, in check_reply
+    assert len(events) == len(runner['extension_events']) == 160
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+FAIL: [witness_contract/max_targets_reply_survives] maximum-target reply contract failed (exit 1; log: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-authority-02/suites/witness_contract/max_targets_reply_survives/artifacts/assertions.log)
+==> [selection] witness_contract/extension_directory
+==> [witness_contract/extension_directory] start
+==> [witness_contract/extension_directory] directory authority with independent modification, exclusive creation and persistence observations
+==> [witness_contract/extension_directory] pass: directory authority controls, fresh writes, creation and withheld publication verified
+==> [selection] witness_contract/extensions
+==> [witness_contract/extensions] start
+==> [witness_contract/extensions] native extension issuance, consumption and release in one worker with fresh reads
+==> [witness_contract/extensions] pass: native lifecycle and fresh descriptor observations retained with phase-local predictions
+==> [selection] witness_contract/extension_policy_qualification
+==> [witness_contract/extension_policy_qualification] start
+==> [witness_contract/extension_policy_qualification] compile and apply the principal specimen's B policy with a baseline fresh read and an ordinary control
+==> [witness_contract/extension_policy_qualification] pass: consumed-extension issuance policy compiles with sbpl-check and applies in a fresh worker
+==> [selection] witness_contract/extension_redelegation
+==> [witness_contract/extension_redelegation] start
+==> [witness_contract/extension_redelegation] run the principal three-actor re-delegation specimen, its positive calibration and four narrow contrasts through the CLI
+==> [witness_contract/extension_redelegation] pass: principal re-delegation credited; calibration exercised issue, transfer, consume and fresh access; 4 contrasts recorded (actors {'A': 14916, 'B': 14917, 'C': 14918})
+==> [selection] witness_contract/actor_compositions
+==> [witness_contract/actor_compositions] start
+==> [witness_contract/actor_compositions] exercise two issuers, fan-out, repeated handles, self-transfer and empty revisits through the public actor form
+==> [witness_contract/actor_compositions] pass: four public compositions preserve resource associations, independent progress after recipient failure and per-actor compiled-profile receipts
+==> [selection] witness_contract/actor_timing_qualification
+==> [witness_contract/actor_timing_qualification] start
+==> [witness_contract/actor_timing_qualification] run matched one-, three- and eight-actor workloads, the aggregate limits workload and the eight-actor re-delegation and calibration shapes; measure every actor-form allowance
+==> [witness_contract/actor_timing_qualification] pass: actor profile qualified on this equipment: largest charged intervals collection_total_ms 20 ms (limits_workload), exchange_max_ms 1 ms (calibration_eight), execution_charged_ms 47 ms (limits_workload), release_wait_max_ms 2 ms (calibration_eight), setup_ms 111 ms (calibration_eight), total_ms 188 ms (limits_workload)
+==> [selection] witness_contract/extension_boundaries
+==> [witness_contract/extension_boundaries] start
+==> [witness_contract/extension_boundaries] actor issuance/setup faults, consume/release interruption, owned termination gates, token confinement and descriptor closure
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/check_extension_boundaries.py", line 355, in <module>
+    main()
+    ~~~~^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/check_extension_boundaries.py", line 350, in main
+    assert not failed, '\n'.join(failed)
+           ^^^^^^^^^^
+AssertionError: worker-116: {'copy_status': 'copied', 'custody_status': 'held', 'delivery_ref': 'delivery', 'equality': 'not_compared', 'lifecycle': {'boundary': {'answer': 'reached', 'basis': ['progress', 'slot', 'attempt_support'], 'state': 'supported'}, 'result': {'answer': 'published', 'basis': ['slot', 'attempt_support'], 'state': 'supported'}, 'summary': 'completed'}, 'phase_id': 'issuer_final', 'recipient_acknowledged': True, 'recipient_actor_id': 'subject', 'recipient_wait': {'budget_ms': 5000, 'clock_fault': False, 'elapsed_ms': 1, 'stop': 'acknowledged'}, 'request_published': True, 'source_acknowledged': True, 'source_actor_id': 'issuer', 'status': 'recipient_rejected', 'step_id': 'transfer', 'token_ref': 'token'}
+worker-117: {'copy_status': 'copied', 'custody_status': 'held', 'delivery_ref': 'delivery', 'equality': 'not_compared', 'lifecycle': {'boundary': {'answer': 'reached', 'basis': ['progress', 'slot', 'attempt_support'], 'state': 'supported'}, 'result': {'answer': 'published', 'basis': ['slot', 'attempt_support'], 'state': 'supported'}, 'summary': 'completed'}, 'phase_id': 'issuer_final', 'recipient_acknowledged': True, 'recipient_actor_id': 'subject', 'recipient_wait': {'budget_ms': 5000, 'clock_fault': False, 'elapsed_ms': 1, 'stop': 'acknowledged'}, 'request_published': True, 'source_acknowledged': True, 'source_actor_id': 'issuer', 'status': 'recipient_rejected', 'step_id': 'transfer', 'token_ref': 'token'}
+FAIL: [witness_contract/extension_boundaries] extension boundary controls failed (exit 1; log: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-authority-02/suites/witness_contract/extension_boundaries/artifacts/assertions.log)
+==> [selection] witness_contract/extension_combinations
+==> [witness_contract/extension_combinations] start
+==> [witness_contract/extension_combinations] matrix-driven faults retain publication, native outcomes and independent interruption receipts
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/check_extension_combinations.py", line 56, in <module>
+    main()
+    ~~~~^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/check_extension_combinations.py", line 51, in main
+    assert all(r['ok'] for r in results), results
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: [{'case': 'M01', 'ok': True, 'issuer_mode': 17, 'worker_mode': 0}, {'case': 'M02', 'ok': False, 'error': "('M02', {'limitations': ['attempt:lifecycle_unresolved'], 'observation': 'unavailable', 'observation_basis': 'no_completed_worker_result', 'operation_relation': 'matched', 'order': 'unestablished', 'target_relation': 'same_submitted'}, {'observation': 'unavailable', 'observation_basis': 'no_completed_worker_result', 'operation_relation': 'matched', 'target_relation': 'same_submitted', 'order': 'unestablished', 'limitations': ['attempt:not_reached']})"}, {'case': 'M03', 'ok': True, 'issuer_mode': 0, 'worker_mode': 104}, {'case': 'M04', 'ok': True, 'issuer_mode': 0, 'worker_mode': 204}, {'case': 'M05', 'ok': True, 'issuer_mode': 0, 'worker_mode': 103}, {'case': 'M06', 'ok': True, 'issuer_mode': 0, 'worker_mode': 201}, {'case': 'M07', 'ok': True, 'issuer_mode': 17, 'worker_mode': 0}]
+FAIL: [witness_contract/extension_combinations] combined extension controls failed (exit 1; log: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-authority-02/suites/witness_contract/extension_combinations/artifacts/assertions.log)
+HARNESS: [blackbox_e2e] suite_exit: case command exited with status 1
+HARNESS: [witness_contract] suite_exit: case command exited with status 1
+HARNESS: [witness_contract] suite_exit: case command exited with status 1
+HARNESS: [witness_contract] suite_exit: case command exited with status 1
+Test run summary: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-authority-02/run.json

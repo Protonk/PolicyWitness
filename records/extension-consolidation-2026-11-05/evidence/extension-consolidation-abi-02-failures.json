@@ -1,0 +1,166 @@
+{
+  "archive": "extension-consolidation-abi-02-failures.tar.gz",
+  "artifact_integrity": null,
+  "bytes": 95443,
+  "case_outcome_counts": {
+    "fail": 1
+  },
+  "case_results": [
+    {
+      "context": "standard",
+      "id": "runner_abi_layout/c_swift_layout_agreement",
+      "reason": "documented C limits or native query controls disagree",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    }
+  ],
+  "completion": {
+    "completed": 1,
+    "selected": 1,
+    "skipped": 0,
+    "unrun": 0
+  },
+  "files": [
+    {
+      "bytes": 2417,
+      "path": "dispatch.json",
+      "sha256": "c0697ac39f71483a2cb1b987129656817d4b7495cc662f4e6e92b214ff595ad3"
+    },
+    {
+      "bytes": 3046,
+      "path": "events.jsonl",
+      "sha256": "efcb2fce95f759d64b8c5e9fe1d3bd59010c7964fc6ce8bdccf569ac2ce0c97b"
+    },
+    {
+      "bytes": 214,
+      "path": "owner.json",
+      "sha256": "6f3f31b44d9b974bca6fb2c588e60716bf70a6d465175027c1e3210d31ef04af"
+    },
+    {
+      "bytes": 96684,
+      "path": "plan.json",
+      "sha256": "a1f4449b380e5041f0fbf4db6f5bc4c52fc28545e14cb9b7afd615ca64bcfcdf"
+    },
+    {
+      "bytes": 201670,
+      "path": "run.json",
+      "sha256": "8c104e2b5e3d474ca172524df245840df9d4d07f91fc95ce949eb6820a64aa17"
+    },
+    {
+      "bytes": 52,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/authority-layout.log",
+      "sha256": "2835e7dcc5336b8ab57fefb8fe43444396586505d845574a8ddf27aaec721755"
+    },
+    {
+      "bytes": 725,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/authority-layout.txt",
+      "sha256": "9408471edc11b5fc8d83e24a888c118ffcdac1aad9ed72dca089cf89bf2d172e"
+    },
+    {
+      "bytes": 33440,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/authority-printer",
+      "sha256": "7db0fc5676c101a00b5c289657ede8a78242a775fd29a77bfb9770899d4e2671"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/authority-printer.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 35368,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/capture",
+      "sha256": "349bf5207acb741b0dbd7cd4f9a61b12d377fc18b6565eb7c8a9433df30497bc"
+    },
+    {
+      "bytes": 1422,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/capture.err",
+      "sha256": "5be2fd4d37a72f3ecf0cef3c29d59192f9ab6230825aab8511c8061ce587846e"
+    },
+    {
+      "bytes": 135,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/diff.json",
+      "sha256": "9ad099b6f62d6b5f98afb0560447ee4ab109089f6b11ed81f975ed59699a2337"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/layout-check.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1849,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/limits.log",
+      "sha256": "5db21b9d3627790d344cc18bf321ec1b48ac9bf86b3e98ee5aa6a2984e7a27a8"
+    },
+    {
+      "bytes": 33512,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer",
+      "sha256": "7e69eea1a435768bf84f09e1d057ff09e05ad34bf3f0debeefe3a5efeaa334e8"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 7878,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer.out",
+      "sha256": "890eea0f911475e32fc2a4afed508dfdb08abd85c9f675d547a2301f0ade49f5"
+    },
+    {
+      "bytes": 69,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/setup-layout.log",
+      "sha256": "abf3bd2cbbb04d921e880f64a3954b41855dfc961355773fbe1eb21ec4b0b617"
+    },
+    {
+      "bytes": 291,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/setup-layout.txt",
+      "sha256": "a06a9282afa54463ce526337c342c3e998c7ab5b91b5896631dd25753e96f470"
+    },
+    {
+      "bytes": 33440,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/setup-printer",
+      "sha256": "a8b62f98d248ce4671e7b69bd1e2d8608ff7ce57cd5c50eb2cf01a69cfb3f255"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/setup-printer.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 34736,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/validator_limits",
+      "sha256": "eec33c452f57e1f3256b1d77da22b85891f3114157f73cdf2147e41a9916ff3d"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/validator_limits.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 72032,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/worker_limits",
+      "sha256": "72f341b7f62d27e9c2b3019e8e54f507c1303f592f64f1ba8502a48ddc54b48c"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/artifacts/worker_limits.err",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3046,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/events.jsonl",
+      "sha256": "efcb2fce95f759d64b8c5e9fe1d3bd59010c7964fc6ce8bdccf569ac2ce0c97b"
+    },
+    {
+      "bytes": 624,
+      "path": "suites/runner_abi_layout/c_swift_layout_agreement/report.json",
+      "sha256": "bd8c4fc7c8cfbe592d350424cc94faf68eaa79a41acdbf155459bdb74a33cf71"
+    }
+  ],
+  "original_root": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-abi-02",
+  "ownership": "Identified copies do not relocate active ownership or establish resource settlement.",
+  "run_id": "20261106T142656Z_5aecfb03",
+  "scope": "Run metadata and complete nonpassing case observations; passed case raw output omitted.",
+  "sha256": "5a7b69a5fa87da0233e36ab8230ac0fd40f287ce9faf97f94811b3a3db7b0fdd"
+}

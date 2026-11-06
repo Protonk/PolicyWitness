@@ -123,7 +123,8 @@ def run_fresh_write_controls(run=None, baseline=None):
             assert any('opened_stat' in error for error in errors) and any('close' in error for error in errors)
         if run is not None:
             document = deepcopy(baseline)
-            step = document['data']['runner_result']['steps'][1]
+            step = next(s for s in document['data']['runner_result']['steps']
+                        if s.get('attempt', {}).get('fresh_read', {}).get('read_rc', -1) >= 0)
             previous = step['attempt']
             previous.pop('fresh_read', None); previous.pop('errno', None)
             previous.update(deepcopy(attempt))

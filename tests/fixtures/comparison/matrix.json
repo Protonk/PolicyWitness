@@ -2603,7 +2603,7 @@
     },
     {
       "id": "M01",
-      "scenario": "issuer publishes a token then exits abnormally; consume and release cannot run",
+      "scenario": "issuing actor publishes then exits abnormally; subject receives no delivery but retains its own visits",
       "specimen": "extension_combinations",
       "step_id": "before",
       "query": "deny",
@@ -2640,7 +2640,7 @@
         "attempt.result_source": "worker",
         "attempt.requested_action": "read_fresh"
       },
-      "control": "witness_contract/extension_combinations: issuer publishes a token then exits abnormally; consume and release cannot run; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "control": "witness_contract/extension_combinations: issuing actor publishes its result then exits before phase completion; subject consume and release publish unavailable without native calls; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
       "comparison": {
         "observation": "permission_failure",
         "observation_basis": "permission_errno",
@@ -2651,7 +2651,9 @@
       },
       "actions": [
         [
-          "before",
+          "before"
+        ],
+        [
           "consume"
         ],
         [
@@ -2665,14 +2667,18 @@
       "issuer_mode": 17,
       "worker_mode": 0,
       "runner_assert": {
-        "extensions.0.host_buffer_erased": true,
-        "extensions.0.issuer.result_published": true,
-        "extensions.0.issuer.exit_code": 87,
-        "extensions.0.issuance_status": "issuer_abnormal_exit",
-        "extensions.0.delivery_status": "token_unavailable",
-        "extension_events.0.status": "unavailable",
-        "extension_events.0.unavailable_reason": "token_unavailable",
-        "extension_events.1.unavailable_reason": "handle_unavailable"
+        "actors.0.subprocess.exit_code": 87,
+        "actors.0.subprocess.reaped": true,
+        "extension_events.0.result_published": true,
+        "extension_events.0.native_nonnull": true,
+        "authority_setup.host.regions.0.ownership.shared_erasure": "performed",
+        "normalized_outcome": "runner_failed",
+        "extension_events.2.result_published": true,
+        "extension_events.2.call_boundary_observed": false,
+        "extension_events.3.result_published": true,
+        "extension_events.2.status": "unavailable",
+        "extension_events.2.unavailable_reason": "delivery_unavailable",
+        "extension_events.3.unavailable_reason": "handle_unavailable"
       },
       "observer_assert": {
         "control_value": 1
@@ -2718,7 +2724,7 @@
         "attempt.requested_action": "read_fresh",
         "attempt.lifecycle.summary": "not_reached"
       },
-      "control": "witness_contract/extension_combinations: worker dies midway through framing validation, before delivery publication; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "control": "witness_contract/extension_combinations: recipient actor dies during inbound framing before acknowledgement; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
       "comparison": {
         "observation": "unavailable",
         "observation_basis": "no_completed_worker_result",
@@ -2742,16 +2748,16 @@
       "issuer_mode": 0,
       "worker_mode": 106,
       "runner_assert": {
-        "extensions.0.issuance_status": "issued",
-        "extensions.0.delivery_status": "not_observed",
-        "extensions.0.delivered_bytes": null,
-        "runner_subprocess.reaped": true,
-        "runner_subprocess.term_signal": 9,
-        "sandboxed_after_apply": false,
-        "extension_events.0.status": "unresolved",
-        "extension_events.0.call_boundary_observed": false,
-        "extension_events.0.result_published": false,
-        "extension_events.1.status": "unresolved"
+        "actors.1.subprocess.reaped": true,
+        "actors.1.subprocess.term_signal": 9,
+        "actors.1.applied": true,
+        "extension_events.2.status": "unresolved",
+        "extension_events.2.call_boundary_observed": false,
+        "extension_events.2.result_published": false,
+        "extension_events.3.status": "unresolved",
+        "extension_events.0.result_published": true,
+        "extension_events.0.native_nonnull": true,
+        "actors.1.setup_status": "applied"
       },
       "observer_assert": {
         "stage": 4,
@@ -2822,11 +2828,11 @@
       "issuer_mode": 0,
       "worker_mode": 104,
       "runner_assert": {
-        "extension_events.0.status": "returned",
-        "extension_events.0.native_result": -1,
-        "extension_events.0.errno": 13,
-        "extension_events.1": null,
-        "phases.1.completion_observed": true
+        "extension_events.2.status": "returned",
+        "extension_events.2.native_result": -1,
+        "extension_events.2.errno": 13,
+        "extension_events.3": null,
+        "phases.2.completion_observed": true
       },
       "observer_assert": {
         "stage": 2,
@@ -2901,12 +2907,12 @@
       "issuer_mode": 0,
       "worker_mode": 204,
       "runner_assert": {
-        "extension_events.0.status": "returned",
-        "extension_events.1.status": "returned",
-        "extension_events.1.native_result": -1,
-        "extension_events.1.errno": 5,
-        "phases.0.completion_observed": true,
-        "phases.2.completion_observed": true
+        "extension_events.2.status": "returned",
+        "extension_events.3.status": "returned",
+        "extension_events.3.native_result": -1,
+        "extension_events.3.errno": 5,
+        "phases.1.completion_observed": true,
+        "phases.3.completion_observed": true
       },
       "observer_assert": {
         "stage": 2,
@@ -2975,13 +2981,13 @@
       "issuer_mode": 0,
       "worker_mode": 103,
       "runner_assert": {
-        "runner_subprocess.term_signal": 9,
-        "runner_subprocess.reaped": true,
-        "extension_events.0.status": "unresolved",
-        "extension_events.0.call_boundary_observed": true,
-        "extension_events.0.native_result": null,
-        "extension_events.0.result_published": false,
-        "extension_events.1": null,
+        "actors.1.subprocess.term_signal": 9,
+        "actors.1.subprocess.reaped": true,
+        "extension_events.2.status": "unresolved",
+        "extension_events.2.call_boundary_observed": true,
+        "extension_events.2.native_result": null,
+        "extension_events.2.result_published": false,
+        "extension_events.3": null,
         "steps.1.attempt.result_source": "synthetic"
       },
       "observer_assert": {
@@ -3055,16 +3061,16 @@
       "issuer_mode": 0,
       "worker_mode": 201,
       "runner_assert": {
-        "runner_subprocess.term_signal": 9,
-        "runner_subprocess.reaped": true,
-        "extension_events.0.status": "returned",
-        "extension_events.1.status": "unresolved",
-        "extension_events.1.call_boundary_observed": true,
-        "extension_events.1.result_published": false,
-        "extension_events.1.native_result": null,
-        "phases.0.completion_observed": true,
-        "phases.1.completion_observed": false,
-        "phases.2.arrival_observed": false
+        "actors.1.subprocess.term_signal": 9,
+        "actors.1.subprocess.reaped": true,
+        "extension_events.2.status": "returned",
+        "extension_events.3.status": "unresolved",
+        "extension_events.3.call_boundary_observed": true,
+        "extension_events.3.result_published": false,
+        "extension_events.3.native_result": null,
+        "phases.1.completion_observed": true,
+        "phases.2.completion_observed": false,
+        "phases.3.arrival_observed": false
       },
       "observer_assert": {
         "stage": 1,
@@ -3112,7 +3118,7 @@
         "attempt.result_source": "worker",
         "attempt.requested_action": "read_fresh"
       },
-      "control": "witness_contract/extension_combinations: published issuer output and abnormal exit survive when both lifecycle actions are omitted; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "control": "witness_contract/extension_combinations: published issue result and abnormal actor exit survive when both lifecycle actions are omitted; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
       "comparison": {
         "observation": "permission_failure",
         "observation_basis": "permission_errno",
@@ -3132,13 +3138,15 @@
       "issuer_mode": 17,
       "worker_mode": 0,
       "runner_assert": {
-        "extensions.0.host_buffer_erased": true,
-        "extensions.0.issuer.result_published": true,
-        "extensions.0.issuer.exit_code": 87,
-        "extensions.0.issuance_status": "issuer_abnormal_exit",
-        "extensions.0.delivery_status": "token_unavailable",
-        "extension_events": [],
-        "phases.1.completion_observed": true
+        "phases.2.completion_observed": true,
+        "actors.0.subprocess.exit_code": 87,
+        "actors.0.subprocess.reaped": true,
+        "extension_events.0.result_published": true,
+        "extension_events.0.native_nonnull": true,
+        "authority_setup.host.regions.0.ownership.shared_erasure": "performed",
+        "normalized_outcome": "runner_failed",
+        "extension_events.1.result_published": false,
+        "phases.0.completion_observed": true
       },
       "observer_assert": {
         "control_value": 1

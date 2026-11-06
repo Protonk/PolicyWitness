@@ -105,10 +105,10 @@ private func readable(_ slot: CWorkerSlotResult?) -> Bool { slot?.completed == t
 /// publications frame correctly. No native extension operation is involved.
 func runHandoffCopyBoundaryControl() throws {
     let plan = AuthorityPlan(tokens: [
-        AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 2),
-        AuthorityPlanToken(index: 1, actorIndex: 0, slot: 1, lastUseSlot: 3)], deliveries: [
-        AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 2),
-        AuthorityPlanDelivery(index: 1, tokenIndex: 1, sourceActorIndex: 0, recipientActorIndex: 0, slot: 3)])
+        AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 2, outboundPosition: 0),
+        AuthorityPlanToken(index: 1, actorIndex: 0, slot: 1, lastUseSlot: 3, outboundPosition: 1)], deliveries: [
+        AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 2, inboundPosition: 0),
+        AuthorityPlanDelivery(index: 1, tokenIndex: 1, sourceActorIndex: 0, recipientActorIndex: 0, slot: 3, inboundPosition: 1)], inboundCounts: [2], outboundCounts: [2])
     let custody = AuthorityCustody(plan: plan, actorCount: 1, calls: ChildProcessCalls())
     defer { custody.finish() }
     try expectNil(custody.setupFailure)
@@ -150,13 +150,37 @@ func runHandoffCopyBoundaryControl() throws {
 func runActorAuthorityTests(_ tk: TestKit) {
     let workerPresent = FileManager.default.isExecutableFile(atPath: equipment("pw-probe-runner"))
     tk.group("actor authority: native issue, host custody, explicit transfer, consume and release") {
+        tk.run("setup cleanup cells are independently eligible before the terminal decision") {
+            let memory=UnsafeMutablePointer<UInt8>.allocate(capacity:PWShmLayout.regionBytes)
+            defer { memory.deallocate() }
+            memory.initialize(repeating:0,count:PWShmLayout.regionBytes)
+            writeU32(memory,offset:PWShmLayout.abiMagicOffset,PWShmLayout.abiMagic)
+            for (i,b) in PWShmLayout.abiIdentity.enumerated() { memory[PWShmLayout.abiIdentityOffset+i]=b }
+            let setup=memory.advanced(by:PWShmLayout.authoritySetupOffset)
+            writeU32(setup,offset:12,1)
+            let cell=setup.advanced(by:64+9*48)
+            writeU32(cell,offset:4,1);writeU32(cell,offset:8,9);writeU32(cell,offset:12,2)
+            writeU64(cell,offset:16,UInt64.max);writeU32(cell,offset:24,9);writeU32(cell,offset:28,11)
+            storeRelease(cell,offset:0,1)
+            let partial=decodeAuthoritySetup(memory,actor:0,required:true)
+            try expectEqual(partial.publication,"not_observed")
+            try expectNil(partial.primary_operation)
+            try expectEqual(partial.operations.count,1)
+            try expectEqual(partial.operations[0].role,"cleanup")
+            try expectEqual(partial.operations[0].native_rc,-1)
+            try expectEqual(partial.operations[0].errno,9)
+            try expectNil(partial.integrity_errors)
+            writeU32(cell,offset:28,27)
+            let corrupted=decodeAuthoritySetup(memory,actor:0,required:true)
+            try expectTrue(corrupted.integrity_errors?.contains("invalid_setup_cell") == true)
+        }
         tk.run("a later publication cannot replace bytes during an earlier custody copy") {
             try runHandoffCopyBoundaryControl()
         }
         tk.run("shared-region erasure requires known quiescence and unknown actors retain their bytes") {
             for quiescent in [false, true] {
-                let plan = AuthorityPlan(tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 1)],
-                    deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 1)])
+                let plan = AuthorityPlan(tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 1, outboundPosition: 0)],
+                    deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 1, inboundPosition: 0)], inboundCounts: [1], outboundCounts: [1])
                 let custody = AuthorityCustody(plan: plan, actorCount: 1, calls: ChildProcessCalls())
                 try expectNil(custody.setupFailure)
                 let region = custody.regions[0]
@@ -178,8 +202,8 @@ func runActorAuthorityTests(_ tk: TestKit) {
             }
         }
         tk.run("one-shot source answers require a matching publication and are serviced once") {
-            let plan = AuthorityPlan(tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 1)],
-                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 1)])
+            let plan = AuthorityPlan(tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 0, lastUseSlot: 1, outboundPosition: 0)],
+                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: 1, inboundPosition: 0)], inboundCounts: [1], outboundCounts: [1])
             let custody = AuthorityCustody(plan: plan, actorCount: 1, calls: ChildProcessCalls())
             defer { custody.finish() }
             try expectNil(custody.setupFailure)
@@ -204,7 +228,7 @@ func runActorAuthorityTests(_ tk: TestKit) {
             custody.recordSourceAcknowledgements([output])
             try expectTrue(custody.transfers[0].sourceAcknowledged)
         }
-        tk.run("positive calibration: an unapplied issuer supplies a parked applied reader through host custody") {
+        tk.run("observation calibration: an unapplied issuer supplies a parked applied reader through host custody") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let target = try freshTarget("calibration")
             let (base, index) = assemble([
@@ -215,8 +239,8 @@ func runActorAuthorityTests(_ tk: TestKit) {
             ])
             var input = base
             input.authority = AuthorityPlan(
-                tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: index["a_issue"]!, lastUseSlot: index["a_to_b"]!)],
-                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!)])
+                tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: index["a_issue"]!, lastUseSlot: index["a_to_b"]!, outboundPosition: 0)],
+                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!, inboundPosition: 0)], inboundCounts: [0, 1], outboundCounts: [1, 0])
             let scheduler = ActorScheduler(input)
             // Independent observation at B's consume phase: B accepted the
             // delivery while parked (its inbound slot is acknowledged) and has
@@ -289,10 +313,10 @@ func runActorAuthorityTests(_ tk: TestKit) {
             ])
             var input = base
             input.authority = AuthorityPlan(
-                tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: index["a_issue"]!, lastUseSlot: index["a_to_b"]!),
-                         AuthorityPlanToken(index: 1, actorIndex: 1, slot: index["b_issue"]!, lastUseSlot: index["b_to_c"]!)],
-                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!),
-                             AuthorityPlanDelivery(index: 1, tokenIndex: 1, sourceActorIndex: 1, recipientActorIndex: 2, slot: index["b_to_c"]!)])
+                tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: index["a_issue"]!, lastUseSlot: index["a_to_b"]!, outboundPosition: 0),
+                         AuthorityPlanToken(index: 1, actorIndex: 1, slot: index["b_issue"]!, lastUseSlot: index["b_to_c"]!, outboundPosition: 0)],
+                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!, inboundPosition: 0),
+                             AuthorityPlanDelivery(index: 1, tokenIndex: 1, sourceActorIndex: 1, recipientActorIndex: 2, slot: index["b_to_c"]!, inboundPosition: 0)], inboundCounts: [0, 1, 1], outboundCounts: [1, 1, 0])
             let outcome = ActorScheduler.run(input) { _, _, _ in }
             try expectNil(outcome.cancelled)
             try expectEqual(outcome.visits.map { $0.endReason }, Array(repeating: "completed", count: 8))
@@ -340,9 +364,9 @@ func runActorAuthorityTests(_ tk: TestKit) {
             ])
             var input = base
             input.authority = AuthorityPlan(
-                tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: index["a_issue"]!, lastUseSlot: index["a_to_b"]!)],
-                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: index["a_to_a"]!),
-                             AuthorityPlanDelivery(index: 1, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!)])
+                tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: index["a_issue"]!, lastUseSlot: index["a_to_b"]!, outboundPosition: 0)],
+                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 0, slot: index["a_to_a"]!, inboundPosition: 0),
+                             AuthorityPlanDelivery(index: 1, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!, inboundPosition: 0)], inboundCounts: [1, 1], outboundCounts: [1, 0])
             let scheduler = ActorScheduler(input)
             var bCompletedAtPhase0End: Int? = nil
             var bAcceptedAtPhase1: UInt32? = nil
@@ -387,8 +411,8 @@ func runActorAuthorityTests(_ tk: TestKit) {
             ])
             var input = base
             input.authority = AuthorityPlan(
-                tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 99, lastUseSlot: index["a_to_b"]!)],
-                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!)])
+                tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: 99, lastUseSlot: index["a_to_b"]!, outboundPosition: 0)],
+                deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!, inboundPosition: 0)], inboundCounts: [0, 1], outboundCounts: [1, 0])
             let outcome = ActorScheduler.run(input) { _, _, _ in }
             try expectEqual(outcome.visits.map { $0.endReason }, ["completed", "completed"])
             let transfer = slot(outcome, 0, "a_to_b")!

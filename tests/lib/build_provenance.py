@@ -148,7 +148,7 @@ OUTPUT_STAGES = ('cargo', 'native', 'assembled', 'packaging')
 CONTROLLER = 'Contents/MacOS/policy-witness'
 SERVICE = 'Contents/XPCServices/PWRunner.xpc'
 TOP_HELPERS = ('pw-runner-client', 'sbpl-check')
-NESTED_HELPERS = ('pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer')
+NESTED_HELPERS = ('pw-probe-runner', 'sb_api_validator', 'pw-probe-runner-unentitled')
 CARGO_TARGETS = {'Contents/MacOS/policy-witness': 'policy-witness',
                  'Contents/MacOS/sbpl-check': 'sbpl-check'}
 

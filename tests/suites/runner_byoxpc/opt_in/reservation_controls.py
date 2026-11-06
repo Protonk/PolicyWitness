@@ -64,7 +64,7 @@ def service_source(source):
         '            F2Trace.event(f2, "reply_invocation")\n'
         '            reply(true, ReservationTrace.outgoingReply(f2, data))\n'
         '            F2Trace.event(f2, "reply_returned")')
-    call = '        let cResp = orchestrate(parsed, policyHash, bundleString("CFBundleIdentifier"), workerPath, validatorPath)'
+    call = '        let cResp = orchestrate(admitted, policyHash, bundleString("CFBundleIdentifier"), workerPath, validatorPath)'
     source = replace_once(source, call,
         '        F2Trace.event(f2, "orchestration_entered")\n' + call + '\n'
         '        F2Trace.orchestrationReturned(f2, cResp)')
@@ -170,7 +170,7 @@ def custom_app(source, host, scratch, out, identity, trace, gates, client=None):
             save(out / 'configured-service-info.json', info)
         path.write_bytes(plistlib.dumps(info))
     # Match the existing disposable signed-host recipe. The worker, validator,
-    # issuer remain the selected app's original binary bytes. Only the
+    # unentitled worker remain the selected app's original binary bytes. Only the
     # lost-capture arrangement supplies the disclosed copied client.
     command(out / 'sign-service', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
         '--entitlements', ROOT / 'runner/Services/PWRunner/Entitlements.plist', '-s', identity, app / SERVICE], timeout=90)
@@ -181,7 +181,7 @@ def custom_app(source, host, scratch, out, identity, trace, gates, client=None):
         '--entitlements', ROOT / 'PolicyWitness.entitlements', '-s', identity, app], timeout=90)
     report = inspect(app); save(out / 'artifact.json', report)
     assert report['ok'], report
-    for relative in (WORKER, SERVICE / 'Contents/MacOS/sb_api_validator', SERVICE / 'Contents/MacOS/pw-extension-issuer'):
+    for relative in (WORKER, SERVICE / 'Contents/MacOS/sb_api_validator', SERVICE / 'Contents/MacOS/pw-probe-runner-unentitled'):
         assert digest(app / relative) == digest(source / relative), f'fixture altered runtime helper: {relative}'
     assert digest(app / CLIENT) == digest(client if client is not None else source / CLIENT)
     save(out / 'binary-hashes.json', dict(host=digest(app / HOST), worker=digest(app / WORKER),

@@ -826,16 +826,41 @@ def control_environment_witness_missing(co, variant):
 
 
 def control_environment_witness_coerced(co, variant):
-    """The CLI owner started with -E from a C locale coerces LC_CTYPE; the refusal names the coercion, not the front end."""
+    """Observe real -E startup coercion before the unchanged owner refuses it."""
     session = co.root / SESSION
     kept = session.read_bytes() if session.exists() else None
     names = ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')
     witnessed = {'PW_ENV_WITNESS_' + name: 'u' for name in names}
-    witnessed['LANG'] = 'C'
-    cli = [sys.executable, '-E', '-B', '-S', str(co.root / 'tests/lib/checkout_lock.py'), '--root', str(co.root), '--',
-           '/bin/bash', str(co.root / 'build.sh')]
+    # A nonempty inherited LC_ALL overrides LANG and prevents Python's locale
+    # coercion. An empty value lets LANG=C select the actual startup locale;
+    # -E then ignores the base environment's PYTHONCOERCECLOCALE=0.
+    witnessed.update(LANG='C', LC_ALL='')
+    observation = co.out / f'{co.prefix}{variant}-environment_witness_coerced' / 'interpreter-startup.json'
+    owner = co.root / 'tests/lib/checkout_lock.py'
+    owner_args = [str(owner), '--root', str(co.root), '--', '/bin/bash', str(co.root / 'build.sh')]
+    # This code does not change the locale, environment, owner or refusal.
+    # It records the interpreter's own startup effect, then executes the real
+    # command-line owner in that same interpreter and unchanged environment.
+    observe_then_owner = textwrap.dedent(f"""
+        import json, os, runpy, sys
+        from pathlib import Path
+        Path({str(observation)!r}).write_text(json.dumps(dict(
+            lang=os.environ.get('LANG'), lc_all=os.environ.get('LC_ALL'),
+            lc_ctype=os.environ.get('LC_CTYPE'),
+            coercion_setting=os.environ.get('PYTHONCOERCECLOCALE'),
+            ignore_environment=sys.flags.ignore_environment,
+            python_version=sys.version.split()[0]), indent=2) + chr(10))
+        sys.argv = {owner_args!r}
+        sys.path.insert(0, {str(owner.parent)!r})
+        runpy.run_path({str(owner)!r}, run_name='__main__')
+    """)
+    cli = [sys.executable, '-E', '-B', '-S', '-c', observe_then_owner]
     build = co.build('environment_witness_coerced', variant, argv=cli, env=witnessed)
-    check(build, 2, 'the helper interpreter coerced the locale to C.UTF-8', absent=('Verifying the checkout lock',))
+    startup = json.loads(observation.read_text())
+    assert startup['lang']=='C' and startup['lc_all']=='', startup
+    assert startup['coercion_setting']=='0' and startup['ignore_environment']==1, startup
+    assert startup['lc_ctype'] in ('C.UTF-8', 'UTF-8'), ('control did not establish interpreter startup coercion', startup)
+    check(build, 2, 'the helper interpreter coerced the locale to ' + startup['lc_ctype'], absent=('Verifying the checkout lock',))
     check(build, 2, 'PYTHONCOERCECLOCALE=0 was not honored')
     assert 'start through tests/lib/checkout_lock.sh' not in build.stderr, build.stderr[-2000:]
     assert not build.receipts and (session.read_bytes() if session.exists() else None) == kept
@@ -2520,7 +2545,7 @@ def control_output_target_mismatch(co, variant):
                 unit.unlink(missing_ok=True)  # the cached unit itself was replaced: Cargo compiles it again
             target.unlink(missing_ok=True)  # otherwise Cargo copies its untouched unit out again
     # Native outputs, after the compile, before assembly and before the worker is run for its identity.
-    last = co.builddir / ('PWRunner' if variant == 'full' else 'pw-extension-issuer')
+    last = co.builddir / ('PWRunner' if variant == 'full' else 'pw-probe-runner')
     worker = co.builddir / 'pw-probe-runner'
     for label, path, fixture, reason in (('universal-last', last, 'universal', 'a fat container with 2 slice(s) (arm64 x86_64), not a thin Mach-O'),
                                          ('one-slice-fat-worker', worker, 'one-slice-fat', 'a fat container with 1 slice(s) (arm64), not a thin Mach-O')):
@@ -2640,7 +2665,13 @@ def control_builddir_target_mismatch(co, variant):
     assert all(j['fresh'] is True for j in reused.judgments().values()), 'reuse rebuilt a Cargo target'
     checked = reused.session['output_check']
     assert {Path(p).name for p in checked['cargo']['outputs']} == set(CARGO_BINS) and not checked['cargo']['problems'], checked['cargo']
-    assert len(checked['native']['outputs']) == (5 if variant == 'full' else 3) and not checked['native']['problems'], checked['native']
+    # Both bundle equipment roles are copies of the single worker product;
+    # the unentitled copy is not a separate Meson output.
+    native_names = {'sb_api_validator', 'pw-probe-runner'}
+    if variant == 'full':
+        native_names.update(('pw-runner-client', 'PWRunner'))
+    assert set(checked['native']['outputs']) == {str(co.builddir / name) for name in native_names}, checked['native']
+    assert not checked['native']['problems'], checked['native']
     for path in kept_paths:
         path.unlink()
     return build

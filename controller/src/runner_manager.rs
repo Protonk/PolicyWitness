@@ -132,6 +132,249 @@ pub struct PendingCleanup {
     pub observations: Vec<Value>,
 }
 
+pub const EQUIPMENT_INVENTORY_BYTES: usize = 1_048_576;
+pub const EQUIPMENT_ENTITLEMENT_BYTES: usize = 65_536;
+const EMPTY_ENTITLEMENTS_XML: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict/></plist>";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkerEquipmentInventory {
+    pub schema_version: u32,
+    pub runner_protocol: u32,
+    pub worker_identity: String,
+    pub unsigned_worker_sha256: String,
+    pub workers: Vec<WorkerEquipmentEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkerEquipmentEntry {
+    pub role: String,
+    pub relative_path: String,
+    pub sha256: String,
+    pub cdhash: String,
+    pub identifier: String,
+    pub team_id: Option<String>,
+    pub entitlements_xml: String,
+}
+
+fn equipment_hex(value: &str, length: usize) -> bool {
+    value.len() == length
+        && value
+            .bytes()
+            .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+}
+
+impl WorkerEquipmentInventory {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.schema_version != 1
+            || self.runner_protocol != RUNNER_PROTOCOL_VERSION
+            || !equipment_hex(&self.worker_identity, 64)
+            || !equipment_hex(&self.unsigned_worker_sha256, 64)
+            || self.workers.len() != 2
+        {
+            return Err(
+                "unsupported or malformed worker equipment inventory; upgrade and reinstall".into(),
+            );
+        }
+        for (role, path) in [
+            ("selected", crate::app_layout::BUNDLE_WORKER_REL),
+            (
+                "unentitled",
+                crate::app_layout::BUNDLE_UNENTITLED_WORKER_REL,
+            ),
+        ] {
+            let rows: Vec<_> = self.workers.iter().filter(|row| row.role == role).collect();
+            if rows.len() != 1 {
+                return Err(format!(
+                    "equipment inventory must contain exactly one {role}"
+                ));
+            }
+            let row = rows[0];
+            if row.relative_path != path
+                || !equipment_hex(&row.sha256, 64)
+                || !equipment_hex(&row.cdhash, 40)
+                || row.identifier.is_empty()
+                || row.identifier.len() > 255
+                || row.identifier.contains('\0')
+                || row
+                    .team_id
+                    .as_ref()
+                    .is_some_and(|team| team.is_empty() || team.len() > 255 || team.contains('\0'))
+                || row.entitlements_xml.len() > EQUIPMENT_ENTITLEMENT_BYTES
+            {
+                return Err(format!("invalid {role} equipment inventory row"));
+            }
+        }
+        Ok(())
+    }
+}
+
+pub fn load_equipment_inventory(bundle: &Path) -> Result<WorkerEquipmentInventory, String> {
+    let path = bundle.join(crate::app_layout::BUNDLE_EQUIPMENT_REL);
+    let metadata = fs::symlink_metadata(&path).map_err(|e| {
+        format!(
+            "equipment inventory {}: {e}; upgrade and reinstall",
+            path.display()
+        )
+    })?;
+    if !metadata.file_type().is_file() || metadata.len() > EQUIPMENT_INVENTORY_BYTES as u64 {
+        return Err("equipment inventory is not a bounded regular file".into());
+    }
+    let root = fs::canonicalize(bundle).map_err(|e| e.to_string())?;
+    if !fs::canonicalize(&path)
+        .map_err(|e| e.to_string())?
+        .starts_with(&root)
+    {
+        return Err("equipment inventory escapes its service bundle".into());
+    }
+    let mut bytes = Vec::new();
+    fs::File::open(&path)
+        .map_err(|e| e.to_string())?
+        .take((EQUIPMENT_INVENTORY_BYTES + 1) as u64)
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+    if bytes.len() > EQUIPMENT_INVENTORY_BYTES {
+        return Err("equipment inventory exceeds limit".into());
+    }
+    // team_id is explicitly present, including null for permitted ad-hoc code.
+    let raw: Value =
+        serde_json::from_slice(&bytes).map_err(|e| format!("equipment inventory: {e}"))?;
+    if raw
+        .get("workers")
+        .and_then(Value::as_array)
+        .is_none_or(|rows| rows.iter().any(|row| row.get("team_id").is_none()))
+    {
+        return Err("equipment inventory has missing team_id observations".into());
+    }
+    let inventory: WorkerEquipmentInventory =
+        serde_json::from_value(raw).map_err(|e| format!("equipment inventory: {e}"))?;
+    inventory.validate()?;
+    Ok(inventory)
+}
+
+fn equipment_worker_path(bundle: &Path, relative: &str) -> Result<PathBuf, String> {
+    let path = bundle.join(relative);
+    let metadata = fs::symlink_metadata(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    if !metadata.file_type().is_file() || metadata.mode() & 0o111 == 0 {
+        return Err(format!("{} is not a regular executable", path.display()));
+    }
+    if !fs::canonicalize(&path)
+        .map_err(|e| e.to_string())?
+        .starts_with(fs::canonicalize(bundle).map_err(|e| e.to_string())?)
+    {
+        return Err(format!("{} escapes its service bundle", path.display()));
+    }
+    Ok(path)
+}
+
+fn equipment_entry(
+    bundle: &Path,
+    role: &str,
+    relative: &str,
+) -> Result<WorkerEquipmentEntry, String> {
+    let path = equipment_worker_path(bundle, relative)?;
+    codesign_verify_binary(&path)?;
+    let (signature, entitlements) = read_back(&path)?;
+    if let Some(error) = entitlements.error {
+        return Err(error);
+    }
+    let xml = entitlements
+        .raw_plist
+        .unwrap_or_else(|| EMPTY_ENTITLEMENTS_XML.into());
+    if xml.len() > EQUIPMENT_ENTITLEMENT_BYTES {
+        return Err("entitlement read-back exceeds equipment limit".into());
+    }
+    let dictionary = plutil_json_from_bytes(xml.as_bytes())?;
+    if !dictionary.is_object()
+        || (role == "unentitled" && dictionary.as_object().is_none_or(|v| !v.is_empty()))
+    {
+        return Err(format!(
+            "{role} equipment entitlement dictionary is invalid"
+        ));
+    }
+    let output = Command::new("/usr/bin/codesign")
+        .args(["-d", "--verbose=2"])
+        .arg(&path)
+        .output()
+        .map_err(|e| format!("signature identifier read-back: {e}"))?;
+    if !output.status.success() {
+        return Err("signature identifier read-back failed".into());
+    }
+    let identifier = String::from_utf8_lossy(&output.stderr)
+        .lines()
+        .find_map(|line| line.strip_prefix("Identifier=").map(str::to_string))
+        .ok_or("signature identifier absent")?;
+    Ok(WorkerEquipmentEntry {
+        role: role.into(),
+        relative_path: relative.into(),
+        sha256: crate::digest::sha256_hex(fs::read(&path).map_err(|e| e.to_string())?),
+        cdhash: signature.cdhash.ok_or("signature CDHash absent")?,
+        identifier,
+        team_id: signature.team_id.filter(|value| value != "not set"),
+        entitlements_xml: xml,
+    })
+}
+
+pub fn verify_equipment_inventory(bundle: &Path) -> Result<WorkerEquipmentInventory, String> {
+    codesign_verify(bundle)?;
+    let inventory = load_equipment_inventory(bundle)?;
+    let host_team = codesign_metadata(bundle)?
+        .team_id
+        .filter(|value| value != "not set");
+    for expected in &inventory.workers {
+        let actual = equipment_entry(bundle, &expected.role, &expected.relative_path)?;
+        if actual.sha256 != expected.sha256
+            || actual.cdhash != expected.cdhash
+            || actual.identifier != expected.identifier
+            || actual.team_id != expected.team_id
+            || actual.team_id != host_team
+            || plutil_json_from_bytes(actual.entitlements_xml.as_bytes())?
+                != plutil_json_from_bytes(expected.entitlements_xml.as_bytes())?
+        {
+            return Err(format!(
+                "{} equipment differs from its sealed inventory",
+                expected.role
+            ));
+        }
+    }
+    Ok(inventory)
+}
+
+fn refresh_equipment_inventory(
+    bundle: &Path,
+    original: &WorkerEquipmentInventory,
+) -> Result<WorkerEquipmentInventory, String> {
+    let mut inventory = original.clone();
+    inventory.workers = original
+        .workers
+        .iter()
+        .map(|row| equipment_entry(bundle, &row.role, &row.relative_path))
+        .collect::<Result<Vec<_>, _>>()?;
+    inventory.validate()?;
+    let bytes = serde_json::to_vec_pretty(&inventory).map_err(|e| e.to_string())?;
+    if bytes.len() > EQUIPMENT_INVENTORY_BYTES {
+        return Err("equipment inventory exceeds limit".into());
+    }
+    let path = bundle.join(crate::app_layout::BUNDLE_EQUIPMENT_REL);
+    let temporary = path.with_extension(format!("json.{}", random_id()?));
+    let result = (|| {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o644)
+            .open(&temporary)?;
+        file.write_all(&bytes)?;
+        file.sync_all()?;
+        fs::rename(&temporary, &path)
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
+    }
+    result.map_err(|e: std::io::Error| format!("equipment inventory publication failed: {e}"))?;
+    Ok(inventory)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerRecord {
     #[serde(default)]
@@ -157,6 +400,18 @@ pub struct RunnerRecord {
     pub worker_signature: Option<RunnerSignature>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub worker_entitlements: Option<RunnerEntitlements>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unentitled_worker_signature: Option<RunnerSignature>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unentitled_worker_entitlements: Option<RunnerEntitlements>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unentitled_worker_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    // Registry recovery retains unknown/future inventory snapshots opaquely;
+    // current execution validates the sealed on-disk manifest separately.
+    pub worker_equipment_inventory: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_worker_equipment_inventory: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub validator_signature: Option<RunnerSignature>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -514,6 +769,14 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
             error: Some(format!("codesign failed: {stderr}")),
         };
     }
+    if out.stdout.len() > EQUIPMENT_ENTITLEMENT_BYTES {
+        return RunnerEntitlements {
+            raw_plist: None,
+            keys: Vec::new(),
+            granted: Vec::new(),
+            error: Some("entitlement read-back exceeds equipment observation limit".into()),
+        };
+    }
     // codesign writes nothing for a signature that carries no entitlements.
     if out.stdout.iter().all(u8::is_ascii_whitespace) {
         return RunnerEntitlements {
@@ -610,13 +873,28 @@ pub fn sign_install_tree(
     entitlements: Option<&Path>,
     sign: &mut dyn FnMut(&Path, &str, Option<&Path>) -> Result<(), String>,
 ) -> Result<(), String> {
+    let original = verify_equipment_inventory(bundle)?;
+    sign_install_tree_with_inventory(bundle, identity, entitlements, sign, &mut |bundle| {
+        refresh_equipment_inventory(bundle, &original).map(|_| ())
+    })
+}
+
+// Injectable signing and inventory publication boundaries pin the ordering
+// without trusting fixture signatures or spawning signing tools in unit tests.
+fn sign_install_tree_with_inventory(
+    bundle: &Path,
+    identity: &str,
+    entitlements: Option<&Path>,
+    sign: &mut dyn FnMut(&Path, &str, Option<&Path>) -> Result<(), String>,
+    inventory: &mut dyn FnMut(&Path) -> Result<(), String>,
+) -> Result<(), String> {
     let worker = bundle.join(crate::app_layout::BUNDLE_WORKER_REL);
     let validator = bundle.join(crate::app_layout::BUNDLE_VALIDATOR_REL);
-    let issuer = bundle.join(crate::app_layout::BUNDLE_ISSUER_REL);
+    let unentitled = bundle.join(crate::app_layout::BUNDLE_UNENTITLED_WORKER_REL);
     for (role, path) in [
         ("worker", &worker),
         ("validator", &validator),
-        ("issuer", &issuer),
+        ("unentitled worker", &unentitled),
     ] {
         if !path.is_file() {
             return Err(format!(
@@ -627,7 +905,8 @@ pub fn sign_install_tree(
     }
     sign(&worker, identity, entitlements)?;
     sign(&validator, identity, None)?;
-    sign(&issuer, identity, None)?;
+    sign(&unentitled, identity, None)?;
+    inventory(bundle)?;
     sign(bundle, identity, entitlements)
 }
 
@@ -712,6 +991,16 @@ pub fn validate_record(
     host_signature.valid = host_signature.valid && bundle_ok;
     let (worker_signature, worker_entitlements) = observe("worker", &worker);
     let (validator_signature, validator_entitlements) = observe("validator", &validator);
+    let unentitled = bundle.join(crate::app_layout::BUNDLE_UNENTITLED_WORKER_REL);
+    if unentitled.exists()
+        || record.unentitled_worker_signature.is_some()
+        || record.worker_equipment_inventory.is_some()
+    {
+        let (signature, entitlements) = observe("unentitled_worker", &unentitled);
+        record.unentitled_worker_signature = Some(signature);
+        record.unentitled_worker_entitlements = Some(entitlements);
+        record.unentitled_worker_sha256 = fs::read(&unentitled).ok().map(crate::digest::sha256_hex);
+    }
     let issuer = bundle.join(crate::app_layout::BUNDLE_ISSUER_REL);
     // Older records/bundles remain manageable; absence means unknown. Once an
     // issuer is recorded, its later disappearance is a validation failure.
@@ -1318,130 +1607,148 @@ mod tests {
     }
 
     #[test]
-    fn install_signing_signs_helpers_before_the_bundle() {
-        // The worker takes the entitlements, validator and issuer the identity
-        // alone, and the enclosing bundle is sealed last so it records the
-        // helpers' new hashes. Pinned with a recording signer; no codesign.
+    fn install_signing_signs_helpers_and_inventory_before_the_bundle() {
+        use std::cell::RefCell;
         let root = std::env::temp_dir().join(format!(
-            "pw-sign-order-{}-{}",
+            "pw-equipment-sign-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
+            random_id().unwrap()
         ));
         let bundle = root.join("Runner.xpc");
         let macos = bundle.join(crate::app_layout::BUNDLE_MACOS_REL);
         fs::create_dir_all(&macos).unwrap();
         for name in [
-            "PWRunner",
             "pw-probe-runner",
             "sb_api_validator",
-            "pw-extension-issuer",
+            "pw-probe-runner-unentitled",
         ] {
             fs::write(macos.join(name), name).unwrap();
         }
-        let plist = root.join("entitlements.plist");
-        fs::write(&plist, "<plist/>").unwrap();
-        let mut calls: Vec<(PathBuf, String, Option<PathBuf>)> = Vec::new();
-        sign_install_tree(
+        let entitlements = root.join("entitlements.plist");
+        let events = RefCell::new(Vec::new());
+        sign_install_tree_with_inventory(
             &bundle,
-            "Developer ID",
-            Some(&plist),
-            &mut |target, identity, ent| {
-                calls.push((
-                    target.to_path_buf(),
-                    identity.to_string(),
-                    ent.map(Path::to_path_buf),
+            "identity",
+            Some(&entitlements),
+            &mut |path, _, ent| {
+                events.borrow_mut().push(format!(
+                    "{}:{}",
+                    path.file_name().unwrap().to_string_lossy(),
+                    ent.is_some()
                 ));
+                Ok(())
+            },
+            &mut |_| {
+                events.borrow_mut().push("inventory".into());
                 Ok(())
             },
         )
         .unwrap();
         assert_eq!(
-            calls,
-            vec![
-                (
-                    macos.join("pw-probe-runner"),
-                    "Developer ID".to_string(),
-                    Some(plist.clone())
-                ),
-                (
-                    macos.join("sb_api_validator"),
-                    "Developer ID".to_string(),
-                    None
-                ),
-                (
-                    macos.join("pw-extension-issuer"),
-                    "Developer ID".to_string(),
-                    None
-                ),
-                (
-                    bundle.clone(),
-                    "Developer ID".to_string(),
-                    Some(plist.clone())
-                ),
+            *events.borrow(),
+            [
+                "pw-probe-runner:true",
+                "sb_api_validator:false",
+                "pw-probe-runner-unentitled:false",
+                "inventory",
+                "Runner.xpc:true"
             ]
         );
-        // A failing helper signature stops before the bundle is sealed.
-        let mut sealed = Vec::new();
-        let err = sign_install_tree(&bundle, "-", None, &mut |target, _, _| {
-            sealed.push(target.to_path_buf());
-            if target.ends_with("sb_api_validator") {
-                Err("controlled".into())
-            } else {
+        events.borrow_mut().clear();
+        let error = sign_install_tree_with_inventory(
+            &bundle,
+            "identity",
+            None,
+            &mut |path, _, _| {
+                events.borrow_mut().push(path.display().to_string());
                 Ok(())
-            }
-        })
+            },
+            &mut |_| Err("inventory refused".into()),
+        )
         .unwrap_err();
-        assert_eq!(err, "controlled");
+        assert_eq!(error, "inventory refused");
         assert_eq!(
-            sealed,
-            vec![
-                macos.join("pw-probe-runner"),
-                macos.join("sb_api_validator")
-            ]
+            events.borrow().len(),
+            3,
+            "inventory refusal must precede enclosing seal"
         );
-        // Issuer signing failure stops before sealing, independently of validator success.
-        let mut sealed = Vec::new();
-        let err = sign_install_tree(&bundle, "-", None, &mut |target, _, _| {
-            sealed.push(target.to_path_buf());
-            if target.ends_with("pw-extension-issuer") {
-                Err("issuer controlled".into())
-            } else {
+        fs::remove_file(macos.join("pw-probe-runner-unentitled")).unwrap();
+        events.borrow_mut().clear();
+        let error = sign_install_tree_with_inventory(
+            &bundle,
+            "identity",
+            None,
+            &mut |_, _, _| {
+                events.borrow_mut().push("signed".into());
                 Ok(())
-            }
-        })
+            },
+            &mut |_| Ok(()),
+        )
         .unwrap_err();
-        assert_eq!(err, "issuer controlled");
-        assert_eq!(
-            sealed,
-            vec![
-                macos.join("pw-probe-runner"),
-                macos.join("sb_api_validator"),
-                macos.join("pw-extension-issuer")
-            ]
+        assert!(error.contains("no embedded unentitled worker"));
+        assert!(
+            events.borrow().is_empty(),
+            "missing role must refuse before signing"
         );
-        // An incomplete copy is refused before any signing.
-        fs::remove_file(macos.join("pw-extension-issuer")).unwrap();
-        let mut touched = 0;
-        let err = sign_install_tree(&bundle, "-", None, &mut |_, _, _| {
-            touched += 1;
-            Ok(())
-        })
-        .unwrap_err();
-        assert!(err.contains("no embedded issuer"), "{err}");
-        assert_eq!(touched, 0);
-        fs::remove_file(macos.join("sb_api_validator")).unwrap();
-        let mut touched = 0;
-        let err = sign_install_tree(&bundle, "-", None, &mut |_, _, _| {
-            touched += 1;
-            Ok(())
-        })
-        .unwrap_err();
-        assert!(err.contains("no embedded validator"), "{err}");
-        assert_eq!(touched, 0);
-        fs::remove_dir_all(&root).unwrap();
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn equipment_inventory_requires_closed_complete_current_roles() {
+        let row = |role: &str, path: &str| {
+            json!({"role":role,"relative_path":path,
+            "sha256":"a".repeat(64),"cdhash":"b".repeat(40),"identifier":"worker",
+            "team_id":null,"entitlements_xml":EMPTY_ENTITLEMENTS_XML})
+        };
+        let value = json!({"schema_version":1,"runner_protocol":RUNNER_PROTOCOL_VERSION,
+            "worker_identity":"c".repeat(64),"unsigned_worker_sha256":"d".repeat(64),
+            "workers":[row("selected",crate::app_layout::BUNDLE_WORKER_REL),
+                       row("unentitled",crate::app_layout::BUNDLE_UNENTITLED_WORKER_REL)]});
+        let inventory: WorkerEquipmentInventory = serde_json::from_value(value.clone()).unwrap();
+        inventory.validate().unwrap();
+        let mut missing = inventory.clone();
+        missing.workers.pop();
+        assert!(missing.validate().is_err());
+        let mut duplicated = inventory.clone();
+        duplicated.workers[1] = duplicated.workers[0].clone();
+        assert!(duplicated.validate().is_err());
+        let mut escaped = inventory.clone();
+        escaped.workers[0].relative_path = "../worker".into();
+        assert!(escaped.validate().is_err());
+        let mut future = inventory.clone();
+        future.runner_protocol += 1;
+        assert!(future.validate().is_err());
+        let mut oversized = inventory.clone();
+        oversized.workers[0].entitlements_xml = "x".repeat(EQUIPMENT_ENTITLEMENT_BYTES + 1);
+        assert!(oversized.validate().is_err());
+        let mut unknown = value.clone();
+        unknown["extra"] = json!(true);
+        assert!(serde_json::from_value::<WorkerEquipmentInventory>(unknown).is_err());
+        let mut role_unknown = value;
+        role_unknown["workers"][0]["extra"] = json!(true);
+        assert!(serde_json::from_value::<WorkerEquipmentInventory>(role_unknown).is_err());
+    }
+
+    #[test]
+    fn unsupported_inventory_snapshots_do_not_strand_registry_recovery() {
+        let future = json!({"schema_version":999,"future_field":{"opaque":[true,7]}});
+        let mut record = recovery_record();
+        record.ownership = Some(RunnerOwnership {
+            plist_path: "/private/tmp/owned.plist".into(),
+            launchd_domain: "gui/501".into(),
+            owner_uid: 501,
+            plist_sha256: "a".repeat(64),
+        });
+        record.worker_equipment_inventory = Some(future.clone());
+        record.source_worker_equipment_inventory = Some(future.clone());
+        let decoded: RunnerRecord =
+            serde_json::from_value(serde_json::to_value(&record).unwrap()).unwrap();
+        assert_eq!(decoded.worker_equipment_inventory, Some(future.clone()));
+        assert_eq!(decoded.source_worker_equipment_inventory, Some(future));
+        assert_eq!(
+            decoded.ownership.unwrap().plist_sha256,
+            record.ownership.unwrap().plist_sha256
+        );
     }
 
     #[test]

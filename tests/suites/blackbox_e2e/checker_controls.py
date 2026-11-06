@@ -3,9 +3,9 @@
 
 Every control here is authored against the current contract: the consumer's
 version gate, the uniform data skeleton, the D1 comparison record, the
-ordering chain and the reporting-failure rules. Baselines are retained live
-envelopes (`tests/fixtures/blackbox_e2e/checker`); nothing is derived from
-the checker or the production code under test.
+ordering chain and the reporting-failure rules. The current baseline is explicitly constructed ordinary evidence. Historical
+captures are retained only for previous-version refusal. Live BBX cases own
+native observations; these controls establish interpretation and rejection.
 """
 import copy
 import json
@@ -149,7 +149,7 @@ def exec_observation_controls(artifacts):
 
 
 def consumer_controls(artifacts, current):
-    """Constructed JSON interpretation controls against a retained live envelope."""
+    """Constructed JSON interpretation controls; no new native observation."""
     records = []
 
     def run(name, envelope, expected=None, rejected_by=None):
@@ -179,7 +179,7 @@ def consumer_controls(artifacts, current):
     def allowed_write(e):
         chosen = select(steps(e), step_id='fs_write_allowed', observation='succeeded', order='query_first')
         require(len(chosen) == 1 and chosen[0]['attempt']['outcome'] == 'ok', 'allowed write must be selectable by its record')
-    run('retained_live_run', current, allowed_write)
+    run('constructed_current_run', current, allowed_write)
 
     from runner_client_capture_controls import run_capture_controls
     run_capture_controls(run)
@@ -593,7 +593,7 @@ def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
-    baseline = json.loads((FIXTURES / "checker/response25/valid_run.json").read_text())
+    baseline = json.loads((FIXTURES / "checker/current/constructed_run.json").read_text())
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"
     failures = []
@@ -671,7 +671,14 @@ def main():
     broken["data"]["runner_result"]["steps"].reverse()
     check("reordered_steps", broken, ("expected step IDs in order",))
 
-    missing = json.loads((FIXTURES / "checker/response25/missing_path_run.json").read_text())
+    # Reuse only the authored input builder; its native-shaped facts are
+    # constructed checker controls and carry no filesystem or live-run credit.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('menagerie_constructed_inputs',
+        ROOT / 'tests/suites/blackbox_menagerie/checker_controls.py')
+    authored = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(authored)
+    missing, _ = authored.constructed_missing_path_baseline()
     check("expected_unavailable", missing, case="BBX-002")
 
     broken = copy.deepcopy(missing)

@@ -23,6 +23,41 @@ private final class AdmissionObservations {
 }
 
 func runServiceAdmissionTests(_ tk: TestKit) {
+    tk.group("host semantic admission ownership") {
+        tk.run("the accepted actor plan is constructed once and reaches orchestration") {
+            let parsed = PWRunnerRunSpec(specimen_id: "single-plan", policy: nil,
+                phases: [PWRunnerPhase(phase_id: "visit", actions: [], actor_id: "A")],
+                actors: [PWRunnerActor(actor_id: "A", sandbox: PWRunnerActorSandbox(mode: "unapplied"))])
+            var admissions = 0, executions = 0
+            let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: {}, scheduleExpiry: { _, _ in },
+                admit: { request in admissions += 1; return admitSpecimen(request) },
+                orchestrate: { admitted, _, _, _, _ in
+                    executions += 1
+                    precondition(admitted.actorPlan?.actors.first?.id == "A")
+                    return PWRunnerRunResult(specimen_id: admitted.request.specimen_id, rc: 1,
+                        normalized_outcome: NormalizedOutcome.runnerFailed, pid: Int(getpid()), policy_format: nil, steps: [])
+                })
+            let grant = reserveService(service)
+            service.runReservedSpecimen(try pwRunnerEncodeJSON(parsed), reservation: grant.reservation_id!) { _, _ in }
+            try expectEqual(admissions, 1); try expectEqual(executions, 1)
+        }
+        tk.run("a distinctive semantic refusal is returned unchanged without orchestration") {
+            let parsed = PWRunnerRunSpec(specimen_id: "refusal", policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"))
+            var executions = 0, replies: [Data] = []
+            let expected = PWRunnerRequestFailure(code: "wrong_owner_reference", path: ["phases", "2", "actions", "1", "extension", "token_ref"])
+            let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: {}, scheduleExpiry: { _, _ in },
+                admit: { _ in .refused(expected) }, orchestrate: { _, _, _, _, _ in
+                    executions += 1
+                    return PWRunnerRunResult(specimen_id: "unexpected", rc: 1, normalized_outcome: NormalizedOutcome.runnerFailed,
+                        pid: Int(getpid()), policy_format: nil, steps: [])
+                })
+            let grant = reserveService(service)
+            service.runReservedSpecimen(try pwRunnerEncodeJSON(parsed), reservation: grant.reservation_id!) { _, data in replies.append(data) }
+            try expectEqual(executions, 0)
+            let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: replies[0])
+            try expectEqual(reply.request_failure?.code, expected.code); try expectEqual(reply.request_failure?.path, expected.path)
+        }
+    }
     tk.group("host single use admission") {
         let request = try! pwRunnerEncodeJSON(PWRunnerRunSpec(specimen_id: "admission",
             policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"), probe_plan: []))
@@ -32,7 +67,7 @@ func runServiceAdmissionTests(_ tk: TestKit) {
                 orchestrate: { parsed, hash, bundle, _, validator in
                     observations.entry(); entered?.signal()
                     if let release { _ = release.wait(timeout: .now() + 5) }
-                    return CWorkerOrchestrator.run(parsed: parsed, policyHash: hash, bundleId: bundle,
+                    return CWorkerOrchestrator.run(admitted: parsed, policyHash: hash, bundleId: bundle,
                         workerExecutablePath: "/nonexistent/pw-admission-control", validatorExecutablePath: validator)
                 })
         }
@@ -146,7 +181,7 @@ func runValidatorSelectionTests(_ tk: TestKit) {
                 let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: { exits += 1 },
                     orchestrate: { request, hash, bundle, _, validator in
                         selected.append(validator)
-                        return CWorkerOrchestrator.run(parsed: request, policyHash: hash, bundleId: bundle,
+                        return CWorkerOrchestrator.run(admitted: request, policyHash: hash, bundleId: bundle,
                             workerExecutablePath: "/nonexistent/validator-selection-worker", validatorExecutablePath: validator)
                     })
                 let grant = reserveService(service)

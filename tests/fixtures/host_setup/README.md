@@ -1,7 +1,7 @@
 # Host setup controls
 
 The `runner_unit/host_setup_controls` case copies the production Swift package,
-renames selected native call sites in `ActorSession.swift`, `CWorker.swift` and `ExtensionIssuer.swift`,
+renames selected native call sites in `ActorSession.swift`, `CWorker.swift` and `AuthorityCustody.swift`,
 and adds `SetupControls.swift` only to that copy. Exact substitution counts and
 source/instrumented hashes are retained. Production control flow is unchanged;
 the signed app is never modified. `shim.c` exposes a fixed-argument shared-memory
@@ -11,8 +11,8 @@ Each scenario runs in a fresh process. The adapters return a selected setup erro
 without performing that operation, or pass through to Darwin. Baselines reserve
 low descriptors. The collision case closes stdin and low unused descriptors;
 the checker requires the actual source/destination overlap and the child's wrong
-evidence endpoint, not merely a low-descriptor label. The issuer's high duplicate
-is exercised in the same low-descriptor arrangement.
+evidence endpoint, not merely a low-descriptor label. Authority-region controls
+exercise shared-object acquisition and cleanup separately from worker launch.
 
 `observer.c` is a separate native executable with no PW protocol headers. It
 records its PID, argc and `fstat` results for protocol descriptor numbers before
@@ -22,21 +22,20 @@ distinguish the pipe, null device and token-source file in these cases; matching
 shared-memory metadata is not a general shared-object identity proof. The
 optional-token control supplies the observer executable's descriptor, distinct
 from the baseline's null devices; it tests descriptor delivery, not token validity.
-The observer never applies a sandbox or publishes a worker/issuer result.
+The observer never applies a sandbox or publishes a worker result.
 
 A failed handle initialization leaves nil. Subsequent adapter calls record the
 invalid use and return EINVAL instead of passing nil into libc; an attempted
 spawn with such a handle is likewise contained. Those observations establish
-continued host control flow, not libc's behavior on an invalid handle. Issuer
-no-spawn results after failed initialization depend on that fixture containment.
-Worker initialization, action-add, evidence unlink and descriptor-flag failures
+continued host control flow, not libc's behavior on an invalid handle. Worker initialization, action-add, evidence unlink and descriptor-flag failures
 refuse before spawn without invalid-handle use. Argument-copy failures can
 still reach real native spawn when the host permits it; the receipt establishes whether a child ran and what it received.
 
 Cleanup is observed before independent fixture cleanup: descriptor closure,
 successful unmapping/destruction, released copied strings, name lookup and child
-reaping. The injected unlink cases leave names; the fixture removes them and
-checks absence. A failed observation retains the name and cleanup receipt in the
+reaping. The injected unlink cases leave names; the fixture retains the actual object with a duplicated descriptor, compares
+the named object against that live reference, then unlinks and checks absence.
+A name or stale receipt alone never authorizes recovery unlink. A failed observation retains the name and cleanup receipt in the
 case artifacts. Each child is either already reaped by the host or independently
 terminated/reaped by the fixture, with host-reap evidence kept separate.
 
@@ -45,7 +44,7 @@ either worker result branch: PID, ready-byte receipt, ready/sentinel/grace wait
 records, poll stop reason, exit request, termination request, reaping, exit code,
 termination signal, wait errors, cleanup trigger, grace end and collection basis.
 It is null when no worker output is available,
-including issuer scenarios; unavailable optional members are omitted. Encoding
+including authority-region scenarios; unavailable optional members are omitted. Encoding
 occurs after the lifecycle and cleanup observations. This adds no child
 instrumentation and preserves the 100 ms ready, 200 ms sentinel and 200 ms grace
 allowances. These records describe host observations; they do not establish why

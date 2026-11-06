@@ -1,0 +1,8 @@
+{
+  "run_id": "20261106T164139Z_90ea0f88",
+  "source_manifest": "evidence/candidate-11-final-source.json",
+  "all_entries_match_after_run": true,
+  "entries": 924,
+  "changed": [],
+  "scope": "Hash/link equality for the recorded source scope; excludes records/reports and build outputs. Dependency reachability is separately reviewed."
+}

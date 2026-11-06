@@ -35,7 +35,7 @@ SERVICE = 'Contents/XPCServices/PWRunner.xpc'
 EXECUTABLES = [CONTROLLER, *('Contents/MacOS/' + name for name in
     ('pw-runner-client', 'sbpl-check')),
     *(SERVICE + '/Contents/MacOS/' + name for name in
-      ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer'))]
+      ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-probe-runner-unentitled'))]
 MANIFEST = 'Contents/Resources/Evidence/manifest.json'
 SYMBOLS = 'Contents/Resources/Evidence/symbols.json'
 PROVENANCE = build_provenance.RECORD_PATH

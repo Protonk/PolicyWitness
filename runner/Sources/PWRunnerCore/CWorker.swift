@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "c1f66cc04bf60846bcddcee5d765e965d75c1e6a8d682d116f14439dc9b93bf7"
-    static let abiIdentity: [UInt8] = [0xc1, 0xf6, 0x6c, 0xc0, 0x4b, 0xf6, 0x08, 0x46, 0xbc, 0xdd, 0xce, 0xe5, 0xd7, 0x65, 0xe9, 0x65, 0xd7, 0x5c, 0x1e, 0x6a, 0x8d, 0x68, 0x2d, 0x11, 0x6f, 0x14, 0x43, 0x9d, 0xc9, 0xb9, 0x3b, 0xf7]
+    static let abiIdentityHex = "6011ef48cde40586569e588279d435e53c7c0e7ddcb86aa28f261053f9ae278b"
+    static let abiIdentity: [UInt8] = [0x60, 0x11, 0xef, 0x48, 0xcd, 0xe4, 0x05, 0x86, 0x56, 0x9e, 0x58, 0x82, 0x79, 0xd4, 0x35, 0xe5, 0x3c, 0x7c, 0x0e, 0x7d, 0xdc, 0xb8, 0x6a, 0xa2, 0x8f, 0x26, 0x10, 0x53, 0xf9, 0xae, 0x27, 0x8b]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -68,6 +68,7 @@ enum PWShmLayout {
     static let captureNonceBytes: Int = 16
     static let evidenceHeaderBytes: Int = 64
     static let diagnosticBytes: Int = 4096
+    static let authoritySetupBytes: Int = 832
 
     // Exec-attempt input bounds. argvBytes is the per-entry
     // byte cap (including the trailing NUL); maxArgv is the number of
@@ -80,7 +81,7 @@ enum PWShmLayout {
     static let childOutputBytes: Int = 1024
 
     static let regionBytes: Int =
-        headerBytes + maxSteps * slotBytes + maxParams * paramBytes + captureHeaderBytes + captureBytes + evidenceHeaderBytes + diagnosticBytes
+        headerBytes + maxSteps * slotBytes + maxParams * paramBytes + captureHeaderBytes + captureBytes + evidenceHeaderBytes + diagnosticBytes + authoritySetupBytes
 
     // Header field offsets (in bytes from region base).
     static let abiMagicOffset: Int      = 0
@@ -98,15 +99,6 @@ enum PWShmLayout {
     static let proceedOffset: Int = 56
     static let proceedObservedOffset: Int = 60
 
-    static let extensionRequestedOffset: Int = 100
-    static let extensionDeliveryPublishedOffset: Int = 104
-    static let extensionDeliveryStatusOffset: Int = 108
-    static let extensionDeliveredBytesOffset: Int = 112
-    static let extensionDeliveryStageOffset: Int = 116
-    static let extensionDeliveryNativeRcOffset: Int = 120
-    static let extensionDeliveryErrnoOffset: Int = 124
-    static let extensionDeliveryCleanupStageOffset: Int = 128
-    static let extensionDeliveryCleanupErrnoOffset: Int = 132
     // Policy delivery acknowledgement: the host's expected byte count (input) and
     // the worker's EOF receipt (count plus its publication flag).
     static let policyBytesExpectedOffset: Int = 136
@@ -150,6 +142,7 @@ enum PWShmLayout {
     static let captureRequestNonceOffset: Int = 128
 
     static let evidenceOffset: Int = captureOffset + captureHeaderBytes + captureBytes
+    static let authoritySetupOffset: Int = evidenceOffset + evidenceHeaderBytes + diagnosticBytes
     static let evidenceProgressOffset: Int = 0
     static let evidenceFailurePublishedOffset: Int = 4
     static let evidenceOperationOffset: Int = 8
@@ -399,11 +392,11 @@ struct CWorkerPhaseOutput {
 }
 
 struct CWorkerInput {
-    var extensionRequested = false
-    var extensionFD: Int32? = nil
     /// Actor form: the descriptor of this actor's authority region, passed as
-    /// the child's descriptor 5. Exclusive with the legacy token channel.
+    /// the child's descriptor 5.
     var authorityFD: Int32? = nil
+    var authorityRequired = false
+    var authorityRecorder: AuthoritySetupRecorder? = nil
     /// Actor-form inputs: PW_ACTOR_MODE_* (0 legacy), the actor's index and the
     /// shared absolute continuous-clock cutoff (0 none).
     var actorMode: UInt32 = 0
@@ -569,8 +562,6 @@ struct CWorkerOutput {
     var cleanupTrigger: String? = nil
     var graceEnd: String? = nil
     var collectionBasis: String? = nil
-    /// The worker's delivery publication, read only after its release store.
-    var extensionDelivery: CWorkerExtensionDelivery? = nil
     /// Measured host waits; nil when the stage did not run.
     var readyWait: PWHostWait? = nil
     var sentinelWait: PWHostWait? = nil
@@ -585,23 +576,10 @@ struct CWorkerOutput {
     var authorityStatus: UInt32 = 0
     var authorityDetail: UInt32 = 0
     var nativeSymbols: UInt32 = 0
+    var authoritySetup: PWRunnerAuthorityScope? = nil
+    var ownedReap: PWOwnedReapObservation? = nil
 }
 
-/// Raw delivery publication words. Codes are interpreted by the orchestrator;
-/// unknown values stay numbers here.
-struct CWorkerExtensionDelivery: Equatable {
-    var status: UInt32
-    var deliveredBytes: UInt32
-    var stage: UInt32
-    var nativeRc: Int32
-    var errno: Int32
-    var cleanupStage: UInt32
-    var cleanupErrno: Int32
-}
-
-
-// Only publication words gate non-atomic payload reads. Progress itself is atomic.
-// Unknown codes remain numbers; structural bounds, not recognition, gate validity.
 func workerIdentityMatches(_ base: UnsafePointer<UInt8>) -> Bool {
     UInt32(bitPattern: readI32(base, offset: PWShmLayout.abiMagicOffset)) == PWShmLayout.abiMagic
         && UnsafeBufferPointer(start: base.advanced(by: PWShmLayout.abiIdentityOffset),
@@ -998,7 +976,17 @@ struct ChildProcessState {
     var terminationRequest: PWRunnerTerminationRequest? = nil
     var waitErrors: [PWRunnerWaitError] = []
     var childUnavailable = false
+    var ownedReap: PWOwnedReapObservation? = nil
+    var departureRequested = false
+    var ownershipUnbroken = true
     private var interruptRetries = 2
+    private var captureOrdinal: UInt64 = 0
+    /// One sequence for actual activation stores, the single owned reap, and
+    /// gate snapshots. Bounded by the admitted schedule, never by poll count.
+    mutating func nextCaptureOrdinal() -> UInt64 {
+        captureOrdinal += 1
+        return captureOrdinal
+    }
 
     init(pid: pid_t, calls: ChildProcessCalls) {
         self.pid = pid
@@ -1006,12 +994,16 @@ struct ChildProcessState {
     }
 
     mutating func wait(options: Int32, stage: String) -> ChildWaitObservation {
+        if status != nil { return .reaped }
         while true {
             var candidate: Int32 = 0
             let rc = calls.wait(pid, &candidate, options)
             let savedErrno = rc == -1 ? errno : nil
             if rc == pid {
                 status = candidate
+                ownedReap = PWOwnedReapObservation(pid: Int(pid), native_rc: rc, raw_status: candidate,
+                    stage: stage, observed_ns: calls.clock(), ownership_unbroken: ownershipUnbroken,
+                    departure_requested: departureRequested, capture_ordinal: nextCaptureOrdinal())
                 return .reaped
             }
             if rc == 0 { return .pending }
@@ -1023,12 +1015,14 @@ struct ChildProcessState {
                     continue
                 }
             }
+            ownershipUnbroken = false
             return .failed
         }
     }
 
     mutating func terminate() {
         guard status == nil && !childUnavailable else { return }
+        departureRequested = true
         let rc = calls.kill(pid, SIGKILL)
         let savedErrno = rc == -1 ? errno : nil
         terminationRequest = PWRunnerTerminationRequest(signal: SIGKILL, rc: rc, errno: savedErrno)

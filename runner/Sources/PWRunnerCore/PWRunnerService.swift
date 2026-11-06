@@ -215,7 +215,8 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
     private let connectionID = PWRunnerAdmission.Connection()
     private let scheduleExit: () -> Void
     private let scheduleExpiry: (Int, @escaping () -> Void) -> Void
-    private let orchestrate: (PWRunnerRunSpec, String, String?, String, String) -> PWRunnerRunResult
+    private let admit: (PWRunnerRunSpec) -> SpecimenAdmission
+    private let orchestrate: (AdmittedSpecimen, String, String?, String, String) -> PWRunnerRunResult
 
     // These boundaries let tests observe entry and retirement without exiting
     // the test host. No request selects them; test orchestration still executes
@@ -227,13 +228,15 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
          scheduleExpiry: @escaping (Int, @escaping () -> Void) -> Void = { delay, action in
              DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(delay), execute: action)
          },
-         orchestrate: @escaping (PWRunnerRunSpec, String, String?, String, String) -> PWRunnerRunResult = {
-             CWorkerOrchestrator.run(parsed: $0, policyHash: $1, bundleId: $2,
+         admit: @escaping (PWRunnerRunSpec) -> SpecimenAdmission = admitSpecimen,
+         orchestrate: @escaping (AdmittedSpecimen, String, String?, String, String) -> PWRunnerRunResult = {
+             CWorkerOrchestrator.run(admitted: $0, policyHash: $1, bundleId: $2,
                  workerExecutablePath: $3, validatorExecutablePath: $4)
          }) {
         self.admission = admission
         self.scheduleExit = scheduleExit
         self.scheduleExpiry = scheduleExpiry
+        self.admit = admit
         self.orchestrate = orchestrate
         super.init()
     }
@@ -320,16 +323,14 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        // Admission and refusal projection are shared with direct orchestration.
-        if let refused = CWorkerOrchestrator.admissionFailure(for: parsed) {
-            replyAndExit(admissionRefusalReply(parsed: parsed, refused: refused,
-                bundleId: bundleString("CFBundleIdentifier")))
+        let admitted: AdmittedSpecimen
+        switch admit(parsed) {
+        case .accepted(let value): admitted = value
+        case .capacity(let refused):
+            replyAndExit(admissionRefusalReply(parsed: parsed, refused: refused, bundleId: bundleString("CFBundleIdentifier")))
             return
-        }
-
-        if let failure = requestMeaningFailure(parsed) {
-            replyAndExit(requestRefusalReply(parsed: parsed, failure: failure,
-                bundleId: bundleString("CFBundleIdentifier")))
+        case .refused(let failure):
+            replyAndExit(requestRefusalReply(parsed: parsed, failure: failure, bundleId: bundleString("CFBundleIdentifier")))
             return
         }
 
@@ -361,7 +362,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
             ?? CWorkerOrchestrator.defaultWorkerExecutablePath()
         let validatorPath = parsed._test_overrides?.validator_executable_path
             ?? CWorkerOrchestrator.defaultValidatorExecutablePath()
-        let cResp = orchestrate(parsed, policyHash, bundleString("CFBundleIdentifier"), workerPath, validatorPath)
+        let cResp = orchestrate(admitted, policyHash, bundleString("CFBundleIdentifier"), workerPath, validatorPath)
         // path_diagnostics enrichment is host-side; the host's
         // realpath(3) is not blocked by the worker's (deny default)
         // policy.

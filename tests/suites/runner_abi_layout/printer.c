@@ -146,15 +146,6 @@ int main(void) {
 
     /* Native lifecycle publications and independently observed fresh reads. */
     printf("PW_SHM_FRESH_READ_BYTES=%u\n", PW_SHM_FRESH_READ_BYTES);
-    printf("offsetof.pw_shm_header_t.extension_requested=%zu\n", offsetof(pw_shm_header_t, extension_requested));
-    printf("offsetof.pw_shm_header_t.extension_delivery_published=%zu\n", offsetof(pw_shm_header_t, extension_delivery_published));
-    printf("offsetof.pw_shm_header_t.extension_delivery_status=%zu\n", offsetof(pw_shm_header_t, extension_delivery_status));
-    printf("offsetof.pw_shm_header_t.extension_delivered_bytes=%zu\n", offsetof(pw_shm_header_t, extension_delivered_bytes));
-    printf("offsetof.pw_shm_header_t.extension_delivery_stage=%zu\n", offsetof(pw_shm_header_t, extension_delivery_stage));
-    printf("offsetof.pw_shm_header_t.extension_delivery_native_rc=%zu\n", offsetof(pw_shm_header_t, extension_delivery_native_rc));
-    printf("offsetof.pw_shm_header_t.extension_delivery_errno=%zu\n", offsetof(pw_shm_header_t, extension_delivery_errno));
-    printf("offsetof.pw_shm_header_t.extension_delivery_cleanup_stage=%zu\n", offsetof(pw_shm_header_t, extension_delivery_cleanup_stage));
-    printf("offsetof.pw_shm_header_t.extension_delivery_cleanup_errno=%zu\n", offsetof(pw_shm_header_t, extension_delivery_cleanup_errno));
     /* Policy delivery acknowledgement: host expectation, worker EOF receipt and its flag. */
     printf("offsetof.pw_shm_header_t.policy_bytes_expected=%zu\n", offsetof(pw_shm_header_t, policy_bytes_expected));
     printf("offsetof.pw_shm_header_t.policy_bytes_received=%zu\n", offsetof(pw_shm_header_t, policy_bytes_received));
@@ -244,8 +235,10 @@ int main(void) {
         + (size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES + (size_t)PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES);
 
     printf("PW_SHM_EVIDENCE_HEADER_BYTES=%u\n", PW_SHM_EVIDENCE_HEADER_BYTES);
+    printf("PW_SHM_AUTHORITY_SETUP_BYTES=%u\n", PW_SHM_AUTHORITY_SETUP_BYTES);
+    printf("region.authority_setup_offset=%zu\n", (size_t)PW_SHM_REGION_BYTES - PW_SHM_AUTHORITY_SETUP_BYTES);
     printf("PW_SHM_DIAGNOSTIC_BYTES=%u\n", PW_SHM_DIAGNOSTIC_BYTES);
-    printf("region.evidence_offset=%zu\n", (size_t)PW_SHM_REGION_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES - PW_SHM_DIAGNOSTIC_BYTES);
+    printf("region.evidence_offset=%zu\n", (size_t)PW_SHM_REGION_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES - PW_SHM_DIAGNOSTIC_BYTES - PW_SHM_AUTHORITY_SETUP_BYTES);
     printf("sizeof.pw_shm_evidence_t=%zu\n", sizeof(pw_shm_evidence_t));
     printf("offsetof.pw_shm_evidence_t.progress=%zu\n", offsetof(pw_shm_evidence_t, progress));
     printf("offsetof.pw_shm_evidence_t.failure_published=%zu\n", offsetof(pw_shm_evidence_t, failure_published));

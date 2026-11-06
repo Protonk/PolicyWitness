@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "id": "com.policywitness.policy-witness.PWRunner",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+      "symbols": [
+        "pw_cworker_load_acquire_u32",
+        "pw_cworker_shm_open_create",
+        "pw_cworker_store_release_u32",
+        "pw_extension_clear"
+      ]
+    }
+  ],
+  "generated_at": "2026-11-06T00:45:18Z"
+}

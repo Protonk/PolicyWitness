@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exercise envelope comparison through its CLI using retained and mutated JSON.
 
-All fixture slots contain copies of one validated live envelope; no app runs or
+All fixture slots contain copies of one authored current envelope; no app runs or
 gitignored migration output are needed. Each control retains both inputs, the
 comparison report, stdout and stderr, including the expected refusal path.
 """
@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from blackbox import recapture_host_reply
-BASE = ROOT / 'tests/fixtures/blackbox_e2e/checker/response25/valid_run.json'
+BASE = ROOT / 'tests/fixtures/blackbox_e2e/checker/current/constructed_run.json'
 COMPARER = ROOT / 'tests/lib/envelope_compare.py'
 
 

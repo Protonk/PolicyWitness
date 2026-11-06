@@ -1,6 +1,9 @@
 //! Worker disposition record validation and projection for
 //! `data.runner_sandbox_diagnostics`, grounded in native execution observations.
 
+#[path = "actor_evidence.rs"]
+mod actor_evidence;
+
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -192,7 +195,7 @@ fn disposition_progress(
         return (None, None, None);
     };
     let index = progress["index"].as_u64();
-    let phase_wait = op == 11 && index.is_some();
+    let phase_wait = matches!(op, 11 | 13) && index.is_some();
     let indexed = op == 9 || op == 4 || phase_wait;
     if (indexed && index.is_none())
         || (!indexed && !progress["index"].is_null())
@@ -914,336 +917,15 @@ fn project_disposition(
     }
 }
 
-/// Structural rules for the worker's delivery failure account, shared with the
-/// Swift encoder and the Python reader: the stage class agrees with the status,
-/// native fields appear exactly for native stages, and cleanup fields are paired.
-fn delivery_failure_problem(status: &str, failure: &Value) -> Option<&'static str> {
-    if !failure.is_object() {
-        return Some("delivery failure lacks its account");
-    }
-    let stage = failure["stage"].as_str().unwrap_or("");
-    let local = matches!(
-        stage,
-        "core_limit" | "descriptor_metadata" | "mapping" | "descriptor_close"
-    );
-    if !local && !matches!(stage, "channel_size" | "channel_header" | "channel_token") {
-        return Some("unknown delivery failure stage");
-    }
-    if (status == "local_setup_failed") != local {
-        return Some("delivery failure stage disagrees with status");
-    }
-    let rc = failure["native_rc"].as_i64();
-    let err = failure["errno"].as_i64();
-    if local {
-        if !rc.is_some_and(|v| v != 0 && v >= i32::MIN as i64 && v <= i32::MAX as i64)
-            || !err.is_some_and(|v| v >= 0 && v <= i32::MAX as i64)
-        {
-            return Some("local setup failure lacks its native result");
-        }
-    } else if stage == "channel_size" {
-        if rc != Some(0) || !failure["errno"].is_null() {
-            return Some("undersized channel misreports its inspection result");
-        }
-    } else if !failure["native_rc"].is_null() || !failure["errno"].is_null() {
-        return Some("channel rejection invents a native result");
-    }
-    match failure["cleanup_stage"].as_str() {
-        Some(cleanup) => {
-            if !matches!(cleanup, "descriptor_close" | "unmap")
-                || !failure["cleanup_errno"]
-                    .as_i64()
-                    .is_some_and(|v| v >= 0 && v <= i32::MAX as i64)
-            {
-                return Some("delivery cleanup failure lacks its errno");
-            }
-            if cleanup == "descriptor_close" && stage == "descriptor_close" {
-                return Some("descriptor closed twice");
-            }
-        }
-        None if !failure["cleanup_stage"].is_null() || !failure["cleanup_errno"].is_null() => {
-            return Some("delivery cleanup errno without a stage");
-        }
-        None => {}
-    }
-    None
-}
-
-// Native events are actions in the worker account, but do not have ordinary
-// query/attempt comparisons. Check their distinct publication and reference
-// requirements before allowing the disposition projection to use them.
+// Native actions exist only in the actor model. Removed declaration keys are
+// rejected even when explicitly null; no historical semantic reader survives.
 fn extension_account_issues(runner: &Value) -> Vec<Value> {
+    let mut issues: Vec<Value> = actor_evidence::validate(runner)
+        .into_iter()
+        .map(|detail| integrity_issue("actor_evidence", detail))
+        .collect();
     if runner["execution_form"] == "actors" {
-        return actor_extension_issues(runner);
-    }
-    let mut issues = Vec::new();
-    let mut reject =
-        |detail: &str| issues.push(integrity_issue("extension_evidence", detail.into()));
-    let empty = Vec::new();
-    let events = match runner.get("extension_events") {
-        None | Some(Value::Null) => &empty,
-        Some(Value::Array(events)) => events,
-        _ => {
-            reject("extension events must be an array");
-            return issues;
-        }
-    };
-    let declarations = match runner.get("extensions") {
-        None | Some(Value::Null) => &empty,
-        Some(Value::Array(declarations)) => declarations,
-        _ => {
-            reject("extension declarations must be an array");
-            return issues;
-        }
-    };
-    if events.len() > 2 || declarations.len() > 1 || (!events.is_empty() && declarations.len() != 1)
-    {
-        reject("extension capacity or declaration association");
-        return issues;
-    }
-    if events.is_empty() && declarations.is_empty() {
-        return issues;
-    }
-    let declaration = declarations.first().unwrap_or(&Value::Null);
-    let issuer = &declaration["issuer"];
-    let reference = |v: &Value| {
-        v.as_str()
-            .is_some_and(|s| !s.is_empty() && s.len() <= 63 && !s.contains('\0'))
-    };
-    if !reference(&declaration["token_ref"])
-        || !matches!(
-            declaration["extension_class"].as_str(),
-            Some("com.apple.app-sandbox.read" | "com.apple.app-sandbox.read-write")
-        )
-    {
-        reject("invalid extension declaration reference or class");
-    }
-    let issued = declaration["issuance_status"] == "issued";
-    let length = issuer["token_length"].as_u64();
-    if declaration["issuance_status"] == "issuer_result_missing"
-        && (issuer["result_published"] != false
-            || [
-                "native_nonnull",
-                "errno",
-                "token_length",
-                "uid",
-                "euid",
-                "gid",
-                "egid",
-            ]
-            .iter()
-            .any(|key| !issuer[key].is_null()))
-    {
-        reject("missing issuer result carries publication or payload");
-    }
-    if declaration["issuance_status"] == "issuer_abnormal_exit"
-        && (issuer["result_published"] != true
-            || issuer["call_boundary_observed"] != true
-            || issuer["native_nonnull"] != true
-            || issuer["reaped"] != true
-            || !length.is_some_and(|v| v > 0 && v < 16384)
-            || !(issuer["term_signal"].as_i64().is_some_and(|v| v > 0)
-                || issuer["exit_code"].as_i64().is_some_and(|v| v != 0)))
-    {
-        reject("abnormal issuer exit lacks publication and reap");
-    }
-    if issued
-        && (declaration["preparation_status"] != "prepared"
-            || issuer["native_nonnull"] != true
-            || issuer["call_boundary_observed"] != true
-            || issuer["result_published"] != true
-            || issuer["reaped"] != true
-            || issuer["exit_code"].as_i64() != Some(0)
-            || !issuer["term_signal"].is_null()
-            || !length.is_some_and(|v| v > 0 && v < 16384))
-    {
-        reject("issued extension lacks bounded native result and clean issuer reap");
-    }
-    if declaration["delivery_status"] == "delivered"
-        && (!issued
-            || declaration["delivered_bytes"].as_u64() != length
-            || !length.is_some_and(|v| v > 0 && v < 16384))
-    {
-        reject("extension delivery lacks bounded issuance");
-    }
-    let delivery = declaration["delivery_status"].as_str().unwrap_or("");
-    if !matches!(
-        delivery,
-        "not_observed"
-            | "delivered"
-            | "token_unavailable"
-            | "channel_rejected"
-            | "native_api_unavailable"
-            | "local_setup_failed"
-    ) {
-        reject("unknown delivery status");
-    }
-    if delivery != "delivered" && !declaration["delivered_bytes"].is_null() {
-        reject("undelivered extension carries delivered byte count");
-    }
-    let cleanup = &declaration["delivery_cleanup_failure"];
-    if !cleanup.is_null()
-        && (delivery != "native_api_unavailable"
-            || !cleanup.is_object()
-            || cleanup["stage"] != "descriptor_close"
-            || !cleanup["errno"]
-                .as_i64()
-                .is_some_and(|v| v >= 0 && v <= i32::MAX as i64))
-    {
-        reject("invalid independent delivery cleanup failure");
-    }
-    let failure = &declaration["delivery_failure"];
-    if matches!(delivery, "channel_rejected" | "local_setup_failed") {
-        if let Some(detail) = delivery_failure_problem(delivery, failure) {
-            reject(detail);
-        } else if delivery == "channel_rejected" && !issued {
-            reject("channel rejection without an issued token");
-        }
-    } else if !failure.is_null() {
-        reject("delivery failure account without a failure status");
-    }
-    let phases = runner["phases"].as_array().unwrap_or(&empty);
-    let action_ids: Vec<&str> = phases
-        .iter()
-        .flat_map(|p| p["action_ids"].as_array().into_iter().flatten())
-        .filter_map(Value::as_str)
-        .collect();
-    let ordinary = runner["steps"].as_array().unwrap_or(&empty);
-    let step_ids: Vec<&str> = ordinary
-        .iter()
-        .filter_map(|s| s["step_id"].as_str())
-        .collect();
-    let event_ids: Vec<&str> = events
-        .iter()
-        .filter_map(|s| s["step_id"].as_str())
-        .collect();
-    let all_ids: std::collections::HashSet<&str> =
-        step_ids.iter().chain(event_ids.iter()).copied().collect();
-    if action_ids.len() != ordinary.len() + events.len()
-        || all_ids.len() != action_ids.len()
-        || action_ids.iter().any(|id| !all_ids.contains(id))
-        || action_ids
-            .iter()
-            .filter(|id| step_ids.contains(id))
-            .copied()
-            .collect::<Vec<_>>()
-            != step_ids
-        || action_ids
-            .iter()
-            .filter(|id| event_ids.contains(id))
-            .copied()
-            .collect::<Vec<_>>()
-            != event_ids
-    {
-        reject("phase actions do not partition ordinary and native events");
-    }
-    let mut consume: Option<&Value> = None;
-    let mut released = false;
-    for event in events {
-        let matches: Vec<&Value> = phases
-            .iter()
-            .filter(|phase| {
-                phase["phase_id"] == event["phase_id"]
-                    && phase["action_ids"]
-                        .as_array()
-                        .is_some_and(|ids| ids.contains(&event["step_id"]))
-            })
-            .collect();
-        if matches.len() != 1
-            || !reference(&event["step_id"])
-            || !reference(&event["handle_ref"])
-            || event["handle_ref"] == declaration["token_ref"]
-        {
-            reject("native event lacks unique phase or valid local references");
-        }
-        let native = event["native_result"].as_i64();
-        match event["operation"].as_str() {
-            Some("consume") => {
-                if consume.is_some() || released || event["token_ref"] != declaration["token_ref"] {
-                    reject("consume reference or order is invalid");
-                }
-                consume = Some(event);
-                if event["status"] == "returned" && declaration["delivery_status"] != "delivered" {
-                    reject("consumption lacks delivery");
-                }
-            }
-            Some("release") => {
-                if released
-                    || !event["token_ref"].is_null()
-                    || !consume.is_some_and(|prior| {
-                        prior["handle_ref"] == event["handle_ref"]
-                            && action_ids
-                                .iter()
-                                .position(|id| Some(*id) == prior["step_id"].as_str())
-                                < action_ids
-                                    .iter()
-                                    .position(|id| Some(*id) == event["step_id"].as_str())
-                    })
-                {
-                    reject("release reference or order is invalid");
-                }
-                if event["status"] == "returned"
-                    && !consume.is_some_and(|prior| {
-                        prior["status"] == "returned"
-                            && prior["native_result"]
-                                .as_i64()
-                                .is_some_and(|handle| handle != -1)
-                    })
-                {
-                    reject("release lacks an observed consume handle");
-                }
-                if native.is_some_and(|v| i32::try_from(v).is_err()) {
-                    reject("release result exceeds native int");
-                }
-                released = true;
-            }
-            _ => reject("unknown native extension operation"),
-        }
-        let published = event["result_published"].as_bool();
-        let called = event["call_boundary_observed"].as_bool();
-        let valid = match event["status"].as_str() {
-            Some("returned") => {
-                published == Some(true)
-                    && called == Some(true)
-                    && native.is_some()
-                    && event["errno"]
-                        .as_u64()
-                        .is_some_and(|v| v <= i32::MAX as u64)
-                    && event["unavailable_reason"].is_null()
-            }
-            Some("unavailable") => {
-                published == Some(true)
-                    && called == Some(false)
-                    && event["native_result"].is_null()
-                    && event["errno"].is_null()
-                    && event["unavailable_reason"].as_str().is_some_and(|s| {
-                        [
-                            "token_unavailable",
-                            "handle_unavailable",
-                            "native_api_unavailable",
-                            "repeated_action",
-                        ]
-                        .contains(&s)
-                    })
-            }
-            Some("unresolved") => {
-                published == Some(false)
-                    && called.is_some()
-                    && event["native_result"].is_null()
-                    && event["errno"].is_null()
-                    && event["unavailable_reason"].is_null()
-            }
-            _ => false,
-        };
-        if !valid {
-            reject("native lifecycle publication is inconsistent");
-        }
-        if (published == Some(true) || called == Some(true))
-            && (runner["sandboxed_after_apply"] != true
-                || matches.len() != 1
-                || matches[0]["ordering"]["proceed_observed"] != true)
-        {
-            reject("native action lacks application and phase acknowledgement");
-        }
+        issues.extend(actor_extension_issues(runner));
     }
     issues
 }
@@ -2206,36 +1888,13 @@ pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDi
     }
     let pid = worker_pid(runner);
     let sub = runner.and_then(|r| r.get("runner_subprocess"));
-    // Disposition indexes every declared action, including native interventions.
-    // Keep each event's own shape; it is not an ordinary query/attempt pair.
-    let mut reply_steps: Vec<Value> = runner
+    // Ordinary requests carry only probe pairs. Native authority actions are
+    // interpreted exclusively by actor_execution_diagnostics.
+    let reply_steps: Vec<Value> = runner
         .and_then(|r| r.get("steps"))
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
-    if let Some(runner) = runner {
-        if let Some(events) = runner.get("extension_events").and_then(Value::as_array) {
-            reply_steps.extend(events.iter().cloned());
-            let action_ids: Vec<&Value> = runner
-                .get("phases")
-                .and_then(Value::as_array)
-                .into_iter()
-                .flatten()
-                .flat_map(|p| {
-                    p.get("action_ids")
-                        .and_then(Value::as_array)
-                        .into_iter()
-                        .flatten()
-                })
-                .collect();
-            reply_steps.sort_by_key(|a| {
-                action_ids
-                    .iter()
-                    .position(|id| **id == a["step_id"])
-                    .unwrap_or(usize::MAX)
-            });
-        }
-    }
     let mut projection = match (pid, sub) {
         (Some(_), Some(sub)) => project_disposition(
             sub,
@@ -2536,11 +2195,11 @@ mod tests {
 
     #[test]
     fn validator_collection_ownership_rejects_transplants_and_ignores_pid_reuse() {
-        let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response25/issuer_abnormal_run.json"
+        let ordinary: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/ordinary_phase_reply.json"
         ))
         .unwrap();
-        let baseline = &envelope["data"]["runner_result"];
+        let baseline = &ordinary;
         assert_eq!(baseline["phases"].as_array().unwrap().len(), 3);
         assert_eq!(diagnostics(baseline).disposition_integrity, Some("valid"));
         let block =
@@ -2599,8 +2258,8 @@ mod tests {
 
     #[test]
     fn shared_evidence_type_corpus() {
-        let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response25/issuer_abnormal_run.json"
+        let baseline: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/ordinary_phase_reply.json"
         ))
         .unwrap();
         let rows: Vec<Value> = serde_json::from_str(include_str!(
@@ -2608,7 +2267,7 @@ mod tests {
         ))
         .unwrap();
         for row in rows {
-            let mut reply = envelope["data"]["runner_result"].clone();
+            let mut reply = baseline.clone();
             for patch in row["patches"].as_array().unwrap() {
                 let (parent, key) = patch["path"].as_str().unwrap().rsplit_once('/').unwrap();
                 let target = reply.pointer_mut(parent).unwrap();
@@ -2630,154 +2289,6 @@ mod tests {
                 assert_eq!(diag.process_disposition, "withheld");
             }
         }
-    }
-
-    #[test]
-    fn missing_issuer_result_rejects_publication_and_payload_without_erasing_cleanup() {
-        let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response25/issuer_abnormal_run.json"
-        ))
-        .unwrap();
-        let baseline = &envelope["data"]["runner_result"];
-        let rule = "missing issuer result carries publication or payload";
-        let rejected = |runner: &Value| {
-            let diag = diagnostics(runner);
-            assert_eq!(diag.disposition_integrity, Some("invalid"));
-            assert_eq!(diag.process_disposition, "withheld");
-            assert!(diag.disposition_issues.iter().any(|i| i["detail"] == rule));
-        };
-        let mut missing = baseline.clone();
-        missing["extensions"][0]["issuance_status"] = json!("issuer_result_missing");
-        rejected(&missing); // The auditor's published-result relabelling.
-        let issuer = missing["extensions"][0]["issuer"].as_object_mut().unwrap();
-        issuer.insert("result_published".into(), json!(false));
-        for key in [
-            "native_nonnull",
-            "errno",
-            "token_length",
-            "uid",
-            "euid",
-            "gid",
-            "egid",
-        ] {
-            issuer.remove(key);
-        }
-        for called in [false, true] {
-            missing["extensions"][0]["issuer"]["call_boundary_observed"] = json!(called);
-            assert_eq!(diagnostics(&missing).disposition_integrity, Some("valid"));
-            assert_eq!(missing["extensions"][0]["issuer"]["exit_code"], 87);
-        }
-        for (key, value) in [
-            ("result_published", json!(true)),
-            ("result_published", Value::Null),
-            ("native_nonnull", json!(false)),
-            ("errno", json!(0)),
-            ("token_length", json!(0)),
-            ("uid", json!(0)),
-            ("euid", json!(0)),
-            ("gid", json!(0)),
-            ("egid", json!(0)),
-        ] {
-            let mut changed = missing.clone();
-            changed["extensions"][0]["issuer"][key] = value;
-            rejected(&changed);
-        }
-        let mut absent = missing.clone();
-        absent["extensions"][0]
-            .as_object_mut()
-            .unwrap()
-            .remove("issuer");
-        rejected(&absent);
-        for status in ["issuer_timeout", "issuer_wait_error"] {
-            let mut interrupted = baseline.clone();
-            interrupted["extensions"][0]["issuance_status"] = json!(status);
-            assert_eq!(
-                diagnostics(&interrupted).disposition_integrity,
-                Some("valid")
-            );
-        }
-    }
-
-    #[test]
-    fn published_abnormal_issuer_exit_requires_both_observations() {
-        let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response25/issuer_abnormal_run.json"
-        ))
-        .unwrap();
-        let baseline = &envelope["data"]["runner_result"];
-        assert_eq!(diagnostics(baseline).disposition_integrity, Some("valid"));
-        for (key, value) in [
-            ("exit_code", json!(0)),
-            ("result_published", json!(false)),
-            ("reaped", json!(false)),
-            ("token_length", json!(0)),
-        ] {
-            let mut changed = baseline.clone();
-            changed["extensions"][0]["issuer"][key] = value;
-            let diag = diagnostics(&changed);
-            assert_eq!(diag.disposition_integrity, Some("invalid"));
-            assert_eq!(diag.process_disposition, "withheld");
-        }
-    }
-
-    #[test]
-    fn native_event_references_and_publication_gate_disposition() {
-        let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response25/extension_run.json"
-        ))
-        .unwrap();
-        let runner = &envelope["data"]["runner_result"];
-        assert_eq!(diagnostics(runner).disposition_integrity, Some("valid"));
-        for class in [
-            "com.apple.app-sandbox.read",
-            "com.apple.app-sandbox.read-write",
-        ] {
-            let mut supported = runner.clone();
-            supported["extensions"][0]["extension_class"] = json!(class);
-            assert_eq!(diagnostics(&supported).disposition_integrity, Some("valid"));
-        }
-        let faults = [
-            ("/extensions/0/extension_class", json!("write")),
-            (
-                "/extensions/0/extension_class",
-                json!("com.apple.app-sandbox.future"),
-            ),
-            ("/extensions/0/extension_class", json!(null)),
-            ("/extension_events/0/native_result", json!(-1)),
-            ("/extension_events/0/native_result", json!(true)),
-            ("/extension_events/0/native_result", json!(1.0)),
-            ("/extension_events/0/call_boundary_observed", json!(false)),
-            ("/extension_events/0/result_published", json!(false)),
-            ("/extension_events/0/status", json!("unresolved")),
-            ("/extension_events/1/handle_ref", json!("other")),
-            ("/extension_events/1/phase_id", json!("other")),
-            ("/extension_events/1/native_result", json!(i64::MAX)),
-            ("/extensions/0/delivered_bytes", json!(16384)),
-            ("/extensions/0/issuer/reaped", json!(false)),
-            ("/extensions/0/issuer/result_published", json!(false)),
-            ("/phases/0/ordering/proceed_observed", json!(false)),
-            (
-                "/runner_subprocess/disposition/steps/1/slot",
-                json!("incomplete"),
-            ),
-        ];
-        for (path, value) in faults {
-            let mut broken = runner.clone();
-            *broken.pointer_mut(path).unwrap() = value;
-            let diag = diagnostics(&broken);
-            assert_eq!(diag.disposition_integrity, Some("invalid"), "{path}");
-            assert_eq!(diag.process_disposition, "withheld", "{path}");
-            assert_eq!(diag.termination_cause, Some("unknown"), "{path}");
-        }
-        let mut refused = runner.clone();
-        refused["extension_events"][0]["native_result"] = json!(-1);
-        let release = refused["extension_events"][1].as_object_mut().unwrap();
-        release.insert("status".into(), json!("unavailable"));
-        release.insert("unavailable_reason".into(), json!("handle_unavailable"));
-        release.insert("call_boundary_observed".into(), json!(false));
-        release.remove("native_result");
-        release.remove("errno");
-        assert_eq!(diagnostics(&refused).disposition_integrity, Some("valid"));
     }
 
     #[test]
@@ -2980,6 +2491,41 @@ mod tests {
     }
 
     #[test]
+    fn indexed_activation_wait_precedes_its_first_slot_without_discarding_the_prefix() {
+        let word = |stage: u64, index: u64| {
+            json!({"worker_evidence": {"progress": {"operation": 13, "stage": stage,
+                "index": index, "raw": (13u64 << 24) | (stage << 20) | (index + 1)}}})
+        };
+        for stage in [1, 2] {
+            for first in [0, 1, 2] {
+                let sub = word(stage, first);
+                let (answer, value, position) = disposition_progress(&sub, 2);
+                assert_eq!((answer, value), (Some("none"), None));
+                let position = position.unwrap();
+                assert_eq!(position, (attempt_position(), first, 0));
+                if first > 0 {
+                    assert!(position > (attempt_position(), first - 1, 2));
+                }
+                assert!(position < (attempt_position(), first, 1));
+            }
+        }
+        assert_eq!(
+            disposition_progress(&word(2, 0), 0),
+            (Some("none"), None, Some((attempt_position(), 0, 0)))
+        );
+        assert_eq!(
+            disposition_progress(&word(1, 3), 2),
+            (Some("invalid"), None, None)
+        );
+        let mut mismatch = word(1, 0);
+        mismatch["worker_evidence"]["progress"]["raw"] = json!((13u64 << 24) | (1 << 20) | 2);
+        assert_eq!(
+            disposition_progress(&mismatch, 2),
+            (Some("invalid"), None, None)
+        );
+    }
+
+    #[test]
     fn clock_setup_progress_is_a_known_position_before_the_policy_read() {
         let word = |op: u64, stage: u64| {
             json!({"worker_evidence": {"progress":
@@ -3008,7 +2554,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response25/a1_expected.json"
+            "../../tests/fixtures/disposition/current/constructed_deadline.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

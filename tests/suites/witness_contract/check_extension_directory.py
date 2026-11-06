@@ -14,6 +14,7 @@ from contract import REQUEST_SCHEMA
 from lifecycle_oracle import check_record
 from run_capture import RunCapture
 from worker_exit_witness import worker_exit_witness
+from check_extensions import specimen, assert_issuance, lifecycle_events
 
 CONTENTS = b'PW directory contents before the attempt\n'
 POLICY = ('(version 1)(allow default)(deny file-read-data)(deny file-write*)'
@@ -21,7 +22,7 @@ POLICY = ('(version 1)(allow default)(deny file-read-data)(deny file-write*)'
           '(extension "com.apple.app-sandbox.read-write"))'
           '(allow file-write* (extension "com.apple.app-sandbox.read-write"))')
 NO_PREDICATE = '(version 1)(allow default)(deny file-read-data)(deny file-write*)'
-CASES = ('read_write', 'no_consume', 'no_predicate', 'different_directory', 'read_only', 'default_read')
+CASES = ('read_write', 'no_consume', 'no_predicate', 'different_directory', 'read_only')
 
 
 def save(path, value):
@@ -51,7 +52,7 @@ def probe(identity, action, target):
 def event(operation):
     fields = dict(operation=operation, handle_ref='handle')
     if operation == 'consume':
-        fields['token_ref'] = 'token'
+        fields['delivery_ref'] = 'delivery'
     return dict(step_id=operation, extension=fields)
 
 
@@ -137,30 +138,27 @@ def run(pw, out, session=None):
             for path in paths[1::2]: path.unlink()
             before = {str(path): observe(path) for path in paths}
             assert all(before[str(path)]['exists'] is False for path in paths[1::2])
-            declaration = dict(token_ref='token', target=str(other if case == 'different_directory' else target))
-            if case != 'default_read':
-                declaration['authority'] = 'read' if case == 'read_only' else 'read_write'
-            phases = [dict(phase_id='before', actions=actions(target, 'before'))]
-            if case != 'no_consume': phases.append(dict(phase_id='consume', actions=[event('consume')]))
-            phases.append(dict(phase_id='during', actions=actions(target, 'during')))
-            if case != 'no_consume': phases.append(dict(phase_id='release', actions=[event('release')]))
-            phases.append(dict(phase_id='after', actions=actions(target, 'after')))
-            request = dict(schema_version=REQUEST_SCHEMA, specimen_id='directory-' + case,
-                           policy=dict(format='sbpl', sbpl_source=NO_PREDICATE if case == 'no_predicate' else POLICY),
-                           extensions=[declaration], phases=phases)
+            supplied_target = other if case == 'different_directory' else target
+            authority = 'read' if case in ('read_only',) else 'read_write'
+            phases = [actions(target, 'before')]
+            if case != 'no_consume': phases.append([event('consume')])
+            phases.append(actions(target, 'during'))
+            if case != 'no_consume': phases.append([event('release')])
+            phases.append(actions(target, 'after'))
+            request = specimen(supplied_target, phases, authority=authority,
+                               policy=NO_PREDICATE if case == 'no_predicate' else POLICY)
+            request['specimen_id'] = 'directory-' + case
             (out / case).mkdir()
             save(out / case / 'before-issuance.json', dict(target=observe(target), other=observe(other), files=before,
-                 basis='owned paths observed before launch; issuance precedes worker actions; no other writer'))
+                 basis='owned paths observed before launch; baseline visit precedes issuance; subject lifetime spans issuance; no other writer'))
             envelope, final = execute(pw, out, root, ownership, case, request, paths, session)
             runner = envelope['data']['runner_result']
-            assert runner['normalized_outcome'] == 'ok' and runner['sandboxed_after_apply']
-            issued, = runner['extensions']
-            assert issued['extension_class'] == ('com.apple.app-sandbox.read' if case in ('read_only', 'default_read') else 'com.apple.app-sandbox.read-write')
-            assert issued['issuance_status'] == 'issued' and issued['delivery_status'] == 'delivered'
-            assert issued['resolved_target'] == declaration['target']
-            assert issued['issuer']['euid'] == os.geteuid() and issued['issuer']['uid'] == os.getuid()
-            assert issued['issuer']['pid'] != runner['runner_subprocess']['pid']
-            events = runner.get('extension_events') or []
+            assert runner['normalized_outcome'] == 'ok'
+            issued = assert_issuance(runner)
+            assert next(a for a in runner['actors'] if a['actor_id']=='subject')['applied']
+            assert issued['extension_class'] == ('com.apple.app-sandbox.read' if authority=='read' else 'com.apple.app-sandbox.read-write')
+            assert issued['target'] == str(supplied_target)
+            events = lifecycle_events(runner)
             if case == 'no_consume':
                 assert events == []
             else:
@@ -171,10 +169,10 @@ def run(pw, out, session=None):
             observed = {step['step_id']: step for step in runner['steps']}
             for boundary in boundaries:
                 read = observed[boundary + '-read']['attempt']
-                positive_read = boundary == 'during' and case in ('read_write', 'read_only', 'default_read')
+                positive_read = boundary == 'during' and case in ('read_write', 'read_only')
                 if positive_read:
                     assert read['rc'] == 0 and read['fresh_read']['content_hex'] == CONTENTS.hex()
-                elif boundary != 'after' or case not in ('read_write', 'read_only', 'default_read'):
+                elif boundary != 'after' or case not in ('read_write', 'read_only'):
                     assert read['fresh_read']['open_rc'] == -1
                 for action, create in (('write', False), ('create', True)):
                     step = observed[boundary + '-' + action]

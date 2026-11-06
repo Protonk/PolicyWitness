@@ -58,7 +58,7 @@
         },
         {
           "id": "build_guard_controls",
-          "description": "Wrong Cargo and native minima, wrong-SDK outputs and outputs outside the arm64 output target stop before assembly, each by its own check; an ad hoc helper and a helper, service or app seal without a secure timestamp pass deep verification but stop before packaging, in both build variants",
+          "description": "Real signing receipts and independent readbacks establish common worker bytes, per-role entitlements and inventory emission before the service seal; wrong minima, SDK, architecture, signer and timestamp controls stop before packaging in both build variants",
           "default": false,
           "requires": [
             "app",
@@ -106,9 +106,11 @@
         },
         {
           "id": "byoxpc_verification_controls",
-          "description": "Installation refuses, and validation reports, a never-launched copy whose worker or issuer code changed after sealing",
+          "description": "Signed worker variants and sealed equipment inventories refuse substitutions; the host binder rejects an incompatible worker identity",
           "requires": [
-            "app"
+            "app",
+            "swift",
+            "clang"
           ]
         },
         {
@@ -462,7 +464,8 @@
           ],
           "requires": [
             "swift",
-            "clang"
+            "clang",
+            "app"
           ],
           "default": false
         }
@@ -906,7 +909,7 @@
         },
         {
           "id": "actor_operations",
-          "description": "Count actual extension calls and fresh opens in production C bodies; omitted calls, crossed delivery and inherited-descriptor substitutions fail designated observations",
+          "description": "Independent native-call and handle observations through operation bodies and production run_attempt dispatch; eleven omission, misrouting, handle and storage mutations must fail designated assertions",
           "command": [
             "bash",
             "tests/suites/runner_c_worker_harness/actor_operations.sh"
@@ -1862,24 +1865,9 @@
           ]
         },
         {
-          "id": "extensions_byoxpc",
-          "default": false,
-          "description": "Native lifecycle, placement and ordinary phases on an owned BYOXPC runner with issuer authority read-back and provenance",
-          "command": [
-            "bash",
-            "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh"
-          ],
-          "requires": [
-            "app",
-            "identity",
-            "clang",
-            "gui"
-          ]
-        },
-        {
           "id": "actors_byoxpc",
           "default": false,
-          "description": "Actor re-delegation, calibration and contrasts on an owned BYOXPC runner's selected worker; the declaration form refused and the actor form executing with the installed issuer held aside; an unapplied actor on an App Sandbox-signed worker copy inheriting that restriction against the ordinary worker baseline",
+          "description": "One owned BYOXPC session: signed mixed actor equipment, substitution controls, lifecycle, directory effects, ordinary phases, maximal replies, re-delegation calibration, inherited restriction, provenance, missing-role refusal and verified service cleanup",
           "command": [
             "bash",
             "tests/suites/witness_contract/opt_in/actors_byoxpc.sh"
@@ -1887,6 +1875,7 @@
           "requires": [
             "app",
             "identity",
+            "clang",
             "gui"
           ]
         },
@@ -2185,7 +2174,6 @@
         "runner_byoxpc/entitlement_transfer",
         "sandbox_extensions_native/feasibility",
         "sandbox_extensions_native/directory",
-        "witness_contract/extensions_byoxpc",
         "witness_contract/actors_byoxpc",
         "witness_contract/path_query_observations",
         "witness_contract/path_query_integrated",

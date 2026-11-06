@@ -25,6 +25,23 @@ MUTATIONS = {
                        '/* control: take the first available delivery */', 'consume selects the named delivery'),
     'inherited_read': ('int fd = open(slot->target, O_RDONLY | O_CLOEXEC);',
                        'int fd = dup(inherited_fd);', 'fresh read executes its own open'),
+    'skip_dispatch_issue': ('case PW_ATTEMPT_EXTENSION_ISSUE: attempt_extension_issue(slot, timing, index); break;',
+        'case PW_ATTEMPT_EXTENSION_ISSUE: break;', 'dispatch issue calls only its native issue boundary'),
+    'skip_dispatch_consume': ('if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_consume_actor(slot);',
+        'if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) { /* omitted dispatch */ }',
+        'dispatch consume calls only its native consume boundary'),
+    'skip_dispatch_release': ('if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_release_actor(slot);',
+        'if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) { /* omitted dispatch */ }',
+        'dispatch release calls only its native release boundary'),
+    'misroute_dispatch_consume': ('if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_consume_actor(slot);',
+        'if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_release_actor(slot);',
+        'dispatch consume calls only its native consume boundary'),
+    'misroute_dispatch_release': ('if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_release_actor(slot);',
+        'if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_consume_actor(slot);',
+        'dispatch release calls only its native release boundary'),
+    'crossed_dispatch_handle': ('if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_release_actor(slot);',
+        'if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) { slot->ext_handle_index = 9; attempt_extension_release_actor(slot); }',
+        'dispatch release receives its own distinct handle'),
 }
 
 
@@ -67,7 +84,7 @@ def main(out, scratch):
             assert observed.returncode == 0 and 'fresh descriptor ownership observed' in observed.stdout, (name, observed.stdout)
         else:
             assert observed.returncode == 73 and 'CONTROL_REJECTED: ' + MUTATIONS[name][2] in observed.stdout, (name, observed.stdout)
-    print('baseline and five targeted source counterexamples classified by independent operation and descriptor observations')
+    print(f'baseline and {len(MUTATIONS)} targeted body/dispatch counterexamples classified by independent call, handle and descriptor observations')
 
 
 if __name__ == '__main__':

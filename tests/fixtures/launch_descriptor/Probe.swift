@@ -98,10 +98,10 @@ func runProbe(_ observer: String, _ variant: String, _ mode: String) throws {
     var readbacks: [[String: Any]] = []
     if mode == "extension_delivery" || mode == "extension_dup" {
         // A real descriptor with distinct file identity exercises the existing
-        // high duplication and fd5 delivery. extensionRequested stays false;
+        // high duplication and fd5 delivery. authorityRequired stays false;
         // no native issuance/consumption claim follows from this control.
         let fd = open(observer, O_RDONLY | O_CLOEXEC); precondition(fd >= 0)
-        input.extensionFD = fd
+        input.authorityFD = fd
     }
     let result = runCWorker(input, processCalls: ChildProcessCalls(), phaseBoundary: { pid, _ in
         precondition(retainedBase != nil && decoyBase != nil)
@@ -153,7 +153,7 @@ func runProbe(_ observer: String, _ variant: String, _ mode: String) throws {
         "original_open_after_return": originalOpen, "worker": worker, "validator": validator, "readbacks": readbacks,
         "mapping": (0..<11).map { descriptorMapWord(Int32($0)) }]
     if sentinelOpen { close(sentinelFD) }
-    if let fd = input.extensionFD { close(fd) }
+    if let fd = input.authorityFD { close(fd) }
     if let p = decoyBase { munmap(p, PWShmLayout.regionBytes) }
     if decoyFD >= 0 { close(decoyFD) }
     try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: "receipt.json"))

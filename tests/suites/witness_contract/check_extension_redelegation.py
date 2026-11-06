@@ -2,7 +2,7 @@
 positive calibration and the narrow public contrasts.
 
 The witnessing assertions are about the apparatus: three distinct fresh
-processes from the selected equipment, the intended policy bytes applied once
+processes with an unentitled A and selected equipment for B and C, the intended policy bytes applied once
 in B and C, every native call, custody, transfer, consume and read either
 published or in a specifically justified unavailable state, and associations
 that bind the second issue to B's process and the second delivery to that
@@ -24,7 +24,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-from check_extensions import capture  # noqa: E402
+from witness_capture import capture  # noqa: E402
 from contract import REQUEST_SCHEMA  # noqa: E402
 import extension_actors  # noqa: E402
 from worker_exit_witness import worker_exit_witness  # noqa: E402
@@ -81,6 +81,14 @@ def apparatus_complete(envelope, runner, spec, policies):
     pids = {name: a['launch']['pid'] for name, a in actors.items()}
     assert len(set(pids.values())) == len(pids), pids
     for name, actor in actors.items():
+        requested=by_id(spec['actors'],'actor_id',name)['equipment']
+        equipment=actor['equipment']
+        assert equipment['requested']==equipment['resolved']==requested
+        assert equipment['requirements_status']=='satisfied'
+        assert equipment['execution']['status']=='matched' and equipment['execution']['eligible']
+        assert equipment['execution']['pid']==pids[name]
+        binding=by_id(runner['equipment_bindings'],'binding_id',equipment['binding_ref'])
+        assert binding['role']==requested and binding['source']=='packaged' and binding['implementation_identity']=='inventory_verified'
         sub = actor['subprocess']
         assert sub['reaped'] is True and sub['exit_code'] == 0 and sub['pid'] == pids[name], (name, sub)
         assert actor['launch']['parent_pid'] == runner['pid'], (name, actor['launch'])
@@ -88,10 +96,12 @@ def apparatus_complete(envelope, runner, spec, policies):
             expected = sha256(policies[name].encode('utf-8'))
             assert actor['mode'] == 'apply' and actor['setup_status'] == 'applied' and actor['applied'] is True, (name, actor)
             assert actor['application_count'] == 1, (name, actor['application_count'])
+            assert actor['application']=={'state':'observed','basis':'applied_publication'}
             assert actor['policy_sha256'] == expected == actor['policy_received_sha256'], (name, actor)
         else:
             assert actor['mode'] == 'unapplied' and actor['setup_status'] == 'unapplied_declared', (name, actor)
             assert actor.get('applied') is None and actor['application_count'] == 0, (name, actor)
+            assert actor['application']=={'state':'not_requested','basis':'unapplied_declaration'}
     for phase in runner['phases']:
         assert phase['arrival_observed'] and phase['completion_observed'], phase
         assert phase['ordering']['protocol_violations'] == [], phase

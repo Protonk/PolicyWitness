@@ -116,7 +116,7 @@ def write_configured_output(builddir, swift=False, cpu_family='aarch64', arch='a
     c = lambda name: dict(name=name, type='executable', target_sources=[
         dict(language='c', compiler=['cc'], parameters=['-I.', '-O2', '-arch', arch, '-mmacosx-version-min=26.0']),
         dict(language=None, compiler=None, parameters=['-Wl,-headerpad_max_install_names', '-arch', link_arch, '-mmacosx-version-min=26.0'])])
-    targets = [c('sb_api_validator'), c('pw-probe-runner'), c('pw-extension-issuer')]
+    targets = [c('sb_api_validator'), c('pw-probe-runner')]
     if swift:
         targets.append(dict(name='PWCWorkerShim', type='static library', target_sources=[
             dict(language='c', compiler=['cc'], parameters=['-arch', arch, '-mmacosx-version-min=26.0']),

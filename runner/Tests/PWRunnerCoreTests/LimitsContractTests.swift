@@ -70,19 +70,26 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "actor_release_wait": PWActorLimits.releaseWaitMs,
                 "actor_exchange_allowance": PWActorLimits.exchangeMs,
                 "actor_lifetime_cutoff": PWActorLimits.lifetimeMs,
+                "actor_required_entitlements": PWActorLimits.requiredEntitlements,
+                "actor_entitlement_key": PWActorLimits.entitlementKeyBytes,
+                "actor_termination_wait": PWActorLimits.terminationMs,
+                "authority_setup_trailer": PWAuthoritySetupLayout.bytes,
+                "authority_setup_cells": PWAuthoritySetupLayout.capacity,
+                "authority_setup_reply": PWAuthoritySetupLayout.encodedReserve,
+                "equipment_entitlement_bytes": PWEquipmentLimits.entitlementBytes,
+                "equipment_inventory_bytes": PWEquipmentLimits.inventoryBytes,
+                "equipment_diagnostic_bytes": PWEquipmentLimits.diagnosticBytes,
+                "equipment_metadata_bytes": PWEquipmentLimits.metadataBytes,
+                "equipment_static_bindings": PWEquipmentLimits.staticBindings,
+                "equipment_live_inspections": PWEquipmentLimits.liveInspections,
+                "equipment_entitlement_records": PWEquipmentLimits.entitlementRecords,
                 "authority_slot_bytes": PWAuthorityLayout.slotBytes,
                 "phase_id": requestLabelMaxBytes,
                 "phase_publications": PWShmLayout.maxPhases * PWShmLayout.phaseBytes,
                 "phase_collection_wait": phaseCollectionBudgetMs,
-                "extension_declarations": PWExtensionLimits.declarations,
-                "extension_consumes": PWExtensionLimits.consumes,
-                "extension_releases": PWExtensionLimits.releases,
                 "extension_reference": PWExtensionLimits.referenceBytes,
-                "extension_target": PWExtensionLimits.targetBytes,
                 "extension_token_storage": PWExtensionLimits.tokenBytes,
                 "extension_token_payload": PWExtensionLimits.tokenBytes - 1,
-                "extension_channel": ExtensionSession.channelBytes,
-                "extension_issuer_wait": ExtensionSession.issuerWaitMs,
                 "fresh_read_bytes": PWExtensionLimits.freshReadBytes,
                 "validator_reply_frame": ValidatorReplyLimits.frameBytes,
                 "validator_records_per_query": ValidatorReplyLimits.recordsPerProbe,
@@ -130,8 +137,8 @@ func runLimitsContractTests(_ tk: TestKit) {
                 + validator.exitGraceMs + validatorReleaseMarginMs)
             try expectTrue(PWRunnerPhase.maximumCount <= PWShmLayout.maxPhases)
             try expectEqual(PWActorLimits.phases, PWShmLayout.maxPhases)
-            try expectEqual(PWExtensionLimits.tokenBytes, PWExtensionLayout.tokenBytes)
-            try expectEqual(PWExtensionLimits.targetBytes + 1, PWExtensionLayout.pathBytes)
+            try expectEqual(PWExtensionLimits.tokenBytes, PWAuthorityLayout.tokenBytes)
+            try expectEqual(PWShmLayout.extTargetBytes - 1, PWActorLimits.targetBytes)
             try expectEqual(PWExtensionLimits.freshReadBytes, PWShmLayout.freshReadBytes)
             try expectEqual(timeoutMsForValidator(override: nil), validator.verdictReadTimeoutMs)
             try expectEqual(timeoutMsForValidator(override: -100), 50)

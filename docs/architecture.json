@@ -199,8 +199,7 @@
           "nodes": [
             "host",
             "worker",
-            "validator",
-            "issuer"
+            "validator"
           ]
         },
         {
@@ -374,14 +373,14 @@
         },
         {
           "id": "worker",
-          "label": "pw-probe-runner",
+          "label": "selected or unentitled C worker",
           "kind": "sandboxed",
           "facts": {
             "Language": "C",
             "Where": "inside the XPC bundle",
             "Started by": "the host",
-            "Sandboxed": "applies its supplied policy once; an unapplied actor declares setup without application",
-            "Native sandbox API": "sandbox_compile_string, params, sandbox_apply; sandbox_extension_consume and sandbox_extension_release; sandbox_extension_issue_file in an actor",
+            "Sandboxed": "equipment is independent of apply/unapplied; inherited restrictions remain",
+            "Native sandbox API": "sandbox_compile_string, params, sandbox_apply; actor sandbox_extension_issue_file, consume and release",
             "Lifetime": "one specimen in the single-worker form, or one actor of an actor-form specimen; one application (none for an unapplied actor) and all of its ordered visits; parked between visits; terminal publication exits without host permission"
           },
           "sources": [
@@ -598,51 +597,6 @@
             {
               "path": "tests/suites/runner_byoxpc/run.sh",
               "symbol": "runner_install",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "issuer",
-          "label": "pw-extension-issuer",
-          "kind": "executable",
-          "facts": {
-            "Where": "inside the XPC bundle",
-            "Lifetime": "one declaration before worker creation; confirmed clean reap required for delivery",
-            "Language": "C",
-            "Started by": "the host",
-            "Sandboxed": "outside the specimen policy; ordinary process authority",
-            "Native sandbox API": "sandbox_extension_issue_file"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "sandbox_extension_issue_file"
-            },
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/check_extensions.py",
-              "symbol": "run_targets",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
-              "symbol": "run_case",
-              "form": "test"
-            },
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
-              "symbol": "runExtensionEvidenceTests",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_combinations.py",
-              "symbol": "check_row",
               "form": "test"
             }
           ]
@@ -1042,123 +996,6 @@
           ]
         },
         {
-          "id": "T13",
-          "from": "host",
-          "to": "issuer",
-          "kind": "spawn",
-          "label": "fresh ordinary-authority issuer; fd 3 token mapping, stdio /dev/null, empty environment",
-          "short": "spawn issuer; fd 3",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "posix_spawn"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/check_extensions.py",
-              "symbol": "run_targets",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
-              "symbol": "run_case",
-              "form": "test"
-            },
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
-              "symbol": "runExtensionEvidenceTests",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_combinations.py",
-              "symbol": "check_row",
-              "form": "test"
-            }
-          ],
-          "note": "Declaration form only: issuer wait {limit:extension_issuer_wait}; cleanup may overrun. Missing capability refuses declaration-form extension specimens."
-        },
-        {
-          "id": "T14",
-          "from": "issuer",
-          "to": "host",
-          "kind": "channel",
-          "label": "native issuance publication and bounded transient token bytes; host owns cleanup and delivery eligibility",
-          "short": "transient token and publication",
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "token_length"
-            },
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "deliveryDescriptor"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
-              "symbol": "run_case",
-              "form": "test"
-            },
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
-              "symbol": "runExtensionEvidenceTests",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_combinations.py",
-              "symbol": "check_row",
-              "form": "test"
-            }
-          ],
-          "note": "Token storage {limit:extension_token_storage}; raw bytes never enter reply fields."
-        },
-        {
-          "id": "T15",
-          "from": "host",
-          "to": "worker",
-          "kind": "spawn",
-          "label": "actor form: posix_spawn with an empty environment, stdin policy pipe, null stdout/stderr and CLOEXEC_DEFAULT; fd 5 the actor's own authority region; activation ordinal and shared lifetime cutoff in the evidence header",
-          "short": "actor launch; fd 5 authority region",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
-              "symbol": "posix_spawn_file_actions_addopen"
-            },
-            {
-              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
-              "symbol": "launchAndSetUp"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_authority"
-            }
-          ],
-          "checks": [
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
-              "symbol": "runActorSchedulerTests",
-              "form": "test"
-            },
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
-              "symbol": "runActorAuthorityTests",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "activation_named_ordinal",
-              "form": "test"
-            }
-          ],
-          "note": "One region per actor, mapped by the host before launch and by that actor before application; a validator or another actor never maps it. Setup allowance {limit:actor_setup_allowance}; lifetime cutoff {limit:actor_lifetime_cutoff}."
-        },
-        {
           "id": "T16",
           "from": "worker",
           "to": "host",
@@ -1227,6 +1064,28 @@
             }
           ],
           "note": "Recipient framing acknowledgement precedes host byte equality and usable/failed settlement, then the source answer. Consumption requires committed, accepted, usable settlement. Private custody erases at last declared transfer use, including failed delivery; shared teardown erasure requires a reaped or never-launched owner."
+        },
+        {
+          "id": "T18",
+          "from": "host",
+          "to": "worker",
+          "kind": "observes",
+          "label": "sealed equipment binding before spawn; owned live signing inspection after usable setup before activation",
+          "short": "sealed equipment binding before spawn; owned live signing inspection after usable setup before activation",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+              "symbol": "ActorEquipmentPreparation"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+              "symbol": "runActorEquipmentTests",
+              "form": "test"
+            }
+          ],
+          "note": "Constructed signing observations exercise complete two-role binding, per-actor boolean requirements, explicit fixture provenance, live path mismatch, process association and ownership/deadline refusal. They do not establish native signature validity or effective authority."
         }
       ]
     },
@@ -1259,8 +1118,8 @@
             "validator_wire",
             "reply",
             "profile_capture",
-            "extension_preparation",
-            "token_channel"
+            "equipment",
+            "authority_setup"
           ]
         },
         {
@@ -1612,78 +1471,6 @@
           ]
         },
         {
-          "id": "extension_preparation",
-          "label": "extension declaration and preparation",
-          "kind": "record",
-          "facts": {
-            "Owner": "host; submitted references and paths remain distinct from observations",
-            "Form": "bounded references, realpath result and metadata before issuer launch"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
-              "symbol": "extensionMeaningFailure"
-            },
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "realpath"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/check_extensions.py",
-              "symbol": "run_targets",
-              "form": "test"
-            },
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
-              "symbol": "runRequestContractTests",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "token_channel",
-          "label": "transient token channel",
-          "kind": "record",
-          "facts": {
-            "Owner": "host owns mapping; issuer writes token/publication; worker consumes and erases",
-            "Form": "separate bounded shared mapping; inherited descriptors closed after mapping; never retained JSON"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "PWExtensionLayout"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "extension_channel"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_abi_layout/run.sh",
-              "symbol": "c_swift_layout_agreement",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
-              "symbol": "run_case",
-              "form": "test"
-            },
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
-              "symbol": "runExtensionEvidenceTests",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_combinations.py",
-              "symbol": "check_row",
-              "form": "test"
-            }
-          ]
-        },
-        {
           "id": "actor_plan",
           "label": "normalized actor plan",
           "kind": "record",
@@ -1748,6 +1535,61 @@
               "form": "test"
             }
           ]
+        },
+        {
+          "id": "equipment",
+          "label": "sealed service equipment inventory and live identity",
+          "kind": "record",
+          "facts": {
+            "Owner": "build/BYOXPC seals static inventory; host inspects both artifacts and owned usable actor processes",
+            "Form": "role/path/hash/CDHash/identifier/team/entitlements plus build identity; per-actor requirements and execution evidence"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+              "symbol": "ActorEquipmentPreparation"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+              "symbol": "runActorEquipmentTests",
+              "form": "test"
+            }
+          ],
+          "note": "Constructed signing observations exercise complete two-role binding, per-actor boolean requirements, explicit fixture provenance, live path mismatch, process association and ownership/deadline refusal. They do not establish native signature validity or effective authority."
+        },
+        {
+          "id": "authority_setup",
+          "label": "automatic authority setup account",
+          "kind": "record",
+          "facts": {
+            "Owner": "host apparatus recorder and worker release-published fixed trailer",
+            "Form": "bounded per-operation native observations; terminal required-apparatus decision separate from application and cleanup"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
+              "symbol": "AuthoritySetupRecorder"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_authority"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+              "symbol": "runActorSchedulerTests",
+              "form": "test"
+            }
+          ],
+          "note": "Constructed setup trailer cells establish independently published cleanup eligibility before a terminal decision and malformed-cell rejection. Native authority exercises separately observe mapped regions and symbol bits; this is not exhaustive apparatus-failure coverage. Scheduler controls preserve application observed during cleanup after setup expiry, retain healthy actor progress after another setup failure, and distinguish natural termination-gate completion from later cleanup. These observations do not infer unobserved application."
         }
       ],
       "edges": [
@@ -2212,152 +2054,6 @@
           ]
         },
         {
-          "id": "B13",
-          "from": "run_spec",
-          "to": "extension_preparation",
-          "kind": "guard",
-          "label": "explicit phases, declaration/action caps, reference order and exec exclusion before preparation",
-          "short": "admit native intent",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
-              "symbol": "extensionMeaningFailure"
-            },
-            {
-              "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
-              "symbol": "requestAdmissionFailure"
-            }
-          ],
-          "checks": [
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
-              "symbol": "runRequestContractTests",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extensions.py",
-              "symbol": "run_targets",
-              "form": "test"
-            }
-          ],
-          "note": "Declaration count {limit:extension_declarations}; consume count {limit:extension_consumes}; release count {limit:extension_releases}; references {limit:extension_reference}; target {limit:extension_target}."
-        },
-        {
-          "id": "B14",
-          "from": "extension_preparation",
-          "to": "token_channel",
-          "kind": "guard",
-          "label": "resolved target and metadata before native issuance; clean issuer reap and bounded publication before worker delivery",
-          "short": "prepare, issue, reap, deliver",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "PW_EXTENSION_TOKEN_BYTES"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/check_extensions.py",
-              "symbol": "run_targets",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
-              "symbol": "run_case",
-              "form": "test"
-            },
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
-              "symbol": "runExtensionEvidenceTests",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_combinations.py",
-              "symbol": "check_row",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "B15",
-          "from": "token_channel",
-          "to": "shm_region",
-          "kind": "channel",
-          "label": "worker receives transient token separately; publishes delivery and ordered consume/release facts in evidence slots",
-          "short": "consume/release publications",
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "sandbox_extension_consume"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "sandbox_extension_release"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "erase_accepted_token"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
-              "symbol": "run_case",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extensions.py",
-              "symbol": "run_targets",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extension_combinations.py",
-              "symbol": "check_row",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "terminal_erasure",
-              "form": "test"
-            }
-          ],
-          "note": "Accepted token storage is erased on ordinary departures and before done; erasure does not invoke native release. Fatal interruption need not reach worker cleanup. Host erasure is a separate observation."
-        },
-        {
-          "id": "B16",
-          "from": "extension_preparation",
-          "to": "reply",
-          "kind": "writes",
-          "label": "preparation, authority and native issuer/cleanup observations without token bytes",
-          "short": "issuer evidence",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
-              "symbol": "PWRunnerExtensionRecord"
-            },
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "record"
-            }
-          ],
-          "checks": [
-            {
-              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
-              "symbol": "runExtensionEvidenceTests",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_extensions.py",
-              "symbol": "run_targets",
-              "form": "test"
-            }
-          ]
-        },
-        {
           "id": "B17",
           "from": "run_spec",
           "to": "actor_plan",
@@ -2452,6 +2148,108 @@
             }
           ],
           "note": "A failed exchange may still complete its action and phase; schedule advancement does not require all deliveries to succeed. No native permission or revocation follows from transport evidence."
+        },
+        {
+          "id": "B20",
+          "from": "actor_plan",
+          "to": "equipment",
+          "kind": "guard",
+          "label": "bind every actor to selected or unentitled equipment before launch",
+          "short": "bind every actor to selected or unentitled equipment before launch",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+              "symbol": "bind"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+              "symbol": "runActorEquipmentTests",
+              "form": "test"
+            }
+          ],
+          "note": "Constructed signing observations exercise complete two-role binding, per-actor boolean requirements, explicit fixture provenance, live path mismatch, process association and ownership/deadline refusal. They do not establish native signature validity or effective authority."
+        },
+        {
+          "id": "B21",
+          "from": "equipment",
+          "to": "reply",
+          "kind": "publishes",
+          "label": "static bindings and per-actor owned live code association; no effective-authority claim",
+          "short": "static bindings and per-actor owned live code association; no effective-authority claim",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+              "symbol": "pwRunnerEquipmentProblems"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+              "symbol": "runActorEquipmentTests",
+              "form": "test"
+            }
+          ],
+          "note": "Constructed signing observations exercise complete two-role binding, per-actor boolean requirements, explicit fixture provenance, live path mismatch, process association and ownership/deadline refusal. They do not establish native signature validity or effective authority."
+        },
+        {
+          "id": "B22",
+          "from": "shm_region",
+          "to": "authority_setup",
+          "kind": "publishes",
+          "label": "published setup operations and terminal decision before application",
+          "short": "published setup operations and terminal decision before application",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_authority"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
+              "symbol": "decodeAuthoritySetup"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+              "symbol": "runActorSchedulerTests",
+              "form": "test"
+            }
+          ],
+          "note": "Constructed setup trailer cells establish independently published cleanup eligibility before a terminal decision and malformed-cell rejection. Native authority exercises separately observe mapped regions and symbol bits; this is not exhaustive apparatus-failure coverage. Scheduler controls preserve application observed during cleanup after setup expiry, retain healthy actor progress after another setup failure, and distinguish natural termination-gate completion from later cleanup. These observations do not infer unobserved application."
+        },
+        {
+          "id": "B23",
+          "from": "authority_setup",
+          "to": "reply",
+          "kind": "publishes",
+          "label": "preserve apparatus, application and final process observations separately",
+          "short": "preserve apparatus, application and final process observations separately",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
+              "symbol": "decodeAuthoritySetup"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift",
+              "symbol": "runActorSchedulerTests",
+              "form": "test"
+            }
+          ],
+          "note": "Constructed setup trailer cells establish independently published cleanup eligibility before a terminal decision and malformed-cell rejection. Native authority exercises separately observe mapped regions and symbol bits; this is not exhaustive apparatus-failure coverage. Scheduler controls preserve application observed during cleanup after setup expiry, retain healthy actor progress after another setup failure, and distinguish natural termination-gate completion from later cleanup. These observations do not infer unobserved application."
         }
       ]
     },
@@ -5381,7 +5179,8 @@
             "install",
             "signing",
             "plist",
-            "registry"
+            "registry",
+            "equipment_inventory"
           ]
         },
         {
@@ -5408,7 +5207,7 @@
           "nodes": [
             "worker",
             "validator",
-            "issuer"
+            "unentitled"
           ]
         },
         {
@@ -5456,7 +5255,7 @@
           "kind": "record",
           "facts": {
             "Ownership": "the installer",
-            "Contents": "the host, worker, validator and issuer, each with the build's signature until the installer re-signs them; CFBundleIdentifier is the service name"
+            "Contents": "the host, selected worker, unentitled worker and validator, each with the build's signature until the installer re-signs them; CFBundleIdentifier is the service name"
           },
           "sources": [
             {
@@ -5513,7 +5312,7 @@
           "label": "runner install",
           "kind": "command",
           "facts": {
-            "Behavior": "signs the worker, validator, issuer and then the bundle, verifies the seal recursively, writes the launchd plist, bootstraps, records the runner with every binary's read-back; with --env, adds EnvironmentVariables"
+            "Behavior": "Verifies source seal and inventory before mutation; signs selected worker with supplied entitlements and unentitled worker/validator without them; refreshes inventory, seals service, registers launchd and retains readbacks"
           },
           "sources": [
             {
@@ -5552,7 +5351,7 @@
           "label": "codesign of the bundle tree",
           "kind": "command",
           "facts": {
-            "Identity": "the embedded worker with the identity and the supplied entitlements, the validator and issuer with the identity alone, then the enclosing bundle with the identity and the entitlements",
+            "Identity": "the embedded worker with the identity and the supplied entitlements, the validator and unentitled worker with the identity alone, then the enclosing bundle with the identity and the entitlements",
             "Checks": "the sealed bundle recursively (--deep --strict) before anything is recorded"
           },
           "sources": [
@@ -5572,7 +5371,7 @@
           "checks": [
             {
               "path": "controller/src/runner_manager.rs",
-              "symbol": "install_signing_signs_helpers_before_the_bundle",
+              "symbol": "install_signing_signs_helpers_and_inventory_before_the_bundle",
               "form": "test"
             },
             {
@@ -5641,7 +5440,7 @@
           "kind": "record",
           "facts": {
             "Lifecycle": "pending, installed, pending_cleanup",
-            "Contents": "service name, scope, bundle path, and separate host/worker/validator/issuer signature and entitlement read-backs, each entitlement set with its keys and the keys granted (value true); absent helper observations in older records remain unknown"
+            "Contents": "service name, scope, bundle path, and separate host/selected worker/unentitled worker/validator signature and entitlement read-backs, each entitlement set with its keys and the keys granted (value true); absent helper observations in older records remain unknown"
           },
           "sources": [
             {
@@ -5858,7 +5657,7 @@
           "label": "runner provenance and binary baselines",
           "kind": "record",
           "facts": {
-            "Contents": "runner kind, service name, registry id and separate host/worker/validator/issuer signature and entitlement read-backs; selected binary hashes observed before invocation; missing older issuer observations remain unknown"
+            "Contents": "runner kind, service name, registry id and separate host/selected worker/unentitled worker/validator signature and entitlement read-backs; selected binary hashes observed before invocation; historical observations remain available for recovery"
           },
           "sources": [
             {
@@ -5887,8 +5686,8 @@
               "form": "test"
             },
             {
-              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
-              "symbol": "extensions_byoxpc",
+              "path": "tests/suites/witness_contract/opt_in/actors_byoxpc.sh",
+              "symbol": "actors_byoxpc",
               "form": "test"
             }
           ]
@@ -5989,7 +5788,7 @@
           "label": "runner validate",
           "kind": "command",
           "facts": {
-            "Behavior": "verifies each record's bundle recursively and the host, worker and validator individually; also verifies the issuer when its file exists or prior issuer evidence is recorded; re-reads those signatures and entitlement sets, reports failures by record and binary, and leaves an absent unrecorded issuer unknown; consults no launchctl"
+            "Behavior": "Verifies service and each current role, sealed equipment inventory and signature/entitlement readbacks; legacy issuer records remain inspectable for recovery; consults no launchctl"
           },
           "sources": [
             {
@@ -6087,12 +5886,12 @@
           ]
         },
         {
-          "id": "issuer",
-          "label": "pw-extension-issuer in the copy",
+          "id": "unentitled",
+          "label": "pw-probe-runner-unentitled in the copy",
           "kind": "executable",
           "facts": {
-            "Identity": "installed identity alone, no supplied worker entitlements",
-            "Behavior": "bundle-local ordinary-authority issuance before the worker"
+            "Identity": "same compiled worker, installed identity, empty entitlement dictionary",
+            "Behavior": "actor equipment choice independent of sandbox mode; no inherited restriction is removed"
           },
           "sources": [
             {
@@ -6100,14 +5899,46 @@
               "symbol": "sign_install_tree"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
-              "symbol": "defaultIssuerExecutablePath"
+              "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+              "symbol": "bind"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
-              "symbol": "extensions_byoxpc",
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "install_signing_signs_helpers_and_inventory_before_the_bundle",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+              "symbol": "runActorEquipmentTests",
+              "form": "test"
+            }
+          ],
+          "note": "Injected signer and inventory publisher establish selected entitlement input, empty-input unentitled/validator signing, inventory publication before enclosing seal, and missing-role/publication failure refusal. They supply no native codesign acceptance evidence. Constructed signing observations exercise complete two-role binding, per-actor boolean requirements, explicit fixture provenance, live path mismatch, process association and ownership/deadline refusal. They do not establish native signature validity or effective authority."
+        },
+        {
+          "id": "equipment_inventory",
+          "label": "sealed worker-equipment.json",
+          "kind": "manifest",
+          "facts": {
+            "Identity": "source seal verified before mutation; refreshed signed-role observations retain source build identity",
+            "Behavior": "host verifies own service seal and both roles; controller registry is not execution authority"
+          },
+          "sources": [
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "verify_equipment_inventory"
+            },
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "refresh_equipment_inventory"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "equipment_inventory_requires_closed_complete_current_roles",
               "form": "test"
             },
             {
@@ -6115,7 +5946,8 @@
               "symbol": "byoxpc_verification_controls",
               "form": "test"
             }
-          ]
+          ],
+          "note": "Constructed inventories exercise current protocol, exactly two distinct roles, fixed paths, bounded entitlement text and closed keys. Native seal and signed-byte equality require the separate verification controls. Never-launched signed copies exercise changed nested code and validly resealed stale or malformed equipment inventories. Installation must refuse without registration; these controls do not establish live actor identity or execution."
         }
       ],
       "edges": [
@@ -6202,7 +6034,7 @@
           "from": "install",
           "to": "signing",
           "kind": "spawn",
-          "label": "sign_install_tree: codesign the worker with --entitlements, the validator, the issuer, then the bundle; codesign --verify --deep --strict",
+          "label": "sign_install_tree: codesign the worker with --entitlements, the validator and unentitled worker, refresh inventory, then seal the bundle; codesign --verify --deep --strict",
           "short": "codesign",
           "sources": [
             {
@@ -6475,8 +6307,8 @@
               "form": "test"
             },
             {
-              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
-              "symbol": "extensions_byoxpc",
+              "path": "tests/suites/witness_contract/opt_in/actors_byoxpc.sh",
+              "symbol": "actors_byoxpc",
               "form": "test"
             }
           ]
@@ -6486,7 +6318,7 @@
           "from": "bundle_copy",
           "to": "provenance",
           "kind": "reads",
-          "label": "Binaries::observe hashes the service, worker, validator and issuer files before invocation",
+          "label": "Binaries::observe hashes the service, selected worker, unentitled worker and validator files before invocation",
           "short": "hashes before invocation",
           "sources": [
             {
@@ -6574,7 +6406,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "eligible collection spawns the copy’s bundle-local validator by default; an explicit override takes precedence",
+          "label": "eligible collection spawns the copy\u2019s bundle-local validator by default; an explicit override takes precedence",
           "short": "spawn",
           "sources": [
             {
@@ -6741,82 +6573,144 @@
         {
           "id": "X26",
           "from": "signing",
-          "to": "issuer",
+          "to": "unentitled",
           "kind": "writes",
-          "label": "issuer receives identity alone; signature and entitlements read back independently",
-          "short": "sign and read back issuer",
+          "label": "sign same compiled worker without supplied entitlements",
+          "short": "sign same compiled worker without supplied entitlements",
           "sources": [
             {
               "path": "controller/src/runner_manager.rs",
               "symbol": "sign_install_tree"
-            },
-            {
-              "path": "controller/src/runner_manager.rs",
-              "symbol": "read_back"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
-              "symbol": "extensions_byoxpc",
-              "form": "test"
-            },
-            {
               "path": "controller/src/runner_manager.rs",
-              "symbol": "install_signing_signs_helpers_before_the_bundle",
+              "symbol": "install_signing_signs_helpers_and_inventory_before_the_bundle",
               "form": "test"
             }
-          ]
+          ],
+          "note": "Injected signer and inventory publisher establish selected entitlement input, empty-input unentitled/validator signing, inventory publication before enclosing seal, and missing-role/publication failure refusal. They supply no native codesign acceptance evidence."
         },
         {
           "id": "X27",
           "from": "host",
-          "to": "issuer",
+          "to": "unentitled",
           "kind": "spawn",
-          "label": "declaration form uses copy-local issuer path; named declaration capability refusal if missing; actor issue runs in its own worker",
-          "short": "spawn local issuer",
+          "label": "spawn the exact actor equipment binding; never substitute roles",
+          "short": "spawn the exact actor equipment binding; never substitute roles",
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
-              "symbol": "defaultIssuerExecutablePath"
-            },
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "capabilityUnavailable"
+              "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+              "symbol": "ActorEquipmentPreparation"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
-              "symbol": "extensions_byoxpc",
+              "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+              "symbol": "runActorEquipmentTests",
               "form": "test"
             }
-          ]
+          ],
+          "note": "Constructed signing observations exercise complete two-role binding, per-actor boolean requirements, explicit fixture provenance, live path mismatch, process association and ownership/deadline refusal. They do not establish native signature validity or effective authority."
         },
         {
           "id": "X28",
-          "from": "issuer",
+          "from": "unentitled",
           "to": "provenance",
           "kind": "reads",
-          "label": "actual selected path and hash compared with shipped issuer baseline; separate installed read-backs",
-          "short": "issuer provenance",
+          "label": "retain actual path, hash, signature and entitlements independently",
+          "short": "retain actual path, hash, signature and entitlements independently",
           "sources": [
             {
               "path": "controller/src/dossier.rs",
-              "symbol": "issuer"
-            },
-            {
-              "path": "controller/src/runner_select.rs",
-              "symbol": "runner_issuer_signature"
+              "symbol": "unentitled_worker"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
-              "symbol": "extensions_byoxpc",
+              "path": "controller/src/run_flow.rs",
+              "symbol": "byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines",
               "form": "test"
             }
-          ]
+          ],
+          "note": "Constructed BYOXPC dossier input compares copied binary paths and hashes against app manifest baselines. Signature and entitlement readbacks retain their own source; this test does not attest live process identity."
+        },
+        {
+          "id": "X29",
+          "from": "bundle_copy",
+          "to": "equipment_inventory",
+          "kind": "guard",
+          "label": "verify source seal and complete inventory before changing bytes",
+          "short": "verify source seal and complete inventory before changing bytes",
+          "sources": [
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "verify_equipment_inventory"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/preflight/run.sh",
+              "symbol": "byoxpc_verification_controls",
+              "form": "test"
+            }
+          ],
+          "note": "Never-launched signed copies exercise changed nested code and validly resealed stale or malformed equipment inventories. Installation must refuse without registration; these controls do not establish live actor identity or execution."
+        },
+        {
+          "id": "X30",
+          "from": "signing",
+          "to": "equipment_inventory",
+          "kind": "writes",
+          "label": "refresh signed observations after nested signing and before service seal",
+          "short": "refresh signed observations after nested signing and before service seal",
+          "sources": [
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "refresh_equipment_inventory"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "install_signing_signs_helpers_and_inventory_before_the_bundle",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/preflight/run.sh",
+              "symbol": "byoxpc_verification_controls",
+              "form": "test"
+            }
+          ],
+          "note": "Injected signer and inventory publisher establish selected entitlement input, empty-input unentitled/validator signing, inventory publication before enclosing seal, and missing-role/publication failure refusal. They supply no native codesign acceptance evidence. Never-launched signed copies exercise changed nested code and validly resealed stale or malformed equipment inventories. Installation must refuse without registration; these controls do not establish live actor identity or execution."
+        },
+        {
+          "id": "X31",
+          "from": "equipment_inventory",
+          "to": "host",
+          "kind": "guard",
+          "label": "bind both production roles to compiled source/ABI identity",
+          "short": "bind both production roles to compiled source/ABI identity",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+              "symbol": "ActorEquipmentManifest"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+              "symbol": "runActorEquipmentTests",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "equipment_inventory_requires_closed_complete_current_roles",
+              "form": "test"
+            }
+          ],
+          "note": "Constructed signing observations exercise complete two-role binding, per-actor boolean requirements, explicit fixture provenance, live path mismatch, process association and ownership/deadline refusal. They do not establish native signature validity or effective authority. Constructed inventories exercise current protocol, exactly two distinct roles, fixed paths, bounded entitlement text and closed keys. Native seal and signed-byte equality require the separate verification controls."
         }
       ]
     },
@@ -6850,7 +6744,6 @@
             "s4a",
             "s4b",
             "s6",
-            "s10a",
             "s13a",
             "s13b",
             "s13c",
@@ -6865,9 +6758,6 @@
             "s35a",
             "s35b",
             "s36b",
-            "n2",
-            "n3",
-            "n4",
             "n5",
             "n6",
             "n8",
@@ -6875,28 +6765,23 @@
             "n9b",
             "n11",
             "n12",
-            "n13"
+            "n13",
+            "a6"
           ]
         },
         {
           "id": "authority",
           "label": "Deliberately supplied authority / restriction",
           "nodes": [
-            "s5",
-            "s8b",
-            "s9",
-            "s10c",
-            "s11a",
-            "s11b",
-            "s12a",
-            "s12b",
-            "s13d",
             "s19",
-            "s22",
             "s25",
             "s26a",
             "s28",
-            "n1"
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
           ]
         },
         {
@@ -7142,36 +7027,6 @@
           ]
         },
         {
-          "id": "s5",
-          "label": "Host token-delivery duplicate\ntokenFD",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S5",
-            "Acquired by": "H: fcntl(F_DUPFD_CLOEXEC, 64)",
-            "When": "Declaration form: before compilation",
-            "Held across": "Through driver return",
-            "Release / teardown action": "H defer close",
-            "Authority": "Duplicate authority-bearing channel",
-            "Reaches exec children": "Worker fd 5; exec/extension combination refused",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
-              "symbol": "runCWorker"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ],
-          "note": "Setup controls observe endpoint-action failure refusing spawn with cleanup."
-        },
-        {
           "id": "s6",
           "label": "Worker-spawn file-action\nhandle",
           "kind": "reporting",
@@ -7241,342 +7096,6 @@
               "symbol": "terminal_exit_without_request",
               "form": "test",
               "scope": "Applied worker publishes done and exits cleanly without a host exit request."
-            }
-          ]
-        },
-        {
-          "id": "s8a",
-          "label": "Extension channel object",
-          "kind": "mixed",
-          "facts": {
-            "Inventory ID": "S8a",
-            "Acquired by": "E: pw_cworker_shm_open_create, ftruncate",
-            "When": "Before compilation",
-            "Held across": "Issuer then worker; through session",
-            "Release / teardown action": "E requests shm_unlink; injected failure leaves name after teardown",
-            "Authority": "Holds transferable token and issuer metadata",
-            "Reaches exec children": "No admitted exec+extension plan",
-            "Role": "A + E"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            },
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "s8b",
-          "label": "Session descriptor",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S8b",
-            "Acquired by": "E: pw_cworker_shm_open_create, FD_CLOEXEC",
-            "When": "Before compilation",
-            "Held across": "Through session",
-            "Release / teardown action": "E deinit close, including setup-failure returns",
-            "Authority": "Map/duplicate token channel",
-            "Reaches exec children": "No: close-on-exec except explicit delivery dup",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Instrumented issuer-session setup controls observe descriptor cleanup; shared-object identity is not established by matching descriptor metadata."
-            }
-          ]
-        },
-        {
-          "id": "s8c",
-          "label": "Host token-channel mapping",
-          "kind": "mixed",
-          "facts": {
-            "Inventory ID": "S8c",
-            "Acquired by": "E: mmap, zero/header/path/authority writes",
-            "When": "Before compilation",
-            "Held across": "Through reply preparation",
-            "Release / teardown action": "E erase before reply; deinit erases, unmaps",
-            "Authority": "Read issuance evidence; supply/erase token",
-            "Reaches exec children": "No: address space replaced",
-            "Role": "A + E"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "s9",
-          "label": "Fresh issuer process",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S9",
-            "Acquired by": "E: posix_spawn with CLOEXEC_DEFAULT, nil envp",
-            "When": "Before compilation",
-            "Held across": "Until issuer exit; delivery requires confirmed clean reap",
-            "Release / teardown action": "I return; E wait/terminate",
-            "Authority": "Ordinary signed issuer authority for file token issuance",
-            "Reaches exec children": "No: sibling, reaped before worker delivery",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "s10a",
-          "label": "Issuer zero soft/hard core\nlimit",
-          "kind": "reporting",
-          "facts": {
-            "Inventory ID": "S10a",
-            "Acquired by": "I: setrlimit(RLIMIT_CORE)",
-            "When": "Before compilation",
-            "Held across": "Until issuer exit",
-            "Release / teardown action": "Exit; failure returns before mapping",
-            "Authority": "Restricts core-dump production",
-            "Reaches exec children": "No: issuer creates no exec child",
-            "Role": "P"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "s10b",
-          "label": "Issuer channel mapping",
-          "kind": "mixed",
-          "facts": {
-            "Inventory ID": "S10b",
-            "Acquired by": "I: mmap from fd 3",
-            "When": "Before compilation",
-            "Held across": "Until publication/exit",
-            "Release / teardown action": "Normal munmap; malformed header exits without explicit unmap",
-            "Authority": "Write token and issuance metadata",
-            "Reaches exec children": "No child",
-            "Role": "A + E"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "s10c",
-          "label": "Issuer channel fd 3",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S10c",
-            "Acquired by": "E adddup2, received by I",
-            "When": "Before compilation",
-            "Held across": "Through I mapping attempt",
-            "Release / teardown action": "I close(3) after mmap; earlier errors leave to exit",
-            "Authority": "Map channel",
-            "Reaches exec children": "No child",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "s11a",
-          "label": "Issuer libsandbox dynamic-\nlibrary handle",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S11a",
-            "Acquired by": "I: dlopen(RTLD_NOW | RTLD_LOCAL)",
-            "When": "Before compilation",
-            "Held across": "Until exit; no explicit dlclose",
-            "Release / teardown action": "Loader/process teardown; internals unobserved",
-            "Authority": "Makes private issuance API callable, not an entitlement grant",
-            "Reaches exec children": "No child",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "s11b",
-          "label": "Issuer issue/consume/release\nsymbol addresses",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S11b",
-            "Acquired by": "I: three dlsym calls",
-            "When": "Before compilation",
-            "Held across": "Issuance check/call; loader image remains",
-            "Release / teardown action": "Automatic values end with I; no independent handle release",
-            "Authority": "API entry points; consume/release are checked, not invoked",
-            "Reaches exec children": "No child",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "s12a",
-          "label": "Native returned token\nallocation",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S12a",
-            "Acquired by": "I: sandbox_extension_issue_file",
-            "When": "Before compilation",
-            "Held across": "Copy/reject decision only",
-            "Release / teardown action": "I bounded erase then free; oversized tail caveat",
-            "Authority": "Bearer bytes for internally selected native read or read-write extension consumption",
-            "Reaches exec children": "No: issuer storage not inherited",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ],
-          "note": "Private issuance allocation internals remain unobserved."
-        },
-        {
-          "id": "s12b",
-          "label": "Token bytes in shared channel",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S12b",
-            "Acquired by": "I: memcpy on bounded accepted token",
-            "When": "Before compilation",
-            "Held across": "Until worker consume decision or ordinary departure after channel acceptance; earlier mapping/header refusals leave erasure to the host; host erasure is independent; fatal interruption may bypass worker cleanup",
-            "Release / teardown action": "Worker full-buffer erasure in S22; independent host erasure in S8c",
-            "Authority": "Transferable extension token",
-            "Reaches exec children": "No admitted exec+extension plan",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "erase_accepted_token"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            },
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "terminal_erasure",
-              "form": "test",
-              "scope": "Independent full-capacity and publication-boundary observations reject shortened or late erasure, including refusal paths."
             }
           ]
         },
@@ -7670,41 +7189,6 @@
               "symbol": "launch_inventory",
               "form": "test",
               "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
-            },
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "s13d",
-          "label": "Worker token fd 5, if\nsupplied",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S13d",
-            "Acquired by": "H checks adddup2(tokenFD, 5) before spawn",
-            "When": "Declaration form: before compilation",
-            "Held across": "Through extension preparation",
-            "Release / teardown action": "prepare_extension closes once; early main refusals leave to exit",
-            "Authority": "Map token channel",
-            "Reaches exec children": "No admitted exec+extension plan; child flags would exclude it",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
-              "symbol": "runCWorker"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             },
             {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
@@ -7837,11 +7321,11 @@
           "kind": "mixed",
           "facts": {
             "Inventory ID": "S16a",
-            "Acquired by": "Kernel/loader at H spawn; controller checks required keys",
+            "Acquired by": "Kernel/loader at spawn; host static/live associated signing inspection",
             "When": "Before compilation",
             "Held across": "Until exit; SBPL/extension interventions alter effective access",
             "Release / teardown action": "Exit, not a PW reset",
-            "Authority": "Starting access and restrictions; built-in manifest has empty entitlements",
+            "Authority": "Role-specific signed entitlements plus inherited credentials/restrictions; neither establishes effective authority",
             "Reaches exec children": "Credentials/policy inherit subject to exec semantics; child signature supplies own entitlements",
             "Role": "Supplied entitlements plus ambient authority/restrictions; mixed starting substrate"
           },
@@ -7853,6 +7337,10 @@
             {
               "path": "controller/src/runner_select.rs",
               "symbol": "enforce_required_entitlements"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
+              "symbol": "ActorEquipmentPreparation"
             }
           ],
           "checks": [],
@@ -8098,28 +7586,21 @@
           "kind": "authority",
           "facts": {
             "Inventory ID": "S19",
-            "Acquired by": "prepare_extension: dlsym(RTLD_DEFAULT)",
-            "When": "Declaration form: before compilation",
+            "Acquired by": "prepare_authority: independent dlsym lookups",
+            "When": "Actor setup before compilation/application",
             "Held across": "Later attempts/phases, until exit",
             "Release / teardown action": "Static storage at exit; no dynamic handle acquired here",
-            "Authority": "Callable native consume/release, no pre-apply consumption",
+            "Authority": "Callable native issue/consume/release, no automatic invocation",
             "Reaches exec children": "No admitted combination; pointer storage not inherited across exec",
             "Role": "A"
           },
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_extension"
+              "symbol": "prepare_authority"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ],
+          "checks": [],
           "note": "Private loader/library internals remain unobserved."
         },
         {
@@ -8128,101 +7609,21 @@
           "kind": "mixed",
           "facts": {
             "Inventory ID": "S20",
-            "Acquired by": "prepare_extension: setrlimit(RLIMIT_CORE) after symbols resolve",
-            "When": "Declaration form: before compilation",
+            "Acquired by": "prepare_authority: setrlimit(RLIMIT_CORE)",
+            "When": "Actor setup before compilation/application",
             "Held across": "All later attempts/phases, until exit if call succeeds",
             "Release / teardown action": "No reset; exit",
-            "Authority": "Restricts core dumping; missing symbols/setup failure qualify it",
-            "Reaches exec children": "No admitted exec with extension; hypothetical ABI child would inherit",
+            "Authority": "Core-dump restriction attempt recorded separately from missing symbols",
+            "Reaches exec children": "Authority-participating actor cannot exec",
             "Role": "P + process context"
           },
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_extension"
+              "symbol": "prepare_authority"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "s21",
-          "label": "Worker extension-channel\nmapping",
-          "kind": "mixed",
-          "facts": {
-            "Inventory ID": "S21",
-            "Acquired by": "prepare_extension: mmap(MAP_SHARED)",
-            "When": "Declaration form: before compilation",
-            "Held across": "Accepted mapping until exit, including after erase",
-            "Release / teardown action": "Rejected mapping: erase/munmap; accepted: no explicit unmap",
-            "Authority": "Read/erase token and inspect channel admission metadata",
-            "Reaches exec children": "No admitted combination; address space replaced on exec",
-            "Role": "A + P"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_extension"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ],
-          "note": "Rejected-mapping unmap failure is recorded on the preparation path."
-        },
-        {
-          "id": "s22",
-          "label": "Accepted token view in S21\n(alias of S12b, no copy)",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "S22",
-            "Acquired by": "prepare_extension: length/NUL/header inspection",
-            "When": "Declaration form: before compilation",
-            "Held across": "Until consume decision or ordinary departure after acceptance; fatal interruption may bypass cleanup",
-            "Release / teardown action": "Full-buffer erase before done, early return or cancellation exit; no native release; separate host erasure remains",
-            "Authority": "Consumable bearer token; validation does not consume it",
-            "Reaches exec children": "No admitted combination",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_extension"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "erase_accepted_token"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "publish_done_and_exit"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            },
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "terminal_erasure",
-              "form": "test",
-              "scope": "Independent full-capacity and publication-boundary observations reject shortened or late erasure, including refusal paths."
-            }
-          ]
+          "checks": []
         },
         {
           "id": "s23",
@@ -8906,162 +8307,29 @@
         },
         {
           "id": "s37",
-          "label": "Static extension handle and\nnative extension state",
+          "label": "Per-reference native handles",
           "kind": "mixed",
           "facts": {
             "Inventory ID": "S37",
-            "Acquired by": "attempt_extension: consume result other than -1",
-            "When": "Declaration form: after apply within an attempt",
+            "Acquired by": "attempt_extension_consume_actor: native consume result other than -1",
+            "When": "After actor setup within an explicitly released action",
             "Held across": "Across attempts/phases; requested release is not proven revocation",
-            "Release / teardown action": "Declaration release_decided set before eligibility/native call; explicit release once if eligible; no automatic exit-time release call; OS teardown",
+            "Release / teardown action": "One requested release per handle; no automatic exit-time native release; OS teardown",
             "Authority": "Native extension access represented by handle; exact kernel state unobserved",
-            "Reaches exec children": "No admitted exec+extension plan",
+            "Reaches exec children": "Authority-participating actor cannot exec",
             "Role": "A + O"
           },
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "attempt_extension"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "n1",
-          "label": "Issuer-channel high duplicate\nspawnFD",
-          "kind": "authority",
-          "facts": {
-            "Inventory ID": "N1",
-            "Acquired by": "E: fcntl(F_DUPFD_CLOEXEC, 64)",
-            "When": "Before compilation",
-            "Held across": "Through E initializer",
-            "Release / teardown action": "E defer close; fd 3 duplicate lives in issuer",
-            "Authority": "Selects channel from a high source; low-fd control preserves delivery",
-            "Reaches exec children": "No: issuer sibling, duplicate close-on-exec",
-            "Role": "A"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
+              "symbol": "attempt_extension_consume_actor"
             },
             {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "n2",
-          "label": "Issuer spawn file-action\nhandle",
-          "kind": "reporting",
-          "facts": {
-            "Inventory ID": "N2",
-            "Acquired by": "E: init, adddup2, three addopen",
-            "When": "Before compilation",
-            "Held across": "Through E initializer",
-            "Release / teardown action": "E defer destroy",
-            "Authority": "Channel/stdio selection",
-            "Reaches exec children": "No worker memory inheritance",
-            "Role": "P"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension_release_actor"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            },
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ],
-          "note": "Failed initialization reaches fixture-contained invalid-handle use in setup controls."
-        },
-        {
-          "id": "n3",
-          "label": "Issuer spawn attribute handle",
-          "kind": "reporting",
-          "facts": {
-            "Inventory ID": "N3",
-            "Acquired by": "E: init and setflags(CLOEXEC_DEFAULT)",
-            "When": "Before compilation",
-            "Held across": "Through E initializer",
-            "Release / teardown action": "E defer destroy",
-            "Authority": "Issuer fd isolation",
-            "Reaches exec children": "No worker memory inheritance",
-            "Role": "P"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            },
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ],
-          "note": "Failed initialization reaches fixture-contained invalid-handle use in setup controls."
-        },
-        {
-          "id": "n4",
-          "label": "Issuer stdio /dev/null\ndescriptors 0/1/2",
-          "kind": "reporting",
-          "facts": {
-            "Inventory ID": "N4",
-            "Acquired by": "E: posix_spawn_file_actions_addopen, executed by native spawn",
-            "When": "Before compilation",
-            "Held across": "Issuer lifetime",
-            "Release / teardown action": "Issuer exit",
-            "Authority": "Read EOF/write discard",
-            "Reaches exec children": "No: issuer creates no child",
-            "Role": "P"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [],
-          "note": "Issuer stdio file actions have source support only; extension boundary controls do not assert these endpoint identities."
+          "checks": []
         },
         {
           "id": "n5",
@@ -9117,35 +8385,6 @@
           "note": "Swift allocation internals and temporary-array lifetimes have source support only."
         },
         {
-          "id": "n7",
-          "label": "Host target-resolution\nbuffer/metadata and issuer\nrecord",
-          "kind": "mixed",
-          "facts": {
-            "Inventory ID": "N7",
-            "Acquired by": "E: [CChar], caller-buffer realpath, fstatat, strings/record",
-            "When": "Before compilation",
-            "Held across": "Through preparation; record survives into reply",
-            "Release / teardown action": "Swift scope/ARC",
-            "Authority": "Resolve token target before worker starts; metadata is host evidence",
-            "Reaches exec children": "No",
-            "Role": "A + E"
-          },
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
           "id": "n8",
           "label": "Worker main-frame arguments,\ntiming state and capture\nnonce",
           "kind": "reporting",
@@ -9173,7 +8412,7 @@
           "kind": "reporting",
           "facts": {
             "Inventory ID": "N9a",
-            "Acquired by": "parse_args, map_region, read_all_from_fd, pw_timing_setup, prepare_extension",
+            "Acquired by": "parse_args, map_region, read_all_from_fd, pw_timing_setup, prepare_authority",
             "When": "Before compilation",
             "Held across": "Call only",
             "Release / teardown action": "Return or process exit",
@@ -9200,7 +8439,7 @@
             },
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_extension"
+              "symbol": "prepare_authority"
             }
           ],
           "checks": [],
@@ -9483,6 +8722,150 @@
             }
           ],
           "note": "Receipt and applied-policy evidence are distinct"
+        },
+        {
+          "id": "a1",
+          "label": "Per-actor authority object and host mapping",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "A1",
+            "Acquired by": "ActorAuthorityRegion creates, unlinks, maps and frames region",
+            "When": "Host preparation before first launch",
+            "Held across": "Setup, visits and owner cleanup",
+            "Release / teardown action": "Shared erasure only after owner reaped or never launched; unresolved owner permits host detach only",
+            "Authority": "One-shot outbound/inbound slots and transfer answer cells",
+            "Reaches exec children": "No authority-participating actor exec",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "ActorAuthorityRegion"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "a2",
+          "label": "Worker authority descriptor and mapping",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "A2",
+            "Acquired by": "ActorSession supplies fd 5; prepare_authority validates, maps, closes descriptor and snapshots assignments",
+            "When": "Before compilation/application",
+            "Held across": "Mapping through worker exit",
+            "Release / teardown action": "Settled inbound erasure on ordinary departure; rejected mapping unmap separately observed",
+            "Authority": "Read/write assigned custody exchange cells; no other actor mapping",
+            "Reaches exec children": "No authority-participating actor exec",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_authority"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "erase_authority"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "a3",
+          "label": "Native issued token allocation",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "A3",
+            "Acquired by": "attempt_extension_issue calls native issue",
+            "When": "Explicit action after setup",
+            "Held across": "Bounded inspection/copy only",
+            "Release / teardown action": "Erase inspected length and free before outbound publication; oversized tail unobserved",
+            "Authority": "Transient bearer bytes",
+            "Reaches exec children": "No authority-participating actor exec",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension_issue"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "a4",
+          "label": "Private host token custody",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "A4",
+            "Acquired by": "AuthorityCustody copies accepted outbound bytes and erases shared source",
+            "When": "After committed issue publication",
+            "Held across": "Declared transfers through last use",
+            "Release / teardown action": "Private erasure at last use/teardown independent of worker publication",
+            "Authority": "Deliberately supplied bearer bytes",
+            "Reaches exec children": "No authority-participating actor exec",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "AuthorityCustody"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "a5",
+          "label": "Assigned recipient inbound bytes",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "A5",
+            "Acquired by": "Host copies custody to assigned slot; recipient accepts framing; host checks equality and settles",
+            "When": "During parked servicing or transfer wait",
+            "Held across": "Until last declared consume or ordinary terminal erasure",
+            "Release / teardown action": "Worker erases last-use/settled bytes; host shared teardown requires reaped owner",
+            "Authority": "Consumption requires committed, accepted, usable delivery",
+            "Reaches exec children": "No authority-participating actor exec",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "service_inbound_once"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension_consume_actor"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "a6",
+          "label": "Automatic setup evidence trailer",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "A6",
+            "Acquired by": "Host creates bounded trailer; worker publishes operation cells and terminal decision",
+            "When": "Before compilation/application and terminal cleanup",
+            "Held across": "Host evidence mapping through reply",
+            "Release / teardown action": "Evidence mapping teardown; no token bytes",
+            "Authority": "Reporting apparatus with separate native and publication facts",
+            "Reaches exec children": "No authority-participating actor exec",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_authority"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
+              "symbol": "decodeAuthoritySetup"
+            }
+          ],
+          "checks": []
         }
       ],
       "edges": [
@@ -9817,319 +9200,6 @@
           ]
         },
         {
-          "id": "W17",
-          "from": "n2",
-          "to": "s9",
-          "kind": "prepares",
-          "label": "Issuer file actions select channel and stdio",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "W18",
-          "from": "n3",
-          "to": "s9",
-          "kind": "prepares",
-          "label": "Issuer attributes select descriptor isolation",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": []
-        },
-        {
-          "id": "W19",
-          "from": "s8b",
-          "to": "n1",
-          "kind": "supplies_authority",
-          "label": "High duplicate of session descriptor",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "W20",
-          "from": "n1",
-          "to": "s10c",
-          "kind": "supplies_authority",
-          "label": "Issuer receives channel fd",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "W21",
-          "from": "s10c",
-          "to": "s10b",
-          "kind": "supplies_authority",
-          "label": "Issuer maps channel fd",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "W22",
-          "from": "s8a",
-          "to": "s8b",
-          "kind": "supplies_authority",
-          "label": "Session holds channel object descriptor",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "W23",
-          "from": "s8b",
-          "to": "s8c",
-          "kind": "supplies_authority",
-          "label": "Host maps authority-bearing channel",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "W24",
-          "from": "s8b",
-          "to": "s5",
-          "kind": "supplies_authority",
-          "label": "Host duplicates channel for worker delivery",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
-              "symbol": "runCWorker"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "W25",
-          "from": "s5",
-          "to": "s13d",
-          "kind": "supplies_authority",
-          "label": "Worker receives optional token descriptor",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
-              "symbol": "runCWorker"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_unit/host_setup_controls.py",
-              "symbol": "check",
-              "form": "test",
-              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
-            }
-          ]
-        },
-        {
-          "id": "W26",
-          "from": "s13d",
-          "to": "s21",
-          "kind": "supplies_authority",
-          "label": "Worker maps token descriptor",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
-              "symbol": "runCWorker"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_extension"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "W27",
-          "from": "s11a",
-          "to": "s11b",
-          "kind": "prepares",
-          "label": "Loaded API symbols permit issuance",
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "W28",
-          "from": "s11b",
-          "to": "s12a",
-          "kind": "exercises",
-          "label": "Native issuer returns bearer allocation",
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "W29",
-          "from": "s12a",
-          "to": "s12b",
-          "kind": "supplies_authority",
-          "label": "Issuer copies accepted bearer bytes",
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "W30",
-          "from": "s12b",
-          "to": "s22",
-          "kind": "supplies_authority",
-          "label": "Worker borrows same bytes through its mapping",
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_extension"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "attempt_extension"
-            }
-          ],
-          "checks": []
-        },
-        {
-          "id": "W31",
-          "from": "s22",
-          "to": "s37",
-          "kind": "supplies_authority",
-          "label": "Requested consume yields native extension handle",
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "prepare_extension"
-            },
-            {
-              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "attempt_extension"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
           "id": "W32",
           "from": "s26a",
           "to": "s28",
@@ -10249,7 +9319,7 @@
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "attempt_extension"
+              "symbol": "attempt_extension_consume_actor"
             }
           ],
           "checks": [
@@ -10423,32 +9493,7 @@
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "attempt_extension"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/extension_boundaries.sh",
-              "symbol": "extension_boundaries",
-              "form": "test",
-              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
-            }
-          ]
-        },
-        {
-          "id": "W46",
-          "from": "s10b",
-          "to": "s8c",
-          "kind": "publishes",
-          "label": "Issuer publishes through same channel object",
-          "sources": [
-            {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
-            },
-            {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
+              "symbol": "attempt_extension_consume_actor"
             }
           ],
           "checks": [
@@ -10683,6 +9728,81 @@
               "scope": "Owned existing files and initially absent children provide independent contents and entry observations through ordinary CLI phases, with authority controls and publication withholding."
             }
           ]
+        },
+        {
+          "id": "W57",
+          "from": "a1",
+          "to": "a2",
+          "kind": "prepares",
+          "label": "Map distinct host and worker views",
+          "short": "Map distinct host and worker views",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_authority"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "W58",
+          "from": "a3",
+          "to": "a4",
+          "kind": "supplies_authority",
+          "label": "Publish bounded token then copy and erase source",
+          "short": "Publish bounded token then copy and erase source",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "AuthorityCustody"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "W59",
+          "from": "a4",
+          "to": "a5",
+          "kind": "supplies_authority",
+          "label": "Copy, acknowledge, compare and settle delivery",
+          "short": "Copy, acknowledge, compare and settle delivery",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "serviceTransfer"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "W60",
+          "from": "a5",
+          "to": "s37",
+          "kind": "exercises",
+          "label": "Requested native consume produces handle",
+          "short": "Requested native consume produces handle",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension_consume_actor"
+            }
+          ],
+          "checks": []
+        },
+        {
+          "id": "W61",
+          "from": "a6",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Release-published automatic setup facts",
+          "short": "Release-published automatic setup facts",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
+              "symbol": "decodeAuthoritySetup"
+            }
+          ],
+          "checks": []
         }
       ]
     }

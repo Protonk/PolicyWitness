@@ -14,8 +14,7 @@ func freshWriteFixture(creating: Bool = false) -> PWRunnerFreshWrite {
 
 func freshWriteReplyFixture(_ write: PWRunnerFreshWrite, creating: Bool = false,
                             rc: Int = 0, errno: Int? = nil) -> PWRunnerRunResult {
-    var reply = extensionReplyFixture()
-    reply.extensions?[0].extension_class = "com.apple.app-sandbox.read-write"
+    var reply = ordinaryReadReplyFixture()
     reply.steps[0].attempt.requested_action = creating ? "create_fresh" : "write_fresh"
     reply.steps[0].attempt.fresh_read = nil
     reply.steps[0].attempt.fresh_write = write
@@ -43,57 +42,45 @@ func freshWriteShapeDocuments() throws -> [[String: Any]] {
 }
 
 func runFreshWriteEvidenceTests(_ tk: TestKit) {
-    tk.group("bounded extension authority admission") {
+    tk.group("actor file authority admission") {
         func request(_ authority: Any?) -> [String: Any] {
-            var declaration: [String: Any] = ["token_ref": "token", "target": "/private/tmp"]
-            if let authority { declaration["authority"] = authority }
+            var operation: [String: Any] = ["operation": "issue", "family": "file", "token_ref": "token", "target": "/private/tmp"]
+            if let authority { operation["authority"] = authority }
             return ["schema_version": PWContract.requestSchema, "specimen_id": "authority",
-                "policy": ["format": "sbpl", "sbpl_source": "(version 1)(allow default)"],
-                "extensions": [declaration], "phases": [["phase_id": "p", "actions": []]]]
+                "actors": [["actor_id": "issuer", "sandbox": ["mode": "unapplied"]]],
+                "phases": [["phase_id": "p", "actor_id": "issuer", "actions": [["step_id": "issue", "extension": operation]]]]]
         }
         func decode(_ value: [String: Any]) throws -> PWRunnerRunSpec {
             try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: JSONSerialization.data(withJSONObject: value))
         }
-        tk.run("absent and null preserve read while explicit authorities remain distinct") {
-            for value in [nil, NSNull(), "read", "read_write"] as [Any?] {
-                let parsed = try decode(request(value))
-                try expectNil(requestMeaningFailure(parsed))
-                let declaration = parsed.extensions![0]
-                let rw = (value as? String) == "read_write"
-                try expectEqual(declaration.effectiveAuthority, rw ? "read_write" : "read")
-                try expectEqual(declaration.nativeClass, rw ? "com.apple.app-sandbox.read-write" : "com.apple.app-sandbox.read")
-                let roundTrip = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: pwRunnerEncodeJSON(parsed))
-                try expectEqual(roundTrip.extensions?[0].authority, declaration.authority)
+        tk.run("actor issue requires explicit read or read_write authority") {
+            for value in ["read", "read_write"] {
+                guard case .success(let plan) = normalizeActorPlan(try decode(request(value))) else {
+                    throw TestFailure(message: "explicit authority refused")
+                }
+                try expectEqual(plan.tokens[0].authority, value)
+                try expectEqual(plan.tokens[0].target, "/private/tmp")
+            }
+            for value in [nil, NSNull()] as [Any?] {
+                try expectEqual(requestMeaningFailure(try decode(request(value)))?.code, "missing_field")
             }
         }
-        tk.run("unknown authority is a bounded semantic refusal; wrong types and raw class/token stay closed") {
-            for authority in ["", "write", "READ", "com.apple.app-sandbox.read-write", "read\0"] {
-                let failure = requestMeaningFailure(try decode(request(authority)))
-                try expectEqual(failure?.code, "unsupported_extension_authority")
-                try expectEqual(failure?.path, ["extensions", "0", "authority"])
+        tk.run("unknown authority and raw class or token stay closed") {
+            for authority in ["", "write", "READ", "com.apple.app-sandbox.read-write"] {
+                try expectEqual(requestMeaningFailure(try decode(request(authority)))?.code, "unsupported_extension_authority")
             }
             for value in [1, true, ["read"], ["authority": "read"]] as [Any] {
                 try expectThrows { _ = try decode(request(value)) }
             }
             for key in ["extension_class", "token"] {
                 var input = request("read_write")
-                var declarations = input["extensions"] as! [[String: Any]]
-                declarations[0][key] = "not accepted"
-                input["extensions"] = declarations
-                do { _ = try decode(input); throw TestFailure(message: "raw authority field accepted") }
-                catch let error as RequestContractError {
-                    try expectEqual(requestDecodeFailure(error).code, "unknown_field")
-                    try expectEqual(requestDecodeFailure(error).path, ["extensions", "0", key])
-                }
+                var phases = input["phases"] as! [[String: Any]]
+                var actions = phases[0]["actions"] as! [[String: Any]]
+                var operation = actions[0]["extension"] as! [String: Any]
+                operation[key] = "not accepted"; actions[0]["extension"] = operation
+                phases[0]["actions"] = actions; input["phases"] = phases
+                try expectThrows { _ = try decode(input) }
             }
-        }
-        tk.run("native class output accepts exactly the two supported classes") {
-            for value in ["com.apple.app-sandbox.read", "com.apple.app-sandbox.read-write"] {
-                var reply = extensionReplyFixture(); reply.extensions?[0].extension_class = value
-                try expectNil(reply.extensionEvidenceProblem())
-            }
-            var reply = extensionReplyFixture(); reply.extensions?[0].extension_class = "write"
-            try expectTrue(reply.extensionEvidenceProblem() != nil)
         }
     }
     tk.group("fresh write evidence and failure ordering") {

@@ -30,7 +30,7 @@ they do not exhaust the verification relevant to a change.
 | Exec publication, compatible absence handling or confirmed-reap reconciliation and race controls | [Exec-reader mutations](#exec-reader-publication-and-absence-mutations) and [confirmed-reap mutation](#confirmed-reap-acknowledgement-mutation). |
 | Exec spawning, process-state inspection, inheritance assertions or retirement of overlapping coverage | [Exec inheritance mutations](#exec-inheritance-mutation-controls). |
 | BYOXPC selection, installation, registry or cleanup; shared response/comparison contracts | [Controller verification guidance](../controller/AGENTS.md#verify-the-changed-boundary), [BYOXPC shared cases](#runner_byoxpc), [registry recovery](#registry-recovery) and [default-location control](#byoxpc-default-location). |
-| BYOXPC dossier records, native extension execution, phase handling, issuer signing or provenance | [Dossier witness](#byoxpc-dossier-witness) and [extension and phase witness](#byoxpc-extension-and-phase-witness). |
+| BYOXPC dossier records, native extension execution, phase handling, worker equipment signing or provenance | [Dossier witness](#byoxpc-dossier-witness) and [extension and phase witness](#byoxpc-extension-and-phase-witness). |
 | Built-in or external caller authorization; host admission/exit, client re-acquisition or launchd throttle | [Built-in caller authentication](#built-in-caller-authentication), [external caller authentication](#runner_auth_external) and [occupied-claim attribution](#byoxpc-occupied-claim-attribution), including session-cleanup and registry triggers. |
 | Build, toolchain, signing or artifact inspection | [Signed-artifact controls](#signed-artifact-controls), [build guards](#build-guard-controls), [build refusals](#build-refusal-controls), [translated-build refusals](#translated-build-refusal-controls) and [toolchain-switch controls](#build-toolchain-switch-controls). Their individual triggers and equipment conditions apply. |
 | Native file-extension authority, call representation, issuer lifetime or allocation assumptions; experiment or checker changes | [Native sandbox-extension experiment](#native-sandbox-extensions). |
@@ -431,44 +431,26 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 
 ### BYOXPC extension and phase witness
 
-- **Case:** `witness_contract/extensions_byoxpc`
-- **Location:** `tests/suites/witness_contract/opt_in/extensions_byoxpc.sh`
-- **Purpose:** Run the shared native lifecycle, placement, omission, target
-  preparation and ordinary-phase controls through an owned BYOXPC runner.
-  Compare issuer and worker authority read-backs with registry and envelope
-  provenance; exercise maximum replies and an actual missing installed issuer
-  with exact-byte restoration; verify removal afterward.
-- **Execution considerations:** Installs a launchd service in a logged-in GUI session and
-  requires the selected app's Developer ID identity.
-- **Resource dependency:** Signed app, signing identity, GUI session and clang.
-  Targets live in the owned `/private/tmp` staging directory. The shared session
-  helper retains durable ownership until removal is verified.
-- **When to run:** After changing native extension execution, phase handling,
-  issuer signing, provenance or runner installation.
-- **Artifacts:** `<run>/suites/witness_contract/extensions_byoxpc/artifacts/`
-
 ### BYOXPC actor controls
 
 - **Case:** `witness_contract/actors_byoxpc`
 - **Location:** `tests/suites/witness_contract/opt_in/actors_byoxpc.sh`
-- **Purpose:** Run the principal re-delegation, calibration and contrasts
-  through an owned installed runner's selected worker; with the installed
-  issuer held aside, show the declaration form refused and the actor form
-  executing without a helper; launch an App Sandbox-signed copy of the worker
-  through the host's override to show an `unapplied` actor inheriting that
-  restriction against the ordinary worker baseline.
+- **Purpose:** Run shared lifecycle, directory, ordinary-phase, maximum-reply
+  and re-delegation workloads in one owned installed-runner session. Independently
+  check selected/unentitled signing, entitlement read-backs, sealed inventory,
+  registry/dossier provenance and live PID bindings. Exercise explicit mixed
+  equipment, renamed/reordered actors, a same-selected mismatch control and an
+  actual missing selected worker with exact-byte restoration. An App Sandbox
+  signed selected-worker override supplies the inherited-restriction contrast.
 - **Execution considerations:** Installs a launchd service in a logged-in GUI
-  session and re-signs a bundled worker copy with the selected identity. The
-  App Sandbox initializer creates that copy's container under a fixed
-  `com.policywitness.test.restricted-worker` identifier in the user's Library;
-  removal needs Full Disk Access, so the case records the attempt and reports
-  a retained container rather than failing.
-- **Resource dependency:** Signed app, signing identity and GUI session.
-  Targets and the worker copy live in the owned `/private/tmp` staging
-  directory under the shared session helper's ownership.
-- **When to run:** After changing actor execution, authority transport, the
-  issuer dependency of the declaration form, worker launch or BYOXPC
-  installation.
+  session and re-signs never-launched owned copies with the selected identity.
+  App Sandbox container cleanup retains a durable recovery receipt when absence
+  cannot be verified; a preexisting container is not owned by this test.
+- **Resource dependency:** Signed app, signing identity, GUI session and clang.
+  Targets and copies live in owned temporary staging. The shared session retains
+  pending-cleanup ownership until service removal is verified.
+- **When to run:** After changing actor execution, worker equipment or authority
+  transport, native lifecycle, phase handling, signing, provenance or BYOXPC installation.
 - **Artifacts:** `<run>/suites/witness_contract/actors_byoxpc/artifacts/`
 
 ### Actor composition, re-delegation and timing qualification

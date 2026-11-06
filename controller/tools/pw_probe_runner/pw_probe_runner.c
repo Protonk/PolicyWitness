@@ -66,7 +66,7 @@
 #include "pw_probe_runner_abi.h"
 #include "pw_worker_evidence.h"
 #include "pw_profile_capture.h"
-#include "pw_extension_channel.h"
+#include "pw_authority_bytes.h"
 #include "pw_authority_region.h"
 
 #include "pw_worker_timing.h"
@@ -96,7 +96,6 @@ extern void sandbox_free_params(void *params);
 /* ---- argv parsing -------------------------------------------------------- */
 
 typedef struct {
-    int extension_fd;
     int authority_fd;
     int shm_fd;
     int ready_fd;
@@ -193,7 +192,6 @@ static int parse_int_arg(const char *value, long *out) {
 }
 
 static int parse_args(int argc, char **argv, pw_args_t *args) {
-    args->extension_fd = -1;
     args->authority_fd = -1;
     args->shm_fd                 = -1;
     args->ready_fd               = -1;
@@ -210,7 +208,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
     int i = 1;
     while (i < argc) {
         const char *flag = argv[i];
-        if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 || strcmp(flag, "--extension-fd") == 0 ||
+        if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 ||
             strcmp(flag, "--authority-fd") == 0 ||
             strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0 ||
             strcmp(flag, "--post-apply-hang-ms") == 0 ||
@@ -229,10 +227,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                 fprintf(stderr, "pw-probe-runner: %s: invalid integer %s\n", flag, argv[i + 1]);
                 return -1;
             }
-            if (strcmp(flag, "--extension-fd") == 0) {
-                if (v < 0 || v > INT_MAX) return -1;
-                args->extension_fd = (int)v;
-            } else if (strcmp(flag, "--authority-fd") == 0) {
+            if (strcmp(flag, "--authority-fd") == 0) {
                 if (v < 0 || v > INT_MAX) return -1;
                 args->authority_fd = (int)v;
             } else if (strcmp(flag, "--shm-fd") == 0) {
@@ -553,9 +548,6 @@ typedef int64_t (*pw_consume_fn)(const char *);
 typedef int (*pw_release_fn)(int64_t);
 static pw_consume_fn extension_consume;
 static pw_release_fn extension_release;
-static pw_extension_channel_t *extension_channel;
-static int64_t extension_handle = -1;
-static int consume_decided, release_decided;
 
 /* Actor form: the issue entry point, this actor's authority region and its
  * local handle table. The header and evidence pointers are kept for the
@@ -569,25 +561,29 @@ static struct { uint32_t writer, operation, resource; } outbound_assignment[PW_A
 static uint32_t transfer_assignment[PW_AUTHORITY_MAX_TRANSFERS];
 static uint8_t outbound_attempted[PW_AUTHORITY_MAX_OUTBOUND];
 static pw_shm_header_t *g_hdr;
+static pw_authority_setup_t *g_setup;
 static pw_shm_evidence_t *g_evidence;
 static int64_t handle_table[PW_AUTHORITY_MAX_HANDLES];
 static uint8_t handle_valid[PW_AUTHORITY_MAX_HANDLES];
 
-/* Ordinary cleanup erases the legacy channel and actor-owned inbound copies.
+/* Ordinary cleanup erases actor-owned inbound copies.
  * Published outbound bytes belong to the host, which may still be copying
  * after a timeout or actor exit. Inbound ownership transfers only after the
  * host's settled publication; until then host cleanup after reap owns erasure.
  * This neither consumes nor releases native extension authority. */
 static void erase_authority(void) {
     if (!authority) return;
+    uint64_t erased=0;
     for (uint32_t i = 0; i < authority->inbound_count && i < PW_AUTHORITY_MAX_INBOUND; i++) {
         pw_authority_slot_t *slot = pw_authority_inbound(authority, i);
-        if (atomic_load_explicit(&slot->settled, memory_order_acquire) != 0u)
+        if (atomic_load_explicit(&slot->settled, memory_order_acquire) != 0u) {
             pw_extension_erase(slot->token, PW_EXTENSION_TOKEN_BYTES);
+            erased += PW_EXTENSION_TOKEN_BYTES;
+        }
     }
+    pw_setup_observe(g_setup,11,PW_SETUP_MEMORY,PW_SETUP_PERFORMED,0,0,PW_SETUP_CLEANUP|PW_SETUP_VALUE,0,erased);
 }
 static void erase_accepted_token(void) {
-    if (extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
     erase_authority();
 }
 
@@ -611,29 +607,6 @@ static _Noreturn void publish_done_and_exit(pw_shm_header_t *hdr) {
 #define PW_EXTENSION_OBSERVE(stage, release, result) ((void)0)
 #endif
 
-/* Delivery status codes the worker publishes in hdr->extension_delivery_status.
- * The host maps them to delivery_status strings; see PWExtensionDelivery. */
-enum {
-    PW_DELIVERY_DELIVERED = 1,          /* channel accepted; delivered_bytes is the token length */
-    PW_DELIVERY_TOKEN_UNAVAILABLE = 2,  /* no token descriptor was supplied */
-    PW_DELIVERY_CHANNEL_REJECTED = 3,   /* the channel was inspected and its contents or size rejected */
-    PW_DELIVERY_API_UNAVAILABLE = 4,    /* consume or release symbol unavailable */
-    PW_DELIVERY_LOCAL_SETUP_FAILED = 5  /* a local native call before validation failed */
-};
-/* Preparation stages. The first failing stage names the status; a cleanup
- * failure after it is published separately and never changes the status. */
-enum {
-    PW_DELIVERY_STAGE_NONE = 0,
-    PW_DELIVERY_STAGE_CORE_LIMIT = 1,          /* setrlimit(RLIMIT_CORE) */
-    PW_DELIVERY_STAGE_DESCRIPTOR_METADATA = 2, /* fstat(fd) */
-    PW_DELIVERY_STAGE_CHANNEL_SIZE = 3,        /* fstat succeeded; st_size below the channel size */
-    PW_DELIVERY_STAGE_MAPPING = 4,             /* mmap */
-    PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE = 5,    /* close(fd) */
-    PW_DELIVERY_STAGE_CHANNEL_HEADER = 6,      /* magic, completed or status */
-    PW_DELIVERY_STAGE_CHANNEL_TOKEN = 7,       /* token length or bytes */
-    PW_DELIVERY_STAGE_UNMAP = 8                /* munmap during cleanup */
-};
-
 /* Compile-time native-call seams for controlled local failures. Production
  * compiles each to the real call; the shipped worker has no request knob. */
 #ifndef PW_EXTENSION_SETRLIMIT
@@ -649,116 +622,6 @@ enum {
 #define PW_EXTENSION_CLOSE(fd) close(fd)
 #endif
 
-static void prepare_extension(pw_shm_header_t *hdr, int fd) {
-    if (!hdr->extension_requested) { if (fd >= 0) close(fd); return; }
-    uint32_t status = PW_DELIVERY_TOKEN_UNAVAILABLE, stage = PW_DELIVERY_STAGE_NONE, cleanup_stage = PW_DELIVERY_STAGE_NONE;
-    int32_t native_rc = 0, saved_errno = 0, cleanup_errno = 0;
-    int rc;
-    /* The descriptor is closed exactly once: either as the inspected call
-     * (after mapping) or as cleanup after an earlier failure. */
-    int fd_open = fd >= 0;
-#define PW_DELIVERY_CLEANUP_CLOSE() do { \
-        if (fd_open) { errno = 0; if (PW_EXTENSION_CLOSE(fd)) { cleanup_stage = PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE; cleanup_errno = errno; } fd_open = 0; } \
-    } while (0)
-    /* Resolve the native entry points first, so a later local failure leaves
-     * the API question answered and the actions unavailable for want of a
-     * delivered token, not for an API absence that was never observed. */
-    extension_consume = (pw_consume_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_consume");
-    extension_release = (pw_release_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_release");
-    if (!extension_consume || !extension_release) {
-        status = PW_DELIVERY_API_UNAVAILABLE; PW_DELIVERY_CLEANUP_CLOSE(); goto publish;
-    }
-    /* Core dumps are disabled before any token byte can be mapped. */
-    struct rlimit core = {0, 0};
-    errno = 0;
-    rc = PW_EXTENSION_SETRLIMIT(RLIMIT_CORE, &core);
-    if (rc) {
-        status = PW_DELIVERY_LOCAL_SETUP_FAILED; stage = PW_DELIVERY_STAGE_CORE_LIMIT; native_rc = rc; saved_errno = errno;
-        PW_DELIVERY_CLEANUP_CLOSE(); goto publish;
-    }
-    if (fd_open) {
-        struct stat metadata;
-        errno = 0;
-        rc = PW_EXTENSION_FSTAT(fd, &metadata);
-        if (rc) {
-            status = PW_DELIVERY_LOCAL_SETUP_FAILED; stage = PW_DELIVERY_STAGE_DESCRIPTOR_METADATA; native_rc = rc; saved_errno = errno;
-            PW_DELIVERY_CLEANUP_CLOSE(); goto publish;
-        }
-        if (metadata.st_size < (off_t)PW_EXTENSION_CHANNEL_BYTES) {
-            /* The inspection call succeeded; the object is too small to be the channel. */
-            status = PW_DELIVERY_CHANNEL_REJECTED; stage = PW_DELIVERY_STAGE_CHANNEL_SIZE; native_rc = rc;
-            PW_DELIVERY_CLEANUP_CLOSE(); goto publish;
-        }
-        errno = 0;
-        void *p = PW_EXTENSION_MMAP(PW_EXTENSION_CHANNEL_BYTES, fd);
-        int map_errno = errno;
-        errno = 0;
-        int closed = PW_EXTENSION_CLOSE(fd);
-        int close_errno = errno;
-        fd_open = 0;
-        if (p == MAP_FAILED) {
-            status = PW_DELIVERY_LOCAL_SETUP_FAILED; stage = PW_DELIVERY_STAGE_MAPPING; native_rc = -1; saved_errno = map_errno;
-            if (closed) { cleanup_stage = PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE; cleanup_errno = close_errno; }
-            goto publish;
-        }
-        extension_channel = p;
-        if (closed) {
-            status = PW_DELIVERY_LOCAL_SETUP_FAILED; stage = PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE; native_rc = closed; saved_errno = close_errno;
-            goto reject_mapping;
-        }
-        uint32_t published = atomic_load_explicit(&extension_channel->completed, memory_order_acquire);
-        if (extension_channel->magic != PW_EXTENSION_MAGIC || published != 1 || extension_channel->status != 1) {
-            status = PW_DELIVERY_CHANNEL_REJECTED; stage = PW_DELIVERY_STAGE_CHANNEL_HEADER; goto reject_mapping;
-        }
-        uint32_t n = extension_channel->token_length;
-        if (n == 0 || n >= PW_EXTENSION_TOKEN_BYTES || extension_channel->token[n] != 0 ||
-            memchr(extension_channel->token, 0, n) != NULL) {
-            status = PW_DELIVERY_CHANNEL_REJECTED; stage = PW_DELIVERY_STAGE_CHANNEL_TOKEN; goto reject_mapping;
-        }
-        hdr->extension_delivered_bytes = n;
-        status = PW_DELIVERY_DELIVERED;
-        goto publish;
-    reject_mapping:
-        pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
-        errno = 0;
-        if (munmap(extension_channel, PW_EXTENSION_CHANNEL_BYTES)) { cleanup_stage = PW_DELIVERY_STAGE_UNMAP; cleanup_errno = errno; }
-        extension_channel = NULL;
-    }
-publish:
-#undef PW_DELIVERY_CLEANUP_CLOSE
-    hdr->extension_delivery_status = status;
-    hdr->extension_delivery_stage = stage;
-    hdr->extension_delivery_native_rc = native_rc;
-    hdr->extension_delivery_errno = saved_errno;
-    hdr->extension_delivery_cleanup_stage = cleanup_stage;
-    hdr->extension_delivery_cleanup_errno = cleanup_errno;
-    atomic_store_explicit(&hdr->extension_delivery_published, 1, memory_order_release);
-}
-
-static void attempt_extension(pw_shm_slot_t *slot, int release) {
-    if ((release && release_decided) || (!release && consume_decided)) {
-        slot->unavailable_code = 4; return;
-    }
-    if (release) release_decided = 1; else consume_decided = 1;
-    if (!extension_consume || !extension_release) slot->unavailable_code = 3;
-    else if (release && extension_handle == -1) slot->unavailable_code = 2;
-    else if (!release && !extension_channel) slot->unavailable_code = 1;
-    else {
-        atomic_store_explicit(&slot->call_boundary, 1, memory_order_release);
-        PW_EXTENSION_OBSERVE(1, release, 0);
-        errno = 0;
-        int64_t result = release ? (int64_t)extension_release(extension_handle)
-                                 : extension_consume(extension_channel->token);
-        int saved = errno;
-        PW_EXTENSION_OBSERVE(2, release, result);
-        slot->native_result = result;
-        slot->native_errno = saved;
-        slot->native_result_valid = 1;
-        if (!release && result != -1) extension_handle = result;
-    }
-    if (!release) erase_accepted_token();
-}
-
 /* ---- actor-form authority operations ------------------------------------ */
 
 static inline void cpu_relax(void);
@@ -766,6 +629,15 @@ static inline void cpu_relax(void);
 /* Compile-time observation seam for issue interruption controls; the shipped
  * worker compiles it away. 1 is after the pre-call publication; 2 is after
  * native return, before any result publication. */
+#ifndef PW_AUTHORITY_PUBLISH_OBSERVE
+#define PW_AUTHORITY_PUBLISH_OBSERVE(slot) ((void)0)
+#endif
+#ifndef PW_INBOUND_OBSERVE
+#define PW_INBOUND_OBSERVE(slot) ((void)0)
+#endif
+#ifndef PW_ATTEMPT_PUBLISHED
+#define PW_ATTEMPT_PUBLISHED(slot) ((void)0)
+#endif
 #ifndef PW_ISSUE_OBSERVE
 #define PW_ISSUE_OBSERVE(stage, nonnull) ((void)0)
 #endif
@@ -774,84 +646,98 @@ static inline void cpu_relax(void);
  * before application. Each failure is published as a setup status with its
  * stage; nothing here is a native API result. Legacy workers close any
  * descriptor and publish nothing. */
+#ifndef PW_AUTHORITY_MUNMAP
+#define PW_AUTHORITY_MUNMAP(p, n) munmap((p), (n))
+#endif
 static void prepare_authority(pw_shm_header_t *hdr, int fd) {
     if (hdr->actor_mode == PW_ACTOR_MODE_LEGACY) { if (fd >= 0) close(fd); return; }
-    uint32_t symbols = 0;
+    const int required = g_setup->required == 1;
+    uint32_t primary = UINT32_MAX, symbols = 0;
+    int fd_open = fd >= 0, rc, saved;
+    void *mapping = MAP_FAILED;
+    size_t bytes = 0;
+    extension_issue = (pw_issue_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_issue_file");
     extension_consume = (pw_consume_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_consume");
     extension_release = (pw_release_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_release");
-    extension_issue = (pw_issue_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_issue_file");
+    if (extension_issue) symbols |= PW_NATIVE_SYMBOL_ISSUE;
     if (extension_consume) symbols |= PW_NATIVE_SYMBOL_CONSUME;
     if (extension_release) symbols |= PW_NATIVE_SYMBOL_RELEASE;
-    if (extension_issue) symbols |= PW_NATIVE_SYMBOL_ISSUE;
     hdr->native_symbols = symbols;
-    uint32_t status = PW_AUTHORITY_SETUP_DESCRIPTOR_MISSING, detail = 0;
-    struct rlimit core = {0, 0};
-    if (PW_EXTENSION_SETRLIMIT(RLIMIT_CORE, &core) != 0) {
-        status = PW_AUTHORITY_SETUP_LOCAL_FAILED; detail = PW_DELIVERY_STAGE_CORE_LIMIT;
-        if (fd >= 0) close(fd);
-        goto publish;
-    }
-    if (fd < 0) goto publish;
+    pw_setup_observe(g_setup,0,PW_SETUP_SYMBOL,extension_issue?PW_SETUP_AVAILABLE:PW_SETUP_UNAVAILABLE,0,0,0,0,0);
+    pw_setup_observe(g_setup,1,PW_SETUP_SYMBOL,extension_consume?PW_SETUP_AVAILABLE:PW_SETUP_UNAVAILABLE,0,0,0,0,0);
+    pw_setup_observe(g_setup,2,PW_SETUP_SYMBOL,extension_release?PW_SETUP_AVAILABLE:PW_SETUP_UNAVAILABLE,0,0,0,0,0);
+    struct rlimit core = {0,0};
+    errno=0; rc=PW_EXTENSION_SETRLIMIT(RLIMIT_CORE,&core); saved=errno;
+    pw_setup_observe(g_setup,3,PW_SETUP_INTEGER,rc?PW_SETUP_FAILED:PW_SETUP_SUCCEEDED,rc,saved,
+        PW_SETUP_RC|(rc?PW_SETUP_ERRNO:0),0,0);
+    if (rc) { primary=3; goto decision; }
+    pw_setup_observe(g_setup,4,PW_SETUP_VALIDATION,
+        fd_open?PW_SETUP_ACCEPTED:(required?PW_SETUP_REJECTED:PW_SETUP_ACCEPTED),0,0,0,fd_open?0:1,0);
+    if (!fd_open || !required) { if (required) primary=4; goto decision; }
     struct stat metadata;
-    if (PW_EXTENSION_FSTAT(fd, &metadata) != 0) {
-        status = PW_AUTHORITY_SETUP_LOCAL_FAILED; detail = PW_DELIVERY_STAGE_DESCRIPTOR_METADATA;
-        close(fd);
-        goto publish;
+    errno=0; rc=PW_EXTENSION_FSTAT(fd,&metadata); saved=errno;
+    pw_setup_observe(g_setup,5,PW_SETUP_INTEGER,rc?PW_SETUP_FAILED:PW_SETUP_SUCCEEDED,rc,saved,
+        PW_SETUP_RC|(rc?PW_SETUP_ERRNO:PW_SETUP_VALUE),0,rc?0:(uint64_t)metadata.st_size);
+    if (rc) { primary=5; goto decision; }
+    off_t page=getpagesize();
+    pw_setup_observe(g_setup,6,PW_SETUP_INTEGER,PW_SETUP_SUCCEEDED,page,0,PW_SETUP_RC,0,0);
+    off_t maximum=(off_t)PW_AUTHORITY_REGION_BYTES(PW_AUTHORITY_MAX_OUTBOUND,PW_AUTHORITY_MAX_INBOUND);
+    off_t rounded=page>0?((maximum+page-1)/page)*page:maximum;
+    int size_ok=metadata.st_size>=(off_t)PW_AUTHORITY_REGION_BYTES(0,0) && metadata.st_size<=rounded;
+    pw_setup_observe(g_setup,7,PW_SETUP_VALIDATION,size_ok?PW_SETUP_ACCEPTED:PW_SETUP_REJECTED,
+        0,0,PW_SETUP_VALUE,0,(uint64_t)metadata.st_size);
+    if (!size_ok) { primary=7; goto decision; }
+    bytes=(size_t)metadata.st_size;
+    errno=0; mapping=PW_EXTENSION_MMAP(bytes,fd); saved=errno;
+    pw_setup_observe(g_setup,8,PW_SETUP_MAPPING,mapping==MAP_FAILED?PW_SETUP_FAILED:PW_SETUP_SUCCEEDED,
+        0,saved,PW_SETUP_VALUE|(mapping==MAP_FAILED?PW_SETUP_ERRNO:0),0,bytes);
+    if (mapping==MAP_FAILED) { primary=8; goto decision; }
+    errno=0; rc=PW_EXTENSION_CLOSE(fd); saved=errno; fd_open=0;
+    pw_setup_observe(g_setup,9,PW_SETUP_INTEGER,rc?PW_SETUP_FAILED:PW_SETUP_SUCCEEDED,rc,saved,
+        PW_SETUP_RC|(rc?PW_SETUP_ERRNO:0),0,0);
+    if (rc) { primary=9; goto decision; }
+    pw_authority_region_t *region=mapping;
+    uint32_t detail=0;
+    if (region->magic!=PW_AUTHORITY_MAGIC) detail=1;
+    else if (memcmp(region->identity,PW_WORKER_ABI_IDENTITY,PW_AUTHORITY_IDENTITY_BYTES)!=0) detail=2;
+    else if (region->actor_index!=hdr->actor_index) detail=3;
+    else if (region->inbound_count>PW_AUTHORITY_MAX_INBOUND || region->outbound_count>PW_AUTHORITY_MAX_OUTBOUND) detail=4;
+    else if (bytes<PW_AUTHORITY_REGION_BYTES(region->outbound_count,region->inbound_count)) detail=5;
+    pw_setup_observe(g_setup,10,PW_SETUP_VALIDATION,detail?PW_SETUP_REJECTED:PW_SETUP_ACCEPTED,0,0,0,detail,0);
+    if (detail) { primary=10; goto decision; }
+    authority=region; authority_bytes=bytes;
+    for (uint32_t i=0;i<region->outbound_count;i++) {
+        pw_authority_slot_t *slot=pw_authority_outbound(region,i);
+        outbound_assignment[i].writer=slot->writer_actor;
+        outbound_assignment[i].operation=slot->operation_index;
+        outbound_assignment[i].resource=slot->resource_index;
     }
-    /* Darwin shm objects report a page-rounded length after ftruncate. Keep
-     * the logical slot bound below; permit only the final page's padding here. */
-    off_t page = getpagesize();
-    off_t maximum = (off_t)PW_AUTHORITY_REGION_BYTES(PW_AUTHORITY_MAX_OUTBOUND, PW_AUTHORITY_MAX_INBOUND);
-    off_t rounded_maximum = page > 0 ? ((maximum + page - 1) / page) * page : maximum;
-    if (metadata.st_size < (off_t)PW_AUTHORITY_REGION_BYTES(0, 0)
-        || metadata.st_size > rounded_maximum) {
-        status = PW_AUTHORITY_SETUP_REJECTED; detail = PW_DELIVERY_STAGE_CHANNEL_SIZE;
-        close(fd);
-        goto publish;
+    for (uint32_t i=0;i<PW_AUTHORITY_MAX_TRANSFERS;i++) transfer_assignment[i]=region->transfers[i].operation_plus_one;
+    for (uint32_t i=0;i<region->inbound_count;i++) {
+        pw_authority_slot_t *slot=pw_authority_inbound(region,i);
+        inbound_assignment[i].writer=slot->writer_actor;
+        inbound_assignment[i].operation=slot->operation_index;
+        inbound_assignment[i].resource=slot->resource_index;
     }
-    size_t bytes = (size_t)metadata.st_size;
-    void *p = PW_EXTENSION_MMAP(bytes, fd);
-    int closed = PW_EXTENSION_CLOSE(fd);
-    if (p == MAP_FAILED) {
-        status = PW_AUTHORITY_SETUP_LOCAL_FAILED; detail = PW_DELIVERY_STAGE_MAPPING;
-        goto publish;
+decision:
+    g_setup->disposition=required?(primary==UINT32_MAX?PW_SETUP_READY:PW_SETUP_TERMINAL_REQUIRED_FAILURE):PW_SETUP_NOT_REQUIRED;
+    g_setup->primary_plus_one=primary==UINT32_MAX?0:primary+1;
+    hdr->authority_status=authority?PW_AUTHORITY_SETUP_MAPPED:(required?PW_AUTHORITY_SETUP_LOCAL_FAILED:PW_AUTHORITY_SETUP_DESCRIPTOR_MISSING);
+    hdr->authority_detail=primary==UINT32_MAX?0:primary;
+    atomic_store_explicit(&g_setup->published,1,memory_order_release);
+    /* Publish refusal before cleanup: an interrupted cleanup cannot hide it. */
+    if (fd_open) {
+        errno=0; rc=PW_EXTENSION_CLOSE(fd); saved=errno;
+        pw_setup_observe(g_setup,9,PW_SETUP_INTEGER,rc?PW_SETUP_FAILED:PW_SETUP_SUCCEEDED,rc,saved,
+            PW_SETUP_CLEANUP|PW_SETUP_RC|(rc?PW_SETUP_ERRNO:0),0,0);
     }
-    if (closed) {
-        status = PW_AUTHORITY_SETUP_LOCAL_FAILED; detail = PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE;
-        munmap(p, bytes);
-        goto publish;
+    if (mapping!=MAP_FAILED && !authority) {
+        errno=0; rc=PW_AUTHORITY_MUNMAP(mapping,bytes); saved=errno;
+        pw_setup_observe(g_setup,12,PW_SETUP_INTEGER,rc?PW_SETUP_FAILED:PW_SETUP_SUCCEEDED,rc,saved,
+            PW_SETUP_CLEANUP|PW_SETUP_RC|PW_SETUP_VALUE|(rc?PW_SETUP_ERRNO:0),0,bytes);
+        /* A failed unmap remains an observed unresolved reference until process exit. */
     }
-    pw_authority_region_t *region = p;
-    if (region->magic != PW_AUTHORITY_MAGIC
-        || memcmp(region->identity, PW_WORKER_ABI_IDENTITY, PW_AUTHORITY_IDENTITY_BYTES) != 0
-        || region->actor_index != hdr->actor_index
-        || region->inbound_count > PW_AUTHORITY_MAX_INBOUND
-        || region->outbound_count > PW_AUTHORITY_MAX_OUTBOUND
-        || bytes < PW_AUTHORITY_REGION_BYTES(region->outbound_count, region->inbound_count)) {
-        status = PW_AUTHORITY_SETUP_REJECTED; detail = PW_DELIVERY_STAGE_CHANNEL_HEADER;
-        munmap(p, bytes);
-        goto publish;
-    }
-    authority = region;
-    authority_bytes = bytes;
-    for (uint32_t i = 0; i < region->outbound_count; i++) {
-        pw_authority_slot_t *slot = pw_authority_outbound(region, i);
-        outbound_assignment[i].writer = slot->writer_actor;
-        outbound_assignment[i].operation = slot->operation_index;
-        outbound_assignment[i].resource = slot->resource_index;
-    }
-    for (uint32_t i = 0; i < PW_AUTHORITY_MAX_TRANSFERS; i++)
-        transfer_assignment[i] = region->transfers[i].operation_plus_one;
-    for (uint32_t i = 0; i < region->inbound_count; i++) {
-        pw_authority_slot_t *slot = pw_authority_inbound(region, i);
-        inbound_assignment[i].writer = slot->writer_actor;
-        inbound_assignment[i].operation = slot->operation_index;
-        inbound_assignment[i].resource = slot->resource_index;
-    }
-    status = PW_AUTHORITY_SETUP_MAPPED;
-publish:
-    hdr->authority_status = status;
-    hdr->authority_detail = detail;
+    if (required && primary!=UINT32_MAX) publish_done_and_exit(hdr);
 }
 
 /* Validate and acknowledge at most one committed, unacknowledged inbound
@@ -863,6 +749,7 @@ static void service_inbound_once(void) {
         pw_authority_slot_t *slot = pw_authority_inbound(authority, i);
         if (atomic_load_explicit(&slot->committed, memory_order_acquire) != 1u) continue;
         if (atomic_load_explicit(&slot->acknowledged, memory_order_acquire) != PW_AUTHORITY_ACK_NONE) continue;
+        PW_INBOUND_OBSERVE(slot);
         uint32_t problem = pw_authority_slot_problem(slot, PW_AUTHORITY_FAMILY_FILE,
             inbound_assignment[i].writer, inbound_assignment[i].operation, inbound_assignment[i].resource);
         slot->reject_detail = problem;
@@ -952,6 +839,7 @@ static void attempt_extension_issue(pw_shm_slot_t *slot, pw_timing_t *timing, ui
     memcpy(out->token, token, length + 1u);
     pw_extension_erase(token, length);
     free(token);
+    PW_AUTHORITY_PUBLISH_OBSERVE(out);
     atomic_store_explicit(&out->committed, 1u, memory_order_release);
     uint32_t status = PW_CUSTODY_NONE;
     uint32_t ack = wait_exchange(&out->acknowledged, timing, index, &status);
@@ -1135,11 +1023,11 @@ static void run_attempt(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t phase
     case PW_ATTEMPT_NONE:                                                 break;
     case PW_ATTEMPT_EXTENSION_CONSUME:
         if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_consume_actor(slot);
-        else attempt_extension(slot, 0);
+        else slot->unavailable_code = 5;
         break;
     case PW_ATTEMPT_EXTENSION_RELEASE:
         if (g_hdr->actor_mode != PW_ACTOR_MODE_LEGACY) attempt_extension_release_actor(slot);
-        else attempt_extension(slot, 1);
+        else slot->unavailable_code = 5;
         break;
     case PW_ATTEMPT_EXTENSION_ISSUE: attempt_extension_issue(slot, timing, index); break;
     case PW_ATTEMPT_EXTENSION_TRANSFER: attempt_extension_transfer(slot, timing, index); break;
@@ -1171,6 +1059,7 @@ static void run_attempt(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t phase
     if (kill_before_publish) kill(getpid(), SIGKILL);
 
     atomic_store_explicit(&slot->completed, 1u, memory_order_release);
+    PW_ATTEMPT_PUBLISHED(slot);
 }
 
 /* ---- phase release wait ------------------------------------------------- */
@@ -1364,6 +1253,7 @@ int main(int argc, char **argv) {
                               + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES));
     pw_shm_evidence_t *evidence = pw_evidence(base);
     g_hdr = hdr;
+    g_setup = (pw_authority_setup_t *)((uint8_t *)base + PW_SHM_REGION_BYTES - PW_SHM_AUTHORITY_SETUP_BYTES);
     g_evidence = evidence;
     pw_progress(evidence, PW_OP_HEADER, PW_PROGRESS_STARTED, UINT32_MAX);
     if (atomic_load_explicit(&hdr->prepared, memory_order_acquire) != 1u) {
@@ -1412,7 +1302,10 @@ int main(int argc, char **argv) {
     }
     if (hdr->actor_mode > PW_ACTOR_MODE_UNAPPLIED
         || atomic_load_explicit(&hdr->actor_setup, memory_order_acquire) != 0u
-        || atomic_load_explicit(&hdr->activation_observed, memory_order_acquire) != 0u) {
+        || atomic_load_explicit(&hdr->activation_observed, memory_order_acquire) != 0u
+        || (hdr->actor_mode != PW_ACTOR_MODE_LEGACY && (g_setup->required > 1u
+            || g_setup->actor_index != hdr->actor_index
+            || atomic_load_explicit(&g_setup->published,memory_order_acquire) != 0u))) {
         pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_PHASE_LAYOUT, PW_NATIVE_NONE,
                    0, 0, 0, UINT32_MAX, hdr->actor_mode);
         pw_diagnostic(evidence, "invalid actor mode or publication input");
@@ -1420,7 +1313,6 @@ int main(int argc, char **argv) {
     }
 
 
-    prepare_extension(hdr, args.extension_fd);
     prepare_authority(hdr, args.authority_fd);
 
     /* Ensure host-populated strings are bounded before the sandbox is
@@ -1589,7 +1481,6 @@ int main(int argc, char **argv) {
             pw_diagnostic(evidence, "sandbox_create_params returned NULL");
             fprintf(stderr,
                     "pw-probe-runner: sandbox_create_params returned NULL\n");
-            hdr->apply_rc = -1;
             publish_done_and_exit(hdr);
         }
         for (uint32_t i = 0; i < param_count; i++) {
@@ -1598,7 +1489,6 @@ int main(int argc, char **argv) {
                 pw_failure(evidence, PW_OP_PARAM_SET, PW_FAILURE_PARAM_ENCODING, PW_NATIVE_NONE, 0, 0, 0, i, 0);
                 pw_diagnostic(evidence, "parameter is not NUL terminated");
                 sandbox_free_params(params_obj);
-                hdr->apply_rc = -1;
                 publish_done_and_exit(hdr);
             }
             pw_progress(evidence, PW_OP_PARAM_SET, PW_PROGRESS_STARTED, i);
@@ -1611,7 +1501,6 @@ int main(int argc, char **argv) {
                         "pw-probe-runner: sandbox_set_param[%u] (key=%s) failed rc=%d\n",
                         i, params[i].key, srv);
                 sandbox_free_params(params_obj);
-                hdr->apply_rc = -1;
                 publish_done_and_exit(hdr);
             }
         }
@@ -1635,7 +1524,6 @@ int main(int argc, char **argv) {
                 "pw-probe-runner: sandbox_compile_string failed: %s\n",
                 compile_err ? compile_err : "(no error string)");
         if (compile_err) free(compile_err);
-        hdr->apply_rc = -1;
         publish_done_and_exit(hdr);
     }
 

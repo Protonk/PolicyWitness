@@ -30,11 +30,11 @@ Offline release controls also exercise the release procedure's decision points.
 - Runs `nm -u` on the shipped `PWRunner` executable and rejects any undefined
   `_sandbox_*` symbol. This sees linked imports; it does not detect dynamic
   symbol lookup. The [host-source check](../source_drift/README.md) covers
-  literal lookup/load forms. Worker, validator and issuer native calls are
-  expected; only the host must remain free of them. The issuer is required in
-  the bundle inventory and has separate signature, signer and manifest-hash
+  literal lookup/load forms. Worker and validator native calls are expected;
+  only the host must remain free of them. Both worker variants are required in
+  the bundle inventory and have separate signature, signer and manifest-hash
   checks. This inspector does not compare entitlement contents. Independent
-  issuer entitlement read-back belongs to the
+  worker-equipment entitlement readback belongs to the
   [BYOXPC controls](../runner_byoxpc/README.md) and
   [extension controls](../witness_contract/README.md#native-extension-boundaries).
 - Runs `nm -u` on the shipped `pw-probe-runner` and rejects an undefined
@@ -99,10 +99,32 @@ Offline release controls also exercise the release procedure's decision points.
   with no additional code in the inventory; cleanup removes only the temporary directory and checks the source
   inventory.
 - `byoxpc_verification_controls` uses never-launched signed copies and isolated
-  child registry/home directories. Corrupting a worker or issuer code page must
-  fail recursive installation checks and subsequently identify both the bundle
-  and changed helper during validation. Other helper signatures remain valid;
-  removal verifies registry and plist cleanup.
+  child registry/home directories. Corrupting either worker variant's code page
+  must fail recursive installation checks and subsequently identify both the
+  bundle and changed helper during validation. Other helper signatures remain
+  valid; removal verifies registry and plist cleanup. Independently resealed
+  inventories must refuse missing/duplicate roles, escaping/substituted paths,
+  stale signed hashes, isolated CDHash/team/identifier substitutions, wrong
+  protocol and unknown fields. An actual re-signed
+  selected worker keeps only its inventory hash stale; an actual nonempty
+  unentitled signature has all recorded metadata refreshed before resealing.
+  Raw inventories, signatures, entitlement read-backs and exact refusals remain
+  beside each control. Every inventory mutation restores and verifies the full
+  original signed copy in `finally`.
+
+  A Swift probe compiles unchanged host core sources once, with products in case
+  scratch and source/build receipts in artifacts, and calls the real static
+  `ActorEquipmentPreparation.bind` without injected Security operations. It
+  first binds the valid ad-hoc service, then rejects a resealed inventory with a
+  well-formed incompatible worker identity as `worker_identity_mismatch`, and
+  binds again after exact restoration. This checks the compiled host identity
+  boundary; it does not require every compatible external service to share the
+  controller's build identity. The probe performs no specimen application,
+  worker launch, dynamic code inspection or XPC dispatch. Service copies never
+  launch or bootstrap; CLI capture is bounded at 60 seconds, probe commands at
+  30 seconds and the one fixture build at 300 seconds. All temporary copies and
+  registry/home directories belong to the fixture, which also verifies the
+  selected source app remains unchanged.
 - `build_provenance_controls` exercises the provenance and lock helpers with
   constructed inputs and disposable directories: SDK admission at shell and
   make entry points; plain and exec-restricted shim-probe profiles, successful
@@ -209,7 +231,19 @@ Offline release controls also exercise the release procedure's decision points.
   pass deep verification and then fail the signer check, naming the artifact,
   before the guide is staged or the ZIP is created; the control inspects each
   such signature independently before
-  crediting the refusal. Successful siblings must package both variants. Raw
+  crediting the refusal. Successful siblings must package both variants. The
+  full-build success also checks executed signing arguments: the selected
+  worker receives the service plist, while the unentitled worker and validator
+  receive identity-only signing. Shim receipts retain both worker copies'
+  pre-sign hashes and inventory snapshots before and after each real signing
+  call. The inventory must be absent through every inner signature's return
+  and present when service sealing starts; monotonic call times independently
+  order inner completion before seal entry. Separate disk reads and direct
+  system `codesign` verification/read-back compare inventory hashes, CDHashes,
+  identifiers, teams and entitlements with the resulting signed workers and
+  verify the validator's empty entitlement dictionary. Seven captured-receipt
+  mutations check specific assertion sensitivity; these are oracle controls,
+  not additional build executions or signature observations. Raw
   command and tool receipts survive temporary-checkout cleanup. This case
   requires the full toolchain with one installed SDK and a Developer ID
   identity, and is opt-in. Actual selection changes between two toolchains

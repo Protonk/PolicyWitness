@@ -303,7 +303,8 @@ def meson_scenarios(repo):
     assert original.count(client_line) == 1, 'fixture requires the explicit client contract boundary'
     client_without_coding = [
         'PWRunnerAPI', 'PWRunnerTransport', 'PWRunnerRequest', 'PWRunnerExtension',
-        'PWRunnerActors', 'PWRunnerPathEvidence', 'PWRunnerAttemptEvidence', 'PWRunnerPredictionEvidence',
+        'PWRunnerActors', 'PWRunnerEquipment', 'PWRunnerAuthoritySetup',
+        'PWRunnerPathEvidence', 'PWRunnerAttemptEvidence', 'PWRunnerPredictionEvidence',
         'PWRunnerStepEvidence', 'PWRunnerLifecycleEvidence', 'PWRunnerDisposition',
         'PWRunnerProfileCapture', 'PWRunnerReply',
     ]

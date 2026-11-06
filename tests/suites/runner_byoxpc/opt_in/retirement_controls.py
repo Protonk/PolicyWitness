@@ -188,7 +188,7 @@ def custom_app(source, host, scratch, out, identity, trace, gates):
             save(out / 'configured-service-info.json', info)
         path.write_bytes(plistlib.dumps(info))
     # Match the existing disposable signed-host recipe. The worker, validator,
-    # issuer and raw client remain the selected app's original binary bytes.
+    # unentitled worker and raw client remain the selected app's original binary bytes.
     command(out / 'sign-service', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
         '--entitlements', ROOT / 'runner/Services/PWRunner/Entitlements.plist', '-s', identity, app / SERVICE], timeout=90)
     command(out / 'substitution-evidence', [sys.executable, '-B', '-S', ROOT / 'tests/build-evidence.py',
@@ -198,7 +198,7 @@ def custom_app(source, host, scratch, out, identity, trace, gates):
         '--entitlements', ROOT / 'PolicyWitness.entitlements', '-s', identity, app], timeout=90)
     report = inspect(app); save(out / 'artifact.json', report)
     assert report['ok'], report
-    for relative in (CLIENT, WORKER, SERVICE / 'Contents/MacOS/sb_api_validator', SERVICE / 'Contents/MacOS/pw-extension-issuer'):
+    for relative in (CLIENT, WORKER, SERVICE / 'Contents/MacOS/sb_api_validator', SERVICE / 'Contents/MacOS/pw-probe-runner-unentitled'):
         assert digest(app / relative) == digest(source / relative), f'fixture altered runtime helper: {relative}'
     save(out / 'binary-hashes.json', dict(host=digest(app / HOST), worker=digest(app / WORKER),
         raw_client=digest(source / CLIENT), manifest=digest(app / MANIFEST)))

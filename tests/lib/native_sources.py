@@ -48,7 +48,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-IDENTITY_TARGETS = ('pw-probe-runner', 'pw-extension-issuer', 'PWCWorkerShim')
+IDENTITY_TARGETS = ('pw-probe-runner', 'PWCWorkerShim')
 CORE_DIR = 'runner/Sources/PWRunnerCore'
 SHIM_DIR = 'runner/Sources/PWCWorkerShim'
 API = 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift'
@@ -60,6 +60,8 @@ SHARED_CONTRACT_SOURCES = (
     'runner/Sources/PWRunnerCore/PWRunnerRequest.swift',
     'runner/Sources/PWRunnerCore/PWRunnerExtension.swift',
     'runner/Sources/PWRunnerCore/PWRunnerActors.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerEquipment.swift',
+    'runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift',
     'runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift',
     'runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift',
     'runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift',
@@ -75,7 +77,6 @@ CLIENT_MAIN = 'runner/Clients/PWRunnerClient/main.swift'
 CLIENT_SESSION = 'runner/Clients/PWRunnerClient/PWRunnerClientSession.swift'
 WORKER = 'controller/tools/pw_probe_runner/pw_probe_runner.c'
 VALIDATOR = 'controller/tools/sb_api_validator/sb_api_validator.c'
-ISSUER = 'controller/tools/pw_probe_runner/pw_extension_issuer.c'
 
 
 class IntrospectionError(Exception):
@@ -207,7 +208,7 @@ def closure_problems(builddir, root, targets, filenames, label):
 def expected(root, xpc=True):
     """Every target and exactly the files the tree holds for it."""
     root = Path(root).resolve()
-    targets = {'sb_api_validator': {VALIDATOR}, 'pw-probe-runner': {WORKER}, 'pw-extension-issuer': {ISSUER}}
+    targets = {'sb_api_validator': {VALIDATOR}, 'pw-probe-runner': {WORKER}}
     if xpc:
         targets['PWCWorkerShim'] = {p.relative_to(root).as_posix() for p in (root / SHIM_DIR).rglob('*.c')}
         targets['pw-runner-client'] = set(SHARED_CONTRACT_SOURCES) | {CLIENT_MAIN, CLIENT_SESSION}

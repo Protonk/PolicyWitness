@@ -73,11 +73,15 @@ worktrees below are untouched; their own indexes remain authoritative for their
 local output. Removing their duplicate main-checkout pins does not settle any
 resource obligation.
 
-The current runs are `actor-passes-default-02` and
-`actor-passes-final-controls-02`. The former's `review/` contains the review,
-exact source snapshots, selected original failure records and the pruning
-receipt. These are gitignored, checkout-local materials. Full superseded runs
-are not relocated into another directory.
+The current runs are `extension-consolidation-battery-01` and
+`extension-consolidation-build-refusals-04`. These are gitignored,
+checkout-local materials at their original owned paths. The consolidation
+records identify their exact source snapshot, verification account and
+retention receipts. The two superseded actor-passes runs have identified,
+hashed historical copies under
+`records/doc-lookback-2026-11-04/critique/historical-evidence/`; their original
+identities and cleanup qualifications remain preserved. Archive copies do not
+relocate active ownership.
 
 Before retiring `workset-r2-byoxpc-02`, seven unchanged recovery files
 (20,628 bytes) were copied to

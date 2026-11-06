@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "c1f66cc04bf60846bcddcee5d765e965d75c1e6a8d682d116f14439dc9b93bf7"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xc1, 0xf6, 0x6c, 0xc0, 0x4b, 0xf6, 0x08, 0x46, 0xbc, 0xdd, 0xce, 0xe5, 0xd7, 0x65, 0xe9, 0x65, 0xd7, 0x5c, 0x1e, 0x6a, 0x8d, 0x68, 0x2d, 0x11, 0x6f, 0x14, 0x43, 0x9d, 0xc9, 0xb9, 0x3b, 0xf7};
+#define PW_WORKER_ABI_IDENTITY_HEX "6011ef48cde40586569e588279d435e53c7c0e7ddcb86aa28f261053f9ae278b"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x60, 0x11, 0xef, 0x48, 0xcd, 0xe4, 0x05, 0x86, 0x56, 0x9e, 0x58, 0x82, 0x79, 0xd4, 0x35, 0xe5, 0x3c, 0x7c, 0x0e, 0x7d, 0xdc, 0xb8, 0x6a, 0xa2, 0x8f, 0x26, 0x10, 0x53, 0xf9, 0xae, 0x27, 0x8b};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -59,7 +59,7 @@ static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xc1, 0xf6, 0x6c, 0xc0, 0x4b,
 #define PW_SHM_POLICY_BYTES 262144u /* includes terminating NUL */
 #define PW_SHM_MAX_STEPS    256u
 #define PW_SHM_SLOT_BYTES   8192u
-/* Exact submitted issue path, including the terminator (pw_extension_channel.h's path bound). */
+/* Exact submitted issue path, including the terminator (pw_authority_bytes.h's path bound). */
 #define PW_SHM_EXT_TARGET_BYTES 1024u
 #define PW_SHM_MAX_PARAMS   1024u
 #define PW_SHM_PARAM_BYTES  512u
@@ -67,6 +67,7 @@ static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xc1, 0xf6, 0x6c, 0xc0, 0x4b,
  * every one of the 16 actor-form phases, so each region holds 16 records. */
 #define PW_SHM_MAX_PHASES 16u
 #define PW_SHM_PHASE_BYTES 32u
+#include "pw_authority_setup.h"
 #define PW_SHM_HEADER_BYTES 768u
 /* Optional compiled-object capture. The host pre-touches this bounded region;
  * no capture pipe or post-apply allocation/file output is needed. */
@@ -80,7 +81,7 @@ static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xc1, 0xf6, 0x6c, 0xc0, 0x4b,
      + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES)                        \
      + ((size_t)PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES)                      \
      + PW_SHM_CAPTURE_HEADER_BYTES + PW_SHM_CAPTURE_BYTES                 \
-     + PW_SHM_EVIDENCE_HEADER_BYTES + PW_SHM_DIAGNOSTIC_BYTES)
+     + PW_SHM_EVIDENCE_HEADER_BYTES + PW_SHM_DIAGNOSTIC_BYTES + PW_SHM_AUTHORITY_SETUP_BYTES)
 
 /* Bounded string sizes inside a slot. They add up below the slot
  * budget; the remainder is reserved padding for future fields. */
@@ -267,21 +268,7 @@ typedef struct {
     _Atomic uint32_t proceed_observed; /* worker: latest acquired release ordinal */
     uint8_t abi_identity[PW_SHM_ABI_IDENTITY_BYTES];
     uint32_t phase_count;
-    uint32_t extension_requested;
-    _Atomic uint32_t extension_delivery_published;
-    uint32_t extension_delivery_status; /* PW_DELIVERY_*: 1 delivered, 2 token unavailable, 3 channel rejected, 4 API unavailable, 5 local setup failed */
-    uint32_t extension_delivered_bytes;
-    /* Delivery failure account, valid with extension_delivery_published and a
-     * failure status. stage names the first failing preparation stage
-     * (PW_DELIVERY_STAGE_*); native_rc and errno are that stage's call result
-     * when it made a native call, otherwise 0 and not evidence. cleanup_stage
-     * and cleanup_errno record a close or unmap failure observed while undoing
-     * earlier setup after the first failure; they never change the status. */
-    uint32_t extension_delivery_stage;
-    int32_t extension_delivery_native_rc;
-    int32_t extension_delivery_errno;
-    uint32_t extension_delivery_cleanup_stage;
-    int32_t extension_delivery_cleanup_errno;
+    uint8_t reserved_authority_retired[36];
     uint32_t policy_bytes_expected;            /* host input; see ownership above */
     uint32_t policy_bytes_received;            /* worker: count read at EOF */
     _Atomic uint32_t policy_read_published;    /* worker: 1 publishes the count */

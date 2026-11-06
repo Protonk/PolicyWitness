@@ -52,8 +52,8 @@ clock and native-call equipment; see [Worker timing controls](#worker-timing-con
 
 6. **params_round_trip** — `(allow default)(deny file-read-data
    (subpath (param "TARGET")))` with `TARGET=/private/etc`. Asserts
-   that `sandbox_compile_string` saw the params object (otherwise
-   `apply_rc` would be `-1` for an unresolved `(param "TARGET")`),
+   that `sandbox_compile_string` saw the params object (an unresolved
+   `(param "TARGET")` instead produces a compiler-null failure),
    `sandbox_apply` succeeded, AND the kernel actually denied
    `/etc/hosts` (`rc=1`, `errno=EPERM`). The kernel deny is the
    load-bearing assertion — a passing compile alone would prove only
@@ -299,16 +299,16 @@ pre-application writes keep it off that path in the observed runs.
 The worker refuses or survives bad input before `sandbox_apply`. The
 shm-corruption branches are e2e-unreachable because the host always
 populates the shm header correctly. `compile_failure` exercises a real
-compilation failure and the published status word, in isolation without the
-host/XPC path. The host maps this ambiguous status to `runner_failed`; it cannot
-identify compilation versus parameter setup/application from that status alone. The harness — which pipes
-policy straight to the worker — is the vehicle for all of them. Each asserts the exact worker exit code with no `applied`/`done`
-sentinel and no ready byte (except compile_failure, which flips `done`).
+compilation failure and its published native failure evidence, in isolation
+without the host/XPC path. The harness pipes policy straight to the worker.
+These pre-apply controls assert their terminal publications and exit status;
+no raw `apply_rc` scalar is interpreted without an apply observation.
 
-10. **compile_failure** — malformed SBPL (missing close paren).
-    `apply_rc=-1`, `applied` stays 0, `done` flips so the host stops
-    polling, and the worker still `_exit(0)`s on the exit byte instead of
-    dying. The "honest even on bad input" contract.
+10. **compile_failure** — malformed SBPL (missing close paren). The published
+    failure names compilation (operation 5, code 1, null-pointer native kind 2,
+    no errno). `applied` stays 0, no ready byte or attempt is published, `done`
+    flips, and the worker exits cleanly. The terminal compiler branch excludes
+    `sandbox_apply`; no native apply return is manufactured.
 11. **abi_mismatch** — header ABI identity ≠ the worker's build → exit 4.
     The same case also runs `abi_magic_mismatch`: a correct identity with an
     incompatible magic prefix must refuse before publishing shared evidence.
@@ -357,7 +357,8 @@ a flag of 1, `policy_bytes_received`.
 21. **policy_empty_expected** — an empty source with a zero expectation: zero
     is compared, not treated as unset. The receipt reports 0, the length check
     passes, and compilation refuses the empty source on its own terms
-    (operation 5, `done` with `apply_rc` -1, clean exit).
+    (operation 5, code 1, null-pointer native kind 2, no errno), then publishes
+    `done` and exits cleanly without applying or running an attempt.
 22. **policy_expectation_out_of_range** — a header expectation of
     `PW_SHM_POLICY_BYTES` cannot fit the buffer, whose final byte is the NUL →
     operation 1, code 12, detail the refused expectation, exit 10, before any
@@ -563,13 +564,19 @@ recorded. Changed shared inputs qualify applicability, so inspect per-variant
 source receipts. `ownership.json` separately reports command settlement and
 cleanup. Passing assertions cannot override incomplete accounting or ownership.
 
-`actor_operations` executes production C operation bodies with independently
-counted native-call substitutes and a real fresh-open observation. Disposable
-source mutations omit a native call, cross delivery associations or substitute
-an existing descriptor. Each must fail its designated call or resource
-observation; a build error is never credited. These controls establish apparatus
-connections; the public composition and re-delegation cases establish native
-policy effects. Sources, commands and rejection diagnostics remain in artifacts.
+`actor_operations` retains direct production-body controls and submits separate
+issue, consume and release slots through the actual `run_attempt` dispatcher.
+Independent native-callback counts identify which operation ran; nonzero issue,
+delivery and handle indices and distinct returned handles expose crossed
+associations. The separate fresh-read body control observes its real open,
+file identity and close beside an inherited descriptor for the same object.
+Eleven disposable source mutations omit body calls or dispatcher routes,
+misroute consume/release, cross handle/delivery associations, or reuse the
+inherited descriptor. Each must compile and fail its designated independent
+observation; build errors, signals and timeouts are never credited. Synthetic
+callbacks establish routing and ownership, not native sandbox authority. Public
+composition and re-delegation cases separately observe native policy effects.
+Sources, commands and rejection diagnostics remain in artifacts.
 
 `authority_binding` compiles the production recipient preparation and inbound
 service with a counted consume replacement. It snapshots assigned references,

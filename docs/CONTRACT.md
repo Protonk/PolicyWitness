@@ -7,15 +7,15 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 26, controller envelope 11, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
-| request schema (`request_schema`) | 5 | [`requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 25 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 10 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| request schema (`request_schema`) | 6 | [`requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 26 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 11 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 | runner protocol (`runner_protocol`) | 3 | [`runnerProtocol`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RUNNER_PROTOCOL_VERSION`](../controller/src/json_contract.rs); [`RUNNER_PROTOCOL`](../tests/lib/contract.py); [`PWRunnerProtocolVersion`](../runner/Services/PWRunner/Info.plist) |
 <!-- END GENERATED CONTRACT TABLE -->
 
@@ -131,7 +131,7 @@ is a `bad_request` with a bounded field path, rather than an ignored option.
 For example, `policy.capture_compiled_profiel` is rejected. `policy.params`
 is a dictionary of caller-chosen names to string values; its names are data,
 not closed object fields. Missing required fields and wrong value types are
-also rejected. Optional null values have the same meaning as absence.
+also rejected. Optional null values generally have the same meaning as absence. Actor `equipment`, `required_entitlements`, phase `after_termination`, and the actor equipment override map reject explicit null; omission selects their documented defaults.
 
 The controller additionally accepts [runner selection](../controller/README.md#runner-selection-external-entitlements)
 and resolves `policy.augments`. It validates selector types and every required
@@ -139,7 +139,7 @@ entitlement, including shadowed aliases; unknown nested selector fields are
 errors. A non-null nested selector value takes precedence over its top-level
 alias, including an explicit empty entitlement list. Selection fields are
 removed before XPC delivery and their resolved meaning is recorded in runner
-provenance. Direct XPC requests reject them. Nonempty augment lists require a
+provenance. Direct XPC requests reject runner selection fields. Actor `required_entitlements` remains in the XPC request and is checked separately for each actor by the host. Nonempty augment lists require a
 string `sbpl_source`; the controller splices the named fragments and strips
 the list. A direct XPC request with unresolved fragments is rejected.
 
@@ -206,6 +206,7 @@ consumers use the code and path without parsing that prose.
 | `unsupported_policy_format`, `missing_policy_source` | The policy's structural prerequisites are absent. |
 | `unknown_filter_kind`, `missing_filter_value`, `empty_operation` | A sandbox query cannot be formed from the request. |
 | `unsupported_attempt`, `relative_exec_target`, `duplicate_step_id` | The plan cannot be carried out with its submitted meaning. |
+| `invalid_termination_dependency` | A phase names an unknown source actor, itself, or a source whose final visit is not earlier than the dependent phase; the path identifies `phases`, its index, `after_termination`, `actor_id`. |
 | `inapplicable_field`, `invalid_capture_nonce` | A supplied field cannot take effect or satisfy its prerequisites. |
 | `conflicting_selector`, `unresolved_augments`, `augment_unavailable` | Controller-owned instructions conflict, remain unresolved at XPC, or name unavailable fragments. |
 | `admission_refused` | Capacity or native-string admission failed; `admission_failure` retains the field, actual count, maximum and applicable positions. |
@@ -214,6 +215,66 @@ These refusals contain no steps or child-process observations. The XPC host
 itself may have launched to decode a request. Capacity checks precede meaning
 checks; diagnostics identify one refusal, not an exhaustive list of defects.
 Retain unfamiliar codes as unclassified refusals rather than guessing their cause.
+
+## Actor evidence ownership
+
+Actor execution has no declaration reply or singular worker projection.
+`actors[]` owns each launch, subprocess, application assessment and equipment
+association. The `authority_setup.host` run/region/custody scopes and
+`authority_setup.workers` cells retain primary setup, independent cleanup and
+native-capability observations. An acquired decision does not publish another
+cell, and a scheduling summary does not replace any actor's facts.
+
+`equipment_inventory` identifies the selected service's sealed equipment
+inventory. `equipment_bindings` separates packaged roles from explicitly
+instrumented overrides; the latter carry `unverified_fixture` implementation
+identity and cannot establish packaged selection. `equipment_entitlements`
+contains independently associated static and live XML read-backs. Every actor's
+requirements are evaluated separately using boolean true keys, including in the
+live read-back. Bounds and reserve geometry belong to [LIMITS](LIMITS.md).
+Runtime inspection failure cancels all scheduled activation and retains any
+already published setup/application facts. It is not a before-launch
+`preparation_failure`; independent earlier cancellation remains visible.
+
+`preparation_failure` admits only `resolved_plan/inconsistent_assignment` or
+`equipment/equipment_binding_refused`, with `runner_failed`, `rc: 1` and no
+launched actors. Observation arrays are empty. Unique bounded declarative phase
+and action identities may remain, without claiming that those actions ran;
+this is the sole exception to their normal complete observation partition.
+
+`actors[].application` has closed state/basis pairs. Unapplied intent is
+`not_requested/unapplied_declaration`. `not_attempted` requires host proof of no
+launch or an eligible terminal worker branch before application.
+`observed` requires an applied publication or the native apply-failure
+publication. With no such source, requested application is `unobserved`.
+In particular, setup timeout, `done`, process death or an auxiliary reporting
+failure alone cannot establish application nonattempt.
+
+Termination dependencies retain a source actor's `owned_reap`, including native
+PID/return/raw wait status, capture stage, ownership/departure flags,
+`capture_ordinal` and optional `observed_ns`. Each phase may retain
+`activation_observation: {capture_ordinal, observed_ns?}`. These ordinals are
+local to the source actor process, not a global process counter.
+`termination_gate.observation` is `{capture_ordinal}` referencing that source
+actor's owned reap. Every nonnull observation, including a failed gate's,
+requires a positive matching source reap ordinal and a present later gate
+`capture_ordinal`. A satisfied gate additionally requires the source's final
+activation before its owned reap before gate closure, consistent child PID and
+decoded wait status, unbroken ownership and no prior host departure request.
+Both source final-activation and owned-reap timestamps must be present and
+monotonically ordered. The gate wait also requires a usable clock, no native
+wait error, and elapsed time within the positive termination-gate allowance in
+[LIMITS](LIMITS.md).
+An abnormal natural reap can satisfy termination; final phase completion,
+`done`, a requested exit or cleanup-only reap cannot substitute.
+
+Native facts may retain absent source timestamps after clock failure, but
+cannot satisfy the dependency without them. Once dependent activation has been
+stored, a missing post-store dependent timestamp retains that activation and
+the already satisfied gate; it cannot turn the observed activation into absence.
+A present dependent timestamp must not precede the source reap. Reached failed
+gates withhold activation, collection and release even if cleanup later
+observes reap.
 
 ## Internal host/worker identity
 

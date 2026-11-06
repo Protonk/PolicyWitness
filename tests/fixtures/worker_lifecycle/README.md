@@ -193,17 +193,11 @@ first exec of a newly built file can take several hundred milliseconds, a
 substantial part of the fixture workers' 1,000 ms readiness wait, so tests must
 not be the first to execute a fixture. Each output's expected status is
 recorded where it is compiled: 90 for the base worker, `.identity-mismatch` and
-`.validator`, 92 for `.issuer`, 0 for `.worker-limits` and 2, a usage refusal,
+`.validator`, 0 for `.worker-limits` and 2, a usage refusal,
 for every production-main companion. An unexpected status, a 30-second timeout
 or a launch error is reported, the remaining outputs still run, and the build
 then fails, so its callers stop before any test. Elapsed times are diagnostic;
 the tests own every behavioral check.
-
-The `.issuer` companion builds the production native issuer for Swift host
-controls. `ExtensionEvidenceTests` observe the mapped bytes before and after
-host erasure and descriptor closure, then inject unavailable wait/kill observations
-while independently reaping the real issuer. Published issuance remains visible,
-but unknown host cleanup prevents delivery. The test never prints token bytes.
 
 The exec evidence family is invoked through
 `tests/run.sh --case runner_c_worker_harness/exec_control_states`. Its nine pytest

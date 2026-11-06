@@ -12,8 +12,8 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 
 use crate::app_layout::{
-    BUNDLE_ISSUER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL, SHIPPED_ISSUER, SHIPPED_SERVICE,
-    SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
+    BUNDLE_UNENTITLED_WORKER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL, SHIPPED_SERVICE,
+    SHIPPED_UNENTITLED_WORKER, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
 };
 use crate::augments::PolicyAugmentation;
 use crate::evidence::{self, EvidenceManifest};
@@ -212,7 +212,7 @@ pub struct Binaries {
     pub service: Option<BinaryRecord>,
     pub worker: Option<BinaryRecord>,
     pub validator: Option<BinaryRecord>,
-    pub issuer: Option<BinaryRecord>,
+    pub unentitled_worker: Option<BinaryRecord>,
 }
 
 /// The echo bound the runner applies to override paths; longer strings are
@@ -348,13 +348,13 @@ fn json_type(value: &Value) -> &'static str {
 /// The record for a helper role under the override rules.
 fn helper_record(
     request: &Value,
-    key: &str,
+    key: Option<&str>,
     bundle_helper: Option<&Path>,
     manifest_selected_path: Option<&Path>,
     manifest: Result<&EvidenceManifest, &String>,
     role: &ShippedBinary,
 ) -> Option<BinaryRecord> {
-    match override_for(request, key) {
+    match key.map_or(Override::Absent, |key| override_for(request, key)) {
         Override::Malformed(reason) => Some(unavailable(
             None,
             None,
@@ -372,6 +372,7 @@ fn helper_record(
             )),
         },
         Override::Path(text) => {
+            let key = key.expect("override path has an owning key");
             if text.contains('\0') {
                 return Some(unavailable(
                     None,
@@ -426,7 +427,7 @@ impl Binaries {
             service: Some(record()),
             worker: Some(record()),
             validator: Some(record()),
-            issuer: Some(record()),
+            unentitled_worker: Some(record()),
         }
     }
 
@@ -459,15 +460,15 @@ impl Binaries {
         };
         let worker_selected = manifest_entry(&SHIPPED_WORKER);
         let validator_selected = manifest_entry(&SHIPPED_VALIDATOR);
-        let issuer_selected = manifest_entry(&SHIPPED_ISSUER);
+        let unentitled_selected = manifest_entry(&SHIPPED_UNENTITLED_WORKER);
         let worker_bundle = bundle.map(|b| b.join(BUNDLE_WORKER_REL));
         let validator_bundle = bundle.map(|b| b.join(BUNDLE_VALIDATOR_REL));
-        let issuer_bundle = bundle.map(|b| b.join(BUNDLE_ISSUER_REL));
+        let unentitled_bundle = bundle.map(|b| b.join(BUNDLE_UNENTITLED_WORKER_REL));
         Binaries {
             service,
             worker: helper_record(
                 request,
-                "worker_executable_path",
+                Some("worker_executable_path"),
                 worker_bundle.as_deref(),
                 worker_selected.as_deref(),
                 manifest,
@@ -475,19 +476,19 @@ impl Binaries {
             ),
             validator: helper_record(
                 request,
-                "validator_executable_path",
+                Some("validator_executable_path"),
                 validator_bundle.as_deref(),
                 validator_selected.as_deref(),
                 manifest,
                 &SHIPPED_VALIDATOR,
             ),
-            issuer: helper_record(
+            unentitled_worker: helper_record(
                 request,
-                "issuer_executable_path",
-                issuer_bundle.as_deref(),
-                issuer_selected.as_deref(),
+                None,
+                unentitled_bundle.as_deref(),
+                unentitled_selected.as_deref(),
                 manifest,
-                &SHIPPED_ISSUER,
+                &SHIPPED_UNENTITLED_WORKER,
             ),
         }
     }
@@ -543,7 +544,7 @@ mod tests {
         &SHIPPED_SERVICE,
         &SHIPPED_WORKER,
         &SHIPPED_VALIDATOR,
-        &SHIPPED_ISSUER,
+        &SHIPPED_UNENTITLED_WORKER,
     ];
 
     /// A synthetic app root: the shipped binaries as small distinct
@@ -622,11 +623,11 @@ mod tests {
                     Some(hash_of(root, &SHIPPED_VALIDATOR)),
                 ),
                 entry(
-                    "pw-extension-issuer",
+                    "pw-probe-runner-unentitled",
                     "xpc-embedded-helper",
                     None,
-                    SHIPPED_ISSUER.rel_path,
-                    Some(hash_of(root, &SHIPPED_ISSUER)),
+                    SHIPPED_UNENTITLED_WORKER.rel_path,
+                    Some(hash_of(root, &SHIPPED_UNENTITLED_WORKER)),
                 ),
                 entry(
                     "sb_api_validator",
@@ -687,8 +688,8 @@ mod tests {
             entitlements: None,
             worker_signature: None,
             worker_entitlements: None,
-            issuer_signature: None,
-            issuer_entitlements: None,
+            unentitled_worker_signature: None,
+            unentitled_worker_entitlements: None,
             validator_signature: None,
             validator_entitlements: None,
         };
@@ -700,7 +701,7 @@ mod tests {
             "service" => binaries.service.clone(),
             "worker" => binaries.worker.clone(),
             "validator" => binaries.validator.clone(),
-            "issuer" => binaries.issuer.clone(),
+            "unentitled_worker" => binaries.unentitled_worker.clone(),
             _ => panic!("unknown role: {role}"),
         }
         .unwrap_or_else(|| panic!("{role}: expected a record"))
@@ -732,7 +733,7 @@ mod tests {
                 service: None,
                 worker: None,
                 validator: None,
-                issuer: None
+                unentitled_worker: None
             }
         );
         assert_eq!(request, before);
@@ -1042,58 +1043,29 @@ mod tests {
     }
 
     #[test]
-    fn issuer_override_and_missing_external_issuer_keep_independent_hash_evidence() {
-        let root = synthetic_app("issuer");
+    fn missing_external_unentitled_worker_keeps_independent_hash_evidence() {
+        let root = synthetic_app("unentitled");
         let manifest = manifest_for(&root);
-        let target = builtin(&root, &manifest);
-        let scratch = temp_root("issuer-copy");
-        let copy = scratch.join("issuer");
-        write(
-            &copy,
-            &fs::read(root.join(SHIPPED_ISSUER.rel_path)).unwrap(),
-        );
-        for (input, expected) in [
-            (json!(copy), "match"),
-            (json!(scratch.join("absent")), "unavailable"),
-            (json!(7), "unavailable"),
-        ] {
-            let request = json!({"_test_overrides": {"issuer_executable_path": input}});
-            let original = request.clone();
-            let observations = Binaries::observe(&root, &target, &request, Ok(&manifest));
-            let issuer = record(&observations, "issuer");
-            assert_eq!(issuer.verification, expected);
-            assert_eq!(
-                issuer.baseline_sha256,
-                Some(hash_of(&root, &SHIPPED_ISSUER))
-            );
-            assert_eq!(issuer.actual_sha256.is_some(), expected == "match");
-            assert!(observations.worker.is_none() && observations.validator.is_none());
-            assert_eq!(request, original);
-        }
-        write(&copy, b"modified issuer");
-        let observations = Binaries::observe(
-            &root,
-            &target,
-            &json!({"_test_overrides": {"issuer_executable_path": copy}}),
-            Ok(&manifest),
-        );
-        assert_eq!(record(&observations, "issuer").verification, "mismatch");
-        let (bundle, external) = byoxpc(
-            "issuer-absent",
+        let (bundle, target) = byoxpc(
+            "unentitled-absent",
             b"host",
             Some(b"worker"),
             Some(b"validator"),
         );
-        let observations = Binaries::observe(&root, &external, &json!({}), Ok(&manifest));
-        let issuer = record(&observations, "issuer");
-        assert_eq!(issuer.verification, "unavailable");
+        let observations = Binaries::observe(&root, &target, &json!({}), Ok(&manifest));
+        let worker = record(&observations, "unentitled_worker");
+        assert_eq!(worker.verification, "unavailable");
         assert_eq!(
-            issuer.path,
-            Some(bundle.join(BUNDLE_ISSUER_REL).display().to_string())
+            worker.path,
+            Some(
+                bundle
+                    .join(BUNDLE_UNENTITLED_WORKER_REL)
+                    .display()
+                    .to_string()
+            )
         );
-        assert!(issuer.actual_sha256.is_none() && issuer.baseline_sha256.is_some());
+        assert!(worker.actual_sha256.is_none() && worker.baseline_sha256.is_some());
         fs::remove_dir_all(root).unwrap();
-        fs::remove_dir_all(scratch).unwrap();
         fs::remove_dir_all(bundle.parent().unwrap()).unwrap();
     }
 
@@ -1282,15 +1254,16 @@ mod tests {
                 service: None,
                 worker: None,
                 validator: None,
-                issuer: None
+                unentitled_worker: None
             }
         );
-        // A malformed container affects every helper role; the service is untouched.
+        // A malformed container affects override-capable roles; packaged roles stay unchanged.
         for container in [json!(5), json!("x"), json!([])] {
             let request = json!({"_test_overrides": container});
             let binaries = Binaries::observe(&root, &target, &request, Ok(&manifest));
             assert!(binaries.service.is_none());
-            for role in ["worker", "validator", "issuer"] {
+            assert!(binaries.unentitled_worker.is_none());
+            for role in ["worker", "validator"] {
                 let record = record(&binaries, role);
                 assert!(record.path.is_none() && record.actual_sha256.is_none());
                 assert_eq!(record.verification, "unavailable");
@@ -1344,7 +1317,7 @@ mod tests {
         );
         assert_eq!(
             keys(&wire["binaries"]),
-            ["issuer", "service", "validator", "worker"]
+            ["service", "unentitled_worker", "validator", "worker"]
         );
         assert_eq!(
             keys(&wire["binaries"]["worker"]),

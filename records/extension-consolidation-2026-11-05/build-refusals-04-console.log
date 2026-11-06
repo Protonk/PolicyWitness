@@ -1,0 +1,5 @@
+==> [selection] preflight/build_refusal_controls
+==> [preflight/build_refusal_controls] start
+==> [preflight/build_refusal_controls] drive the unchanged build script through every baseline refusal and observe the operation each one protects
+==> [preflight/build_refusal_controls] pass: every manifest refusal fires in its variants before the operation it protects; the fresh-mode state sequence, lock and record limits hold; bypassed and displaced guards fail their control
+Test run summary: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-build-refusals-04/run.json

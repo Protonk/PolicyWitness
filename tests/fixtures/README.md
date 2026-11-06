@@ -22,10 +22,12 @@ deterministic, and checked into the repo so tests are hermetic.
   collection/disposition observations to the Swift encoder, Rust disposition
   reader and Python consumer/oracle controls. Accepted failures include driver
   setup, native spawn failure and unconfirmed child cleanup.
-  `evidence_types.json` supplies malformed and valid neighboring delivery and
-  validator records to all three readers, including scalar types, integer
-  bounds, independent cleanup and mixed-type association issues. Its patches
-  apply to the retained issuer-abnormal capture; they are constructed controls.
+  `evidence_types.json` supplies malformed and valid neighboring validator records
+  to all three readers, including scalar types, integer bounds and mixed-type
+  association issues. Its patches apply to `ordinary_phase_reply.json`, an
+  authored current ordinary model. `actor_evidence.json` patches actor setup,
+  equipment, application and gate projections; those are subaccount-only
+  controls, not full wire-valid replies or native execution evidence.
   `exec_observation.json` supplies independent collection, signal-request and
   final-wait combinations to Swift ordinary-reply decoding/encoding, Rust
   disposition admission and Python consumer controls. Cases include unknown
@@ -62,7 +64,7 @@ deterministic, and checked into the repo so tests are hermetic.
   transient token transport, fresh reads, directory writes and exclusive creation,
   external persistence evidence and allocation controls;
   see its [README](sandbox_extensions/README.md).
-- `extension_controls/`: production issuer/worker boundary substitutions with
+- `extension_controls/`: production actor-worker boundary substitutions with
   transient independent receipts for native interruption and token confinement;
   see its [README](extension_controls/README.md).
 - `path_query/`: independent signed native target for direct shipped-validator

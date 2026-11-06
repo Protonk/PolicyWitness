@@ -27,7 +27,7 @@ def run(pw, output, request):
 
 
 def specimen(source, target, overrides):
-    return {'schema_version': 5, 'specimen_id': 'unfamiliar-transport',
+    return {'schema_version': 6, 'specimen_id': 'unfamiliar-transport',
             'policy': {'format': 'sbpl', 'sbpl_source': source},
             'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-write-data',
                 'filter': {'kind': 'path', 'value': str(target)}},
@@ -64,7 +64,12 @@ def check_worker(pw, output, fixture, mode):
     evidence = process.get('worker_evidence')
     if mode == 'transport_incompatible':
         assert evidence is None, evidence
-        assert 'native return unavailable' in runner['error'], runner
+        # An incompatible publication supplies no native application result.
+        # Keep this structural: diagnostic prose is not an apply return code.
+        assert 'apply_rc' not in runner and 'apply_errno' not in runner, runner
+        assert runner['sandboxed_after_apply'] is False, runner
+        assert step['attempt']['outcome'] == 'no_completed_result', step
+        assert 'sandbox_apply' not in runner['error'] and 'sandbox_compile_string' not in runner['error'], runner
         return
     assert isinstance(evidence['abi_identity'], str) and len(evidence['abi_identity']) == 64, evidence
     progress = dict(evidence['progress']); progress.pop('raw')

@@ -108,6 +108,8 @@ def swift_name_for(printer_key: str) -> str:
         return "paramBytes"
     if printer_key == "sizeof.pw_shm_evidence_t":
         return "evidenceHeaderBytes"
+    if printer_key == "region.authority_setup_offset":
+        return "authoritySetupOffset"
     if printer_key == "region.evidence_offset":
         return "evidenceOffset"
     if printer_key.startswith("offsetof.pw_shm_evidence_t."):
@@ -280,16 +282,16 @@ then
   test_fail "layout check failed: ${LAYOUT_ERR}" "{\"diff_report\":\"${DIFF_REPORT}\",\"stderr_log\":\"${PW_TEST_ARTIFACTS}/layout-check.err\"}"
 fi
 
-test_step extension_layout "compare transient issuer channel sizeof and offsets with Swift"
+test_step setup_layout "compare independently published setup record layout"
 if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Werror -O2 -std=c11 \
-    -I "${ABI_HEADER_DIR}" "${SUITE_DIR}/extension_printer.c" -o "${PW_TEST_ARTIFACTS}/extension-printer" \
-    2>"${PW_TEST_ARTIFACTS}/extension-printer.err"; then
-  test_fail "extension channel printer failed to compile"
+    -I "${ABI_HEADER_DIR}" "${SUITE_DIR}/setup_printer.c" -o "${PW_TEST_ARTIFACTS}/setup-printer" \
+    2>"${PW_TEST_ARTIFACTS}/setup-printer.err"; then
+  test_fail "authority setup printer failed to compile"
 fi
-"${PW_TEST_ARTIFACTS}/extension-printer" >"${PW_TEST_ARTIFACTS}/extension-layout.txt"
-if ! "${PW_PYTHON}" -B -S "${SUITE_DIR}/extension_layout.py" "${PW_TEST_ARTIFACTS}/extension-layout.txt" \
-    >"${PW_TEST_ARTIFACTS}/extension-layout.log" 2>&1; then
-  test_fail "transient extension channel layout disagrees"
+"${PW_TEST_ARTIFACTS}/setup-printer" >"${PW_TEST_ARTIFACTS}/setup-layout.txt"
+if ! "${PW_PYTHON}" -B -S "${SUITE_DIR}/setup_layout.py" "${PW_TEST_ARTIFACTS}/setup-layout.txt" \
+    >"${PW_TEST_ARTIFACTS}/setup-layout.log" 2>&1; then
+  test_fail "authority setup layout disagrees"
 fi
 
 test_step authority_layout "compare per-actor authority region sizeof and offsets with Swift"

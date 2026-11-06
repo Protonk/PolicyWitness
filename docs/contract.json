@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "versions": {
-    "request_schema": 5,
-    "response_schema": 25,
-    "controller_envelope": 10,
+    "request_schema": 6,
+    "response_schema": 26,
+    "controller_envelope": 11,
     "runner_protocol": 3
   }
 }

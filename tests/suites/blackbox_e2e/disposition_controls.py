@@ -227,7 +227,7 @@ sys.exit(config['status'])
 def expected_fixture_controls(out):
     """E2: current acceptance, unsupported-envelope refusal, and named rejections.
 
-    The expected fixture is an unmodified live A1 capture. Its raw witnesses
+    The expected fixture is an authored current two-step deadline model. Its raw witnesses
     and disposition claims are checked together by the independent oracle.
     Semantic rejections start from fresh copies of the accepted baseline and
     require independently expected rules. Version refusal uses an empty frame.
@@ -241,7 +241,7 @@ def expected_fixture_controls(out):
     from consumer import validate
     out.mkdir(parents=True, exist_ok=True)
     fixtures = ROOT / 'tests/fixtures/disposition'
-    expected = json.loads((fixtures / 'response25/a1_expected.json').read_text())
+    expected = json.loads((fixtures / 'current/constructed_deadline.json').read_text())
     unsupported = {'schema_version': contract.CONTROLLER_ENVELOPE - 1,
                    'kind': 'run', 'data': {}}
     records = []

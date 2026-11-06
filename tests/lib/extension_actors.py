@@ -49,11 +49,11 @@ def release(step_id, handle_ref):
 
 
 def apply_actor(actor_id, policy):
-    return {'actor_id': actor_id, 'sandbox': {'mode': 'apply', 'policy': {'format': 'sbpl', 'sbpl_source': policy}}}
+    return {'actor_id': actor_id, 'equipment': 'selected', 'sandbox': {'mode': 'apply', 'policy': {'format': 'sbpl', 'sbpl_source': policy}}}
 
 
 def unapplied_actor(actor_id):
-    return {'actor_id': actor_id, 'sandbox': {'mode': 'unapplied'}}
+    return {'actor_id': actor_id, 'equipment': 'unentitled', 'sandbox': {'mode': 'unapplied'}}
 
 
 def redelegation_specimen(target, *, schema_version, specimen_id='extension_redelegation',

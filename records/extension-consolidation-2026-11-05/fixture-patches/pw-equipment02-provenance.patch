@@ -1,0 +1,34 @@
+--- a/tests/suites/witness_contract/check_extension_provenance.py
++++ b/tests/suites/witness_contract/check_extension_provenance.py
+@@ -25,7 +25,13 @@
+             binary = envelope['data']['specimen']['binaries'][role]
+             override = request.get('_test_overrides', {}).get(role + '_executable_path') if role in ('worker', 'validator') else None
+             selected = Path(override) if override else bundle / 'Contents/MacOS' / filename
+-            assert binary['path'] == str(selected)
++            if selected.is_file():
++                assert Path(binary['path']).samefile(selected), (path, role, binary['path'], selected)
++            else:
++                # Keep unavailable-artifact checks without requiring an inode;
++                # existing parent aliases may still resolve to the same path.
++                assert Path(binary['path']).resolve() == selected.resolve(), (path, role, binary['path'], selected)
++                assert not Path(binary['path']).is_file(), (path, role, binary['path'])
+             actual = hashlib.sha256(selected.read_bytes()).hexdigest() if selected.is_file() else None
+             assert binary['actual_sha256'] == actual
+             expected = 'unavailable' if actual is None else 'match' if actual == binary['baseline_sha256'] else 'mismatch'
+@@ -44,14 +50,14 @@
+                 assert binding['sha256'] == hashlib.sha256(Path(binding['path']).read_bytes()).hexdigest()
+                 if binding['source'] == 'packaged':
+                     expected = bundle / 'Contents/MacOS' / ('pw-probe-runner-unentitled' if equipment['resolved'] == 'unentitled' else 'pw-probe-runner')
+-                    assert binding['path'] == str(expected) and binding['implementation_identity'] == 'inventory_verified'
++                    assert Path(binding['path']).samefile(expected) and binding['implementation_identity'] == 'inventory_verified', (path, binding, expected)
+                 else:
+                     assert binding['source'] == 'test_override' and binding['implementation_identity'] == 'unverified_fixture'
+                     assert binding.get('relative_path') is None and binding.get('expected_sha256') is None
+                 execution = equipment['execution']
+                 if execution['status'] == 'matched':
+                     assert execution['pid'] == actor['launch']['pid'] == actor['subprocess']['pid']
+-                    assert execution['path'] == binding['path'] and execution['cdhash'] == binding['cdhash']
++                    assert Path(execution['path']).samefile(binding['path']) and execution['cdhash'] == binding['cdhash'], (path, execution, binding)
+                     static = entitlements[binding['entitlements_ref']]
+                     live = entitlements[execution['entitlements_ref']]
+                     assert live['source'] == 'execution' and live['actor_id'] == actor['actor_id'] and live['binding_ref'] == binding['binding_id']

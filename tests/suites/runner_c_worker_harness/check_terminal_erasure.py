@@ -37,6 +37,7 @@ def run(binary, scenario):
     value = json.loads(result.stdout)
     assert value['capacity'] == 16384 and value['tail_seeded'] == 1, value
     assert not value['cleanup_kill'], value
+    assert value['outbound_preserved'] == value['unsettled_preserved'] == 1, value
     assert value['release_calls'] == (1 if scenario == 'explicit_release' else 0), value
     return value
 
@@ -73,9 +74,9 @@ def main(out):
         assert v['exit_code'] == code and not v['signal'], v
         assert not any(v[key] for key in ('done', 'applied', 'ack', 'completed', 'consume_calls')), v
         assert v['failure'] == 1 and v['code'] == failure and v['boundary_zero'] == -1, v
-        assert v['delivery'] == 1 and v['exit_requested'] == 0, v
+        assert v['setup_disposition'] == 1 and v['exit_requested'] == 0, v
     terminal = ['normal', 'params_create', 'params_set', 'compile', 'apply', 'proceed_refusal',
-                'future_release', 'consume', 'consume_failure', 'explicit_release', 'pre_hang', 'rejected_channel']
+                'future_release', 'consume', 'consume_failure', 'explicit_release', 'pre_hang']
     for scenario in terminal:
         v = results[scenario] = run(baseline, scenario)
         whole_buffer(v)
@@ -90,8 +91,6 @@ def main(out):
             assert v['consume_calls'] == 1 and v['completed'] == 1 and v['erase_calls'] >= 3, v
         if scenario == 'pre_hang':
             assert v['sleep_observed'] == 1 and v['sleep_zero'] == 1, v
-        if scenario == 'rejected_channel':
-            assert v['delivery'] == 3, v
     v = results['cancel'] = run(baseline, 'cancel')
     whole_buffer(v)
     assert v['exit_code'] == 0 and v['exit_requested'] == 1 and v['applied'] == 1, v
@@ -103,13 +102,31 @@ def main(out):
             assert not v['final_zero'] and v['erase_calls'] == 0 and not v['completed'], v
         else:
             whole_buffer(v)  # normal-path erase happened before the fatal seam
-    v = results['null_channel'] = run(baseline, 'null_channel')
+    v = results['not_required'] = run(baseline, 'not_required')
     assert v['exit_code'] == 0 and v['done'] == 1 and v['erase_calls'] == 0 and not v['final_zero'], v
 
+    v = results['rejected_channel'] = run(baseline, 'rejected_channel')
+    assert v['setup_disposition'] == 3 and v['done'] == 1 and v['exit_code'] == 0, v
+    assert not v['applied'] and not v['apply_calls'] and not v['compile_calls'], v
+    assert v['final_zero'] == v['boundary_zero'] == 0, v  # Invalid mapping grants no payload access.
+
+    setup_cases = {'setup_core': (4, -1, 1), 'setup_fstat_close': (6, -1, 5),
+                   'setup_mmap_close': (9, 0, 19), 'setup_size': (8, 0, 0), 'setup_header_unmap': (11, 0, 0)}
+    for scenario, primary in setup_cases.items():
+        v = results[scenario] = run(baseline, scenario)
+        assert v['setup_disposition'] == 3 and v['done'] == 1 and v['exit_code'] == 0, v
+        assert not any(v[k] for k in ('apply_calls', 'compile_calls', 'read_calls', 'applied', 'ack', 'completed')), v
+        assert (v['primary_slot'], v['primary_rc'], v['primary_errno']) == primary, v
+        if scenario in ('setup_fstat_close', 'setup_mmap_close'):
+            assert v['close_published'] == 1 and v['close_rc'] == -1 and v['close_errno'] == 9 and v['close_flags'] & 8, v
+        if scenario == 'setup_header_unmap':
+            assert v['unmap_published'] == 1 and v['unmap_rc'] == -1 and v['unmap_errno'] == 22, v
+        assert v['final_zero'] == 0, v  # No validated owned payload was acquired.
+
     source = (ABI / 'pw_probe_runner.c').read_text()
-    short_anchor = 'if (extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);'
+    short_anchor = 'pw_extension_erase(slot->token, PW_EXTENSION_TOKEN_BYTES);'
     assert source.count(short_anchor) == 1, 'accepted erasure mutation anchor changed'
-    shortened = source.replace(short_anchor, short_anchor.replace('PW_EXTENSION_TOKEN_BYTES', 'extension_channel->token_length + 1'))
+    shortened = source.replace(short_anchor, short_anchor.replace('PW_EXTENSION_TOKEN_BYTES', 'slot->token_length + 1'))
     short = run(build(out / 'shortened', shortened), 'proceed_refusal')
     short_error = rejected(whole_buffer, short, 'full-capacity erasure failed')
 
@@ -123,9 +140,16 @@ def main(out):
     reverse = run(build(out / 'reversed', reversed_source), 'proceed_refusal')
     whole_buffer(reverse)  # post-reap check alone would miss this defect
     reverse_error = rejected(publication, reverse, 'erasure before done publication failed')
+    terminal_anchor = '    if (required && primary!=UINT32_MAX) publish_done_and_exit(hdr);'
+    assert source.count(terminal_anchor) == 1, 'terminal setup mutation anchor changed'
+    continuing = source.replace(terminal_anchor, '    /* deliberate control: continue past required setup refusal */')
+    refused = run(build(out / 'continuing', continuing), 'setup_core')
+    def no_policy_calls(value):
+        assert value['apply_calls'] == value['compile_calls'] == value['read_calls'] == 0, 'terminal setup reached policy processing'
+    continuation_error = rejected(no_policy_calls, refused, 'terminal setup reached policy processing')
     save(out / 'observations.json', dict(baseline=results, shortened=short, reversed=reverse,
-         rejected_mutations=dict(shortened=short_error, reversed=reverse_error)))
-    print('ok: full-capacity erasure, erase-before-done, unchanged departures and two rejected mutations')
+         rejected_mutations=dict(shortened=short_error, reversed=reverse_error, continuing=continuation_error), continuing=refused))
+    print('ok: full-capacity erasure, erase-before-done, unchanged departures and three rejected mutations')
 
 
 if __name__ == '__main__':

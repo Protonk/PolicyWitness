@@ -2035,7 +2035,8 @@ else:
     mod orchestration {
         use super::*;
         use crate::app_layout::{
-            SHIPPED_ISSUER, SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
+            SHIPPED_SERVICE, SHIPPED_UNENTITLED_WORKER, SHIPPED_VALIDATOR, SHIPPED_WORKER,
+            ShippedBinary,
         };
         use crate::runner_manager::{
             RUNNER_PROTOCOL_VERSION, RUNNER_REGISTRY_SCHEMA_VERSION, RunnerEntitlements,
@@ -2048,9 +2049,9 @@ else:
             &SHIPPED_SERVICE,
             &SHIPPED_WORKER,
             &SHIPPED_VALIDATOR,
-            &SHIPPED_ISSUER,
+            &SHIPPED_UNENTITLED_WORKER,
         ];
-        const ROLE_NAMES: [&str; 4] = ["service", "worker", "validator", "issuer"];
+        const ROLE_NAMES: [&str; 4] = ["service", "worker", "validator", "unentitled_worker"];
         const SERVICE_ID: &str = "com.controlled.pw.PWRunner";
         const EXTERNAL_SERVICE: &str = "com.controlled.runner";
 
@@ -2113,7 +2114,7 @@ else:
                     entry(SERVICE_ID, Some(SERVICE_ID), &SHIPPED_SERVICE),
                     entry("pw-probe-runner", None, &SHIPPED_WORKER),
                     entry("sb_api_validator", None, &SHIPPED_VALIDATOR),
-                    entry("pw-extension-issuer", None, &SHIPPED_ISSUER),
+                    entry("pw-probe-runner-unentitled", None, &SHIPPED_UNENTITLED_WORKER),
                 ],
                 "notes": ["controlled"],
             })
@@ -2158,8 +2159,8 @@ else:
                 &fs::read(app.join(SHIPPED_VALIDATOR.rel_path)).unwrap(),
             );
             write(
-                &macos.join("pw-extension-issuer"),
-                &fs::read(app.join(SHIPPED_ISSUER.rel_path)).unwrap(),
+                &macos.join("pw-probe-runner-unentitled"),
+                &fs::read(app.join(SHIPPED_UNENTITLED_WORKER.rel_path)).unwrap(),
             );
             bundle
         }
@@ -2202,8 +2203,13 @@ else:
                 worker_entitlements: Some(entitlements(keys)),
                 validator_signature: Some(signature()),
                 validator_entitlements: Some(entitlements(&[])),
-                issuer_signature: Some(signature()),
-                issuer_entitlements: Some(entitlements(&[])),
+                unentitled_worker_sha256: None,
+                worker_equipment_inventory: None,
+                source_worker_equipment_inventory: None,
+                issuer_signature: None,
+                issuer_entitlements: None,
+                unentitled_worker_signature: Some(signature()),
+                unentitled_worker_entitlements: Some(entitlements(&[])),
             }
         }
 
@@ -3158,14 +3164,14 @@ else:
                     granted: vec![],
                     error: Some("constructed".into()),
                 }),
-                issuer_signature: Some(RunnerSignature {
+                unentitled_worker_signature: Some(RunnerSignature {
                     team_id: Some("TEAM123456".into()),
                     identity: Some("constructed".into()),
                     cdhash: Some("12".repeat(20)),
                     valid: true,
                     adhoc: false,
                 }),
-                issuer_entitlements: Some(RunnerEntitlements {
+                unentitled_worker_entitlements: Some(RunnerEntitlements {
                     raw_plist: Some("<plist/>".into()),
                     keys: vec![],
                     granted: vec![],
@@ -3214,7 +3220,7 @@ else:
                     service: Some(binary()),
                     worker: Some(binary()),
                     validator: Some(binary()),
-                    issuer: Some(binary()),
+                    unentitled_worker: Some(binary()),
                 },
                 actors: Some(vec![crate::dossier::ActorDossier {
                     actor_id: Some("B".into()),

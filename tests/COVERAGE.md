@@ -75,18 +75,21 @@ It neither produces nor validates PW outcomes; production extension and phase
 integration is outside those cases.
 
 The default `witness_contract/extensions`, `extension_boundaries` and
-`extension_combinations` cases cover
-the integrated native lifecycle and its failure boundaries. Issuance refusal,
-missing native APIs, each worker channel rejection and local setup failure
-class, issuer death/deadline, consume/release failure and interrupted
-publication retain separate native, delivery and access observations. The independent token detector compares actual bytes in memory;
+`extension_combinations` cases cover actor-native lifecycle and failure
+boundaries. They retain native issuance, custody, transfer, consumption and
+release facts beside independent access observations. Controlled worker setup
+failures retain each fixed operation cell, primary failure and cleanup result;
 controlled return values establish reporting behavior, not effective permissions.
-`witness_contract/extensions_byoxpc` repeats placement and ordinary-phase
-controls on an owned external runner, checking independent issuer/worker signing
-and entitlement read-backs against registry and envelope provenance. Swift
-`ExtensionEvidenceTests` inspect physical host-buffer erasure and withhold
-delivery when a controlled host wait cannot establish issuer cleanup, despite
-independent test observations of a completed native issuance.
+The independent token detector compares actual bytes in memory.
+`witness_contract/actors_byoxpc` repeats these workloads, ordinary phases,
+maximum replies and re-delegation within one owned external-runner session.
+Independent signing/read-back and registry/dossier checks bind selected and
+unentitled workers to installed bytes. A mixed-equipment calibration checks
+separate static and live identity, while the missing-selected-role control
+retains exact-byte restoration and honest service-seal or inventory refusal.
+Swift actor setup/equipment tests and the independent Rust/Python account corpus
+cover constructed cell, application, requirement, identity and gate contradictions.
+Those constructed controls do not establish native effects or integrated reachability.
 
 The default `witness_contract/phases` case exercises the public phase grammar
 through the signed CLI: an independently observed unlink makes the next path
@@ -111,7 +114,7 @@ control independently removes the worker wait and moves host release early.
 
 The combined-fault matrix rows are shared by `extension_combinations`, the
 ordinary-phase `runner_unit` driver control and the Swift comparison tests.
-They retain published issuer results beside abnormal exit, withhold delivery
+They retain published actor results beside abnormal exit, withhold transfer
 after interrupted validation, and preserve earlier ordinary and native evidence
 through same-phase and cross-phase interruption. The ordinary driver combines
 timeout, failed termination, unconfirmed reap and rejected late output; its reply

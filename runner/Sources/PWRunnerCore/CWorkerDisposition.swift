@@ -43,34 +43,6 @@ func buildWorkerSubprocess(_ out: CWorkerOutput, disposition: PWDispositionRecor
     return result
 }
 
-/// Map the worker's delivery publication to the record's status and failure
-/// account. A publication that contradicts the vocabulary is `invalid`; nothing
-/// is inferred from it, and no stage or native field survives it.
-func extensionDeliveryObservation(_ p: CWorkerExtensionDelivery) -> (status: String, failure: PWRunnerExtensionDeliveryFailure?, cleanup: PWRunnerExtensionDeliveryCleanupFailure?) {
-    let invalid: (String, PWRunnerExtensionDeliveryFailure?, PWRunnerExtensionDeliveryCleanupFailure?) = ("invalid", nil, nil)
-    guard let status = PWExtensionDelivery.statuses[p.status] else { return invalid }
-    guard PWExtensionDelivery.failureStatuses.contains(status) else {
-        guard p.stage == 0, p.nativeRc == 0, p.errno == 0 else { return invalid }
-        if p.cleanupStage == 0 { return p.cleanupErrno == 0 ? (status, nil, nil) : invalid }
-        guard let stage = PWExtensionDelivery.stages[p.cleanupStage] else { return invalid }
-        let cleanup = PWRunnerExtensionDeliveryCleanupFailure(stage: stage, errno: p.cleanupErrno)
-        return cleanup.problem(status: status) == nil ? (status, nil, cleanup) : invalid
-    }
-    guard let stage = PWExtensionDelivery.stages[p.stage] else { return invalid }
-    var cleanup: String? = nil
-    if p.cleanupStage != 0 {
-        guard let name = PWExtensionDelivery.stages[p.cleanupStage] else { return invalid }
-        cleanup = name
-    }
-    let local = PWExtensionDelivery.localStages.contains(stage)
-    let failure = PWRunnerExtensionDeliveryFailure(stage: stage,
-        native_rc: local || stage == "channel_size" ? p.nativeRc : nil,
-        errno: local ? p.errno : nil,
-        cleanup_stage: cleanup, cleanup_errno: cleanup == nil ? nil : p.cleanupErrno)
-    if failure.problem(status: status) != nil { return invalid }
-    return (status, failure, nil)
-}
-
 func buildValidatorSubprocess(_ out: ValidatorOutput, phaseId: String, ordinal: Int) -> PWRunnerValidatorSubprocess {
     var result = PWRunnerValidatorSubprocess(pid: Int(out.validatorPid),
         term_signal: out.termSignal.map(Int.init), exit_code: out.exitCode.map(Int.init))
@@ -357,15 +329,21 @@ func classify(
                     error: "pw-probe-runner failure publication \(evidence.failure_state)")
             }
         }
-        if (out.applied && out.applyRC != 0) || (out.done && !out.applied && out.applyRC == 0) {
+        if out.authoritySetup?.disposition == "terminal_required_failure" {
             return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
-                error: "pw-probe-runner published inconsistent application/completion state")
+                error: "pw-probe-runner refused required authority setup before policy processing")
+        }
+        if out.authoritySetup?.integrity_errors != nil {
+            return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
+                error: "pw-probe-runner authority setup evidence failed integrity validation")
+        }
+        if out.applied && out.applyRC != 0 {
+            return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
+                error: "pw-probe-runner published inconsistent application state")
         }
         if !out.applied && out.done {
-            let detail = out.applyErrno != 0 ? "; apply_errno=\(out.applyErrno)" : ""
             return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
-                error: "pw-probe-runner published a preparation/application failure through the status word "
-                    + "(status=\(out.applyRC)\(detail)); failed operation and native return unavailable")
+                error: "pw-probe-runner completed without an observed application; no native apply return is inferred")
         }
         // Lifecycle clauses render from the resolved account (the same account
         // the reply carries); worker, validator and setup diagnostics keep their

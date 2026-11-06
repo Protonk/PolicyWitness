@@ -42,29 +42,36 @@ private let stringPolicy: [String: Int?] = [
     "abi_identity": nil, "code": nil, "collection_status": nil,
     "original_normalized_outcome": nil, "unavailable_reason": nil,
     "detail": nil, "observations": nil, "rule": nil, "original_error": 8191,
-    "extension_class": nil, "preparation_status": nil, "issuance_status": nil, "delivery_status": nil,
-    "cleanup_stage": nil, "stop": nil, "stop_reason": nil, "deadline_kind": nil,
+    "extension_class": nil, "stop": nil, "stop_reason": nil, "deadline_kind": nil,
     // Actor form: fixed vocabulary and hashes.
     "execution_form": nil, "mode": nil, "setup_status": nil, "policy_received_sha256": nil, "family": nil,
     "custody_status": nil, "copy_status": nil, "equality": nil, "environment": nil, "standard_streams": nil,
     "cancelled": nil,
+    "requested": nil, "resolved": nil, "binding_ref": nil, "binding_id": nil, "role": nil, "source": nil,
+    "implementation_identity": nil, "relative_path": 1023, "sha256": nil, "expected_sha256": nil,
+    "cdhash": nil, "expected_cdhash": nil, "identifier": 1023, "team_id": 255,
+    "entitlements_id": nil, "entitlements_ref": nil, "requirements_status": nil,
+    "required_entitlements": 255, "missing_requirements": 255, "raw_plist": 65536,
+    "worker_identity": nil, "unsigned_worker_sha256": nil, "publication": nil, "disposition": nil,
+    "native_kind": nil, "descriptor": nil, "mapping": nil, "object_name": nil,
+    "shared_erasure": nil, "private_erasure": nil, "recovery_state": nil, "name": 31,
+    "integrity_errors": nil, "domain": 255, "condition": nil, "source_final_phase_id": 63,
     // Bounded echoes of request strings.
-    "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 63,
+    "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 1023,
     "phase_id": requestLabelMaxBytes, "action_ids": PWShmLayout.stepIdMax - 1,
     "step_id": PWShmLayout.stepIdMax - 1, "operation": sandboxCheckOperationMaxBytes,
     "filter_kind": probePlanLabelMaxBytes, "filter_value": sandboxCheckFilterValueMaxBytes,
     "input": sandboxCheckFilterValueMaxBytes, "requested_kind": probePlanLabelMaxBytes,
     "requested_action": probePlanLabelMaxBytes, "requested_path": PWShmLayout.targetMax - 1,
     "parameter_key": PWShmLayout.paramKeyMax - 1, "expected_step_ids": PWShmLayout.stepIdMax - 1,
+    "selected": testOverridePathMaxBytes, "unentitled": testOverridePathMaxBytes,
     "worker_executable_path": testOverridePathMaxBytes,
-    "issuer_executable_path": testOverridePathMaxBytes,
     "validator_executable_path": testOverridePathMaxBytes, "executable_path": testOverridePathMaxBytes,
     "token_ref": PWExtensionLimits.referenceBytes, "handle_ref": PWExtensionLimits.referenceBytes,
     "delivery_ref": PWExtensionLimits.referenceBytes, "actor_id": PWActorLimits.identifierBytes,
     "source_actor_id": PWActorLimits.identifierBytes, "recipient_actor_id": PWActorLimits.identifierBytes,
     "last_use_step_id": PWShmLayout.stepIdMax - 1, "release_step_id": PWShmLayout.stepIdMax - 1,
     "raw_equal_handles": PWExtensionLimits.referenceBytes, "target": PWActorLimits.targetBytes,
-    "submitted_target": PWExtensionLimits.targetBytes, "resolved_target": PWExtensionLimits.targetBytes,
     // Bounded host-derived strings.
     "error": 8191, "diagnostic": 1023, "message": 1023, "read_error": 1023, "io_error": 1023,
     "realpath_resolved": 1023, "firmlink_resolved": maximalFirmlinkPathBytes,
@@ -188,54 +195,18 @@ private func maximalRecord() throws -> [String: Any] {
 /// Additional JSON members, including punctuation, encoded with the production
 /// encoder. Optional failure/success fields coexist here solely to upper-bound
 /// size; these components do not claim to satisfy full-reply evidence guards.
-/// Count two events in addition to all 256 ordinary slots, and a fresh-read
-/// payload beside every ordinary attempt, without reclaiming replaced fields.
+/// A fresh-read payload beside every ordinary attempt remains bounded after
+/// declaration removal. Actor authority records have their separate allowance.
 private func extensionReplyAllowance() throws -> Int {
     let identity = PWFileIdentity(device: UInt64.max, inode: UInt64.max,
         mode: UInt32.max, uid: UInt32.max, gid: UInt32.max)
-    var issuer = PWRunnerIssuer(executable_path: maximal(testOverridePathMaxBytes), pid: Int32.max,
-        uid: UInt32.max, euid: UInt32.max, gid: UInt32.max, egid: UInt32.max,
-        call_boundary_observed: false, result_published: false, native_nonnull: false,
-        errno: Int32.max, token_length: UInt32.max, reaped: false, exit_code: Int32.max, term_signal: Int32.max)
-    // Two lifetime EINTR retries plus a final failed wait at each boundary.
-    issuer.wait_errors = Array(repeating: "after_termination", count: 4).map {
-        PWRunnerWaitError(stage: $0, rc: -1, errno: Int32.max)
-    }
-    issuer.termination_request = PWRunnerTerminationRequest(signal: Int32.max, rc: -1, errno: Int32.max)
-    issuer.spawn_failure = PWRunnerSpawnFailure(executable_path: maximal(testOverridePathMaxBytes),
-        return_code: Int32.max, diagnostic: maximal(1023))
-    let declaration = PWRunnerExtensionRecord(token_ref: maximal(PWExtensionLimits.referenceBytes), extension_class: "com.apple.app-sandbox.read-write",
-        submitted_target: maximal(PWExtensionLimits.targetBytes), resolved_target: maximal(PWExtensionLimits.targetBytes),
-        preparation_status: "resolution_failed", preparation_errno: Int32.max, identity: identity,
-        issuance_status: "native_api_unavailable", issuer: issuer, delivery_status: "token_unavailable",
-        delivered_bytes: UInt32.max,
-        delivery_failure: PWRunnerExtensionDeliveryFailure(stage: "descriptor_metadata", native_rc: Int32.min, errno: Int32.max,
-                                                           cleanup_stage: "descriptor_close", cleanup_errno: Int32.max),
-        host_buffer_erased: false)
-    let claim = PWDispositionClaim(state: "inapplicable", answer: "unpublished",
-        value: .integer(Int.min), reason: "unsupported_attempt", issue: Int.max,
-        basis: PWDisposition.runReferences + PWDisposition.stepReferences)
-    let lifecycle = PWAttemptLifecycle(summary: "started_without_result", boundary: claim, result: claim)
-    let events = ["consume", "release"].map { operation -> PWRunnerExtensionEvent in
-        return PWRunnerExtensionEvent(phase_id: maximal(requestLabelMaxBytes), step_id: maximal(PWShmLayout.stepIdMax - 1),
-            operation: operation, token_ref: maximal(PWExtensionLimits.referenceBytes),
-            handle_ref: maximal(PWExtensionLimits.referenceBytes), call_boundary_observed: false, result_published: false,
-            status: "unavailable", native_result: operation == "consume" ? Int64.min : Int64(Int32.min),
-            errno: Int32.max, unavailable_reason: "native_api_unavailable", lifecycle: lifecycle)
-    }
-    struct NativeFields: Encodable {
-        let extensions: [PWRunnerExtensionRecord]
-        let extension_events: [PWRunnerExtensionEvent]
-    }
-    let native = try pwRunnerEncodeJSON(NativeFields(extensions: [declaration], extension_events: events))
     let fresh = PWRunnerFreshRead(open_rc: Int32.max, open_errno: Int32.max,
         read_rc: Int64(PWExtensionLimits.freshReadBytes), read_errno: Int32.max,
         stat_rc: -1, stat_errno: Int32.max, identity: identity, close_rc: -1, close_errno: Int32.max,
         content_hex: String(repeating: "f", count: PWExtensionLimits.freshReadBytes * 2))
     // Object braces overcount the actual comma joining these members, safely.
     let freshMember = try pwRunnerEncodeJSON(["fresh_read": fresh])
-    let overrideMember = try pwRunnerEncodeJSON(["issuer_executable_path": maximal(testOverridePathMaxBytes)])
-    return native.count + PWShmLayout.maxSteps * freshMember.count + overrideMember.count
+    return PWShmLayout.maxSteps * freshMember.count
 }
 
 private func freshWriteReplyAllowance() throws -> Int {
@@ -407,7 +378,11 @@ private func actorReplyComponents(_ documents: [[String: Any]]) throws -> [Strin
     func rows(_ key: String, in objects: [[String: Any]]) -> [[String: Any]] {
         objects.flatMap { ($0[key] as? [[String: Any]]) ?? [] }
     }
-    let actors = rows("actors", in: documents)
+    // Equipment/application and gate/setup tables are charged by the bounded
+    // consolidation allowance below. Keep ordinary actor payload accounting independent.
+    let actors = rows("actors", in: documents).map { row -> [String: Any] in
+        var value = row; value.removeValue(forKey: "equipment"); value.removeValue(forKey: "application"); return value
+    }
     let subprocesses = actors.compactMap { $0["subprocess"] as? [String: Any] }
     let dispositions = subprocesses.compactMap { $0["disposition"] as? [String: Any] }
     let resources = documents.compactMap { $0["resources"] as? [String: Any] }
@@ -418,7 +393,9 @@ private func actorReplyComponents(_ documents: [[String: Any]]) throws -> [Strin
     addAbsentOptionalFields(&ordinary)
     let phaseDocuments = documents + (try replyShapeDocuments()) + [ordinary]
     let candidates: [String: [Any]] = [
-        "actor": actors, "phase": rows("phases", in: phaseDocuments),
+        "actor": actors, "phase": rows("phases", in: phaseDocuments).map { row -> [String: Any] in
+            var value = row; value.removeValue(forKey: "termination_gate"); return value
+        },
         "event": rows("extension_events", in: documents), "transfer": rows("transfers", in: documents),
         "token": rows("tokens", in: resources), "delivery": rows("deliveries", in: resources),
         "handle": rows("handles", in: resources), "disposition_step": rows("steps", in: dispositions),
@@ -473,6 +450,23 @@ private func actorReplyAllowance() throws -> Int {
         ["actor_id": maximal(PWActorLimits.identifierBytes)]).count - 1
     total += PWActorLimits.actions * actorStepMember
     return total
+}
+
+/// Independent complete population budget for added setup/equipment/application
+/// and termination evidence, including JSON escaping. This is conservative,
+/// not a claim that these incompatible outcomes occur in one execution.
+private func consolidationReplyAllowance() throws -> Int {
+    let setup = 524_288 // at most 388 operation cells plus owner/cleanup metadata
+    let readbacks = PWEquipmentLimits.entitlementRecords * PWEquipmentLimits.entitlementBytes * 6
+    let requirements = PWActorLimits.actors * 2 * PWActorLimits.requiredEntitlements * (PWActorLimits.entitlementKeyBytes * 6 + 3)
+    let identityMetadata = PWEquipmentLimits.entitlementRecords * PWEquipmentLimits.metadataBytes
+    let gates = PWActorLimits.phases * 4_096
+    let preparation = 4_096
+    let envelopeAndApplication = 32_768
+    let sum = setup + readbacks + requirements + identityMetadata + gates + preparation + envelopeAndApplication
+    let allowance = 8 * 1024 * 1024
+    try expectTrue(sum <= allowance, "consolidation populations exceed reserved encoded allowance")
+    return allowance
 }
 
 func maximalReplyEncodedSize() throws -> Int {
@@ -544,7 +538,7 @@ func maximalReplyEncodedSize() throws -> Int {
     // a nonempty phase adds one comma instead. All key/value bytes stay counted.
     let spawnAllowance = PWRunnerPhase.maximumCount * (try pwRunnerEncodeJSON(spawn).count - 1)
     let bound = try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance() + freshWriteReplyAllowance() + spawnAllowance + execReplyAllowance()
-        + actorReplyAllowance()
+        + actorReplyAllowance() + consolidationReplyAllowance()
     let execBytes = try encodeAllExecReply(decoded)
     try expectTrue(execBytes.count <= bound, "every-slot valid exec reply exceeds conservative representation bound")
     let writeBytes = try encodeAllFreshWriteReply(decoded)
@@ -568,6 +562,23 @@ func runReplyMaximumTests(_ tk: TestKit) {
             let components = try actorReplyComponents(documents)
             let actor = components["actor"] as! [String: Any]
             let process = actor["subprocess"] as! [String: Any]
+            let reap = actor["owned_reap"] as! [String: Any]
+            for field in ["pid", "native_rc", "raw_status", "stage", "observed_ns", "ownership_unbroken", "departure_requested", "capture_ordinal"] {
+                try expectNotNil(reap[field], "owned reap companion escaped actor size account: \(field)")
+            }
+            let phase = components["phase"] as! [String: Any]
+            let activation = phase["activation_observation"] as! [String: Any]
+            try expectNotNil(activation["capture_ordinal"])
+            try expectNotNil(activation["observed_ns"])
+            // Gate/setup/equipment payloads retain the explicit bounded 8 MiB
+            // allowance; owned reap and activation are additionally unioned.
+            let gates = documents.flatMap { ($0["phases"] as? [[String: Any]]) ?? [] }
+                .compactMap { $0["termination_gate"] as? [String: Any] }
+            try expectFalse(gates.isEmpty, "termination gate lacks an encoded fixture")
+            let references = gates.compactMap { $0["observation"] as? [String: Any] }
+            try expectTrue(references.allSatisfy { Set($0.keys) == Set(["capture_ordinal"]) },
+                "gate must reference the actor-owned reap instead of duplicating it")
+            try expectEqual(try consolidationReplyAllowance(), 8 * 1024 * 1024)
             for field in ["term_signal", "termination_request", "policy_transfer_error", "policy_transfer_timeout"] {
                 try expectNotNil(process[field], "failure companion escaped actor size account: \(field)")
             }

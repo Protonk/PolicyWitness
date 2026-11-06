@@ -123,6 +123,7 @@ int main(void) {
         inbound->resource_index = 3;
         pw_shm_header_t header = {0};
         header.actor_mode = PW_ACTOR_MODE_UNAPPLIED; header.actor_index = 1;
+        pw_authority_setup_t setup={0}; setup.required=1;setup.actor_index=header.actor_index;g_setup=&setup;
         prepare_authority(&header, fd);  /* closes fd, snapshots assignment */
         assert(header.authority_status == PW_AUTHORITY_SETUP_MAPPED);
         pw_authority_slot_t *slot = pw_authority_inbound(host, 0);
@@ -158,6 +159,7 @@ int main(void) {
         munmap(authority, size); authority = NULL;
         munmap(host, size);
     }
+    g_setup=NULL;
     handoff_lifetimes();
     return 0;
 }

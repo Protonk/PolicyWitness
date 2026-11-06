@@ -25,6 +25,7 @@ ABI_LIMITS = {
     'observed_path': ('PW_SHM_OBSERVED_PATH_MAX', 1),
     'attempt_error': ('PW_SHM_ERROR_MAX', 1),
     'fresh_read_bytes': ('PW_SHM_FRESH_READ_BYTES', 0),
+    'extension_issue_target': ('PW_SHM_EXT_TARGET_BYTES', 1),
 }
 NATIVE_LIMITS = {'worker_proceed_wait', 'exec_child_wait', 'exec_attempt_budget', 'exec_reap_grace',
                  'validator_query_payload'}
@@ -113,12 +114,9 @@ def main():
         native.update(values(subprocess.check_output([str(artifacts / binary)], text=True, timeout=10)))
     assert set(native) == NATIVE_LIMITS, native
     observed.update(native)
-    channel = values((artifacts / 'extension-layout.txt').read_text())
-    observed.update(extension_target=channel['pathBytes'] - 1,
-                    extension_token_storage=channel['tokenBytes'],
-                    extension_token_payload=channel['tokenBytes'] - 1,
-                    extension_channel=channel['channelBytes'],
-                    extension_issuer_wait=channel['issuerWaitMs'])
+    authority = values((artifacts / 'authority-layout.txt').read_text())
+    observed.update(extension_token_storage=authority['tokenBytes'],
+                    extension_token_payload=authority['tokenBytes'] - 1)
     limits = json.loads((ROOT / 'docs/limits.json').read_text())['limits']
     compare(limits, observed)
     # A self-consistent generated document must not hide a changed inventory.

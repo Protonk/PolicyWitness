@@ -9,7 +9,7 @@ from runner_client_capture import validate_capture, host_reply, REPLY_BYTES
 
 
 def run_capture_controls(run):
-    assert REPLY_BYTES == 88_080_384, 'independent reader must admit the current retained-reply capacity'
+    assert REPLY_BYTES == 96_468_992, 'independent reader must admit the current retained-reply capacity'
     reply = {'schema_version': contract.RESPONSE_SCHEMA, 'normalized_outcome': 'bad_request',
              'rc': 1, 'error': 'constructed host reply', 'steps': [], 'phases': []}
     baseline = envelope_skeleton(reply, ok=False)

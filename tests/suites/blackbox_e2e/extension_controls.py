@@ -1,74 +1,58 @@
-"""Independent mutations of a retained native capture; no native calls here."""
+"""Independent ordinary-file, validator-ownership and actor-evidence controls.
+
+The ordinary fixture is constructed from ordinary records with no declaration
+or native lifecycle action. Actor fixtures exercise the bounded subaccount
+reader; complete lifecycle/transport remains separately checked by the live
+actor driver and cross-reader controls.
+"""
 from copy import deepcopy
 import json
 from pathlib import Path
 
 from lifecycle_oracle import check_record
 from consumer import validate
-from blackbox import recapture_host_reply
+from blackbox import envelope_skeleton, recapture_host_reply
+from actor_evidence import validate_actor_evidence
+
+
+def patch(document, path, value):
+    parts = path.lstrip('/').split('/')
+    target = document
+    for key in parts[:-1]:
+        target = target[int(key)] if isinstance(target, list) else target[key]
+    target[int(parts[-1]) if isinstance(target, list) else parts[-1]] = deepcopy(value)
 
 
 def run_extension_controls(run):
-    fixture = Path(__file__).resolve().parents[2] / 'fixtures/blackbox_e2e/checker/response25/extension_run.json'
-    baseline = json.loads(fixture.read_text())
+    fixtures = Path(__file__).resolve().parents[2] / 'fixtures/contract'
+    ordinary = json.loads((fixtures / 'ordinary_phase_reply.json').read_text())
+    # Author one successful ordinary read beside the retained denied-open
+    # neighbor. These hypothetical syscall facts make every later byte/count,
+    # stat/close and fresh-write mutation exercise its intended channel.
+    # They are constructed input, with no native access or calibration credit.
+    read_step = ordinary['steps'][1]
+    read_step['attempt'].update(rc=0, errno=None, outcome='ok',
+        observed_path=read_step['attempt']['requested_path'],
+        fresh_read=dict(open_rc=17, read_rc=32, stat_rc=0,
+            identity=dict(device=3, inode=42, mode=33152, uid=501, gid=20),
+            close_rc=0, content_hex='ab' * 32))
+    read_step['comparison'].update(observation='succeeded',
+        observation_basis='completed_worker_status')
+    baseline = envelope_skeleton(ordinary)
+    baseline['data']['runner_sandbox_diagnostics'] = dict(process_disposition='clean_exit',
+        termination_cause=None, stop_reason='done', disposition_integrity='valid', disposition_issues=[])
     assert check_record(baseline) == [], check_record(baseline)
-    run('extension_native_capture', baseline)
-    abnormal = json.loads(fixture.with_name('issuer_abnormal_run.json').read_text())
-    cases = json.loads((fixture.parents[3] / 'contract/evidence_types.json').read_text())
-    for case in cases:
-        document = deepcopy(abnormal)
-        for patch in case['patches']:
-            keys = patch['path'].lstrip('/').split('/')
-            target = document['data']['runner_result']
-            for key in keys[:-1]:
-                target = target[int(key)] if isinstance(target, list) else target[key]
-            target[int(keys[-1]) if isinstance(target, list) else keys[-1]] = deepcopy(patch['value'])
-        # These patches author host records, not client transport failures.
+    run('ordinary_fresh_read_and_phases', baseline)
+    for case in json.loads((fixtures / 'evidence_types.json').read_text()):
+        document = deepcopy(baseline)
+        for change in case['patches']:
+            patch(document['data']['runner_result'], change['path'], change['value'])
         recapture_host_reply(document)
         before = deepcopy(document)
         errors, findings = validate(document), check_record(document)
         assert (not errors) == case['accepted'], (case['name'], errors)
         assert (not findings) == case['accepted'], (case['name'], findings)
         assert document == before, case['name']
-    run('issuer_abnormal_capture', abnormal)
-    assert check_record(abnormal) == []
-    missing = deepcopy(abnormal)
-    declaration = missing['data']['runner_result']['extensions'][0]
-    declaration['issuance_status'] = 'issuer_result_missing'
-    rule = 'missing issuer result carries publication or payload'
-    run('issuer_missing_published_result', missing, rejected_by=rule)
-    assert any(f.get('detail') == rule for f in check_record(missing))
-    issuer = declaration['issuer']
-    issuer['result_published'] = False
-    for key in ('native_nonnull', 'errno', 'token_length', 'uid', 'euid', 'gid', 'egid'):
-        issuer.pop(key, None)
-    for called in (False, True):
-        issuer['call_boundary_observed'] = called
-        run('issuer_missing_boundary_' + str(called), missing)
-        assert check_record(missing) == []
-        assert issuer['exit_code'] == 87 and issuer['reaped'] is True
-    for index, (key, value) in enumerate([
-            ('result_published', True), ('result_published', None), ('native_nonnull', False),
-            ('errno', 0), ('token_length', 0), ('uid', 0), ('euid', 0), ('gid', 0), ('egid', 0)]):
-        changed = deepcopy(missing)
-        changed['data']['runner_result']['extensions'][0]['issuer'][key] = value
-        run('issuer_missing_payload_' + str(index), changed, rejected_by=rule)
-        assert any(f.get('detail') == rule for f in check_record(changed))
-    changed = deepcopy(missing)
-    changed['data']['runner_result']['extensions'][0].pop('issuer')
-    run('issuer_missing_record', changed, rejected_by=rule)
-    assert any(f.get('detail') == rule for f in check_record(changed))
-    for status in ('issuer_timeout', 'issuer_wait_error'):
-        interrupted = deepcopy(abnormal)
-        interrupted['data']['runner_result']['extensions'][0]['issuance_status'] = status
-        run(status + '_retains_publication', interrupted)
-        assert check_record(interrupted) == []
-    for key, value in [('exit_code', 0), ('result_published', False), ('reaped', False), ('token_length', 0)]:
-        changed = deepcopy(abnormal)
-        changed['data']['runner_result']['extensions'][0]['issuer'][key] = value
-        run('issuer_abnormal_' + key, changed, rejected_by='abnormal issuer exit lacks publication and reap')
-        assert check_record(changed)
-
     for name, value in [('integer', 7), ('boolean', True), ('string', 'invalid'),
                         ('object', {'invalid': True}), ('entry', [7])]:
         document = deepcopy(baseline)
@@ -78,7 +62,7 @@ def run_extension_controls(run):
         findings = check_record(document)
         assert any(f['kind'] == 'phase_collection' for f in findings), (name, findings)
 
-    cases = json.loads((fixture.parents[3] / 'contract/phase_collection.json').read_text())
+    cases = json.loads((fixtures / 'phase_collection.json').read_text())
     for case in cases:
         document = deepcopy(baseline)
         reply = document['data']['runner_result']
@@ -141,10 +125,7 @@ def run_extension_controls(run):
     def runner(document):
         return document['data']['runner_result']
 
-    def event(document, index=0):
-        return runner(document)['extension_events'][index]
-
-    # Validator collection ownership: every phase of this capture queries the same
+    # Validator collection ownership: every phase of this model queries the same
     # path under a different action ID, so a borrowed block differs only in its
     # identity, plan and record IDs. Each reader must reject the transplant for the
     # stated reason; the independent oracle must report it as a phase finding.
@@ -175,55 +156,6 @@ def run_extension_controls(run):
     run('validator_ownership_reused_pid', reused)
     assert check_record(reused) == []
 
-    mutations = [
-        ('no_call_boundary', lambda d: event(d).update(call_boundary_observed=False), 'lacks publication'),
-        ('no_result_publication', lambda d: event(d).update(result_published=False), 'publication'),
-        ('unpublished_native_value', lambda d: event(d).update(status='unresolved', result_published=False), 'must stay unresolved'),
-        ('unavailable_with_call', lambda d: event(d).update(status='unavailable', unavailable_reason='token_unavailable'), 'fabricates a call'),
-        ('native_boolean', lambda d: event(d).update(native_result=True), 'lacks publication'),
-        ('native_float', lambda d: event(d).update(native_result=1.0), 'lacks publication'),
-        ('native_overflow', lambda d: event(d).update(native_result=2**63), 'lacks publication'),
-        ('release_int_overflow', lambda d: event(d, 1).update(native_result=2**31), 'lacks publication'),
-        ('release_without_handle', lambda d: event(d).update(native_result=-1), 'observed consume handle'),
-        ('release_wrong_handle', lambda d: event(d, 1).update(handle_ref='another'), 'reference/order'),
-        ('release_token_reference', lambda d: event(d, 1).update(token_ref='token'), 'reference/order'),
-        ('consume_wrong_token', lambda d: event(d).update(token_ref='another'), 'reference/order'),
-        ('aliased_handle', lambda d: event(d).update(handle_ref='token'), 'invalid extension action/handle'),
-        ('wrong_phase', lambda d: event(d).update(phase_id='absent'), 'phase association'),
-        ('reordered_events', lambda d: runner(d)['extension_events'].reverse(), 'partition'),
-        ('duplicate_event', lambda d: runner(d)['extension_events'].append(deepcopy(event(d))), 'capacity'),
-        ('duplicate_declaration', lambda d: runner(d)['extensions'].append(deepcopy(runner(d)['extensions'][0])), 'capacity'),
-        ('removed_declaration', lambda d: runner(d).update(extensions=[]), 'require one declaration'),
-        ('lost_delivery', lambda d: runner(d)['extensions'][0].update(delivery_status='not_observed', delivered_bytes=None), 'consumption lacks delivery'),
-        ('oversized_delivery', lambda d: runner(d)['extensions'][0].update(delivered_bytes=16384), 'bounded issuance'),
-        ('unreaped_issuer', lambda d: runner(d)['extensions'][0]['issuer'].update(reaped=False), 'clean issuer reap'),
-        ('unpublished_issuer', lambda d: runner(d)['extensions'][0]['issuer'].update(result_published=False), 'publication'),
-        ('missing_issuer_marker', lambda d: runner(d)['extensions'][0]['issuer'].update(call_boundary_observed=False), 'publication'),
-        ('missing_apply', lambda d: runner(d).update(sandboxed_after_apply=False), 'application and phase acknowledgement'),
-        ('missing_ack', lambda d: runner(d)['phases'][0]['ordering'].update(proceed_observed=False), 'application and phase acknowledgement'),
-        ('missing_slot', lambda d: runner(d)['runner_subprocess']['disposition']['steps'].pop(1), 'disagrees with disposition'),
-        ('invented_slot', lambda d: runner(d)['runner_subprocess']['disposition']['steps'][1].update(slot='incomplete'), 'disagrees with disposition'),
-        ('copied_wrong_claim', lambda d: event(d)['lifecycle']['result'].update(answer='unpublished'), 'disagrees with disposition'),
-        ('unknown_native_operation', lambda d: event(d).update(operation='future'), 'unknown extension operation'),
-    ]
-    for name, change, diagnostic in mutations:
-        document = deepcopy(baseline)
-        change(document)
-        run('extension_' + name, document, rejected_by=diagnostic)
-        # The separate lifecycle oracle also rejects invented native evidence.
-        if name not in ('reordered_events',):
-            assert check_record(document), ('oracle accepted', name)
-
-    # A native consume failure has no handle for release. Access observations
-    # remain independently meaningful even when they show a successful read.
-    refused = deepcopy(baseline)
-    event(refused)['native_result'] = -1
-    event(refused, 1).update(status='unavailable', call_boundary_observed=False,
-        unavailable_reason='handle_unavailable')
-    event(refused, 1).pop('native_result'); event(refused, 1).pop('errno')
-    run('extension_native_failure_keeps_access', refused)
-    assert check_record(refused) == [], check_record(refused)
-
     for name, changes, diagnostic in [
         ('wrong_byte_count', {'read_rc': 1}, 'bytes disagree'),
         ('float_byte_count', {'read_rc': 32.0}, 'invalid fresh read result'),
@@ -237,21 +169,30 @@ def run_extension_controls(run):
     ]:
         document = deepcopy(baseline)
         runner(document)['steps'][1]['attempt']['fresh_read'].update(changes)
-        run('extension_read_' + name, document, rejected_by=diagnostic)
+        run('ordinary_read_' + name, document, rejected_by=diagnostic)
     document = deepcopy(baseline)
     runner(document)['steps'][0]['attempt']['fresh_read']['read_rc'] = 0
-    run('extension_read_after_failed_open', document, rejected_by='failed fresh open cannot supply')
+    run('ordinary_read_after_failed_open', document, rejected_by='failed fresh open cannot supply')
     document = deepcopy(baseline)
     runner(document)['steps'][1]['attempt'].pop('fresh_read')
-    run('extension_read_missing_observation', document, rejected_by='lacks syscall observations')
+    run('ordinary_read_missing_observation', document, rejected_by='lacks syscall observations')
 
-    read_write = deepcopy(baseline)
-    runner(read_write)['extensions'][0]['extension_class'] = 'com.apple.app-sandbox.read-write'
-    run('extension_read_write_class', read_write)
-    assert check_record(read_write) == []
-    wrong_class = deepcopy(baseline)
-    runner(wrong_class)['extensions'][0]['extension_class'] = 'com.apple.app-sandbox.write'
-    run('extension_unknown_class', wrong_class, rejected_by='invalid extension declaration reference/class')
-    assert check_record(wrong_class)
     from fresh_write_controls import run_fresh_write_controls
     run_fresh_write_controls(run, baseline)
+    # Both independent implementations read this hand-authored corpus. These
+    # are subaccount interpretation controls, never synthetic native authority.
+    actor_cases = json.loads((fixtures / 'actor_evidence.json').read_text())
+    for case in actor_cases:
+        reply = json.loads((fixtures / case.get('fixture', 'actor_authority_reply.json')).read_text())
+        before_patch = deepcopy(reply)
+        for change in case['patches']:
+            patch(reply, change['path'], change['value'])
+        if case['patches']:
+            assert reply != before_patch, ('inert actor evidence mutation', case['name'])
+        before = deepcopy(reply)
+        errors = validate_actor_evidence(reply)
+        assert reply == before, case['name']
+        assert (not errors) == case['accepted'], (case['name'], errors)
+        if case.get('diagnostic'):
+            assert any(case['diagnostic'] in error for error in errors), (case['name'], errors)
+    print(f"{len(actor_cases)} independent actor setup/equipment/application/gate controls checked", flush=True)

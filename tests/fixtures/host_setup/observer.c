@@ -1,5 +1,5 @@
 /* Independent child receipt: observes the descriptors actually installed by spawn.
- * It neither applies a policy nor implements the worker/issuer protocol. */
+ * It neither applies a policy nor implements the worker protocol. */
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/stat.h>

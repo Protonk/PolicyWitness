@@ -58,21 +58,20 @@ This isolates integration relevance while explicitly changing collection timing.
 ## Native extension boundaries
 
 `extensions` executes the public guide's actual extension example as well as
-ordinary-authority issuance, native consumption and release
-in one worker, with fresh descriptor identity, bounded bytes and syscall results
+issuance by an unentitled unapplied actor, native consumption and release
+in a selected applied actor, with fresh descriptor identity, bounded bytes and syscall results
 on either side of both interventions. Each phase collects its own queries.
 Native return values and observed access remain independent evidence.
 
 The same case covers omitted lifecycle actions, same-phase and cross-phase
-placement, intervention-only phases, failed path preparation, symlink resolution
-and replacement between issuance preparation and consumption. An independently
+placement, intervention-only phases, native issuance for missing paths, literal symlink targets
+and replacement between issuance and consumption. An independently
 held, non-inherited descriptor keeps the removed identity observable while the
 worker creates a replacement. Later reads report their actual identity and bytes;
 the test does not require release success to revoke access.
 
 `extension_directory` compares directory read-write authority with omitted
-consumption, missing predicates, another directory, explicit read authority and
-default read authority. Each row first establishes ordinary permissions through
+consumption, missing predicates, another directory and explicit read authority. Each row first establishes ordinary permissions through
 the public fresh-write actions, then restores existing contents and removes the
 baseline children before issuance. Separate names serve before-consumption,
 during-consumption and post-release attempts. Before-launch absence plus
@@ -85,39 +84,48 @@ write leaves an independently observed effect while withholding its native
 result payload. Unknown worker cleanup retains owned staging and a durable
 ownership record outside prunable run output.
 
-The opt-in `extensions_byoxpc` case runs both extension workloads and the ordinary `phases`
-controls through an owned installed runner. Independent signing and entitlement
-read-backs establish that the issuer receives the selected identity without the
-worker's supplied entitlements. Envelope provenance must match the registry's
-per-binary records, and issuer dossier hashes must match independently read
-installed bytes and the shipped baseline. A missing issuer path must produce
-the named capability refusal before worker launch. The owned installed-copy
-control removes the actual issuer, retains a restoration receipt, checks public
-validation, then restores and verifies the exact bytes. The same BYOXPC session
-runs the maximum-reply workloads, including fresh-write evidence and the
-read-write class. Between those size-limit workloads, a successful
-`launchctl print` supplies the host PID and kernel generation observations establish
-retirement; unknown observations fail the test. This avoids connecting during a
-host's exit without a refusal reply. The BYOXPC coexistence controls independently
-exercise overlapping requests without this handoff. Cleanup verifies service removal. These workloads place
-their targets in owned temporary directories to avoid requesting Desktop access.
+The opt-in `actors_byoxpc` case uses one owned installed-runner session for
+shared lifecycle, directory, ordinary phases, maximum replies and re-delegation.
+It independently reads selected and unentitled signatures and entitlement
+plists, compares sealed source/installed inventory with registry snapshots,
+and checks dossier hashes against installed bytes and the shipped baseline.
+An explicit mixed-equipment calibration binds each actor to its static role,
+launch PID and live executable inspection; renamed/reordered actors preserve
+that association, while a same-selected contrast must fail the expected
+unentitled-role assertion. A missing installed selected worker retains an
+exact-byte restoration receipt and checks public validation before and after
+restore. A service-seal refusal is retained honestly if it precedes role binding.
+An ordinary five-actor workload covers all four equipment/application pairs
+and omitted equipment selection. Signed false and absent requirement keys
+refuse through both the CLI and direct XPC, even when the controller's separate
+selected-worker requirement passes; per-actor decisions and absence of launch
+and file effects remain independently checked. Unreadable readback branches
+belong to controlled Swift inspection tests, not these live signing observations.
+These controls establish no prediction/enforcement agreement or revocation claim.
+Cleanup verifies service removal. Targets stay in owned temporary directories.
 
-`extension_boundaries` compiles the production issuer and worker with the
+`extension_boundaries` compiles two production actor workers with the
 [controlled native entrypoints](../../fixtures/extension_controls/README.md).
 The clang test build uses `PW_EXTENSION_OBSERVE` outside the inspected app.
 These controls establish boundary behavior of those instrumented sources;
 they do not interrupt the shipped executable bytes or observe private API internals.
-It drives native refusal, absent APIs, issuer death/deadline, malformed transport
-and interrupted consumption/release through the CLI, and forces each worker
-delivery failure class individually: every local setup failure (`core_limit`,
-`descriptor_metadata`, `mapping`, `descriptor_close`), a cleanup close failure
-after an earlier failure, an undersized channel and each header and token
-rejection. The published `delivery_status` and `delivery_failure` must identify
-the controlled failure with its native return and errno where a call supplied
-them, and consumption must stay unavailable. Independent receipts
-distinguish death after the pre-call marker, inside a replacement function, and
-after the real native return but before publication. PW must retain unresolved
-results and earlier completed evidence regardless of what the fixture knows.
+It drives native refusal, absent issue/consume/release APIs, issuing-actor death,
+malformed outbound and inbound slots, and interrupted consumption/release through
+the CLI. Required worker setup failures cover the core limit, descriptor
+metadata, mapping, close, object size and header binding. `authority_setup`
+retains the primary operation and independent cleanup cells with actual native
+returns and errno. A terminal required failure excludes policy processing and
+produces the corresponding actor application assessment. Missing symbols remain
+separate operation-availability facts. Independent receipts distinguish death
+after the pre-call marker, inside a replacement function, and after the real
+native return but before publication; earlier completed evidence survives.
+
+Termination controls keep an issuing actor alive after final completion and
+`done`, exceed the gate deadline, or exit abnormally after completion. Dependent
+activation requires the source's owned reap. A timeout stays closed after later
+cleanup; a natural abnormal exit can satisfy termination without proving clean
+completion. Activation, immutable owned-reap and gate-capture ordinals establish
+the observed ordering.
 
 The test compares real token bytes with captured output in memory before saving
 output, checks argv/environment confinement, production descriptor closure and
@@ -131,9 +139,9 @@ published issuance with abnormal exit, worker death during mapped-token validati
 same-phase consume failure with omitted release, cross-phase release failure,
 and native-call interruption with earlier ordinary observations. Independent
 receipts and both readers check each row; Swift comparison tests read the same
-expectations. Token validation interruption occurs before delivery publication;
-the channel is mapped, not copied as a byte stream. No new worker setup status
-is needed: unobserved delivery remains distinct from a published setup refusal.
+expectations. Recipient validation interruption occurs after usable actor setup but before
+inbound acknowledgement. Its unresolved delivery and later unactivated visits
+remain distinct from terminal authority setup failure.
 
 The ordinary-phase combined control is in `runner_unit` (`PhaseProtocolTests`):
 a real validator times out, a substituted termination call fails, and its late
@@ -220,24 +228,13 @@ retains the hardware's CPU topology, OS, power and load, every measurement and
 margin, and the actor PIDs. A deliberately slow or hung specimen is a different
 control; it is not expected to meet this margin.
 
-The opt-in `actors_byoxpc` case repeats the re-delegation, calibration and
-contrasts through an owned installed runner's selected worker, then holds the
-installed issuer aside under a recovery record: the declaration form is refused
-before any worker exists while an actor-form specimen issues, delivers,
-consumes and reads through the same installation, so actor execution launches
-no issuer helper; public validation reports the damaged and restored states and
-the exact bytes are verified back. Its last step places an owned copy of the
-installed worker in a minimal bundle (the App Sandbox initializer needs a
-bundle identifier and aborts a bare executable), signs it with the App Sandbox
-entitlement under a unique identifier and launches it through the host's
-worker override: an `unapplied` actor on that
-copy cannot read the test-owned target but reads a system file, and the
-validator's query for its PID reports the same inherited denial, while the
-ordinary worker and the test process read the target. The entitlement is read
-back from the signed copy. The copy's App Sandbox container, under a fixed
-`com.policywitness.test` identifier in the user's Library, needs Full Disk
-Access to remove; the case records its presence and the removal attempt and
-reports a retained container in its pass message.
+The same BYOXPC case also launches an owned selected-worker override in a
+minimal App Sandbox-signed bundle. An `unapplied` actor cannot read the owned
+target while it reads a system file; the ordinary worker and test process can
+read the target. The signed entitlement and per-actor instrumented binding are
+read independently. A preexisting container is left untouched; a potentially
+new container has a durable receipt outside prunable staging, retained until
+process cleanup and container absence are established.
 
 ## Invariants
 

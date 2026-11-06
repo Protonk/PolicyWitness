@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/records/extension-consolidation-2026-11-05/prototype/run_authority.py", line 122, in <module>
+    raw = command(name, [out / 'host', case, target, target, 'plain', out / 'selected',
+                         out / 'unentitled', mode])
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/records/extension-consolidation-2026-11-05/prototype/run_authority.py", line 42, in command
+    assert not timed_out and p.returncode == 0, name
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: restricted-lifecycle

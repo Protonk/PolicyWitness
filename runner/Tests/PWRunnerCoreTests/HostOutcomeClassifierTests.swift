@@ -15,7 +15,8 @@ private func workerOut(
     stop: String? = "done",
     reaped: Bool? = true,
     waitErrors: [PWRunnerWaitError]? = [],
-    killRC: Int32 = 0
+    killRC: Int32 = 0,
+    nativeFailure: PWWorkerFailure? = nil
 ) -> CWorkerOutput {
     return CWorkerOutput(
         workerPid: 0,
@@ -30,8 +31,17 @@ private func workerOut(
         pollStopReason: stop,
         terminationRequest: sentSigkill ? PWRunnerTerminationRequest(signal: 9, rc: killRC, errno: killRC == -1 ? EPERM : nil) : nil,
         reaped: reaped,
-        waitErrors: waitErrors
+        waitErrors: waitErrors,
+        workerEvidence: nativeFailure.map { failure in
+            PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: nil,
+                failure_publication: 1, failure_state: "published", failure: failure,
+                readiness: nil, diagnostic: PWWorkerDiagnostic(state: 0, status: "absent", length: nil, text: nil))
+        }
     )
+}
+
+private func nativeApplyFailure(_ error: Int32? = EPERM) -> PWWorkerFailure {
+    PWWorkerFailure(operation:8,code:1,native_kind:1,native_result:-1,errno:error,index:nil,detail:0)
 }
 
 private struct ClassifyRow {
@@ -59,7 +69,7 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                     expected: NormalizedOutcome.runnerFailed),
 
         // Worker publication, deadline, cleanup and disposition rows.
-        ClassifyRow(label: "published status-word failure",
+        ClassifyRow(label: "done without observed application ignores nonzero status storage",
                     worker: .success(workerOut(applied: false, applyRC: -1)),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
@@ -76,11 +86,11 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
         ClassifyRow(label: "published failure outranks cleanup and deadline",
-                    worker: .success(workerOut(applied: false, applyRC: -1, sentSigkill: true, termSignal: 9, exitCode: nil, stop: "sentinel_deadline")),
+                    worker: .success(workerOut(applied: false, applyRC: -1, sentSigkill: true, termSignal: 9, exitCode: nil, stop: "sentinel_deadline", nativeFailure: nativeApplyFailure())),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
         ClassifyRow(label: "published failure survives failed kill and reap",
-                    worker: .success(workerOut(applied: false, applyRC: -1, sentSigkill: true, exitCode: nil, reaped: false, killRC: -1)),
+                    worker: .success(workerOut(applied: false, applyRC: -1, sentSigkill: true, exitCode: nil, reaped: false, killRC: -1, nativeFailure: nativeApplyFailure())),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
         ClassifyRow(label: "unpublished zeros and pre-apply clean exit",
@@ -221,16 +231,36 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
     }
 
     tk.group("classify: publication validity and independent diagnostics") {
-        tk.run("status-word failure retains status and meaningful apply errno without native attribution") {
+        tk.run("done without an application observation cannot publish scalar apply storage") {
+            let clean=classify(workerResult:.success(workerOut(applied:false)),validatorResult:nil,expectedVerdictCount:0)
             for applyErrno: Int32 in [0, 1, 4567] {
-                let got = classify(workerResult: .success(workerOut(applied: false, applyRC: -1, applyErrno: applyErrno)),
-                                   validatorResult: nil, expectedVerdictCount: 0)
-                try expectEqual(got.outcome, NormalizedOutcome.runnerFailed)
-                try expectContains(got.error ?? "", "status=-1")
-                if applyErrno != 0 { try expectContains(got.error ?? "", "apply_errno=\(applyErrno)") }
-                else { try expectFalse((got.error ?? "").contains("errno")) }
+                let output=workerOut(applied:false,applyRC:-1,applyErrno:applyErrno)
+                let got=classify(workerResult:.success(output),validatorResult:nil,expectedVerdictCount:0)
+                try expectEqual(got.outcome,NormalizedOutcome.runnerFailed)
+                try expectEqual(got.rc,1)
+                try expectEqual(got.error,clean.error)
+                try expectContains(got.error ?? "","without an observed application")
+                try expectFalse((got.error ?? "").contains("status=-1"))
+                try expectFalse((got.error ?? "").contains("apply_errno="))
                 try expectFalse((got.error ?? "").contains("sandbox_apply"))
-                try expectFalse((got.error ?? "").contains("returned"))
+                let application=actorApplicationAssessment(mode:"apply",launched:true,applied:false,evidence:output.workerEvidence,authority:nil)
+                try expectEqual(application.state,"unobserved")
+                try expectEqual(application.basis,"no_eligible_apply_publication")
+            }
+        }
+        tk.run("published native apply failure retains its return and optional errno") {
+            for error: Int32? in [nil,0,EPERM,4567] {
+                let output=workerOut(applied:false,nativeFailure:nativeApplyFailure(error))
+                let got=classify(workerResult:.success(output),validatorResult:nil,expectedVerdictCount:0)
+                try expectEqual(got.outcome,NormalizedOutcome.runnerFailed)
+                try expectEqual(got.rc,1)
+                try expectContains(got.error ?? "","sandbox_apply failure")
+                try expectContains(got.error ?? "","native_kind=1, result=-1")
+                if let error { try expectContains(got.error ?? "","errno=\(error)") }
+                else { try expectFalse((got.error ?? "").contains("errno")) }
+                let application=actorApplicationAssessment(mode:"apply",launched:true,applied:false,evidence:output.workerEvidence,authority:nil)
+                try expectEqual(application.state,"observed")
+                try expectEqual(application.basis,"apply_failure_publication")
             }
         }
         tk.run("unpublished storage is ignored including arbitrary nonzero values") {
@@ -243,12 +273,13 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
             try expectEqual(garbage.error, clean.error)
         }
         tk.run("worker failure precedence retains validator failure independently") {
-            let worker = workerOut(applied: false, applyRC: -1, sentSigkill: true, exitCode: nil, reaped: false)
+            let worker = workerOut(applied: false, sentSigkill: true, exitCode: nil, reaped: false, nativeFailure: nativeApplyFailure())
             let validator = ValidatorClientResult.failure(error: .spawnFailed(PWRunnerSpawnFailure(
                 executable_path: "/fixture-validator", return_code: EACCES, diagnostic: "constructed failure")), partial: nil)
             let got = classify(workerResult: .success(worker), validatorResult: validator, expectedVerdictCount: 1)
             try expectEqual(got.outcome, NormalizedOutcome.runnerFailed)
-            try expectContains(got.error ?? "", "status=-1")
+            try expectContains(got.error ?? "", "sandbox_apply failure")
+            try expectContains(got.error ?? "", "result=-1")
             try expectEqual(buildWorkerSubprocess(worker).termination_request?.rc, 0)
             try expectEqual(buildWorkerSubprocess(worker).reaped, false)
         }

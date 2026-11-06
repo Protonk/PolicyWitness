@@ -61,6 +61,41 @@ class BuildDocumentationTests(receipts.TestCase):
             self.evidence.capture(path.parent, [path.name], 'manifest mutation')
             return generator.load_manifest(path, root)
 
+    def test_equipment_inventory_helper_refuses_without_publishing(self):
+        """Real helper refusal at input/role boundaries; no native signature-success credit."""
+        self.track_inputs(ROOT, ['tests/build_equipment.py', 'tests/lib/contract.py'])
+        with tempfile.TemporaryDirectory(prefix='pw-equipment-inventory-refusal-') as directory:
+            root = Path(directory)
+            bundle = root / 'Runner.xpc'
+            destination = bundle / 'Contents/Resources/worker-equipment.json'
+            destination.parent.mkdir(parents=True)
+            original = b'previous inventory must remain unchanged\n'
+            destination.write_bytes(original)
+            unsigned = root / 'worker'
+            unsigned.write_bytes(b'controlled common worker input')
+            cases = [
+                ('invalid_identity', unsigned, 'not-a-worker-identity', 'invalid generated worker identity'),
+                ('missing_common_worker', root / 'absent', 'a' * 64, 'absent'),
+                ('missing_selected_role', unsigned, 'a' * 64, 'selected: expected a regular bundle-local executable'),
+            ]
+            self.evidence.capture(root, ['worker', 'Runner.xpc/Contents/Resources/worker-equipment.json'],
+                                  'equipment helper refusal inputs')
+            for name, worker, identity, reason in cases:
+                with self.subTest(case=name):
+                    result = self.run_command([
+                        sys.executable, '-B', '-S', str(ROOT / 'tests/build_equipment.py'),
+                        '--bundle', str(bundle), '--unsigned-worker', str(worker),
+                        '--worker-identity', identity,
+                    ], cwd=root, capture_output=True, text=True, timeout=30)
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertEqual(result.stdout, '')
+                    self.assertIn('ERROR: equipment inventory:', result.stderr)
+                    self.assertIn(reason, result.stderr)
+                    self.assertEqual(destination.read_bytes(), original,
+                                     'refusal must precede replacement of the published inventory')
+                    self.assertFalse((bundle / 'Contents/MacOS').exists(),
+                                     'inventory generation must not synthesize missing equipment')
+
     # ---- currency ----
     def test_document_and_figure_are_current_and_the_rules_agree(self):
         result = self.command(ROOT, '--check')

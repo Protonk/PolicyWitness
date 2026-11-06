@@ -177,7 +177,7 @@ Choose these concrete workloads before measurement:
   checks and actual available profile receipt. Separately pair its
   `independent_query` and `eight_phase_maximum` workloads to isolate repeated
   collection with fixed actions, targets and queries; the latter is not a phased
-  version of the escaped exec workload. The ordinary/declaration phase cap is
+  version of the escaped exec workload. The ordinary phase cap is
   eight; sixteen phases requires actor form.
   The synthesized maximal reply remains a separate constructed control.
 - **Waiting variation:** one worker, followed by a legal multi-actor specimen

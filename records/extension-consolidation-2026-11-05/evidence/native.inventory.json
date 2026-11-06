@@ -1,0 +1,1165 @@
+{
+  "files": [
+    {
+      "bytes": 4667,
+      "path": "dispatch.json",
+      "sha256": "f99652f6d997934a97c415abead1d9897b6d2d350308ac335e1512e621e5a45c"
+    },
+    {
+      "bytes": 2519,
+      "path": "events.jsonl",
+      "sha256": "a8a784ad3868121a3c0ba93c85d3969fea04e3580769ae4f3eb9b910fe948b4f"
+    },
+    {
+      "bytes": 223,
+      "path": "owner.json",
+      "sha256": "1471d3a41bfaac99ee5fbe6be778e5062ccf8b3ec66c206ed7904c385e49e358"
+    },
+    {
+      "bytes": 98311,
+      "path": "plan.json",
+      "sha256": "6ba832d4162612a8bb426025235a8bd9b088ae22e1056a1563a7beb91a10fbe6"
+    },
+    {
+      "bytes": 207253,
+      "path": "run.json",
+      "sha256": "8b838eae461826dad0eeba5df54e0a7c747fb184f587cc48f4585c87c8a75e1b"
+    },
+    {
+      "bytes": 70,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/architecture.command.json",
+      "sha256": "5448aaa8474928351525ada12709acccbab743aebaa81717edc27f6442e8e66d"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/architecture.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 6,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/architecture.stdout",
+      "sha256": "c1669e1d8edca98769c37d494b76442a1d6e5ffffd7b4da1fb63aef8ebaf6f01"
+    },
+    {
+      "bytes": 332,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/assertions.log",
+      "sha256": "97974522002a140132697b9c41888a92d92df5dfc8c0475c568fa247d1834a88"
+    },
+    {
+      "bytes": 406,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/build.log",
+      "sha256": "d4f62f748ec093c8e578be7bdcb3ee4adeb3e79f3138c394367153fe8f77d19d"
+    },
+    {
+      "bytes": 616,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/checker-controls.json",
+      "sha256": "519287e5956fdd3b0e1a836a2a08bba08e09d2fbc57f5c439297281d2bcb8978"
+    },
+    {
+      "bytes": 90,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/compiler.command.json",
+      "sha256": "4a4e459e546c6fc0316afa7f4c59857ec7a1a77f0b244e7b04dff43614056f7c"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/compiler.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 200,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/compiler.stdout",
+      "sha256": "2f695e8ead1d2404c2829c51b53b3e7082de6995b84e1840f2449e4e63dcb286"
+    },
+    {
+      "bytes": 57,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/credentials.command.json",
+      "sha256": "079edca43967ed75d86628d3d99b794e7d1190b448db7be760daa8f2e21493db"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/credentials.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 360,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/credentials.stdout",
+      "sha256": "601faf4fce1ba5d0048579a4834a29cd9a0cd2ed67b21b40fd6b102414acb223"
+    },
+    {
+      "bytes": 430,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory/command.json",
+      "sha256": "9e26f85cf200f82b81454963764309b85af83245f47fe07156b1e57c7709f253"
+    },
+    {
+      "bytes": 2109,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory/external-after-exit.json",
+      "sha256": "83ab19ff0f8c7f31ea6d9bddf418c4877d7b97604079a107d047f38576e70182"
+    },
+    {
+      "bytes": 26786,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory/native.json",
+      "sha256": "7a153480cb926668e63dd2fe38a44bb146fe4744c932a401b88783f7e340c4f5"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1015,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory/preparation.json",
+      "sha256": "8043dc3f05ae945f24e14781a186033f0e040178c79dfb5120a430b9546b9057"
+    },
+    {
+      "bytes": 468,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_different/command.json",
+      "sha256": "a98702b999a7e1e569eee39c4200da2344bfb5c46c7a82881957c1f10d384f16"
+    },
+    {
+      "bytes": 2004,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_different/external-after-exit.json",
+      "sha256": "d0153ae6ef47d4a1a5b444ef9423e6a02af7dfaf1d52ffe421d019b1f16d8e73"
+    },
+    {
+      "bytes": 26649,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_different/native.json",
+      "sha256": "238cb4bc75cabf6713db9b3b1d1ee95543da7048edc322d63f9ac97721b3dae0"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_different/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1014,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_different/preparation.json",
+      "sha256": "cc568616f9f8a835fcbdb69a12c94d90f10f589312ce671010a6c80fd8799cb1"
+    },
+    {
+      "bytes": 464,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_consume/command.json",
+      "sha256": "311260c8cd14cbe1ba1aa741489b8ee7fbc29e3f0e0c3f5660bd326c65fa93fc"
+    },
+    {
+      "bytes": 2012,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_consume/external-after-exit.json",
+      "sha256": "25a6d42293e493ba8a2283e0ce9a1424ff1d960e9aa83c813569cfd96b6a2a81"
+    },
+    {
+      "bytes": 26653,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_consume/native.json",
+      "sha256": "aea6a206355ad914cc9b2e36dfc4dc0b8a0e7a5eeb517843e1c2444eed237348"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_consume/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1015,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_consume/preparation.json",
+      "sha256": "e58dcff49b1312b158ba57d9dc56a56968c04481b83bfddba822698ee2fc3352"
+    },
+    {
+      "bytes": 471,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_predicate/command.json",
+      "sha256": "2f0f383d8378a2c486cc7d69706e0435afa48886035547cdbe29193dda565929"
+    },
+    {
+      "bytes": 2028,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_predicate/external-after-exit.json",
+      "sha256": "b5aeeb1258c951133e2baa3c6c5856aaa6c3ee3e43927d0c6ebaaf02fc2b6fd5"
+    },
+    {
+      "bytes": 26487,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_predicate/native.json",
+      "sha256": "08d9fa2ee971a99892ec4fa844c8f9702d3d704b231edf7e628337118a922dd8"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_predicate/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1015,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_no_predicate/preparation.json",
+      "sha256": "a757d9faec3f4513bbf6674108bec75db36f84e7be6d951f1ce6f675848bb9e3"
+    },
+    {
+      "bytes": 462,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only/command.json",
+      "sha256": "58b45b8003738ac6b27cd1ca569e7c4655dde8212745285047ed790268cc6ec2"
+    },
+    {
+      "bytes": 2004,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only/external-after-exit.json",
+      "sha256": "d0e527b0a670f29389a5935fb9a95135849665eff0194f65ad103ac9627c08b5"
+    },
+    {
+      "bytes": 26714,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only/native.json",
+      "sha256": "c5b8402de32de390e0b5aa075f700da6f84edf7911df37acd31173009fca9b82"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1015,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only/preparation.json",
+      "sha256": "e66300555ae8f496b363a003ddb67db58ed283e33cde2a91c65559235b94f38f"
+    },
+    {
+      "bytes": 497,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_different/command.json",
+      "sha256": "8459f8f234f49f3188db74b9faa806b856cee7412bf329a7cb127e1b658d4ddb"
+    },
+    {
+      "bytes": 2084,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_different/external-after-exit.json",
+      "sha256": "4a06f060dfa03cb066da5bda7efaebda2d668a42d0150684d828cb5011f950c4"
+    },
+    {
+      "bytes": 26773,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_different/native.json",
+      "sha256": "041890f6128a60d16dce2543439fb747cd1ded58273093bb5f4ef11bb3c6970a"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_different/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1014,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_different/preparation.json",
+      "sha256": "bdff7cec276fa7855bb44ba22b5fbf742ad4f80d225990df8d63f80202debba0"
+    },
+    {
+      "bytes": 494,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_consume/command.json",
+      "sha256": "4b92bd0d0d55b89ef40a4396046e3cc7316df7f2fc9a2211b9b3474311077f36"
+    },
+    {
+      "bytes": 2092,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_consume/external-after-exit.json",
+      "sha256": "96f4e1e526a4cbd3cfbccc620f0533f4ca856c35c3ce4c3134f12b00c8ef1735"
+    },
+    {
+      "bytes": 26777,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_consume/native.json",
+      "sha256": "8b358212fb643066cc646181756eca2c0d051d0860f5f2a63223ea590e26646c"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_consume/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1015,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_consume/preparation.json",
+      "sha256": "b0103a3c72e0919897d411f35fb9d5fd77266a2aaef4b720dfd6adb81c5ce73a"
+    },
+    {
+      "bytes": 500,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_predicate/command.json",
+      "sha256": "045bc95dbabeaa148a4e50289a028f94a7e3b3441650dc52c7068314707d4060"
+    },
+    {
+      "bytes": 2108,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_predicate/external-after-exit.json",
+      "sha256": "6d4362c3076740ddce0add10942e92167dd6dfb3c2419af0e312754c0dedb640"
+    },
+    {
+      "bytes": 26611,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_predicate/native.json",
+      "sha256": "c541db5417278ccc998ac96fbafbe20c38215576baadbb882ceb5186ac569c51"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_predicate/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1015,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/directory_read_only_no_predicate/preparation.json",
+      "sha256": "d92b438ba2849e7be060a5a1739d057bfa786074e12bfb68ee5f0b80a5593865"
+    },
+    {
+      "bytes": 273,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/entitlements.command.json",
+      "sha256": "869b6e94d6ba11cacbaf32ea8f186ef0f0d979a4d69e645b6e3707ea78905ff4"
+    },
+    {
+      "bytes": 260,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/entitlements.stderr",
+      "sha256": "02c95cbda136359277031be257a4ea02e2a5cf454566f28ebfc60f877425e8c8"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/entitlements.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/equipment.json",
+      "sha256": "29c277cff3398b54ef905faff2e8955f9a40333dd554ee53af2e25d4858a349a"
+    },
+    {
+      "bytes": 62,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/host.command.json",
+      "sha256": "83c77dfab6dfd89fd5260ecb2c3f3703a42f950df433ce11d37bf73ca4ea66c4"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/host.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 66,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/host.stdout",
+      "sha256": "0b74dee9f2004e79e0ebb6e94909916c30d37db5dfb5c1f733b7ca7f723a701d"
+    },
+    {
+      "bytes": 123,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/identities.command.json",
+      "sha256": "ce6c6fce4f2627492765b7d9760c0fe295b0c885351696fcb1e72c9921404474"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/identities.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 129,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/identities.stdout",
+      "sha256": "bf37a06872cf400427179c053dfb618cef4f86ae54d7e2f627920ed85c0cc17e"
+    },
+    {
+      "bytes": 73520,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/native",
+      "sha256": "76fde5934f3a22bc6e52412a7ae300f3a8592f9e4bf5b744d03b043933231b31"
+    },
+    {
+      "bytes": 663,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/native.dSYM/Contents/Info.plist",
+      "sha256": "f2185a06af5dd258c240d515ef0ebd32fe02afecd3b667989a18924836d288e9"
+    },
+    {
+      "bytes": 54012,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/native.dSYM/Contents/Resources/DWARF/native",
+      "sha256": "25ed216253a582ce57cbdd3b3b4804662953577992439cc978c3376ea027210a"
+    },
+    {
+      "bytes": 246,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/native.dSYM/Contents/Resources/Relocations/aarch64/native.yml",
+      "sha256": "c647844a44b768ff9b35d6b871715721f51258becabd43442be757e48adcb678"
+    },
+    {
+      "bytes": 110,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/sdk.command.json",
+      "sha256": "f7c47ce71ca9664e2e827261bd5da59357102178f43ac18ec11cc05e68858f8c"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/sdk.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 99,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/sdk.stdout",
+      "sha256": "65cc3834fc060b76c3d4c52bf08769c606fd42a29b02f205d9b7b791aa56be56"
+    },
+    {
+      "bytes": 365,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/sign.command.json",
+      "sha256": "52ce93a4c5ebdb10bd70df87ce71faf3490b3e15f27e9d434ef486be0a0da74c"
+    },
+    {
+      "bytes": 191,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/sign.stderr",
+      "sha256": "938c7a0cf8caf3214162810e1679283538ea834eae9f17c5db218be526c3da8a"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/sign.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 244,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/signature.command.json",
+      "sha256": "0e8cdf4803465950723b9c86df4f6b4a632a2ac3f7eca4bdb923f053667f5810"
+    },
+    {
+      "bytes": 961,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/signature.stderr",
+      "sha256": "043651b57569bc86b02602bf51b49fbfd80d6eeb80f6b7d099941dfde71e15cd"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/signature.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 81572,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/catalog.json",
+      "sha256": "43871eee4c1052aac7a50df147769e161b1f1611b12552a523024fafa7212937"
+    },
+    {
+      "bytes": 3543,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/fixtures/sandbox_extensions/README.md",
+      "sha256": "ae8ee6a5f7401a3a8cfad44c6971405e2501828611059aca667e0f4810d3ed3c"
+    },
+    {
+      "bytes": 423,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/fixtures/sandbox_extensions/build.sh",
+      "sha256": "0f345d4ad0b307cfd954aa5ed3678be67645f48905c224435996ee0b032d82d5"
+    },
+    {
+      "bytes": 34633,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/fixtures/sandbox_extensions/native.c",
+      "sha256": "2be5a59b900827f10694f6c7599241139c8315a619ba9fe11519136fb33d61b4"
+    },
+    {
+      "bytes": 1784,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/lib/case.sh",
+      "sha256": "4ba5573c5e1aa87b6ab0f2b3b06abaac2eb9ff424df11c2509a8b4f0eb68d1ea"
+    },
+    {
+      "bytes": 4168,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/lib/python_start.sh",
+      "sha256": "af3119ffadc74ccfd951522088386d0275c2e19bc98249c9e3861240777399c9"
+    },
+    {
+      "bytes": 726,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/lib/sdk_guard.sh",
+      "sha256": "cf8e3698c36c974523c93e12b2263e3fadbab1ba4292eef8f03a633426788f2a"
+    },
+    {
+      "bytes": 31545,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/lib/suite_run.py",
+      "sha256": "25b6fdfd9bcf3e36b06c125736d7ef21c8ea58ffa3354aa8562599c994513ca0"
+    },
+    {
+      "bytes": 14602,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/lib/test_cli.py",
+      "sha256": "dcac4b68c4aa0c20a5ba3e198d8bfb0d7cff4ad29eac7dab31d27ff73bcb20b1"
+    },
+    {
+      "bytes": 13106,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/lib/testlib.sh",
+      "sha256": "901184837407bec29e2d8f1a102f976a03e91d04bebfcdbed8cb7e0e52c36a1f"
+    },
+    {
+      "bytes": 5400,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/suites/sandbox_extensions_native/README.md",
+      "sha256": "1fabeda5d1dc05bc5c6e7d9eed56fca51cfcb4eae21369b9b4f78de13a5b4f6a"
+    },
+    {
+      "bytes": 16563,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/suites/sandbox_extensions_native/check.py",
+      "sha256": "ad5eb06c46c9bb464bf6bab134a50b525dac2946dfef4f0eb5bf4cb534f718e8"
+    },
+    {
+      "bytes": 741,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/suites/sandbox_extensions_native/directory.sh",
+      "sha256": "e229c396bd2be69cef4ca291b42f54dff7c688769c372e077d38f9cf2004d3c9"
+    },
+    {
+      "bytes": 19057,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/suites/sandbox_extensions_native/directory_check.py",
+      "sha256": "8227e8a6097db5979ebf0ecfdbc4ff54242c638386ba18962f848c2148556f27"
+    },
+    {
+      "bytes": 741,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source/tests/suites/sandbox_extensions_native/run.sh",
+      "sha256": "3178ceb1f181432fe88faf73702f803670f24a6b3a42290ff0fd4ca4a43a1a8c"
+    },
+    {
+      "bytes": 78,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source-commit.command.json",
+      "sha256": "0c5c1875fd8035bd4b65f318913ca3f62d3ef4c9cc253a95fd919051697bbb2a"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source-commit.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source-commit.stdout",
+      "sha256": "41c5129ee9ad9d5c24b794cf51593ff11f989ac9e24163cafe06bdc3dc852ad0"
+    },
+    {
+      "bytes": 1633,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source-hashes.json",
+      "sha256": "6795ca068a1f176b77a587f00392f063d35c3162fa27a92bb7ab59ec0320495d"
+    },
+    {
+      "bytes": 78,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source-status.command.json",
+      "sha256": "ca6f6a396b425e900f5c626619d2ef7a673c0783b28f56c1d9326b4929c258fe"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source-status.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 47,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/source-status.stdout",
+      "sha256": "952b3be9dc228462fb24bf8209c810cdbabfc1ac58f3030b4576baf56307c27b"
+    },
+    {
+      "bytes": 9333,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/summary.json",
+      "sha256": "ab87fc7271053a5edd407e186ac8862e467cadd10839d4c6abecdd96ff86a6fd"
+    },
+    {
+      "bytes": 282,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/verify.command.json",
+      "sha256": "90b1a3aa1b7478bf06c13ff91cdd26c3af21a5284b607da08d8a1fcabf734fee"
+    },
+    {
+      "bytes": 375,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/verify.stderr",
+      "sha256": "d7a48ca0afe84132ed68998c77f86cf882e58ec8721ff5be0017e7e92650f4df"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/directory/artifacts/verify.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1252,
+      "path": "suites/sandbox_extensions_native/directory/events.jsonl",
+      "sha256": "a00b426e33b111d80d913320bbcbfe83131c8a5cef1d4714775a16b047b50308"
+    },
+    {
+      "bytes": 653,
+      "path": "suites/sandbox_extensions_native/directory/report.json",
+      "sha256": "9f1df8a094bd3429af9f84bd2022eab02e915fb0a926b0cca915aa2fbe7b24d2"
+    },
+    {
+      "bytes": 258,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/__syscall_logger.command.json",
+      "sha256": "7defb7828e764113192f7e3a2a1a4dec70e96b9540f7f1f38f9ab1e243e80807"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/__syscall_logger.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 81,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/__syscall_logger.stdout",
+      "sha256": "b7868a90c98121a7d00284c775ef355f7cd834fd785bce1818a4c44d6acefc9e"
+    },
+    {
+      "bytes": 70,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/architecture.command.json",
+      "sha256": "5448aaa8474928351525ada12709acccbab743aebaa81717edc27f6442e8e66d"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/architecture.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 6,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/architecture.stdout",
+      "sha256": "c1669e1d8edca98769c37d494b76442a1d6e5ffffd7b4da1fb63aef8ebaf6f01"
+    },
+    {
+      "bytes": 605,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/assertions.log",
+      "sha256": "afa000212e5b650d2bf5fd0d1d46d5a32ce6918d94f765159db493e9c5a796a9"
+    },
+    {
+      "bytes": 408,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/build.log",
+      "sha256": "401f4c00983890f8be956a0888e4b8d8013457e0e5fa5d0a25755f08e5e8dd1f"
+    },
+    {
+      "bytes": 435,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/checker-controls.json",
+      "sha256": "16f66bae82235c5475224bf6221088ace7efa3c8a3563a96f3c710280114120f"
+    },
+    {
+      "bytes": 90,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/compiler.command.json",
+      "sha256": "4a4e459e546c6fc0316afa7f4c59857ec7a1a77f0b244e7b04dff43614056f7c"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/compiler.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 200,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/compiler.stdout",
+      "sha256": "2f695e8ead1d2404c2829c51b53b3e7082de6995b84e1840f2449e4e63dcb286"
+    },
+    {
+      "bytes": 57,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/credentials.command.json",
+      "sha256": "079edca43967ed75d86628d3d99b794e7d1190b448db7be760daa8f2e21493db"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/credentials.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 360,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/credentials.stdout",
+      "sha256": "601faf4fce1ba5d0048579a4834a29cd9a0cd2ed67b21b40fd6b102414acb223"
+    },
+    {
+      "bytes": 439,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/different_target-instrumented/command.json",
+      "sha256": "3d8f3d39aae1620ad18a36d42995dffceaefccef6a05b72d6c76d3cb986e50af"
+    },
+    {
+      "bytes": 5232,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/different_target-instrumented/native.json",
+      "sha256": "3c108b94351d2fff4d9b6162f34077625093374a38e3650e6835aeb52cbd7b8c"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/different_target-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 434,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/different_target-plain/command.json",
+      "sha256": "cd2c5aad140c6310fb5ef34e01418e4ef1acdad3ab1ff5d413fa18e45f2a801e"
+    },
+    {
+      "bytes": 5214,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/different_target-plain/native.json",
+      "sha256": "500143efd7d2c0c0a891bb8d47e86b300e3e99e5b23366388318f781bb91e0cc"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/different_target-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 275,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/entitlements.command.json",
+      "sha256": "533c9e1a37f27d6d460c66067d41fee764649498c5560844d37ce8e9d8300281"
+    },
+    {
+      "bytes": 262,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/entitlements.stderr",
+      "sha256": "2f59ed5c97903f6ab5e186ffd8ecff7e081089643c7e363651efe8ab6381dfe0"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/entitlements.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/equipment.json",
+      "sha256": "7fb556794a9003e68d5ae51f15135f5f49cf4138087edcebf0f8ee33db25a6a5"
+    },
+    {
+      "bytes": 62,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/host.command.json",
+      "sha256": "83c77dfab6dfd89fd5260ecb2c3f3703a42f950df433ce11d37bf73ca4ea66c4"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/host.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 66,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/host.stdout",
+      "sha256": "0b74dee9f2004e79e0ebb6e94909916c30d37db5dfb5c1f733b7ca7f723a701d"
+    },
+    {
+      "bytes": 123,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/identities.command.json",
+      "sha256": "ce6c6fce4f2627492765b7d9760c0fe295b0c885351696fcb1e72c9921404474"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/identities.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 129,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/identities.stdout",
+      "sha256": "bf37a06872cf400427179c053dfb618cef4f86ae54d7e2f627920ed85c0cc17e"
+    },
+    {
+      "bytes": 440,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issue_failure-instrumented/command.json",
+      "sha256": "3aa7e84247101922d9f9119d9b5c6295dc9e81c58dac84594cb41c5c8a75d50f"
+    },
+    {
+      "bytes": 5202,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issue_failure-instrumented/native.json",
+      "sha256": "3a36133219c0fbb4da683bbc45116766f8aa09bfaf4969c24d728fcbdb90ec84"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issue_failure-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 435,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issue_failure-plain/command.json",
+      "sha256": "68206c7384ded17eb0ef0cc9e74d51a681851378b8491b198a63d5d75e783e4c"
+    },
+    {
+      "bytes": 5184,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issue_failure-plain/native.json",
+      "sha256": "a06a17619f1dbdf7d52c71db371b70a0f855356b40500976e7948f058ff35899"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issue_failure-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 438,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issuer_exit-instrumented/command.json",
+      "sha256": "619544e90fff43187763329adadeb037f413f40d4939dec4ab464609fafd4229"
+    },
+    {
+      "bytes": 5322,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issuer_exit-instrumented/native.json",
+      "sha256": "5d33421a3308357d077be821971f2e1391e044b2eabafc0b06dd3c0ae1ed950d"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issuer_exit-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 433,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issuer_exit-plain/command.json",
+      "sha256": "402d3b8cb4a39827a3aa4c5e77ead6b27205daabe293d7d05c270d078dd0c523"
+    },
+    {
+      "bytes": 5304,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issuer_exit-plain/native.json",
+      "sha256": "238c812047c7ab41fec19f554e8dfb1ea0cb33cb4c26cafd74e24c69407864c3"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/issuer_exit-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 437,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/lifecycle-instrumented/command.json",
+      "sha256": "20af9c875694c7d90f5de033c18a50e0dcf5cbbc307aab2d1d4c0420dfd6d1d1"
+    },
+    {
+      "bytes": 5320,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/lifecycle-instrumented/native.json",
+      "sha256": "dcb0ede7680b0cf362a56ea0694fabc8639fe0356d0f279a7588f10c02c83dc5"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/lifecycle-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 431,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/lifecycle-plain/command.json",
+      "sha256": "e5dd554ae1e4dac4e30fce6b24f6d51857d0535bfac480524833036e8d8b43e5"
+    },
+    {
+      "bytes": 5302,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/lifecycle-plain/native.json",
+      "sha256": "39b6e3133a7fe8a37d964b689643cf5672931bda6298a3e858f7fc69455711fb"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/lifecycle-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 255,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/malloc_logger.command.json",
+      "sha256": "b494e4b690b212d1e42c34d4d97f73052de9644f5b92cfd6a926b333ff6ba918"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/malloc_logger.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 81,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/malloc_logger.stdout",
+      "sha256": "ead4350b27a88931690003eee925e8086a87a845b5be32cdee8823ff8762d356"
+    },
+    {
+      "bytes": 73520,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/native",
+      "sha256": "75e4a62e3bb122524db70aa1055d47721140a762de5d68af07f67356eb6ef296"
+    },
+    {
+      "bytes": 663,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/native.dSYM/Contents/Info.plist",
+      "sha256": "f2185a06af5dd258c240d515ef0ebd32fe02afecd3b667989a18924836d288e9"
+    },
+    {
+      "bytes": 54012,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/native.dSYM/Contents/Resources/DWARF/native",
+      "sha256": "0a7d967010a6eafe1836d12cb82e066fe174558f16acb47c4ec96f2d54ad8d9b"
+    },
+    {
+      "bytes": 248,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/native.dSYM/Contents/Resources/Relocations/aarch64/native.yml",
+      "sha256": "1190888209bd98db0a28635390b823b10b7d7343e543b32b55545d6d80db94b2"
+    },
+    {
+      "bytes": 437,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_consume-instrumented/command.json",
+      "sha256": "05a88704ad37179e232601e783db72156d05d11a4702de46423adf621466e7d9"
+    },
+    {
+      "bytes": 5241,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_consume-instrumented/native.json",
+      "sha256": "79852c066aeae760d7078a770fcd5576a379f37a2ad2f69b2e8d8b1b3a0ba510"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_consume-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 432,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_consume-plain/command.json",
+      "sha256": "fb94fb7a1b1c3349048c2363f358cdc6f90d050b87e21cca87191ad62a8507ca"
+    },
+    {
+      "bytes": 5223,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_consume-plain/native.json",
+      "sha256": "29452203ccd7b8f9dfb771070366190bb30ef4b9c020ce327cfd59f4b59ca5d4"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_consume-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 439,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_predicate-instrumented/command.json",
+      "sha256": "3131f886e82aa34facf3063f5bf0facaef623d76de535d787b4d9957d3d5ef82"
+    },
+    {
+      "bytes": 5169,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_predicate-instrumented/native.json",
+      "sha256": "abcbf07552e0fedb3647338b24583baa74f716a305839799ce0b2b8675628105"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_predicate-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 435,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_predicate-plain/command.json",
+      "sha256": "b44ff86f1507497351bc7078b4d0d06b9fca8fb1e06f0b7967b7ef6b0c30c742"
+    },
+    {
+      "bytes": 5151,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_predicate-plain/native.json",
+      "sha256": "d3a515d6a0224def9cb5cad4de81ba4abffaf321a83ffb39a80350e4f1f422b0"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_predicate-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 437,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_release-instrumented/command.json",
+      "sha256": "c01165d7bed9e19c65aa467b079a5357b7c0dbe9a47c78e63c83b3fcdc8bad06"
+    },
+    {
+      "bytes": 5413,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_release-instrumented/native.json",
+      "sha256": "5ec945e5832e9212c21ccd076149dffea1091a6440a9b246a11b90dbd8bb9e92"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_release-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 433,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_release-plain/command.json",
+      "sha256": "d8fc1ff50a65a13db4b160aee989e47a4ccab6c59f8b0d4fc58cc81c14201777"
+    },
+    {
+      "bytes": 5395,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_release-plain/native.json",
+      "sha256": "499f040cb7f531decfae1a4d093e2d18c591d1a26648437a5f64f4870da5fafd"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/no_release-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 440,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/rejected_token-instrumented/command.json",
+      "sha256": "c42f66419d0bc764e478aca387f86f0feb8f556f6e430c0967dbf7162aef36de"
+    },
+    {
+      "bytes": 5243,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/rejected_token-instrumented/native.json",
+      "sha256": "561dd2039cd57303793c59c5c884e770ca5795b396ab2309ab0d7c384176b641"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/rejected_token-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 437,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/rejected_token-plain/command.json",
+      "sha256": "22e6465bfd915ee5e351a23948dcc63efe323e19dbb6affc4a7e9f7c553c84b9"
+    },
+    {
+      "bytes": 5225,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/rejected_token-plain/native.json",
+      "sha256": "e1b9de96db43ed491809caeaadeedb97ee87f0f6291627849e69f5aceac6fea1"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/rejected_token-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 438,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/retained_fd-instrumented/command.json",
+      "sha256": "7a2a7fdfa9305485cfe640267de5683933fc4d8621004055887d217edee849f7"
+    },
+    {
+      "bytes": 5411,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/retained_fd-instrumented/native.json",
+      "sha256": "315808ae5a2550386b907fdf832a1423bc7572dc9479b571b7da341617270150"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/retained_fd-instrumented/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 433,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/retained_fd-plain/command.json",
+      "sha256": "564a5ffcbb45a910e7f7c4908f72be68215a25532494c16b0b96acbae4821472"
+    },
+    {
+      "bytes": 5393,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/retained_fd-plain/native.json",
+      "sha256": "d629a52abb5cde868fd20ccbd2f10e2fc174268c72d7bc0bba6916a482867ed2"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/retained_fd-plain/native.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 110,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/sdk.command.json",
+      "sha256": "f7c47ce71ca9664e2e827261bd5da59357102178f43ac18ec11cc05e68858f8c"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/sdk.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 99,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/sdk.stdout",
+      "sha256": "65cc3834fc060b76c3d4c52bf08769c606fd42a29b02f205d9b7b791aa56be56"
+    },
+    {
+      "bytes": 367,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/sign.command.json",
+      "sha256": "84c4d20f15fcce5f75a3b48272977b35da65945dbae46100a1f531904a72208a"
+    },
+    {
+      "bytes": 193,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/sign.stderr",
+      "sha256": "ac6390744dfbce46166dab67ac35c7058d8720e5e658d08d17c60795ef7e0565"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/sign.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 246,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/signature.command.json",
+      "sha256": "6fb9976956362727bc53321d4bcb86e2a848eb9dec458264c5204cd3a9280d74"
+    },
+    {
+      "bytes": 963,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/signature.stderr",
+      "sha256": "11a1c0a58cd56599a6bb073f5871b0a9dd70d01f959913def3cb237618317e64"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/signature.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 81572,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/catalog.json",
+      "sha256": "43871eee4c1052aac7a50df147769e161b1f1611b12552a523024fafa7212937"
+    },
+    {
+      "bytes": 3543,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/fixtures/sandbox_extensions/README.md",
+      "sha256": "ae8ee6a5f7401a3a8cfad44c6971405e2501828611059aca667e0f4810d3ed3c"
+    },
+    {
+      "bytes": 423,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/fixtures/sandbox_extensions/build.sh",
+      "sha256": "0f345d4ad0b307cfd954aa5ed3678be67645f48905c224435996ee0b032d82d5"
+    },
+    {
+      "bytes": 34633,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/fixtures/sandbox_extensions/native.c",
+      "sha256": "2be5a59b900827f10694f6c7599241139c8315a619ba9fe11519136fb33d61b4"
+    },
+    {
+      "bytes": 1784,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/lib/case.sh",
+      "sha256": "4ba5573c5e1aa87b6ab0f2b3b06abaac2eb9ff424df11c2509a8b4f0eb68d1ea"
+    },
+    {
+      "bytes": 4168,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/lib/python_start.sh",
+      "sha256": "af3119ffadc74ccfd951522088386d0275c2e19bc98249c9e3861240777399c9"
+    },
+    {
+      "bytes": 726,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/lib/sdk_guard.sh",
+      "sha256": "cf8e3698c36c974523c93e12b2263e3fadbab1ba4292eef8f03a633426788f2a"
+    },
+    {
+      "bytes": 31545,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/lib/suite_run.py",
+      "sha256": "25b6fdfd9bcf3e36b06c125736d7ef21c8ea58ffa3354aa8562599c994513ca0"
+    },
+    {
+      "bytes": 14602,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/lib/test_cli.py",
+      "sha256": "dcac4b68c4aa0c20a5ba3e198d8bfb0d7cff4ad29eac7dab31d27ff73bcb20b1"
+    },
+    {
+      "bytes": 13106,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/lib/testlib.sh",
+      "sha256": "901184837407bec29e2d8f1a102f976a03e91d04bebfcdbed8cb7e0e52c36a1f"
+    },
+    {
+      "bytes": 5400,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/suites/sandbox_extensions_native/README.md",
+      "sha256": "1fabeda5d1dc05bc5c6e7d9eed56fca51cfcb4eae21369b9b4f78de13a5b4f6a"
+    },
+    {
+      "bytes": 16563,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/suites/sandbox_extensions_native/check.py",
+      "sha256": "ad5eb06c46c9bb464bf6bab134a50b525dac2946dfef4f0eb5bf4cb534f718e8"
+    },
+    {
+      "bytes": 741,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/suites/sandbox_extensions_native/directory.sh",
+      "sha256": "e229c396bd2be69cef4ca291b42f54dff7c688769c372e077d38f9cf2004d3c9"
+    },
+    {
+      "bytes": 19057,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/suites/sandbox_extensions_native/directory_check.py",
+      "sha256": "8227e8a6097db5979ebf0ecfdbc4ff54242c638386ba18962f848c2148556f27"
+    },
+    {
+      "bytes": 741,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source/tests/suites/sandbox_extensions_native/run.sh",
+      "sha256": "3178ceb1f181432fe88faf73702f803670f24a6b3a42290ff0fd4ca4a43a1a8c"
+    },
+    {
+      "bytes": 78,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source-commit.command.json",
+      "sha256": "0c5c1875fd8035bd4b65f318913ca3f62d3ef4c9cc253a95fd919051697bbb2a"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source-commit.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source-commit.stdout",
+      "sha256": "41c5129ee9ad9d5c24b794cf51593ff11f989ac9e24163cafe06bdc3dc852ad0"
+    },
+    {
+      "bytes": 1633,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source-hashes.json",
+      "sha256": "6795ca068a1f176b77a587f00392f063d35c3162fa27a92bb7ab59ec0320495d"
+    },
+    {
+      "bytes": 78,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source-status.command.json",
+      "sha256": "ca6f6a396b425e900f5c626619d2ef7a673c0783b28f56c1d9326b4929c258fe"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source-status.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 47,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/source-status.stdout",
+      "sha256": "952b3be9dc228462fb24bf8209c810cdbabfc1ac58f3030b4576baf56307c27b"
+    },
+    {
+      "bytes": 15003,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/summary.json",
+      "sha256": "f329af672e22fc854ee70247e8cafeaa3eadeb41d365ffad5793ac8054ac0959"
+    },
+    {
+      "bytes": 567,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/targets.json",
+      "sha256": "2bee1823a1a582117c469e69f1851d20450a76633ea0a031a678f809856cd618"
+    },
+    {
+      "bytes": 284,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/verify.command.json",
+      "sha256": "0b7a0d040fd2edf642e3712b44a7dfb67fe770440ac6185d7195e54bb782f9cd"
+    },
+    {
+      "bytes": 379,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/verify.stderr",
+      "sha256": "34d4e7687d6b3375a878ea78776790d387a61dd9e4199245b417f1640c720fa7"
+    },
+    {
+      "bytes": 0,
+      "path": "suites/sandbox_extensions_native/feasibility/artifacts/verify.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1267,
+      "path": "suites/sandbox_extensions_native/feasibility/events.jsonl",
+      "sha256": "b0031a1fd03df441d05b1652bb99bd37473b2c0506d42d34173e9091fc38e5ad"
+    },
+    {
+      "bytes": 650,
+      "path": "suites/sandbox_extensions_native/feasibility/report.json",
+      "sha256": "ee833fae8d8e7934dd14086a3a6ca879d5f8568f8f29fa212b73cbc236ac351b"
+    }
+  ],
+  "original_root": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-native-20261105"
+}

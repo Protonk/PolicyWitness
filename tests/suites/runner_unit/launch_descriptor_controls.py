@@ -73,7 +73,7 @@ def check(r, variant, mode):
             'mmap_nil': 'mmap:', 'mmap_failed': 'mmap:', 'pipe_1': 'ready pipe:',
             'pipe_2': 'policy pipe:', 'nosigpipe': 'F_SETNOSIGPIPE:',
             'get_flags': 'policy O_NONBLOCK:', 'nonblock': 'policy O_NONBLOCK:',
-            'pipe_cloexec': 'FD_CLOEXEC:', 'extension_dup': 'extension descriptor duplication failed'}
+            'pipe_cloexec': 'FD_CLOEXEC:', 'extension_dup': 'authority descriptor duplication failed'}
         assert expected[mode] in r['worker']['error'], 'wrong refusal boundary'
         assert 'pid' not in r['worker'] and not r['worker_receipt'] and not r['validator_receipt'] and not r['child_owner'], 'unexpected child'
         assert not r['readbacks'] and not r['validator']

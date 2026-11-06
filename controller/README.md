@@ -27,9 +27,8 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 [Cargo.toml](Cargo.toml) builds the controller and the top-level app helper
 [sbpl-check.rs](src/bin/sbpl-check.rs), which independently compiles SBPL.
 Meson builds [pw_probe_runner.c](tools/pw_probe_runner/pw_probe_runner.c) and
-[sb_api_validator.c](tools/sb_api_validator/sb_api_validator.c) and
-[pw_extension_issuer.c](tools/pw_probe_runner/pw_extension_issuer.c) into
-`pw-probe-runner`, `sb_api_validator` and `pw-extension-issuer`. Those native helpers live inside each
+[sb_api_validator.c](tools/sb_api_validator/sb_api_validator.c) into
+`pw-probe-runner` and `sb_api_validator`; the build installs a second copy of the worker as `pw-probe-runner-unentitled`, signed without supplied entitlements. Those native helpers live inside each
 XPC service's `Contents/MacOS/`, resolved relative to that service's bundle.
 The [runner README](../runner/README.md) describes their implementation.
 
@@ -37,9 +36,7 @@ The [runner README](../runner/README.md) describes their implementation.
 
 The controller uses the app's `Contents/MacOS/pw-runner-client` Swift helper for
 `NSXPCConnection` wiring. Rust owns orchestration and capture, and consumes the
-host's reply without directly managing its worker, validator or issuer. Issuer
-binary provenance uses the same observed-path/hash/baseline rules as the other
-helpers. After version admission, the controller checks native publication,
+host's reply without directly managing its workers or validator. Both worker variants have independent observed-path/hash/baseline provenance. After version admission, the controller checks native publication,
 local-reference association, fresh-read consistency and phase collection evidence
 before exposing derived disposition claims. These checks do not validate every
 response field's shape; the full test consumer owns that broader validation.
@@ -123,7 +120,7 @@ evidence. The built-in selection control uses an app root without an Info.plist.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 26, controller envelope 11, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
@@ -146,7 +143,7 @@ not manufacture one. `runner verify` uses this same path and admission order.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
 received/retained byte counts. Each stream retains at
-most <!-- span limits.controller_output.binary -->248 MiB<!-- /span -->;
+most <!-- span limits.controller_output.binary -->272 MiB<!-- /span -->;
 full output is collected first, so this is not a streaming allocation bound.
 `stdout_capture_error` identifies prefix loss and `stdout_parse_error` malformed
 untruncated JSON/UTF-8. Accepted stdin writes prove neither client reads nor XPC

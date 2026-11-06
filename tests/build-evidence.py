@@ -41,8 +41,10 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_provenance  # noqa: E402
 import signer_check  # noqa: E402
+import build_equipment  # noqa: E402
 
 
 def sha256_file(path: Path) -> str:
@@ -367,6 +369,26 @@ def main() -> int:
             svc_bin = svc_bundle / "Contents" / "MacOS" / svc_name
             if not svc_bin.exists():
                 continue
+            # The service seal already covers this resource. Check its binding
+            # to the actual signed helpers without regenerating or repairing it.
+            equipment_path = svc_bundle / "Contents/Resources/worker-equipment.json"
+            equipment_bytes = equipment_path.read_bytes()
+            if len(equipment_bytes) > build_equipment.INVENTORY_BYTES:
+                raise ValueError("service equipment inventory exceeds limit")
+            equipment = json.loads(equipment_bytes)
+            if equipment.get("schema_version") != 1 or equipment.get("runner_protocol") != build_equipment.RUNNER_PROTOCOL:
+                raise ValueError("unsupported service equipment inventory")
+            expected_roles = {row["role"]: row for row in equipment["workers"]}
+            if len(equipment["workers"]) != 2 or set(expected_roles) != set(build_equipment.ROLES):
+                raise ValueError("service equipment inventory requires both worker roles")
+            for role, relative in build_equipment.ROLES.items():
+                observed = build_equipment.signed_worker(svc_bundle, role, relative)
+                expected = expected_roles[role]
+                # XML serialization order is not entitlement semantics.
+                if plistlib.loads(expected["entitlements_xml"].encode()) != plistlib.loads(observed["entitlements_xml"].encode()):
+                    raise ValueError(f"{role} entitlement read-back differs from sealed inventory")
+                if {k: v for k, v in expected.items() if k != "entitlements_xml"} != {k: v for k, v in observed.items() if k != "entitlements_xml"}:
+                    raise ValueError(f"{role} signed bytes differ from sealed inventory")
             entitlements, err = entitlements_from_codesign(svc_bin)
             entry = {
                 "id": bundle_id or svc_name,
@@ -383,7 +405,7 @@ def main() -> int:
             entries.append(entry)
 
             # Sibling binaries inside the XPC bundle's MacOS dir (e.g.
-            # pw-probe-runner, sb_api_validator, pw-extension-issuer). These are signed
+            # pw-probe-runner, pw-probe-runner-unentitled, sb_api_validator). These are signed
             # individually before the XPC bundle seal is computed so
             # the bundle codesign records their hashes; we surface
             # them here so an evidence consumer can see the embedded

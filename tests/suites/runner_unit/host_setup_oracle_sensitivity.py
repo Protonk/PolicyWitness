@@ -331,12 +331,12 @@ def assert_scan(mapped, stage, start, length, expected_mapped):
 
 
 def assert_observations(variant, rows, results):
-    assert len(rows) == 23 and all(row["legacy_accepted"] for row in rows), rows
-    assert len([r for r in results if "case" in r]) == 23, results
+    assert len(rows) == 17 and all(row["legacy_accepted"] for row in rows), rows
+    assert len([r for r in results if "case" in r]) == 17, results
     assert len([r for r in results if "rejected_control" in r]) == 10, results
     for row in rows:
         mapped = row["mapping"]
-        if row["owner"] == "worker" and row["fault"] in ("unlink", "clear_cloexec"):
+        if (row["owner"] == "worker" and row["fault"] in ("unlink", "clear_cloexec")) or (row["owner"] == "authority" and row["fault"] == "unlink"):
             # These checked prerequisites now refuse before mmap. They must
             # leave no acquisition, unmap or observer-cleanup claim behind.
             assert all(mapped[key] == 0 for key in (
@@ -372,7 +372,7 @@ def assert_observations(variant, rows, results):
             expected = ["pw-probe-runner", "--shm-fd", "4" if variant == "wrong_shm_argv" else "3",
                         "--ready-fd", "4", "--step-count", "0"]
             if row["owner"] == "worker_token":
-                expected += ["--extension-fd", "5"]
+                expected += ["--authority-fd", "5"]
             assert row["argv"] == expected, row
             ready = row["fd_modes"]["4"]
             assert ready["oracle_fcntl_rc"] >= 0 and ready["oracle_fcntl_errno"] == 0, row

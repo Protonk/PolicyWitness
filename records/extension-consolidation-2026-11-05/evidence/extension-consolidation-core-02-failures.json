@@ -1,0 +1,212 @@
+{
+  "archive": "extension-consolidation-core-02-failures.tar.gz",
+  "artifact_integrity": {
+    "app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+    "harness_errors": [],
+    "report_dir": "artifact-integrity",
+    "unchanged": true,
+    "valid_before": true
+  },
+  "bytes": 393543,
+  "case_outcome_counts": {
+    "fail": 1
+  },
+  "case_results": [
+    {
+      "context": "standard",
+      "id": "runner_unit/pwrunner_core_unit_executable",
+      "reason": "PWRunnerCoreTests exited rc=134; tail: 1    libswiftCore.dylib                 0x000000019a881bd0 swift_beginAccess + 84\n2    PWRunnerCoreTests                  0x00000001029748f4 finish #1 (_:) in ActorScheduler.observeTermination(_:remainingMs:) + 2024\n3    PWRunnerCoreTests                  0x0000000102972780 ActorScheduler.observeTermination(_:remainingMs:) + 4244\n4    PWRunnerCoreTests                  0x000000010296d384 ActorScheduler.walkSchedule(collect:) + 3108\n5    PWRunnerCoreTests                  0x0000000102969100 ActorScheduler.run(collect:) + 5016\n6    PWRunnerCoreTests                  0x0000000102969038 static ActorScheduler.run(_:processCalls:collect:) + 156\n7    PWRunnerCoreTests                  0x00000001026ea08c runTerminationGateBoundaryControl() + 1536\n8    PWRunnerCoreTests                  0x00000001026eb300 closure #1 in closure #1 in runActorSchedulerTests(_:) + 20\n9    PWRunnerCoreTests                  0x00000001028bdbe0 TestKit.run(_:_:) + 356\n10   PWRunnerCoreTests                  0x00000001026eae68 closure #1 in runActorSchedulerTests(_:) + 112\n11   PWRunnerCoreTests                  0x00000001028bd9e0 TestKit.group(_:_:) + 496\n12   PWRunnerCoreTests                  0x00000001026ead10 runActorSchedulerTests(_:) + 312\n13   PWRunnerCoreTests                  0x00000001028f99d0 main + 560\n14   dyld                               0x0000000186d5e994 start + 6992\nFatal access conflict detected.",
+      "state": "completed",
+      "status": "fail",
+      "system_sleep_ms": 0
+    }
+  ],
+  "completion": {
+    "completed": 1,
+    "selected": 1,
+    "skipped": 0,
+    "unrun": 0
+  },
+  "files": [
+    {
+      "bytes": 5758,
+      "path": "artifact-integrity/after.json",
+      "sha256": "5c5fc9b617df267dd746199339429144edbcc7487c2bea3cec26c42e0a8aada7"
+    },
+    {
+      "bytes": 5758,
+      "path": "artifact-integrity/before.json",
+      "sha256": "5c5fc9b617df267dd746199339429144edbcc7487c2bea3cec26c42e0a8aada7"
+    },
+    {
+      "bytes": 3,
+      "path": "artifact-integrity/changes.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "bytes": 9693,
+      "path": "artifact-integrity/inspection.json",
+      "sha256": "c5ec6319f442faa9d262d1c3ca2c42eb3a2397af63aaf1013797241e989f25ff"
+    },
+    {
+      "bytes": 5221,
+      "path": "dispatch.json",
+      "sha256": "ebc8288689630e652c8dfe93d4c94bffe28939a8869238b49532e6c01b52f7f7"
+    },
+    {
+      "bytes": 2833,
+      "path": "events.jsonl",
+      "sha256": "8df2c8fba7b77a11580dfe98d09b9222b93784f3f5839419c97832cafa63b666"
+    },
+    {
+      "bytes": 215,
+      "path": "owner.json",
+      "sha256": "837541d5c6f6168233e484fe7ac8843bd98bd02d3551251a7465e2e3f81ea452"
+    },
+    {
+      "bytes": 96693,
+      "path": "plan.json",
+      "sha256": "6833402180876e0a4ca09f963e845a7793aacb670ddedf54ef0d120d05083187"
+    },
+    {
+      "bytes": 207511,
+      "path": "run.json",
+      "sha256": "b3644eb6282316755ade0ce9561ba9998f05b3f2ea69eef2dfaa1db2589ca6c7"
+    },
+    {
+      "bytes": 23,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/combined-phases-late-write.txt",
+      "sha256": "2b70208a51bcd1df25b2a9790bd03be47a05b9c81f7448852c277e9e38449d7e"
+    },
+    {
+      "bytes": 55,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/combined-phases-test-cleanup.json",
+      "sha256": "af0a1f1edfab819306fc6561744dae1d012ce86fed7ac7df086af3b9d7431c5f"
+    },
+    {
+      "bytes": 8865,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/combined-phases.json",
+      "sha256": "960501a72d8eb6b46b65c3fc27263831a5ff5a94a68dfd79fc363f594a1048c0"
+    },
+    {
+      "bytes": 1029,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/lifecycle-fixture-build.log",
+      "sha256": "d8382334912e21a0be5d7b71d5b2378cf6da1fda9561c2ed5416a20c18b4d303"
+    },
+    {
+      "bytes": 56489,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/pwrunner_core_tests.log",
+      "sha256": "f5f7d909f419815ab718d72cfb1092048c71469bba6677b32b516c48a128834a"
+    },
+    {
+      "bytes": 36363,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/response_shape.candidate.json",
+      "sha256": "c252f21e56d9de76eadf0c5216a04a7516b4cd210891ae33550ffeb57d8eb418"
+    },
+    {
+      "bytes": 34776,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture",
+      "sha256": "bcae3ff9c13aaae09080704ca75b554c6dfc76c89a59cc0e9e20f2cd0cf24c3b"
+    },
+    {
+      "bytes": 71976,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.apply-failure",
+      "sha256": "5a245e27207c4900529d92d948ea4c4e6cd4a683a97bb20c82ebed9517e6370a"
+    },
+    {
+      "bytes": 72056,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-arith",
+      "sha256": "11b3e57c5f8f6cce0a92c081e80cb9e16b41b73eeee44bde5882022015e6a1e4"
+    },
+    {
+      "bytes": 72472,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-expire2",
+      "sha256": "f0301597dee5b85309d54f04b123ef4310b25bd2e7d9fcf78ce3f97496c5baf7"
+    },
+    {
+      "bytes": 72024,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-failure",
+      "sha256": "b55921a73ff33272c4570f6ea3d893602fa03c09b366a574fc220196744ff61e"
+    },
+    {
+      "bytes": 72032,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-failure-later",
+      "sha256": "194193eb8071f92c436762d6da4bb2104ffe0c0dead2ad723a4117c23e959b41"
+    },
+    {
+      "bytes": 72424,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-phase2",
+      "sha256": "2f9e27ecdece53cd0609674496b938735b9a51391a08c1eaa44621c0f2d13db0"
+    },
+    {
+      "bytes": 34752,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-setup-failure",
+      "sha256": "584a16771c44734a037c7220a6d0a9ffc336886d3842c23f02849e97cb7ee84f"
+    },
+    {
+      "bytes": 72024,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-sticky",
+      "sha256": "b3b4353f96395966b11a89e9b79d19774697c7b7d4a71933bfb658827b744c5d"
+    },
+    {
+      "bytes": 72016,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-unrepresentable",
+      "sha256": "39e888851030dc40acc45afa177b51708d66d3e35bea8e66d4f347e4d21823e0"
+    },
+    {
+      "bytes": 72008,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.clock-zero-factor",
+      "sha256": "2e996590f85ee0d75f2a2a55fac550bf5e855796097d6696175f625b9ef611f1"
+    },
+    {
+      "bytes": 34792,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.identity-mismatch",
+      "sha256": "f88284cbdc243352a58e2a4109b58fa4ea6614400d552441e55597c1d9bee864"
+    },
+    {
+      "bytes": 72056,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.map-failure",
+      "sha256": "a8fa85db1c48b850bf4f4fdcc8ebbac7ad880a0adf0b09984b72e4a882089cd7"
+    },
+    {
+      "bytes": 71800,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.params-CREATE",
+      "sha256": "b683cfa48c1dd637de4010f6dfed7af84fdd72baeadd152b3bc27f9a762db972"
+    },
+    {
+      "bytes": 72000,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.params-SET",
+      "sha256": "d5b0f0a3cd32352ef70a30c0d4a2dd7b2750312a7ece47068a656bd86105abfc"
+    },
+    {
+      "bytes": 72056,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.read-failure",
+      "sha256": "190b81182cc97428e6a847f642cc8e1ca32861faf23e0a16ed63fb1ac0ccfdfc"
+    },
+    {
+      "bytes": 34864,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.validator",
+      "sha256": "fe9fa8803a2011fd98e0d4b2e2514974ee17fb2d572d4e2ee55944c721616630"
+    },
+    {
+      "bytes": 72056,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/artifacts/worker-lifecycle-fixture.worker-limits",
+      "sha256": "b2a9381ba3547216b7d8d0c315838ab95009bda72d496cc42555aa811c842576"
+    },
+    {
+      "bytes": 2833,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/events.jsonl",
+      "sha256": "8df2c8fba7b77a11580dfe98d09b9222b93784f3f5839419c97832cafa63b666"
+    },
+    {
+      "bytes": 2031,
+      "path": "suites/runner_unit/pwrunner_core_unit_executable/report.json",
+      "sha256": "056db4d0853bec6dd16fa3e098df5f1b7e7bbe148c708b24afc547935f54cab1"
+    }
+  ],
+  "original_root": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-core-02",
+  "ownership": "Identified copies do not relocate active ownership or establish resource settlement.",
+  "run_id": "20261106T143302Z_13dcbf63",
+  "scope": "Run metadata and complete nonpassing case observations; passed case raw output omitted.",
+  "sha256": "80dbb3126f349cb5f7aba553384cb98973fd249d167c6284321a4abe3f46530d"
+}

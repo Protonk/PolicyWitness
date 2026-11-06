@@ -9,7 +9,7 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 
 use crate::app_layout::{
-    SHIPPED_ISSUER, SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
+    SHIPPED_SERVICE, SHIPPED_UNENTITLED_WORKER, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
 };
 use crate::evidence::{self, EvidenceManifest};
 use crate::request_patch::RequestError;
@@ -49,8 +49,8 @@ pub struct RunnerTarget {
     pub worker_entitlements: Option<RunnerEntitlements>,
     pub validator_signature: Option<RunnerSignature>,
     pub validator_entitlements: Option<RunnerEntitlements>,
-    pub issuer_signature: Option<RunnerSignature>,
-    pub issuer_entitlements: Option<RunnerEntitlements>,
+    pub unentitled_worker_signature: Option<RunnerSignature>,
+    pub unentitled_worker_entitlements: Option<RunnerEntitlements>,
 }
 
 #[derive(Serialize, Clone)]
@@ -67,8 +67,8 @@ pub struct RunnerProvenance {
     runner_worker_entitlements: Option<RunnerEntitlements>,
     runner_validator_signature: Option<RunnerSignature>,
     runner_validator_entitlements: Option<RunnerEntitlements>,
-    runner_issuer_signature: Option<RunnerSignature>,
-    runner_issuer_entitlements: Option<RunnerEntitlements>,
+    runner_unentitled_worker_signature: Option<RunnerSignature>,
+    runner_unentitled_worker_entitlements: Option<RunnerEntitlements>,
 }
 
 /// Controller-owned keys are consumed before the worker request is delivered.
@@ -351,8 +351,8 @@ fn builtin_runner_target(
         worker_entitlements,
         validator_signature: None,
         validator_entitlements,
-        issuer_signature: None,
-        issuer_entitlements: Some(helper_entitlements(&SHIPPED_ISSUER)),
+        unentitled_worker_signature: None,
+        unentitled_worker_entitlements: Some(helper_entitlements(&SHIPPED_UNENTITLED_WORKER)),
     })
 }
 
@@ -514,8 +514,8 @@ fn resolve_external_target(
         worker_entitlements: record.worker_entitlements.clone(),
         validator_signature: record.validator_signature.clone(),
         validator_entitlements: record.validator_entitlements.clone(),
-        issuer_signature: record.issuer_signature.clone(),
-        issuer_entitlements: record.issuer_entitlements.clone(),
+        unentitled_worker_signature: record.unentitled_worker_signature.clone(),
+        unentitled_worker_entitlements: record.unentitled_worker_entitlements.clone(),
     })
 }
 
@@ -536,8 +536,8 @@ pub fn runner_provenance_from_target(target: &RunnerTarget) -> RunnerProvenance 
         runner_worker_entitlements: target.worker_entitlements.clone(),
         runner_validator_signature: target.validator_signature.clone(),
         runner_validator_entitlements: target.validator_entitlements.clone(),
-        runner_issuer_signature: target.issuer_signature.clone(),
-        runner_issuer_entitlements: target.issuer_entitlements.clone(),
+        runner_unentitled_worker_signature: target.unentitled_worker_signature.clone(),
+        runner_unentitled_worker_entitlements: target.unentitled_worker_entitlements.clone(),
     }
 }
 
@@ -627,8 +627,13 @@ mod tests {
             worker_entitlements: Some(ent(ent_keys)),
             validator_signature: None,
             validator_entitlements: Some(ent(&[])),
+            unentitled_worker_sha256: None,
+            worker_equipment_inventory: None,
+            source_worker_equipment_inventory: None,
             issuer_signature: None,
             issuer_entitlements: None,
+            unentitled_worker_signature: None,
+            unentitled_worker_entitlements: None,
         }
     }
 

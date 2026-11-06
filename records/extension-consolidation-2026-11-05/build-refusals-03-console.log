@@ -1,0 +1,197 @@
+==> [selection] preflight/build_refusal_controls
+==> [preflight/build_refusal_controls] start
+==> [preflight/build_refusal_controls] drive the unchanged build script through every baseline refusal and observe the operation each one protects
+full/none: status 0; protected operations checked
+full/native_builder_required: status 2; protected operations checked
+full/missing_tree_input: status 2; protected operations checked
+full/checkout_busy: status 2; protected operations checked
+full/lock_claim_invalid: status 2; protected operations checked
+full/environment_witness_missing: status 2; protected operations checked
+full/environment_witness_changed: status 2; protected operations checked
+full/sdk_unavailable: status 2; protected operations checked
+full/sdk_version_unreadable: status 2; protected operations checked
+full/builddir_stamp_missing: status 2; protected operations checked
+full/builddir_stamp_invalid: status 2; protected operations checked
+full/builddir_target_mismatch: status 1; protected operations checked
+full/cargo_build_dir_redirected: status 1; protected operations checked
+full/cargo_build_dir_unknown: status 2; protected operations checked
+full/cargo_configuration_unresolved: status 2; protected operations checked
+full/cargo_environment_conflict: status 1; protected operations checked
+full/fresh_removal_failed: status 1; protected operations checked
+full/missing_cargo_output: status 2; protected operations checked
+full/cargo_artifact_elsewhere: status 2; protected operations checked
+full/cargo_failed: status 101; protected operations checked
+full/cargo_target_reused: status 1; protected operations checked
+full/cargo_judgment_unknown: status 2; protected operations checked
+full/meson_ninja_missing: status 2; protected operations checked
+full/ninja_old: status 2; protected operations checked
+full/meson_policy: status 1; protected operations checked
+full/meson_target: status 1; protected operations checked
+full/meson_failed: status 1; protected operations checked
+full/native_sources_unreadable: status 2; protected operations checked
+full/missing_native_output: status 2; protected operations checked
+full/output_target_mismatch: status 1; protected operations checked
+full/stale_identity_presign: status 1; protected operations checked
+full/worker_identity_mismatch: status 1; protected operations checked
+full/sign_target_not_macho: status 2; protected operations checked
+full/codesign_failed: status 1; protected operations checked
+full/evidence_failed: status 2; protected operations checked
+full/provenance_required_unknown: status 2; protected operations checked
+full/cache_path_unsafe: status 2; protected operations checked
+full/verify_failed: status 1; protected operations checked
+partial/none: status 0; protected operations checked
+partial/native_builder_required: status 2; protected operations checked
+partial/missing_tree_input: status 2; protected operations checked
+partial/checkout_busy: status 2; protected operations checked
+partial/lock_claim_invalid: status 2; protected operations checked
+partial/environment_witness_missing: status 2; protected operations checked
+partial/environment_witness_changed: status 2; protected operations checked
+partial/sdk_unavailable: status 2; protected operations checked
+partial/sdk_version_unreadable: status 2; protected operations checked
+partial/builddir_stamp_missing: status 2; protected operations checked
+partial/builddir_stamp_invalid: status 2; protected operations checked
+partial/builddir_target_mismatch: status 1; protected operations checked
+partial/cargo_build_dir_redirected: status 1; protected operations checked
+partial/cargo_build_dir_unknown: status 2; protected operations checked
+partial/cargo_configuration_unresolved: status 2; protected operations checked
+partial/cargo_environment_conflict: status 1; protected operations checked
+partial/fresh_removal_failed: status 1; protected operations checked
+partial/missing_cargo_output: status 2; protected operations checked
+partial/cargo_artifact_elsewhere: status 2; protected operations checked
+partial/cargo_failed: status 101; protected operations checked
+partial/cargo_target_reused: status 1; protected operations checked
+partial/cargo_judgment_unknown: status 2; protected operations checked
+partial/meson_ninja_missing: status 2; protected operations checked
+partial/ninja_old: status 2; protected operations checked
+partial/meson_policy: status 1; protected operations checked
+partial/meson_target: status 1; protected operations checked
+partial/meson_failed: status 1; protected operations checked
+partial/native_sources_unreadable: status 2; protected operations checked
+partial/missing_native_output: status 2; protected operations checked
+partial/output_target_mismatch: status 1; protected operations checked
+partial/stale_identity_presign: status 1; protected operations checked
+partial/worker_identity_mismatch: status 1; protected operations checked
+partial/sign_target_not_macho: status 2; protected operations checked
+partial/codesign_failed: status 1; protected operations checked
+partial/evidence_failed: status 2; protected operations checked
+partial/provenance_required_unknown: status 2; protected operations checked
+partial/cache_path_unsafe: status 2; protected operations checked
+partial/verify_failed: status 1; protected operations checked
+sequence/shim_install_detector: completed
+sequence/builddir_toolchain_changed: completed
+sequence/provenance_probe_failed: completed
+sequence/fresh_sequence: completed
+sequence/replaced_cached_output: completed
+sequence/release_entrypoints: completed
+sequence/lock_lifetime: completed
+sequence/cargo_configuration_oracle: completed
+sequence/cargo_selection_sequence: completed
+sequence/sdk_requests: completed
+sequence/cargo_package_target_guard: completed
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/preflight/opt_in/build_refusals.py", line 3082, in <module>
+    test_build_refusals(Path(sys.argv[1]).resolve(), sys.argv[2])
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/preflight/opt_in/build_refusals.py", line 3050, in test_build_refusals
+    build = function(co, 'full')
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/preflight/opt_in/build_refusals.py", line 2012, in control_release_battery
+    assert status == 0, stderr[-4000:]
+           ^^^^^^^^^^^
+AssertionError: ate: three matched rounds of one, three and eight actors with a constant aggregate workload, the aggregate action and phase limits over eight actors, and the eight-actor re-delegation and calibration shapes complete with at least a quarter of every actor-form allowance remaining at the largest charged interval",
+                "id": "actor_timing_qualification",
+                "requires": [
+                  "app"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/extension_boundaries.sh"
+                ],
+                "description": "Native issuer faults and consume/release interruption with independent transient-token confinement and descriptor observations",
+                "id": "extension_boundaries",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/extension_combinations.sh"
+                ],
+                "description": "Matrix-driven issuer publication/exit, interrupted delivery and same/cross-phase native failures with token confinement",
+                "id": "extension_combinations",
+                "requires": [
+                  "app",
+                  "clang"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/opt_in/actors_byoxpc.sh"
+                ],
+                "default": false,
+                "description": "One owned BYOXPC session: signed mixed actor equipment, substitution controls, lifecycle, directory effects, ordinary phases, maximal replies, re-delegation calibration, inherited restriction, provenance, missing-role refusal and verified service cleanup",
+                "id": "actors_byoxpc",
+                "requires": [
+                  "app",
+                  "identity",
+                  "clang",
+                  "gui"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/opt_in/path_query_observations.sh"
+                ],
+                "default": false,
+                "description": "Exploratory shipped-validator path queries against signed native targets, independent file effects, path resolution and same-worker unlink/recreate",
+                "id": "path_query_observations",
+                "requires": [
+                  "app",
+                  "clang",
+                  "identity"
+                ]
+              },
+              {
+                "command": [
+                  "bash",
+                  "tests/suites/witness_contract/opt_in/path_query_integrated.sh"
+                ],
+                "default": false,
+                "description": "Observe extra native queries against actual PW workers while preserving host-planned replies and independent file effects",
+                "id": "path_query_integrated",
+                "requires": [
+                  "app"
+                ]
+              }
+            ],
+            "include": [
+              "runner_validator_failure/validator_decode_failure_reports_degraded",
+              "runner_validator_failure/validator_unavailable_reports_degraded"
+            ],
+            "requires": [
+              "app",
+              "clang"
+            ]
+          }
+        }
+      },
+      "catalog_sha256": "424b4e02ea2344c2c6f913ee79bd074823d6d48e72f628ef1c3aae96e292bac7",
+      "reader_sha256": "877c853db5c3f37784a592dc5237e4485e469809f531ef345b3a6ce1e56f2d06"
+    }
+  },
+  "extraction_dir": "/private/tmp/pw-release-7rdby6f4",
+  "ok": false,
+  "schema_version": 3,
+  "sha256_after": "f3995d221a4056de1c687163176f9a1e2db78c46cd063efb540d07b2c8784407",
+  "sha256_before": "f3995d221a4056de1c687163176f9a1e2db78c46cd063efb540d07b2c8784407"
+}
+
+
+FAIL: [preflight/build_refusal_controls] build refusal controls failed (exit 1; log: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-build-refusals-03/suites/preflight/build_refusal_controls/artifacts/assertions.log)
+HARNESS: [preflight] suite_exit: case command exited with status 1
+Test run summary: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-build-refusals-03/run.json

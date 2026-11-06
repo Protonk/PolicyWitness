@@ -16,7 +16,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-from check_extensions import capture  # script directory supplies this module
+from witness_capture import capture
 from contract import REQUEST_SCHEMA
 from consumer import validate
 from lifecycle_oracle import check_record
@@ -91,6 +91,14 @@ def assert_composition(envelope, runner, spec, resources, prefix, failed_actor=N
     for expected in spec['actors']:
         actual = got_actors[expected['actor_id']]
         assert actual['mode'] == expected['sandbox']['mode']
+        equipment=actual['equipment']
+        assert equipment['requested']==expected['equipment'] and equipment['resolved']==expected['equipment']
+        assert equipment['requirements_status']=='satisfied'
+        if expected['actor_id']==failed_actor:
+            assert equipment['execution']['status']=='unobserved' and equipment['execution']['reason']=='setup_unavailable'
+        else:
+            assert equipment['execution']['status']=='matched' and equipment['execution']['eligible']
+            assert equipment['execution']['pid']==actual['launch']['pid']
         assert actual['subprocess']['reaped'] is True and actual['subprocess']['exit_code'] == 0
         assert actual['subprocess']['pid'] == actual['launch']['pid']
         assert actual['launch']['parent_pid'] == runner['pid']
@@ -101,8 +109,10 @@ def assert_composition(envelope, runner, spec, resources, prefix, failed_actor=N
                 assert actual['setup_status'] == 'setup_failed' and actual['applied'] is False and actual['application_count'] == 0
             else:
                 assert actual['setup_status'] == 'applied' and actual['applied'] is True and actual['application_count'] == 1
+                assert actual['application']=={'state':'observed','basis':'applied_publication'}
         else:
             assert actual['setup_status'] == 'unapplied_declared' and actual['application_count'] == 0
+            assert actual['application']=={'state':'not_requested','basis':'unapplied_declaration'}
         policy = expected['sandbox'].get('policy', {})
         capture = actual.get('compiled_profile')
         if policy.get('capture_compiled_profile'):

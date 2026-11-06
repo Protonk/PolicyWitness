@@ -1,0 +1,36 @@
+{
+  "status": "unresolved_container_cleanup",
+  "prototype": {
+    "owner_record": "/private/tmp/pw-equipment-prototype-20261105-02/container-ownership.json",
+    "owner_record_sha256": "7ea19b33c701990fd39040a795e95a002f942ebe9c7a1493a89139b91ebc06ab",
+    "identifier": "com.policywitness.test.equipment-5baed78c80dc4eeeb2b95b9f10113600",
+    "container": "/Users/raccoon/Library/Containers/com.policywitness.test.equipment-5baed78c80dc4eeeb2b95b9f10113600",
+    "before": false,
+    "after": true,
+    "removed": false,
+    "remove_command": {
+      "argv": [
+        "/bin/rm",
+        "-rf",
+        "/Users/raccoon/Library/Containers/com.policywitness.test.equipment-5baed78c80dc4eeeb2b95b9f10113600"
+      ],
+      "rc": 1,
+      "deadline": false,
+      "supervisor_pid": 85845
+    },
+    "remove_stderr": "rm: /Users/raccoon/Library/Containers/com.policywitness.test.equipment-5baed78c80dc4eeeb2b95b9f10113600/.com.apple.containermanagerd.metadata.plist: Operation not permitted\nrm: /Users/raccoon/Library/Containers/com.policywitness.test.equipment-5baed78c80dc4eeeb2b95b9f10113600/Data: Operation not permitted\nrm: /Users/raccoon/Library/Containers/com.policywitness.test.equipment-5baed78c80dc4eeeb2b95b9f10113600: Operation not permitted\n",
+    "child_processes": "All actor direct children observed cleanly reaped in prototype02.",
+    "next_action": "Retain the original ownership receipt. Remove only this uniquely created container from an environment with the required macOS authorization, then record observed absence. Do not infer settlement from a requested removal."
+  },
+  "preexisting_test_container": {
+    "kind": "restricted-worker-control",
+    "workspace": "/private/tmp/pw-byoxpc-8p7kcxz0/restricted-worker",
+    "identifier": "com.policywitness.test.restricted-worker",
+    "container": "/Users/raccoon/Library/Containers/com.policywitness.test.restricted-worker",
+    "container_before": true,
+    "container_after": true,
+    "container_removed": false,
+    "removal_error": "rm: /Users/raccoon/Library/Containers/com.policywitness.test.restricted-worker/.com.apple.containermanagerd.metadata.plist: Operation not permitted\nrm: /Users/raccoon/Library/Containers/com.policywitness.test.restricted-worker/Data: Operation not permitted\nrm: /Users/raccoon/Library/Containers/com.policywitness.test.restricted-worker: Operation not permitted"
+  },
+  "copies": "Evidence archives preserve receipts; they do not move active cleanup ownership."
+}

@@ -184,46 +184,54 @@ partitions their union, preserving each array's relative order. Consumers join
 disposition entries by action identity; an index in `steps` alone is not the
 worker slot index when interventions are present.
 
+### Actor setup, equipment and scheduling evidence
+
+`authority_setup` keeps host run, per-region, private-custody and per-worker
+accounts separate. Each operation cell owns its publication, native result,
+validation or memory observation and causal setup/cleanup role. Primary setup
+failure never overwrites an independently published close or unmap failure.
+No publication means no eligible value; an unpublished worker decision can
+coexist with earlier eligible cells. Shared erasure requires established owner
+quiescence; private custody cleanup has its own lifetime. Byte erasure, native
+release, `done` and reap are different facts.
+
+`actors[].application` is a state/basis assessment, not a duplicated apply return.
+Unapplied mode is `not_requested`; a proven never-launched or terminal pre-apply
+branch supports `not_attempted`. An eligible applied or native apply-failure
+publication supports `observed`; missing publication is otherwise `unobserved`.
+Host setup timeout does not establish nonattempt and cannot be undone by later
+application facts. Required authority refusal excludes policy processing locally;
+missing symbols and auxiliary reporting failures retain their continuing flow.
+
+Equipment tables distinguish inspected packaged or explicitly instrumented
+artifacts, per-actor requirements and owned live code. Boolean true keys must
+satisfy requirements in the actual live read-back too. An inspection failure
+withholds every activation, arrival, collection, completion and release while
+preserving setup/application and cleanup facts. A prior independent scheduling
+cancellation remains recorded; an equipment failure does not replace it.
+`preparation_failure` is restricted to admitted execution refused before any
+actor launch. Its empty observation arrays may retain unique bounded declarative
+phase/action IDs; this narrow exception does not invent worker results.
+
+A source actor's `owned_reap` records the native PID/return/raw status, observer
+stage, unbroken ownership, prior departure-request flag and source-scoped
+`capture_ordinal`. Phase `activation_observation` records its source-scoped
+ordinal and optional monotonic timestamp. A gate's `observation` contains only
+an ordinal reference to the source's owned reap; its own `capture_ordinal`
+closes the ordering account. Satisfaction requires the source's final activation
+ordinal before the reap before gate closure, matching native status and PID,
+natural ownership without a prior departure request, eligible timestamps and a
+bounded, clocked wait. Completion and clean exit are not prerequisites: a natural
+abnormal reap can establish termination. Cleanup-only reap cannot.
+
+Clock failure can leave native facts or activation observations without a
+timestamp. Retain them; they cannot satisfy a gate requiring temporal support.
+Gate timeout or ownership loss stays ineligible after later cleanup. Neither
+successful termination ordering nor a satisfied gate proves native consumption,
+authority persistence or fresh access. The [wire contract](../docs/CONTRACT.md#actor-evidence-ownership)
+owns the field relationships.
+
 ### Native extension evidence
-
-`extensions[]` records target preparation, issuance and worker delivery
-independently. It carries a specimen-local `token_ref`, the fixed
-`com.apple.app-sandbox.read` class, submitted and resolved targets, preparation
-status/errno and the prepared target's device, inode, mode, UID and GID. Resolution
-and metadata are host observations before issuance; neither establishes that a
-later open reached the same object. Preparation failure retains its status and
-withholds the unavailable identity or resolved path. It does not fabricate a
-native issuance call.
-
-The nested `issuer` records its executable, PID, authority IDs, pre-call boundary,
-result publication, native pointer nonnullness, errno and bounded token length,
-plus independent spawn/wait/termination/reap observations. The pointer and token
-bytes are not reply fields. `issuance_status: issued` requires a complete bounded
-native result and a clean, confirmed issuer reap; abnormal or unconfirmed cleanup
-withholds delivery. `issuer_abnormal_exit` retains a published bounded native
-token result alongside a confirmed nonzero exit or signal; it does not mean the
-publication was missing. Timeout and wait-error statuses retain their independent
-cleanup observations. `delivery_status` and `delivered_bytes` describe the worker's
-published channel observation separately from issuance. `host_buffer_erased`
-records clearing the host's mapping, not proof that every process or native
-library has erased every copy.
-
-Ordinary worker departures after channel acceptance erase the full fixed token
-buffer. Terminal publication follows that erasure; cancellation and early returns
-preserve their existing publication boundaries. Fatal termination or interruption
-inside a native call need not reach cleanup. The worker retains its borrowed
-mapping until exit. Erasure does not call native extension release, which remains
-an explicit specimen action; the host's separate erasure observation cannot prove
-worker cleanup.
-
-A worker delivery failure publishes `delivery_status` as `channel_rejected` or
-`local_setup_failed` beside a `delivery_failure` account: `stage` names the
-first failing preparation stage, `native_rc` and `errno` are that call's return
-and the errno saved immediately after it when the stage made a native call,
-and `cleanup_stage` with `cleanup_errno` record a `descriptor_close` or `unmap`
-failure observed while undoing earlier setup. A cleanup failure never changes
-the status. The account is present exactly for those two statuses. Delivery
-success still establishes neither consumption nor effective access.
 
 The actor form (`execution_form: actors`) has no `extensions[]` and no singular
 worker: `actors[]` carries each actor's mode, setup status, policy hashes
@@ -254,44 +262,7 @@ not native API unavailability.
 
 <!-- BEGIN SHARED EXTENSION STATUSES -->
 
-Issuance and delivery are separate observations. Only `issued` makes the token
-channel eligible for worker delivery. Other issuance statuses withhold it;
-none establishes consumption, effective permission or revocation. Read spawn,
-termination, wait and reap fields independently: a status does not substitute
-for cleanup evidence.
-
-| Issuance status | Publication and supported meaning |
-| --- | --- |
-| `not_started` | Issuance did not start, including when target preparation failed. No issuer result is supplied. |
-| `issuer_unavailable` | The selected issuer executable was unavailable. Preparation and issuance did not start; capability refusal prevents a worker run. |
-| `channel_setup_failed` | Host setup of the transient channel or its descriptor failed before issuer launch. No issuer result is supplied. |
-| `spawn_failed` | Spawn setup or `posix_spawn` failed. The issuer record retains the spawn failure; no child PID or native result is inferred. |
-| `issuer_timeout` | The issuer wait expired without a more specific publication status. Publication may be present; termination requests and final reap observations remain separate. |
-| `issuer_wait_error` | The issuer wait failed without a more specific publication status. Publication may be present; the wait error does not establish child exit. |
-| `issuer_result_missing` | The issuer was reaped without result publication. `result_published` is false, with no native result, errno, token length or published authority IDs. A pre-call marker and exit/signal observation may remain. |
-| `issuer_abnormal_exit` | A bounded token result was published, but the issuer was reaped with a nonzero exit or signal. Publication is retained and delivery withheld. |
-| `native_api_unavailable` | The issuer published that at least one required extension API (issue, consume or release) was unavailable, without a native call. Capability refusal prevents a worker run; cleanup remains independently recorded. |
-| `native_refusal` | The issuer published a null native return and its errno. This observation does not establish why issuance was refused or whether cleanup was clean. |
-| `token_oversized` | A nonnull native return supplied an empty token or no terminator within the token buffer bound. The issuer published that rejection; no deliverable token length is supplied. |
-| `invalid_transport` | Publication was observed, but its header, state/marker relationship or token length failed host validation. Fields from an invalid header are not treated as native results. |
-| `issued` | The issuer published a nonnull native result with a bounded token length and was cleanly reaped. The worker still must validate the channel and publish its own delivery observation. |
-
-Published API unavailability, native refusal, token rejection or invalid transport
-has its own issuance status even if the host wait also timed out or failed.
-For a valid bounded token result, a wait timeout or error withholds delivery and
-keeps that wait status; clean and abnormal reaps distinguish `issued` from
-`issuer_abnormal_exit`.
-
-| Delivery status | Worker observation and supported meaning |
-| --- | --- |
-| `not_observed` | No worker delivery publication was collected. This includes no worker or interruption before publication; it does not negate completed issuance. |
-| `delivered` | The worker published successful channel validation; `delivered_bytes` matches the issued token length. This does not establish a consume call or result. |
-| `token_unavailable` | The worker published that no token descriptor was supplied. No delivered byte count is supplied. |
-| `channel_rejected` | The worker inspected the channel and rejected it. `delivery_failure.stage` is `channel_size` (a successful `fstat` reported an object smaller than the channel; `native_rc` 0 and no errno), `channel_header` (magic, completion or status) or `channel_token` (length, terminator or embedded NUL). Format rejections carry no native result. No delivered byte count is supplied. |
-| `local_setup_failed` | A local native call before channel validation failed. `delivery_failure.stage` is `core_limit` (`setrlimit`), `descriptor_metadata` (`fstat`), `mapping` (`mmap`) or `descriptor_close` (`close`), with that call's `native_rc` and the errno saved immediately after it. The channel contents were not judged. No delivered byte count is supplied. |
-| `native_api_unavailable` | The worker published that consume or release API support was unavailable. No delivered byte count is supplied. |
-
-In the actor form, host custody and explicit transfer have their own statuses.
+Host custody and explicit transfer have their own statuses.
 A custody status describes the host's acceptance of the bytes an actor
 published after a nonnull native issue; a transfer status describes the host's
 answer to the sending actor and is never a native result.
@@ -302,7 +273,8 @@ answer to the sending actor and is never a native result.
 | `issued_uncustodied` | The native issue returned nonnull but the host rejected, timed out on or never saw the publication; the token's transfers read `custody_unavailable`. |
 | `null` | The native issue returned NULL with its errno. No custody exists. |
 | `unavailable` | The issue was not called; the event's `unavailable_reason` says why. |
-| `not_reached` | The issue action never published a result. |
+| `not_reached` | Independent progress and slot evidence supports that the issue action's boundary was not reached. |
+| `unresolved` | No eligible complete result establishes the issue state; absence of publication alone does not prove the action was never called. |
 
 | Transfer status | Host observation and supported meaning |
 | --- | --- |
@@ -315,14 +287,17 @@ answer to the sending actor and is never a native result.
 | `host_timeout`, `clock_fault` | The sending worker's own wait for the host's answer expired or lost its clock; the host's record may still carry an answer. |
 | `copy_mismatch` | The recipient acknowledged bytes that no longer equalled custody; the delivery was withdrawn. |
 
-An actor event's `unavailable_reason` adds `authority_channel_unavailable` (the
-worker could not map its authority region) and `delivery_unavailable` (the
-named delivery was never accepted by this actor) to the legacy reasons.
+An event can report `authority_channel_unavailable` when its worker cannot use the
+assigned authority region, or `delivery_unavailable` when the named delivery
+was not accepted. Individually unavailable issue, consume and release symbols
+produce operation-specific `native_api_unavailable` decisions; supported
+unrelated operations remain observable. These are no-call decisions, not
+native denial results.
 
 <!-- END SHARED EXTENSION STATUSES -->
 
 Each `extension_events[]` entry identifies its phase, action, operation and local
-handle reference; consumption also identifies its token reference. These events
+resource references; consumption identifies its delivery and handle references. These events
 have no ordinary query or comparison. `call_boundary_observed` is a separately
 published pre-call marker, not proof of native entry, return or effect.
 `result_published` means the worker completed that action's immutable slot.
@@ -463,11 +438,12 @@ the reason code the record must use. Applicability is explicit: an inapplicable
 question is not missing evidence.
 
 Protocol position orders progress words by the worker protocol, not by opcode:
-header 1, policy read 2, parameter allocation 3, parameter assignment 4,
-compilation 5, capture 6, readiness 7, application 8, then proceed 11 before each phase's action batch, attempt 9
+header 1, clock setup 12, policy read 2, parameter allocation 3, parameter assignment 4,
+compilation 5, capture 6, readiness 7, application 8, then actor activation 13
+and proceed 11 before each phase's action batch, attempt 9
 for each action in execution order, and completion 10. Here a disposition
 "step" means any declared action, including consumption and release. Indexed
-proceed progress names the waiting phase's first action and occupies the position
+activation and proceed progress name the waiting phase's first action and occupy the position
 immediately before that action; an empty final phase can name the total action
 count. It does not mean that action began. An attempt word's item
 index names the step; a parameter word's names the parameter. An attempt index
@@ -1069,7 +1045,7 @@ subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
 For the runner client and sbpl-check, the controller collects full
-`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->248 MiB<!-- /span --> prefix per runner-client
+`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->272 MiB<!-- /span --> prefix per runner-client
 stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
 up to 4 MiB) and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
 Runner-client stdout is a protocol-versioned client capture, not a synthetic
@@ -1097,7 +1073,7 @@ proof that no worker ran.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver
-budget (<!-- span limits.controller_output.value -->260,046,848<!-- /span --> or <!-- span limits.policy_helper_output.value -->8,388,608<!-- /span --> bytes). Locally truncated
+budget (<!-- span limits.controller_output.value -->285,212,672<!-- /span --> or <!-- span limits.policy_helper_output.value -->8,388,608<!-- /span --> bytes). Locally truncated
 stdout is not parsed and has `stdout_capture_error`, distinct from
 `stdout_parse_error` for malformed JSON/UTF-8 within the cap. Text context may use
 replacement characters; accepted JSON is parsed from original untruncated bytes.
@@ -1149,7 +1125,7 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 The controller's runner-client and sbpl-check receivers use the same
-original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->248 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
+original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->272 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
 Received/retained byte counts precede lossy context conversion and count fully
 collected buffers. These are retention limits, not peak-memory bounds.
 `stdout_capture_error` identifies local truncation and precludes parsing the
@@ -1319,8 +1295,8 @@ from that retained chain.
 
 Phase completion and action completion are separate publications. A missing
 completion stays missing even if an action result exists; a later boundary
-cannot fill in an unpublished result. Progress operation `PW_OP_PROCEED`
-identifies the next phase's first action index, which can equal the total
+cannot fill in an unpublished result. Indexed progress operations `PW_OP_PROCEED`
+and, for actors, `PW_OP_ACTIVATE` identify the next phase's first action index, which can equal the total
 count at an empty final phase. It records a wait, not entry into that action.
 The request has one fixed policy application and one worker for every phase.
 These publications establish intervals, not stable target identity or effective
@@ -1523,13 +1499,13 @@ Lifecycle limitations in the table come from the step's summary.
 | B7 | B | allow, read succeeds (control) | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | stub supplies allow; b_readable bytes unchanged |
 | C1 | C | policy fails to compile, nothing runs | `unavailable` | `unavailable` | `no_completed_worker_result` | `matched` | `same_submitted` | `unestablished` | `attempt:not_reached` | the worker publishes a compile failure record (operation 5) and exits before applying; no validator is spawned; readable bytes unchanged |
 | T | T | allow policy, FIFO read starts after release, then worker deadline | `allow` | `unavailable` | `no_completed_worker_result` | `matched` | `same_submitted` | `query_first` | `attempt:started_without_result` | a FIFO with no writer blocks the worker's open inside attempt 0 until the host's sentinel deadline; raw progress, the validator record and the release chain are asserted by the owning case before this row is compared |
-| M01 | extension_combinations | issuer publishes a token then exits abnormally; consume and release cannot run | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | witness_contract/extension_combinations: issuer publishes a token then exits abnormally; consume and release cannot run; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
-| M02 | extension_combinations | worker dies midway through framing validation, before delivery publication | `unavailable` | `unavailable` | `no_completed_worker_result` | `matched` | `same_submitted` | `unestablished` | `attempt:not_reached` | witness_contract/extension_combinations: worker dies midway through framing validation, before delivery publication; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
+| M01 | extension_combinations | issuing actor publishes then exits abnormally; subject receives no delivery but retains its own visits | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | witness_contract/extension_combinations: issuing actor publishes its result then exits before phase completion; subject consume and release publish unavailable without native calls; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
+| M02 | extension_combinations | worker dies midway through framing validation, before delivery publication | `unavailable` | `unavailable` | `no_completed_worker_result` | `matched` | `same_submitted` | `unestablished` | `attempt:not_reached` | witness_contract/extension_combinations: recipient actor dies during inbound framing before acknowledgement; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
 | M03 | extension_combinations | same-phase consume fails natively; release is omitted and fresh read still fails | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | witness_contract/extension_combinations: same-phase consume fails natively; release is omitted and fresh read still fails; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
 | M04 | extension_combinations | cross-phase release returns native failure; earlier consume and fresh read survive | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | witness_contract/extension_combinations: cross-phase release returns native failure; earlier consume and fresh read survive; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
 | M05 | extension_combinations | same-phase consume returns natively then worker dies before publication; release omitted | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | witness_contract/extension_combinations: same-phase consume returns natively then worker dies before publication; release omitted; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
 | M06 | extension_combinations | cross-phase release is interrupted before its native call; prior phase evidence survives | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | witness_contract/extension_combinations: cross-phase release is interrupted before its native call; prior phase evidence survives; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
-| M07 | extension_combinations | published issuer output and abnormal exit survive when both lifecycle actions are omitted | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | witness_contract/extension_combinations: published issuer output and abnormal exit survive when both lifecycle actions are omitted; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
+| M07 | extension_combinations | published issuer output and abnormal exit survive when both lifecycle actions are omitted | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | witness_contract/extension_combinations: published issue result and abnormal actor exit survive when both lifecycle actions are omitted; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks. |
 | M08 | combined_phase_driver | validator timeout, failed termination and unconfirmed reap followed by late output during a fresh next-phase collection | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | runner_unit PhaseProtocolTests M08: native kill substitution returns EPERM; surviving validator observes EPIPE after collection closure; distinct validator PIDs and exact phase-local record IDs; unchanged target bytes; Rust/Python replay of the production-encoded reply. |
 
 <!-- END GENERATED SCENARIO MATRIX -->

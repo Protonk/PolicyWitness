@@ -1,0 +1,145 @@
+{
+  "candidate_manifests": [
+    {
+      "manifest": "candidate-09-source.json",
+      "archive": "candidate-09-source.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 920
+    },
+    {
+      "manifest": "candidate-11-br3-source.json",
+      "archive": "candidate-11-br3-source.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 924
+    },
+    {
+      "manifest": "candidate-11-final-source.json",
+      "archive": "candidate-11-final-source.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 924
+    },
+    {
+      "manifest": "candidate-11-source.json",
+      "archive": "candidate-11-source.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 920
+    },
+    {
+      "manifest": "completed-run-metadata-before-br4.json",
+      "archive": "completed-run-metadata-before-br4.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 442
+    },
+    {
+      "manifest": "extension-consolidation-abi-01-failures.json",
+      "archive": "extension-consolidation-abi-01-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 12
+    },
+    {
+      "manifest": "extension-consolidation-abi-02-failures.json",
+      "archive": "extension-consolidation-abi-02-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 27
+    },
+    {
+      "manifest": "extension-consolidation-actors-03-complete.json",
+      "archive": "extension-consolidation-actors-03-complete.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 560
+    },
+    {
+      "manifest": "extension-consolidation-authority-01-failures.json",
+      "archive": "extension-consolidation-authority-01-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 1251
+    },
+    {
+      "manifest": "extension-consolidation-authority-02-failures.json",
+      "archive": "extension-consolidation-authority-02-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 1803
+    },
+    {
+      "manifest": "extension-consolidation-build-refusals-02-failures.json",
+      "archive": "extension-consolidation-build-refusals-02-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 323
+    },
+    {
+      "manifest": "extension-consolidation-build-refusals-03-complete.json",
+      "archive": "extension-consolidation-build-refusals-03-complete.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 39763
+    },
+    {
+      "manifest": "extension-consolidation-contracts-01-failures.json",
+      "archive": "extension-consolidation-contracts-01-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 3548
+    },
+    {
+      "manifest": "extension-consolidation-contracts-04-complete.json",
+      "archive": "extension-consolidation-contracts-04-complete.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 11816
+    },
+    {
+      "manifest": "extension-consolidation-core-01-failures.json",
+      "archive": "extension-consolidation-core-01-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 38
+    },
+    {
+      "manifest": "extension-consolidation-core-02-failures.json",
+      "archive": "extension-consolidation-core-02-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 35
+    },
+    {
+      "manifest": "extension-consolidation-equipment-01-complete.json",
+      "archive": "extension-consolidation-equipment-01-complete.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 3349
+    },
+    {
+      "manifest": "extension-consolidation-equipment-02-complete.json",
+      "archive": "extension-consolidation-equipment-02-complete.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 6286
+    },
+    {
+      "manifest": "extension-consolidation-native-contract-01-failures.json",
+      "archive": "extension-consolidation-native-contract-01-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 22
+    },
+    {
+      "manifest": "extension-consolidation-order-native-01-complete.json",
+      "archive": "extension-consolidation-order-native-01-complete.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 1650
+    },
+    {
+      "manifest": "extension-consolidation-source-01-failures.json",
+      "archive": "extension-consolidation-source-01-failures.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 383
+    },
+    {
+      "manifest": "previous-default-cleanup-observations.json",
+      "archive": "previous-default-cleanup-observations.tar.gz",
+      "archive_sha256_verified": true,
+      "member_hashes_or_links_verified": 15
+    }
+  ],
+  "stage1_archives_unchanged": [
+    "native.tar.gz",
+    "baseline.tar.gz",
+    "prototype-01-failed.tar.gz",
+    "prototype-02.tar.gz",
+    "inheritance-01-partial.tar.gz",
+    "source-baseline.tar.gz"
+  ],
+  "scope": "Archive digests and per-member hashes/links checked without extraction to filesystem. Ownership and semantic applicability are separate reviews."
+}

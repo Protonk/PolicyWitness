@@ -17,7 +17,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-from check_extensions import capture  # noqa: E402
+from witness_capture import capture  # noqa: E402
 from contract import REQUEST_SCHEMA  # noqa: E402
 import extension_actors  # noqa: E402
 

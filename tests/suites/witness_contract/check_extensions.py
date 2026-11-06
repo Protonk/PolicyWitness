@@ -9,9 +9,8 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'docs'))
 import markdown_reader  # noqa: E402
-import consumer
 from contract import REQUEST_SCHEMA
-from run_capture import RunCapture
+from witness_capture import capture
 
 
 def probe(identity, target):
@@ -23,31 +22,42 @@ def probe(identity, target):
 def intervention(identity, operation):
     value = {'operation': operation, 'handle_ref': 'handle'}
     if operation == 'consume':
-        value['token_ref'] = 'token'
+        value['delivery_ref'] = 'delivery'
     return {'step_id': identity, 'extension': value}
 
 
-def specimen(target, phases):
-    return {'schema_version': REQUEST_SCHEMA, 'specimen_id': 'extensions',
-            'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)(deny file-read-data)(allow file-read-data (extension "com.apple.app-sandbox.read"))'},
-            'extensions': [{'token_ref': 'token', 'target': str(target)}],
-            'phases': [{'phase_id': f'p{i}', 'actions': actions} for i, actions in enumerate(phases)]}
+def specimen(target, phases, *, authority='read', policy=None, terminate_issuer=False):
+    policy = policy or '(version 1)(allow default)(deny file-read-data)(allow file-read-data (extension "com.apple.app-sandbox.read"))'
+    subject = [{'phase_id': f'p{i}', 'actor_id': 'subject', 'actions': actions} for i, actions in enumerate(phases)]
+    issuance = {'phase_id':'issuer_final','actor_id':'issuer','actions':[
+        {'step_id':'issue','extension':{'operation':'issue','family':'file','authority':authority,'target':str(target),'token_ref':'token'}},
+        {'step_id':'transfer','extension':{'operation':'transfer','token_ref':'token','recipient':'subject','delivery_ref':'delivery'}}]}
+    # Keep a baseline before issuing where the submitted phase is genuinely a baseline.
+    insertion = 1 if subject and not any('extension' in a for a in subject[0]['actions']) and any(
+        a.get('extension',{}).get('operation')=='consume' for p in subject[1:] for a in p['actions']) else 0
+    ordered = subject[:insertion] + [issuance] + subject[insertion:]
+    if terminate_issuer:
+        dependent=next(p for p in ordered if any(a.get('extension',{}).get('operation')=='consume' for a in p['actions']))
+        dependent['after_termination']={'actor_id':'issuer'}
+    return {'schema_version':REQUEST_SCHEMA,'specimen_id':'extensions',
+        'actors':[{'actor_id':'issuer','equipment':'unentitled','sandbox':{'mode':'unapplied'}},
+                  {'actor_id':'subject','equipment':'selected','sandbox':{'mode':'apply','policy':{'format':'sbpl','sbpl_source':policy}}}],
+        'phases':ordered}
 
 
-def capture(pw, out, name, spec, *, expected_rc=0, session_state=None):
-    directory = out / name
-    if session_state:
-        spec['runner'] = {'mode': 'byoxpc', 'service': session_state['service_name']}
-        directory.mkdir(parents=True, exist_ok=True)
-    with RunCapture(pw, directory, spec, cli_args=[]) as captured:
-        assert captured.wait(timeout=40) == expected_rc, captured.metadata_path
-        envelope = captured.load_json()
-    errors = consumer.validate(envelope)
-    assert not errors, errors
-    from lifecycle_oracle import check_record
-    errors = check_record(envelope)
-    assert not errors, errors
-    return envelope, envelope['data']['runner_result']
+def lifecycle_events(runner):
+    return [e for e in runner['extension_events'] if e['operation'] in ('consume','release')]
+
+
+def assert_issuance(runner):
+    issue=next(e for e in runner['extension_events'] if e['operation']=='issue')
+    assert issue['status']=='returned' and issue['native_nonnull'] is True and issue['result_published'] and issue['call_boundary_observed'],issue
+    transfer=runner['transfers'][0]
+    assert transfer['status']=='delivered' and transfer['equality']=='equal' and transfer['recipient_acknowledged'] and transfer['source_acknowledged'],transfer
+    actors={a['actor_id']:a for a in runner['actors']}
+    assert len({a['launch']['pid'] for a in actors.values()})==len(actors)
+    assert all(a['subprocess']['reaped'] for a in actors.values())
+    return issue
 
 
 def run_suite(pw, out, session_state=None):
@@ -67,22 +77,25 @@ def run_targets(pw, out, target_dir, session_state):
     contents = b'PW extension fresh read witness\n'
     target.write_bytes(contents)
     metadata = target.stat()
-    spec = specimen(target, [[probe('before', target), intervention('consume', 'consume')],
+    spec = specimen(target, [[probe('before', target)], [intervention('consume', 'consume')],
                              [probe('during', target), intervention('release', 'release')],
-                             [probe('after', target)]])
+                             [probe('after', target)]], terminate_issuer=True)
     envelope, runner = capture(pw, out, 'lifecycle', spec, session_state=session_state)
     assert runner['normalized_outcome'] == 'ok', runner
-    assert runner['sandboxed_after_apply'] and runner['runner_subprocess']['reaped']
-    declaration, = runner['extensions']
-    assert declaration['preparation_status'] == 'prepared'
-    assert declaration['identity']['inode'] == metadata.st_ino
-    assert declaration['identity']['device'] == metadata.st_dev
-    assert declaration['issuance_status'] == 'issued' and declaration['delivery_status'] == 'delivered'
-    issuer = declaration['issuer']
-    assert issuer['native_nonnull'] and issuer['result_published'] and issuer['call_boundary_observed']
-    assert issuer['reaped'] and issuer['exit_code'] == 0 and issuer['euid'] == os.geteuid()
-    assert issuer['pid'] != runner['runner_subprocess']['pid']
-    consume, release = runner['extension_events']
+    issue=assert_issuance(runner)
+    assert issue['target']==str(target)
+    actors={a['actor_id']:a for a in runner['actors']}
+    assert actors['subject']['applied'] and actors['subject']['application_count']==1
+    gate=next(p['termination_gate'] for p in runner['phases'] if p.get('termination_gate'))
+    assert gate['outcome']=='satisfied' and gate['activation_eligible']
+    reap=actors['issuer']['owned_reap']
+    activation=next(p['activation_observation'] for p in runner['phases'] if p['phase_id']=='issuer_final')
+    assert gate['observation']['capture_ordinal']==reap['capture_ordinal']
+    assert activation['capture_ordinal']<reap['capture_ordinal']<gate['capture_ordinal']
+    assert reap['observed_ns']>=activation['observed_ns']
+    assert reap['native_rc']==actors['issuer']['launch']['pid']
+    assert reap['ownership_unbroken'] and not reap['departure_requested']
+    consume, release = lifecycle_events(runner)
     assert consume['native_result'] != -1 and consume['status'] == 'returned'
     assert release['native_result'] == 0 and release['status'] == 'returned'
     assert consume['handle_ref'] == release['handle_ref'] == 'handle'
@@ -105,9 +118,8 @@ def run_targets(pw, out, target_dir, session_state):
     example = fences[0].split(heredoc, 1)[1].split('\nJSON\n', 1)[0]
     request = json.loads(example.replace('$PW_EXTENSION_DIR/target', str(target)))
     _, documented = capture(pw, out, 'guide_example', request, session_state=session_state)
-    assert documented['extensions'][0]['issuance_status'] == 'issued'
-    assert documented['extensions'][0]['delivery_status'] == 'delivered'
-    consumed, released = documented['extension_events']
+    assert_issuance(documented)
+    consumed, released = lifecycle_events(documented)
     assert consumed['status'] == released['status'] == 'returned'
     assert consumed['native_result'] != -1 and released['native_result'] == 0
     assert documented['steps'][0]['attempt']['rc'] != 0
@@ -152,64 +164,51 @@ def run_targets(pw, out, target_dir, session_state):
                     for a in p['actions'] if 'extension' in a]
         events = reply.get('extension_events', [])
         assert [(e['phase_id'], e['step_id'], e['operation']) for e in events] == declared
-        assert reply['extensions'][0]['issuance_status'] == 'issued'
-        assert reply['extensions'][0]['delivery_status'] == 'delivered'
-        assert all(e['status'] == 'returned' and e['result_published'] for e in events)
-        if events:
-            assert events[0]['native_result'] != -1
-        if len(events) == 2:
-            assert events[1]['native_result'] == 0
+        assert_issuance(reply)
+        assert all(e['status'] == ('delivered' if e['operation']=='transfer' else 'returned') and e['result_published'] for e in events)
+        lifecycle=lifecycle_events(reply)
+        if lifecycle: assert lifecycle[0]['native_result'] != -1
+        if len(lifecycle)==2: assert lifecycle[1]['native_result'] == 0
         assert all(p['completion_observed'] for p in reply['phases'])
-        assert reply['runner_subprocess']['reaped']
+        assert all(a['subprocess']['reaped'] for a in reply['actors'])
         for step in reply['steps']:
             if step['step_id'] in ('during', 'later') or name == 'consume_only':
                 assert bytes.fromhex(step['attempt']['fresh_read']['content_hex']) == contents
         if name == 'intervention_only_phases':
-            assert all(reply['phases'][i]['collection_status'] == 'not_needed' for i in (0, 2))
+            assert all(p['collection_status']=='not_needed' for p in reply['phases'] if p['phase_id'] in ('p0','p2','issuer_final'))
 
-    ordinary = specimen(target, [[probe('ordinary', target)]])
-    ordinary.pop('extensions')
-    _, reply = capture(pw, out, 'no_declaration', ordinary, session_state=session_state)
-    assert not reply.get('extensions') and not reply.get('extension_events')
-
-    unavailable = specimen(target, [[intervention('consume', 'consume'), probe('read', target),
-                                     intervention('release', 'release')]])
-    absent_issuer = str(target_dir / 'absent-issuer')
-    unavailable['_test_overrides'] = {'issuer_executable_path': absent_issuer}
-    _, reply = capture(pw, out, 'issuer_capability', unavailable, expected_rc=1, session_state=session_state)
-    assert reply['normalized_outcome'] == 'bad_request'
-    assert reply['request_failure'] == {'code': 'extension_issuer_unavailable', 'path': ['extensions']}
-    assert reply['extensions'][0]['issuance_status'] == 'issuer_unavailable'
-    assert not reply.get('runner_subprocess') and not reply.get('extension_events')
-    assert reply['test_overrides']['issuer_executable_path'] == absent_issuer
-    assert target.read_bytes() == contents
+    ordinary={'schema_version':REQUEST_SCHEMA,'specimen_id':'ordinary_without_authority',
+              'policy':{'format':'sbpl','sbpl_source':'(version 1)(allow default)'},
+              'probe_plan':[probe('ordinary',target)]}
+    _, reply=capture(pw,out,'ordinary_without_authority',ordinary,session_state=session_state)
+    assert not reply.get('actors') and not reply.get('extension_events') and not reply.get('authority_setup')
+    assert reply['runner_subprocess']['reaped']
+    assert bytes.fromhex(reply['steps'][0]['attempt']['fresh_read']['content_hex'])==contents
 
     missing = target_dir / 'absent-target'
     failed = specimen(missing, [[intervention('consume', 'consume')],
                                [probe('absent', missing), intervention('release', 'release')]])
     _, reply = capture(pw, out, 'preparation_failure', failed, session_state=session_state)
-    declaration, = reply['extensions']
-    assert declaration['preparation_status'] == 'resolution_failed'
-    assert declaration['preparation_errno'] != 0 and not declaration.get('issuer')
-    assert declaration['issuance_status'] == 'not_started'
-    assert [e['unavailable_reason'] for e in reply['extension_events']] == ['token_unavailable', 'handle_unavailable']
-    assert reply['steps'][0]['sandbox_check']['outcome'] == 'prediction_unavailable'
-    assert reply['steps'][0]['comparison']['order'] == 'unestablished'
+    issue=next(e for e in reply['extension_events'] if e['operation']=='issue')
+    assert issue['target']==str(missing) and issue['call_boundary_observed'] and issue['result_published']
+    assert reply['steps'][0]['attempt']['rc'] != 0
+    # Missing targets reach native issuance unchanged; no host-resolution result is invented.
+    assert 'extensions' not in reply
     assert not missing.exists()
 
     alias = target_dir / 'target-symlink'
     alias.symlink_to(target)
     linked = specimen(alias, [[intervention('consume', 'consume'), probe('linked', alias), intervention('release', 'release')]])
     _, reply = capture(pw, out, 'symlink', linked, session_state=session_state)
-    declaration, = reply['extensions']
-    assert declaration['submitted_target'] == str(alias) and declaration['resolved_target'] == str(target.resolve())
-    assert declaration['identity']['inode'] == metadata.st_ino
+    issue=assert_issuance(reply)
+    assert issue['target']==str(alias)
+    assert reply['steps'][0]['attempt']['fresh_read']['identity']['inode']==metadata.st_ino
     assert bytes.fromhex(reply['steps'][0]['attempt']['fresh_read']['content_hex']) == contents
     assert alias.is_symlink() and target.read_bytes() == contents
 
-    # Issuance preparation describes the original identity. Ordinary worker
-    # actions replace it before consumption; later fresh observations must not
-    # borrow the issuance identity or assert target stability.
+    # The independent original identity precedes issuance. Ordinary actor
+    # actions replace it before consumption; later fresh observations must
+    # identify their own opened object, without asserting target stability.
     replacement = target_dir / 'replaced-target'
     replacement.write_bytes(b'original before replacement')
     original = replacement.stat()
@@ -224,7 +223,7 @@ def run_targets(pw, out, target_dir, session_state):
         _, reply = capture(pw, out, 'replacement', changed, session_state=session_state)
         observed = replacement.stat()
         assert observed.st_ino != original.st_ino and replacement.read_bytes() == b''
-        assert reply['extensions'][0]['identity']['inode'] == original.st_ino
+        assert next(e for e in reply['extension_events'] if e['operation']=='issue')['target']==str(replacement)
         assert all(s['attempt']['rc'] == 0 for s in reply['steps'][:2])
         fresh = reply['steps'][2]['attempt']['fresh_read']
         if fresh['open_rc'] >= 0:
@@ -234,7 +233,7 @@ def run_targets(pw, out, target_dir, session_state):
             'replacement_length': observed.st_size, 'fresh_read': fresh}, indent=2) + '\n')
     finally:
         os.close(held)
-    print('Native lifecycle, optional/same/cross-phase placement, preparation, symlink and replacement observations passed.')
+    print('Actor lifecycle, natural-termination ordering, optional/same/cross-phase placement, submitted paths and replacement observations passed.')
 
 
 def main():

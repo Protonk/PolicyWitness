@@ -95,7 +95,7 @@ def association(progress, plan_len):
     if type(raw) is not int or not 0 < raw <= 0xffffffff or raw >> 24 != op \
             or (raw >> 20) & 15 != stage or (raw & 0xfffff) != (index + 1 if type(index) is int else 0):
         return 'invalid', None
-    if op == 11 and index is not None:
+    if op in (11, 13) and index is not None:
         if type(index) is not int or index < 0 or index > plan_len:
             return 'invalid', None
         return 'none', (ORDER[C.OP_ATTEMPT], index, 0)
@@ -460,13 +460,14 @@ def actor_view(envelope, actor, diagnostics):
     single-worker rules apply to it unchanged."""
     runner = envelope['data']['runner_result']
     actor_id = actor.get('actor_id')
-    view = {k: v for k, v in runner.items() if k not in ('actors', 'transfers', 'resources', 'execution_form')}
+    view = {k: v for k, v in runner.items() if k not in ('actors', 'transfers', 'resources', 'execution_form', 'authority_setup', 'equipment_inventory', 'equipment_bindings', 'equipment_entitlements', 'preparation_failure')}
     view['runner_subprocess'] = actor.get('subprocess')
     view['sandboxed_after_apply'] = actor.get('setup_status') in ('applied', 'unapplied_declared')
     view['steps'] = [s for s in runner.get('steps', []) if isinstance(s, dict) and s.get('actor_id') == actor_id]
     view['extension_events'] = [e for e in runner.get('extension_events') or [] if isinstance(e, dict) and e.get('actor_id') == actor_id]
     view['phases'] = [p for p in runner.get('phases', []) if isinstance(p, dict) and p.get('actor_id') == actor_id]
-    # The actor form's extension tables are validated once on the whole reply.
+    # Setup, equipment and resource tables retain their actual actor owners;
+    # validate them once on the whole reply, never as singular worker facts.
     view['_actor_view'] = True
     own = next((d for d in diagnostics if isinstance(d, dict) and d.get('actor_id') == actor_id), None)
     return {'schema_version': envelope.get('schema_version'), 'kind': envelope.get('kind'),

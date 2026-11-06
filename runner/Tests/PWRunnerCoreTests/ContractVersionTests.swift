@@ -197,7 +197,7 @@ func replyShapeDocuments() throws -> [[String: Any]] {
             runner_subprocess: sub, phases: [constructedPhase(out, ids: plan.map { $0.step_id })])
         documents.append(try shapeObject(pwRunnerEncodeJSON(reply)))
     }
-    documents += try extensionShapeDocuments()
+    documents += try ordinaryReadShapeDocuments()
     documents += try freshWriteShapeDocuments()
     documents += try execObservationShapeDocuments()
     documents += try actorShapeDocuments()

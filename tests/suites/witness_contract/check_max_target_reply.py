@@ -25,6 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
+import extension_actors as actor_actions
 from run_capture import RunCapture
 
 SESSION = None
@@ -66,10 +67,57 @@ def specimen(targets, queries, *, denied=False, exec_args=None, large_filter=Fal
         steps.append(dict(step_id=sid, sandbox_check=dict(
             operation='sysctl-read' if large_filter else 'file-read-data',
             filter=dict(kind='sysctl_name' if large_filter else 'path', value=query)), attempt=attempt))
-    return dict(schema_version=5, specimen_id=secrets.token_hex(12),
+    return dict(schema_version=6, specimen_id=secrets.token_hex(12),
                 policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)' +
                             ('(deny file-read-data)' if denied else '')),
                 probe_plan=steps)
+
+
+def actor_maximum(ordinary, *, write=False):
+    """All 256 aggregate slots, eight actors, sixteen phases and native caps.
+
+    Four issuer/subject pairs each use eight issues, sixteen deliveries,
+    sixteen consumes, eight independent ordinary attempts and sixteen releases.
+    The ordinary all-slot maxima remain separate workloads below.
+    """
+    actors, phases = [], []
+    probes = request_steps(ordinary)
+    for pair in range(4):
+        issuer, subject = f'issuer{pair}', f'subject{pair}'
+        actors.append(actor_actions.unapplied_actor(issuer))
+        actor = actor_actions.apply_actor(subject, '(version 1)(allow default)')
+        actor['sandbox']['policy'].update(capture_compiled_profile=True, capture_nonce=secrets.token_hex(16))
+        actors.append(actor)
+        supply, consumes, releases = [], [], []
+        reads = copy.deepcopy(probes[pair * 8:(pair + 1) * 8])
+        for index, action in enumerate(reads):
+            token = f't{pair}_{index}'
+            target = action['attempt']['target']
+            if write:
+                target = str(Path(target).parent)
+            supply.append(actor_actions.issue(f'issue{pair}_{index}', token, target,
+                                             authority='read_write' if write else 'read'))
+            for use in range(2):
+                suffix = f'{pair}_{index}_{use}'
+                delivery, handle = 'd' + suffix, 'h' + suffix
+                supply.append(actor_actions.transfer('transfer' + suffix, token, subject, delivery))
+                consumes.append(actor_actions.consume('consume' + suffix, delivery, handle))
+                releases.append(actor_actions.release('release' + suffix, handle))
+        phases.extend([
+            dict(phase_id=f'supply{pair}', actor_id=issuer, actions=supply),
+            dict(phase_id=f'consume{pair}', actor_id=subject, actions=consumes),
+            dict(phase_id=f'ordinary{pair}', actor_id=subject, actions=reads),
+            dict(phase_id=f'release{pair}', actor_id=subject, actions=releases),
+        ])
+    assert len(actors) == 8 and len(phases) == 16
+    assert sum(len(p['actions']) for p in phases) == 256
+    assert {operation: sum(a.get('extension', {}).get('operation') == operation
+            for p in phases for a in p['actions']) for operation in ('issue', 'transfer', 'consume', 'release')} == {
+                'issue': 32, 'transfer': 64, 'consume': 64, 'release': 64}
+    assert {actor['actor_id']: sum(len(p['actions']) for p in phases if p['actor_id'] == actor['actor_id'])
+            for actor in actors} == {f'{role}{pair}': count for pair in range(4)
+                                     for role, count in (('issuer', 24), ('subject', 40))}
+    return dict(schema_version=6, specimen_id=secrets.token_hex(12), actors=actors, phases=phases)
 
 
 def request_steps(request):
@@ -83,11 +131,14 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
     errors = consumer.validate(runner)
     assert not errors, errors
     if 'phases' in request:
-        assert len(runner['phases']) == 8
+        assert len(runner['phases']) == len(request['phases'])
         for phase, planned in zip(runner['phases'], request['phases']):
             ordinary = [action for action in planned['actions'] if 'attempt' in action]
             assert phase['arrival_observed'] and phase['completion_observed']
-            assert len(phase['validator_subprocess']['records']) == len(ordinary)
+            if ordinary:
+                assert len(phase['validator_subprocess']['records']) == len(ordinary)
+            else:
+                assert not (phase.get('validator_subprocess') or {}).get('records'), phase
         assert all(step['comparison']['order'] == 'query_first' for step in runner['steps'])
     for step, planned in zip(runner['steps'], request_steps(request)):
         check, attempt = step['sandbox_check'], step['attempt']
@@ -127,13 +178,81 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
                 stdout, stderr = exec_output or ('A' * 1023, exec_args[-1] + '\n')
                 assert attempt['stdout'] == stdout
                 assert attempt['stderr'] == stderr
-    if request.get('extensions'):
-        declaration, = runner['extensions']
-        assert declaration['issuance_status'] == 'issued' and declaration['delivery_status'] == 'delivered'
-        consume, release = runner['extension_events']
-        assert consume['status'] == release['status'] == 'returned'
-        assert consume['native_result'] != -1 and release['native_result'] == 0
-        assert consume['handle_ref'] == release['handle_ref']
+    if request.get('actors'):
+        planned = {action['step_id']: (phase['actor_id'], action['extension'])
+                   for phase in request['phases'] for action in phase['actions'] if 'extension' in action}
+        events = {event['step_id']: event for event in runner['extension_events']}
+        assert len(events) == len(runner['extension_events']) == 224
+        assert set(events) == set(planned)
+        assert sum(e['operation'] != 'transfer' for e in events.values()) == 160
+        assert sum(e['operation'] == 'transfer' for e in events.values()) == 64
+        planned_phases = {action['step_id']: phase['phase_id'] for phase in request['phases'] for action in phase['actions']}
+        for step, event in events.items():
+            owner, operation = planned[step]
+            assert event['actor_id'] == owner and event['operation'] == operation['operation'], event
+            assert event['phase_id'] == planned_phases[step] and event['result_published'], event
+            if operation['operation'] == 'transfer':
+                # The worker publishes the host exchange acknowledgement as an
+                # event. It is not a sandbox-extension native API call.
+                assert event['status'] == 'delivered' and event['call_boundary_observed'] is False, event
+                assert not any(key in event for key in ('native_result', 'native_nonnull', 'errno')), event
+                assert event['token_ref'] == operation['token_ref'] and event['delivery_ref'] == operation['delivery_ref'], event
+                continue
+            assert event['status'] == 'returned' and event['call_boundary_observed'] is True, event
+            if operation['operation'] == 'issue':
+                assert event['native_nonnull'] is True and event['target'] == operation['target'], event
+                assert event['token_ref'] == operation['token_ref'], event
+            else:
+                assert event['handle_ref'] == operation['handle_ref'], event
+                if operation['operation'] == 'consume':
+                    assert event['native_result'] != -1 and event['delivery_ref'] == operation['delivery_ref'], event
+                else:
+                    assert event['native_result'] == 0, event
+        assert len(runner['transfers']) == 64
+        assert {t['step_id'] for t in runner['transfers']} == {
+            step for step, (_, operation) in planned.items() if operation['operation'] == 'transfer'}
+        for transfer in runner['transfers']:
+            owner, operation = planned[transfer['step_id']]
+            assert operation['operation'] == 'transfer'
+            assert transfer['source_actor_id'] == owner and transfer['recipient_actor_id'] == operation['recipient'], transfer
+            assert transfer['token_ref'] == operation['token_ref'] and transfer['delivery_ref'] == operation['delivery_ref'], transfer
+            assert transfer['status'] == 'delivered' and transfer['equality'] == 'equal', transfer
+            assert transfer['source_acknowledged'] and transfer['recipient_acknowledged'], transfer
+            assert transfer['phase_id'] == planned_phases[transfer['step_id']], transfer
+            assert transfer['request_published'] and transfer['custody_status'] == 'held' and transfer['copy_status'] == 'copied', transfer
+            event = events[transfer['step_id']]
+            assert event['status'] == transfer['status'] and event['actor_id'] == transfer['source_actor_id'], (event, transfer)
+        assert [len(runner['resources'][name]) for name in ('tokens', 'deliveries', 'handles')] == [32, 64, 64]
+        for name, operation_name, reference in [('tokens', 'issue', 'token_ref'),
+                                                ('deliveries', 'transfer', 'delivery_ref'),
+                                                ('handles', 'consume', 'handle_ref')]:
+            expected = {op[reference]: (step, owner, op) for step, (owner, op) in planned.items() if op['operation'] == operation_name}
+            actual = {row[reference]: row for row in runner['resources'][name]}
+            assert len(actual) == len(runner['resources'][name]) and set(actual) == set(expected)
+            for ref, row in actual.items():
+                step, owner, op = expected[ref]
+                assert row['step_id'] == step, row
+                if name == 'deliveries':
+                    assert row['source_actor_id'] == owner and row['recipient_actor_id'] == op['recipient'], row
+                    assert row['token_ref'] == op['token_ref'] and row['status'] == 'delivered' and row['equality'] == 'equal', row
+                else:
+                    assert row['actor_id'] == owner, row
+                    if name == 'tokens':
+                        assert row['status'] == 'issued' and row['token_length'] == events[step]['token_length'], row
+                    else:
+                        release_step, = [sid for sid, (_, action) in planned.items() if action['operation'] == 'release' and action['handle_ref'] == ref]
+                        assert row['status'] == 'produced' and row['delivery_ref'] == op['delivery_ref'], row
+                        assert row['native_handle'] == events[step]['native_result'], row
+                        assert row['release_attempted'] and row['release_step_id'] == release_step, row
+        assert len(runner['actors']) == 8 and len({a['launch']['pid'] for a in runner['actors']}) == 8
+        for actor in runner['actors']:
+            assert actor['subprocess']['reaped'] and actor['equipment']['execution']['eligible'], actor
+            if actor['actor_id'].startswith('subject'):
+                assert actor['application_count'] == 1 and actor['applied'] is True, actor
+                profile = actor['compiled_profile']
+                assert profile['status'] == 'captured' and profile['bytecode_length'] > 0, profile
+            else:
+                assert actor['setup_status'] == 'unapplied_declared' and actor['application_count'] == 0, actor
 
 
 def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_FILTER_BYTES, step_index=0):
@@ -234,6 +353,11 @@ def run_case(pw, out, name, request, *, refused=False, measure_margin=False, **e
                        client_stdout_bytes=client_bytes,
                        capture_limit_bytes=client['capture_limit_bytes'],
                        envelope_bytes=run.stdout_path.stat().st_size)
+    if request.get('actors'):
+        observation.update(actors=len(request['actors']), phases=len(request['phases']),
+                           aggregate_actions=sum(len(p['actions']) for p in request['phases']),
+                           actor_action_counts={a['actor_id']: sum(len(p['actions']) for p in request['phases'] if p['actor_id'] == a['actor_id']) for a in request['actors']},
+                           transfers=len(data['runner_result'].get('transfers') or []))
     if refused:
         assert rc == 1 and result['normalized_outcome'] == 'bad_request', result
         check_refused(data['runner_result'], **expectations)
@@ -287,8 +411,8 @@ def main():
         observations.append(run_case(pw, out, 'eight_phase_maximum', phased))
         assert all(Path(target).read_bytes() == b'x' for target in plain + escaped)
 
-        # Fresh descriptor/content evidence at the aggregate action maximum,
-        # with and without two native lifecycle actions sharing those 256 slots.
+        # Keep all-slot ordinary descriptor/content evidence. Separate actor
+        # workloads fill the aggregate action, phase and native resource caps.
         payload = bytes(range(65))
         for target in plain:
             Path(target).write_bytes(payload)
@@ -296,12 +420,7 @@ def main():
         for action in request_steps(fresh):
             action['attempt']['action'] = 'read_fresh'
         observations.append(run_case(pw, out, 'fresh_read_maximum', fresh))
-        mixed = copy.deepcopy(fresh)
-        mixed['extensions'] = [dict(token_ref='token', target=plain[0])]
-        mixed['phases'][0]['actions'][0] = dict(step_id='consume', extension=dict(
-            operation='consume', token_ref='token', handle_ref='handle'))
-        mixed['phases'][-1]['actions'][-1] = dict(step_id='release', extension=dict(
-            operation='release', handle_ref='handle'))
+        mixed = actor_maximum(fresh)
         observations.append(run_case(pw, out, 'extension_action_maximum', mixed))
         assert all(Path(target).read_bytes() == payload for target in plain)
 
@@ -310,12 +429,7 @@ def main():
             action['attempt']['action'] = 'write_fresh'
             action['sandbox_check']['operation'] = 'file-write-data'
         observations.append(run_case(pw, out, 'fresh_write_maximum', writes))
-        write_mixed = copy.deepcopy(writes)
-        write_mixed['extensions'] = [dict(token_ref='token', target=str(Path(plain[0]).parent), authority='read_write')]
-        write_mixed['phases'][0]['actions'][0] = dict(step_id='consume', extension=dict(
-            operation='consume', token_ref='token', handle_ref='handle'))
-        write_mixed['phases'][-1]['actions'][-1] = dict(step_id='release', extension=dict(
-            operation='release', handle_ref='handle'))
+        write_mixed = actor_maximum(writes, write=True)
         observations.append(run_case(pw, out, 'write_extension_action_maximum', write_mixed))
         assert all(Path(target).read_bytes() == b'x' for target in plain)
 

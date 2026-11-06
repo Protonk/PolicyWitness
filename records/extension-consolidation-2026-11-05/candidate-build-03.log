@@ -1,0 +1,90 @@
+==> [build] build, sign and embed evidence into dist/PolicyWitness.app
+DIST_DIR="dist" IDENTITY="Developer ID Application: Adam Hyland (42D369QV8E)"  ./build.sh
+==> Verifying the checkout lock: /Users/raccoon/Desktop/Security/PolicyWitness/tests/.checkout.lock
+ok: admitted by the owner of tests/.checkout.lock for /Users/raccoon/Desktop/Security/PolicyWitness (acquisition 670e6bb7206d)
+==> Checking limits documentation
+ok: 100 limits, 16 questions, 43 matrix rows; documents current
+==> Checking contract versions
+ok: request schema 6, response schema 26, controller envelope 11, runner protocol 3; all generated copies current
+ok: architecture manifest: 5 graphs, 164 nodes, 177 edges; dot files, svg stamps and document regions current
+==> Checking build documentation
+ok: build manifest: 33 steps, 61 refusals (0 in the baseline), 7 signing calls, 3 knobs; script agreement, dot file, svg stamp and document regions current
+==> Checking host/worker identity
+ok: worker identity eb82659a6c0a52f27b18d2824cf4c420646b4c4116726654d21cb49a15a4288d; all generated copies current
+==> Build stamp: 0.3.4 (1141) v0.3.4-60-g02ce5c6e-dirty
+ok: build session /Users/raccoon/Desktop/Security/PolicyWitness/controller/target/pw-build-session.json
+==> Supported macOS (Info.plist LSMinimumSystemVersion): 26.0
+==> Selecting the macOS SDK (xcrun --sdk macosx)
+    /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk (SDK 27.2, default selection)
+==> Checking the native build directory: /Users/raccoon/Desktop/Security/PolicyWitness/builddir
+ok: pw-toolchain.json agrees with the selected toolchain (11 fields) and the output target (6 fields)
+==> Checking the signing identity
+==> Admitting the Cargo output and intermediate directories: /Users/raccoon/Desktop/Security/PolicyWitness/controller/target
+ok: Cargo intermediate and final release state admitted under /Users/raccoon/Desktop/Security/PolicyWitness/controller/target (output triple aarch64-apple-darwin)
+==> Building Rust controller + tools
+warning: use of deprecated struct `libc::mach_timebase_info`: Use the `mach2` crate instead
+   --> src/runner_client.rs:778:26
+    |
+778 |     let mut info = libc::mach_timebase_info { numer: 0, denom: 0 };
+    |                          ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated function `libc::mach_timebase_info`: Use the `mach2` crate instead
+   --> src/runner_client.rs:779:23
+    |
+779 |     if unsafe { libc::mach_timebase_info(&mut info) } != 0 {
+    |                       ^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `libc::mach_timebase_info::numer`: Use the `mach2` crate instead
+   --> src/runner_client.rs:778:47
+    |
+778 |     let mut info = libc::mach_timebase_info { numer: 0, denom: 0 };
+    |                                               ^^^^^^^^
+
+warning: use of deprecated field `libc::mach_timebase_info::denom`: Use the `mach2` crate instead
+   --> src/runner_client.rs:778:57
+    |
+778 |     let mut info = libc::mach_timebase_info { numer: 0, denom: 0 };
+    |                                                         ^^^^^^^^
+
+warning: use of deprecated field `libc::mach_timebase_info::numer`: Use the `mach2` crate instead
+   --> src/runner_client.rs:785:9
+    |
+785 |         info.numer,
+    |         ^^^^^^^^^^
+
+warning: use of deprecated field `libc::mach_timebase_info::denom`: Use the `mach2` crate instead
+   --> src/runner_client.rs:786:9
+    |
+786 |         info.denom,
+    |         ^^^^^^^^^^
+
+warning: field `index` is never read
+  --> src/augments.rs:87:9
+   |
+86 | pub struct ActorAugmentResolution {
+   |            ---------------------- field in this struct
+87 |     pub index: usize,
+   |         ^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `controller` (bin "policy-witness") generated 7 warnings
+    Finished `release` profile [optimized] target(s) in 0.01s
+ok: 2 outputs are thin arm64 Mach-O for macOS (cargo)
+ok: Cargo judgments recorded (policy-witness: reused, sbpl-check: reused)
+==> Checking the native toolchain (meson, ninja 1.13.2 or newer)
+==> Configuring native build (meson configure, existing directory): -Dinspection=true -Dxpc=true
+==> Compiling native executables
+ninja: Entering directory `/Users/raccoon/Desktop/Security/PolicyWitness/builddir'
+[1/4] Compiling C object pw-probe-runner.p/controller_tools_pw_probe_runner_pw_probe_runner.c.o
+[2/4] Linking target pw-probe-runner
+[3/4] Compiling Swift source /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAPI.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerCoding.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerTransport.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerRequest.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerExtension.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerActors.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerEquipment.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerDisposition.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerReply.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/SandboxApply.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ProbeRunner.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PathUtils.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorker.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorSession.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorScheduler.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/AuthorityCustody.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorOrchestration.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorEquipment.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/MonotonicDeadline.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ValidatorClient.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorPlan.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerStepResults.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerComparison.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerDisposition.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerService.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerReservation.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerListener.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Services/PWRunner/main.swift
+[4/4] Compiling Swift source 
+INFO: autodetecting backend as ninja
+INFO: calculating backend command to run: /opt/homebrew/bin/ninja -C /Users/raccoon/Desktop/Security/PolicyWitness/builddir
+==> Checking the configured native source lists and the identity closure against the tree
+ok: 5 native targets carry exactly the tree's sources and the identity targets consumed only digest inputs (/Users/raccoon/Desktop/Security/PolicyWitness/builddir (xpc=true))
+./build.sh: line 531: PW_EXTENSION_ISSUER_BIN: unbound variable
+make: *** [build] Error 1

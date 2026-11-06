@@ -55,7 +55,7 @@ Use these corpus IDs with the same renderer:
 | `capture_typo` | Closed field names | `unknown_field` at `policy.capture_compiled_profiel`. |
 | `wrong_args_type` | Field types | `type_mismatch` at the attempt's `args`. |
 | `parameter_value` | Open dictionaries | Parameter names are caller data, but their values must be strings. |
-| `optional_nulls` | Defaults | Optional nulls have the same meaning as absence; creation succeeds. |
+| `optional_nulls` | Defaults | The optional fields shown in this example treat null as absent; creation succeeds. Actor equipment, requirement and termination-dependency fields reject explicit null. |
 | `duplicate_ids` | Meaning across steps | `duplicate_step_id` at the second step. |
 | `file_args` | Meaning across fields | Even an empty non-null `args` array is inapplicable to a file attempt. |
 | `unused_nonce` | Meaning across fields | A nonce without enabled capture is refused. |
@@ -115,58 +115,66 @@ and how fresh planning can leave a later query unavailable after an unlink.
 
 ## Declare authority separately from lifecycle placement
 
-The [sandbox-extension example](PolicyWitness.md#sandbox-extensions) uses one
-local declaration under `extensions`, with `token_ref`, `target` and optional
-`authority` (`read` or `read_write`; absent/null means `read`), plus explicit
-phases. An action is either a complete ordinary pair or `step_id` and an
-`extension` object. `consume` names `token_ref` and a distinct `handle_ref`;
-`release` names only that earlier handle. Native events do not have queries.
-Unknown fields remain closed at the declaration, action and operation objects.
-The bounded authority maps internally to native read or read-write classes;
-raw class names and token bytes remain unknown request fields. `write_fresh`
-and `create_fresh` are ordinary file action spellings with fixed one-byte writes,
-separate from the preserved `open_write` and `create` operations.
+Extension specimens use actors and explicit `issue`, `transfer`, `consume` and
+`release` operations. The [sandbox-extension example](PolicyWitness.md#sandbox-extensions)
+starts with an unapplied, unentitled issuer and an applied, selected subject.
+Issuance happens inside the named actor at its scheduled action, using the exact
+submitted absolute target. Native events do not have validator queries.
 
-The corpus's `extension_paired_create` combines an ordinary create with consume
-and release. Its issuance target is absent during preparation; accepting the
-request and observing creation do not imply that a token was issued. The later
-native actions therefore retain their unavailable reasons. The guide example
-uses an existing file to exercise the full native path. Both forms distinguish
-request acceptance from native availability.
+The top-level `extensions` field is refused even when null or empty. The retired
+`issuer_executable_path` override is also refused by key presence. These are
+current-schema field refusals, distinct from unsupported-version rejection.
+`consume` takes `delivery_ref` and a new `handle_ref`; its removed `token_ref`
+operand is refused even when null. Unknown fields remain closed at actor,
+phase, action and operation objects. Raw class names and token bytes are not
+request inputs. `write_fresh` and `create_fresh` remain ordinary file actions
+with fixed one-byte writes, separate from `open_write` and `create`.
 
 | Corpus family | Meaning or refusal |
 | --- | --- |
-| `extension_requires_phases`, `extension_declarations_over` | Explicit phases and the declaration cap are admission requirements. |
-| `extension_empty_token`, `extension_empty_handle`, `extension_unknown_token`, `extension_duplicate_reference` | References must be nonempty, declared and distinct. |
-| `extension_release_first`, `extension_unknown_handle`, `extension_release_token` | Release follows consumption and names only its handle reference. |
-| `extension_repeated_consume`, `extension_repeated_release` | Counts apply across phases, even if the earlier action would fail. |
-| `extension_unknown_action`, `extension_exec`, `extension_raw_token`, `extension_class` | Operation vocabulary, exec exclusion and fixed issuer interface are explicit. |
-| `extension_missing_issuer` | Admission can pass before the live host reports `extension_issuer_unavailable`. The corpus records that difference. |
-| Reference and target exact/over cases | UTF-8 byte limits apply to ASCII and multibyte strings. |
-| `extension_total_actions_256`, `extension_total_actions_257` | Ordinary and lifecycle actions share the aggregate capacity. |
+| `removed_extensions_null`, `removed_extensions_empty_array`, `removed_extensions_array` | The declaration field is refused in the current schema. |
+| `removed_issuer_override_null`, `removed_issuer_override_path` | The removed helper override is refused, including null. |
+| `consume_removed_operand_null`, `consume_removed_operand` | Actor consumption names its delivery, without declaration operands. |
+| `actor_issue_authority_null`, `actor_issue_authority_unknown`, `actor_issue_authority_empty`, `actor_issue_authority_boolean`, `actor_issue_authority_number` | Issue authority is a required closed string choice, not a nullable default. |
+| `actor_issue_raw_token`, `actor_issue_raw_extension_class` | Bearer bytes and native class strings are not accepted. |
+| Reference and target exact/over cases | UTF-8 byte capacities apply to ASCII and multibyte strings. |
 
-The compact `repeat_phase_actions` recipe repeats its first ordinary action,
-then preserves trailing lifecycle actions while partitioning the total into
-phases. Swift admission and the Python CLI/XPC materializer implement that same
-recipe. Expected refusals remain independent corpus data. Consume/release may
-be omitted or share a phase; their order is an action-order rule, not a promise
-that effective permissions are stable during a phase.
+The compact `repeat_phase_actions` recipe repeats an ordinary action and
+partitions the requested total into phases. Swift admission and the Python
+CLI/XPC materializer implement the same recipe; expected refusals remain
+independent corpus data. Admission is separate from native availability and
+from the observed effects of an admitted action.
 
 ## Give each actor its own sandbox
 
 The actor form replaces the singular `policy` with `actors`: each actor has an
 `actor_id` and a `sandbox` whose `mode` is `apply` (with its own `policy`
-object) or `unapplied` (no policy; the process runs under the runner's
-ordinary authority). Every phase names its `actor_id`, every declared actor
-owns at least one phase; `probe_plan` and `extensions` do not combine with
-`actors`, and `policy` is absent. The
+object) or `unapplied` (no specimen policy application; inherited restrictions
+remain). Every phase names its `actor_id`, every declared actor owns at least
+one phase; `probe_plan` and singular `policy` are absent. The `extensions`
+field is refused in every request form. The
 corpus's `actors_redelegation` is the principal specimen: an unapplied `A`
 issues a file token and transfers it to `B`; `B` consumes it, reads, issues
 under the consumed extension and transfers to `C`; `C` consumes and reads;
 both handles are released; a final phase has `A` create the corpus's effect
 file, the independent witness that the request executed. The guide's
 [sandbox-extension section](PolicyWitness.md#sandbox-extensions) walks the
-same request.
+same model, beginning with the simpler issuer/subject lifecycle.
+
+Each actor independently selects `equipment: "selected"` (the default) or
+`"unentitled"`; `required_entitlements` defaults to an empty list. Explicit null
+for either field is refused. Required keys must be unique nonempty C-string
+keys, at most 64 keys of 255 UTF-8 bytes each. The host checks boolean `true`
+in the actor's static and live signing readbacks; equipment labels do not prove
+effective authority. The controller's selected-runner requirement remains separate.
+
+A phase may add `after_termination: {"actor_id": "issuer"}` when the source's
+final scheduled visit precedes that phase. Unknown, self or non-prior source
+dependencies return `invalid_termination_dependency` at the dependency's
+`actor_id`. Null and unknown keys are refused. A satisfied dependency requires
+an owned natural reap after source final activation; phase completion alone
+cannot satisfy it. [The wire account](CONTRACT.md#actor-evidence-ownership)
+describes retained reap, activation and reference-only gate observations.
 
 Extension actions name their operands by reference. `issue` takes `family`
 (`file`), `authority` (`read` or `read_write`), an absolute `target` and a new
@@ -215,7 +223,9 @@ shadowed aliases are still refused. The selector unit tests pin that rule.
 [PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift) owns
 the ordinary request types;
 [PWRunnerExtension.swift](../runner/Sources/PWRunnerCore/PWRunnerExtension.swift)
-owns extension declarations and interventions. `CodingKeys` lists the allowed
+owns shared actor intervention types; [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift)
+owns actor inputs and [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift)
+resolves actor operations and resource ownership. `CodingKeys` lists the allowed
 fields; explicit decoding rejects unknown names, missing required fields and wrong types. Parameter
 names remain open. No additional schema language participates in parsing.
 

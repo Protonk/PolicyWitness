@@ -1,0 +1,47 @@
+--- a/tests/catalog.json
++++ b/tests/catalog.json
+@@ -106,7 +106,7 @@
+         },
+         {
+           "id": "byoxpc_verification_controls",
+-          "description": "Installation refuses, and validation reports, a never-launched copy whose worker or issuer code changed after sealing",
++          "description": "Signed worker variants and sealed equipment inventories refuse substitutions; the host binder rejects an incompatible worker identity",
+           "requires": [
+             "app",
+             "swift",
+--- a/tests/suites/preflight/run.sh
++++ b/tests/suites/preflight/run.sh
+@@ -46,11 +46,11 @@
+ 
+ if test_selected byoxpc_verification_controls; then
+ test_begin preflight byoxpc_verification_controls
+-test_step verification "refuse installation of, and report validation failure for, a copy whose worker or issuer code changed after sealing"
++test_step verification "verify signed worker variants, sealed inventory refusals and the host binding identity boundary"
+ test_require_pw
+ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "BYOXPC verification controls failed" \
+   "${ROOT_DIR}/tests/suites/preflight/check_byoxpc_verification.py" "${PW_APP_DIR}" "${PW_TEST_ARTIFACTS}" "${PW_BIN}"
+-test_pass "installation and validation verify the copied bundle recursively; a changed worker or issuer is refused and reported"
++test_pass "changed worker variants and sealed inventory substitutions are refused; host binding and exact restoration are verified"
+ fi
+ 
+ if test_selected build_entry_controls; then
+--- a/tests/suites/preflight/check_native_sources.py
++++ b/tests/suites/preflight/check_native_sources.py
+@@ -1,7 +1,7 @@
+ """Native source controls: the configured-directory reading build.sh uses, on the real Meson boundary.
+ 
+ What Meson evaluated must be the tree, and what the compiler consumed for the worker must be in the identity.
+-`xpc=false` configures and compiles only the C executables (the worker, the validator and the extension issuer),
++`xpc=false` configures and compiles only the two C executables (the worker and the validator),
+ so these controls need no Swift discovery. The unmodified manifest passes; a worker declaration pointing at a
+ substitute file, present on disk so Meson accepts it, is refused by name; a worker include reaching outside the
+ digest's directories through a symlinked directory, or by a relative path, is refused by the closure check, and
+--- a/tests/fixtures/host_setup/observer.c
++++ b/tests/fixtures/host_setup/observer.c
+@@ -1,5 +1,5 @@
+ /* Independent child receipt: observes the descriptors actually installed by spawn.
+- * It neither applies a policy nor implements the worker/issuer protocol. */
++ * It neither applies a policy nor implements the worker protocol. */
+ #include <fcntl.h>
+ #include <stdio.h>
+ #include <sys/stat.h>

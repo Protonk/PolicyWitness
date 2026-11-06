@@ -133,7 +133,8 @@ final class ActorSession {
             rawBase.advanced(by: PWShmLayout.abiIdentityOffset).update(from: identity.bindMemory(to: UInt8.self).baseAddress!,
                                                                      count: PWShmLayout.abiIdentityBytes)
         }
-        writeU32(rawBase, offset: PWShmLayout.extensionRequestedOffset, input.extensionRequested ? 1 : 0)
+        writeU32(rawBase, offset: PWShmLayout.authoritySetupOffset + 12, input.authorityRequired ? 1 : 0)
+        writeU32(rawBase, offset: PWShmLayout.authoritySetupOffset + 16, input.actorIndex)
         writeU32(rawBase, offset: PWShmLayout.stepCountOffset, UInt32(input.slots.count))
         writeU32(rawBase, offset: PWShmLayout.paramCountOffset, UInt32(input.params.count))
         // The submission's byte array is built once. Its count is the header's
@@ -261,11 +262,13 @@ final class ActorSession {
 
         // A high CLOEXEC duplicate avoids collisions with the evidence/ready dup2
         // destinations even when the session's original channel occupied FD 3/4/5.
-        if let source = input.extensionFD ?? input.authorityFD {
+        if let source = input.authorityFD {
             tokenFD = fcntl(source, F_DUPFD_CLOEXEC, 64)
+            let duplicateErrno = errno
+            input.authorityRecorder?.integer(6, "authority_duplicate", tokenFD, duplicateErrno)
             if tokenFD < 0 {
                 for fd in readyPipe + policyPipe { close(fd) }
-                failure = .shmSetupFailed("extension descriptor duplication failed"); return
+                failure = .shmSetupFailed("authority descriptor duplication failed"); return
             }
         }
         // Relocate all actor sources away from 0/3/4/5. Besides avoiding
@@ -301,7 +304,9 @@ final class ActorSession {
               spawnSetup(posix_spawn_file_actions_adddup2(&fileActions, launchSources[1], 3), "evidence dup2"),
               spawnSetup(posix_spawn_file_actions_adddup2(&fileActions, launchSources[2], 4), "ready dup2") else { return }
         if tokenFD >= 0 {
-            guard spawnSetup(posix_spawn_file_actions_adddup2(&fileActions, tokenFD, 5), "authority dup2") else { return }
+            let dupRC = posix_spawn_file_actions_adddup2(&fileActions, tokenFD, 5)
+            input.authorityRecorder?.record(7, "authority_spawn_dup2", dupRC == 0 ? "succeeded":"failed", kind:"error_code", rc:Int64(dupRC))
+            guard spawnSetup(dupRC, "authority dup2") else { return }
         }
         // Actor form: defined standard streams and an empty environment. The
         // legacy form keeps its inherited streams and environment unchanged.
@@ -320,7 +325,7 @@ final class ActorSession {
             "--ready-fd", "4",
             "--step-count", stepCountStr,
         ]
-        if tokenFD >= 0 { argv += [input.authorityFD != nil && input.extensionFD == nil ? "--authority-fd" : "--extension-fd", "5"] }
+        if tokenFD >= 0 { argv += ["--authority-fd", "5"] }
         if let hangMs = input.postApplyHangMs, hangMs > 0 {
             argv.append("--post-apply-hang-ms")
             argv.append(String(hangMs))
@@ -363,6 +368,7 @@ final class ActorSession {
             failure = .spawnFailed("\(String(cString: strerror(spawnRC)))"); return
         }
         pid = child
+        closeAuthorityDuplicate()
         spawned = true
         // The transfer calls (clock, write, poll) are one injection point: the
         // deadline and the writer share the supplied clock, and production keeps
@@ -439,9 +445,17 @@ final class ActorSession {
         base = nil
         if ownsShmFD && shmFD >= 0 { close(shmFD) }
         ownsShmFD = false
-        if tokenFD >= 0 { close(tokenFD); tokenFD = -1 }
+        closeAuthorityDuplicate()
         if actionsInitialized { posix_spawn_file_actions_destroy(&fileActions); actionsInitialized = false }
         if attributesInitialized { posix_spawnattr_destroy(&spawnAttributes); attributesInitialized = false }
+    }
+
+    private func closeAuthorityDuplicate() {
+        if tokenFD >= 0 {
+            let fd=tokenFD; tokenFD = -1
+            let rc=close(fd), saved=errno
+            input.authorityRecorder?.integer(8,"close_launch_duplicate",rc,saved,cleanup:true)
+        }
     }
 
     // MARK: - Publication primitives
@@ -455,8 +469,9 @@ final class ActorSession {
     var identityMatches: Bool { workerIdentityMatches(rawBase) }
     /// The worker's setup publication: 1 applied, 2 unapplied declared, 0 none.
     var actorSetup: UInt32 { loadAcquire(rawBase, offset: PWShmLayout.actorSetupOffset) }
-    var authorityStatus: UInt32 { UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.authorityStatusOffset)) }
-    var authorityDetail: UInt32 { UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.authorityDetailOffset)) }
+    var authoritySetupObservation: PWRunnerAuthorityScope { decodeAuthoritySetup(rawBase, actor: Int(input.actorIndex), required: input.authorityRequired) }
+    var authorityStatus: UInt32 { authoritySetupObservation.publication == "observed" ? UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.authorityStatusOffset)) : 0 }
+    var authorityDetail: UInt32 { authoritySetupObservation.publication == "observed" ? UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.authorityDetailOffset)) : 0 }
     var activationObserved: UInt32 { loadAcquire(rawBase, offset: PWShmLayout.activationObservedOffset) }
     /// Slots this worker has published as completed; an acquire sample.
     var completedSlotCount: Int {
@@ -507,8 +522,11 @@ final class ActorSession {
     }
 
     /// Actor form: name the global phase that activates this actor's next visit.
-    func activate(globalPhase: UInt32) {
+    @discardableResult
+    func activate(globalPhase: UInt32) -> PWRunnerActorActivation {
+        let ordinal=process.nextCaptureOrdinal()
         storeRelease(rawBase, offset: PWShmLayout.activationOffset, globalPhase)
+        return PWRunnerActorActivation(capture_ordinal:ordinal,observed_ns:process.calls.clock())
     }
 
     /// One nonblocking wait on the child; a failed wait breaks ownership.
@@ -521,6 +539,7 @@ final class ActorSession {
     // MARK: - Cleanup
 
     func requestExit() {
+        process.departureRequested = true
         storeRelease(rawBase, offset: PWShmLayout.exitRequestedOffset, 1)
         exitRequested = true
     }
@@ -578,8 +597,11 @@ final class ActorSession {
             phaseOutputs[index].completed = loadAcquire(base, offset: PWShmLayout.phaseCompletedOffset) == 1
         }
         let finalProceedObserved = phaseOutputs.allSatisfy { $0.acknowledged }
-        let applyRC = (sawApplied || sawDone) ? readI32(rawBase, offset: PWShmLayout.applyRcOffset) : 0
-        let applyErrno = (sawApplied || sawDone) ? readI32(rawBase, offset: PWShmLayout.applyErrnoOffset) : 0
+        let workerEvidence=decodeWorkerEvidence(rawBase)
+        let nativeApplyFailure=workerEvidence?.failure_state == "published" && workerEvidence?.failure?.operation == 8
+            && workerEvidence?.failure?.code == 1 && workerEvidence?.failure?.native_kind == 1 ? workerEvidence?.failure:nil
+        let applyRC = sawApplied ? readI32(rawBase, offset:PWShmLayout.applyRcOffset) : nativeApplyFailure?.native_result ?? 0
+        let applyErrno = nativeApplyFailure?.errno ?? 0
 
         // Slot payloads are immutable after release publication. Read only confirmed slots.
         var slotResults: [CWorkerSlotResult] = []
@@ -696,25 +718,17 @@ final class ActorSession {
             cleanupTrigger: cleanupTrigger,
             graceEnd: graceEnd,
             collectionBasis: collectionBasis,
-            extensionDelivery: loadAcquire(rawBase, offset: PWShmLayout.extensionDeliveryPublishedOffset) == 1
-                ? CWorkerExtensionDelivery(
-                    status: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryStatusOffset)),
-                    deliveredBytes: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveredBytesOffset)),
-                    stage: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryStageOffset)),
-                    nativeRc: readI32(rawBase, offset: PWShmLayout.extensionDeliveryNativeRcOffset),
-                    errno: readI32(rawBase, offset: PWShmLayout.extensionDeliveryErrnoOffset),
-                    cleanupStage: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryCleanupStageOffset)),
-                    cleanupErrno: readI32(rawBase, offset: PWShmLayout.extensionDeliveryCleanupErrnoOffset))
-                : nil,
             readyWait: readyWait,
             sentinelWait: sentinelWait,
             graceWait: graceWait,
             actorSetup: actorSetup,
             activationObserved: activationObserved,
             policyReceivedSha256: policyReceived,
-            authorityStatus: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.authorityStatusOffset)),
-            authorityDetail: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.authorityDetailOffset)),
-            nativeSymbols: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.nativeSymbolsOffset))
+            authorityStatus: authorityStatus,
+            authorityDetail: authorityDetail,
+            nativeSymbols: authoritySetupObservation.publication == "observed" ? UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.nativeSymbolsOffset)) : 0,
+            authoritySetup: input.actorMode == 0 ? nil : authoritySetupObservation,
+            ownedReap: process.ownedReap
         )
     }
 }

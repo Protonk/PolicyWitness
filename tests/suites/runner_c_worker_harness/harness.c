@@ -314,13 +314,10 @@ static const char SCEN_PARAMS_ROUND_TRIP_POLICY[] =
     "(deny file-read-data (subpath (param \"TARGET\")))\n";
 
 /* Deliberately malformed: a missing close paren makes
- * sandbox_compile_string fail. Exercises the worker's compile-failure
- * branch — apply_rc=-1, done flips, applied stays 0, and the worker
- * still clean-exits on the exit byte rather than dying. This is the same
- * worker publication that the host interprets as a legacy runner_failed
- * status. The status alone cannot distinguish compilation, parameter setup,
- * and application failures; this harness tests the real compilation branch
- * in isolation without host/XPC classification. */
+ * sandbox_compile_string return NULL. Its published failure identifies
+ * compilation before any sandbox_apply call. The worker publishes done with
+ * applied still zero and exits cleanly; an unpublished apply_rc scalar does
+ * not establish a native application result. */
 static const char SCEN_COMPILE_FAILURE_POLICY[] =
     "(version 1)\n"
     "(allow default";
@@ -938,7 +935,7 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     int poll_iters = (scen->poll_deadline_ms ? scen->poll_deadline_ms : 2000) / 2;
     struct timespec applied_time = {0};
     pw_shm_evidence_t *order_e = (void *)((char *)base + PW_SHM_REGION_BYTES
-        - PW_SHM_DIAGNOSTIC_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES);
+        - PW_SHM_DIAGNOSTIC_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES - PW_SHM_AUTHORITY_SETUP_BYTES);
     int saw_applied = 0;
     int saw_done = 0;
     int status = 0;
@@ -1123,7 +1120,7 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         printf(",\"exit_code\":null,\"term_signal\":null");
     }
     pw_shm_evidence_t *ev = (pw_shm_evidence_t *)((char *)base + PW_SHM_REGION_BYTES
-        - PW_SHM_DIAGNOSTIC_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES);
+        - PW_SHM_DIAGNOSTIC_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES - PW_SHM_AUTHORITY_SETUP_BYTES);
     uint32_t published = atomic_load_explicit(&ev->failure_published, memory_order_acquire);
     printf(",\"failure_published\":%u", published);
     if (published == 1) {

@@ -25,7 +25,7 @@ have none, carry that distinction.
 The parser accepts the forms build.sh uses and refuses any other: a banner is
 `echo "==> ..."` outside a function; a refusal is `echo "ERROR: ..." 1>&2` or
 a stderr heredoc whose first ERROR line is the message, followed within three
-lines by `exit N`; a signature is a `sign_macho "..."` call and a seal a
+lines by `exit N`; a signature is a `sign_macho "..."` call with an optional second quoted entitlement-plist argument and a seal a
 `codesign --force` command; helpers run under `"${PW_PYTHON}"` as
 `"${ROOT_DIR}/<path>"`, bare or captured into a variable, as the lock front
 end `exec /bin/bash "${ROOT_DIR}/<path>"`, or as the resolver
@@ -262,9 +262,9 @@ def parse_script(text):
             continue
         if re.match(r"""^\s*echo\s+['"]?ERROR""", line):
             raise ParseError(f"line {number}: an ERROR echo must be double-quoted and redirected to stderr")
-        match = re.match(r'^\s*sign_macho "(.*)"\s*$', line)
+        match = re.match(r'^\s*sign_macho "([^"]+)"(?: "([^"]+)")?\s*$', line)
         if match:
-            model["signing"].append(dict(kind="signature", target=match.group(1), entitlements=None, **context(number)))
+            model["signing"].append(dict(kind="signature", target=match.group(1), entitlements=match.group(2), **context(number)))
             i += 1
             continue
         if re.match(r"^\s*codesign\b", line):
@@ -306,7 +306,7 @@ def parse_script(text):
             i += 1
             continue
         if re.match(r"^\s*sign_macho ", line):
-            raise ParseError(f"line {number}: a sign_macho call must name one double-quoted target")
+            raise ParseError(f"line {number}: a sign_macho call must name one double-quoted target and optionally one double-quoted entitlement plist")
         i += 1
     if stack:
         raise ParseError(f"unbalanced block at end of script: {stack[-1]['kind']}")

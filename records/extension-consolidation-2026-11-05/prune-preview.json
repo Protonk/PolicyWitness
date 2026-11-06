@@ -1,0 +1,259 @@
+{
+  "apply": false,
+  "checkout_busy": false,
+  "failures": [],
+  "removed": [],
+  "runs": [
+    {
+      "disposition": "delete",
+      "path": "runs/actor-passes-default-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/actor-passes-final-controls-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-audit-drift-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-critique-controls-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-critique-default-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-critique-default-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-docs-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-docs-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-docs-03"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-repairs-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-repairs-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-repairs-03"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-repairs-04"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-repairs-05"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-repairs-06"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/doc-lookback-repairs-07"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/docs-extensions-cuts-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/docs-extensions-cuts-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/docs-frontier-faq-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/docs-specimen-wording-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-abi-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-abi-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-actors-03"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-authority-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-authority-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-baseline-20261105"
+    },
+    {
+      "disposition": "keep: retained",
+      "path": "runs/extension-consolidation-battery-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-build-refusals-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-build-refusals-03"
+    },
+    {
+      "disposition": "keep: retained",
+      "path": "runs/extension-consolidation-build-refusals-04"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-contracts-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-contracts-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-contracts-03"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-contracts-04"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-core-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-core-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-core-docs-plan"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-equipment-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-equipment-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-failure-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-lifecycle-plan"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-native-20261105"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-native-contract-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-order-native-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-plan-cleanup-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-plan-docs-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-plan-review"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-repairs-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-resolved-plan"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-source-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/extension-consolidation-terminal-setup-plan"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/footprint-outflow-docs-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/footprint-outflow-docs-02"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/footprint-outflow-docs-03"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/footprint-outflow-docs-04"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/footprint-plan-order-docs-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/footprint-prereq-01"
+    },
+    {
+      "disposition": "delete",
+      "path": "runs/footprint-prereq-02"
+    },
+    {
+      "disposition": "keep: unmanaged",
+      "path": ".release-rotation",
+      "reason": "outside tests/out/runs",
+      "retained": false
+    },
+    {
+      "disposition": "keep: unmanaged",
+      "path": "pytest-owners",
+      "reason": "outside tests/out/runs",
+      "retained": false
+    },
+    {
+      "disposition": "keep: unmanaged",
+      "path": "release-acceptance",
+      "reason": "outside tests/out/runs",
+      "retained": true
+    }
+  ],
+  "schema_version": 1
+}

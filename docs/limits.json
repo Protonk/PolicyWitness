@@ -607,8 +607,8 @@
       "title": "Test-seam executable paths",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.issuer_executable_path`",
-      "counting": "Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Applies even to an issuer override supplied in actor form, which does not run the declaration issuer.",
+      "refusal_field": "`_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.actor_equipment_executable_paths.{role}`",
+      "counting": "Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Actor equipment overrides are keyed by selected or unentitled role.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -789,9 +789,9 @@
       "title": "Worker publication wait",
       "value": 120000,
       "unit": "milliseconds",
-      "counting": "Elapsed monotonic publication wait for ordinary/declaration execution, starting after the readiness wait and excluding synchronous validator collection. Actor execution uses actor_execution_allowance instead.",
+      "counting": "Elapsed monotonic publication wait for ordinary execution, starting after the readiness wait and excluding synchronous validator collection. Actor execution uses actor_execution_allowance instead.",
       "effect": "Expiry can yield `runner_timeout` with partial evidence and reported cleanup results.",
-      "control": "Fixed; `_test_overrides.worker_timeout_ms` replaces the ordinary/declaration default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance.",
+      "control": "Fixed; `_test_overrides.worker_timeout_ms` replaces the ordinary default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -1180,7 +1180,7 @@
       "title": "Validator I/O deadline",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
+      "counting": "Default elapsed monotonic deadline for one phase\u2019s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
       "effect": "Received verdicts survive an I/O timeout; cleanup results remain reported.",
       "control": "Fixed; `_test_overrides.validator_io_timeout_ms` changes the proposed deadline, floored at 50 ms without a ceiling. The aggregate remainder can cap the effective deadline below that floor.",
       "sources": [
@@ -1507,7 +1507,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 85852557,
+      "value": 94205342,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",
@@ -1548,13 +1548,13 @@
           "form": "test"
         }
       ],
-      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer, lifecycle-event, fresh-read, fresh-write, exec-observation and actor components are added without reclaiming ordinary fields. Actor components use the union of encoded success, failure, interruption and capture fixtures: eight actor records with full compiled-profile payloads, sixteen phase overheads, every event, transfer and resource at its capacity, aggregate disposition entries and issues, and ordinary-step actor identities. Bounded echoed strings use maximal escaping, native scalars use 20 decimal bytes, fixed actor vocabulary has a checked 128-byte ASCII ceiling, and each array has an explicit capacity. The actor capture allowance is compared with production encoding of a maximum receipt; missing capture fixtures and unclassified or oversized arrays fail. Ordinary controls separately encode valid exec evidence and fresh-write evidence on every slot. Mutually exclusive fields remain counted, so this is an upper bound, not a reachable reply. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write, mixed native and actor capture workloads. Fixture-key classification does not prove that every future producer branch is represented; producer and fixture review remain necessary."
+      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded fresh-read, fresh-write, exec-observation and actor components are added without reclaiming ordinary fields. Actor components use the union of encoded success, failure, interruption and capture fixtures: eight actor records with full compiled-profile payloads, sixteen phase overheads, every event, transfer and resource at its capacity, aggregate disposition entries and issues, and ordinary-step actor identities. Bounded echoed strings use maximal escaping, native scalars use 20 decimal bytes, fixed actor vocabulary has a checked 128-byte ASCII ceiling, and each array has an explicit capacity. The actor capture allowance is compared with production encoding of a maximum receipt; missing capture fixtures and unclassified or oversized arrays fail. Ordinary controls separately encode valid exec evidence and fresh-write evidence on every slot. Mutually exclusive fields remain counted, so this is an upper bound, not a reachable reply. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read, fresh-write, mixed native and actor capture workloads. Fixture-key classification does not prove that every future producer branch is represented; producer and fixture review remain necessary. The added authority setup, equipment readbacks and requirements, application assessments, termination gates and preparation refusals reserve 8 MiB after explicit worst-escaped populations are summed; declaration components are removed while ordinary fresh-read fields remain charged."
     },
     {
       "id": "controller_output",
       "section": "transport",
       "title": "Runner client output",
-      "value": 260046848,
+      "value": 285212672,
       "unit": "bytes",
       "counting": "Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes.",
       "effect": "Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred.",
@@ -1924,10 +1924,10 @@
     {
       "id": "phase_count",
       "section": "admission",
-      "title": "Ordinary/declaration phases",
+      "title": "Ordinary phases",
       "value": 8,
       "unit": "items",
-      "counting": "Explicit phases in an ordinary or declaration request; probe_plan normalizes to one phase. Actor requests use actor_phases.",
+      "counting": "Explicit phases in an ordinary request; probe_plan normalizes to one phase. Actor requests use actor_phases.",
       "effect": "Excess returns admission_failure before any child.",
       "control": "Fixed.",
       "sources": [
@@ -1954,7 +1954,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The ordinary/declaration phase cap is distinct from the global actor phase cap; both share the same per-worker record layout.",
+      "behavior": "The ordinary phase cap is distinct from the global actor phase cap; both share the same per-worker record layout.",
       "refusal_field": "`phases`"
     },
     {
@@ -1995,7 +1995,7 @@
       "title": "Phase records per worker region",
       "value": 16,
       "unit": "items",
-      "counting": "Fixed phase records in each worker shared header. Ordinary/declaration requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records.",
+      "counting": "Fixed phase records in each worker shared header. Ordinary requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records.",
       "effect": "A worker refuses a header naming more phases than its records before application.",
       "control": "Fixed.",
       "sources": [
@@ -2018,7 +2018,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Fixed phase records in each worker shared header. The declaration form admits eight phases; actor-form visits use the same records under their own admitted phase limit. A worker refuses a header naming more phases than its records before application."
+      "behavior": "Fixed phase records in each worker shared header. The ordinary form admits eight phases; actor-form visits use the same records under their own admitted phase limit. A worker refuses a header naming more phases than its records before application."
     },
     {
       "id": "authority_slot_bytes",
@@ -2092,7 +2092,7 @@
       "title": "Aggregate phase collection allowance",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Cumulative monotonic planning and collection time across ordinary/declaration phases. Actor form uses the single actor_collection_allowance pool. Remaining allowance caps each validator I/O deadline; cleanup and scheduling can overrun it.",
+      "counting": "Cumulative monotonic planning and collection time across ordinary phases. Actor form uses the single actor_collection_allowance pool. Remaining allowance caps each validator I/O deadline; cleanup and scheduling can overrun it.",
       "effect": "After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts.",
       "control": "Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond.",
       "sources": [
@@ -2397,121 +2397,13 @@
       "behavior": "Bytes in a decoded validator error string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated."
     },
     {
-      "id": "extension_declarations",
-      "section": "admission",
-      "title": "Declaration-form declarations",
-      "value": 1,
-      "unit": "items",
-      "counting": "Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate.",
-      "effect": "Additional declarations return `admission_refused`.",
-      "control": "Fixed.",
-      "sources": [
-        {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
-          "symbol": "PWExtensionLimits"
-        },
-        {
-          "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
-          "symbol": "extensionMeaningFailure"
-        }
-      ],
-      "checks": [
-        {
-          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
-          "symbol": "runLimitsContractTests",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/runner_outcome_bad_request/contract.py",
-          "symbol": "main",
-          "kind": "boundary",
-          "form": "test"
-        }
-      ],
-      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "`extensions`"
-    },
-    {
-      "id": "extension_consumes",
-      "section": "admission",
-      "title": "Declaration-form consume actions",
-      "value": 1,
-      "unit": "items",
-      "counting": "Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate.",
-      "effect": "A repeated consume returns `repeated_consume`.",
-      "control": "Fixed.",
-      "sources": [
-        {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
-          "symbol": "PWExtensionLimits"
-        },
-        {
-          "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
-          "symbol": "extensionMeaningFailure"
-        }
-      ],
-      "checks": [
-        {
-          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
-          "symbol": "runLimitsContractTests",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/runner_outcome_bad_request/contract.py",
-          "symbol": "main",
-          "kind": "boundary",
-          "form": "test"
-        }
-      ],
-      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "No `admission_failure.field`; `request_failure.code: repeated_consume`, with `request_failure.path: [\"phases\", \"{phase}\", \"actions\", \"{action}\", \"extension\"]`"
-    },
-    {
-      "id": "extension_releases",
-      "section": "admission",
-      "title": "Declaration-form release actions",
-      "value": 1,
-      "unit": "items",
-      "counting": "Across the complete declaration-form specimen, including separate phases. Omitted actions are legal. Actor-form counts are separate.",
-      "effect": "A repeated release returns `repeated_release`.",
-      "control": "Fixed.",
-      "sources": [
-        {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
-          "symbol": "PWExtensionLimits"
-        },
-        {
-          "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
-          "symbol": "extensionMeaningFailure"
-        }
-      ],
-      "checks": [
-        {
-          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
-          "symbol": "runLimitsContractTests",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/runner_outcome_bad_request/contract.py",
-          "symbol": "main",
-          "kind": "boundary",
-          "form": "test"
-        }
-      ],
-      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "No `admission_failure.field`; `request_failure.code: repeated_release`, with `request_failure.path: [\"phases\", \"{phase}\", \"actions\", \"{action}\", \"extension\"]`"
-    },
-    {
       "id": "extension_reference",
       "section": "admission",
       "title": "Extension references and recipients",
       "value": 63,
       "unit": "UTF-8 bytes",
       "counting": "Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL.",
-      "effect": "Excess returns `admission_refused`; references must also satisfy declaration and action order.",
+      "effect": "Excess returns `admission_refused`; references must also satisfy actor resource ownership and action order.",
       "control": "Fixed.",
       "sources": [
         {
@@ -2538,49 +2430,7 @@
         }
       ],
       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "`extensions.{declaration}.token_ref`, `phases.{phase}.actions.{action}.extension.token_ref`, `phases.{phase}.actions.{action}.extension.handle_ref`, `phases.{phase}.actions.{action}.extension.delivery_ref` or `phases.{phase}.actions.{action}.extension.recipient`"
-    },
-    {
-      "id": "extension_target",
-      "section": "admission",
-      "title": "Issuance target path",
-      "value": 1023,
-      "unit": "UTF-8 bytes",
-      "counting": "Submitted declaration-form target path, before host realpath preparation; excludes terminating NUL. Actor issue targets and ordinary attempt targets have separate rows.",
-      "effect": "Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence.",
-      "control": "Fixed.",
-      "sources": [
-        {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
-          "symbol": "PWExtensionLimits"
-        },
-        {
-          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
-          "symbol": "PW_EXTENSION_PATH_BYTES"
-        }
-      ],
-      "checks": [
-        {
-          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
-          "symbol": "runLimitsContractTests",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "compare",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/runner_outcome_bad_request/contract.py",
-          "symbol": "main",
-          "kind": "boundary",
-          "form": "test"
-        }
-      ],
-      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "`extensions.{declaration}.target`"
+      "refusal_field": "`phases.{phase}.actions.{action}.extension.token_ref`, `.handle_ref`, `.delivery_ref` or `.recipient`"
     },
     {
       "id": "actors",
@@ -2874,7 +2724,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The same bound as the legacy extension references, shared by every identifier the reply echoes."
+      "behavior": "Actor identifiers and local token, delivery and handle references share this bound; every echoed identifier remains bounded."
     },
     {
       "id": "extension_issue_target",
@@ -2914,6 +2764,12 @@
           "symbol": "main",
           "kind": "boundary",
           "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         }
       ],
       "behavior": "The exact submitted bytes reach the worker's slot and the native issue call; no canonicalization is applied."
@@ -2929,7 +2785,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "path": "controller/tools/pw_probe_runner/pw_authority_bytes.h",
           "symbol": "PW_EXTENSION_TOKEN_BYTES"
         }
       ],
@@ -2953,7 +2809,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
+      "behavior": "Actor authority controls exercise framing, unavailable operations, native results, owned byte erasure and independent cleanup; shared scalar admission is checked separately."
     },
     {
       "id": "extension_token_payload",
@@ -2966,7 +2822,7 @@
       "control": "Fixed.",
       "sources": [
         {
-          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "path": "controller/tools/pw_probe_runner/pw_authority_bytes.h",
           "symbol": "PW_EXTENSION_TOKEN_BYTES"
         }
       ],
@@ -2990,85 +2846,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
-    },
-    {
-      "id": "extension_channel",
-      "section": "transport",
-      "title": "Transient extension channel",
-      "value": 17472,
-      "unit": "bytes",
-      "counting": "Declaration-form logical mapped channel with header, resolved path and token array. The OS backing object may round its storage up; actor authority slots are separate.",
-      "effect": "Insufficient backing size or invalid channel geometry cannot supply a token.",
-      "control": "Fixed.",
-      "sources": [
-        {
-          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
-          "symbol": "PW_EXTENSION_CHANNEL_BYTES"
-        }
-      ],
-      "checks": [
-        {
-          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
-          "symbol": "runLimitsContractTests",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "compare",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/witness_contract/check_extension_boundaries.py",
-          "symbol": "run_case",
-          "kind": "boundary",
-          "form": "test"
-        }
-      ],
-      "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
-    },
-    {
-      "id": "extension_issuer_wait",
-      "section": "execution",
-      "title": "Issuer collection wait",
-      "value": 5000,
-      "unit": "milliseconds",
-      "counting": "Declaration form only: monotonic host wait after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; actor issue actions do not use this helper or allowance.",
-      "effect": "Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait.",
-      "control": "Fixed.",
-      "sources": [
-        {
-          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
-          "symbol": "PW_EXTENSION_ISSUER_WAIT_MS"
-        },
-        {
-          "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-          "symbol": "ExtensionSession"
-        }
-      ],
-      "checks": [
-        {
-          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
-          "symbol": "runLimitsContractTests",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "compare",
-          "kind": "value",
-          "form": "test"
-        },
-        {
-          "path": "tests/suites/witness_contract/check_extension_boundaries.py",
-          "symbol": "run_case",
-          "kind": "boundary",
-          "form": "test"
-        }
-      ],
-      "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
+      "behavior": "Actor authority controls exercise framing, unavailable operations, native results, owned byte erasure and independent cleanup; shared scalar admission is checked separately."
     },
     {
       "id": "sysctl_read_bytes",
@@ -3373,7 +3151,7 @@
       "id": "client_reply_retention",
       "section": "transport",
       "title": "Client host reply retention",
-      "value": 88080384,
+      "value": 96468992,
       "unit": "bytes",
       "counting": "Host result bytes retained before base64 encoding in the client capture.",
       "effect": "Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct.",
@@ -3507,6 +3285,345 @@
         }
       ],
       "behavior": "Constructed Swift and Rust paths independently derive the retained maximum from their production constructors. Separate literal depth 8/9 and UTF-8 component 63/64 controls assert whole-path retention or withholding; Rust also checks serialized null and exact retained components. Actor parameter refusal controls cover component 63/64. These are constructor and serialization observations, not live XPC evidence."
+    },
+    {
+      "id": "actor_required_entitlements",
+      "section": "admission",
+      "title": "Actor entitlement requirements",
+      "value": 64,
+      "unit": "items",
+      "counting": "Unique nonempty required boolean entitlement keys per actor.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Pure admission checks exact and excessive counts; public request corpus rejects excessive counts and malformed keys.",
+      "refusal_field": "`actors.{actor}.required_entitlements`"
+    },
+    {
+      "id": "actor_entitlement_key",
+      "section": "admission",
+      "title": "Actor entitlement requirement key",
+      "value": 255,
+      "unit": "UTF-8 bytes",
+      "counting": "Each actor requirement key, excluding NUL.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Pure admission covers exact and excessive UTF-8 byte lengths, including multibyte input; independent readers validate requirement decisions.",
+      "refusal_field": "`actors.{actor}.required_entitlements.{key}`"
+    },
+    {
+      "id": "actor_termination_wait",
+      "section": "execution",
+      "title": "Actor termination dependency wait",
+      "value": 5000,
+      "unit": "milliseconds",
+      "counting": "Maximum wait before a dependent phase, additionally capped by remaining execution and lifetime allowances.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+          "symbol": "PWActorLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Natural-reap and still-alive controls distinguish termination from phase completion; shortened internal allowances establish routing rather than elapsed production duration."
+    },
+    {
+      "id": "authority_setup_trailer",
+      "section": "evidence",
+      "title": "Worker authority setup trailer",
+      "value": 832,
+      "unit": "bytes",
+      "counting": "64-byte header plus sixteen 48-byte independently published operation cells.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
+          "symbol": "PWAuthoritySetupLayout"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Compiled C and Swift layout agreement and publication controls retain eligible cells independently of the setup decision."
+    },
+    {
+      "id": "authority_setup_cells",
+      "section": "evidence",
+      "title": "Worker authority setup operation cells",
+      "value": 16,
+      "unit": "items",
+      "counting": "Fixed operation slots per worker trailer, including separate cleanup facts.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
+          "symbol": "PWAuthoritySetupLayout"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Decoder rejects malformed or duplicate identity and retains primary and cleanup observations."
+    },
+    {
+      "id": "authority_setup_reply",
+      "section": "transport",
+      "title": "Authority setup encoded reserve",
+      "value": 524288,
+      "unit": "bytes",
+      "counting": "Conservative JSON allowance for host run, eight regions, thirty-two custody slots and eight workers; at most 388 operation cells.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
+          "symbol": "PWAuthoritySetupLayout"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Maximum reply model accounts for the entire setup reserve; native controls separately establish publication and ownership."
+    },
+    {
+      "id": "equipment_entitlement_bytes",
+      "section": "evidence",
+      "title": "Equipment entitlement readback",
+      "value": 65536,
+      "unit": "UTF-8 bytes",
+      "counting": "UTF-8 XML payload in each entitlement readback row.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "PWEquipmentLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Independent readers check the fixed populations and record associations; the maximum reply model charges worst-case JSON escaping."
+    },
+    {
+      "id": "equipment_static_bindings",
+      "section": "evidence",
+      "title": "Equipment static binding records",
+      "value": 4,
+      "unit": "items",
+      "counting": "Two required packaged roles and at most two explicit role overrides.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "PWEquipmentLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Independent readers check the fixed populations and record associations; the maximum reply model charges worst-case JSON escaping."
+    },
+    {
+      "id": "equipment_live_inspections",
+      "section": "evidence",
+      "title": "Equipment live inspections",
+      "value": 8,
+      "unit": "items",
+      "counting": "One inspection per usable actor, before any schedule activation.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "PWEquipmentLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Independent readers check the fixed populations and record associations; the maximum reply model charges worst-case JSON escaping."
+    },
+    {
+      "id": "equipment_entitlement_records",
+      "section": "evidence",
+      "title": "Equipment entitlement records",
+      "value": 12,
+      "unit": "items",
+      "counting": "Four static and eight live readbacks at the maximum actor and override population.",
+      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "PWEquipmentLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Independent readers check the fixed populations and record associations; the maximum reply model charges worst-case JSON escaping."
+    },
+    {
+      "id": "equipment_inventory_bytes",
+      "section": "evidence",
+      "title": "Sealed worker equipment inventory",
+      "value": 1048576,
+      "unit": "bytes",
+      "counting": "Complete service-local inventory bytes read before actor preparation. A larger input is refused without selecting equipment.",
+      "effect": "An observation exceeding this bound cannot establish eligible actor equipment.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "PWEquipmentLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+          "symbol": "runActorEquipmentTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Implementation-value and constructed exact/over-bound controls are separate from signed live equipment observations."
+    },
+    {
+      "id": "equipment_diagnostic_bytes",
+      "section": "evidence",
+      "title": "Equipment diagnostic",
+      "value": 1024,
+      "unit": "UTF-8 bytes",
+      "counting": "Each equipment diagnostic is bounded before it enters a reply; longer observations retain a bounded diagnostic.",
+      "effect": "An observation exceeding this bound cannot establish eligible actor equipment.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "PWEquipmentLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorEquipmentTests.swift",
+          "symbol": "runActorEquipmentTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Implementation-value and constructed exact/over-bound controls are separate from signed live equipment observations."
+    },
+    {
+      "id": "equipment_metadata_bytes",
+      "section": "evidence",
+      "title": "Equipment metadata record",
+      "value": 32768,
+      "unit": "bytes",
+      "counting": "Encoded static-binding or live-execution metadata record, separate from its referenced entitlement plist.",
+      "effect": "An observation exceeding this bound cannot establish eligible actor equipment.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+          "symbol": "PWEquipmentLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Implementation-value check only; live workload sizes and conservative reply allowance are checked separately."
     }
   ]
 }

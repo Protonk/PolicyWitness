@@ -1,0 +1,14 @@
+{
+  "source_manifest": "evidence/candidate-11-final-source.json",
+  "entries": 924,
+  "unchanged_entries": 923,
+  "changed": [
+    {
+      "path": "tests/RETAINED.json",
+      "before_sha256": "c8267207ebf319e0ac3075990382f7fc28ba9af22b6d755b1dadc0cbce9378fe",
+      "after_sha256": "e0efcac90d7aa66ffcd6020edf2f8329c10cbb62a30c0a93675ea06e94341fb7"
+    }
+  ],
+  "reviewed_exception": "Only the retention index changed after final execution. It records the two retained run locations, identities and reasons; it is not a production build or test-behavior input. The prior bytes and atomic update receipt are preserved. Record-only review/evidence updates are outside this source scope.",
+  "production_inputs_unchanged": true
+}

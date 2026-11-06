@@ -1,0 +1,14 @@
+==> [selection] witness_contract/actors_byoxpc
+==> [witness_contract/actors_byoxpc] start
+==> [witness_contract/actors_byoxpc] install one owned runner with independently signed selected and unentitled workers
+==> [witness_contract/actors_byoxpc] read both worker roles, host and validator from installed bytes and registry
+==> [witness_contract/actors_byoxpc] mixed packaged authority, reordered actors and a same-selected substitution rejected independently of native success
+==> [witness_contract/actors_byoxpc] actor issuance, placement, omission, fresh access and termination dependency
+==> [witness_contract/actors_byoxpc] directory modification, exclusive creation and independent persistence
+==> [witness_contract/actors_byoxpc] ordinary phases preserve independent attempts and native query observations
+==> [witness_contract/actors_byoxpc] maximum ordinary, phased, fresh-file, actor and escaped-output replies
+==> [witness_contract/actors_byoxpc] principal re-delegation observations, successful calibration and narrow contrasts
+==> [witness_contract/actors_byoxpc] unapplied instrumented selected worker retains its signed App Sandbox restriction
+==> [witness_contract/actors_byoxpc] hold only selected worker aside, retain actual refusal boundary, restore exact bytes
+==> [witness_contract/actors_byoxpc] pass: BYOXPC mixed equipment, lifecycle, directory, ordinary phases, maximal replies, re-delegation observations and inherited restriction pass with verified runner cleanup
+Test run summary: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-actors-03/run.json

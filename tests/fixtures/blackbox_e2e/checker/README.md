@@ -1,44 +1,18 @@
 # Evidence checker fixtures
 
-Live captures of complete `run` envelopes for independent controls of the
-evidence checker. The current directory is `response25/`. Each `*_run.json` is
-an unmodified capture from the case named below, stamped with the build that
-produced it, and each `*_specimen.json` is the exact submitted request.
+`current/constructed_run.json` is an authored ordinary current-contract model
+with hypothetical process identities, copied carrier structure and unavailable
+artifact verification. It supports checker and comparison interpretation controls;
+it is not a live capture or signed-candidate result. Missing-path controls are
+authored by `constructed_missing_path_baseline()` in the menagerie control file.
 
-- `valid_run.json` and `valid_specimen.json`: `blackbox_e2e/BBX-001`. The
-  checker controls and the comparison controls start from it.
-- `missing_path_run.json` and `missing_path_specimen.json`:
-  `blackbox_e2e/BBX-002`, a read of a missing path. The checker controls and
-  the menagerie checker controls start from it.
-- `extension_run.json` and `extension_specimen.json`:
-  `witness_contract/extensions`, the lifecycle artifact. The extension
-  controls start from it.
-- `issuer_abnormal_run.json` and `issuer_abnormal_specimen.json`:
-  `witness_contract/extension_combinations`, the M01 artifact. The extension
-  controls start from it, and the constructed patches in
-  `../../contract/evidence_types.json` apply to it.
+The `response25/` and earlier directories contain unmodified historical live
+captures and their exact submitted requests. Current readers refuse their versions.
+Their build stamps, hashes and source identities describe only those producers.
+No historical capture is upgraded by editing its version or signing evidence.
 
-## Refresh
-
-A response, controller-envelope or runner-protocol version bump makes the readers reject these
-captures. Capture a new set, without editing its contents; the `responseNN/`
-directory names the runner response schema. Run the four cases above against the
-final candidate and copy from each case's `artifacts/` directory:
-
-- `BBX-001`: `policy_witness.run.stdout.json` as `valid_run.json` and
-  `specimen.rendered.json` as `valid_specimen.json`.
-- `BBX-002`: the same two files as `missing_path_run.json` and
-  `missing_path_specimen.json`.
-- `extensions`: `lifecycle/run.json` and `lifecycle/specimen.json` as
-  `extension_run.json` and `extension_specimen.json`.
-- `extension_combinations`: `M01/run.json` and `M01/specimen.json` as
-  `issuer_abnormal_run.json` and `issuer_abnormal_specimen.json`.
-
-Specimens differ between captures only by temporary paths. For a response
-schema change, bump
-`schema_version` in `../../contract/path_diagnostics.json` (one value per
-case), replace `../../contract/response_shape.json` with the
-`response_shape.candidate.json` that `runner_unit` writes when the golden
-disagrees, and retain the capture run in `tests/RETAINED.json`. The
-disposition capture ([`../../disposition/`](../../disposition/README.md))
-refreshes with the same bump.
+Current live evidence belongs to the selected BBX-001/002 and witness workload
+run directories. Refresh a retained live fixture by copying the complete envelope
+and exact submitted request from a verified candidate case, retaining its run
+through the test evidence helpers. Do not replace constructed control scope with
+native credit merely because its shape is accepted.

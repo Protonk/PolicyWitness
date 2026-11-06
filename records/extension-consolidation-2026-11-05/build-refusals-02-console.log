@@ -1,0 +1,27 @@
+==> [selection] preflight/build_refusal_controls
+==> [preflight/build_refusal_controls] start
+==> [preflight/build_refusal_controls] drive the unchanged build script through every baseline refusal and observe the operation each one protects
+full/none: status 0; protected operations checked
+full/native_builder_required: status 2; protected operations checked
+full/missing_tree_input: status 2; protected operations checked
+full/checkout_busy: status 2; protected operations checked
+full/lock_claim_invalid: status 2; protected operations checked
+full/environment_witness_missing: status 2; protected operations checked
+full/environment_witness_changed: status 2; protected operations checked
+full/sdk_unavailable: status 2; protected operations checked
+full/sdk_version_unreadable: status 2; protected operations checked
+full/builddir_stamp_missing: status 2; protected operations checked
+full/builddir_stamp_invalid: status 2; protected operations checked
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/preflight/opt_in/build_refusals.py", line 3076, in <module>
+    test_build_refusals(Path(sys.argv[1]).resolve(), sys.argv[2])
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/preflight/opt_in/build_refusals.py", line 3036, in test_build_refusals
+    build = function(co, variant)
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/preflight/opt_in/build_refusals.py", line 2668, in control_builddir_target_mismatch
+    assert len(checked['native']['outputs']) == (5 if variant == 'full' else 3) and not checked['native']['problems'], checked['native']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'outputs': {'/private/tmp/pw-build-refusals-pdpblqq3/checkout/builddir/PWRunner': {'architectures': ['arm64'], 'container': 'thin', 'platform': '1', 'problems': []}, '/private/tmp/pw-build-refusals-pdpblqq3/checkout/builddir/pw-probe-runner': {'architectures': ['arm64'], 'container': 'thin', 'platform': '1', 'problems': []}, '/private/tmp/pw-build-refusals-pdpblqq3/checkout/builddir/pw-runner-client': {'architectures': ['arm64'], 'container': 'thin', 'platform': '1', 'problems': []}, '/private/tmp/pw-build-refusals-pdpblqq3/checkout/builddir/sb_api_validator': {'architectures': ['arm64'], 'container': 'thin', 'platform': '1', 'problems': []}}, 'problems': []}
+FAIL: [preflight/build_refusal_controls] build refusal controls failed (exit 1; log: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-build-refusals-02/suites/preflight/build_refusal_controls/artifacts/assertions.log)
+HARNESS: [preflight] suite_exit: case command exited with status 1
+Test run summary: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extension-consolidation-build-refusals-02/run.json

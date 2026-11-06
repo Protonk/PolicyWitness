@@ -1,0 +1,25 @@
+{
+  "schema_version": 6,
+  "specimen_id": "ordinary_without_extensions",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "read",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-extension-review/target.txt"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "read_fresh",
+        "target": "/private/tmp/pw-extension-review/target.txt"
+      }
+    }
+  ]
+}

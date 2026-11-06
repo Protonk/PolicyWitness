@@ -10,6 +10,7 @@ var setupCase = ""
 var setupEvents: [[String: Any]] = []
 var setupFDs: [Int32] = []
 var setupNames: [String] = []
+var setupIdentityFDs: [String: Int32] = [:]
 var setupMaps: Set<UInt> = []
 var setupStrings: Set<UInt> = []
 var setupHandles = 0
@@ -31,7 +32,13 @@ func setupIdentity(_ fd: Int32) -> [String: Any] {
 }
 func setup_shm(_ name: UnsafePointer<CChar>, _ mode: mode_t) -> Int32 {
     let fd = pw_cworker_shm_open_create(name, mode)
-    if fd >= 0 { setupFDs.append(fd); setupNames.append(String(cString: name)) }
+    if fd >= 0 {
+        setupFDs.append(fd); let key=String(cString:name); setupNames.append(key)
+        // Keep the actual object alive until fixture cleanup. A recorded name
+        // and an old inode alone cannot authorize unlink after name reuse.
+        let retained=Darwin.fcntl(fd,F_DUPFD_CLOEXEC,256)
+        precondition(retained >= 256); setupIdentityFDs[key]=retained
+    }
     setupEvent("shm", ["fd": fd]); return fd
 }
 func setup_unlink(_ name: UnsafePointer<CChar>) -> Int32 {
@@ -191,7 +198,7 @@ func runSetupControl(_ owner: String, _ fault: String, _ child: String, _ output
     if owner.hasPrefix("worker") {
         var input = CWorkerInput(workerExecutablePath: child, policy: "(version 1) (allow default)",
             slots: [], readyByteTimeoutMs: 100, sentinelTimeoutMs: 200, exitGraceMs: 200)
-        if token >= 0 { input.extensionFD = token }
+        if token >= 0 { input.authorityFD = token }
         let result = runCWorker(input, postApplied: nil)
         switch result {
         case .failure(let failure, let value):
@@ -201,10 +208,10 @@ func runSetupControl(_ owner: String, _ fault: String, _ child: String, _ output
             workerOutput = value
         }
     } else {
-        var session: ExtensionSession? = ExtensionSession(
-            declaration: PWRunnerExtensionDeclaration(token_ref: "setup", target: child), executable: child)
-        outcome = session!.record.issuance_status
-        session = nil // observe owner teardown, not fixture cleanup
+        let region = ActorAuthorityRegion(actorIndex:0,inboundCount:1,outboundCount:1,sessionNonce:1)
+        outcome = region.failure ?? "authority region prepared"
+        region.tearDown() // Observe production teardown before fixture recovery.
+
     }
     if token >= 0 { close(token) }
     let fdsClosed = setupFDs.allSatisfy { fcntl($0, F_GETFD) == -1 && errno == EBADF }
@@ -222,7 +229,17 @@ func runSetupControl(_ owner: String, _ fault: String, _ child: String, _ output
     }
     // Independent cleanup owns names deliberately left by the unlink fault.
     var namesRemoved = true
-    for name in namesPresent { if name.withCString({ Darwin.shm_unlink($0) }) != 0 { namesRemoved = false } }
+    for name in namesPresent {
+        let current=name.withCString { setupOpenExisting($0) }
+        guard current >= 0, let retained=setupIdentityFDs[name] else { namesRemoved=false;continue }
+        var original=stat(), named=stat()
+        let same=fstat(retained,&original)==0 && fstat(current,&named)==0 && original.st_dev==named.st_dev && original.st_ino==named.st_ino
+        close(current)
+        // No other fixture actor can rename this object while this process owns
+        // its retained descriptor; mismatch leaves the name for manual recovery.
+        if !same || name.withCString({ Darwin.shm_unlink($0) }) != 0 { namesRemoved=false }
+    }
+    for fd in setupIdentityFDs.values { close(fd) }
     for name in setupNames {
         let fd = name.withCString { setupOpenExisting($0) }
         if fd >= 0 { namesRemoved = false; close(fd) }

@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
-use crate::app_layout::{BUNDLE_ISSUER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
+use crate::app_layout::{BUNDLE_UNENTITLED_WORKER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
@@ -312,8 +312,10 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         ));
     }
 
-    let (issuer_signature, issuer_entitlements) =
-        runner_manager::read_back(&bundle_path.join(BUNDLE_ISSUER_REL))?;
+    // Authenticate the complete source inventory before any nested signature
+    // or service seal is changed. Missing roles cannot be substituted.
+    let source_worker_equipment_inventory =
+        runner_manager::verify_equipment_inventory(&bundle_path)?;
 
     let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
     match std::fs::symlink_metadata(&plist_path) {
@@ -382,6 +384,14 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         runner_manager::read_back(&bundle_path.join(BUNDLE_WORKER_REL))?;
     let (validator_signature, validator_entitlements) =
         runner_manager::read_back(&bundle_path.join(BUNDLE_VALIDATOR_REL))?;
+    let (unentitled_worker_signature, unentitled_worker_entitlements) =
+        runner_manager::read_back(&bundle_path.join(BUNDLE_UNENTITLED_WORKER_REL))?;
+    let worker_equipment_inventory = runner_manager::verify_equipment_inventory(&bundle_path)?;
+    let unentitled_worker_sha256 = worker_equipment_inventory
+        .workers
+        .iter()
+        .find(|worker| worker.role == "unentitled")
+        .map(|worker| worker.sha256.clone());
 
     let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
     if !env.contains_key("XPC_SERVICE_PATH") {
@@ -420,10 +430,19 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         kind: Some(kind),
         worker_signature: Some(worker_signature),
         worker_entitlements: Some(worker_entitlements),
+        unentitled_worker_signature: Some(unentitled_worker_signature),
+        unentitled_worker_entitlements: Some(unentitled_worker_entitlements),
+        unentitled_worker_sha256,
+        worker_equipment_inventory: Some(
+            serde_json::to_value(worker_equipment_inventory).map_err(|e| e.to_string())?,
+        ),
+        source_worker_equipment_inventory: Some(
+            serde_json::to_value(source_worker_equipment_inventory).map_err(|e| e.to_string())?,
+        ),
         validator_signature: Some(validator_signature),
         validator_entitlements: Some(validator_entitlements),
-        issuer_signature: Some(issuer_signature),
-        issuer_entitlements: Some(issuer_entitlements),
+        issuer_signature: None,
+        issuer_entitlements: None,
     };
 
     let record = runner_manager::install_record(&registry_path, &mut registry, record, || {
@@ -709,12 +728,24 @@ fn cmd_runner_validate() -> Result<i32, String> {
             record.entitlements.error = Some("executable missing".to_string());
             continue;
         }
-        let found = runner_manager::validate_record(
+        let mut found = runner_manager::validate_record(
             record,
             &runner_manager::codesign_verify,
             &runner_manager::codesign_verify_binary,
             &runner_manager::read_back,
         );
+        match runner_manager::verify_equipment_inventory(Path::new(&record.bundle_path)) {
+            Ok(inventory) => {
+                record.worker_equipment_inventory =
+                    Some(serde_json::to_value(inventory).map_err(|e| e.to_string())?)
+            }
+            Err(error) => found.push(runner_manager::ValidateFailure {
+                runner_id: record.id.clone(),
+                service_name: record.service_name.clone(),
+                binary: "equipment_inventory".into(),
+                error,
+            }),
+        }
         if !found.is_empty() {
             invalid += 1;
             failures.extend(found);

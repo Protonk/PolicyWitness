@@ -338,7 +338,7 @@ r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 
 # Three distinguishable outcomes:
 #   (a) compile failed: sandbox_compile_string couldn't resolve
-#       (param "TARGET") so apply_rc=-1, done is set, no slots ran.
+#       (param "TARGET"): compile-null failure is published, done is set, no slots ran.
 #       Means the worker built a params object but it was empty or
 #       the SET failed silently.
 #   (b) compile + apply succeeded but slot rc=0: the param was
@@ -453,7 +453,7 @@ PY
 
 run_compile_failure() {
   run_harness_case "compile_failure" "compile_failure" \
-    "malformed SBPL: apply_rc=-1, done flips, applied stays 0, worker still clean-exits" || return 0
+    "malformed SBPL: compile-null failure publishes before apply, done flips, worker clean-exits" || return 0
   set +e
   "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
@@ -462,14 +462,19 @@ r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 # The compile fails before the ready byte and before apply, so:
 assert r["ready_byte_received"] is False, f"compile fails before the ready byte: {r}"
 assert r["applied"] is False, f"applied must stay false when compile fails: {r}"
-assert r["apply_rc"] == -1, f"apply_rc must be -1 on compile failure (got {r['apply_rc']}): {r}"
+assert r["failure_published"] == 1, f"compile failure must be independently published: {r}"
+f = r["failure"]
+assert f["operation"] == 5 and f["code"] == 1 and f["native_kind"] == 2 and f["errno_present"] == 0, \
+    f"expected a compiler-null observation, not an invented sandbox_apply return: {f}"
+# The raw apply_rc scalar has no native result meaning without an apply
+# publication. The terminal compiler-failure branch excludes that call.
 # ...but the worker still publishes done and exits cleanly.
 assert r["done"] is True, f"done must flip so the host stops polling: {r}"
 assert r["sent_sigkill"] is False, f"worker should exit after terminal publication without SIGKILL: {r}"
 assert r["exit_code"] == 0, f"worker should _exit(0) after reporting the compile failure: {r}"
 # No attempts ran.
 assert r["slots"][0]["completed"] == 0, f"no slot should run when compile fails: {r['slots'][0]}"
-print("ok: worker reported compile failure (apply_rc=-1, done) and clean-exited")
+print("ok: worker published compiler-null failure before apply, then done and clean exit")
 PY
   local arc=$?
   set -e
@@ -607,9 +612,11 @@ elif r["scenario"] == "policy_empty_expected":
     assert expected == 0, r
     # Zero is compared, not treated as unset: the empty source passes the length
     # check and reaches compilation, which libsandbox refuses on its own terms.
-    assert not r["ready_byte_received"] and not r["applied"] and r["done"] and r["apply_rc"] == -1, r
-    assert r["failure_published"] == 1 and r["failure"]["operation"] == 5, \
-        f"an empty source reaches compilation, not a length refusal: {r}"
+    assert not r["ready_byte_received"] and not r["applied"] and r["done"], r
+    assert r["failure_published"] == 1, r
+    f = r["failure"]
+    assert f["operation"] == 5 and f["code"] == 1 and f["native_kind"] == 2 and f["errno_present"] == 0, \
+        f"an empty source reaches compiler-null refusal before apply, not a length refusal: {r}"
     assert s["completed"] == 0, s
     note = "zero expectation with empty EOF passed the length check; compilation refused the empty source"
 else:

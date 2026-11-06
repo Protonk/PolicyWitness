@@ -22,26 +22,24 @@ executable; it does not build the shipped service bundle.
 | Area | Sources and responsibility |
 | --- | --- |
 | Shared wire entry | [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift): XPC protocol, wire constants and versions; [PWRunnerCoding.swift](Sources/PWRunnerCore/PWRunnerCoding.swift): closed-object key checking and JSON encoding/decoding. These and the wire families below compile in host and client. |
-| Requests and extensions | [PWRunnerRequest.swift](Sources/PWRunnerCore/PWRunnerRequest.swift): ordinary requests, phases, overrides and refusal records; [PWRunnerExtension.swift](Sources/PWRunnerCore/PWRunnerExtension.swift): extension declarations, interventions, issuer/delivery/event records and local validity rules. |
+| Requests and extensions | [PWRunnerRequest.swift](Sources/PWRunnerCore/PWRunnerRequest.swift): ordinary requests, phases, overrides and refusal records; [PWRunnerExtension.swift](Sources/PWRunnerCore/PWRunnerExtension.swift): actor interventions, native event/fresh-file records and local validity rules. |
 | Attempt and path evidence | [PWRunnerAttemptEvidence.swift](Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift): native attempt records, codecs and local read/write/exec validity; [PWRunnerPathEvidence.swift](Sources/PWRunnerCore/PWRunnerPathEvidence.swift): identities, path forms and their codecs. |
 | Prediction and step evidence | [PWRunnerPredictionEvidence.swift](Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): native query and validator records, codecs and association; [PWRunnerStepEvidence.swift](Sources/PWRunnerCore/PWRunnerStepEvidence.swift): step/comparison/ordering records and ordered-query eligibility. |
 | Lifecycle and disposition evidence | [PWRunnerLifecycleEvidence.swift](Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift): worker publications, host waits and subprocess records; [PWRunnerDisposition.swift](Sources/PWRunnerCore/PWRunnerDisposition.swift): claims, issues, lifecycle projection and integrity validation. |
 | Reply and profile evidence | [PWRunnerReply.swift](Sources/PWRunnerCore/PWRunnerReply.swift): phase/run codecs and checks joining families; [PWRunnerProfileCapture.swift](Sources/PWRunnerCore/PWRunnerProfileCapture.swift): compiled-profile records and local validity. |
 | Service lifecycle | [PWRunnerService.swift](Sources/PWRunnerCore/PWRunnerService.swift): caller authorization, shared single-use admission, request handling, reply degradation and host retirement. |
 | Listener and bundle | [PWRunnerListener.swift](Sources/PWRunnerCore/PWRunnerListener.swift): listener selection; [Services/PWRunner/](Services/PWRunner/): entry point, Info.plist and entitlements. |
-| Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): admission, extension preparation/erasure, per-phase collection, driver invocation and final reply sequence; [CWorkerRequestPlanning.swift](Sources/PWRunnerCore/CWorkerRequestPlanning.swift): request translation, capacity checks, refusal assembly and fresh query planning; [ActorPlan.swift](Sources/PWRunnerCore/ActorPlan.swift): the actor form's normalized reference tables; [ActorOrchestration.swift](Sources/PWRunnerCore/ActorOrchestration.swift): per-actor driver inputs, the schedule with per-phase collection, and the actor-indexed reply. |
+| Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): admission, ordinary worker execution, per-phase collection, driver invocation and final reply sequence; [CWorkerRequestPlanning.swift](Sources/PWRunnerCore/CWorkerRequestPlanning.swift): request translation, capacity checks, refusal assembly and fresh query planning; [ActorPlan.swift](Sources/PWRunnerCore/ActorPlan.swift): the actor form's normalized reference tables; [ActorOrchestration.swift](Sources/PWRunnerCore/ActorOrchestration.swift): per-actor driver inputs, the schedule with per-phase collection, and the actor-indexed reply. |
 | Host result construction | [CWorkerStepResults.swift](Sources/PWRunnerCore/CWorkerStepResults.swift): query/attempt step assembly; [CWorkerComparison.swift](Sources/PWRunnerCore/CWorkerComparison.swift): ordering and comparison construction; [CWorkerDisposition.swift](Sources/PWRunnerCore/CWorkerDisposition.swift): unique slot association, disposition, subprocess projection and outcome classification. |
 | Child drivers | [ActorSession.swift](Sources/PWRunnerCore/ActorSession.swift): one owned worker process: evidence region, pipes, launch, policy transfer, readiness, polling primitives, cleanup and decoded output; [CWorker.swift](Sources/PWRunnerCore/CWorker.swift): the layout mirror, driver inputs and outputs, the single-worker loop over one session and the shared child lifecycle observer; [ActorScheduler.swift](Sources/PWRunnerCore/ActorScheduler.swift): the actor form's serial schedule over several sessions; [AuthorityCustody.swift](Sources/PWRunnerCore/AuthorityCustody.swift): per-actor authority regions, host custody buffers and transfer servicing, with no sandbox call; [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift): concurrent probe writes/verdict reads and partial-evidence collection. |
-| Extension preparation | [ExtensionIssuer.swift](Sources/PWRunnerCore/ExtensionIssuer.swift): target resolution/metadata, separate issuer lifetime, bounded transient token delivery and host erasure. |
+| Actor equipment and setup | [ActorEquipment.swift](Sources/PWRunnerCore/ActorEquipment.swift): sealed inventory, static bindings and live code inspection; [PWRunnerEquipment.swift](Sources/PWRunnerCore/PWRunnerEquipment.swift): shared evidence/readers; [AuthoritySetupRuntime.swift](Sources/PWRunnerCore/AuthoritySetupRuntime.swift) and [PWRunnerAuthoritySetup.swift](Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift): automatic setup account. |
 | Time and native shim | [MonotonicDeadline.swift](Sources/PWRunnerCore/MonotonicDeadline.swift): deadlines and policy-pipe delivery; [PWCWorkerShim/](Sources/PWCWorkerShim/): fixed-argument shared-memory opening and acquire/release helpers. |
 | Request and path helpers | [ProbeRunner.swift](Sources/PWRunnerCore/ProbeRunner.swift): request meaning and prediction-exclusion definitions; [SandboxApply.swift](Sources/PWRunnerCore/SandboxApply.swift): policy hashing; [PathUtils.swift](Sources/PWRunnerCore/PathUtils.swift): planning and later host path observations. |
 | Client and tests | [Clients/PWRunnerClient/main.swift](Clients/PWRunnerClient/main.swift): JSON-over-Data XPC client; [Tests/PWRunnerCoreTests/](Tests/PWRunnerCoreTests/): explicitly registered TestKit groups. |
 
 The native [C worker](../controller/tools/pw_probe_runner/pw_probe_runner.c) and
-[batch validator](../controller/tools/sb_api_validator/sb_api_validator.c) and
-[extension issuer](../controller/tools/pw_probe_runner/pw_extension_issuer.c)
-live outside this directory. Meson embeds them as `pw-probe-runner`,
-`sb_api_validator` and `pw-extension-issuer` in each service's `Contents/MacOS/`; the host resolves them
+[batch validator](../controller/tools/sb_api_validator/sb_api_validator.c) live outside this directory. The build embeds the worker twice and the validator as `pw-probe-runner`,
+`sb_api_validator` and `pw-probe-runner-unentitled` in each service's `Contents/MacOS/`; the host resolves them
 relative to its own bundle for both built-in and external runners. Only these
 runner children call the sandbox APIs. The host's source and shipped imports
 are checked by [source drift](../tests/suites/source_drift/README.md) and
@@ -81,11 +79,6 @@ creates no validator spawn failure.
    header before spawn, and shares fixed-layout inputs/publications with the
    host; at EOF it publishes the count it read and refuses a different length
    before compiling, so a delivery cut short is never applied as a shorter policy.
-   An extension declaration requires explicit phases. Before worker creation,
-   the host resolves its target and records metadata, then launches the issuer
-   under ordinary authority. Only bounded issuance with a confirmed clean reap
-   permits delivery. Missing helper/native issuance capability is a named refusal;
-   preparation and other issuance failures remain evidence beside unavailable actions.
 3. The worker applies the policy once, then publishes arrival at each phase.
    The host checks successful application, identity and worker ownership, plans
    that phase's queries afresh and collects eligible queries with a fresh
@@ -111,7 +104,7 @@ creates no validator spawn failure.
 For the actor form the same steps run per actor under one scheduler: every
 actor's region and authority region exist before the first launch; actors
 launch in order under one setup allowance and each publishes its own setup
-(application, or an unapplied declaration); the schedule activates one actor
+(application, or an explicit unapplied setup decision); the schedule activates one actor
 per phase, plans and collects that phase's queries against that actor's PID,
 releases its visit ordinal and awaits its completion while servicing the
 active actor's token publications and transfer requests; a failed actor is
@@ -127,17 +120,15 @@ evidence collection and teardown; later validators cannot inherit the closed
 host reference. Worker descriptors already installed by spawn, including any
 surviving original-number alias, keep their separate lifetime.
 
-The issuer's token channel is separate from the worker evidence mapping. The
-issuer and worker close inherited channel descriptors after mapping; neither
-arguments nor environment carry tokens. The worker erases the full accepted token
-buffer after the consumption decision, before the post-phase test seams, and on
-ordinary departures after preparation; terminal publication follows that erasure.
-Fatal termination or an interrupted native call need not reach worker cleanup.
-The host independently clears the mapping before reply assembly. Token erasure
-does not invoke native extension release; that remains a submitted action.
-Consume/release markers precede calls; immutable result
-publication is required before reporting a native return. Lifecycle actions
-share the ordered action capacity but do not create validator queries.
+Actor authority regions are separate from evidence mappings. Token bytes never enter retained JSON, argv or environment. Worker-owned accepted buffers are erased on ordinary departure; host shared-buffer erasure requires a reaped or never-launched owner. Native release remains an explicit action. Call markers and completed result publication are separate; lifecycle actions create no validator queries.
+
+Each actor chooses `equipment: "selected"` (the default) or `"unentitled"`, independently of `sandbox.mode`. Both are signed copies of the same compiled worker. The selected copy carries the runner's supplied entitlements; the unentitled copy has an empty entitlement dictionary. Neither name establishes effective authority: an unapplied actor can inherit restrictions, and signing entitlements are associated code metadata. Optional actor `required_entitlements` require boolean `true` in that actor's selected equipment and live signing readback. The controller's `runner.required_entitlements` remains a separate preflight on the selected runner worker.
+
+The service validates its own seal, its sealed `Contents/Resources/worker-equipment.json`, and both production worker artifacts before launching any actor. The inventory binds roles to relative paths, signed hashes, CDHashes, identifiers, teams, entitlements and the compiled worker ABI/build identity. There is no fallback between roles. After usable setup and before any activation or query collection, the host inspects the owned live process and matches its associated code to the binding. An inspection failure cancels scheduled activations while preserving any application already observed. Setup-failed or unlaunched actors remain unavailable without turning their missing inspection into a failure of healthy actors.
+
+Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
+
+A phase's `after_termination` dependency requires an owned natural reap after the source's final activation, before dependent activation and query collection. Abnormal natural exit can satisfy it without final phase completion. Source clock uncertainty prevents satisfaction, while clock loss after dependent activation was stored cannot erase that activation. The gate never requests termination to satisfy itself. [The wire contract](../docs/CONTRACT.md#actor-evidence-ownership) defines source association, clock eligibility and retained evidence.
 
 Every validator query uses `SANDBOX_CHECK_NO_REPORT`, so predictions produce no
 denial records. `comparison.order=query_first` requires eligible native records,
@@ -163,7 +154,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 25, controller envelope 10, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 26, controller envelope 11, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL
@@ -175,15 +166,7 @@ versions, unsupported attempt/filter names and ineffective combinations produce
 `bad_request` with a bounded `request_failure`. Capacity admission is shared
 between service handling and direct orchestration.
 
-The optional `extensions` array declares a local token reference, target and
-optional `authority` (`read` or `read_write`, defaulting to `read`). The fresh
-issuer chooses the corresponding native read or read-write class from that
-bounded value in its transient channel; callers cannot supply class strings.
-An explicit phase action is either an ordinary pair or a `step_id` plus
-`extension` operation. At most one declaration, consume and release are admitted;
-release references the earlier consume handle. Actions may be omitted or placed
-in separate phases. Token bytes, caller-selected classes, repeated lifecycle
-actions and mixing exec with an extension declaration are refused.
+Extension actions are actor-only and use issue, transfer, consume and release with owner-bound local references. An ordinary request containing `extensions` or an extension action is refused. The issuer passes the submitted absolute path unchanged, selecting the native read or read-write class from `authority`. Raw tokens and caller-selected native class strings are not admitted.
 
 The controller resolves `policy.augments` and removes selection fields before
 delivery. Direct XPC requests containing nonempty unresolved augments or
@@ -209,7 +192,7 @@ sandbox or declaring prediction/enforcement agreement. Its principal records are
 | `runner_subprocess` | Worker publications and independent host observations; [worker evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract) and [disposition](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record). Its PID is authoritative for worker correlation. |
 | `phases[].validator_subprocess`, `phases[].validator_spawn_failure` | Observed validator execution, accepted records and collection faults, or a failed native launch. A failed launch creates no subprocess record; [receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#admission-and-validatorcontroller-receiver-contract). |
 | `phases[]` | Ordered arrival/completion observations, collection status, action membership and phase-local ordering. Missing publications remain missing. |
-| `extensions[]`, `extension_events[]` | Preparation/issuer/delivery observations and separately published consume/release results; [native evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence). Raw tokens are absent. |
+| `extension_events[]`, `transfers`, `resources` | Actor native results and separate custody/delivery observations; [native evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence). Raw tokens are absent. |
 | `steps[].sandbox_check`, `attempt`, `comparison` | Predictions, attempted-operation evidence, and their submitted-scope/order relations; [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record). Later host path resolution is separately attributed. |
 | `normalized_outcome`, `reporting_failure` | Classification of available observations and any reply-construction failure; [classification](../tests/FAILURE-PROPAGATION-CONTRACT.md#evidence-and-classification) and [reply failure](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure). |
 
@@ -255,11 +238,11 @@ retain the request for that fact.
 
 | Key | Request type | Default and effective behavior |
 | --- | --- | --- |
-| `worker_executable_path` | string | Bundle-local `pw-probe-runner`; substitutes the worker spawn path. A nonexistent path can exercise `worker_spawn_failed`. |
+| `worker_executable_path` | string | Ordinary requests only: substitutes the worker spawn path. A nonexistent path can exercise `worker_spawn_failed`. |
+| `actor_equipment_executable_paths` | closed object | Actor requests only: nonempty `selected`/`unentitled` map of absolute signed fixture paths. Both packaged roles are still verified first. Overrides retain actual identity and `test_override` provenance; valid ad-hoc fixtures are allowed but receive no packaged build/signing credit. Missing or invalid code refuses before launch; an ABI mismatch remains worker setup evidence. |
 | `worker_timeout_ms` | integer milliseconds | <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->; changes the host sentinel allowance, leaving the worker's exec budget unchanged. |
 | `validator_io_timeout_ms` | integer milliseconds | <!-- span limits.validator_io_wait.value_unit -->30,000 milliseconds<!-- /span -->; sets the proposed per-phase I/O deadline, capped by the remaining aggregate collection allowance. |
 | `validator_total_timeout_ms` | integer milliseconds | Reduces the aggregate collection allowance, clamped to 1–<!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span --> across all phases. Later collections can become unavailable while attempts still run. |
-| `issuer_executable_path` | string | Bundle-local `pw-extension-issuer`; substitutes the issuer launch path. |
 | `validator_executable_path` | string | Bundle-local `sb_api_validator`; substitutes the validator spawn path after successful worker application. |
 | `worker_post_apply_hang_ms` | integer milliseconds | Disabled when absent or nonpositive. Requests a native sleep after completed slots and before `done`; paired with a shorter sentinel allowance it can exercise timeout handling. |
 | `worker_post_apply_kill_signal` | integer signal number | Disabled when absent or nonpositive. Requests self-signalling after completed slots and before `done`; observed fatal delivery can exercise `runner_failed`. |

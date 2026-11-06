@@ -71,6 +71,10 @@ runActorSchedulerTests(tk)
 // parked acceptance, consume after release, release and the faults between.
 runActorAuthorityTests(tk)
 // The actor form through the production orchestrator: assembled, encoded and decoded.
+// Static role inventory and live signature read-back binding controls.
+runActorEquipmentTests(tk)
+// Setup ownership, application uncertainty and natural-reap evidence controls.
+runActorAccountTests(tk)
 runActorReplyTests(tk)
 // Production host driver against the separately built ABI fixture with
 // controlled kill/waitpid faults; host lifecycle observations only. The fixture

@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdatomic.h>
-#include "pw_extension_channel.h"
+#include "pw_authority_bytes.h"
 
 #define PW_AUTHORITY_MAGIC 0x50574155u          /* 'PWAU' */
 #define PW_AUTHORITY_HEADER_BYTES 1152u

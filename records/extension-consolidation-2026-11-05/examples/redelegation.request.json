@@ -1,0 +1,255 @@
+{
+  "schema_version": 6,
+  "specimen_id": "extension_redelegation",
+  "actors": [
+    {
+      "actor_id": "A",
+      "sandbox": {
+        "mode": "unapplied"
+      },
+      "equipment": "unentitled"
+    },
+    {
+      "actor_id": "B",
+      "sandbox": {
+        "mode": "apply",
+        "policy": {
+          "format": "sbpl",
+          "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (deny file-issue-extension) (allow file-read-data (extension \"com.apple.app-sandbox.read\")) (allow file-issue-extension (require-all (extension-class \"com.apple.app-sandbox.read\") (extension \"com.apple.app-sandbox.read\")))"
+        }
+      },
+      "equipment": "selected"
+    },
+    {
+      "actor_id": "C",
+      "sandbox": {
+        "mode": "apply",
+        "policy": {
+          "format": "sbpl",
+          "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+        }
+      },
+      "equipment": "selected"
+    }
+  ],
+  "phases": [
+    {
+      "phase_id": "b_before",
+      "actor_id": "B",
+      "actions": [
+        {
+          "step_id": "b_read_before",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "c_before",
+      "actor_id": "C",
+      "actions": [
+        {
+          "step_id": "c_read_before",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "initial_supply",
+      "actor_id": "A",
+      "actions": [
+        {
+          "step_id": "a_issue",
+          "extension": {
+            "operation": "issue",
+            "family": "file",
+            "authority": "read",
+            "target": "/private/tmp/pw-extension-review/target.txt",
+            "token_ref": "ta"
+          }
+        },
+        {
+          "step_id": "a_to_b",
+          "extension": {
+            "operation": "transfer",
+            "token_ref": "ta",
+            "recipient": "B",
+            "delivery_ref": "db"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "b_consume",
+      "actor_id": "B",
+      "actions": [
+        {
+          "step_id": "b_consume_first",
+          "extension": {
+            "operation": "consume",
+            "delivery_ref": "db",
+            "handle_ref": "hb"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "b_redelegate",
+      "actor_id": "B",
+      "actions": [
+        {
+          "step_id": "b_read_after",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        },
+        {
+          "step_id": "b_issue",
+          "extension": {
+            "operation": "issue",
+            "family": "file",
+            "authority": "read",
+            "target": "/private/tmp/pw-extension-review/target.txt",
+            "token_ref": "tb"
+          }
+        },
+        {
+          "step_id": "b_to_c",
+          "extension": {
+            "operation": "transfer",
+            "token_ref": "tb",
+            "recipient": "C",
+            "delivery_ref": "dc"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "c_consume",
+      "actor_id": "C",
+      "actions": [
+        {
+          "step_id": "c_consume_second",
+          "extension": {
+            "operation": "consume",
+            "delivery_ref": "dc",
+            "handle_ref": "hc"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "c_effect",
+      "actor_id": "C",
+      "actions": [
+        {
+          "step_id": "c_read_after",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        },
+        {
+          "step_id": "c_release",
+          "extension": {
+            "operation": "release",
+            "handle_ref": "hc"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "b_cleanup",
+      "actor_id": "B",
+      "actions": [
+        {
+          "step_id": "b_release",
+          "extension": {
+            "operation": "release",
+            "handle_ref": "hb"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "c_after_release",
+      "actor_id": "C",
+      "actions": [
+        {
+          "step_id": "c_read_after_release",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        }
+      ]
+    },
+    {
+      "phase_id": "b_after_release",
+      "actor_id": "B",
+      "actions": [
+        {
+          "step_id": "b_read_after_release",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/private/tmp/pw-extension-review/target.txt"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "/private/tmp/pw-extension-review/target.txt"
+          }
+        }
+      ]
+    }
+  ]
+}

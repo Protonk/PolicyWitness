@@ -217,7 +217,6 @@ let runKindAdmission = AdmissionStringRule(field: "run_kind", maximum: requestLa
 let policyFormatAdmission = AdmissionStringRule(field: "policy.format", maximum: requestLabelMaxBytes)
 let overridePathAdmissions: [(key: WritableKeyPath<PWRunnerTestOverrides, String?>, rule: AdmissionStringRule)] = [
     (\.worker_executable_path, AdmissionStringRule(field: "_test_overrides.worker_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
-    (\.issuer_executable_path, AdmissionStringRule(field: "_test_overrides.issuer_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
     (\.validator_executable_path, AdmissionStringRule(field: "_test_overrides.validator_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
 ]
 
@@ -225,14 +224,6 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
     for (rule, value) in [(specimenIdAdmission, parsed.specimen_id),
                            (runKindAdmission, parsed.run_kind), (policyFormatAdmission, parsed.policy?.format)] {
         if let refused = rule.failure(value) { return refused }
-    }
-    if let declarations = parsed.extensions {
-        if declarations.count > PWExtensionLimits.declarations { return PWRunnerAdmissionFailure(field: "extensions", actual: declarations.count, maximum: PWExtensionLimits.declarations, unit: "items") }
-        for (i, declaration) in declarations.enumerated() {
-            for (key, value, cap) in [("token_ref", declaration.token_ref, PWExtensionLimits.referenceBytes), ("target", declaration.target, PWExtensionLimits.targetBytes)] {
-                if let failure = AdmissionStringRule(field: "extensions.\(i).\(key)", maximum: cap, requiresCString: true).failure(value) { return failure }
-            }
-        }
     }
     for (i, actor) in (parsed.actors ?? []).enumerated() {
         if let failure = AdmissionStringRule(field: "actors.\(i).actor_id", maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(actor.actor_id) { return failure }
@@ -242,6 +233,7 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
     }
     for (pi, phase) in (parsed.phases ?? []).enumerated() {
         if parsed.isActorForm, let failure = AdmissionStringRule(field: "phases.\(pi).actor_id", maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(phase.actor_id) { return failure }
+        if let failure = AdmissionStringRule(field: "phases.\(pi).after_termination.actor_id", maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(phase.after_termination?.actor_id) { return failure }
         for (ai, action) in phase.actions.enumerated() {
             guard case .extensionAction(let value) = action else { continue }
             let op = value.intervention
@@ -257,6 +249,9 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
         }
     }
     if let overrides = parsed._test_overrides {
+        for (role, path) in (overrides.actor_equipment_executable_paths ?? [:]).sorted(by: { $0.key < $1.key }) {
+            if let refused = AdmissionStringRule(field: "_test_overrides.actor_equipment_executable_paths." + role, maximum: testOverridePathMaxBytes, requiresCString: true).failure(path) { return refused }
+        }
         for (key, rule) in overridePathAdmissions {
             if let refused = rule.failure(overrides[keyPath: key]) { return refused }
         }
@@ -273,6 +268,9 @@ func admissionRefusalReply(parsed: PWRunnerRunSpec, refused: PWRunnerAdmissionFa
     if var overrides = mirrored {
         for (key, rule) in overridePathAdmissions {
             overrides[keyPath: key] = rule.safeEcho(overrides[keyPath: key])
+        }
+        overrides.actor_equipment_executable_paths = overrides.actor_equipment_executable_paths?.filter {
+            AdmissionStringRule(field: "path", maximum: testOverridePathMaxBytes, requiresCString: true).safeEcho($0.value) != nil
         }
         mirrored = overrides
     }

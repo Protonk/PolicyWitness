@@ -24,7 +24,7 @@ assert embedded['PWRunner'] == supplied, ('host entitlements', embedded['PWRunne
 assert embedded['pw-probe-runner'] == supplied, \
     ('the worker must hold the supplied entitlements', embedded['pw-probe-runner'])
 assert embedded['sb_api_validator'] is None, ('the validator carries no entitlements', embedded['sb_api_validator'])
-assert embedded['pw-extension-issuer'] is None, ('issuer must not inherit worker entitlements', embedded['pw-extension-issuer'])
+assert embedded['pw-probe-runner-unentitled'] is None, ('unentitled worker must not inherit selected entitlements', embedded['pw-probe-runner-unentitled'])
 team = signatures['PWRunner']['TeamIdentifier']
 for name in session.HELPERS:
     assert signatures[name]['TeamIdentifier'] == team and not signatures[name]['adhoc'], (name, signatures[name])
@@ -43,9 +43,14 @@ granted = sorted(key for key, value in supplied.items() if value is True)
 for field in ('entitlements', 'worker_entitlements'):
     assert record[field]['granted'] == granted, (field, record[field])
 assert record['validator_entitlements']['granted'] == [], record['validator_entitlements']
-assert record['issuer_entitlements']['keys'] == [] and record['issuer_entitlements']['error'] is None
-assert record['issuer_entitlements']['granted'] == []
-for field in ('signature', 'worker_signature', 'validator_signature', 'issuer_signature'):
+assert record['unentitled_worker_entitlements']['keys'] == [] and record['unentitled_worker_entitlements']['error'] is None
+assert record['unentitled_worker_entitlements']['granted'] == []
+for field in ('signature', 'worker_signature', 'validator_signature', 'unentitled_worker_signature'):
     assert record[field]['team_id'] == team and record[field]['valid'] is True and record[field]['adhoc'] is False, \
         (field, record.get(field))
+equipment = session.equipment_inventory(bundle, receipts, 'equipment', command)
+assert record['worker_equipment_inventory'] == equipment
+assert record['source_worker_equipment_inventory']['worker_identity'] == equipment['worker_identity']
+assert record['source_worker_equipment_inventory']['unsigned_worker_sha256'] == equipment['unsigned_worker_sha256']
+assert record['unentitled_worker_sha256'] == next(row['sha256'] for row in equipment['workers'] if row['role'] == 'unentitled')
 print(json.dumps(dict(embedded=embedded, team=team, record=record['id'])))

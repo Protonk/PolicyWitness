@@ -6,18 +6,22 @@ File sandbox extensions carry read or read-write authority for a path from an
 issuing process to a consuming process. PolicyWitness records their lifecycle
 alongside probes of file access.
 
-PolicyWitness accepts two request forms for specimens that use sandbox extensions.
+Extension specimens use actors: one fresh worker per named process, with explicit `issue`, `transfer`, `consume` and `release` actions. Start with an unapplied, unentitled issuer and an applied, selected subject. Add a third actor when testing whether a subject that consumed a token can issue a new one and transfer it onward. Every actor owns at least one phase; issuance takes place inside that actor after its own setup.
 
-| Form | How authority enters | Processes | Fields |
-| --- | --- | --- | --- |
-| Declaration | A fresh helper outside the specimen sandbox issues one token before the worker exists; the host delivers it to the one worker over a transient channel. | One worker under one policy, plus the issuer. | `policy`, `extensions: [{token_ref, target, authority}]`, explicit `phases` with `consume` and `release` actions. |
-| Actors | An actor issues a token itself, after its own setup, and transfers it explicitly to another actor through host custody. | One fresh worker per actor; an actor is `apply` (its own policy) or `unapplied` (the runner's ordinary authority). Every declared actor owns at least one phase. | `actors: [{actor_id, sandbox: {mode, policy}}]`, explicit `phases` each naming an `actor_id`, with `issue`, `transfer`, `consume` and `release` actions. |
+Each actor chooses `equipment: "selected"` (the default) or `"unentitled"`, independently of `sandbox.mode`. Both are signed copies of the same compiled worker. The selected copy carries the runner's supplied entitlements; the unentitled copy has an empty entitlement dictionary. Neither name establishes effective authority: an unapplied actor can inherit restrictions, and signing entitlements are associated code metadata. Optional actor `required_entitlements` require boolean `true` in that actor's selected equipment and live signing readback. The controller's `runner.required_entitlements` remains a separate preflight on the selected runner worker.
 
-The declaration form answers "what does a consumed token do under this
-policy". The actor form also answers "can a process that consumed a token
-issue another one for the same file, and can a third process use it": the
-re-delegation question, which needs issuance to happen inside the sandboxed
-process rather than in a helper.
+The service validates its own seal, its sealed `Contents/Resources/worker-equipment.json`, and both production worker artifacts before launching any actor. The inventory binds roles to relative paths, signed hashes, CDHashes, identifiers, teams, entitlements and the compiled worker ABI/build identity. There is no fallback between roles. After usable setup and before any activation or query collection, the host inspects the owned live process and matches its associated code to the binding. An inspection failure cancels scheduled activations while preserving any application already observed. Setup-failed or unlaunched actors remain unavailable without turning their missing inspection into a failure of healthy actors.
+
+Actor setup automatically records bounded apparatus observations before policy compilation/application: core-limit handling, authority mapping and framing, descriptor closure and each extension-symbol lookup. Missing extension symbols make the corresponding actions unavailable; required apparatus failure prevents application. Setup publication, application observation and final process disposition remain separate. Missing terminal publication leaves application uncertain rather than proving it did not happen.
+
+A phase may specify `after_termination: {"actor_id": "issuer"}` when that actor's last scheduled visit precedes the phase. The gate requires an owned natural reap after the source's final activation, including a nonzero exit or signal, before dependent activation and query collection. It does not require final phase completion. It does not kill an actor to satisfy the dependency. Expiry or an unusable dependency withholds that phase; cleanup and previously published facts retain their own meanings. The reply retains `actors[].owned_reap` and phase `activation_observation`; the gate references the source reap by `capture_ordinal`. Missing clock timestamps retain facts without establishing gate order.
+
+## Request forms
+
+| Form | Available operations |
+| --- | --- |
+| Actor specimen | Ordinary probes and explicit issue, transfer, consume and release actions. Equipment and policy application are selected per actor. |
+| Ordinary single-worker specimen | Ordinary probes and phases without extension actions. |
 
 ## Supported families and native calls
 
@@ -26,9 +30,7 @@ process rather than in a helper.
 | `file` | `read` | `com.apple.app-sandbox.read` | `sandbox_extension_issue_file(class, path, 0)` | `sandbox_extension_consume(token)` | `sandbox_extension_release(handle)` |
 | `file` | `read_write` | `com.apple.app-sandbox.read-write` | the same call with the read-write class | the same | the same |
 
-Issuance uses flags zero. The declaration form resolves its target with
-`realpath` before issuance and records both paths; the actor form passes the
-submitted absolute path unchanged.
+Issuance uses flags zero and passes the submitted absolute path unchanged.
 
 ## Operations and references
 
@@ -36,7 +38,7 @@ submitted absolute path unchanged.
 | --- | --- | --- | --- |
 | `issue` | an actor | `family`, `authority`, absolute `target`, new `token_ref` | a token the host takes into custody when the native call returns one |
 | `transfer` | the actor that issued the token | `token_ref`, `recipient` actor, new `delivery_ref` | a delivery the recipient accepts while parked or during its own wait |
-| `consume` | the recipient of a delivery (actor form) or the one worker (declaration form) | `delivery_ref` or `token_ref`, new `handle_ref` | a candidate handle when the native call returns one |
+| `consume` | the recipient of a delivery | `delivery_ref`, new `handle_ref` | a candidate handle when the native call returns one |
 | `release` | the actor that consumed | `handle_ref` | the native release result |
 
 References are specimen-local names. Each `token_ref`, `delivery_ref` and
@@ -111,7 +113,7 @@ extension events stay outside the query/attempt comparison.
 
 | Situation | Reading |
 | --- | --- |
-| Required authority-region or custody setup fails | The host refuses launch, or stops the affected worker before releasing a phase; the run records an apparatus failure. This is distinct from missing native symbols or a native refusal. |
+| Required authority-region or custody setup fails | Host preparation refuses launch, or automatic worker setup records a terminal apparatus failure before policy compilation/application. This is distinct from missing native symbols or a native refusal. |
 | An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are `actor_unavailable`; other actors' evidence stands. The run is `runner_failed`. |
 | An application is published during cleanup after setup expires | Setup stays `setup_timeout` and its visits remain unavailable; `applied` and `application_count` retain the later observed application. |
 | An actor dies during a visit | The visit records how it ended; the scheduler establishes the actor is reaped before activating anyone else; later visits of that actor are unavailable. |

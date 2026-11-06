@@ -15,6 +15,7 @@ diagnostic, the status, the banners before and after, the signatures that
 were and were not made, the preserved or absent outputs, and inspects a
 timestamp-less signature independently before crediting the refusal.
 """
+import copy
 import hashlib
 import json
 import os
@@ -81,6 +82,117 @@ def display(path):
     text = subprocess.run(['/usr/bin/codesign', '-dvv', str(path)], capture_output=True, text=True, timeout=60).stderr
     return dict(timestamp=bool(re.search(r'^Timestamp=', text, re.M)), signed_time=bool(re.search(r'^Signed Time=', text, re.M)),
                 leaf=(re.findall(r'^Authority=(.*)$', text, re.M) or [None])[0], adhoc='Signature=adhoc' in text)
+
+
+
+def check_equipment_call_receipts(receipts, bundle, entitlements, identity):
+    """Execution receipts only: read-back of the resulting signatures is separate."""
+    targets = [bundle / 'Contents/MacOS' / name for name in
+               ('pw-probe-runner', 'sb_api_validator', 'pw-probe-runner-unentitled')]
+    targets.append(bundle)
+    observed = []
+    for target in targets:
+        calls = [(i, r) for i, r in enumerate(receipts)
+                 if r['tool'] == 'codesign' and '--force' in r['args'] and r['args'][-1] == str(target)]
+        assert len(calls) == 1, ('equipment signing call count', target, calls)
+        index, receipt = calls[0]
+        args = receipt['executed'][1:]
+        assert receipt['status'] == 0, ('equipment signing call failed', target)
+        assert args[-1] == str(target) and args.count('-s') == 1 and args[args.index('-s') + 1] == identity, ('equipment signing identity', target)
+        assert all(flag in args for flag in ('--force', '--options', 'runtime', '--timestamp')), ('equipment signing flags', target)
+        if target == targets[0] or target == bundle:
+            assert args.count('--entitlements') == 1 and args[args.index('--entitlements') + 1] == str(entitlements), ('selected/service entitlement argument', target)
+        else:
+            assert not any(a.startswith('--entitlements') for a in args), ('identity-only entitlement argument', target)
+        observation = receipt['equipment']
+        assert observation['bundle'] == str(bundle), ('equipment receipt bundle', target)
+        if target != bundle:
+            assert observation['before'] is None and observation['after'] is None, ('inventory preceded inner signature completion', target)
+        else:
+            assert observation['before'] is not None and observation['before'] == observation['after'], 'inventory unavailable or changed while sealing service'
+        if target.name in ('pw-probe-runner', 'pw-probe-runner-unentitled'):
+            assert observation['input_sha256'] == observation['unsigned_worker_sha256'], ('worker not copied from common unsigned input', target)
+        observed.append((index, receipt))
+    assert max(i for i, _ in observed[:3]) < observed[3][0], 'service sealed before inner signatures returned'
+    assert all(r['started_ns'] <= r['finished_ns'] < observed[3][1]['started_ns']
+               for _, r in observed[:3]), 'service signing started before inner signatures returned'
+    source_hashes = [observed[i][1]['equipment']['unsigned_worker_sha256'] for i in (0, 2)]
+    manifest = observed[3][1]['equipment']['before']['manifest']
+    assert source_hashes[0] == source_hashes[1] == manifest['unsigned_worker_sha256'], 'inventory common input mismatch'
+    return observed
+
+
+def equipment_readback(case, bundle, entitlements, seal_snapshot):
+    """Independent disk and system-codesign observations, not shim receipt credit."""
+    path = bundle / 'Contents/Resources/worker-equipment.json'
+    data = path.read_bytes()
+    assert hashlib.sha256(data).hexdigest() == seal_snapshot['sha256'], 'sealed inventory bytes changed'
+    manifest = json.loads(data)
+    assert manifest['schema_version'] == 1 and {w['role'] for w in manifest['workers']} == {'selected', 'unentitled'}
+    assert len(manifest['workers']) == 2
+    workers = {w['role']: w for w in manifest['workers']}
+    expected = plistlib.loads(entitlements.read_bytes())
+    observations = {}
+    for role, name in (('selected', 'pw-probe-runner'), ('unentitled', 'pw-probe-runner-unentitled'), ('validator', 'sb_api_validator')):
+        binary = bundle / 'Contents/MacOS' / name
+        calls = []
+        for args in (['--verify', '--strict', '--verbose=2'], ['-dvvv'], ['-d', '--entitlements', ':-']):
+            result = subprocess.run(['/usr/bin/codesign', *args, str(binary)], capture_output=True, timeout=60)
+            calls.append(dict(argv=result.args, returncode=result.returncode,
+                              stdout=result.stdout.decode(errors='replace'), stderr=result.stderr.decode(errors='replace')))
+            assert result.returncode == 0, calls[-1]
+        actual = plistlib.loads(calls[2]['stdout'].encode()) if calls[2]['stdout'].strip() else {}
+        assert actual == (expected if role == 'selected' else {}), ('signed entitlement readback', role, actual)
+        digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+        if role in workers:
+            worker = workers[role]
+            fields = dict(line.split('=', 1) for line in calls[1]['stderr'].splitlines() if '=' in line)
+            team = fields.get('TeamIdentifier')
+            assert worker['relative_path'] == f'Contents/MacOS/{name}' and worker['sha256'] == digest
+            assert worker['cdhash'] == fields['CDHash'] and worker['identifier'] == fields['Identifier']
+            assert worker['team_id'] == (None if team in (None, 'not set') else team)
+            assert plistlib.loads(worker['entitlements_xml'].encode()) == actual
+        observations[role] = dict(sha256=digest, entitlements=actual, calls=calls)
+    save(case / 'equipment-independent-readback.json', dict(inventory=manifest, observations=observations))
+
+
+def equipment_receipt_sensitivity(case, receipts, bundle, entitlements, identity, observed):
+    """Mutate captured receipts to establish oracle sensitivity, not build faults."""
+    controls = []
+    expected = {
+        'selected_without_plist': 'selected/service entitlement argument',
+        'unentitled_with_plist': 'identity-only entitlement argument',
+        'validator_with_plist': 'identity-only entitlement argument',
+        'inventory_before_last_inner_return': 'inventory preceded inner signature completion',
+        'inventory_absent_at_seal': 'inventory unavailable or changed while sealing service',
+        'seal_before_inner_return': 'service signing started before inner signatures returned',
+        'different_unsigned_input': 'worker not copied from common unsigned input',
+    }
+    for name, diagnostic in expected.items():
+        mutant = copy.deepcopy(receipts)
+        selected, validator, unentitled, seal = [mutant[i] for i, _ in observed]
+        if name == 'selected_without_plist':
+            index = selected['executed'].index('--entitlements')
+            del selected['executed'][index:index + 2]
+        elif name in ('unentitled_with_plist', 'validator_with_plist'):
+            target = unentitled if name.startswith('unentitled') else validator
+            target['executed'][1:1] = ['--entitlements', str(entitlements)]
+        elif name == 'inventory_before_last_inner_return':
+            unentitled['equipment']['after'] = seal['equipment']['before']
+        elif name == 'inventory_absent_at_seal':
+            seal['equipment']['before'] = None
+        elif name == 'seal_before_inner_return':
+            seal['started_ns'] = unentitled['started_ns']
+        else:
+            unentitled['equipment']['input_sha256'] = '0' * 64
+        try:
+            check_equipment_call_receipts(mutant, bundle, entitlements, identity)
+        except AssertionError as error:
+            assert diagnostic in str(error), (name, 'unrelated refusal', str(error))
+            controls.append(dict(name=name, rejected=True, diagnostic=str(error)))
+        else:
+            raise AssertionError(f'equipment receipt mutation escaped: {name}')
+    save(case / 'equipment-receipt-sensitivity.json', controls)
 
 
 def test_build_guards(out, identity):
@@ -158,7 +270,7 @@ def test_build_guards(out, identity):
 
         cargo_outputs = [root / build_provenance.TRIPLE_RELEASE / name for name in ('policy-witness', 'sbpl-check')]
         for variant, xpc in (('full', '1'), ('partial', '0')):
-            meson_outputs = [root / 'builddir' / name for name in ('sb_api_validator', 'pw-probe-runner', 'pw-extension-issuer')]
+            meson_outputs = [root / 'builddir' / name for name in ('sb_api_validator', 'pw-probe-runner')]
             if xpc == '1':
                 meson_outputs += [root / 'builddir/pw-runner-client', root / 'builddir/PWRunner']
             # The final loop members catch a check accidentally limited to the
@@ -183,7 +295,8 @@ def test_build_guards(out, identity):
                 (dist / 'PolicyWitness.md').write_text('previous guide\n')
                 before = inventory(dist)
                 backups = work / 'backups'
-                config = dict(tools=tools, fault=fault, backups=str(backups), receipt=str(case / 'tools.jsonl'), replacements=[])
+                config = dict(tools=tools, fault=fault, backups=str(backups), receipt=str(case / 'tools.jsonl'), replacements=[],
+                              unsigned_worker=str(root / 'builddir/pw-probe-runner'))
                 if fault in ('cargo', 'meson'):
                     config['replacements'] = [dict(tool=fault, first='build' if fault == 'cargo' else 'compile',
                                                    targets=[str(last[fault])], source=str(wrong_binary))]
@@ -289,6 +402,12 @@ def test_build_guards(out, identity):
                             assert (dist / 'PolicyWitness.zip').stat().st_size > 0
                             assert (dist / 'PolicyWitness.md').read_bytes() == (root / 'docs/PolicyWitness.md').read_bytes()
                             assert (app / 'Contents/XPCServices/PWRunner.xpc').exists() == (xpc == '1')
+                            if xpc == '1':
+                                bundle = app / 'Contents/XPCServices/PWRunner.xpc'
+                                entitlements = root / 'runner/Services/PWRunner/Entitlements.plist'
+                                observed = check_equipment_call_receipts(receipts, bundle, entitlements, identity)
+                                equipment_readback(case, bundle, entitlements, observed[3][1]['equipment']['before'])
+                                equipment_receipt_sensitivity(case, receipts, bundle, entitlements, identity, observed)
                             facts = display(app)
                             assert facts['timestamp'] and facts['leaf'] == identity, facts
                     scenarios.append(dict(name=name, status=status, before=before, after=inventory(dist), injected=injected))

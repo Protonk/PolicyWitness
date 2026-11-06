@@ -15,12 +15,9 @@ builds also copy its README and AGENTS.md into a custom `DIST_DIR`.
 
 See [the signing contract](BUILD.md#the-signing-contract) for identity checks,
 the generated signing order, inventory agreement and post-seal verification.
-The embedded `pw-extension-issuer` is signed before the XPC bundle seal and is
-included in its evidence inventory. It receives the identity without an
-entitlement plist. BYOXPC installation likewise signs its bundle-local issuer
-with the selected identity alone, separately from the worker's supplied
-entitlements. Read-back and validation retain each helper's actual signature
-and entitlements.
+The build copies one compiled C worker into `pw-probe-runner` and `pw-probe-runner-unentitled`. It signs the selected worker with the supplied entitlements, and signs the unentitled worker and validator with the identity alone. `tests/build_equipment.py` reads those signed artifacts and writes the service-local `Contents/Resources/worker-equipment.json` before the service seal. Its bounded schema records both roles, source/ABI identity, unsigned build hash, signed hashes, CDHashes, signing identifiers, teams and full entitlement XML. It excludes the host hash to avoid a circular seal dependency.
+
+BYOXPC installation first verifies the source service seal and inventory before changing any bytes. It signs both worker copies and the validator, refreshes inventory signing observations while preserving the source build identity, and seals the service last. A renamed or otherwise edited source service must be resealed before installation. The host reads its own sealed inventory; direct XPC execution does not rely on a controller registry snapshot. Actor execution validates both roles, even when only one is requested, and records live associated signing identity separately from static binding and native effects.
 
 ## Evidence artifacts
 
@@ -36,9 +33,8 @@ During the build, `tests/build-evidence.py` generates, under
 All three are generated after the helpers and the service are signed and
 before the outer seal, so they describe signed bytes and are themselves
 sealed by the app signature; no embedded evidence is rewritten after the
-seal. The issuer has its own manifest entry and symbol inventory, identifying
-its signed bytes. The controller reads the manifest at run time to locate its
-runner; nothing reads the record at run time.
+seal. Both worker variants have their own manifest entries and symbol inventories, identifying their signed bytes. The controller reads the manifest at run time to locate its
+runner; the service-local equipment inventory is separately read by actor execution.
 
 ### The provenance record
 

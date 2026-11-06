@@ -1,0 +1,161 @@
+==> [build] build, sign and embed evidence into dist/PolicyWitness.app
+DIST_DIR="dist" IDENTITY="Developer ID Application: Adam Hyland (42D369QV8E)"  ./build.sh
+==> Verifying the checkout lock: /Users/raccoon/Desktop/Security/PolicyWitness/tests/.checkout.lock
+ok: admitted by the owner of tests/.checkout.lock for /Users/raccoon/Desktop/Security/PolicyWitness (acquisition 9ad7fe8bf4d3)
+==> Checking limits documentation
+ok: 100 limits, 16 questions, 43 matrix rows; documents current
+==> Checking contract versions
+ok: request schema 6, response schema 26, controller envelope 11, runner protocol 3; all generated copies current
+ok: architecture manifest: 5 graphs, 164 nodes, 177 edges; dot files, svg stamps and document regions current
+==> Checking build documentation
+ok: build manifest: 33 steps, 61 refusals (0 in the baseline), 7 signing calls, 3 knobs; script agreement, dot file, svg stamp and document regions current
+==> Checking host/worker identity
+ok: worker identity f738aab1d944f923f0e5a889751e7456dfd2d3ac3ab7b734ff1673a1dd3e96fa; all generated copies current
+==> Build stamp: 0.3.4 (1141) v0.3.4-60-g02ce5c6e-dirty
+ok: build session /Users/raccoon/Desktop/Security/PolicyWitness/controller/target/pw-build-session.json
+==> Supported macOS (Info.plist LSMinimumSystemVersion): 26.0
+==> Selecting the macOS SDK (xcrun --sdk macosx)
+    /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk (SDK 27.2, default selection)
+==> Checking the native build directory: /Users/raccoon/Desktop/Security/PolicyWitness/builddir
+ok: pw-toolchain.json agrees with the selected toolchain (11 fields) and the output target (6 fields)
+==> Checking the signing identity
+==> Admitting the Cargo output and intermediate directories: /Users/raccoon/Desktop/Security/PolicyWitness/controller/target
+ok: Cargo intermediate and final release state admitted under /Users/raccoon/Desktop/Security/PolicyWitness/controller/target (output triple aarch64-apple-darwin)
+==> Building Rust controller + tools
+   Compiling controller v0.1.0 (/Users/raccoon/Desktop/Security/PolicyWitness/controller)
+warning: use of deprecated struct `libc::mach_timebase_info`: Use the `mach2` crate instead
+   --> src/runner_client.rs:778:26
+    |
+778 |     let mut info = libc::mach_timebase_info { numer: 0, denom: 0 };
+    |                          ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated function `libc::mach_timebase_info`: Use the `mach2` crate instead
+   --> src/runner_client.rs:779:23
+    |
+779 |     if unsafe { libc::mach_timebase_info(&mut info) } != 0 {
+    |                       ^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `libc::mach_timebase_info::numer`: Use the `mach2` crate instead
+   --> src/runner_client.rs:778:47
+    |
+778 |     let mut info = libc::mach_timebase_info { numer: 0, denom: 0 };
+    |                                               ^^^^^^^^
+
+warning: use of deprecated field `libc::mach_timebase_info::denom`: Use the `mach2` crate instead
+   --> src/runner_client.rs:778:57
+    |
+778 |     let mut info = libc::mach_timebase_info { numer: 0, denom: 0 };
+    |                                                         ^^^^^^^^
+
+warning: use of deprecated field `libc::mach_timebase_info::numer`: Use the `mach2` crate instead
+   --> src/runner_client.rs:785:9
+    |
+785 |         info.numer,
+    |         ^^^^^^^^^^
+
+warning: use of deprecated field `libc::mach_timebase_info::denom`: Use the `mach2` crate instead
+   --> src/runner_client.rs:786:9
+    |
+786 |         info.denom,
+    |         ^^^^^^^^^^
+
+warning: field `index` is never read
+  --> src/augments.rs:87:9
+   |
+86 | pub struct ActorAugmentResolution {
+   |            ---------------------- field in this struct
+87 |     pub index: usize,
+   |         ^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `controller` (bin "policy-witness") generated 7 warnings
+    Finished `release` profile [optimized] target(s) in 3.89s
+ok: 2 outputs are thin arm64 Mach-O for macOS (cargo)
+ok: Cargo judgments recorded (policy-witness: rebuilt, sbpl-check: rebuilt)
+==> Checking the native toolchain (meson, ninja 1.13.2 or newer)
+==> Configuring native build (meson configure, existing directory): -Dinspection=true -Dxpc=true
+==> Compiling native executables
+ninja: Entering directory `/Users/raccoon/Desktop/Security/PolicyWitness/builddir'
+[0/1] Regenerating build files
+Cleaning... 3 files.
+The Meson build system
+Version: 1.12.1
+Source dir: /Users/raccoon/Desktop/Security/PolicyWitness
+Build dir: /Users/raccoon/Desktop/Security/PolicyWitness/builddir
+Build type: native build
+Project name: PolicyWitness
+Project version: undefined
+C compiler for the host machine: cc (clang 21.0.0 "Apple clang version 21.0.0 (clang-2100.4.1.1)")
+C linker for the host machine: cc ld64 27106.1
+Host machine cpu family: aarch64
+Host machine cpu: aarch64
+Swift compiler for the host machine: swiftc (llvm 6.4.2)
+Swift linker for the host machine: swiftc ld64 27106.1
+Build targets in project: 5
+
+PolicyWitness undefined
+
+  User defined options
+    inspection: true
+    xpc       : true
+
+Found ninja-1.13.2 at /opt/homebrew/bin/ninja
+[1/7] Compiling C object pw-probe-runner.p/controller_tools_pw_probe_runner_pw_probe_runner.c.o
+[2/7] Linking target pw-probe-runner
+[3/7] Compiling Swift source /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAPI.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerCoding.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerTransport.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerRequest.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerExtension.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerActors.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerEquipment.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerDisposition.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerReply.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Clients/PWRunnerClient/main.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Clients/PWRunnerClient/PWRunnerClientSession.swift
+[4/7] Compiling Swift source 
+[5/7] Compiling Swift source /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAPI.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerCoding.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerTransport.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerRequest.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerExtension.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerActors.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerEquipment.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerDisposition.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerReply.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/SandboxApply.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ProbeRunner.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PathUtils.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorker.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorSession.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorScheduler.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/AuthorityCustody.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorOrchestration.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorEquipment.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/MonotonicDeadline.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ValidatorClient.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorPlan.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerStepResults.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerComparison.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerDisposition.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerService.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerReservation.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerListener.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Services/PWRunner/main.swift
+FAILED: [code=1] PWRunner.p/PWRunnerAPI.o PWRunner.p/PWRunnerCoding.o PWRunner.p/PWRunnerTransport.o PWRunner.p/PWRunnerRequest.o PWRunner.p/PWRunnerExtension.o PWRunner.p/PWRunnerActors.o PWRunner.p/PWRunnerEquipment.o PWRunner.p/PWRunnerAuthoritySetup.o PWRunner.p/PWRunnerPathEvidence.o PWRunner.p/PWRunnerAttemptEvidence.o PWRunner.p/PWRunnerPredictionEvidence.o PWRunner.p/PWRunnerStepEvidence.o PWRunner.p/PWRunnerLifecycleEvidence.o PWRunner.p/PWRunnerDisposition.o PWRunner.p/PWRunnerProfileCapture.o PWRunner.p/PWRunnerReply.o PWRunner.p/SandboxApply.o PWRunner.p/ProbeRunner.o PWRunner.p/PathUtils.o PWRunner.p/CWorker.o PWRunner.p/ActorSession.o PWRunner.p/ActorScheduler.o PWRunner.p/AuthorityCustody.o PWRunner.p/ActorOrchestration.o PWRunner.p/ActorEquipment.o PWRunner.p/AuthoritySetupRuntime.o PWRunner.p/MonotonicDeadline.o PWRunner.p/ValidatorClient.o PWRunner.p/CWorkerOrchestrator.o PWRunner.p/CWorkerRequestPlanning.o PWRunner.p/ActorPlan.o PWRunner.p/CWorkerStepResults.o PWRunner.p/CWorkerComparison.o PWRunner.p/CWorkerDisposition.o PWRunner.p/PWRunnerService.o PWRunner.p/PWRunnerReservation.o PWRunner.p/PWRunnerListener.o PWRunner.p/main.o 
+swiftc -working-directory PWRunner.p -c -module-name PWRunner -module-cache-path /Users/raccoon/Desktop/Security/PolicyWitness/builddir/swift-module-cache -Onone -g -target arm64-apple-macosx26.0 -I/Users/raccoon/Desktop/Security/PolicyWitness/builddir/libPWCWorkerShim.a.p /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAPI.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerCoding.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerTransport.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerRequest.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerExtension.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerActors.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerEquipment.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerDisposition.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerReply.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/SandboxApply.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ProbeRunner.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PathUtils.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorker.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorSession.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorScheduler.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/AuthorityCustody.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorOrchestration.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorEquipment.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/MonotonicDeadline.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ValidatorClient.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorPlan.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerStepResults.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerComparison.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/CWorkerDisposition.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerService.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerReservation.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/PWRunnerListener.swift /Users/raccoon/Desktop/Security/PolicyWitness/runner/Services/PWRunner/main.swift
+/Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorSession.swift:601:32: error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure_state' of wrapped base type 'PWWorkerEvidence'
+599 |         let finalProceedObserved = phaseOutputs.allSatisfy { $0.acknowledged }
+600 |         let workerEvidence=decodeWorkerEvidence(rawBase)
+601 |         let nativeApplyFailure=workerEvidence.failure_state == "published" && workerEvidence.failure?.operation == 8
+    |                                |- error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure_state' of wrapped base type 'PWWorkerEvidence'
+    |                                |- note: chain the optional using '?' to access member 'failure_state' only for non-'nil' base values
+    |                                `- note: force-unwrap using '!' to abort execution if the optional value contains 'nil'
+602 |             && workerEvidence.failure?.code == 1 && workerEvidence.failure?.native_kind == 1 ? workerEvidence.failure:nil
+603 |         let applyRC = sawApplied ? readI32(rawBase, offset:PWShmLayout.applyRcOffset) : nativeApplyFailure?.native_result ?? 0
+
+/Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorSession.swift:601:79: error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure' of wrapped base type 'PWWorkerEvidence'
+599 |         let finalProceedObserved = phaseOutputs.allSatisfy { $0.acknowledged }
+600 |         let workerEvidence=decodeWorkerEvidence(rawBase)
+601 |         let nativeApplyFailure=workerEvidence.failure_state == "published" && workerEvidence.failure?.operation == 8
+    |                                                                               |- error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure' of wrapped base type 'PWWorkerEvidence'
+    |                                                                               `- note: chain the optional using '?' to access member 'failure' only for non-'nil' base values
+602 |             && workerEvidence.failure?.code == 1 && workerEvidence.failure?.native_kind == 1 ? workerEvidence.failure:nil
+603 |         let applyRC = sawApplied ? readI32(rawBase, offset:PWShmLayout.applyRcOffset) : nativeApplyFailure?.native_result ?? 0
+
+/Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorSession.swift:602:16: error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure' of wrapped base type 'PWWorkerEvidence'
+600 |         let workerEvidence=decodeWorkerEvidence(rawBase)
+601 |         let nativeApplyFailure=workerEvidence.failure_state == "published" && workerEvidence.failure?.operation == 8
+602 |             && workerEvidence.failure?.code == 1 && workerEvidence.failure?.native_kind == 1 ? workerEvidence.failure:nil
+    |                |- error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure' of wrapped base type 'PWWorkerEvidence'
+    |                `- note: chain the optional using '?' to access member 'failure' only for non-'nil' base values
+603 |         let applyRC = sawApplied ? readI32(rawBase, offset:PWShmLayout.applyRcOffset) : nativeApplyFailure?.native_result ?? 0
+604 |         let applyErrno = nativeApplyFailure?.errno ?? 0
+
+/Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorSession.swift:602:53: error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure' of wrapped base type 'PWWorkerEvidence'
+600 |         let workerEvidence=decodeWorkerEvidence(rawBase)
+601 |         let nativeApplyFailure=workerEvidence.failure_state == "published" && workerEvidence.failure?.operation == 8
+602 |             && workerEvidence.failure?.code == 1 && workerEvidence.failure?.native_kind == 1 ? workerEvidence.failure:nil
+    |                                                     |- error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure' of wrapped base type 'PWWorkerEvidence'
+    |                                                     `- note: chain the optional using '?' to access member 'failure' only for non-'nil' base values
+603 |         let applyRC = sawApplied ? readI32(rawBase, offset:PWShmLayout.applyRcOffset) : nativeApplyFailure?.native_result ?? 0
+604 |         let applyErrno = nativeApplyFailure?.errno ?? 0
+
+/Users/raccoon/Desktop/Security/PolicyWitness/runner/Sources/PWRunnerCore/ActorSession.swift:602:96: error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure' of wrapped base type 'PWWorkerEvidence'
+600 |         let workerEvidence=decodeWorkerEvidence(rawBase)
+601 |         let nativeApplyFailure=workerEvidence.failure_state == "published" && workerEvidence.failure?.operation == 8
+602 |             && workerEvidence.failure?.code == 1 && workerEvidence.failure?.native_kind == 1 ? workerEvidence.failure:nil
+    |                                                                                                |- error: value of optional type 'PWWorkerEvidence?' must be unwrapped to refer to member 'failure' of wrapped base type 'PWWorkerEvidence'
+    |                                                                                                `- note: chain the optional using '?' to access member 'failure' only for non-'nil' base values
+603 |         let applyRC = sawApplied ? readI32(rawBase, offset:PWShmLayout.applyRcOffset) : nativeApplyFailure?.native_result ?? 0
+604 |         let applyErrno = nativeApplyFailure?.errno ?? 0
+ninja: build stopped: subcommand failed.
+INFO: autodetecting backend as ninja
+INFO: calculating backend command to run: /opt/homebrew/bin/ninja -C /Users/raccoon/Desktop/Security/PolicyWitness/builddir
+make: *** [build] Error 1

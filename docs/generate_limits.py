@@ -267,12 +267,12 @@ def update_guide_extension_coverage(text, extensions_document):
 
 
 def update_guide_extension_statuses(text, contract_document):
-    """Copy the contract-owned issuance/delivery account without reinterpretation."""
+    """Copy the contract-owned actor custody/transfer account without reinterpretation."""
     begin, finish = block_bounds(contract_document, EXTENSION_START, EXTENSION_END)
     shared = contract_document[begin + len(EXTENSION_START):finish - len(EXTENSION_END)].strip()
     headers = {table.header[0].text for table in markdown_reader.parse(shared, "shared extension statuses").tables}
-    if not {"Issuance status", "Delivery status"} <= headers:
-        raise ValueError("shared extension statuses must contain issuance and delivery tables")
+    if not {"Custody status", "Transfer status"} <= headers:
+        raise ValueError("shared extension statuses must contain custody and transfer tables")
     require_standalone(shared, "extension statuses")
     return replace_block(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END,
                          GUIDE_EXTENSION_START + "\n\n" + shared + "\n\n" + GUIDE_EXTENSION_END)
@@ -484,12 +484,15 @@ def main():
         guide_bytes = guide_path.read_bytes()
         guide_before = guide_bytes.decode("utf-8")
         guide_after = update_guide_rules(update_guide_questions(
-            update_guide(render_spans(guide_before, "limits", span_values(limits), "docs/PolicyWitness.md"), after), questions),
+            update_guide(guide_before, after), questions),
             contract_after)
         guide_after = update_guide_extension_statuses(guide_after, contract_after)
         # The coverage copy comes from the freshly span-rendered source document.
         extensions_after = span_only[EXTENSIONS_NAME][1] if EXTENSIONS_NAME in span_only else extensions_path.read_text()
         guide_after = update_guide_extension_coverage(guide_after, extensions_after)
+        # Replace owned copies before rendering spans: a retired limit may
+        # still appear in the stale copied text, but never in the new sources.
+        guide_after = render_spans(guide_after, "limits", span_values(limits), "docs/PolicyWitness.md")
         validate_guide(guide_after, limits)
         question_count = sum(heading.level == 3 for heading in markdown_reader.parse(shared_questions(questions)).headings)
         if args.check or args.stage_guide is not None:
