@@ -1,8 +1,0 @@
-{
-  "timing": "Reviewed post-run snapshot, not a pre-execution attestation. Sources unchanged since their final recorded executions, as confirmed by their author and root review.",
-  "files": {
-    "prototype/main.swift": "d10254cdea18732d8fd99dc0b2bc9731354d7695d102dd629d9ceca532895cc1",
-    "prototype/run_actors.py": "ae17c0cc52d055d8c164a83c4185455ee40055490fe957ee3bfdec33450c3530",
-    "prototype/run_authority.py": "a46480db4a5656d500232728eb76bc82d628a679db3b7ca3b4dadea50d3f6a08"
-  }
-}

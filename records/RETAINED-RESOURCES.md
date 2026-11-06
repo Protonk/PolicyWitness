@@ -75,10 +75,10 @@ resource obligation.
 
 The current runs are `extension-consolidation-battery-01` and
 `extension-consolidation-build-refusals-04`. These are gitignored,
-checkout-local materials at their original owned paths. The consolidation
-records identify their exact source snapshot, verification account and
-retention receipts. The two superseded actor-passes runs have identified,
-hashed historical copies under
+checkout-local materials at their original owned paths. Their exact source
+snapshot, verification account and retention receipts remain recoverable from commit `bc3abe2f` under
+`records/extension-consolidation-2026-11-05/`. The two superseded actor-passes
+runs have identified, hashed historical copies under
 `records/doc-lookback-2026-11-04/critique/historical-evidence/`; their original
 identities and cleanup qualifications remain preserved. Archive copies do not
 relocate active ownership.
@@ -135,6 +135,17 @@ external exit observations do not settle them.
 
 ## Resources outside worktrees
 
+- `/Users/raccoon/Library/Containers/com.policywitness.test.equipment-5baed78c80dc4eeeb2b95b9f10113600`:
+  the consolidation prototype's uniquely created App Sandbox container. Its removal was refused with `Operation not permitted`; no settled
+  cleanup is claimed. The original ownership receipt remains
+  `/private/tmp/pw-equipment-prototype-20261105-02/container-ownership.json`
+  (SHA-256 `7ea19b33c701990fd39040a795e95a002f942ebe9c7a1493a89139b91ebc06ab`).
+  The historical recovery account is recoverable at
+  `bc3abe2f:records/extension-consolidation-2026-11-05/recovery.json`.
+  Retiring the plan records does not transfer this ownership or establish
+  removal; retain the original receipt until absence is verified. The separate
+  `com.policywitness.test.restricted-worker` container was preexisting and was
+  not newly owned by this work.
 - [Socket directories](retained-resources/sockets.json): 37 `/private/tmp/pwpx-*`
   and the prototype's `/private/tmp/pw-py-res-6e703d57e50848888c7d8b19e46202f9`. Each is
   named by exactly one unresolved record listed there. One of them,

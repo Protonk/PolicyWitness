@@ -1,7 +1,0 @@
-{
-  "result": "refused before index mutation",
-  "reason": "Record-local helper supplied an unsupported checkout-lock purpose.",
-  "correction": "Use the existing execution purpose, including its pytest ownership guard; no repository locking code changed.",
-  "prior_index_preserved": true,
-  "prior_change_receipt_absent": true
-}
