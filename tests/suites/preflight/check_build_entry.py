@@ -61,6 +61,7 @@ class BuildEntryTests(receipts.TestCase):
     def build_checkout(self):
         """A checkout in which every check before the signing identity passes."""
         extra = (LIMITS_FILES | set(fixture_inputs.generator_inputs(ROOT, 'architecture'))
+                 | set(fixture_inputs.generator_inputs(ROOT, 'footprint'))
                  | set(fixture_inputs.generator_inputs(ROOT, 'build')) | set(fixture_inputs.build_script_inputs(ROOT))
                  | set(fixture_inputs.generator_inputs(ROOT, 'worker_identity')) | {'Info.plist', 'meson.build', 'meson.options'})
         return self.checkout(extra=extra)
@@ -282,6 +283,21 @@ class BuildEntryTests(receipts.TestCase):
         result, destination = self.build(root, {'IDENTITY': ''})
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('architecture documentation is stale', result.stderr)
+        self.assertIn('Checking contract versions', result.stdout)
+        self.assertNotIn('Checking build documentation', result.stdout)
+        self.assertFalse(destination.exists())
+
+    def test_build_refuses_a_stale_footprint_copy_before_compiling(self):
+        root = self.build_checkout()
+        document = root / 'docs/FOOTPRINT.md'
+        row = json.loads((ROOT / 'docs/footprint.json').read_text())['rows'][0]['id']
+        original = document.read_text()
+        changed = original.replace(f'| {row} |', f'| {row}x |', 1)
+        self.assertNotEqual(changed, original)
+        document.write_text(changed)
+        result, destination = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('stale footprint document', result.stderr)
         self.assertIn('Checking contract versions', result.stdout)
         self.assertNotIn('Checking build documentation', result.stdout)
         self.assertFalse(destination.exists())

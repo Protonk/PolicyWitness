@@ -5,6 +5,33 @@ action, the reality of an exec helper's own effect, and the absence of any
 persistent registration after a plain run. Every observation is made outside
 PolicyWitness, before the envelope is decoded.
 
+## Aftermath footprint
+
+The opt-in `aftermath_footprint` case inventories ordinary and actor runs at
+baseline, CLI return and independently observed resource ending. It repeats the
+completion path and separately holds a post-invocation timeout. Required workers
+have generation-qualified inspection and independent process-exit watches.
+The timeout path requires the invoked worker to remain observed at CLI return;
+fixture release and cleanup occur only after the unassisted primary snapshot.
+
+Each inventory object names its owner, identity, creation evidence, expected
+ending and category: baseline, specimen effect, requested artifact or apparatus.
+Actor inventories include evidence and authority backing, launch descriptors,
+custody, fixed handle tables and native handles. Component/source observations
+retain their scope; process exit alone is not direct inspection of private
+mappings or custody. Erasure, release, unmapping, exit and reap are distinct
+endings. An inspection failure remains unknown and cannot establish absence.
+
+`aftermath.json` retains the inventory, complete boundary snapshots, invocation
+and exit receipts, interventions and cleanup status. `repetitions.json` lists the
+completion observations; `RunCapture`, raw observer replies and durable recovery
+or ownership records remain beside them. The default `checker_controls` case exercises
+missing objects/boundaries, false absence and premature cleanup without running
+PW. Native execution needs app/XPC, Clang and a Developer ID identity for the
+disposable actor host. Follow the
+[footprint verification account](../../CHANGE-VERIFICATION.md#footprint-observations)
+for selection, equipment and interpretation.
+
 ## Invariants
 
 - `open_write` under an allowing policy truncates the target in place to one
@@ -73,6 +100,6 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 ./tests/run.sh --suite run_effects
 ```
 
-Included in the default battery. The live cases need the built app and XPC;
+Baseline cases are included in the default battery; `aftermath_footprint` is opt-in. The live cases need the built app and XPC;
 the exec case also needs the macOS C toolchain; the controls need only
 Python 3.

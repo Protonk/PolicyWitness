@@ -38,7 +38,7 @@ def build_checks(text):
 
 def ownership(root, name):
     regions, whole = region_ownership(root, name)
-    if name in {'limits', 'architecture', 'build'}:
+    if name in {'limits', 'architecture', 'build', 'footprint'}:
         gen = module('span_owner_' + name, root / f'docs/generate_{name}.py')
         common = module('span_common', root / 'docs/generator_common.py')
         for document in gen.SPAN_DOCUMENTS:
@@ -71,6 +71,10 @@ def region_ownership(root, name):
                     (gen.GUIDE_EXTENSION_START, gen.GUIDE_EXTENSION_END),
                     (gen.GUIDE_COVERAGE_START, gen.GUIDE_COVERAGE_END)]}, set()
     data = json.loads((root / gen.MANIFEST_NAME).read_text())
+    if name == 'footprint':
+        return {data['document']: [(f'<!-- BEGIN GENERATED FOOTPRINT {region} -->',
+                                    f'<!-- END GENERATED FOOTPRINT {region} -->')
+                                   for region in ('WAITING', 'RESPONSE', 'AFTERMATH', 'BACKING', 'ENDINGS', 'COVERAGE')]}, set()
     if name == 'build':
         return {data['document']: [(gen.REGION_START.format(region=r), gen.REGION_END.format(region=r)) for r in gen.REGIONS]}, {
             str(Path(data['document']).parent / (data['figure'] + suffix)) for suffix in ('.dot', '.svg')}
@@ -366,6 +370,8 @@ class GeneratorContractTests(receipts.TestCase):
                         data['versions']['response_schema'] += 1
                     elif name == 'limits':
                         data['limits'][0]['value'] += 1
+                    elif name == 'footprint':
+                        data['rows'][0]['title'] += ' property control'
                     elif name == 'build':
                         data['steps'][2]['reads'] += ' (property control)'
                     else:
@@ -590,6 +596,38 @@ class GeneratorContractTests(receipts.TestCase):
         self.assertEqual(self.command(root, 'limits').returncode, 0)
         self.assertNotIn('<!-- span limits.host_exit_delay.value -->', source.read_text())
 
+    def test_footprint_quantities_have_owned_regions_and_spans(self):
+        gen = module('footprint_quantities', ROOT / 'docs/generate_footprint.py')
+        root = self.checkout()
+        path = root / 'docs/FOOTPRINT.md'
+        original = path.read_text()
+        row = json.loads((root / gen.MANIFEST_NAME).read_text())['rows'][0]['id']
+        span = f'footprint.{row}.quantity'
+        authored = f'\nQuantity <!-- span {span} -->stale<!-- /span -->.\n'
+        path.write_text(original + authored)
+        before = self.snapshot(root)
+        result = self.command(root, 'footprint', '--check')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.snapshot(root), before)
+        regions, whole = ownership(root, 'footprint')
+        result = self.command(root, 'footprint')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(changed_outside(before, self.snapshot(root), regions, whole), [])
+        rendered = path.read_text()
+        self.assertNotIn('stale<!-- /span -->', rendered)
+        # Byte/time values inside a footprint region/span do not create baseline
+        # entries; the same authored claim outside either owner must do so.
+        visible = authored_prose(rendered + '\nUnowned 7654321 bytes.\n', str(path))
+        self.assertNotIn('<!-- span', visible)
+        self.assertIn('Unowned 7654321 bytes.', visible)
+        self.assertNotIn('| ' + row + ' |', visible)
+        path.write_text(rendered.replace(f'<!-- span {span} -->', '<!-- span footprint.missing -->'))
+        before = self.snapshot(root)
+        result = self.command(root, 'footprint', '--check')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('unknown span footprint.missing', result.stderr)
+        self.assertEqual(self.snapshot(root), before)
+
     def test_a_span_marker_that_begins_a_line_is_refused(self):
         # The marker would start an HTML block, which GitHub renders outside its paragraph.
         root = self.checkout()
@@ -624,7 +662,7 @@ class GeneratorContractTests(receipts.TestCase):
     def test_every_span_prefix_has_one_registered_owner(self):
         common = module('prefix_checks', ROOT / 'docs/generator_common.py')
         owners = {}
-        for name in ('limits', 'architecture', 'build'):
+        for name in ('limits', 'architecture', 'build', 'footprint'):
             gen = module('prefix_' + name, ROOT / f'docs/generate_{name}.py')
             self.assertNotIn(name, owners)
             owners[name] = set(gen.SPAN_DOCUMENTS)
@@ -879,6 +917,9 @@ class GeneratorContractTests(receipts.TestCase):
             'architecture': ['docs/generate_architecture.py', 'docs/generate_limits.py', 'docs/generator_common.py',
                              'docs/markdown_reader.py', 'docs/architecture.json', 'docs/limits.json', 'docs/ARCHITECTURE.md',
                              'docs/WORKER.md', 'tests/catalog.json', 'tests/suites/source_drift/check.py'],
+            'footprint': ['docs/generate_footprint.py', 'docs/generator_common.py', 'docs/generate_limits.py',
+                          'docs/footprint.json', 'docs/limits.json', 'docs/architecture.json', 'docs/FOOTPRINT.md',
+                          'docs/markdown_reader.py', 'tests/catalog.json'],
             'build': ['docs/generate_build.py', 'docs/generate_architecture.py', 'docs/generate_limits.py', 'docs/generator_common.py',
                       'docs/markdown_reader.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
                       'tests/fixtures/docs/build_baseline.json', 'build.sh', 'meson.build', 'Makefile', 'README.md',
@@ -925,7 +966,7 @@ class GeneratorContractTests(receipts.TestCase):
                 loaded = json.loads(result.stdout)
                 for module_name, path in loaded.items():
                     self.assertTrue(Path(path).resolve().is_relative_to(root.resolve()), (name, module_name, path))
-                if name in ('limits', 'architecture', 'build'):
+                if name in ('limits', 'architecture', 'build', 'footprint'):
                     self.assertIn('generator_common', loaded)
         # An omitted helper is a clear refusal, not a silent pass.
         (root / 'docs/generator_common.py').unlink()
@@ -967,7 +1008,7 @@ class GeneratorContractTests(receipts.TestCase):
                     owners.setdefault(path, []).append((name, a, b))
         self.assertFalse(set(owners) & set(whole_files))
         authored = common.authored_spans('Value <!-- span unknown.value -->1<!-- /span -->')
-        self.assertTrue(any(m[1].split('.', 1)[0] not in {'architecture', 'limits', 'build'} for m in authored))
+        self.assertTrue(any(m[1].split('.', 1)[0] not in {'architecture', 'limits', 'build', 'footprint'} for m in authored))
 
 
 

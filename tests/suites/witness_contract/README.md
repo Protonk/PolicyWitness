@@ -10,6 +10,49 @@ Cases assert contract claims independently. The suite reads as a
 behavior specification — what PolicyWitness promises, regardless of
 the architecture behind it.
 
+## Footprint observations
+
+The opt-in `held_phase_footprint` case repeats matched ordinary and actor holds
+at declared intervals. An acknowledged validator bridge holds collection while
+external generation-qualified samples record worker CPU and apparatus demand.
+Selected effects remain absent until release. Actor variants include the
+custody, delivery and handle hold, with metadata-only publications from a
+disposable signed host fixture. Busy and sleeping controls calibrate observable
+CPU increments. The case requires complete repeated observations; it establishes
+neither idle waiting nor a universal CPU threshold.
+
+The opt-in `response_footprint` case samples fresh shipped controllers handling a
+small known-byte read, the fixed-action independent-query and phased pair, the
+control-character exec workload and the existing actor maximum read workload.
+The existing maximum-reply checker retains action, transfer, equipment, resource
+and profile assertions. Strict decoding preserves exact host bytes and a computed
+transport-artifact hash; the transport supplies no independent producer hash.
+Host reply, client streams, final envelope, optional bytecode and logical actor
+storage remain distinct quantities. Native resident and physical-footprint
+samples stay separate and have unknown decoder-stage attribution. Required
+same-generation samples and independent exit observations cannot be replaced by
+an inspection error or a synthesized reply bound.
+
+`unit/rust.unit` supplies the separate test-process scalar receipt for collection,
+capture parsing, typed validation/decoding, host parsing, envelope construction
+and rendering. The seam retains scalars only and is absent from production
+builds. Its input/source hashes and ordered overlap assertions do not timestamp
+production decoder stages. The default `response_footprint_controls` and
+`held_phase_footprint_controls` accept constructed valid receipts before rejecting
+missing boundaries, incorrect counts, invalid units, capacities or ownership
+claims. The default `footprint_observer_controls` builds the native observer and
+checks acknowledged allocation and CPU sensitivity, generation/metric/error
+validation and exited-generation inspection; it needs Clang but no app.
+
+Artifacts include observer source/binary identity and raw samples, conditions,
+calibration and declared hold repetitions, per-hold `measurement.json`, response
+`response-footprint.json`, exact `host-reply.json`, `RunCapture` files, the copied
+unit receipt/input artifact and independent exit receipts. These cases require
+native inspection and XPC access; the actor hold also needs a matching Developer
+ID identity and disposable-host signing. See the
+[execution and interpretation account](../../CHANGE-VERIFICATION.md#footprint-observations)
+and the [footprint account](../../../docs/FOOTPRINT.md).
+
 ## Public phases
 
 `phases` uses the signed CLI with ordinary actions. It unlinks a controlled

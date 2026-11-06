@@ -70,6 +70,8 @@ def main():
         assert raised == rejects, f'{name}: expected rejection={rejects}, got {message!r}'
         results.append({'control': name, 'rejects': rejects, 'message': message})
         print(f'{name}: {"rejected" if raised else "accepted"} as required', flush=True)
+    from check_aftermath_footprint import checker_controls
+    results.extend(checker_controls())
     (out / 'controls.json').write_text(json.dumps(results, indent=2) + '\n')
 
 

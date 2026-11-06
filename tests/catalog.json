@@ -180,6 +180,10 @@
         {
           "id": "direct_python_start",
           "description": "Build, test and release ancestry uses direct Python; wrapper shebangs agree and independent weakening controls reject shim and bare Python commands"
+        },
+        {
+          "id": "footprint_documentation",
+          "description": "Footprint rows, qualified quantities, table regions and diagram correspondence agree; malformed and stale inputs are rejected"
         }
       ]
     },
@@ -1187,6 +1191,28 @@
             "bash",
             "tests/suites/run_effects/run_installs_nothing.sh"
           ]
+        },
+        {
+          "id": "aftermath_footprint",
+          "description": "Resource inventories at CLI return and independently observed ending boundaries before cleanup, including actor custody and invoked timeout",
+          "command": [
+            "bash",
+            "tests/suites/run_effects/aftermath_footprint.sh"
+          ],
+          "requires": [
+            "app",
+            "clang",
+            "swift",
+            "meson",
+            "identity"
+          ],
+          "default": false,
+          "depends_on": [
+            "witness_contract/footprint_observer_controls",
+            "run_effects/checker_controls",
+            "runner_exec_lifecycle/closed_streams_leader_exit",
+            "runner_exec_lifecycle/worker_dies_during_exec"
+          ]
         }
       ]
     },
@@ -1904,6 +1930,79 @@
           "requires": [
             "app"
           ]
+        },
+        {
+          "id": "footprint_observer_controls",
+          "description": "Persistent process counters, generation-bound exits and live sensitivity controls; malformed observations are rejected",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/footprint_observer_controls.sh"
+          ],
+          "requires": [
+            "clang"
+          ],
+          "default": true
+        },
+        {
+          "id": "response_footprint_controls",
+          "description": "Response representation and native observation consumers reject lost bytes, changed identities and missing boundaries",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/response_footprint_controls.sh"
+          ],
+          "requires": [],
+          "default": true
+        },
+        {
+          "id": "response_footprint",
+          "description": "Fresh controller samples and exact response representations for ordinary and actor-extension workloads",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/response_footprint.sh"
+          ],
+          "requires": [
+            "app",
+            "clang",
+            "cargo"
+          ],
+          "default": false,
+          "depends_on": [
+            "unit/rust.unit",
+            "runner_abi_layout/c_swift_layout_agreement",
+            "witness_contract/footprint_observer_controls",
+            "witness_contract/response_footprint_controls"
+          ]
+        },
+        {
+          "id": "held_phase_footprint_controls",
+          "description": "Held-phase accounting rejects changed generations, incomplete intervals and absent custody evidence",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/held_phase_footprint_controls.sh"
+          ],
+          "requires": [],
+          "default": true
+        },
+        {
+          "id": "held_phase_footprint",
+          "description": "Matched live CPU observations across ordinary and actor holds, including extension custody and independent ending observations",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/held_phase_footprint.sh"
+          ],
+          "requires": [
+            "app",
+            "clang",
+            "swift",
+            "meson",
+            "identity"
+          ],
+          "default": false,
+          "depends_on": [
+            "runner_abi_layout/c_swift_layout_agreement",
+            "witness_contract/footprint_observer_controls",
+            "witness_contract/held_phase_footprint_controls"
+          ]
         }
       ],
       "include": [
@@ -2185,7 +2284,10 @@
         "runner_unit/actor_handoff_mutations",
         "runner_exec_lifecycle/closed_streams_leader_exit",
         "runner_exec_inheritance/closed_worker_stderr",
-        "dispatcher/pytest_controls"
+        "dispatcher/pytest_controls",
+        "witness_contract/held_phase_footprint",
+        "witness_contract/response_footprint",
+        "run_effects/aftermath_footprint"
       ]
     },
     "failure_boundaries": {

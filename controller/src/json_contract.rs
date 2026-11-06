@@ -19,6 +19,63 @@ pub const RESPONSE_SCHEMA_VERSION: u32 = 26;
 pub const RUNNER_PROTOCOL_VERSION: u32 = 3;
 // END GENERATED CONTRACT VERSIONS
 
+/// Test-only scalar observations. No payload, address, or borrowed owner is retained.
+#[cfg(test)]
+pub(crate) mod footprint_test {
+    use std::cell::RefCell;
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum Stage {
+        FullClientCollection,
+        CaptureParsing,
+        TypedCaptureValidationBase64Decoding,
+        HostParsing,
+        EnvelopeConstructionSorting,
+        FinalRendering,
+    }
+    #[derive(Clone, Copy, Debug, Default, serde::Serialize)]
+    pub struct Summary {
+        #[serde(skip)]
+        pub stage: Option<Stage>,
+        pub raw_stdout: Option<(usize, usize)>,
+        pub raw_stderr: Option<(usize, usize)>,
+        pub retained_stdout: Option<(usize, usize)>,
+        pub retained_stderr: Option<(usize, usize)>,
+        pub generic_base64: Option<usize>,
+        pub typed_base64: Option<usize>,
+        pub host_retained: Option<usize>,
+        pub decoded: Option<(usize, usize)>,
+        pub parsed_host: bool,
+        pub borrowed_input: bool,
+        pub envelope: bool,
+        pub rendered: Option<(usize, usize)>,
+    }
+    thread_local! { static RECORDS: RefCell<Option<Vec<Summary>>> = const { RefCell::new(None) }; }
+    pub struct Scope;
+    impl Drop for Scope {
+        fn drop(&mut self) {
+            RECORDS.with(|r| *r.borrow_mut() = None);
+        }
+    }
+    pub fn begin() -> Scope {
+        RECORDS.with(|r| {
+            assert!(r.borrow().is_none());
+            *r.borrow_mut() = Some(Vec::with_capacity(6));
+        });
+        Scope
+    }
+    pub fn take() -> Vec<Summary> {
+        RECORDS.with(|r| r.borrow_mut().take().unwrap())
+    }
+    pub fn record(summary: Summary) {
+        RECORDS.with(|r| {
+            if let Some(records) = r.borrow_mut().as_mut() {
+                assert!(records.len() < 6);
+                records.push(summary);
+            }
+        });
+    }
+}
+
 #[derive(Serialize, Clone)]
 pub struct JsonResult {
     pub ok: bool,
@@ -114,6 +171,13 @@ fn envelope_value<T: Serialize>(kind: &str, result: JsonResult, data: &T) -> Res
         "data": data,
     });
     sort_value(&mut value);
+    #[cfg(test)]
+    footprint_test::record(footprint_test::Summary {
+        stage: Some(footprint_test::Stage::EnvelopeConstructionSorting),
+        borrowed_input: true,
+        envelope: true,
+        ..Default::default()
+    });
     Ok(value)
 }
 
@@ -123,7 +187,17 @@ pub fn render_envelope<T: Serialize>(
     data: &T,
 ) -> Result<String, String> {
     let value = envelope_value(kind, result, data)?;
-    serde_json::to_string_pretty(&value).map_err(|e| format!("failed to encode JSON: {e}"))
+    let text =
+        serde_json::to_string_pretty(&value).map_err(|e| format!("failed to encode JSON: {e}"))?;
+    #[cfg(test)]
+    footprint_test::record(footprint_test::Summary {
+        stage: Some(footprint_test::Stage::FinalRendering),
+        borrowed_input: true,
+        envelope: true,
+        rendered: Some((text.len(), text.capacity())),
+        ..Default::default()
+    });
+    Ok(text)
 }
 
 pub fn print_envelope<T: Serialize>(

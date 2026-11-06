@@ -675,6 +675,13 @@ fn parse_runner_client_output(
     out: &std::process::Output,
     request_delivery: Option<RequestDelivery>,
 ) -> (RunnerClientRun, Option<Value>) {
+    #[cfg(test)]
+    crate::json_contract::footprint_test::record(crate::json_contract::footprint_test::Summary {
+        stage: Some(crate::json_contract::footprint_test::Stage::FullClientCollection),
+        raw_stdout: Some((out.stdout.len(), out.stdout.capacity())),
+        raw_stderr: Some((out.stderr.len(), out.stderr.capacity())),
+        ..Default::default()
+    });
     let (output, transport) =
         capture_json_output(out, "runner client", crate::utils::RUNNER_CAPTURE_BYTES);
     let mut run = RunnerClientRun {
@@ -728,6 +735,21 @@ fn parse_runner_client_output(
         let capture: Capture = serde_json::from_value(value.clone())
             .map_err(|e| ("malformed", format!("malformed client capture: {e}")))?;
         let bytes = validate_capture(&capture).map_err(|e| ("malformed", e))?;
+        #[cfg(test)]
+        let footprint_decoding = crate::json_contract::footprint_test::Summary {
+            stage: Some(
+                crate::json_contract::footprint_test::Stage::TypedCaptureValidationBase64Decoding,
+            ),
+            raw_stdout: Some((out.stdout.len(), out.stdout.capacity())),
+            raw_stderr: Some((out.stderr.len(), out.stderr.capacity())),
+            generic_base64: value["runner_reply"]["data_base64"].as_str().map(str::len),
+            typed_base64: capture.runner_reply.as_ref().map(|r| r.data_base64.len()),
+            host_retained: capture.runner_reply.as_ref().map(|r| r.bytes_retained),
+            decoded: bytes.as_ref().map(|b| (b.len(), b.capacity())),
+            ..Default::default()
+        };
+        #[cfg(test)]
+        crate::json_contract::footprint_test::record(footprint_decoding);
         run.submission = capture.submission.state;
         if let Some(bytes) = bytes {
             if capture.runner_reply.as_ref().unwrap().truncated {
@@ -737,7 +759,19 @@ fn parse_runner_client_output(
                 );
             } else {
                 match serde_json::from_slice(&bytes) {
-                    Ok(value) => reply = Some(value),
+                    Ok(value) => {
+                        #[cfg(test)]
+                        crate::json_contract::footprint_test::record(
+                            crate::json_contract::footprint_test::Summary {
+                                stage: Some(
+                                    crate::json_contract::footprint_test::Stage::HostParsing,
+                                ),
+                                parsed_host: true,
+                                ..footprint_decoding
+                            },
+                        );
+                        reply = Some(value)
+                    }
                     Err(error) => {
                         run.runner_reply_error =
                             Some(format!("runner reply is not complete JSON: {error}"))
@@ -950,6 +984,115 @@ pub(crate) fn test_client_run(reply: Option<&Value>) -> RunnerClientRun {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn response_footprint_success_boundaries() {
+        use crate::json_contract::{JsonResult, footprint_test as ft, render_envelope};
+        use ft::Stage::*;
+        let host = br#"{"schema_version":26,"steps":[],"marker":"independent bytes"}"#;
+        let frame = serde_json::to_vec(&test_capture_bytes(Some(host))).unwrap();
+        let stderr = b"fixture diagnostic";
+        let _scope = ft::begin();
+        let (run, parsed) = {
+            let output = std::process::Output {
+                status: std::os::unix::process::ExitStatusExt::from_raw(0),
+                stdout: frame.clone(),
+                stderr: stderr.to_vec(),
+            };
+            parse_runner_client_output(&[], 0, 1, &output, None)
+        }; // Complete raw streams end before envelope construction.
+        assert_eq!(run.transport_admission, "accepted");
+        assert_eq!(parsed, Some(serde_json::from_slice(host).unwrap()));
+        let text = render_envelope(
+            "footprint_fixture",
+            JsonResult::new(true, 0, None, None),
+            &(run, parsed),
+        )
+        .unwrap();
+        let records = ft::take();
+        assert_eq!(
+            records.iter().map(|r| r.stage.unwrap()).collect::<Vec<_>>(),
+            vec![
+                FullClientCollection,
+                CaptureParsing,
+                TypedCaptureValidationBase64Decoding,
+                HostParsing,
+                EnvelopeConstructionSorting,
+                FinalRendering
+            ]
+        );
+        for (index, r) in records.iter().enumerate() {
+            for pair in [
+                r.raw_stdout,
+                r.raw_stderr,
+                r.retained_stdout,
+                r.retained_stderr,
+                r.decoded,
+                r.rendered,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                assert!(pair.1 >= pair.0);
+            }
+            if index < 4 {
+                assert_eq!(r.raw_stdout.unwrap().0, frame.len());
+                assert_eq!(r.raw_stderr.unwrap().0, stderr.len());
+            } else {
+                assert!(r.raw_stdout.is_none() && r.raw_stderr.is_none());
+                assert!(r.typed_base64.is_none() && r.decoded.is_none());
+                assert!(r.borrowed_input && r.envelope);
+            }
+            if (1..=3).contains(&index) {
+                assert_eq!(r.generic_base64, Some(host.len().div_ceil(3) * 4));
+            }
+            if (2..=3).contains(&index) {
+                assert_eq!(r.typed_base64, Some(host.len().div_ceil(3) * 4));
+                assert_eq!(r.host_retained, Some(host.len()));
+                assert_eq!(r.decoded.unwrap().0, host.len());
+            }
+        }
+        assert_eq!(records[1].retained_stdout.unwrap().0, frame.len());
+        assert_eq!(records[1].retained_stderr.unwrap().0, stderr.len());
+        assert!(records[3].parsed_host);
+        assert_eq!(records[5].rendered.unwrap().0, text.len());
+        // Optional receipt is written only by this explicitly selected unit case.
+        if let Some(path) = std::env::var_os("PW_RESPONSE_FOOTPRINT_UNIT_RECEIPT")
+            .map(std::path::PathBuf::from)
+            .or_else(|| {
+                std::env::var_os("PW_TEST_ARTIFACTS")
+                    .map(|p| std::path::PathBuf::from(p).join("response-footprint-unit.json"))
+            })
+        {
+            let stages = [
+                "full_client_collection",
+                "capture_parsing",
+                "typed_capture_validation_base64_decoding",
+                "host_parsing",
+                "envelope_construction_sorting",
+                "final_rendering",
+            ];
+            let boundaries: Vec<_> = records
+                .iter()
+                .zip(stages)
+                .map(|(record, stage)| {
+                    let mut value = serde_json::to_value(record).unwrap();
+                    value["stage"] = stage.into();
+                    value
+                })
+                .collect();
+            let receipt = serde_json::json!({"schema_version":1,"case_id":"response_footprint_success_boundaries",
+                "input_sha256":crate::digest::sha256_hex(host),
+                "source_sha256":crate::digest::sha256_hex(include_bytes!("runner_client.rs")),
+                "sources_sha256": {"controller/src/runner_client.rs":crate::digest::sha256_hex(include_bytes!("runner_client.rs")),
+                    "controller/src/utils.rs":crate::digest::sha256_hex(include_bytes!("utils.rs")),
+                    "controller/src/json_contract.rs":crate::digest::sha256_hex(include_bytes!("json_contract.rs"))}, "host_bytes":host.len(),
+                "client_stdout_bytes":frame.len(),"client_stderr_bytes":stderr.len(),
+                "rendered_bytes":text.len(),"boundaries":boundaries});
+            std::fs::write(path.with_extension("input.json"), host).unwrap();
+            std::fs::write(path, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+        }
+    }
 
     #[test]
     fn reply_capture_limit_matches_documented_capacity() {

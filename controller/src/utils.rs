@@ -158,6 +158,19 @@ pub fn capture_json_output(
             Err(error) => stdout_parse_error = Some(error.to_string()),
         }
     }
+    #[cfg(test)]
+    crate::json_contract::footprint_test::record(crate::json_contract::footprint_test::Summary {
+        stage: Some(crate::json_contract::footprint_test::Stage::CaptureParsing),
+        raw_stdout: Some((out.stdout.len(), out.stdout.capacity())),
+        raw_stderr: Some((out.stderr.len(), out.stderr.capacity())),
+        retained_stdout: Some((stdout.len(), stdout.capacity())),
+        retained_stderr: Some((stderr.len(), stderr.capacity())),
+        generic_base64: parsed
+            .as_ref()
+            .and_then(|v: &serde_json::Value| v["runner_reply"]["data_base64"].as_str())
+            .map(str::len),
+        ..Default::default()
+    });
     let stdout_raw = (stdout_parse_error.is_some() || stdout_truncated).then_some(stdout);
     (
         JsonOutputCapture {

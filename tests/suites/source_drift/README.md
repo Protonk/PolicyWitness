@@ -233,8 +233,20 @@ bounds after peer and parent headings, code labels, images and the refusal.
 ### Generator contracts
 
 The `generator_contract` case in [generators.py](generators.py) holds these
-invariants across the five generators. Per-generator cases retain their shape,
+invariants across the six generators. Per-generator cases retain their shape,
 stale-copy, marker and build-refusal controls.
+
+The footprint manifest, [docs/footprint.json](../../../docs/footprint.json),
+is rendered by [docs/generate_footprint.py](../../../docs/generate_footprint.py).
+Its three principal tables, backing groups, endings and coverage share stable
+row IDs with the footprint graphs in the architecture manifest. Validation
+requires exact bidirectional depicted-row/node correspondence; measured rows
+may have a null figure. It also checks closed field sets,
+quantity evidence and units, explicit aftermath states and defined citations.
+Check citations distinguish assertions, receipt validation and compiled values;
+`pins` records their reviewed scope. The `footprint_documentation` case checks
+freshness, stale-copy refusal without writes, invalid manifests, region markers
+and scalar spans. The build checks the footprint document before compilation.
 
 The limits manifest is a reviewed description; production code does not load
 it. Every row cites a test or rule, and a value owner must be a test in the
@@ -282,9 +294,12 @@ compiled-value and behavioral checks establish implementation agreement.
   verify text it wrote.
 - **G7. Declared vocabulary.** A graph declares the fact keys its nodes and
   edges may use, in column order; an undeclared or unused key is an error.
-- **G8. Durations and sizes render from limits.** The architecture manifest
+- **G8. Durations and sizes have a reviewed owner.** The architecture manifest
   states a duration or size only through a limit placeholder; a literal one
-  anywhere in the manifest is an error.
+  anywhere in the architecture manifest is an error. The footprint manifest
+  owns measured, logical, constructed and source-supported quantities in its
+  quantity fields; authored size/time prose reaches its document through
+  `footprint.` spans or generated tables.
 - **G9. Counts and values reach prose through spans.** A span is owned by one
   generator, rendered from its manifest, checked for a stale value or an
   unknown name, and authored outside every region; a copy region carries it
@@ -333,7 +348,7 @@ regions are opaque to the span pass. A backticked link label into a non-Markdown
 file denotes a symbol; use a plain filename label for an ordinary file link.
 Local links must resolve, and reference-style links are refused.
 
-The architecture manifest uses schema version 3; limits uses schema version 2.
+The architecture manifest uses schema version 4; limits uses schema version 2.
 Each architecture graph may select a registered document, defaulting to the
 manifest destination. ARCHITECTURE.md and WORKER.md are registered; unknown or
 escaping destinations, duplicate output ownership and misplaced markers refuse
@@ -419,7 +434,7 @@ import of either package anywhere else.
   suite prints them. Declarations are a reviewed account of what is read,
   not a claim that every read is declared or an observation of subprocess
   reads: review new reads and imports against them. The generic generator
-  fixture holds the union of the five generators' inputs plus sentinel
+  fixture holds the union of the six generators' inputs plus sentinel
   files no generator owns, and snapshots cover the whole fixture.
 - The generator contract case checks each generator's declarations against
   an independently listed set of known inputs, follows a new citation, a new

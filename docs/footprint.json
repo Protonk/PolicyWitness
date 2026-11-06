@@ -3,12 +3,12 @@
   "document": "docs/FOOTPRINT.md",
   "rows": [
     {
-      "id": "W1",
+      "id": "fw1",
       "case": "waiting",
-      "title": "Worker release wait",
+      "title": "Release-word polling",
       "subject": {
         "kind": "activity",
-        "owner": "worker",
+        "owner": "active worker",
         "backing": null
       },
       "quantity": {
@@ -16,11 +16,11 @@
         "value": null,
         "unit": null,
         "limit": "worker_proceed_wait",
-        "behavior": "Polls the release word continuously, in batches of yield hints, until a release store is accepted, a continuous-clock sample expires or cancellation is observed."
+        "behavior": "Continuously samples release/cancellation and expiry, with batches of yield hints. Requested-action quiescence is not CPU idleness."
       },
-      "conditions": "One ordinary worker arrived at a phase boundary with no requested attempt released.",
+      "conditions": "Arrived phase awaiting collection release.",
       "interval": {
-        "starts": "phase arrival acknowledged by the worker",
+        "starts": "phase arrival",
         "ends": "release accepted, expiry sampled or cancellation observed",
         "ending_event": "release, expiry or cancellation"
       },
@@ -41,15 +41,408 @@
           "symbol": "proceed_delayed_observed_quiescence",
           "kind": "assertion",
           "form": "test",
-          "pins": "Requested effects stay absent across a delayed release and occur after it; the control does not measure CPU."
+          "pins": "Selected effects remain absent across delayed release and occur afterward; no CPU measurement."
         }
       ],
-      "figure": null
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw1"
+      }
     },
     {
-      "id": "R1",
+      "id": "fw2",
+      "case": "waiting",
+      "title": "Parked actor polling",
+      "subject": {
+        "kind": "activity",
+        "owner": "parked worker",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Polls its activation word and can service inbound authority while parked."
+      },
+      "conditions": "Actor prepared before its next scheduled visit.",
+      "interval": {
+        "starts": "setup or previous visit completion",
+        "ends": "named activation, cutoff or exit request",
+        "ending_event": "activation, expiry or cancellation"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "wait_for_activation"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_c_worker_harness/run.sh",
+          "symbol": "activation_named_ordinal",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Setup is published with no early action/arrival; named activation then permits the visit."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw2"
+      }
+    },
+    {
+      "id": "fw3",
+      "case": "waiting",
+      "title": "Collection orchestration",
+      "subject": {
+        "kind": "activity",
+        "owner": "host / validator",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Host polls/sleeps while collecting; an eligible phase launches a separate validator. Their demand is separate from worker polling."
+      },
+      "conditions": "Ordinary and actor collection; validator only for eligible queries.",
+      "interval": {
+        "starts": "worker readiness or arrival",
+        "ends": "collection ends; validator ends independently",
+        "ending_event": "collection completion and validator exit"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "symbol": "walkSchedule"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "runValidator"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "symbol": "runCWorkerLifecycleTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw3"
+      }
+    },
+    {
+      "id": "fw4",
+      "case": "waiting",
+      "title": "Evidence backing / host view",
+      "subject": {
+        "kind": "mapping",
+        "owner": "host",
+        "backing": "evidence_per_worker"
+      },
+      "quantity": {
+        "evidence": "logical",
+        "value": 3675920,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "One fixed evidence backing per worker, initialized before spawn; host and worker mappings are views of the same object."
+      },
+      "conditions": "Each ordinary worker or actor, independent of requested action count.",
+      "interval": {
+        "starts": "mapping preparation",
+        "ends": "host session teardown",
+        "ending_event": "host unmapping attempted; native success not recorded"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "PWShmLayout"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "symbol": "tearDown"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/run.sh",
+          "symbol": "c_swift_layout_agreement",
+          "kind": "value",
+          "form": "test",
+          "pins": "Compiled C and Swift layout constants agree; logical geometry, not residency."
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "symbol": "runCWorkerLifecycleTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw4"
+      }
+    },
+    {
+      "id": "fw5",
+      "case": "waiting",
+      "title": "Evidence worker view",
+      "subject": {
+        "kind": "mapping",
+        "owner": "worker",
+        "backing": "evidence_per_worker"
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Aliases the evidence backing; do not add its logical capacity to the host view as a second backing object."
+      },
+      "conditions": "Each launched worker.",
+      "interval": {
+        "starts": "worker maps launch descriptor",
+        "ends": "worker process exit",
+        "ending_event": "worker exit ends its references"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "mmap"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "symbol": "init"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "symbol": "runCWorkerLifecycleTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw5"
+      }
+    },
+    {
+      "id": "fw6",
+      "case": "waiting",
+      "title": "Authority regions",
+      "subject": {
+        "kind": "mapping",
+        "owner": "host / actor workers",
+        "backing": "authority_per_actor"
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Per actor: 1152 + (inbound slots + outbound slots) \u00d7 16448 requested logical bytes, including actors with no slots. The worker maps the observed object size, which can include page padding; it remains a view of the same backing. Bearer bytes are outside the encoded reply."
+      },
+      "conditions": "Authority-bearing actor plan; one distinct backing per actor, host/worker views.",
+      "interval": {
+        "starts": "authority setup before launch",
+        "ends": "host detachment and worker exit, independently",
+        "ending_event": "shared erase eligibility, host unmap and worker exit are separate"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "PWAuthorityLayout"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "ActorAuthorityRegion"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/run.sh",
+          "symbol": "c_swift_layout_agreement",
+          "kind": "value",
+          "form": "test",
+          "pins": "Compiled C and Swift layout constants agree; logical geometry, not residency."
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "symbol": "runActorAuthorityTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw6"
+      }
+    },
+    {
+      "id": "fw7",
+      "case": "waiting",
+      "title": "Private token custody",
+      "subject": {
+        "kind": "allocation",
+        "owner": "host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "logical",
+        "value": 16384,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "One fixed private buffer per admitted token. Last-use erasure resets payload state but retains its allocation."
+      },
+      "conditions": "Authority-bearing actor plan; accepted lengths are separate from capacity.",
+      "interval": {
+        "starts": "custody preparation",
+        "ends": "custody finish",
+        "ending_event": "final erase and private buffer disposal"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "TokenCustody"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "erase"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "symbol": "runActorAuthorityTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw7"
+      }
+    },
+    {
+      "id": "fw8",
+      "case": "waiting",
+      "title": "Candidate handles / fixed table",
+      "subject": {
+        "kind": "allocation",
+        "owner": "actor worker",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "logical",
+        "value": 512,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "Fixed handle table storage remains after native release. Candidate count and native result do not measure private kernel storage."
+      },
+      "conditions": "Each worker; successful consumes populate named candidates.",
+      "interval": {
+        "starts": "worker static storage",
+        "ends": "worker exit",
+        "ending_event": "native release and table disposal are separate"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "handle_table"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "attempt_extension_release_actor"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_c_worker_harness/run.sh",
+          "symbol": "terminal_erasure",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Terminal/last-use erasure controls distinguish authority publications from process storage."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw8"
+      }
+    },
+    {
+      "id": "fw9",
+      "case": "waiting",
+      "title": "Launch-only descriptors",
+      "subject": {
+        "kind": "descriptor",
+        "owner": "host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Evidence/authority launch descriptors close after spawn; policy/ready pipes have their own close boundaries. Mapping references survive descriptor close."
+      },
+      "conditions": "Prepared host resources; actual setup failures retain their own cleanup outcomes.",
+      "interval": {
+        "starts": "host setup",
+        "ends": "spawn or setup failure closes each descriptor",
+        "ending_event": "descriptor close, not mapping disposal"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "symbol": "init"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+          "symbol": "check",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Object identity, descriptor reuse and mapping teardown component controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_waiting",
+        "node": "fw9"
+      }
+    },
+    {
+      "id": "fr1",
       "case": "response",
-      "title": "Controller collection of client stdout",
+      "title": "Complete child stream collection",
       "subject": {
         "kind": "allocation",
         "owner": "controller",
@@ -60,13 +453,13 @@
         "value": null,
         "unit": null,
         "limit": "controller_output",
-        "behavior": "Collects the complete child stdout before applying the retention prefix; the allowance bounds retained bytes, not collection memory. The buffer's disposal boundary relative to parsing and rendering is unestablished."
+        "behavior": "Collects complete stdout/stderr before making retained prefixes. Raw Output remains borrowed through capture and host parsing, then drops before final rendering."
       },
-      "conditions": "Any run whose client replies; the large workload's stdout carries the base64 host reply.",
+      "conditions": "Client reply or failure output; complete received counts differ from retained counts.",
       "interval": {
-        "starts": "client stdout pipe opened",
-        "ends": null,
-        "ending_event": null
+        "starts": "child pipes opened",
+        "ends": "run_client_stdin returns",
+        "ending_event": "raw Output drops on caller return"
       },
       "aftermath": null,
       "sources": [
@@ -75,25 +468,381 @@
           "symbol": "run_with_stdin"
         },
         {
-          "path": "controller/src/utils.rs",
-          "symbol": "capture_json_output"
+          "path": "controller/src/runner_client.rs",
+          "symbol": "run_client_stdin"
         }
       ],
       "checks": [
         {
           "path": "controller/src/runner_client.rs",
+          "symbol": "response_footprint_success_boundaries",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
+        },
+        {
+          "path": "controller/src/runner_client.rs",
           "symbol": "valid_oversized_producer_is_receiver_loss_not_malformed_json",
           "kind": "assertion",
           "form": "test",
-          "pins": "An over-allowance producer is reported as receiver loss with its full received count, not as malformed JSON."
+          "pins": "Oversized producer reports full received count and receiver loss, not malformed JSON."
         }
       ],
-      "figure": null
+      "figure": {
+        "graph": "footprint_response",
+        "node": "fr1"
+      }
     },
     {
-      "id": "A1",
+      "id": "fr2",
+      "case": "response",
+      "title": "Collection copies from mappings",
+      "subject": {
+        "kind": "allocation",
+        "owner": "host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Copies published slots/profile/phase values while source mappings still exist; session teardown precedes later reply assembly. Actor reply metadata survives authority teardown."
+      },
+      "conditions": "Ordinary and actor outputs; authority contents are not response payload.",
+      "interval": {
+        "starts": "output collection",
+        "ends": "last reply-model use; source mappings end earlier",
+        "ending_event": "source mappings detach before later encoding"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+          "symbol": "collectOutput"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "symbol": "finish"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "symbol": "runCWorkerLifecycleTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run."
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "symbol": "runActorAuthorityTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_response",
+        "node": "fr2"
+      }
+    },
+    {
+      "id": "fr3",
+      "case": "response",
+      "title": "Validator framing and decoded records",
+      "subject": {
+        "kind": "allocation",
+        "owner": "host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Raw bounded validator output and decoded records coexist during decoding; returned records/counts outlive the temporary raw Data."
+      },
+      "conditions": "Eligible query phases; repeated results contribute metadata to the final reply.",
+      "interval": {
+        "starts": "validator output drain",
+        "ends": "raw Data last use; decoded records retained separately",
+        "ending_event": "validator receive scope ends"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "runValidator"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Validator evidence controls assert accepted records and malformed/oversized framing refusal."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_response",
+        "node": "fr3"
+      }
+    },
+    {
+      "id": "fr4",
+      "case": "response",
+      "title": "Reply model, encoded bytes and XPC",
+      "subject": {
+        "kind": "allocation",
+        "owner": "host / client",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": "runner_reply_maximum",
+        "behavior": "Reply model overlaps encoded host Data; XPC and Foundation physical copy/backing behavior is unestablished. The synthesized maximum bounds encoded reply size, not live memory."
+      },
+      "conditions": "Successful encoding, including actor setup/events/resources metadata.",
+      "interval": {
+        "starts": "reply assembly",
+        "ends": "callback and representation last use",
+        "ending_event": "host/client representation disposal is not externally observed"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "symbol": "replyAndExit"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "PWRunnerReplyCapture"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+          "symbol": "runReplyMaximumTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Constructed field-complete reply fits transport allowance; not a reachable specimen or memory measurement."
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_response",
+        "node": "fr4"
+      }
+    },
+    {
+      "id": "fr5",
+      "case": "response",
+      "title": "Base64 capture and client stdout",
+      "subject": {
+        "kind": "allocation",
+        "owner": "client",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Incoming host Data, retained prefix and base64 text overlap during capture. Capture and encoded capture bytes coexist during emit; stdout adds a newline. Prefix backing identity is unestablished."
+      },
+      "conditions": "Versioned client capture; host bytes and client stdout bytes are different representations.",
+      "interval": {
+        "starts": "reply capture",
+        "ends": "client emit and exit",
+        "ending_event": "client representation lifetime ends with exit"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+          "symbol": "PWRunnerReplyCapture"
+        },
+        {
+          "path": "runner/Clients/PWRunnerClient/main.swift",
+          "symbol": "emit"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_response",
+        "node": "fr5"
+      }
+    },
+    {
+      "id": "fr6",
+      "case": "response",
+      "title": "Generic and typed capture",
+      "subject": {
+        "kind": "allocation",
+        "owner": "controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Retained text is made before parsing. Generic capture JSON survives a clone into typed Capture; generic and typed base64 coexist during validation. Lossy text length need not equal retained source-byte count."
+      },
+      "conditions": "Accepted capture; malformed/oversized paths have separate retention behavior.",
+      "interval": {
+        "starts": "capture parsing",
+        "ends": "typed capture scope ends; generic capture survives into assembly",
+        "ending_event": "typed capture disposal before final rendering"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "controller/src/utils.rs",
+          "symbol": "capture_json_output"
+        },
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "parse_runner_client_output"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "response_footprint_success_boundaries",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
+        },
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "multibyte_cut_counts_bytes_before_lossy_conversion",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Retained source bytes are counted before lossy conversion."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_response",
+        "node": "fr6"
+      }
+    },
+    {
+      "id": "fr7",
+      "case": "response",
+      "title": "Decoded bytes and parsed host reply",
+      "subject": {
+        "kind": "allocation",
+        "owner": "controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Strict base64 decode allocates host bytes. Raw client Output, generic capture, typed base64 and decoded bytes coexist; parsed host Value is added before decoded bytes leave scope."
+      },
+      "conditions": "Successful capture validation and host JSON parsing.",
+      "interval": {
+        "starts": "base64 decoding",
+        "ends": "decoded vector scope ends; parsed reply retained",
+        "ending_event": "decoded bytes drop before envelope rendering"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "validate_capture"
+        },
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "decode_base64"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "response_footprint_success_boundaries",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_response",
+        "node": "fr7"
+      }
+    },
+    {
+      "id": "fr8",
+      "case": "response",
+      "title": "Envelope and rendered text",
+      "subject": {
+        "kind": "allocation",
+        "owner": "controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Borrowed input and envelope coexist. Recursive sorting clones subtrees; pretty serialization adds a String while the Value remains live. Sort temporaries are not claimed to survive the sort."
+      },
+      "conditions": "Final envelope rendering; successful stdout adds a newline.",
+      "interval": {
+        "starts": "envelope construction",
+        "ends": "print returns and CLI exits",
+        "ending_event": "Value/String disposal after last use"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "controller/src/json_contract.rs",
+          "symbol": "sort_value"
+        },
+        {
+          "path": "controller/src/json_contract.rs",
+          "symbol": "render_envelope"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "response_footprint_success_boundaries",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_response",
+        "node": "fr8"
+      }
+    },
+    {
+      "id": "fa1",
       "case": "aftermath",
-      "title": "Host retirement after the reply",
+      "title": "Asynchronous host retirement",
       "subject": {
         "kind": "process",
         "owner": "host",
@@ -104,26 +853,22 @@
         "value": null,
         "unit": null,
         "limit": "host_exit_delay",
-        "behavior": "Schedules its own exit a fixed delay after replying; a client timeout after invocation cancels neither the submitted work nor this retirement."
+        "behavior": "Schedules retirement after replying. A live host at CLI return may still be in this interval; its generation needs an independent end observation."
       },
-      "conditions": "Ordinary completion with a delivered reply.",
+      "conditions": "Completion with delivered reply.",
       "interval": {
         "starts": "reply sent",
-        "ends": "host process exit",
-        "ending_event": "host exit observed independently of the host's own report"
+        "ends": "host exit",
+        "ending_event": "host process exit"
       },
       "aftermath": {
         "at_cli_return": "unknown",
-        "expected_ending": "host process exit after the scheduled delay"
+        "expected_ending": "host process exit"
       },
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
           "symbol": "replyAndExit"
-        },
-        {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-          "symbol": "hostExitDelayMs"
         }
       ],
       "checks": [
@@ -132,7 +877,782 @@
           "symbol": "runReservationAdmissionTests",
           "kind": "assertion",
           "form": "test",
-          "pins": "Single retirement ownership and refusal of a stale timer; the production delay is value-checked, not observed at CLI return."
+          "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_aftermath",
+        "node": "fa1"
+      }
+    },
+    {
+      "id": "fa2",
+      "case": "aftermath",
+      "title": "Submitted work after client timeout",
+      "subject": {
+        "kind": "process",
+        "owner": "host / workers",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "A post-invocation client deadline ends the client wait without cancelling submitted work. Gate release, signalling and fixture cleanup are later interventions."
+      },
+      "conditions": "Client deadline after submission, including actor form.",
+      "interval": {
+        "starts": "irreversible submission",
+        "ends": "resource-specific completion or failure",
+        "ending_event": "each identified process exits independently"
+      },
+      "aftermath": {
+        "at_cli_return": "unknown",
+        "expected_ending": "each identified process exits independently"
+      },
+      "sources": [
+        {
+          "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+          "symbol": "deadline"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "symbol": "replyAndExit"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+          "symbol": "runReservationAdmissionTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_aftermath",
+        "node": "fa2"
+      }
+    },
+    {
+      "id": "fa3",
+      "case": "aftermath",
+      "title": "Authority erasure and detachment",
+      "subject": {
+        "kind": "mapping",
+        "owner": "host / actor workers",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Shared erasure requires a reaped or never-launched owner; unresolved workers withhold erasure while host detachment proceeds. Private custody is erased/disposed separately. Native release does neither. Native process exits do not directly observe shared-byte erasure, host unmapping, private disposal, native release or parent reap in the timed-out run."
+      },
+      "conditions": "Authority-bearing actor teardown; component receipts do not establish this run\u2019s native unmapping.",
+      "interval": {
+        "starts": "actor cleanup",
+        "ends": "each owner-specific ending",
+        "ending_event": "shared erasure, host unmap, private disposal and worker exit"
+      },
+      "aftermath": {
+        "at_cli_return": "unknown",
+        "expected_ending": "shared erasure, host unmap, private disposal and worker exit"
+      },
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "tearDown"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "finish"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+          "symbol": "finish"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "symbol": "runActorAuthorityTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_aftermath",
+        "node": "fa3"
+      }
+    },
+    {
+      "id": "fa4",
+      "case": "aftermath",
+      "title": "Baseline installation state",
+      "subject": {
+        "kind": "registry",
+        "owner": "registry / launchd files",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Plain run inventory compares registry state and directory names. Pre-existing installed services are baseline, not run-created apparatus. Name equality does not establish every object identity."
+      },
+      "conditions": "Explicit baseline inventory around a plain run.",
+      "interval": {
+        "starts": "before invocation",
+        "ends": "post-run inventory comparison",
+        "ending_event": "baseline comparison; no run-owned removal implied"
+      },
+      "aftermath": {
+        "at_cli_return": "unknown",
+        "expected_ending": "baseline comparison; no run-owned removal implied"
+      },
+      "sources": [
+        {
+          "path": "tests/suites/run_effects/check_installs_nothing.py",
+          "symbol": "inventory"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/run_effects/check_installs_nothing.py",
+          "symbol": "main",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Registry digest/reported registry and plist-directory inventory remain unchanged in this scoped control."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_aftermath",
+        "node": "fa4"
+      }
+    },
+    {
+      "id": "fa5",
+      "case": "aftermath",
+      "title": "Requested effects and descendants",
+      "subject": {
+        "kind": "process",
+        "owner": "specimen",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Requested file effects and surviving exec descendants remain separate from apparatus residue. Leader exit or stream EOF does not establish descendant exit."
+      },
+      "conditions": "Specimens that request writes or exec.",
+      "interval": {
+        "starts": "requested operation",
+        "ends": "effect-specific removal or descendant exit",
+        "ending_event": "independent descendant exit or owned effect removal"
+      },
+      "aftermath": {
+        "at_cli_return": "unknown",
+        "expected_ending": "independent descendant exit or owned effect removal"
+      },
+      "sources": [
+        {
+          "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+          "symbol": "observe_survivor"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+          "symbol": "main",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Same-generation descendant answers after CLI return; later fixture release is separate."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_aftermath",
+        "node": "fa5"
+      }
+    },
+    {
+      "id": "fa6",
+      "case": "aftermath",
+      "title": "Requested output and observer resources",
+      "subject": {
+        "kind": "file",
+        "owner": "caller / harness",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "Envelope files, gates, meters, staging and exit watchers have caller/harness ownership. Their removal cannot substitute for the pre-intervention product snapshot."
+      },
+      "conditions": "Artifacts explicitly requested or created for observation.",
+      "interval": {
+        "starts": "caller/harness preparation",
+        "ends": "recorded owned cleanup",
+        "ending_event": "explicit output/observer cleanup"
+      },
+      "aftermath": {
+        "at_cli_return": "unknown",
+        "expected_ending": "explicit output/observer cleanup"
+      },
+      "sources": [
+        {
+          "path": "tests/lib/run_capture.py",
+          "symbol": "close"
+        },
+        {
+          "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+          "symbol": "cleanup"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+          "symbol": "main",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Survivor observation precedes owned cleanup; failures retain cleanup ownership."
+        }
+      ],
+      "figure": {
+        "graph": "footprint_aftermath",
+        "node": "fa6"
+      }
+    },
+    {
+      "id": "fr9",
+      "case": "response",
+      "title": "ordinary_small",
+      "subject": {
+        "kind": "allocation",
+        "owner": "fresh shipped controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 9435,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "Host reply bytes; client stdout 13,420 bytes; final envelope 32,035 bytes. Controller sampled maximum resident 6,750,208 bytes and physical footprint 1,556,816 bytes, independently; 32 successful samples over 43,041,375 ns. Actual sample-start intervals 1,277,166\u20131,458,000 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+      },
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "interval": {
+        "starts": "first successful generation-qualified sample",
+        "ends": "last successful generation-qualified sample",
+        "ending_event": "independently observed controller exit"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fr10",
+      "case": "response",
+      "title": "independent_query",
+      "subject": {
+        "kind": "allocation",
+        "owner": "fresh shipped controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 1826055,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "Host reply bytes; client stdout 2,435,586 bytes; final envelope 4,737,755 bytes. Controller sampled maximum resident 57,966,592 bytes and physical footprint 52,593,048 bytes, independently; 138 successful samples over 187,629,834 ns. Actual sample-start intervals 1,340,792\u20131,468,791 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+      },
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "interval": {
+        "starts": "first successful generation-qualified sample",
+        "ends": "last successful generation-qualified sample",
+        "ending_event": "independently observed controller exit"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fr11",
+      "case": "response",
+      "title": "eight_phase_maximum",
+      "subject": {
+        "kind": "allocation",
+        "owner": "fresh shipped controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 1830373,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "Host reply bytes; client stdout 2,441,346 bytes; final envelope 4,751,545 bytes. Controller sampled maximum resident 57,606,144 bytes and physical footprint 52,232,600 bytes, independently; 150 successful samples over 202,997,208 ns. Actual sample-start intervals 1,129,000\u20131,465,916 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+      },
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "interval": {
+        "starts": "first successful generation-qualified sample",
+        "ends": "last successful generation-qualified sample",
+        "ending_event": "independently observed controller exit"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fr12",
+      "case": "response",
+      "title": "actor_maximum",
+      "subject": {
+        "kind": "allocation",
+        "owner": "fresh shipped controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 603354,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "Host reply bytes; client stdout 805,316 bytes; final envelope 1,904,230 bytes. Controller sampled maximum resident 38,879,232 bytes and physical footprint 31,506,816 bytes, independently; 300 successful samples over 424,208,000 ns. Actual sample-start intervals 1,213,000\u20133,434,375 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+      },
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "interval": {
+        "starts": "first successful generation-qualified sample",
+        "ends": "last successful generation-qualified sample",
+        "ending_event": "independently observed controller exit"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fr13",
+      "case": "response",
+      "title": "control_character_exec",
+      "subject": {
+        "kind": "allocation",
+        "owner": "fresh shipped controller",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 9491469,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "Host reply bytes; client stdout 12,656,138 bytes; final envelope 22,740,116 bytes. Controller sampled maximum resident 159,973,376 bytes and physical footprint 154,665,464 bytes, independently; 578 successful samples over 786,891,792 ns. Actual sample-start intervals 1,112,750\u20131,546,875 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+      },
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "interval": {
+        "starts": "first successful generation-qualified sample",
+        "ends": "last successful generation-qualified sample",
+        "ending_event": "independently observed controller exit"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fr14",
+      "case": "response",
+      "title": "Actor backing and page-padded views",
+      "subject": {
+        "kind": "mapping",
+        "owner": "host / actor workers",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "logical",
+        "value": 30995584,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "Logical evidence-plus-authority backing capacity, counted once; separate private custody 524,288 bytes. Issuer authority requested 132,736 bytes, worker mapped 147,456 bytes; subject requested 264,320 bytes, mapped 278,528 bytes. Observed page size 16,384 bytes explains padding. These are capacities/view lengths, not reply bytes or measured residency."
+      },
+      "conditions": "Actor maximum response workload; distinct backing per actor. Source geometry and native worker mapping metadata corroborate each other.",
+      "interval": {
+        "starts": "actor setup",
+        "ends": "owner-specific teardown",
+        "ending_event": "host detach and worker exit are separate"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_response_footprint.py",
+          "symbol": "main",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fa7",
+      "case": "aftermath",
+      "title": "Serial completion process observations",
+      "subject": {
+        "kind": "process",
+        "owner": "inventoried hosts / workers / validators",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 6,
+        "unit": "observations",
+        "limit": null,
+        "behavior": "Three ordinary and three actor completions: every inventoried host, worker and validator generation had exited in its first post-return snapshot. Snapshot starts 87,334\u2013145,583 ns and ends 5,234,792\u20136,125,000 ns after the recorded CLI-return observation. Repetitions are serial with intervening fixture cleanup; no accumulation or instant-return claim."
+      },
+      "conditions": "Ordinary shipped app; actor disposable instrumented host with unchanged signed workers. Snapshot follows return and precedes fixture cleanup.",
+      "interval": {
+        "starts": "CLI return observed",
+        "ends": "first post-return snapshot complete",
+        "ending_event": "independent generation-qualified NOTE_EXIT events"
+      },
+      "aftermath": {
+        "at_cli_return": "absence_confirmed",
+        "expected_ending": "independent generation-qualified NOTE_EXIT events"
+      },
+      "sources": [
+        {
+          "path": "tests/suites/run_effects/check_aftermath_footprint.py",
+          "symbol": "validate_receipt"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/run_effects/check_aftermath_footprint.py",
+          "symbol": "validate_receipt",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Requires held-state/generation binding, exact inventory and primary-before-intervention order; process exits do not prove mapping disposal or reap."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fa8",
+      "case": "aftermath",
+      "title": "Held timeout process observations",
+      "subject": {
+        "kind": "process",
+        "owner": "invoked host / worker(s) / validator",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 2,
+        "unit": "observations",
+        "limit": null,
+        "behavior": "One ordinary and one actor timeout: every inventoried required generation remained present through the primary post-return snapshot. Later independent exits followed explicitly recorded harness gate release; they establish assisted continuation, not autonomous teardown at CLI return."
+      },
+      "conditions": "Held invoked work; actor metadata retains accepted custody, settled delivery and a candidate handle with releases pending.",
+      "interval": {
+        "starts": "CLI return observed while gate remains closed",
+        "ends": "primary snapshot completes before gate release",
+        "ending_event": "recorded gate release followed by independent exits"
+      },
+      "aftermath": {
+        "at_cli_return": "present",
+        "expected_ending": "recorded gate release followed by independent exits"
+      },
+      "sources": [
+        {
+          "path": "tests/suites/run_effects/check_aftermath_footprint.py",
+          "symbol": "validate_receipt"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/run_effects/check_aftermath_footprint.py",
+          "symbol": "validate_receipt",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Requires held-state/generation binding, exact inventory and primary-before-intervention order; process exits do not prove mapping disposal or reap."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fw10",
+      "case": "waiting",
+      "title": "ordinary held CPU",
+      "subject": {
+        "kind": "activity",
+        "owner": "identified worker generations",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 6,
+        "unit": "holds",
+        "limit": null,
+        "behavior": "Hold class 1: conservative elapsed 1,107,987,125\u20131,128,846,875 ns; worker:0 CPU 1,101,612,917\u20131,123,613,417 ns; worker aggregate 1,101,612,917\u20131,123,613,417 ns. Native observer child CPU 134,209\u2013187,250 ns. Hold class 3: conservative elapsed 3,115,067,458\u20133,144,625,083 ns; worker:0 CPU 3,108,671,500\u20133,143,494,666 ns; worker aggregate 3,108,671,500\u20133,143,494,666 ns. Native observer child CPU 295,791\u2013366,084 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
+      },
+      "conditions": "Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging.",
+      "interval": {
+        "starts": "acknowledged gate then first endpoint batch",
+        "ends": "second endpoint batch before release",
+        "ending_event": "gate release follows completed measurement"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fw11",
+      "case": "waiting",
+      "title": "actor_1 held CPU",
+      "subject": {
+        "kind": "activity",
+        "owner": "identified worker generations",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 6,
+        "unit": "holds",
+        "limit": null,
+        "behavior": "Hold class 1: conservative elapsed 1,119,694,584\u20131,130,162,833 ns; worker:0 CPU 1,114,585,833\u20131,131,120,833 ns; worker aggregate 1,114,585,833\u20131,131,120,833 ns. Native observer child CPU 145,542\u2013171,083 ns. Hold class 3: conservative elapsed 3,118,528,958\u20133,141,749,458 ns; worker:0 CPU 3,114,453,583\u20133,144,314,292 ns; worker aggregate 3,114,453,583\u20133,144,314,292 ns. Native observer child CPU 295,416\u2013319,250 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
+      },
+      "conditions": "Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging.",
+      "interval": {
+        "starts": "acknowledged gate then first endpoint batch",
+        "ends": "second endpoint batch before release",
+        "ending_event": "gate release follows completed measurement"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fw12",
+      "case": "waiting",
+      "title": "actor_3 held CPU",
+      "subject": {
+        "kind": "activity",
+        "owner": "identified worker generations",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 6,
+        "unit": "holds",
+        "limit": null,
+        "behavior": "Hold class 1: conservative elapsed 1,118,848,333\u20131,129,527,459 ns; worker:0 CPU 1,109,434,708\u20131,132,191,750 ns; worker:1 CPU 1,124,444,624\u20131,129,185,792 ns; worker:2 CPU 1,109,997,583\u20131,130,167,250 ns; worker aggregate 3,343,876,915\u20133,391,544,792 ns. Native observer child CPU 283,584\u2013363,167 ns. Hold class 3: conservative elapsed 3,100,499,666\u20133,148,954,292 ns; worker:0 CPU 3,101,086,792\u20133,157,780,833 ns; worker:1 CPU 3,097,857,250\u20133,144,838,583 ns; worker:2 CPU 3,104,895,124\u20133,145,675,708 ns; worker aggregate 9,303,839,166\u20139,448,295,124 ns. Native observer child CPU 533,375\u2013647,666 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
+      },
+      "conditions": "Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging.",
+      "interval": {
+        "starts": "acknowledged gate then first endpoint batch",
+        "ends": "second endpoint batch before release",
+        "ending_event": "gate release follows completed measurement"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fw13",
+      "case": "waiting",
+      "title": "actor_lifecycle held CPU",
+      "subject": {
+        "kind": "activity",
+        "owner": "identified worker generations",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 6,
+        "unit": "holds",
+        "limit": null,
+        "behavior": "Hold class 1: conservative elapsed 1,128,085,959\u20131,131,137,792 ns; worker:0 CPU 1,126,848,958\u20131,131,069,249 ns; worker:1 CPU 1,127,899,542\u20131,133,016,542 ns; worker aggregate 2,255,967,001\u20132,264,085,791 ns. Native observer child CPU 155,041\u2013164,876 ns. Hold class 3: conservative elapsed 3,148,305,250\u20133,151,015,291 ns; worker:0 CPU 3,146,478,041\u20133,157,893,791 ns; worker:1 CPU 3,145,107,374\u20133,151,512,042 ns; worker aggregate 6,291,585,415\u20136,307,922,750 ns. Native observer child CPU 342,666\u2013370,125 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
+      },
+      "conditions": "Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging.",
+      "interval": {
+        "starts": "acknowledged gate then first endpoint batch",
+        "ends": "second endpoint batch before release",
+        "ending_event": "gate release follows completed measurement"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
+        }
+      ],
+      "figure": null
+    },
+    {
+      "id": "fw14",
+      "case": "waiting",
+      "title": "Held actor custody / delivery / candidate",
+      "subject": {
+        "kind": "allocation",
+        "owner": "issuer / subject / host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "measured",
+        "value": 212,
+        "unit": "bytes",
+        "limit": null,
+        "behavior": "Actual accepted custody length and equal settled first delivery length, not buffer capacity. Across six holds, issuer is parked after its first transfer; subject has completed H1, holds the read-bearing visit without release, and has H2 and both releases pending. Private custody remains mapped and unerased for a later transfer; D2 is unpublished. No bearer bytes were captured."
+      },
+      "conditions": "Instrumented pre-collection metadata bound to the acknowledged held gate and unchanged marker/target; named references retained.",
+      "interval": {
+        "starts": "completed first consume and held next visit",
+        "ends": "post-measurement gate release",
+        "ending_event": "last-use erasure, native release and disposal remain distinct"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/witness_contract/check_held_phase_footprint.py",
+          "symbol": "check_measurement",
+          "kind": "receipt",
+          "form": "test",
+          "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
         }
       ],
       "figure": null

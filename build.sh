@@ -226,6 +226,7 @@ echo "==> Checking limits documentation"
 echo "==> Checking contract versions"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_contract.py" --check
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_architecture.py" --check
+"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_footprint.py" --check
 echo "==> Checking build documentation"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_build.py" --check
 echo "==> Checking host/worker identity"

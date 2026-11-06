@@ -2276,7 +2276,8 @@
             "catalog_json",
             "prose_baseline",
             "build_json",
-            "build_baseline"
+            "build_baseline",
+            "footprint_json"
           ]
         },
         {
@@ -2289,7 +2290,8 @@
             "gen_architecture",
             "gen_common",
             "gen_build",
-            "markdown_reader"
+            "markdown_reader",
+            "gen_footprint"
           ]
         },
         {
@@ -2311,7 +2313,8 @@
             "coverage_md",
             "build_md",
             "worker_md",
-            "extensions_md"
+            "extensions_md",
+            "footprint_md"
           ]
         },
         {
@@ -2340,7 +2343,8 @@
             "drift_generators",
             "preflight",
             "build",
-            "drift_build"
+            "drift_build",
+            "drift_footprint"
           ]
         }
       ],
@@ -3578,6 +3582,90 @@
             {
               "path": "tests/suites/source_drift/limits.py",
               "symbol": "test_extension_coverage_is_copied_from_its_document_demoted_and_standalone",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "footprint_json",
+          "label": "docs/footprint.json",
+          "kind": "manifest",
+          "facts": {
+            "Owns": "resource claims, quantities, conditions, ownership and ending boundaries"
+          },
+          "sources": [
+            {
+              "path": "docs/generate_footprint.py",
+              "symbol": "MANIFEST_NAME"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "test_strict_manifest_and_correspondence",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "gen_footprint",
+          "label": "generate_footprint.py",
+          "kind": "generator",
+          "facts": {
+            "Owns": "footprint tables, coverage and scalar spans"
+          },
+          "sources": [
+            {
+              "path": "docs/generate_footprint.py",
+              "symbol": "render_document"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "test_regions_spans_and_authored_text",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "footprint_md",
+          "label": "docs/FOOTPRINT.md",
+          "kind": "document",
+          "facts": {
+            "Carries": "waiting demand, response storage and state remaining after runs"
+          },
+          "sources": [
+            {
+              "path": "docs/FOOTPRINT.md",
+              "symbol": "BEGIN GENERATED FOOTPRINT WAITING"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "test_current_document",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "drift_footprint",
+          "label": "source_drift footprint.py",
+          "kind": "check",
+          "facts": {
+            "Guards": "qualified quantities, exact row/figure correspondence and generated copies"
+          },
+          "sources": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "FootprintDocumentationTests"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "test_stale_refusal_and_no_check_writes",
               "form": "test"
             }
           ]
@@ -5147,6 +5235,111 @@
             {
               "path": "tests/suites/source_drift/limits.py",
               "symbol": "test_extension_coverage_copy_rejects_staleness_dependencies_and_missing_regions_without_writes",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D73",
+          "from": "footprint_json",
+          "to": "gen_footprint",
+          "kind": "reads",
+          "label": "qualified resource rows",
+          "short": "qualified resource rows",
+          "sources": [
+            {
+              "path": "docs/generate_footprint.py",
+              "symbol": "load_manifest"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "test_strict_manifest_and_correspondence",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D74",
+          "from": "architecture_json",
+          "to": "gen_footprint",
+          "kind": "reads",
+          "label": "exact row / figure association",
+          "short": "exact row / figure association",
+          "sources": [
+            {
+              "path": "docs/generate_footprint.py",
+              "symbol": "load_manifest"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "test_strict_manifest_and_correspondence",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D75",
+          "from": "gen_footprint",
+          "to": "footprint_md",
+          "kind": "writes",
+          "label": "tables, coverage and spans",
+          "short": "tables, coverage and spans",
+          "sources": [
+            {
+              "path": "docs/generate_footprint.py",
+              "symbol": "render_document"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "test_regions_spans_and_authored_text",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D76",
+          "from": "drift_footprint",
+          "to": "gen_footprint",
+          "kind": "checks",
+          "label": "stale and malformed controls",
+          "short": "stale and malformed controls",
+          "sources": [
+            {
+              "path": "docs/generate_footprint.py",
+              "symbol": "load_manifest"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/footprint.py",
+              "symbol": "test_stale_refusal_and_no_check_writes",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D77",
+          "from": "build",
+          "to": "gen_footprint",
+          "kind": "checks",
+          "label": "--check before compilation",
+          "short": "--check before compilation",
+          "sources": [
+            {
+              "path": "build.sh",
+              "symbol": "generate_footprint.py"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "test_build_checks_every_generator_before_signing",
               "form": "test"
             }
           ]
@@ -10065,6 +10258,1331 @@
               "symbol": "check",
               "form": "test",
               "scope": "An injected authority-duplication failure prevents launch, and a read-only fixture endpoint remains separate at fd 5 in extension_delivery; this does not establish authority-region backing identity."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "footprint_waiting",
+      "title": "Waiting ownership",
+      "file": "footprint-waiting",
+      "rankdir": "TB",
+      "node_facts": [
+        "Owner",
+        "Interval",
+        "Ending"
+      ],
+      "edge_facts": [],
+      "clusters": [],
+      "nodes": [
+        {
+          "id": "fw1",
+          "label": "Active worker: polls release\nEnds: release / expiry / cancellation",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "active worker",
+            "Interval": "phase arrival \u2192 release accepted, expiry sampled or cancellation observed",
+            "Ending": "release, expiry or cancellation"
+          },
+          "note": "Continuously samples release/cancellation and expiry, with batches of yield hints. Requested-action quiescence is not CPU idleness.",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "wait_for_proceed"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "cpu_relax"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "proceed_delayed_observed_quiescence",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fw2",
+          "label": "Parked actor: polls activation\nEnds: activation / expiry / exit request",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "parked worker",
+            "Interval": "setup or previous visit completion \u2192 named activation, cutoff or exit request",
+            "Ending": "activation, expiry or cancellation"
+          },
+          "note": "Polls its activation word and can service inbound authority while parked.",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "wait_for_activation"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "activation_named_ordinal",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fw3",
+          "label": "Host collections / validator\nEnds: collection / validator exit",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "host / validator",
+            "Interval": "worker readiness or arrival \u2192 collection ends; validator ends independently",
+            "Ending": "collection completion and validator exit"
+          },
+          "note": "Host polls/sleeps while collecting; an eligible phase launches a separate validator. Their demand is separate from worker polling.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "walkSchedule"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+              "symbol": "runValidator"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fw4",
+          "label": "Host evidence view\nUnmap attempted at host teardown",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "host",
+            "Interval": "mapping preparation \u2192 host session teardown",
+            "Ending": "host view unmapping attempted"
+          },
+          "note": "One fixed evidence backing per worker, initialized before spawn; host and worker mappings are views of the same object.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "PWShmLayout"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "tearDown"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_abi_layout/run.sh",
+              "symbol": "c_swift_layout_agreement",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fw5",
+          "label": "Worker evidence view\nSame backing; ends: worker exit",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "worker",
+            "Interval": "worker maps launch descriptor \u2192 worker process exit",
+            "Ending": "worker exit ends its references"
+          },
+          "note": "Aliases the evidence backing; do not add its logical capacity to the host view as a second backing object.",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "mmap"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "init"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fw6",
+          "label": "Actor authority views\nErase / unmap / exit separately",
+          "kind": "authority",
+          "facts": {
+            "Owner": "host / actor workers",
+            "Interval": "authority setup before launch \u2192 host detachment and worker exit, independently",
+            "Ending": "shared erase eligibility, host unmap and worker exit are separate"
+          },
+          "note": "Per actor: 1152 + (inbound slots + outbound slots) \u00d7 16448 logical bytes, including actors with no slots. Bearer bytes are outside the encoded reply.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "PWAuthorityLayout"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "ActorAuthorityRegion"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_abi_layout/run.sh",
+              "symbol": "c_swift_layout_agreement",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fw7",
+          "label": "Host private custody\nErase retains allocation; finish disposes",
+          "kind": "authority",
+          "facts": {
+            "Owner": "host",
+            "Interval": "custody preparation \u2192 custody finish",
+            "Ending": "final erase and private buffer disposal"
+          },
+          "note": "One fixed private buffer per admitted token. Last-use erasure resets payload state but retains its allocation.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "TokenCustody"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "erase"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fw8",
+          "label": "Worker candidates / fixed table\nNative release differs from table disposal",
+          "kind": "authority",
+          "facts": {
+            "Owner": "actor worker",
+            "Interval": "worker static storage \u2192 worker exit",
+            "Ending": "native release and table disposal are separate"
+          },
+          "note": "Fixed handle table storage remains after native release. Candidate count and native result do not measure private kernel storage.",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "handle_table"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension_release_actor"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "terminal_erasure",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fw9",
+          "label": "Host launch descriptors\nClose after spawn; mappings survive",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "host",
+            "Interval": "host setup \u2192 spawn or setup failure closes each descriptor",
+            "Ending": "descriptor close, not mapping disposal"
+          },
+          "note": "Evidence/authority launch descriptors close after spawn; policy/ready pipes have their own close boundaries. Mapping references survive descriptor close.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "init"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
+              "form": "test"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "id": "F101",
+          "from": "fw3",
+          "to": "fw1",
+          "kind": "writes",
+          "label": "release after collection",
+          "short": "release after collection",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "walkSchedule"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+              "symbol": "runValidator"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "wait_for_proceed"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "cpu_relax"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F102",
+          "from": "fw3",
+          "to": "fw2",
+          "kind": "writes",
+          "label": "named activation",
+          "short": "named activation",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "walkSchedule"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+              "symbol": "runValidator"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "wait_for_activation"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F103",
+          "from": "fw4",
+          "to": "fw5",
+          "kind": "channel",
+          "label": "views of same backing",
+          "short": "views of same backing",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "PWShmLayout"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "tearDown"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "mmap"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "init"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_abi_layout/run.sh",
+              "symbol": "c_swift_layout_agreement",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F104",
+          "from": "fw9",
+          "to": "fw4",
+          "kind": "prepares",
+          "label": "close does not unmap",
+          "short": "close does not unmap",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "init"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "PWShmLayout"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "tearDown"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F105",
+          "from": "fw7",
+          "to": "fw6",
+          "kind": "copies",
+          "label": "custody to delivery",
+          "short": "custody to delivery",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "TokenCustody"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "erase"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "PWAuthorityLayout"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "ActorAuthorityRegion"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F106",
+          "from": "fw6",
+          "to": "fw8",
+          "kind": "supplies_authority",
+          "label": "consume candidate",
+          "short": "consume candidate",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "PWAuthorityLayout"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "ActorAuthorityRegion"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "handle_table"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension_release_actor"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_abi_layout/run.sh",
+              "symbol": "c_swift_layout_agreement",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F107",
+          "from": "fw2",
+          "to": "fw6",
+          "kind": "reads",
+          "label": "parked inbound service",
+          "short": "parked inbound service",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "wait_for_activation"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "PWAuthorityLayout"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "ActorAuthorityRegion"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "activation_named_ordinal",
+              "form": "test"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "footprint_response",
+      "title": "Response collection",
+      "file": "footprint-response",
+      "rankdir": "TB",
+      "node_facts": [
+        "Owner",
+        "Interval",
+        "Ending"
+      ],
+      "edge_facts": [],
+      "clusters": [],
+      "nodes": [
+        {
+          "id": "fr1",
+          "label": "Controller: complete raw stdout/stderr\nDrops before final rendering",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "controller",
+            "Interval": "child pipes opened \u2192 run_client_stdin returns",
+            "Ending": "raw Output drops on caller return"
+          },
+          "note": "Collects complete stdout/stderr before making retained prefixes. Raw Output remains borrowed through capture and host parsing, then drops before final rendering.",
+          "sources": [
+            {
+              "path": "controller/src/utils.rs",
+              "symbol": "run_with_stdin"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "run_client_stdin"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "response_footprint_success_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "valid_oversized_producer_is_receiver_loss_not_malformed_json",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fr2",
+          "label": "Host: collected publication copies\nMappings detach before encoding",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "host",
+            "Interval": "output collection \u2192 last reply-model use; source mappings end earlier",
+            "Ending": "source mappings detach before later encoding"
+          },
+          "note": "Copies published slots/profile/phase values while source mappings still exist; session teardown precedes later reply assembly. Actor reply metadata survives authority teardown.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "collectOutput"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "finish"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fr3",
+          "label": "Host: validator raw / parsed records\nRaw scope ends; records retained",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "host",
+            "Interval": "validator output drain \u2192 raw Data last use; decoded records retained separately",
+            "Ending": "validator receive scope ends"
+          },
+          "note": "Raw bounded validator output and decoded records coexist during decoding; returned records/counts outlive the temporary raw Data.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+              "symbol": "runValidator"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+              "symbol": "runValidatorEvidenceTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fr4",
+          "label": "Host model \u2192 encoded Data \u2192 XPC\nFramework copy count unknown",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "host / client",
+            "Interval": "reply assembly \u2192 callback and representation last use",
+            "Ending": "host/client representation disposal is not externally observed"
+          },
+          "note": "Reply model overlaps encoded host Data; XPC and Foundation physical copy/backing behavior is unestablished. The synthesized maximum bounds encoded reply size, not live memory.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+              "symbol": "PWRunnerReplyCapture"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+              "symbol": "runReplyMaximumTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+              "symbol": "runReservationAdmissionTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fr5",
+          "label": "Client: host Data \u2192 base64 capture\nCapture \u2192 encoded stdout \u2192 exit",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "client",
+            "Interval": "reply capture \u2192 client emit and exit",
+            "Ending": "client representation lifetime ends with exit"
+          },
+          "note": "Incoming host Data, retained prefix and base64 text overlap during capture. Capture and encoded capture bytes coexist during emit; stdout adds a newline. Prefix backing identity is unestablished.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+              "symbol": "PWRunnerReplyCapture"
+            },
+            {
+              "path": "runner/Clients/PWRunnerClient/main.swift",
+              "symbol": "emit"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+              "symbol": "runReservationAdmissionTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fr6",
+          "label": "Controller: generic + typed capture\nTyped scope ends before rendering",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "controller",
+            "Interval": "capture parsing \u2192 typed capture scope ends; generic capture survives into assembly",
+            "Ending": "typed capture disposal before final rendering"
+          },
+          "note": "Retained text is made before parsing. Generic capture JSON survives a clone into typed Capture; generic and typed base64 coexist during validation. Lossy text length need not equal retained source-byte count.",
+          "sources": [
+            {
+              "path": "controller/src/utils.rs",
+              "symbol": "capture_json_output"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "parse_runner_client_output"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "response_footprint_success_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "multibyte_cut_counts_bytes_before_lossy_conversion",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fr7",
+          "label": "Controller: decoded bytes + host Value\nDecoded bytes drop; host Value survives",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "controller",
+            "Interval": "base64 decoding \u2192 decoded vector scope ends; parsed reply retained",
+            "Ending": "decoded bytes drop before envelope rendering"
+          },
+          "note": "Strict base64 decode allocates host bytes. Raw client Output, generic capture, typed base64 and decoded bytes coexist; parsed host Value is added before decoded bytes leave scope.",
+          "sources": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "validate_capture"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "decode_base64"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "response_footprint_success_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fr8",
+          "label": "Controller: envelope + pretty String\nLast use / CLI exit",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "controller",
+            "Interval": "envelope construction \u2192 print returns and CLI exits",
+            "Ending": "Value/String disposal after last use"
+          },
+          "note": "Borrowed input and envelope coexist. Recursive sorting clones subtrees; pretty serialization adds a String while the Value remains live. Sort temporaries are not claimed to survive the sort.",
+          "sources": [
+            {
+              "path": "controller/src/json_contract.rs",
+              "symbol": "sort_value"
+            },
+            {
+              "path": "controller/src/json_contract.rs",
+              "symbol": "render_envelope"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "response_footprint_success_boundaries",
+              "form": "test"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "id": "F201",
+          "from": "fr3",
+          "to": "fr2",
+          "kind": "copies",
+          "label": "decoded query records",
+          "short": "decoded query records",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+              "symbol": "runValidator"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "collectOutput"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "finish"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+              "symbol": "runValidatorEvidenceTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F202",
+          "from": "fr2",
+          "to": "fr4",
+          "kind": "copies",
+          "label": "after session teardown",
+          "short": "after session teardown",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "collectOutput"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "finish"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+              "symbol": "PWRunnerReplyCapture"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F203",
+          "from": "fr4",
+          "to": "fr5",
+          "kind": "channel",
+          "label": "encoded host bytes",
+          "short": "encoded host bytes",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+              "symbol": "PWRunnerReplyCapture"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+              "symbol": "PWRunnerReplyCapture"
+            },
+            {
+              "path": "runner/Clients/PWRunnerClient/main.swift",
+              "symbol": "emit"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+              "symbol": "runReplyMaximumTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+              "symbol": "runReservationAdmissionTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F204",
+          "from": "fr5",
+          "to": "fr1",
+          "kind": "channel",
+          "label": "client stdout",
+          "short": "client stdout",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+              "symbol": "PWRunnerReplyCapture"
+            },
+            {
+              "path": "runner/Clients/PWRunnerClient/main.swift",
+              "symbol": "emit"
+            },
+            {
+              "path": "controller/src/utils.rs",
+              "symbol": "run_with_stdin"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "run_client_stdin"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+              "symbol": "runReservationAdmissionTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F205",
+          "from": "fr1",
+          "to": "fr6",
+          "kind": "copies",
+          "label": "parse; raw still borrowed",
+          "short": "parse; raw still borrowed",
+          "sources": [
+            {
+              "path": "controller/src/utils.rs",
+              "symbol": "run_with_stdin"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "run_client_stdin"
+            },
+            {
+              "path": "controller/src/utils.rs",
+              "symbol": "capture_json_output"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "parse_runner_client_output"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "response_footprint_success_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "valid_oversized_producer_is_receiver_loss_not_malformed_json",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F206",
+          "from": "fr6",
+          "to": "fr7",
+          "kind": "copies",
+          "label": "base64 decode / host parse",
+          "short": "base64 decode / host parse",
+          "sources": [
+            {
+              "path": "controller/src/utils.rs",
+              "symbol": "capture_json_output"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "parse_runner_client_output"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "validate_capture"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "decode_base64"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "response_footprint_success_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "multibyte_cut_counts_bytes_before_lossy_conversion",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F207",
+          "from": "fr7",
+          "to": "fr8",
+          "kind": "copies",
+          "label": "raw / typed / decoded dropped",
+          "short": "raw / typed / decoded dropped",
+          "sources": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "validate_capture"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "decode_base64"
+            },
+            {
+              "path": "controller/src/json_contract.rs",
+              "symbol": "sort_value"
+            },
+            {
+              "path": "controller/src/json_contract.rs",
+              "symbol": "render_envelope"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "response_footprint_success_boundaries",
+              "form": "test"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "footprint_aftermath",
+      "title": "Host retirement",
+      "file": "footprint-aftermath",
+      "rankdir": "TB",
+      "node_facts": [
+        "Owner",
+        "Interval",
+        "Ending"
+      ],
+      "edge_facts": [],
+      "clusters": [],
+      "nodes": [
+        {
+          "id": "fa1",
+          "label": "Host: asynchronous retirement\nReply precedes scheduled exit",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "host",
+            "Interval": "reply sent \u2192 host exit",
+            "Ending": "host process exit"
+          },
+          "note": "Schedules retirement after replying. A live host at CLI return may still be in this interval; its generation needs an independent end observation.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+              "symbol": "runReservationAdmissionTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fa2",
+          "label": "Submitted host / worker work\nClient timeout does not cancel it",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "host / workers",
+            "Interval": "irreversible submission \u2192 resource-specific completion or failure",
+            "Ending": "each identified process exits independently"
+          },
+          "note": "A post-invocation client deadline ends the client wait without cancelling submitted work. Gate release, signalling and fixture cleanup are later interventions.",
+          "sources": [
+            {
+              "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+              "symbol": "deadline"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+              "symbol": "runReservationAdmissionTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fa3",
+          "label": "Authority / custody owners\nErase \u2260 detach \u2260 release \u2260 exit",
+          "kind": "authority",
+          "facts": {
+            "Owner": "host / actor workers",
+            "Interval": "actor cleanup \u2192 each owner-specific ending",
+            "Ending": "shared erasure, host unmap, private disposal and worker exit"
+          },
+          "note": "Shared erasure requires a reaped or never-launched owner; unresolved workers withhold erasure while host detachment proceeds. Private custody is erased/disposed separately. Native release does neither.",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "tearDown"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "finish"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "finish"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+              "symbol": "runActorAuthorityTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fa4",
+          "label": "Pre-existing registry / plists\nBaseline comparison only",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "registry / launchd files",
+            "Interval": "before invocation \u2192 post-run inventory comparison",
+            "Ending": "baseline comparison; no run-owned removal implied"
+          },
+          "note": "Plain run inventory compares registry state and directory names. Pre-existing installed services are baseline, not run-created apparatus. Name equality does not establish every object identity.",
+          "sources": [
+            {
+              "path": "tests/suites/run_effects/check_installs_nothing.py",
+              "symbol": "inventory"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/run_effects/check_installs_nothing.py",
+              "symbol": "main",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fa5",
+          "label": "Requested effects / descendants\nOwn endings; leader exit insufficient",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "specimen",
+            "Interval": "requested operation \u2192 effect-specific removal or descendant exit",
+            "Ending": "independent descendant exit or owned effect removal"
+          },
+          "note": "Requested file effects and surviving exec descendants remain separate from apparatus residue. Leader exit or stream EOF does not establish descendant exit.",
+          "sources": [
+            {
+              "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+              "symbol": "observe_survivor"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+              "symbol": "main",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "fa6",
+          "label": "Output / observer resources\nExplicit caller / harness cleanup",
+          "kind": "reporting",
+          "facts": {
+            "Owner": "caller / harness",
+            "Interval": "caller/harness preparation \u2192 recorded owned cleanup",
+            "Ending": "explicit output/observer cleanup"
+          },
+          "note": "Envelope files, gates, meters, staging and exit watchers have caller/harness ownership. Their removal cannot substitute for the pre-intervention product snapshot.",
+          "sources": [
+            {
+              "path": "tests/lib/run_capture.py",
+              "symbol": "close"
+            },
+            {
+              "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+              "symbol": "cleanup"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+              "symbol": "main",
+              "form": "test"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "id": "F301",
+          "from": "fa2",
+          "to": "fa1",
+          "kind": "joins",
+          "label": "reply before retirement",
+          "short": "reply before retirement",
+          "sources": [
+            {
+              "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+              "symbol": "deadline"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+              "symbol": "runReservationAdmissionTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F302",
+          "from": "fa2",
+          "to": "fa3",
+          "kind": "joins",
+          "label": "owner-qualified endings",
+          "short": "owner-qualified endings",
+          "sources": [
+            {
+              "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+              "symbol": "deadline"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "tearDown"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+              "symbol": "finish"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ActorScheduler.swift",
+              "symbol": "finish"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
+              "symbol": "runReservationAdmissionTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F303",
+          "from": "fa4",
+          "to": "fa2",
+          "kind": "observes",
+          "label": "baseline, not run residue",
+          "short": "baseline, not run residue",
+          "sources": [
+            {
+              "path": "tests/suites/run_effects/check_installs_nothing.py",
+              "symbol": "inventory"
+            },
+            {
+              "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
+              "symbol": "deadline"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "replyAndExit"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/run_effects/check_installs_nothing.py",
+              "symbol": "main",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "F304",
+          "from": "fa5",
+          "to": "fa6",
+          "kind": "observes",
+          "label": "observe before cleanup",
+          "short": "observe before cleanup",
+          "sources": [
+            {
+              "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+              "symbol": "observe_survivor"
+            },
+            {
+              "path": "tests/lib/run_capture.py",
+              "symbol": "close"
+            },
+            {
+              "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+              "symbol": "cleanup"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
+              "symbol": "main",
+              "form": "test"
             }
           ]
         }

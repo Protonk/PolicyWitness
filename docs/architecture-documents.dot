@@ -12,6 +12,7 @@ digraph documents {
         prose_baseline;
         build_json;
         build_baseline;
+        footprint_json;
     }
     subgraph cluster_generators {
         label="generators"; style=dashed; color="#888888"; fontsize=10;
@@ -22,6 +23,7 @@ digraph documents {
         gen_common;
         gen_build;
         markdown_reader;
+        gen_footprint;
     }
     subgraph cluster_docs {
         label="documents"; style=dashed; color="#888888"; fontsize=10;
@@ -41,6 +43,7 @@ digraph documents {
         build_md;
         worker_md;
         extensions_md;
+        footprint_md;
     }
     subgraph cluster_sources {
         label="sources with generated or checked regions"; style=dashed; color="#888888"; fontsize=10;
@@ -64,6 +67,7 @@ digraph documents {
         preflight;
         build;
         drift_build;
+        drift_footprint;
     }
     contract_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/contract.json\ncontract_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_json: docs/contract.json | the request, response and envelope version numbers "];
     limits_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/limits.json\nlimits_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="limits_json: docs/limits.json | every runtime limit with its source and check citations "];
@@ -114,6 +118,10 @@ digraph documents {
     worker_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/WORKER.md\nworker_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="worker_md: docs/WORKER.md | resource inventory, capability figure and tables "];
     markdown_reader [shape="component", style="dashed", color="#2e7d32", label="markdown_reader.py\nmarkdown_reader", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="markdown_reader: markdown_reader.py | the only import of the vendored markdown-it-py 3.0.0 and mdurl 0.1.2, and the Markdown structure the generators and checks read: blocks, headings and anchors, sections, links, inline code, list items and table cells "];
     extensions_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/EXTENSIONS.md\nextensions_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="extensions_md: docs/EXTENSIONS.md | the shared sandbox-extension coverage the guide copies "];
+    footprint_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/footprint.json\nfootprint_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="footprint_json: docs/footprint.json | resource claims, quantities, conditions, ownership and ending boundaries "];
+    gen_footprint [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_footprint.py\ngen_footprint", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_footprint: generate_footprint.py | footprint tables, coverage and scalar spans "];
+    footprint_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/FOOTPRINT.md\nfootprint_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="footprint_md: docs/FOOTPRINT.md | waiting demand, response storage and state remaining after runs "];
+    drift_footprint [shape="octagon", style="dashed", color="#8e24aa", label="source_drift footprint.py\ndrift_footprint", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_footprint: source_drift footprint.py | qualified quantities, exact row/figure correspondence and generated copies "];
     contract_json -> gen_contract [style="solid", color="#8a7400", label="D1 versions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D1: version numbers |  "];
     gen_contract -> contract_md [style="bold", color="#2e7d32", label="D2 sentence, table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D2: version sentence and table |  "];
     gen_contract -> api_swift [style="bold", color="#2e7d32", label="D3 PWContract", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D3: PWContract |  "];
@@ -185,4 +193,9 @@ digraph documents {
     markdown_reader -> drift_check [style="solid", color="#8a7400", label="D71 structure", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D71: sections, tables, lists, links and guidance routes |  "];
     markdown_reader -> drift_generators [style="solid", color="#8a7400", label="D72 prose", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D72: G9 prose lines, citation pairs and G11 links |  "];
     extensions_md -> gen_limits [style="solid", color="#8a7400", label="D63 coverage", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D63: shared extension coverage |  "];
+    footprint_json -> gen_footprint [style="solid", color="#8a7400", label="D73 qualified resource rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D73: qualified resource rows |  "];
+    architecture_json -> gen_footprint [style="solid", color="#8a7400", label="D74 exact row / figure association", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D74: exact row / figure association |  "];
+    gen_footprint -> footprint_md [style="bold", color="#2e7d32", label="D75 tables, coverage and spans", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D75: tables, coverage and spans |  "];
+    drift_footprint -> gen_footprint [style="dashed", color="#8e24aa", label="D76 stale and malformed controls", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D76: stale and malformed controls |  "];
+    build -> gen_footprint [style="dashed", color="#8e24aa", label="D77 --check before compilation", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D77: --check before compilation |  "];
 }

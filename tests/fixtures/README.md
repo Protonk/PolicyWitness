@@ -57,6 +57,12 @@ deterministic, and checked into the repo so tests are hermetic.
   transcripts (EOF, malformed JSON and signal), plus an independent native
   bridge with acknowledged query/emission/closure gates. Used by
   `runner_validator_failure`, `validator_bridge` and `witness_contract`.
+- `footprint/`: persistent native libproc observer with generation-qualified CPU
+  and memory samples, native clock brackets and acknowledged busy, sleeping and
+  touched-allocation controls. Its wrapper retains native errors and metric
+  units; independent exit watches distinguish collection time from actual exit.
+  It is test equipment outside the app, shared by the footprint cases and
+  observer controls; see its [README](footprint/README.md).
 - `exec/`: shared C helper for controlled output, exit status, and process
   trees, plus OS identity/lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.

@@ -33,7 +33,66 @@ they do not exhaust the verification relevant to a change.
 | BYOXPC dossier records, native extension execution, phase handling, worker equipment signing or provenance | [Dossier witness](#byoxpc-dossier-witness) and [extension and phase witness](#byoxpc-extension-and-phase-witness). |
 | Built-in or external caller authorization; host admission/exit, client re-acquisition or launchd throttle | [Built-in caller authentication](#built-in-caller-authentication), [external caller authentication](#runner_auth_external) and [occupied-claim attribution](#byoxpc-occupied-claim-attribution), including session-cleanup and registry triggers. |
 | Build, toolchain, signing or artifact inspection | [Signed-artifact controls](#signed-artifact-controls), [build guards](#build-guard-controls), [build refusals](#build-refusal-controls), [translated-build refusals](#translated-build-refusal-controls) and [toolchain-switch controls](#build-toolchain-switch-controls). Their individual triggers and equipment conditions apply. |
+| Worker wait demand, response representation/retention, observer accounting or post-run resource endings | [Footprint observations](#footprint-observations), including separate default checker/sensitivity controls and opt-in native observations. |
 | Native file-extension authority, call representation, issuer lifetime or allocation assumptions; experiment or checker changes | [Native sandbox-extension experiment](#native-sandbox-extensions). |
+
+## Footprint observations
+
+- **Cases:** `witness_contract/held_phase_footprint`,
+  `witness_contract/response_footprint` and `run_effects/aftermath_footprint`.
+  All are opt-in. The response dependency supplies the scalar unit receipt;
+  applicable ABI agreement is declared in the catalog. Default cases separately
+  cover checker validity and native observer sensitivity.
+- **Question:** Observe held-worker CPU demand, response representation overlap
+  and fresh-controller memory, and state remaining after completion or an
+  invoked timeout. Each case requires its own deterministic assertions and
+  complete native observations; a recorder-only run receives no credit.
+- **Conditions:** Use a fresh dispatcher output and an unsandboxed macOS shell
+  with the signed app, XPC and native inspection access. Clang builds owned
+  observer/bridge/exec fixtures; actor host fixtures also need Swift and Meson. Held actor and aftermath runs sign a disposable
+  host; provide a matching Developer ID identity, with `IDENTITY` required by
+  the aftermath wrapper. The held wrapper also supports the documented BYOXPC
+  identity selection. No fixture replaces bytes in the inspected app.
+- **Required observations:** Held phases preserve declared repetitions, matched
+  controls, selected-effect guards, generation-qualified CPU deltas, actual
+  intervals and release observations. Response retains all named workloads,
+  full reply/effect assertions, exact decoded host artifacts and their computed
+  hashes, host/client counts and separate resident/physical-footprint samples.
+  Its unit-process boundary receipt is independently identified, rather than
+  aligned to native samples. Aftermath repeats completion and holds an invoked
+  timeout, inventories every object at each boundary, independently observes
+  required worker endings, and records interventions after the primary snapshot.
+- **Controls:** Default `held_phase_footprint_controls`,
+  `response_footprint_controls` and `run_effects/checker_controls`
+  accept valid constructed receipts before rejecting altered accounting,
+  ownership, boundaries or false absence. Default `footprint_observer_controls`
+  requires real acknowledged allocation and busy/sleep sensitivity plus receipt
+  rejection controls. Native failures retain errors; missing coverage is not a
+  zero observation. Construction tests and live sensitivity are separate claims.
+- **Artifacts:** Under each case's artifact directory, retain raw observer
+  replies and executable/source identity, native clocks, conditions and process
+  generation/exit receipts. Held cases add calibration, declared measurements,
+  per-hold `measurement.json` and `summary.json`; response adds exact
+  `host-reply.json`, `response-footprint.json` and unit input/assertion copies;
+  aftermath adds `aftermath.json`, `repetitions.json`, snapshots, interventions
+  and recovery ownership. Each workload retains its `RunCapture` output.
+- **Interpretation:** CPU deltas are measurements during verified holds, not an
+  idle claim. Sampled memory extrema are not instantaneous peaks, stage labels
+  or a pipeline memory ceiling. Host reply bounds are constructed encoding
+  bounds; logical capacity, shared backing, views and payload bytes differ.
+  Aftermath keeps baseline, effects, requested artifacts and apparatus separate.
+  Unknown is not absence; native release, erasure, unmapping, exit and reap are
+  distinct. Retain contrary repetitions and unfinished cleanup records.
+
+Inspect the dependency selection before running:
+
+```sh
+tests/run.sh --case witness_contract/held_phase_footprint --case witness_contract/response_footprint --case run_effects/aftermath_footprint --list
+```
+
+The [witness suite](suites/witness_contract/README.md#footprint-observations),
+[run-effects suite](suites/run_effects/README.md#aftermath-footprint) and
+[footprint account](../docs/FOOTPRINT.md) describe the assertions and their scope.
 
 ## Select and run a control
 

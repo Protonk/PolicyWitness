@@ -47,6 +47,30 @@ separate admission outcomes. None of these paths permits execution replay.
 
 ## Evidence contract coverage
 
+The footprint cases cover apparatus accounting at three distinct boundaries.
+Opt-in `witness_contract/held_phase_footprint` requires repeated, externally
+sampled worker CPU intervals while an acknowledged collection gate is held,
+selected-effect guards and metadata-only actor authority observations. Opt-in
+`witness_contract/response_footprint` preserves exact transported host bytes,
+separate host/client/envelope counts, full ordinary and actor workload evidence,
+and generation-qualified controller resident/physical-footprint samples.
+`unit/rust.unit` independently asserts scalar overlap at receiver/rendering
+boundaries; its test-process receipt does not locate a production sample in a
+decoder stage. Opt-in `run_effects/aftermath_footprint` inventories repeated
+completion and held post-invocation timeout paths before harness interventions,
+with independent required-worker exit observations.
+
+Default scalar/ledger controls first accept valid constructed evidence, then
+reject missing boundaries, incorrect counts, units, ownership and false absence.
+The native observer controls separately establish acknowledged live sensitivity
+and reject generation/metric/error inconsistencies. These checks establish no
+universal CPU threshold, instantaneous memory peak, pipeline-wide ceiling or
+complete teardown from a reply alone. Logical capacity, encoded bytes, shared
+backing/views and sampled metrics retain their units and scopes. Optional
+inspection errors remain unknown; process exit is not direct observation of
+private mapping disposal. See the
+[footprint verification account](CHANGE-VERIFICATION.md#footprint-observations).
+
 The opt-in `runner_exec_inheritance/launch_inventory` case records external
 descriptor/environment observations at production pre-ready and post-apply
 sleep seams, with the contaminated-worker case as a dependency. It retains

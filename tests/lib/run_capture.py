@@ -90,6 +90,13 @@ class RunCapture:
         return self.poll()
 
     @property
+    def pid(self):
+        """The launched CLI PID, available before waiting for completion."""
+        if self._process is None:
+            raise RuntimeError(f'capture has no CLI process: {self.out}')
+        return self._process.pid
+
+    @property
     def elapsed_seconds(self):
         """Elapsed time through the first observation of CLI exit."""
         return self._metadata['elapsed_seconds']

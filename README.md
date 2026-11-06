@@ -130,6 +130,7 @@ preserved release archives.
 - Using the app:
   - User guide: [docs/PolicyWitness.md](docs/PolicyWitness.md)
   - Limits: [docs/LIMITS.md](docs/LIMITS.md)
+  - Resource demand, storage and teardown: [docs/FOOTPRINT.md](docs/FOOTPRINT.md)
   - FAQ: [docs/QUESTIONS.md](docs/QUESTIONS.md)
   - Signing/distribution: [docs/SIGNING.md](docs/SIGNING.md)
 - Consuming the output:

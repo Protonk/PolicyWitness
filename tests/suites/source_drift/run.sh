@@ -44,6 +44,17 @@ if test_selected "${PW_TEST_ID}"; then
   test_pass "limits, matrix table, questions and reading-rule copies agree; standalone guide, staging and rejection controls pass" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
+PW_TEST_ID="footprint_documentation"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step footprint "check footprint rows, quantities, generated regions and diagram correspondence"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/footprint.log"
+  if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/source_drift/footprint.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "footprint documentation controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "footprint manifest, tables and diagrams agree; malformed and stale inputs are rejected" "{\"log\":\"${RUN_LOG}\"}"
+fi
+
 PW_TEST_ID="contract_versions"
 if test_selected "${PW_TEST_ID}"; then
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"

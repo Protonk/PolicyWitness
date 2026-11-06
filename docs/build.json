@@ -325,11 +325,12 @@
         "full",
         "partial"
       ],
-      "reads": "docs/contract.json (including the runner protocol and signed service marker), docs/architecture.json and their generated copies",
+      "reads": "docs/contract.json (including the runner protocol and signed service marker), docs/architecture.json and their generated copies, docs/footprint.json and its generated document",
       "writes": "nothing",
       "refusals": [
         "stale_contract",
-        "stale_architecture"
+        "stale_architecture",
+        "stale_footprint"
       ],
       "sources": [
         {
@@ -3239,6 +3240,49 @@
       ]
     },
     {
+      "id": "stale_footprint",
+      "message": "stale footprint document",
+      "kind": "propagated",
+      "steps": [
+        "check_contract"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_footprint.py"
+        },
+        {
+          "path": "docs/generate_footprint.py",
+          "symbol": "stale footprint document"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_entry.py",
+          "symbol": "test_build_refuses_a_stale_footprint_copy_before_compiling",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
       "id": "stale_build_doc",
       "message": "build documentation is stale",
       "kind": "propagated",
@@ -4373,6 +4417,35 @@
         {
           "path": "build.sh",
           "symbol": "docs/generate_architecture.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_footprint_check",
+      "command": "docs/generate_footprint.py --check",
+      "step": "check_contract",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_footprint.py\" --check"
         }
       ],
       "checks": [

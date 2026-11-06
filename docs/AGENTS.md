@@ -47,3 +47,23 @@ documentation checks. If an edit removes a mutation control's prose target,
 update the control to make the same change to the revised document and confirm
 that its mutation still changes the input; do not restore reader-facing prose
 solely to satisfy a test fixture.
+
+## Editing footprint content
+
+Edit [footprint.json](footprint.json), then run
+`tests/lib/python.sh docs/generate_footprint.py` from the repository root.
+Keep its reading guide outside the generated regions; quantities belong in
+manifest rows or authored `footprint.<row>.<field>` spans. Do not add literal
+size/time prose to the prose baseline. Depicted row IDs equal their figure node IDs in both directions. Measured
+rows may use a null figure to keep the diagrams compact.
+Each check's `pins` phrase identifies its assertion scope; receipt validation
+is distinct from a fixed value assertion. Measured, logical, constructed and
+source-supported claims keep their stated units, conditions and intervals.
+
+Footprint figures belong to [architecture.json](architecture.json), render into
+[ARCHITECTURE.md](ARCHITECTURE.md) and are embedded by FOOTPRINT. Update rows
+and figures together, then run `tests/lib/python.sh docs/generate_architecture.py`.
+Use the existing architecture schema and generator. Run both generators with
+`--check` and the `source_drift` suite through the dispatcher after edits.
+Review shared backing versus views and distinguish erasure, native release,
+unmapping, exit and reap. An unknown observation never establishes absence.
