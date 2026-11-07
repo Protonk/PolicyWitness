@@ -97,7 +97,12 @@ Candidate worktree, against its signed build, before the comparison:
   (`host01-mutations-01`); `native_pause` failed as the intentionally failing
   applicability gate on this equipment, and `exec_control_states` was unrun
   there because the pytest family was not yet provisioned in the worktree.
-- Default battery: recorded below when complete.
+- Default battery in the candidate worktree against the candidate build: 222 of
+  222 cases pass with no skips, harness errors or sleep overlap, run
+  `20261107T212517Z_13c8c342` (`host01-default-01`); the pytest family ran
+  after its target was provisioned from the main checkout's identical target.
+  Verification before comparison is complete; the comparison window is the
+  next step.
 
 ## Results
 
