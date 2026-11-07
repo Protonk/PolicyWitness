@@ -71,6 +71,21 @@ inspection errors remain unknown; process exit is not direct observation of
 private mapping disposal. See the
 [footprint verification account](CHANGE-VERIFICATION.md#footprint-observations).
 
+Opt-in `witness_contract/worker_wait_pilot` records host and worker
+continuous-clock stamps through staged disposable apps on the production
+validator path. It retains per-trial power, sleep, load and pacing
+observations, requires every envelope to finish and validate, and decomposes
+each held phase into worker publication, host detection, planning, validator,
+closure, release and acknowledgement intervals. Those intervals describe the
+stamped disposable flavour, not production executables; their combined
+uncertainty is established only with a clock-pair calibration receipt. Default
+`witness_contract/worker_wait_pilot_controls` accepts constructed stamp
+receipts before rejecting corrupted pages, clock-order violations, missing
+files, condition exclusions, pooled aggregates, unpaired or inconsistent host
+sleep events and pass-count records, and a reader using the superseded
+uncertainty formula. See the
+[pilot verification account](CHANGE-VERIFICATION.md#worker-wait-pilot).
+
 The opt-in `runner_exec_inheritance/launch_inventory` case records external
 descriptor/environment observations at production pre-ready and post-apply
 sleep seams, with the contaminated-worker case as a dependency. It retains

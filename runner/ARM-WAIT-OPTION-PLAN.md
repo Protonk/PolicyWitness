@@ -47,8 +47,8 @@ a new baseline incorporating it and repeated affected comparisons. Track the
 two wait roles separately; release success cannot resolve the question for
 parked activation.
 
-Use the shared `records/WORKER-WAIT-PILOT.md` decomposition to choose the benefit
-metric and minimum worthwhile improvement. This pilot is measured in an arranged
+Use the shared [pilot record](../records/WORKER-WAIT-PILOT.md) decomposition to
+choose the benefit metric and minimum worthwhile improvement. This pilot is measured in an arranged
 quiet window with stable power conditions; it is not the later ARM comparison
 baseline. Its production-shaped timestamps decompose held time; extended
 held-footprint runs supply separately labeled CPU rates, not production hold

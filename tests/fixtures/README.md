@@ -63,6 +63,12 @@ deterministic, and checked into the repo so tests are hermetic.
   units; independent exit watches distinguish collection time from actual exit.
   It is test equipment outside the app, shared by the footprint cases and
   observer controls; see its [README](footprint/README.md).
+- `worker_wait/`: worker-wait pilot equipment outside the app: a seam-built
+  worker that includes the production worker source and records stamps in
+  capture pages of its region, an uninstrumented twin built with the same
+  flags, a patch set, builder and stager for a disposable stamped host and its
+  unpatched neighbor, and a two-process clock-pair calibration control. Used by
+  `witness_contract/worker_wait_pilot`; see its [README](worker_wait/README.md).
 - `exec/`: shared C helper for controlled output, exit status, and process
   trees, plus OS identity/lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.

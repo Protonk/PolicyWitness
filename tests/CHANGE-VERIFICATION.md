@@ -33,7 +33,7 @@ they do not exhaust the verification relevant to a change.
 | BYOXPC dossier records, native extension execution, phase handling, worker equipment signing or provenance | [Dossier witness](#byoxpc-dossier-witness) and [extension and phase witness](#byoxpc-extension-and-phase-witness). |
 | Built-in or external caller authorization; host admission/exit, client re-acquisition or launchd throttle | [Built-in caller authentication](#built-in-caller-authentication), [external caller authentication](#runner_auth_external) and [occupied-claim attribution](#byoxpc-occupied-claim-attribution), including session-cleanup and registry triggers. |
 | Build, toolchain, signing or artifact inspection | [Signed-artifact controls](#signed-artifact-controls), [build guards](#build-guard-controls), [build refusals](#build-refusal-controls), [translated-build refusals](#translated-build-refusal-controls) and [toolchain-switch controls](#build-toolchain-switch-controls). Their individual triggers and equipment conditions apply. |
-| Worker wait demand, response representation/retention, observer accounting or post-run resource endings | [Footprint observations](#footprint-observations), including separate default checker/sensitivity controls and opt-in native observations. |
+| Worker wait demand, response representation/retention, observer accounting or post-run resource endings | [Footprint observations](#footprint-observations), including separate default checker/sensitivity controls and opt-in native observations. Held-phase timing decomposition uses the [worker wait pilot](#worker-wait-pilot). |
 | Native file-extension authority, call representation, issuer lifetime or allocation assumptions; experiment or checker changes | [Native sandbox-extension experiment](#native-sandbox-extensions). |
 
 ## Footprint observations
@@ -702,6 +702,55 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   OS/toolchain changes when crediting earlier applicability. Passing this native
   control alone does not establish integrated live queries, order, responsiveness,
   CPU reduction or actual sleep/wake behavior.
+
+### Worker wait pilot
+
+- **Cases:** opt-in `witness_contract/worker_wait_pilot` and default
+  `witness_contract/worker_wait_pilot_controls`.
+- **Location:** `tests/suites/witness_contract/opt_in/worker_wait_pilot.sh`,
+  `check_worker_wait_pilot.py` and `worker_wait_pilot_reader.py`, with the
+  stamp worker, host patch set and clock-pair control in `tests/fixtures/worker_wait/`.
+- **Purpose:** Decompose ordinary and actor held phases on the production
+  planning and validator path into worker publication, host detection,
+  planning, validator, closure, release and acknowledgement intervals, from
+  continuous-clock stamps in a disposable stamped host and seam-built worker.
+  An unpatched neighbor built with the same recipe exposes observer effects on
+  whole-request latency. Rapid and idle pacing, power, Low Power Mode, sleep and
+  load are recorded per trial and never pooled.
+- **Execution considerations:** Builds and signs two disposable hosts, stages
+  two app copies once and reuses them through fresh processes after one
+  excluded first execution each. Trials start only when their watchdog and
+  cleanup reserve fit the declared window. Competing builds, batteries or busy
+  processes change the measured response; run it in an announced quiet window.
+- **Resource dependency:** Built signed app, matching Developer ID Application
+  identity, clang, Swift, Meson, unsandboxed live XPC and native process
+  observation. Identity resolution follows `PW_BYOXPC_IDENTITY`, `IDENTITY`,
+  then the app's team-matched keychain identity. The clock-pair calibration
+  runs first inside the window; combined uncertainty is established only from
+  a receipt its own checker accepts.
+- **When to run:** Before selecting a worker-wait host, preparation, scan or
+  hint candidate, and to re-establish the baseline decomposition after an
+  accepted change to host polling, planning, the validator path, the worker
+  wait seams or the pilot reader. Select with
+  `tests/run.sh --case witness_contract/worker_wait_pilot`;
+  `PW_WORKER_WAIT_PILOT_ARGS` passes driver options such as `--dry-run`.
+- **Artifacts:** `<run>/suites/witness_contract/worker_wait_pilot/artifacts/`:
+  start conditions, worker, host and clock-pair build receipts, staging
+  receipts, the `clock-pair/` calibration receipt and cell outputs, staged executable hashes
+  with device and inode before and after, `schedule.json`, `window.json`,
+  excluded `warm/` executions, per-trial `RunCapture` files with `trial.json`,
+  `conditions.json`, `started.json`, `stamps.json`, `exported.json` when
+  present, `host-exit.json` and `validation.json`, then `decomposition.json`,
+  `summary.json`, `summary.md`, `cleanup.json` and `pilot.json`. The staged
+  apps stay in `staging/` unless the run is a dry run.
+- **Gating:** Not a default acceptance control. A missing identity fails before
+  any build. A failed, incomplete or refused trial fails the case; excluded and
+  skipped trials stay diagnostic, and the case passes only when every app, cell
+  and regime keeps at least five accepted trials in one homogeneous group and
+  the calibration receipt is accepted, so fewer accepted trials is an
+  incomplete pilot. A dry run establishes mechanics only. The default controls
+  establish the reader's interpretation on constructed receipts, not live
+  sensitivity or resolution.
 
 ### BYOXPC entitlement read-back
 

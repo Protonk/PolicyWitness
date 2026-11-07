@@ -53,6 +53,96 @@ ID identity and disposable-host signing. See the
 [execution and interpretation account](../../CHANGE-VERIFICATION.md#footprint-observations)
 and the [footprint account](../../../docs/FOOTPRINT.md).
 
+## Worker wait pilot
+
+The opt-in `worker_wait_pilot` case decomposes ordinary and actor held phases
+on the production planning and validator path, with no test overrides and no
+collection hold. It builds a disposable host from patched copies of the runner
+sources, which records `mach_continuous_time` stamps in preallocated storage,
+and an unpatched neighbor host with the same recipe. Both apps are staged once
+into the case artifacts with fresh bundle identifiers and signed with the app
+team's Developer ID identity. The stamped app carries the seam-built worker in
+both roles; it records publications and pass samples in capture pages of its
+region, which the host copies before teardown. After the reply the host writes
+its stamps and those pages to a directory fixed at build time. No wire field
+or post-apply resource is added.
+
+Inside the declared window, the clock-pair calibration control runs first,
+then one excluded first execution of each staged app, with an eligible query
+and the actor cell when selected, precedes counted trials. Every trial reuses the
+same staged executables in fresh processes. The declared schedule covers one,
+64 and 256 eligible queries, a matched zero-eligible layout using the static
+prediction-unavailable pair, two phases, and the two-actor lifecycle with
+deliveries. A rapid block launches after each observed cleanup; an idle block
+requests at least one second after it and alternates with the neighbor. A
+trial starts only when its watchdog and cleanup reserve fit the remaining
+declared window; otherwise it is recorded as skipped. Observed cleanup is the
+CLI exit plus a generation-checked host exit event, or the CLI exit plus
+100 ms where no host watch exists, as for the neighbor. Each trial retains
+power source and Low Power Mode before and after, observer continuous and
+uptime clocks for sleep, load averages, requested and actual gaps, whole-request
+latency and the envelope's millisecond fields.
+
+After the window, every envelope must finish and pass consumer and lifecycle
+validation, with attempt, eligibility, issuance and delivery checks per cell.
+`worker_wait_pilot_reader.py` then writes `decomposition.json`, `summary.json`
+and `summary.md`. It never pools apps, cells, regimes, power sources or host
+flavours. Sleep-overlapped, power-transition and out-of-range trials stay in
+the decomposition and out of aggregates. Stamps describe the disposable
+stamped flavour, not production executables. The host poll interval is
+reported as detection response, not instrument resolution. A host observation
+with no negative sample before it is a separate `*_first_check_positive` row,
+attributed where possible to the host sleep that contained the worker's
+publication: the exact sleep when the host recorded it as a stamped event pair
+(its first 64 sleeps per wait key), otherwise a register pair, otherwise
+marked unattributed. The ordinary host's detection of the worker's terminal
+publication is a component of its own, and exchange waits appear in the wait
+table with their pass counts and an upper-bound period. Each interval's uncertainty is the sum of its two endpoint
+terms, where a publication's term is the width from the nearest preceding
+stamp in the same process to its post-store stamp, floored at the clock-pair
+receipt's endpoint term and, for host endpoints, at twice the host's in-situ
+stamp cost, plus the receipt's alignment bound across processes; values at or
+below it are marked below the instrument floor. Groups are keyed by app, cell,
+regime, power source, low power mode and host flavour. A trial whose exit-watch
+registration overlapped a held interval is excluded as `observer_overlap`. The
+case passes when no trial failed, was incomplete or was refused, every
+scheduled entry has a receipt, each app, cell and regime has at least five
+accepted trials in one group, and the calibration receipt is accepted; fewer
+accepted trials is an incomplete pilot.
+`PW_WORKER_WAIT_PILOT_ARGS` passes driver options such as `--dry-run`,
+`--cells`, `--repetitions`, `--regimes`, `--window-seconds` and
+`--clock-pair-trials`; `--no-clock-pair` is accepted only in a dry run. A dry
+run establishes mechanics only and removes its staged apps.
+
+Artifacts include `conditions-start.json`, the worker build receipt, host
+build and staging receipts, the clock-pair build and `clock-pair/` receipt,
+`staged-identity-before.json` and `-after.json` (hashes, device and inode),
+`schedule.json`, `window.json`, `warm/<app>/<cell>/warm.json`, per-trial
+directories `trials/<app>/<cell>/<regime>/<index>/` with `RunCapture` files,
+`trial.json` (with every driver wake), `conditions.json`, `started.json`,
+`stamps.json`, `exported.json` when the host wrote its export marker,
+`host-exit.json` and `validation.json` (with the envelope's millisecond fields
+for both apps), the reader outputs, `cleanup.json` (processes found under the
+staged bundles and any action taken) and `pilot.json`.
+The case is opt-in because it builds and signs disposable hosts and its
+timings are sensitive to competing load, so it needs a quiet window.
+
+The default `worker_wait_pilot_controls` constructs complete ordinary, actor
+and neighbor receipts, with worker events in program order and the clock
+pair's own constructed calibration receipt, and checks decoded values,
+intervals and uncertainty arithmetic. It then rejects a wrong page magic or version, capture-refused and
+overflow pages, non-monotonic worker events, a host observation earlier than
+the worker publication, a missing stamp or start file, a truncated page,
+dropped host stamps, a page copied before reap, sleep overlap, pacing out of
+range, a power transition, neighbor stamps, a page-count mismatch, a rejected
+calibration receipt and pooled groups. It also exercises a counted sub-50 µs
+inversion that widens the alignment term, a host pid mismatch between the
+start marker and the export, an arrival with no negative sample, pooling across
+cells, power sources, low power mode and flavours, a calibration receipt whose
+endpoint-bracket outlier exceeds the gate, the per-wait pass events and
+pre-store host stamps, and a copy of the reader with the earlier uncertainty
+formula, which must fail. Combined faults keep every code.
+
 ## Public phases
 
 `phases` uses the signed CLI with ordinary actions. It unlinks a controlled

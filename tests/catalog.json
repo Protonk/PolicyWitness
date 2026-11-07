@@ -2024,6 +2024,37 @@
             "witness_contract/footprint_observer_controls",
             "witness_contract/held_phase_footprint_controls"
           ]
+        },
+        {
+          "id": "worker_wait_pilot_controls",
+          "description": "Worker-wait pilot reader accepts constructed host and worker stamp receipts, then rejects page, clock-order, missing-file, sleep, pacing, power and pooling faults",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/worker_wait_pilot_controls.sh"
+          ],
+          "requires": [],
+          "default": true
+        },
+        {
+          "id": "worker_wait_pilot",
+          "description": "Paced trials through staged stamped and neighbor apps on the production validator path, with continuous-clock host and worker stamps, per-trial conditions and a timeline decomposition",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/worker_wait_pilot.sh"
+          ],
+          "requires": [
+            "app",
+            "clang",
+            "swift",
+            "meson",
+            "identity"
+          ],
+          "default": false,
+          "depends_on": [
+            "runner_abi_layout/c_swift_layout_agreement",
+            "witness_contract/footprint_observer_controls",
+            "witness_contract/worker_wait_pilot_controls"
+          ]
         }
       ],
       "include": [
@@ -2310,7 +2341,8 @@
         "dispatcher/pytest_controls",
         "witness_contract/held_phase_footprint",
         "witness_contract/response_footprint",
-        "run_effects/aftermath_footprint"
+        "run_effects/aftermath_footprint",
+        "witness_contract/worker_wait_pilot"
       ]
     },
     "failure_boundaries": {

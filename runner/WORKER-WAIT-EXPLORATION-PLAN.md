@@ -315,8 +315,8 @@ Keep benefit claims scoped by regime and check the other regime for regression.
 
 ### Records, workloads and readers
 
-Commit the pilot as `records/WORKER-WAIT-PILOT.md` before candidate optimization
-work. Report host-side intervals within the held timeline and worker polling
+Commit the pilot as [`records/WORKER-WAIT-PILOT.md`](../records/WORKER-WAIT-PILOT.md)
+before candidate optimization work. Report host-side intervals within the held timeline and worker polling
 CPU separately: they overlap and must not be added as disjoint elapsed time.
 Keep unobserved intervals explicit. Both plans own this shared record; the ARM
 plan uses it to select and justify its minimum worthwhile improvement, then
