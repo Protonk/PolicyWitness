@@ -1145,7 +1145,7 @@
         "value": 9435,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 13,420 bytes; final envelope 32,035 bytes. Controller sampled maximum resident 6,750,208 bytes and physical footprint 1,556,816 bytes, independently; 32 successful samples over 43,041,375 ns. Actual sample-start intervals 1,277,166\u20131,458,000 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+        "behavior": "Host reply bytes; client stdout 13,420 bytes; final envelope 32,035 bytes. Sampled maximum resident 6,750,208 bytes and physical footprint 1,556,816 bytes; 32 successful samples over 43,041,375 ns, starting 1,277,166\u20131,458,000 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1185,7 +1185,7 @@
         "value": 1826055,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 2,435,586 bytes; final envelope 4,737,755 bytes. Controller sampled maximum resident 57,966,592 bytes and physical footprint 52,593,048 bytes, independently; 138 successful samples over 187,629,834 ns. Actual sample-start intervals 1,340,792\u20131,468,791 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+        "behavior": "Host reply bytes; client stdout 2,435,586 bytes; final envelope 4,737,755 bytes. Sampled maximum resident 57,966,592 bytes and physical footprint 52,593,048 bytes; 138 successful samples over 187,629,834 ns, starting 1,340,792\u20131,468,791 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1225,7 +1225,7 @@
         "value": 1830373,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 2,441,346 bytes; final envelope 4,751,545 bytes. Controller sampled maximum resident 57,606,144 bytes and physical footprint 52,232,600 bytes, independently; 150 successful samples over 202,997,208 ns. Actual sample-start intervals 1,129,000\u20131,465,916 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+        "behavior": "Host reply bytes; client stdout 2,441,346 bytes; final envelope 4,751,545 bytes. Sampled maximum resident 57,606,144 bytes and physical footprint 52,232,600 bytes; 150 successful samples over 202,997,208 ns, starting 1,129,000\u20131,465,916 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1265,7 +1265,7 @@
         "value": 603354,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 805,316 bytes; final envelope 1,904,230 bytes. Controller sampled maximum resident 38,879,232 bytes and physical footprint 31,506,816 bytes, independently; 300 successful samples over 424,208,000 ns. Actual sample-start intervals 1,213,000\u20133,434,375 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+        "behavior": "Host reply bytes; client stdout 805,316 bytes; final envelope 1,904,230 bytes. Sampled maximum resident 38,879,232 bytes and physical footprint 31,506,816 bytes; 300 successful samples over 424,208,000 ns, starting 1,213,000\u20133,434,375 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1305,7 +1305,7 @@
         "value": 9491469,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 12,656,138 bytes; final envelope 22,740,116 bytes. Controller sampled maximum resident 159,973,376 bytes and physical footprint 154,665,464 bytes, independently; 578 successful samples over 786,891,792 ns. Actual sample-start intervals 1,112,750\u20131,546,875 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established."
+        "behavior": "Host reply bytes; client stdout 12,656,138 bytes; final envelope 22,740,116 bytes. Sampled maximum resident 159,973,376 bytes and physical footprint 154,665,464 bytes; 578 successful samples over 786,891,792 ns, starting 1,112,750\u20131,546,875 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1471,7 +1471,7 @@
         "value": 6,
         "unit": "holds",
         "limit": null,
-        "behavior": "Hold class 1: conservative elapsed 1,107,987,125\u20131,128,846,875 ns; worker:0 CPU 1,101,612,917\u20131,123,613,417 ns; worker aggregate 1,101,612,917\u20131,123,613,417 ns. Native observer child CPU 134,209\u2013187,250 ns. Hold class 3: conservative elapsed 3,115,067,458\u20133,144,625,083 ns; worker:0 CPU 3,108,671,500\u20133,143,494,666 ns; worker aggregate 3,108,671,500\u20133,143,494,666 ns. Native observer child CPU 295,791\u2013366,084 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
+        "behavior": "Hold class 1: conservative elapsed 1,107,987,125\u20131,128,846,875 ns; worker:0 CPU 1,101,612,917\u20131,123,613,417 ns. Hold class 3: conservative elapsed 3,115,067,458\u20133,144,625,083 ns; worker:0 CPU 3,108,671,500\u20133,143,494,666 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
       },
       "conditions": "Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging.",
       "interval": {
@@ -1511,7 +1511,7 @@
         "value": 6,
         "unit": "holds",
         "limit": null,
-        "behavior": "Hold class 1: conservative elapsed 1,119,694,584\u20131,130,162,833 ns; worker:0 CPU 1,114,585,833\u20131,131,120,833 ns; worker aggregate 1,114,585,833\u20131,131,120,833 ns. Native observer child CPU 145,542\u2013171,083 ns. Hold class 3: conservative elapsed 3,118,528,958\u20133,141,749,458 ns; worker:0 CPU 3,114,453,583\u20133,144,314,292 ns; worker aggregate 3,114,453,583\u20133,144,314,292 ns. Native observer child CPU 295,416\u2013319,250 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
+        "behavior": "Hold class 1: conservative elapsed 1,119,694,584\u20131,130,162,833 ns; worker:0 CPU 1,114,585,833\u20131,131,120,833 ns. Hold class 3: conservative elapsed 3,118,528,958\u20133,141,749,458 ns; worker:0 CPU 3,114,453,583\u20133,144,314,292 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
       },
       "conditions": "Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging.",
       "interval": {
@@ -1551,7 +1551,7 @@
         "value": 6,
         "unit": "holds",
         "limit": null,
-        "behavior": "Hold class 1: conservative elapsed 1,118,848,333\u20131,129,527,459 ns; worker:0 CPU 1,109,434,708\u20131,132,191,750 ns; worker:1 CPU 1,124,444,624\u20131,129,185,792 ns; worker:2 CPU 1,109,997,583\u20131,130,167,250 ns; worker aggregate 3,343,876,915\u20133,391,544,792 ns. Native observer child CPU 283,584\u2013363,167 ns. Hold class 3: conservative elapsed 3,100,499,666\u20133,148,954,292 ns; worker:0 CPU 3,101,086,792\u20133,157,780,833 ns; worker:1 CPU 3,097,857,250\u20133,144,838,583 ns; worker:2 CPU 3,104,895,124\u20133,145,675,708 ns; worker aggregate 9,303,839,166\u20139,448,295,124 ns. Native observer child CPU 533,375\u2013647,666 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
+        "behavior": "Hold class 1: conservative elapsed 1,118,848,333\u20131,129,527,459 ns; worker:0 CPU 1,109,434,708\u20131,132,191,750 ns; worker:1 CPU 1,124,444,624\u20131,129,185,792 ns; worker:2 CPU 1,109,997,583\u20131,130,167,250 ns; worker aggregate 3,343,876,915\u20133,391,544,792 ns. Hold class 3: conservative elapsed 3,100,499,666\u20133,148,954,292 ns; worker:0 CPU 3,101,086,792\u20133,157,780,833 ns; worker:1 CPU 3,097,857,250\u20133,144,838,583 ns; worker:2 CPU 3,104,895,124\u20133,145,675,708 ns; worker aggregate 9,303,839,166\u20139,448,295,124 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
       },
       "conditions": "Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging.",
       "interval": {
@@ -1591,7 +1591,7 @@
         "value": 6,
         "unit": "holds",
         "limit": null,
-        "behavior": "Hold class 1: conservative elapsed 1,128,085,959\u20131,131,137,792 ns; worker:0 CPU 1,126,848,958\u20131,131,069,249 ns; worker:1 CPU 1,127,899,542\u20131,133,016,542 ns; worker aggregate 2,255,967,001\u20132,264,085,791 ns. Native observer child CPU 155,041\u2013164,876 ns. Hold class 3: conservative elapsed 3,148,305,250\u20133,151,015,291 ns; worker:0 CPU 3,146,478,041\u20133,157,893,791 ns; worker:1 CPU 3,145,107,374\u20133,151,512,042 ns; worker aggregate 6,291,585,415\u20136,307,922,750 ns. Native observer child CPU 342,666\u2013370,125 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
+        "behavior": "Hold class 1: conservative elapsed 1,128,085,959\u20131,131,137,792 ns; worker:0 CPU 1,126,848,958\u20131,131,069,249 ns; worker:1 CPU 1,127,899,542\u20131,133,016,542 ns; worker aggregate 2,255,967,001\u20132,264,085,791 ns. Hold class 3: conservative elapsed 3,148,305,250\u20133,151,015,291 ns; worker:0 CPU 3,146,478,041\u20133,157,893,791 ns; worker:1 CPU 3,145,107,374\u20133,151,512,042 ns; worker aggregate 6,291,585,415\u20136,307,922,750 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns."
       },
       "conditions": "Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging.",
       "interval": {

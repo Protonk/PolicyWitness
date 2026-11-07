@@ -23,6 +23,42 @@ shipped controllers. Actor lifecycle observations use a disposable instrumented
 host with unchanged signed workers; their timing does not describe an
 uninstrumented host.
 
+## Provenance of measured rows
+
+Every measured row was transcribed into the manifest from the receipts of one
+managed test run: run id `20261106T210300Z_381f3d39`, output directory
+`footprint-targeted-20261106-01`, cases `witness_contract/held_phase_footprint`,
+`witness_contract/response_footprint` and `run_effects/aftermath_footprint`.
+That run is archived as `historical-footprint-measurements.tar.gz`, with an
+index of file hashes beside it, in the finished evidence of the retained run
+`runs/finished-targeted-20261106`. The retention record
+[tests/RETAINED.json](../tests/RETAINED.json) lists that retained run. Test
+output is gitignored, so the archive exists only in a checkout that retained
+it. Its artifact inventory records the hashes of the binaries that were
+measured. The app in `dist/` and the later retained run were built after that
+measurement and carry different binary hashes; the later run's own response
+measurement is not what these rows describe.
+
+The generator and the footprint drift case verify the manifest's structure,
+its citations and the freshness of the rendered copy. Nothing verifies that a
+row's numbers agree with a receipt. A row changes only when someone reruns its
+case and transcribes the new receipt.
+
+## Using the rows as a baseline
+
+A change is compared against a fresh measurement of the same signed binaries
+before and after, under the same case and conditions. These rows fix the shape
+of that comparison and its limits; they are the before side only if the
+archived binaries are the ones rebuilt.
+
+| Change class | Compare | Rows | Outside the baseline |
+| --- | --- | --- | --- |
+| Controller serialization or capture ownership | Host reply, client stdout and envelope bytes for equality outside dynamic fields; sampled resident and physical footprint maxima for demand | fr9–fr13 | Peaks shorter than the spacing between sample starts; stage attribution; host, worker and observer demand |
+| Worker wait or activation | Per-worker CPU per hold class against the matched busy and sleeping controls | fw10–fw13 | Idle waiting; host demand, which these rows observe through an instrumented host |
+| Evidence region geometry | Logical capacity and layout agreement only | fw4, fw5, fr14 | Residency; no measured row covers host or worker memory |
+| Authority region or custody sizing or disposal | Logical capacities and the accepted custody length | fw6, fw7, fw14, fr14 | Residency; erasure after CLI return, which fa3 leaves unknown |
+| Any change | Process presence at the first post-return snapshot | fa7, fa8 | Mapping disposal and reap |
+
 ## Waiting and retained resources
 
 ![Waiting ownership](footprint-waiting.svg)
@@ -42,26 +78,24 @@ uninstrumented host.
 | fw7 | Private token custody — host | logical: 16,384 bytes One fixed private buffer per admitted token. Last-use erasure resets payload state but retains its allocation. | Authority-bearing actor plan; accepted lengths are separate from capacity. | custody preparation → custody finish | — |
 | fw8 | Candidate handles / fixed table — actor worker | logical: 512 bytes Fixed handle table storage remains after native release. Candidate count and native result do not measure private kernel storage. | Each worker; successful consumes populate named candidates. | worker static storage → worker exit | — |
 | fw9 | Launch-only descriptors — host | source: Evidence/authority launch descriptors close after spawn; policy/ready pipes have their own close boundaries. Mapping references survive descriptor close. | Prepared host resources; actual setup failures retain their own cleanup outcomes. | host setup → spawn or setup failure closes each descriptor | — |
-| fw10 | ordinary held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,107,987,125–1,128,846,875 ns; worker:0 CPU 1,101,612,917–1,123,613,417 ns; worker aggregate 1,101,612,917–1,123,613,417 ns. Native observer child CPU 134,209–187,250 ns. Hold class 3: conservative elapsed 3,115,067,458–3,144,625,083 ns; worker:0 CPU 3,108,671,500–3,143,494,666 ns; worker aggregate 3,108,671,500–3,143,494,666 ns. Native observer child CPU 295,791–366,084 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
-| fw11 | actor_1 held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,119,694,584–1,130,162,833 ns; worker:0 CPU 1,114,585,833–1,131,120,833 ns; worker aggregate 1,114,585,833–1,131,120,833 ns. Native observer child CPU 145,542–171,083 ns. Hold class 3: conservative elapsed 3,118,528,958–3,141,749,458 ns; worker:0 CPU 3,114,453,583–3,144,314,292 ns; worker aggregate 3,114,453,583–3,144,314,292 ns. Native observer child CPU 295,416–319,250 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
-| fw12 | actor_3 held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,118,848,333–1,129,527,459 ns; worker:0 CPU 1,109,434,708–1,132,191,750 ns; worker:1 CPU 1,124,444,624–1,129,185,792 ns; worker:2 CPU 1,109,997,583–1,130,167,250 ns; worker aggregate 3,343,876,915–3,391,544,792 ns. Native observer child CPU 283,584–363,167 ns. Hold class 3: conservative elapsed 3,100,499,666–3,148,954,292 ns; worker:0 CPU 3,101,086,792–3,157,780,833 ns; worker:1 CPU 3,097,857,250–3,144,838,583 ns; worker:2 CPU 3,104,895,124–3,145,675,708 ns; worker aggregate 9,303,839,166–9,448,295,124 ns. Native observer child CPU 533,375–647,666 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
-| fw13 | actor_lifecycle held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,128,085,959–1,131,137,792 ns; worker:0 CPU 1,126,848,958–1,131,069,249 ns; worker:1 CPU 1,127,899,542–1,133,016,542 ns; worker aggregate 2,255,967,001–2,264,085,791 ns. Native observer child CPU 155,041–164,876 ns. Hold class 3: conservative elapsed 3,148,305,250–3,151,015,291 ns; worker:0 CPU 3,146,478,041–3,157,893,791 ns; worker:1 CPU 3,145,107,374–3,151,512,042 ns; worker aggregate 6,291,585,415–6,307,922,750 ns. Native observer child CPU 342,666–370,125 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
+| fw10 | ordinary held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,107,987,125–1,128,846,875 ns; worker:0 CPU 1,101,612,917–1,123,613,417 ns. Hold class 3: conservative elapsed 3,115,067,458–3,144,625,083 ns; worker:0 CPU 3,108,671,500–3,143,494,666 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
+| fw11 | actor_1 held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,119,694,584–1,130,162,833 ns; worker:0 CPU 1,114,585,833–1,131,120,833 ns. Hold class 3: conservative elapsed 3,118,528,958–3,141,749,458 ns; worker:0 CPU 3,114,453,583–3,144,314,292 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
+| fw12 | actor_3 held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,118,848,333–1,129,527,459 ns; worker:0 CPU 1,109,434,708–1,132,191,750 ns; worker:1 CPU 1,124,444,624–1,129,185,792 ns; worker:2 CPU 1,109,997,583–1,130,167,250 ns; worker aggregate 3,343,876,915–3,391,544,792 ns. Hold class 3: conservative elapsed 3,100,499,666–3,148,954,292 ns; worker:0 CPU 3,101,086,792–3,157,780,833 ns; worker:1 CPU 3,097,857,250–3,144,838,583 ns; worker:2 CPU 3,104,895,124–3,145,675,708 ns; worker aggregate 9,303,839,166–9,448,295,124 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
+| fw13 | actor_lifecycle held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,128,085,959–1,131,137,792 ns; worker:0 CPU 1,126,848,958–1,131,069,249 ns; worker:1 CPU 1,127,899,542–1,133,016,542 ns; worker aggregate 2,255,967,001–2,264,085,791 ns. Hold class 3: conservative elapsed 3,148,305,250–3,151,015,291 ns; worker:0 CPU 3,146,478,041–3,157,893,791 ns; worker:1 CPU 3,145,107,374–3,151,512,042 ns; worker aggregate 6,291,585,415–6,307,922,750 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
 | fw14 | Held actor custody / delivery / candidate — issuer / subject / host | measured: 212 bytes Actual accepted custody length and equal settled first delivery length, not buffer capacity. Across six holds, issuer is parked after its first transfer; subject has completed H1, holds the read-bearing visit without release, and has H2 and both releases pending. Private custody remains mapped and unerased for a later transfer; D2 is unpublished. No bearer bytes were captured. | Instrumented pre-collection metadata bound to the acknowledged held gate and unchanged marker/target; named references retained. | completed first consume and held next visit → post-measurement gate release | — |
 
 <!-- END GENERATED FOOTPRINT WAITING -->
 
-Waiting CPU rows report cumulative native user-plus-system counters converted
-from raw Mach absolute-time ticks using each sample’s recorded timebase.
-Independent busy-process getrusage timeval observations validate that conversion
-within their endpoint brackets and accounting tolerance. That calibration
-establishes counter units at its observed scope, not a universal scheduler
-quantum. CPU accumulation is observed across
-generation-qualified held intervals, while independent targets/markers remain
-unchanged. Controls are matched within each hold. Recorded machine load remains
-a condition; exclusive machine quietness is not claimed. Actor metadata comes
-from the pre-collection instrumented host and is associated with the subsequent
-acknowledged gate. The observer CPU figure covers its native child only; the
-Python driver’s CPU demand was not measured in this waiting case.
+Waiting CPU rows report cumulative native user-plus-system counters, converted
+from Mach ticks with each sample’s recorded timebase and validated at that scope
+by independent busy-process getrusage observations; the conversion does not
+establish a universal scheduler quantum. CPU accumulates across
+generation-qualified held intervals while independent targets and markers stay
+unchanged, with controls matched within each hold. Recorded machine load is a
+condition, not a claim of quietness. Each receipt also records the observer’s
+native child CPU; the Python driver’s demand was not measured. Actor metadata
+comes from the pre-collection instrumented host, associated with the subsequent
+acknowledged gate.
 
 ## Response storage and transport
 
@@ -81,21 +115,22 @@ Python driver’s CPU demand was not measured in this waiting case.
 | fr6 | Generic and typed capture — controller | source: Retained text is made before parsing. Generic capture JSON survives a clone into typed Capture; generic and typed base64 coexist during validation. Lossy text length need not equal retained source-byte count. | Accepted capture; malformed/oversized paths have separate retention behavior. | capture parsing → typed capture scope ends; generic capture survives into assembly | — |
 | fr7 | Decoded bytes and parsed host reply — controller | source: Strict base64 decode allocates host bytes. Raw client Output, generic capture, typed base64 and decoded bytes coexist; parsed host Value is added before decoded bytes leave scope. | Successful capture validation and host JSON parsing. | base64 decoding → decoded vector scope ends; parsed reply retained | — |
 | fr8 | Envelope and rendered text — controller | source: Borrowed input and envelope coexist. Recursive sorting clones subtrees; pretty serialization adds a String while the Value remains live. Sort temporaries are not claimed to survive the sort. | Final envelope rendering; successful stdout adds a newline. | envelope construction → print returns and CLI exits | — |
-| fr9 | ordinary_small — fresh shipped controller | measured: 9,435 bytes Host reply bytes; client stdout 13,420 bytes; final envelope 32,035 bytes. Controller sampled maximum resident 6,750,208 bytes and physical footprint 1,556,816 bytes, independently; 32 successful samples over 43,041,375 ns. Actual sample-start intervals 1,277,166–1,458,000 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
-| fr10 | independent_query — fresh shipped controller | measured: 1,826,055 bytes Host reply bytes; client stdout 2,435,586 bytes; final envelope 4,737,755 bytes. Controller sampled maximum resident 57,966,592 bytes and physical footprint 52,593,048 bytes, independently; 138 successful samples over 187,629,834 ns. Actual sample-start intervals 1,340,792–1,468,791 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
-| fr11 | eight_phase_maximum — fresh shipped controller | measured: 1,830,373 bytes Host reply bytes; client stdout 2,441,346 bytes; final envelope 4,751,545 bytes. Controller sampled maximum resident 57,606,144 bytes and physical footprint 52,232,600 bytes, independently; 150 successful samples over 202,997,208 ns. Actual sample-start intervals 1,129,000–1,465,916 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
-| fr12 | actor_maximum — fresh shipped controller | measured: 603,354 bytes Host reply bytes; client stdout 805,316 bytes; final envelope 1,904,230 bytes. Controller sampled maximum resident 38,879,232 bytes and physical footprint 31,506,816 bytes, independently; 300 successful samples over 424,208,000 ns. Actual sample-start intervals 1,213,000–3,434,375 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
-| fr13 | control_character_exec — fresh shipped controller | measured: 9,491,469 bytes Host reply bytes; client stdout 12,656,138 bytes; final envelope 22,740,116 bytes. Controller sampled maximum resident 159,973,376 bytes and physical footprint 154,665,464 bytes, independently; 578 successful samples over 786,891,792 ns. Actual sample-start intervals 1,112,750–1,546,875 ns; requested 1,000,000 ns. No stage attribution or instantaneous peak is established. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr9 | ordinary_small — fresh shipped controller | measured: 9,435 bytes Host reply bytes; client stdout 13,420 bytes; final envelope 32,035 bytes. Sampled maximum resident 6,750,208 bytes and physical footprint 1,556,816 bytes; 32 successful samples over 43,041,375 ns, starting 1,277,166–1,458,000 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr10 | independent_query — fresh shipped controller | measured: 1,826,055 bytes Host reply bytes; client stdout 2,435,586 bytes; final envelope 4,737,755 bytes. Sampled maximum resident 57,966,592 bytes and physical footprint 52,593,048 bytes; 138 successful samples over 187,629,834 ns, starting 1,340,792–1,468,791 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr11 | eight_phase_maximum — fresh shipped controller | measured: 1,830,373 bytes Host reply bytes; client stdout 2,441,346 bytes; final envelope 4,751,545 bytes. Sampled maximum resident 57,606,144 bytes and physical footprint 52,232,600 bytes; 150 successful samples over 202,997,208 ns, starting 1,129,000–1,465,916 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr12 | actor_maximum — fresh shipped controller | measured: 603,354 bytes Host reply bytes; client stdout 805,316 bytes; final envelope 1,904,230 bytes. Sampled maximum resident 38,879,232 bytes and physical footprint 31,506,816 bytes; 300 successful samples over 424,208,000 ns, starting 1,213,000–3,434,375 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr13 | control_character_exec — fresh shipped controller | measured: 9,491,469 bytes Host reply bytes; client stdout 12,656,138 bytes; final envelope 22,740,116 bytes. Sampled maximum resident 159,973,376 bytes and physical footprint 154,665,464 bytes; 578 successful samples over 786,891,792 ns, starting 1,112,750–1,546,875 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
 | fr14 | Actor backing and page-padded views — host / actor workers | logical: 30,995,584 bytes Logical evidence-plus-authority backing capacity, counted once; separate private custody 524,288 bytes. Issuer authority requested 132,736 bytes, worker mapped 147,456 bytes; subject requested 264,320 bytes, mapped 278,528 bytes. Observed page size 16,384 bytes explains padding. These are capacities/view lengths, not reply bytes or measured residency. | Actor maximum response workload; distinct backing per actor. Source geometry and native worker mapping metadata corroborate each other. | actor setup → owner-specific teardown | — |
 
 <!-- END GENERATED FOOTPRINT RESPONSE -->
 
 The native response rows describe single repetitions. Memory values are maxima
-among successful samples, with verified lifetime coverage. Resident and physical
-footprint maxima can occur in different samples and are not added. A later failed
-inspection stays a failed inspection, not zero memory. Native samples cannot
-locate parser stages. Unit assertions establish representation coexistence at
-their own boundaries, in a separate process.
+among successful samples with verified lifetime coverage; resident and physical
+footprint maxima can occur in different samples and are not added. A sampled
+maximum cannot show a peak shorter than the spacing between sample starts, and
+samples cannot locate parser stages. A later failed inspection stays a failed
+inspection, not zero memory. Unit assertions establish representation
+coexistence at their own boundaries, in a separate process.
 
 ## State remaining after a run
 
