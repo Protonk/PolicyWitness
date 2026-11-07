@@ -106,7 +106,71 @@ Candidate worktree, against its signed build, before the comparison:
 
 ## Results
 
-Pending the comparison window.
+Run `20261107T220331Z_2be0f17e` in `tests/out/runs/worker-wait-host01-compare-01`
+(gitignored, local checkout only). Announced quiet window, battery power at 82
+percent throughout, low power mode off, no system sleep, no observer overlap,
+one counted clock inversion of 0.9 µs. 120 trials accepted, 60 matched pairs,
+none unpaired; five pairs in each of the twelve cell and regime groups. Actual
+gaps: `rapid` 13.4 to 26.3 ms, `idle` 1000.3 to 1005.5 ms. Calibration
+credited the instrument at 333 ns endpoint term and 83 ns alignment bound.
+
+### Shorter held interval (the claim)
+
+Baseline minus candidate per pair, microseconds, with the frozen verdict
+`improves_beyond_uncertainty_in_every_pair` and the stricter spread verdict.
+
+| Cell, regime | Arrival to first host sample, five pairs | Verdicts | Held total, five pairs | Verdicts |
+| --- | --- | --- | --- | --- |
+| O1 idle | 2696, 2966, 2240, 2862, 5147 | yes / no | 2479, 3079, 2872, 2843, 4610 | yes / yes |
+| O1 rapid | 3209, 5179, 5243, 3266, 7601 | yes / yes | 3064, 5124, 5257, 3427, 8116 | yes / yes |
+| O64 idle | 3066, 5116, 5418, 754, 5616 | yes / no | 3160, 5645, 5032, 408, 5424 | yes / no |
+| O64 rapid | 5187, 5178, 2827, 7837, 5059 | yes / yes | 5672, 4472, 2878, 7793, 5175 | yes / no |
+| O256 idle | 3602, 6174, 3112, 3076, 5668 | yes / yes | 3047, 3293, 3837, 3338, 5876 | yes / yes |
+| O256 rapid | 4238, 7710, 7709, 5193, 2842 | yes / yes | 4346, 8274, 7567, 5175, 2795 | yes / no |
+| O0 idle | 3086, 5531, 5488, 4123, 680 | yes / no | 3087, 5524, 5438, 4122, 681 | yes / no |
+| O0 rapid | 5192, 3142, 7625, 6626, 5236 | yes / yes | 5194, 3207, 7594, 6599, 5244 | yes / yes |
+| O2P idle, phase 0 | 5347, 3764, 2886, 2935, 4792 | yes / yes | 5062, 3903, 2475, 3056, 5046 | yes / no |
+| O2P rapid, phase 0 | 7470, 5216, 3021, 4526, 2866 | yes / yes | 7504, 5245, 3011, 3296, 2787 | yes / no |
+
+Every pair of every ordinary cell and regime improved beyond the instrument
+uncertainty (1.3 to 1.8 µs) for both named components, and the worker made
+fewer release-wait passes in every pair (7,663 to 13,807 fewer in O1 idle).
+The improvement is smaller than the pilot's readiness share because the
+candidate's first arrival is now detected by the 2 ms sentinel poll: its
+arrival-to-observation values spread over about 2.5 ms (0 to 2.5 ms), which
+is why the stricter spread verdict is mixed. The candidate's readiness wait
+ended at the byte: one wait of 4.6 to 8.1 ms (shorter after a rapid launch,
+longer after an idle gap, since the worker's compile and readiness take
+longer there) against the baseline's one sleep of 12.5 ms (10.0 to 12.5 ms).
+
+### Actor form, response and whole request
+
+- A2: no quantity worsened beyond spread in every pair, in either regime. The
+  any-pair spread verdict fired where a 1.25 ms polled detection fell on
+  different sides of its bimodal distribution in one pair, as the null
+  control predicted; those are not resolved regressions. The subject's parked
+  activation wait made 19 to 81 fewer passes per pair in its first two visits.
+  Whole request in A2 idle improved beyond spread in every pair, by 13.3 to
+  19.8 ms, from the two actors' shorter readiness waits during setup; in A2
+  rapid four pairs improved by 17 to 22 ms and one pair was 65 ms slower on
+  the candidate, a single-trial excursion outside both spreads that does not
+  resolve in every pair.
+- Response: release-to-acknowledgement and activation response, candidate
+  upper bound minus baseline lower bound, 0.04 to 1.4 µs across every cell and
+  phase, against the 2 ms bound; all credited.
+- Ordinary whole request: improved in most pairs by 1 to 9 ms; O256 idle had
+  two pairs 13 to 14 ms slower on the candidate against spreads of 12 and
+  24 ms; no cell worsened in every pair.
+- Fewer host wakes: the readiness wait makes one wake on both sides, but the
+  candidate's wake is the byte's arrival rather than a 10 ms timer.
+
+### Decision
+
+Accepted. The frozen improvement criterion holds in all sixty ordinary pairs,
+no resolved regression appears in the actor form or in whole-request latency,
+and every response bound is credited. The candidate is integrated into `main`
+with its tests and documentation; the next baseline for any later candidate
+includes it.
 
 ## Revisions
 
