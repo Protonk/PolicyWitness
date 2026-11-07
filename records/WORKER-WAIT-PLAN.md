@@ -7,8 +7,11 @@ can the worker remain alive, queryable and correctly ordered while spending much
 less CPU between protocol observations? The first production candidate paces
 `wait_for_proceed` and `wait_for_activation`. Qualify the pause first, introduce
 it at release waiting, then extend it to parked activation only after release
-controls pass. Deliver a matched CPU and responsiveness account, or an evidenced
-decision to retain the current implementation.
+controls pass. Release-only pacing is an acceptable outcome if parked pacing
+fails its own qualification or responsiveness checks. A failure in the shared
+pause dependency also disqualifies release pacing wherever that failure applies.
+Deliver a matched CPU and responsiveness account for the final changed waits,
+or an evidenced decision to retain the current implementation.
 
 The lifetime lesson remains: a validator must query the correct live worker,
 in its established sandbox state, before the requested attempts. Continuous
@@ -50,6 +53,12 @@ successful pre-apply reads. Commit `085e23e6` introduced validated continuous
 Mach timing. Neither a source comment nor a successful warm-up qualifies a new
 post-apply dependency.
 
+The recollection that `nanosleep` replaced another problematic sleep/wait
+mechanism remains an unresolved historical lead. Do not equate it with the
+documented clock failure or assume a direct native wait avoids the original
+problem. Review earlier choices before trying the alternative; establish what
+is known about their failure modes and qualify the proposed path independently.
+
 ## Execution
 
 1. **Preserve the comparison and qualify one pause.** Record the baseline source,
@@ -60,10 +69,21 @@ post-apply dependency.
    permits overshoot and signal interruption. Inspect the installed call path
    and first-use behavior, including resource acquisition and failure paths.
    Published [Apple libc source](https://github.com/apple-oss-distributions/Libc/blob/55b54c0a0c37b3b24393b42b90a4c561d6c606b1/gen/nanosleep.c)
-   is a lead, not proof of the installed implementation. If that wrapper adds
-   an unsuitable dependency, evaluate direct `mach_wait_until` as the single
-   alternative, explicitly separating its deadline clock from PW's continuous
-   clock. Do not expand into a survey of wakeup mechanisms.
+   is a lead, not proof of the installed implementation.
+
+   A qualification failure or failure of the CPU/response acceptance criteria
+   can justify one alternative, direct `mach_wait_until`, only when inspection
+   or measurements identify a cause specific to the `nanosleep` path that the
+   alternative could remove. Record that causal hypothesis before the trial.
+   Compare installed paths and their initialization, acquired resources,
+   clock domains, interruption/restart behavior, native failures and behavior
+   across system sleep. Explicitly separate the alternative's deadline clock
+   from PW's continuous clock. A lower-level call is not automatically a safer
+   or faster one. If the paths share the relevant mechanism and the observed
+   problem is scheduling or the chosen cadence, stop rather than switching
+   names. Apply the full qualification and acceptance criteria to any alternative
+   that would ship; keep the experiment to these two candidates at the same
+   requested cadence, without a survey of wakeup mechanisms.
 
    Add a registered opt-in native applicability control beside
    [`native_clock`](../tests/CHANGE-VERIFICATION.md#native-worker-clock-applicability).
@@ -133,19 +153,39 @@ post-apply dependency.
    explicitly; retain the ability to interpret baseline evidence.
 
    Run baseline and candidate with identical observer/checker code, separately
-   reporting active and parked workers. Require a repeatable reduction larger
-   than the declared accounting uncertainty in each changed wait role. A source
-   change alone cannot establish this optimization's benefit. Report all
-   responsiveness samples and their largest observed intervals; investigate a
-   repeatable regression exceeding the requested pause plus measurement
-   uncertainty. That comparison is a diagnostic trigger, not a scheduler bound.
-   Require the existing actor timing qualification's allowance margin as well
-   as successful operations. If CPU improvement or response cost remains
-   ambiguous, retain the result and stop; do not widen allowances, loosen
-   observers or search indefinitely for a favorable cadence.
+   reporting active and parked workers. Fix matching, uncertainty accounting
+   and response probe repetitions before candidate measurements. For this
+   1 ms cadence, acceptance requires both:
 
-5. **Accept the integrated candidate.** Regenerate worker identity, build through
-   the signed pipeline and inspect the exact candidate. Through `tests/run.sh`
+   - At least 90% lower worker CPU per elapsed time in each changed wait role,
+     in each hold class and valid matched repetition, after accounting for
+     measurement uncertainty. Unchanged parked workers in a release-only build
+     have no reduction requirement; retain their measurements separately.
+   - At most 2 ms additional worst-observed response latency in each matched
+     workload and response class from step 3, including cancellation and expiry
+     endings. Compare the candidate maximum's upper observation bound with the
+     baseline maximum's lower bound, so uncertainty cannot conceal a regression.
+     Report every sample and both maxima; do not infer a population tail bound
+     from this finite experiment.
+
+   These are engineering acceptance bars chosen before measurement, not values
+   established by existing observations or changes to runtime limits. Preserve
+   the existing actor timing qualification's allowance margin and all correctness
+   requirements. Review diagnoses breaches; it does not waive a repeatable
+   breach or unresolved uncertainty. Retain failed observations and any justified
+   diagnostic rerun. Do not discard unfavorable valid samples, widen allowances,
+   loosen observers or search for a favorable cadence. If the alternative's
+   causal condition is met, evaluate it under the same bars; otherwise stop the
+   failing stage. A source change alone cannot establish the CPU benefit.
+
+5. **Accept the integrated candidate.** If parked pacing fails independently,
+   remove it and keep release pacing only if its own qualification and acceptance
+   criteria hold. Rebuild, remeasure and verify that exact release-only candidate;
+   passing results from an earlier stage do not accept a different final build.
+   Retain actor and parked-delivery regression coverage even when parked polling
+   is unchanged. A common primitive failure cannot be isolated by merely removing
+   parked pacing. Regenerate worker identity, build through the signed pipeline
+   and inspect the exact candidate. Through `tests/run.sh`
    in fresh managed output, inspect selections with `--list`, then run
    `--suite runner_unit`, `--suite runner_abi_layout`,
    `--suite runner_c_worker_harness` (including its opt-in native controls),
@@ -160,20 +200,24 @@ post-apply dependency.
    endings, not merely final success. Keep failed observations and diagnose
    equipment failures without changing the artifact to conceal them.
 
-6. **Publish the supported result and retire the plan.** Update fw1–fw2 and
-   affected measured rows through [footprint.json](../docs/footprint.json), regenerate
+6. **Publish the supported result and retire the plan.** Update the changed
+   mechanism rows (fw1 for release-only; fw1–fw2 for both waits) and affected
+   measured rows through [footprint.json](../docs/footprint.json), regenerate
    FOOTPRINT and identify the exact provenance behind each measurement group.
    Review the [worker capability inventory](../docs/WORKER.md#detailed-capability-inventory)
    through architecture.json and its generator for the new post-apply dependency.
    Keep budgets in LIMITS and measured demand in FOOTPRINT. Claim lower measured
-   CPU only for the observed waits; exchange polling remains. Actual system
+   CPU only for the observed changed waits; identify any unchanged parked
+   polling and retain its measured cost. Exchange polling remains. Actual system
    sleep/wake remains unverified unless separately arranged and observed.
    Retain current default and complementary evidence through the normal helpers,
    commit implementation, tests and documentation, remove the consumed part of
-   outflow Direction 3 while retaining its exchange question, and retire this
-   plan and any temporary acceptance records. If qualification rejects both
-   candidates, record the reason in the outflow and retire the completed
-   investigation without a production change.
+   outflow Direction 3 while retaining its exchange question and any unresolved
+   parked-wait question with its rejection evidence, and retire this plan and
+   any temporary acceptance records. If no candidate meets qualification and
+   acceptance, record the reason in the outflow and retire the completed
+   investigation without a production change. Retiring a release-only plan does
+   not accept parked pacing or erase what disqualified it.
 
 ## Coordination and stops
 
@@ -188,5 +232,7 @@ sleep; any dedicated sleep/wake experiment needs an arranged window.
 No scheduled approval pause is needed during execution. Stop dependent work for
 unqualified native behavior, changed query eligibility or ordering, ambiguous
 attribution, a new resource/authority requirement, unresolved cleanup, missing
-required observations or an unacceptable CPU/response tradeoff. Preserve the
-baseline and the negative evidence so stopping remains an informative result.
+required observations or failure of the stated CPU/response acceptance bars.
+An independently failing parked stage permits the release-only outcome above.
+Preserve the baseline and the negative evidence so stopping remains an
+informative result.
