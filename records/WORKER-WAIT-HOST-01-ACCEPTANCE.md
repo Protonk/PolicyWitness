@@ -35,13 +35,21 @@ already exists and the call blocks the same thread that slept before.
 - Baseline source: `6b5b2d40` on `main`; production sources unchanged since
   `ce6e35d2`; worker identity `160149e86953317fc6e4a24ce5ed79ab5ccd16311bb01da5a8ad76e5ccebc2cf`.
   Baseline app: the distribution build of that source in the main checkout.
-- Candidate source: branch `wait/host-01` in the worktree
-  `PolicyWitness-wait-host01`; commit, worker identity and build receipt are
-  recorded under Revisions when the candidate is frozen.
-- Readers and fixtures: the pilot's timestamp reader and fixtures at the main
-  checkout's committed versions, used for both sides; their hashes are recorded
-  at freeze. No CPU reader is used: the candidate changes no held-worker
-  mechanism and makes no CPU claim.
+- Candidate source: commit `df85ebef` on branch `wait/host-01` in the
+  worktree `PolicyWitness-wait-host01`, clean; worker identity
+  `a729571df02255983f5bf8e76883a7fb94166f6404cb869780e86997c4e57894`. Candidate
+  app: its distribution build (provenance commit `df85ebef`, dirty false);
+  host `4ef877ea…`, worker `fef3a811…`.
+- Readers and fixtures, main checkout at `451e2124`, used for both sides:
+  pilot reader version 5 `34071eb5…`, driver `9027e742…`, clock-pair reader
+  `6bdf2567…`, host patch set `9645cdcd…`, recorder `6e9885e4…`, worker build
+  `aab37da3…`, stamp worker `5bc7937e…`, page header `a63b0f68…`, clock pair
+  `19d8b521…`. The candidate side's stamped host and worker are built from the
+  candidate tree with this patch set; its optional readiness-wait patch applies
+  on the candidate only (confirmed in the dry run `20261107T213500Z_887fdc65`,
+  where the baseline side skipped it and the candidate side applied it). No
+  CPU reader is used: the candidate changes no held-worker mechanism and makes
+  no CPU claim.
 
 ## Workloads and trials
 
@@ -74,9 +82,26 @@ held-footprint fixture is not applicable: it measures CPU during holds the
 candidate does not change. Regenerated worker identity and limits account
 (`worker_ready_wait` behavior) are part of the candidate.
 
+## Verification results
+
+Candidate worktree, against its signed build, before the comparison:
+
+- `runner_unit` (11 cases, including the four opt-in mutation cases; 559 of
+  559 core unit assertions), `runner_abi_layout/c_swift_layout_agreement` and
+  `source_drift` (9 cases): 21 of 21 pass, runs `host01-unit-01` and
+  `host01-unit-02`.
+- `witness_contract/order_barrier_mutations`, `phases`,
+  `attempt_effects_wait_for_collection`, `actor_compositions`,
+  `extension_boundaries`, the `failure_boundaries` suite and the
+  `runner_c_worker_harness` suite: 70 pass in run `20261107T212100Z_79d318f6`
+  (`host01-mutations-01`); `native_pause` failed as the intentionally failing
+  applicability gate on this equipment, and `exec_control_states` was unrun
+  there because the pytest family was not yet provisioned in the worktree.
+- Default battery: recorded below when complete.
+
 ## Results
 
-Pending.
+Pending the comparison window.
 
 ## Revisions
 
