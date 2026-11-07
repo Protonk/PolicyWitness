@@ -411,12 +411,12 @@ Protective roles the present habit may have:
 
 Ways the present habit may obstruct witnessing:
 
-- At CLI return, fa3 stays unknown: erased-but-mapped custody and withheld shared
-  erasure leave token bytes potentially present in mappings PW no longer
+- After CLI return, erasure is unobserved: erased-but-mapped custody and withheld
+  shared erasure leave token bytes potentially present in mappings PW no longer
   observes. The habit is not the cause; the unresolved reader is. It does mean
-  that no change to disposal timing can improve that row. What is missing is an
-  independent post-reap observation of erasure, which is evidence work rather
-  than footprint work.
+  that no change to disposal timing can supply that observation. What is missing
+  is an independent post-reap observation of erasure, which is evidence work
+  rather than footprint work.
 - Retained allocations after erase hold 16 KiB per token. There is nothing to
   witness in them.
 

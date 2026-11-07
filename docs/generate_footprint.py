@@ -74,7 +74,7 @@ def load_manifest(path, root=ROOT):
         text(row['subject']['backing'], ident, True)
         q = row['quantity']
         fields(q, 'evidence value unit limit behavior', ident)
-        if q['evidence'] not in {'measured','logical','constructed','source'}:
+        if q['evidence'] not in {'measured','logical','source'}:
             raise ValueError(f'{ident}: invalid evidence')
         if q['value'] is not None:
             if type(q['value']) not in (int,float) or q['value'] < 0 or not __import__('math').isfinite(q['value']):

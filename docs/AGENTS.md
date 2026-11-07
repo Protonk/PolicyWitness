@@ -56,8 +56,8 @@ Keep its reading guide outside the generated regions; quantities belong in
 manifest rows or authored `footprint.<row>.<field>` spans. Do not add literal
 size/time prose to the prose baseline.
 Each check's `pins` phrase identifies its assertion scope; receipt validation
-is distinct from a fixed value assertion. Measured, logical, constructed and
-source-supported claims keep their stated units, conditions and intervals.
+is distinct from a fixed value assertion. Measured, logical and source-supported
+claims keep their stated units, conditions and intervals.
 The document's provenance section names the run behind its measured rows;
 to change a measured row, rerun its case, transcribe the new receipt and
 update that section, rather than editing numbers in place.

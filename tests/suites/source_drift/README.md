@@ -294,7 +294,7 @@ compiled-value and behavioral checks establish implementation agreement.
 - **G8. Durations and sizes have a reviewed owner.** The architecture manifest
   states a duration or size only through a limit placeholder; a literal one
   anywhere in the architecture manifest is an error. The footprint manifest
-  owns measured, logical, constructed and source-supported quantities in its
+  owns measured, logical and source-supported quantities in its
   quantity fields; authored size/time prose reaches its document through
   `footprint.` spans or generated tables.
 - **G9. Counts and values reach prose through spans.** A span is owned by one

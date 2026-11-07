@@ -1,13 +1,14 @@
 # Resource footprint
 
-Each row is one of three kinds. A measured row reports an observation under
-its stated conditions. A logical row states a capacity that follows from the
-compiled layout and the admitted plan, not a measurement. A source row
-describes a mechanism and carries no quantity of its own. Conditions and
-intervals belong to each row; no row establishes a universal memory ceiling.
-Add quantities only when their units, backing and overlapping lifetimes
-support the sum; native memory metrics are never added to logical capacity or
-encoded bytes.
+This document records what a run demands, holds and leaves behind, one row
+per resource. Each row is one of three kinds. A measured row reports an
+observation under its stated conditions. A logical row states a capacity that
+follows from the compiled layout and the admitted plan, not a measurement. A
+source row describes a mechanism and carries no quantity of its own; it may
+cite the LIMITS allowance that bounds it. Conditions and intervals belong to
+each row; no row establishes a universal memory ceiling. Add quantities only
+when their units, backing and overlapping lifetimes support the sum; native
+memory metrics are never added to logical capacity or encoded bytes.
 
 ## Provenance of measured rows
 
@@ -21,9 +22,9 @@ index of file hashes beside it, in the finished evidence of the retained run
 [tests/RETAINED.json](../tests/RETAINED.json) lists that retained run. Test
 output is gitignored, so the archive exists only in a checkout that retained
 it. Its artifact inventory records the hashes of the binaries that were
-measured. The app in `dist/` and the later retained run were built after that
-measurement and carry different binary hashes; the later run's own response
-measurement is not what these rows describe.
+measured. The later retained run was built after that measurement and carries
+different binary hashes; its own response measurement is not what these rows
+describe.
 
 The generator and the footprint drift case verify the manifest's structure,
 its citations and the freshness of the rendered copy. Nothing verifies that a
@@ -42,7 +43,7 @@ archived binaries are the ones rebuilt.
 | Controller serialization or capture ownership | Host reply, client stdout and envelope bytes for equality outside dynamic fields; sampled resident and physical footprint maxima for demand | fr9–fr13 | Peaks shorter than the spacing between sample starts; stage attribution; host, worker and observer demand |
 | Worker wait or activation | Per-worker CPU per hold class against the matched busy and sleeping controls | fw10–fw13 | Idle waiting; host demand, which these rows observe through an instrumented host |
 | Evidence region geometry | Logical capacity and layout agreement only | fw4, fw5, fr14 | Residency; no measured row covers host or worker memory |
-| Authority region or custody sizing or disposal | Logical capacities and the accepted custody length | fw6, fw7, fw14, fr14 | Residency; erasure after CLI return, which fa3 leaves unknown |
+| Authority region or custody sizing or disposal | Logical capacities and the accepted custody length | fw6, fw7, fw14, fr14 | Residency; erasure after CLI return, which no measured row observes |
 | Any change | Process presence at the first post-return snapshot | fa7, fa8 | Mapping disposal and reap |
 
 ## Waiting and retained resources
@@ -50,6 +51,17 @@ archived binaries are the ones rebuilt.
 Elapsed waiting does not establish idle CPU. Measured actor rows come from a
 disposable instrumented host with unchanged signed workers; their timing does
 not describe an uninstrumented host.
+
+Waiting CPU rows report cumulative native user-plus-system counters, converted
+from Mach ticks with each sample’s recorded timebase and validated at that scope
+by independent busy-process getrusage observations; the conversion does not
+establish a universal scheduler quantum. CPU accumulates across
+generation-qualified held intervals while independent targets and markers stay
+unchanged, with controls matched within each hold. Recorded machine load is a
+condition, not a claim of quietness. Each receipt also records the observer’s
+native child CPU; the Python driver’s demand was not measured. Actor metadata
+comes from the pre-collection instrumented host, associated with the subsequent
+acknowledged gate.
 
 <!-- BEGIN GENERATED FOOTPRINT WAITING -->
 
@@ -72,17 +84,6 @@ not describe an uninstrumented host.
 
 <!-- END GENERATED FOOTPRINT WAITING -->
 
-Waiting CPU rows report cumulative native user-plus-system counters, converted
-from Mach ticks with each sample’s recorded timebase and validated at that scope
-by independent busy-process getrusage observations; the conversion does not
-establish a universal scheduler quantum. CPU accumulates across
-generation-qualified held intervals while independent targets and markers stay
-unchanged, with controls matched within each hold. Recorded machine load is a
-condition, not a claim of quietness. Each receipt also records the observer’s
-native child CPU; the Python driver’s demand was not measured. Actor metadata
-comes from the pre-collection instrumented host, associated with the subsequent
-acknowledged gate.
-
 ## Response storage and transport
 
 The source rows describe representations in the order they arise: validator
@@ -92,6 +93,14 @@ capture (fr6), decoded host bytes (fr7) and the envelope (fr8).
 
 A retention allowance does not bound collection memory. The measured rows use
 fresh shipped controllers.
+
+The native response rows describe single repetitions. Memory values are maxima
+among successful samples with verified lifetime coverage; resident and physical
+footprint maxima can occur in different samples and are not added. A sampled
+maximum cannot show a peak shorter than the spacing between sample starts, and
+samples cannot locate parser stages. A later failed inspection stays a failed
+inspection, not zero memory. Unit assertions establish representation
+coexistence at their own boundaries, in a separate process.
 
 <!-- BEGIN GENERATED FOOTPRINT RESPONSE -->
 
@@ -114,21 +123,18 @@ fresh shipped controllers.
 
 <!-- END GENERATED FOOTPRINT RESPONSE -->
 
-The native response rows describe single repetitions. Memory values are maxima
-among successful samples with verified lifetime coverage; resident and physical
-footprint maxima can occur in different samples and are not added. A sampled
-maximum cannot show a peak shorter than the spacing between sample starts, and
-samples cannot locate parser stages. A later failed inspection stays a failed
-inspection, not zero memory. Unit assertions establish representation
-coexistence at their own boundaries, in a separate process.
-
 ## State remaining after a run
 
 Source rows here describe what can remain after a run and who owns its ending;
 only a measured row carries a state. At CLI return, `present`,
 `absence confirmed` and `unknown` refer to the stated inventory and boundary,
-and a failed inspection remains unknown. Erasure, native release, unmapping,
-exit and reap are different endings, and CLI return establishes none of them.
+and a failed inspection remains unknown. CLI return establishes no ending. The
+state column refers to the first post-return snapshot, not the mathematical
+instant of CLI exit. Established process exit is distinct from parent reap or
+disappearance of every process record. No measured row observes erasure,
+unmapping, native release or parent reap after CLI return; the measured rows
+observe process presence only. Owned staging cleanup and retained evidence
+belong to the harness; neither rewrites the primary snapshot.
 
 <!-- BEGIN GENERATED FOOTPRINT AFTERMATH -->
 
@@ -145,13 +151,6 @@ exit and reap are different endings, and CLI return establishes none of them.
 
 <!-- END GENERATED FOOTPRINT AFTERMATH -->
 
-The state column refers to the first post-return snapshot, not the
-mathematical instant of CLI exit. Established process exit is distinct from
-parent reap or disappearance of every process record. No measured row observes
-erasure, unmapping, native release or parent reap after CLI return; the
-measured rows observe process presence only. Owned staging cleanup and
-retained evidence belong to the harness; neither rewrites the primary snapshot.
-
 ## Shared backing
 
 A backing identity denotes one object; its mappings are views, not additional
@@ -167,6 +166,9 @@ backing.
 <!-- END GENERATED FOOTPRINT BACKING -->
 
 ## Ending conditions
+
+Rows grouped by the event that ends their interval. Erasure, native release,
+unmapping, exit and reap are different endings; one does not establish another.
 
 <!-- BEGIN GENERATED FOOTPRINT ENDINGS -->
 
