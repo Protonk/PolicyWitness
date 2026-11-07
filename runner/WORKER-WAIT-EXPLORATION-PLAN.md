@@ -10,6 +10,28 @@ The separate [ARM option plan](ARM-WAIT-OPTION-PLAN.md) investigates a new waiti
 mechanism. Neither plan depends on the other succeeding. Keep their candidate
 builds and comparisons separate until each accepted change has its own evidence.
 
+## Order of work
+
+This plan's builds and native trials run before the ARM plan's. Open with the
+baseline pilot described under measurement, then dispose of branch 2 while its
+fixture and decomposition are current, then branch 1, then branch 3. Accepting
+or rejecting a branch remains independent of the others; the order fixes
+sequence, not outcome.
+
+Within branch 3, the scan cursor may proceed as soon as branch 1 is disposed.
+Hint-batch tuning for the release and parked-activation tails waits for the
+ARM plan's qualification result for that wait. A qualified ARM candidate at a
+tail removes hint tuning there from this plan; a failed qualification leaves
+hint tuning as the only remaining tail candidate for it.
+
+The ARM plan's contract research, checker fixtures and pinned-source review run
+in parallel as read-only work. Its disposable-child applicability trials use
+native trial time this plan is not using and never share a build, output
+directory or acceptance record with this plan's candidates. Dispose of
+branches 1 and 2 before the ARM plan freezes its production comparison
+baseline, so that baseline includes every accepted host-side and preparation
+change. Record each of those dispositions in the outflow when it lands.
+
 ## Starting point and boundaries
 
 The first-use qualification recorded in the outflow found `nanosleep` returning
@@ -143,7 +165,8 @@ eligible higher slots. Preserve lowest-index selection among eligible slots
 and at most one acknowledgement per pass. Skipping completed scanning never
 skips host settlement, consumption validation, payload erasure or cleanup.
 
-Keep hint-batch tuning separate. All three loops currently end unsuccessful
+Keep hint-batch tuning separate, and sequence it as fixed under order of
+work. All three loops currently end unsuccessful
 polls with one thousand `cpu_relax` instruction hints. ARM `yield` here is not
 an OS scheduler yield. Try at most one alternative batch per affected wait,
 chosen from the baseline response/work measurements. Fewer scans or hints can
@@ -169,10 +192,12 @@ generation-qualified live hold and response control.
 ## Measurement, selection and acceptance
 
 Start with a bounded baseline pilot to locate held time and quantify observer
-resolution. Then commit an acceptance record associated with this plan, before
-candidate measurements. Identify source/build hashes, workloads, exact trial
-counts and durations, uncertainty calculation, cache bounds, the selected
-branch and its claimed benefit. Use five matched baseline/candidate pairs in
+resolution. Commit the pilot's decomposition of held time into worker polling
+and each host-side interval before any candidate work; the ARM plan selects
+its minimum worthwhile improvement from that record. Then commit an acceptance
+record associated with this plan, before candidate measurements. Identify
+source/build hashes, workloads, exact trial counts and durations, uncertainty
+calculation, cache bounds, the selected branch and its claimed benefit. Use five matched baseline/candidate pairs in
 alternating order for each claimed performance workload. Keep contrary pairs;
 do not extend sampling until a preferred result appears.
 
@@ -185,7 +210,10 @@ scan. Avoid permanent wire telemetry and token-content capture. Its current
 reader also asserts that workers use more CPU than the matched sleeper. Keep
 that baseline characterization separate from candidate acceptance; any new
 reader must retain identity, sensitivity, interval and effect checks without
-requiring the candidate to remain busy.
+requiring the candidate to remain busy. The ARM plan compares with the same
+reader. Record the reader's source identity in every acceptance record, and
+treat a reader change after a frozen baseline as invalidating comparisons made
+against that baseline until it is re-frozen with the new reader.
 
 The acceptance record must separate these quantities:
 
