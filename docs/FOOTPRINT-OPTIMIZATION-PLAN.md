@@ -58,11 +58,12 @@ investigation. Only the first candidate is in this plan.
    Report unchanged/noisy native results honestly. If repeated matched samples
    suggest a material regression, investigate before accepting the change;
    retain negative results rather than expanding scope to obtain a win.
-5. Update fr8 and its diagram to describe the resulting mechanism. Keep measured
-   observations tied to the candidate and conditions. Commit the implementation,
-   tests and documentation together; retain current default and complementary
-   evidence within the normal retention policy, then retire this plan and its
-   temporary acceptance records.
+5. Update fr8 in [footprint.json](footprint.json) and regenerate
+   [FOOTPRINT](FOOTPRINT.md) to describe the resulting mechanism. Keep measured
+   observations and their provenance tied to the candidate and conditions.
+   Commit the implementation, tests and documentation together; retain current
+   default and complementary evidence within the normal retention policy, then
+   retire this plan and its temporary acceptance records.
 
 ## Invariants and stop conditions
 

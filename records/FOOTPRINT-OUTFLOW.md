@@ -242,11 +242,14 @@ Protective roles the present habit may have:
   a microsecond acknowledgement into one or more sleep quanta, bounded by the
   5,000 ms exchange allowance. Transfer timing fields, and any fixture that
   shortens that allowance, observe the difference.
-- The held-phase receipt asserts worker CPU above a matched sleeping control to
-  validate counter units, not to detect optimization. After pacing it may still
-  pass, or it may fail for a reason that is not a defect. Either way its meaning
-  must be restated before it is reused; loosening it to pass would remove the
-  unit calibration it was written for.
+- The held-phase receipt asserts worker CPU above a matched sleeping control,
+  characterizing the current polling behavior. Unit calibration belongs to the
+  independent [observer controls](../tests/suites/witness_contract/footprint_observer_controls.py),
+  which compare normalized CPU counters with the child's `getrusage` accounting
+  and check sensitivity to unconverted ticks when the timebase differs from
+  unity. After pacing, the worker-versus-sleep assertion may still pass or may
+  fail without indicating a defect. Review its meaning before reusing it;
+  preserve the independent unit calibration.
 - "Requested-action quiescence is not CPU idleness" is currently an honest
   statement because nothing idles. A paced worker invites an idle-wait claim
   that would need its own observation under the same unit calibration.
@@ -309,45 +312,51 @@ Not a small first perturbation.
 
 Protective roles the present habit may have:
 
-- The sandboxed worker trusts no runtime geometry. For an admitted request,
-  region and plan cannot disagree. A right-sized region would make the worker
-  read its geometry from the header and bounds-check against it after apply,
-  adding an apparatus failure that can only occur after apply, where the
-  worker's only publication channel is the region it is disputing. That failure
-  would need its own disposition and must never read as a sandbox cause.
-- Pre-touching every page before spawn is what keeps post-apply publication free
-  of first-touch faults into the shared object. Right-sizing keeps that only if
-  the pre-touch still covers the whole smaller region; any lazily grown design
-  reintroduces allocation after apply.
-- Request-independent geometry is what lets independent readers corroborate the
-  worker's mapping from source alone: the ABI layout suite, the response
-  checker's `evidence_region_bytes_per_backing` computed from constants, and the
-  held-phase and aftermath checks that read worker mapping metadata. With
-  variable geometry each run must publish its own geometry and every reader
-  must trust the publication it is checking.
+- Fixed offsets let the worker locate sections after checking the object size
+  and bootstrap identity. Variable geometry would need its own validation and
+  a stable place to report failures. A proposal must identify which checks run
+  before apply and how any later failure can be published without trusting the
+  disputed geometry. A geometry failure must never read as a sandbox cause.
+- The host zeroes the full region through its mapping before spawn. This may
+  move some backing initialization work before apply, but it does not establish
+  fault-free access through the worker's separate mapping. Any claimed
+  protection of post-apply publication needs observations of that mapping over
+  the publication interval. Right-sizing or lazy initialization could change
+  when initialization and faults occur; their effects remain to be measured.
+- Request-independent geometry supplies a source-derived comparison basis for
+  the ABI layout suite, the response checker's
+  `evidence_region_bytes_per_backing`, and the held-phase and aftermath checks
+  that read worker mapping metadata. These checks retain their own observation
+  scopes; the constants alone do not observe a live mapping. With
+  variable geometry, readers need an independent basis for comparison, such as
+  geometry derived from the admitted plan and independently observed mapping
+  lengths. Repeating a reported size is not corroboration of that size.
 - The evidence header and diagnostic buffer are where failure evidence lands
   for any plan, including a plan with no slots. Right-sizing must keep them
   whole and at a position the worker can find without the plan.
-- Layout changes change the worker identity. Evidence from before and after the
-  change is no longer directly comparable, and every pinned fixture and golden
-  moves at once. That is a cost to the record, not just to the build.
+- Layout changes require worker identity regeneration and review of affected
+  fixtures and goldens. Before/after comparisons must account for changed
+  geometry and binary identity rather than treating offsets as unchanged.
 
 Ways the present habit may obstruct witnessing:
 
-- Logical capacity is not residency, but the host touches every page, so the
-  host's resident set grows by the full region per worker whether or not the
-  plan uses it: about 29 MB of touched shared pages for eight actors, counted
-  once. That is the entire measurable cost, and the gain from right-sizing is
-  bounded by it. No way in which the fixed region makes an effect harder to
-  witness was identified; its mapping size is, if anything, easier to
-  corroborate because it is constant.
+- The host initializes the full logical region per worker whether or not the
+  plan uses it. Initialization work and physical memory demand are possible
+  costs, but the footprint measurements establish neither host residency nor
+  publication faults. The logical capacity is not a measured resident-set
+  increase or a bound on every possible gain. Compare initialization work,
+  host and worker memory, and faults over identified intervals before claiming
+  a benefit or an obstruction to witnessing. Shared backing must still be
+  counted once.
 
 ### Before crediting a result
 
 Worker identity regeneration, the ABI layout suite and layout golden review,
 the C worker lifecycle tests, the worker harness, the response and held-phase
 footprint cases with their readers updated to the published geometry, and the
-default battery.
+default battery. A claimed pre-touching benefit also needs independent
+observations of faults through the worker's mapping during publication;
+claimed physical-memory savings need host and worker memory observations.
 
 ## Direction 5: authority region and custody sizing or disposal
 
@@ -357,15 +366,17 @@ Rows: fw6–fw7.
 
 [`ActorAuthorityRegion`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift)
 sizes each actor's shared object from the admitted plan: 1,152 bytes plus
-16,448 per inbound or outbound slot, so the region is already proportional, and
-a slotless actor's 1,152 bytes occupy one 16 KiB page. The worker validates the
+16,448 per inbound or outbound slot, so the region is already proportional; a
+slotless actor requests 1,152 logical bytes. Page-rounded object and mapping
+lengths remain separate from residency. The worker validates the
 observed object size between the zero-slot minimum and the page-rounded maximum
 and maps the observed size. [`TokenCustody`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift)
 maps one anonymous 16 KiB buffer per admitted token during setup; `erase`
 clears the whole buffer at the token's last declared use and keeps the mapping;
-`finish` erases again and unmaps. `tearDown(quiescent:)` erases a shared
-region only when the host has established that its actor terminated; otherwise
-it records `withheld_not_quiescent` and only detaches the host mapping. The
+`finish` erases again and unmaps. At final actor cleanup, the scheduler permits
+`tearDown(quiescent:)` to erase a shared region when its owner was reaped or
+never launched; otherwise it records `withheld_not_quiescent` and only detaches
+the host mapping. The
 authority tests pin that a non-quiescent region keeps its bytes and that a
 second `finish` cannot turn unknown into permission to erase.
 
@@ -385,13 +396,16 @@ repeated consume.
 
 Protective roles the present habit may have:
 
-- Withheld erasure is what keeps a consume result attributable. If the host
-  cleared shared bytes while a worker could still read them, a failed consume
-  could be the sandbox's refusal or the apparatus's erasure, and PW could not
-  say which. "Earlier safe disposal" can only mean disposal after reap is
-  established, which is the present gate; there is no earlier point that
-  preserves attribution. The same reasoning is why a failed delivery is settled
-  by a flag, not by writing under a reader.
+- Withholding shared erasure while a worker could still read prevents one
+  possible source of apparatus-induced interference with a consume. It does
+  not by itself establish the cause of a failed consume. For final host erasure
+  of a launched actor's shared region, the present protocol uses established
+  reap as its quiescence gate; a never-launched owner is also eligible. A
+  different protocol could use an independently established end to in-flight
+  and future reads. That would need its own evidence and failure handling
+  before earlier erasure could be credited. Private custody's last-use boundary
+  is separate from shared-region quiescence. Failed delivery currently settles
+  a flag rather than overwriting bytes a recipient may still read.
 - Allocating every custody buffer during setup moves apparatus allocation
   failure before the first activation, where it is reported as a setup
   disposition. Allocating at acceptance would put a possible host allocation
@@ -402,29 +416,33 @@ Protective roles the present habit may have:
   what the host believes it holds, and the evidence that the erasure covered the
   bytes is then the same bookkeeping.
 - The worker's size validation and the response checker's padding corroboration
-  both encode the present geometry. Any region below one page cannot change
-  physical residency, so a tighter logical size for a slotless actor changes
-  the checks without changing the footprint.
+  both encode the present geometry. Reducing a logical size while leaving
+  page-rounded object and mapping lengths unchanged does not by itself
+  establish lower residency. Observe those lengths and physical memory before
+  crediting a saving for a slotless actor.
 - The setup observation carries one region row per actor. Dropping regions for
   slotless actors is a reply shape change under the evidence contract, for
   1,152 logical bytes per actor.
 
 Ways the present habit may obstruct witnessing:
 
-- After CLI return, erasure is unobserved: erased-but-mapped custody and withheld
-  shared erasure leave token bytes potentially present in mappings PW no longer
-  observes. The habit is not the cause; the unresolved reader is. It does mean
-  that no change to disposal timing can supply that observation. What is missing
-  is an independent post-reap observation of erasure, which is evidence work
-  rather than footprint work.
-- Retained allocations after erase hold 16 KiB per token. There is nothing to
-  witness in them.
+- The current aftermath measurements observe process presence after CLI return,
+  not erasure or disposal of private and shared token storage. Changing disposal
+  timing alone would not establish byte erasure. A claim about that ending
+  needs an independent observation tied to the owner and the protocol's
+  established quiescence boundary, which need not be reap in a different design.
+- Source-established erasure leaves private custody allocated until `finish`.
+  Earlier disposal could reduce its lifetime; distinguish logical capacity
+  released, observed mapping disposal and any measured physical-memory change.
 
 ### Before crediting a result
 
 The actor authority tests including the quiescent and non-quiescent teardown
 cases, the worker harness terminal-erasure case, the actor composition and
-response footprint cases, and the aftermath footprint case.
+response footprint cases, and the aftermath footprint case. An earlier shared
+erasure gate needs independent evidence that no in-flight or future reads
+survive it, including interrupted and failed paths. Claims of erasure or
+mapping disposal need their own observations, separate from process exit.
 
 ## Assertion owners
 
