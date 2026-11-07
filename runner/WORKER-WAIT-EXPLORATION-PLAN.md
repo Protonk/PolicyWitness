@@ -26,37 +26,39 @@ tail for ARM deployment and benefit evaluation; it does not establish adoption.
 An accepted ARM change supersedes hint tuning at that tail. ARM closure without
 adoption, including failed qualification or insufficient benefit, leaves hint
 tuning as the remaining tail candidate. Pending observations are not failures;
-the pending-work decision below governs whether hint tuning can proceed earlier.
+the deferral rule below permits hint tuning to proceed earlier when recorded
+by the coordinator.
 
 Read-only ARM contract research, checker design and pinned-source review can
 run in parallel. Its disposable-child applicability trials use native trial
 time this plan is not using; their builds and executions remain serialized
 with this plan's. They never share a build, output directory or acceptance
-record with this plan's candidates. Dispose of
-branches 1 and 2 before the ARM plan freezes its production comparison
-baseline, so that baseline includes every accepted host-side and preparation
-change. Record each of those dispositions in the outflow when it lands.
+record with this plan's candidates. Dispose of branches 1 and 2 before the ARM
+plan freezes its production comparison baseline, subject to the blocked-branch
+exclusion below. Include every accepted host-side and preparation change and
+record each disposition or exclusion in the outflow.
 
 Freeze comparisons against identified accepted source, excluding other candidate
 changes. Any later accepted scan, hint or host change that affects a frozen
 comparison requires a new baseline and candidate comparison on the same source
 foundation; do not combine results from before and after that change.
 
-### Coordination decisions awaiting the user
+### Deferred work and baseline exclusions
 
-- If ARM qualification is pending on an external observation or user
-  availability, may the coordinator explicitly defer that wait's ARM work and
-  open hint tuning? Recommendation: permit recorded deferral, preserving the
-  pending ARM status and requiring a new baseline if ARM later resumes after
-  an accepted hint change. Until decided, reserve the affected tail; elapsed
-  time alone does not release it. Independent work may continue.
-- If branch 1 is blocked on a tradeoff decision, may ARM freeze on accepted
-  production source with that candidate excluded? Recommendation: permit this,
-  recording the exclusion and requiring a new comparison if branch 1 later
-  lands. Until decided, keep the existing host-branch disposition prerequisite;
-  ARM research and disposable-child qualification may continue. Excluding a
-  candidate never permits bypassing a correctness or ownership blocker in the
-  accepted source or measurement apparatus.
+- When ARM qualification is pending on an external observation or user
+  availability, the coordinator may explicitly defer that wait's ARM work and
+  open hint tuning. Record the deferral, its reason and the outstanding
+  observation in the outflow and affected acceptance records. Preserve ARM's
+  pending status; elapsed time is not qualification failure. If ARM resumes
+  after an accepted hint change, freeze a new baseline incorporating that
+  change and repeat the affected comparisons.
+- When branch 1 is blocked solely on a tradeoff decision, the coordinator may
+  freeze ARM's baseline on accepted production source with that candidate
+  excluded. Record the exclusion in the outflow and ARM acceptance record,
+  leaving branch 1 blocked. If it later lands, freeze a new baseline and repeat
+  the affected comparisons. This exception does not bypass branch 2's
+  disposition or a correctness or ownership blocker in accepted source or the
+  measurement apparatus, and does not close branch 1 for plan retirement.
 
 ## Starting point and boundaries
 

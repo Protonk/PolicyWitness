@@ -26,19 +26,26 @@ execution rule and with separate builds, output directories and acceptance
 records. Do not interpret priority as waiting for the other plan to retire.
 
 Branches 1 and 2 must be accepted or rejected, with dispositions recorded in
-the outflow, before this plan freezes a production comparison baseline. Include
-their accepted changes and exclude unaccepted candidates. The worker plan's
-[coordination decisions](WORKER-WAIT-EXPLORATION-PLAN.md#coordination-decisions-awaiting-the-user)
-identify the pending exception for a blocked preparation branch; until resolved,
-retain this prerequisite while continuing independent qualification work.
+the outflow, before this plan freezes a production comparison baseline, with
+one exception: if branch 1 is blocked solely on a tradeoff decision, the
+coordinator may freeze on accepted production source with that candidate
+excluded. Record the exclusion in the outflow and ARM acceptance record and
+leave branch 1 blocked. Include all accepted changes; if branch 1 later lands,
+freeze a new baseline and repeat affected comparisons. The worker plan's
+[deferral and exclusion rules](WORKER-WAIT-EXPLORATION-PLAN.md#deferred-work-and-baseline-exclusions)
+preserve branch 2's disposition requirement and correctness/ownership gates.
 
 Successful native qualification reserves the corresponding release or activation
 tail for this plan's deployment and benefit evaluation. Accepted ARM adoption
 supersedes hint tuning there; closing that ARM path without adoption returns
 the tail to the worker exploration. Pending qualification does neither by
-itself. The same coordination decisions govern any explicit deferral to allow
-hint tuning while an ARM observation remains pending. Track the two wait roles
-separately; release success cannot dispose of the parked-activation question.
+itself. When qualification awaits an external observation or user availability,
+the coordinator may record an explicit deferral for that wait and open hint
+tuning. Retain ARM's pending status and outstanding observation in the outflow
+and affected acceptance records. Resuming after an accepted hint change needs
+a new baseline incorporating it and repeated affected comparisons. Track the
+two wait roles separately; release success cannot resolve the question for
+parked activation.
 
 Use the shared `records/WORKER-WAIT-PILOT.md` decomposition to choose the benefit
 metric and minimum worthwhile improvement. This pilot is measured in an arranged
