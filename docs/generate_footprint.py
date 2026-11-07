@@ -16,7 +16,7 @@ MANIFEST_NAME = 'docs/footprint.json'
 GENERATOR_NAME = 'docs/generate_footprint.py'
 SPAN_DOCUMENTS = ('docs/FOOTPRINT.md',)
 INPUTS = (GENERATOR_NAME, MANIFEST_NAME, 'docs/generator_common.py', 'docs/generate_limits.py',
-          'docs/limits.json', 'docs/architecture.json', 'tests/catalog.json', *SPAN_DOCUMENTS)
+          'docs/limits.json', 'tests/catalog.json', *SPAN_DOCUMENTS)
 CASES = {'waiting': 'Waiting and retained resources', 'response': 'Response storage and transport',
          'aftermath': 'State remaining after a run'}
 
@@ -56,11 +56,9 @@ def load_manifest(path, root=ROOT):
     limits = {r['id'] for r in generate_limits.load_limits(root / 'docs/limits.json', root)}
     if not isinstance(data['rows'], list) or not data['rows']:
         raise ValueError('rows must be nonempty')
-    architecture = json.loads((root / 'docs/architecture.json').read_text(), object_pairs_hook=unique_object)
-    nodes = {(g['id'], n['id']): n for g in architecture['graphs'] if g['id'].startswith('footprint_') for n in g['nodes']}
-    used, ids = set(), set()
+    ids = set()
     for row in data['rows']:
-        fields(row, 'id case title subject quantity conditions interval aftermath sources checks figure', 'row')
+        fields(row, 'id case title subject quantity conditions interval aftermath sources checks', 'row')
         ident = row['id']
         if not isinstance(ident, str) or not re.fullmatch('f[wra][1-9][0-9]*', ident) or ident in ids:
             raise ValueError('invalid/duplicate row id')
@@ -117,15 +115,6 @@ def load_manifest(path, root=ROOT):
         for value in strings({k:v for k,v in row.items() if k != 'quantity'}):
             if DURATION_SIZE_RE.search(value):
                 raise ValueError(f'{ident}: literal quantity outside quantity')
-        f = row['figure']
-        if f is not None:
-            fields(f, 'graph node', ident)
-            key = (f['graph'], f['node'])
-            if key not in nodes or key in used or f['node'] != ident:
-                raise ValueError(f'{ident}: invalid/duplicate figure correspondence')
-            used.add(key)
-    if used != set(nodes):
-        raise ValueError('footprint figure nodes must correspond to rows in both directions')
     return data
 
 

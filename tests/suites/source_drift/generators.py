@@ -918,7 +918,7 @@ class GeneratorContractTests(receipts.TestCase):
                              'docs/markdown_reader.py', 'docs/architecture.json', 'docs/limits.json', 'docs/ARCHITECTURE.md',
                              'docs/WORKER.md', 'tests/catalog.json', 'tests/suites/source_drift/check.py'],
             'footprint': ['docs/generate_footprint.py', 'docs/generator_common.py', 'docs/generate_limits.py',
-                          'docs/footprint.json', 'docs/limits.json', 'docs/architecture.json', 'docs/FOOTPRINT.md',
+                          'docs/footprint.json', 'docs/limits.json', 'docs/FOOTPRINT.md',
                           'docs/markdown_reader.py', 'tests/catalog.json'],
             'build': ['docs/generate_build.py', 'docs/generate_architecture.py', 'docs/generate_limits.py', 'docs/generator_common.py',
                       'docs/markdown_reader.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',

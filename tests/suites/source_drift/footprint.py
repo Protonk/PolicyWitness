@@ -35,7 +35,7 @@ class FootprintDocumentationTests(receipts.TestCase):
         result = self.command(ROOT, '--check')
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_strict_manifest_and_correspondence(self):
+    def test_strict_manifest(self):
         self.load(self.manifest)
         mutations = [
             lambda d: d.update(schema_version=True),
@@ -48,8 +48,6 @@ class FootprintDocumentationTests(receipts.TestCase):
             lambda d: d['rows'][0]['checks'][0].update(kind='unknown'),
             lambda d: d['rows'][0]['checks'][0].update(pins=''),
             lambda d: d['rows'][0]['checks'][0].update(symbol='missing_footprint_assertion'),
-            lambda d: d['rows'][0].update(figure=None),
-            lambda d: d['rows'][0]['figure'].update(node='missing'),
             lambda d: d['rows'][0]['sources'][0].update(path='../outside'),
             lambda d: d['rows'][0].update(conditions='7 bytes'),
         ]
@@ -72,13 +70,6 @@ class FootprintDocumentationTests(receipts.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('stale footprint', result.stderr)
             self.assertEqual(fixture_inputs.snapshot(root), before)
-
-    def test_undepicted_row_preserves_existing_figure_correspondence(self):
-        data = copy.deepcopy(self.manifest)
-        row = copy.deepcopy(data['rows'][0])
-        row.update(id='fw999', figure=None)
-        data['rows'].append(row)
-        self.load(data)
 
     def test_regions_spans_and_authored_text(self):
         data = self.load(self.manifest)

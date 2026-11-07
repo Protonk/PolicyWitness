@@ -43,11 +43,7 @@
           "form": "test",
           "pins": "Selected effects remain absent across delayed release and occur afterward; no CPU measurement."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw1"
-      }
+      ]
     },
     {
       "id": "fw2",
@@ -86,11 +82,7 @@
           "form": "test",
           "pins": "Setup is published with no early action/arrival; named activation then permits the visit."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw2"
-      }
+      ]
     },
     {
       "id": "fw3",
@@ -137,11 +129,7 @@
           "form": "test",
           "pins": "Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw3"
-      }
+      ]
     },
     {
       "id": "fw4",
@@ -191,11 +179,7 @@
           "form": "test",
           "pins": "Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw4"
-      }
+      ]
     },
     {
       "id": "fw5",
@@ -238,11 +222,7 @@
           "form": "test",
           "pins": "Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw5"
-      }
+      ]
     },
     {
       "id": "fw6",
@@ -292,11 +272,7 @@
           "form": "test",
           "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw6"
-      }
+      ]
     },
     {
       "id": "fw7",
@@ -312,7 +288,7 @@
         "value": 16384,
         "unit": "bytes",
         "limit": null,
-        "behavior": "One fixed private buffer per admitted token. Last-use erasure resets payload state but retains its allocation."
+        "behavior": "One fixed private buffer per admitted token; delivery copies it into the recipient actor's inbound slot. Last-use erasure resets payload state but retains its allocation."
       },
       "conditions": "Authority-bearing actor plan; accepted lengths are separate from capacity.",
       "interval": {
@@ -339,11 +315,7 @@
           "form": "test",
           "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw7"
-      }
+      ]
     },
     {
       "id": "fw8",
@@ -386,11 +358,7 @@
           "form": "test",
           "pins": "Terminal/last-use erasure controls distinguish authority publications from process storage."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw8"
-      }
+      ]
     },
     {
       "id": "fw9",
@@ -433,11 +401,7 @@
           "form": "test",
           "pins": "Object identity, descriptor reuse and mapping teardown component controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_waiting",
-        "node": "fw9"
-      }
+      ]
     },
     {
       "id": "fr1",
@@ -487,11 +451,7 @@
           "form": "test",
           "pins": "Oversized producer reports full received count and receiver loss, not malformed JSON."
         }
-      ],
-      "figure": {
-        "graph": "footprint_response",
-        "node": "fr1"
-      }
+      ]
     },
     {
       "id": "fr2",
@@ -541,11 +501,7 @@
           "form": "test",
           "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_response",
-        "node": "fr2"
-      }
+      ]
     },
     {
       "id": "fr3",
@@ -584,11 +540,7 @@
           "form": "test",
           "pins": "Validator evidence controls assert accepted records and malformed/oversized framing refusal."
         }
-      ],
-      "figure": {
-        "graph": "footprint_response",
-        "node": "fr3"
-      }
+      ]
     },
     {
       "id": "fr4",
@@ -638,11 +590,7 @@
           "form": "test",
           "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_response",
-        "node": "fr4"
-      }
+      ]
     },
     {
       "id": "fr5",
@@ -685,11 +633,7 @@
           "form": "test",
           "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_response",
-        "node": "fr5"
-      }
+      ]
     },
     {
       "id": "fr6",
@@ -739,11 +683,7 @@
           "form": "test",
           "pins": "Retained source bytes are counted before lossy conversion."
         }
-      ],
-      "figure": {
-        "graph": "footprint_response",
-        "node": "fr6"
-      }
+      ]
     },
     {
       "id": "fr7",
@@ -786,11 +726,7 @@
           "form": "test",
           "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
         }
-      ],
-      "figure": {
-        "graph": "footprint_response",
-        "node": "fr7"
-      }
+      ]
     },
     {
       "id": "fr8",
@@ -833,11 +769,7 @@
           "form": "test",
           "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
         }
-      ],
-      "figure": {
-        "graph": "footprint_response",
-        "node": "fr8"
-      }
+      ]
     },
     {
       "id": "fa1",
@@ -879,11 +811,7 @@
           "form": "test",
           "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_aftermath",
-        "node": "fa1"
-      }
+      ]
     },
     {
       "id": "fa2",
@@ -929,11 +857,7 @@
           "form": "test",
           "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_aftermath",
-        "node": "fa2"
-      }
+      ]
     },
     {
       "id": "fa3",
@@ -983,11 +907,7 @@
           "form": "test",
           "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
         }
-      ],
-      "figure": {
-        "graph": "footprint_aftermath",
-        "node": "fa3"
-      }
+      ]
     },
     {
       "id": "fa4",
@@ -1029,11 +949,7 @@
           "form": "test",
           "pins": "Registry digest/reported registry and plist-directory inventory remain unchanged in this scoped control."
         }
-      ],
-      "figure": {
-        "graph": "footprint_aftermath",
-        "node": "fa4"
-      }
+      ]
     },
     {
       "id": "fa5",
@@ -1075,11 +991,7 @@
           "form": "test",
           "pins": "Same-generation descendant answers after CLI return; later fixture release is separate."
         }
-      ],
-      "figure": {
-        "graph": "footprint_aftermath",
-        "node": "fa5"
-      }
+      ]
     },
     {
       "id": "fa6",
@@ -1125,11 +1037,7 @@
           "form": "test",
           "pins": "Survivor observation precedes owned cleanup; failures retain cleanup ownership."
         }
-      ],
-      "figure": {
-        "graph": "footprint_aftermath",
-        "node": "fa6"
-      }
+      ]
     },
     {
       "id": "fr9",
@@ -1168,8 +1076,7 @@
           "form": "test",
           "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fr10",
@@ -1208,8 +1115,7 @@
           "form": "test",
           "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fr11",
@@ -1248,8 +1154,7 @@
           "form": "test",
           "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fr12",
@@ -1288,8 +1193,7 @@
           "form": "test",
           "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fr13",
@@ -1328,8 +1232,7 @@
           "form": "test",
           "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fr14",
@@ -1368,8 +1271,7 @@
           "form": "test",
           "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fa7",
@@ -1411,8 +1313,7 @@
           "form": "test",
           "pins": "Requires held-state/generation binding, exact inventory and primary-before-intervention order; process exits do not prove mapping disposal or reap."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fa8",
@@ -1454,8 +1355,7 @@
           "form": "test",
           "pins": "Requires held-state/generation binding, exact inventory and primary-before-intervention order; process exits do not prove mapping disposal or reap."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fw10",
@@ -1494,8 +1394,7 @@
           "form": "test",
           "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fw11",
@@ -1534,8 +1433,7 @@
           "form": "test",
           "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fw12",
@@ -1574,8 +1472,7 @@
           "form": "test",
           "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fw13",
@@ -1614,8 +1511,7 @@
           "form": "test",
           "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
         }
-      ],
-      "figure": null
+      ]
     },
     {
       "id": "fw14",
@@ -1654,8 +1550,7 @@
           "form": "test",
           "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
         }
-      ],
-      "figure": null
+      ]
     }
   ]
 }

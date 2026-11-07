@@ -183,7 +183,7 @@
         },
         {
           "id": "footprint_documentation",
-          "description": "Footprint rows, qualified quantities, table regions and diagram correspondence agree; malformed and stale inputs are rejected"
+          "description": "Footprint rows, qualified quantities and table regions agree; malformed and stale inputs are rejected"
         }
       ]
     },

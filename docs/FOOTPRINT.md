@@ -16,9 +16,8 @@ machine-dependent threshold. Source citations identify mechanisms, not measured
 consumption. At CLI return, `present`, `absence confirmed` and `unknown` refer
 to the stated inventory and boundary. Failed inspection remains unknown.
 
-Depicted rows correspond exactly to figure nodes; measured observation rows
-may omit a figure. Native memory metrics remain separate and are not added to
-logical backing capacity or encoded bytes. The response observations use fresh
+Native memory metrics remain separate and are not added to logical backing
+capacity or encoded bytes. The response observations use fresh
 shipped controllers. Actor lifecycle observations use a disposable instrumented
 host with unchanged signed workers; their timing does not describe an
 uninstrumented host.
@@ -61,10 +60,6 @@ archived binaries are the ones rebuilt.
 
 ## Waiting and retained resources
 
-![Waiting ownership](footprint-waiting.svg)
-
-[Figure IDs and citations](ARCHITECTURE.md#waiting-ownership).
-
 <!-- BEGIN GENERATED FOOTPRINT WAITING -->
 
 | ID | Resource / owner | Quantity / mechanism | Conditions | Interval | At CLI return |
@@ -75,7 +70,7 @@ archived binaries are the ones rebuilt.
 | fw4 | Evidence backing / host view — host | logical: 3,675,920 bytes One fixed evidence backing per worker, initialized before spawn; host and worker mappings are views of the same object. | Each ordinary worker or actor, independent of requested action count. | mapping preparation → host session teardown | — |
 | fw5 | Evidence worker view — worker | source: Aliases the evidence backing; do not add its logical capacity to the host view as a second backing object. | Each launched worker. | worker maps launch descriptor → worker process exit | — |
 | fw6 | Authority regions — host / actor workers | source: Per actor: 1152 + (inbound slots + outbound slots) × 16448 requested logical bytes, including actors with no slots. The worker maps the observed object size, which can include page padding; it remains a view of the same backing. Bearer bytes are outside the encoded reply. | Authority-bearing actor plan; one distinct backing per actor, host/worker views. | authority setup before launch → host detachment and worker exit, independently | — |
-| fw7 | Private token custody — host | logical: 16,384 bytes One fixed private buffer per admitted token. Last-use erasure resets payload state but retains its allocation. | Authority-bearing actor plan; accepted lengths are separate from capacity. | custody preparation → custody finish | — |
+| fw7 | Private token custody — host | logical: 16,384 bytes One fixed private buffer per admitted token; delivery copies it into the recipient actor's inbound slot. Last-use erasure resets payload state but retains its allocation. | Authority-bearing actor plan; accepted lengths are separate from capacity. | custody preparation → custody finish | — |
 | fw8 | Candidate handles / fixed table — actor worker | logical: 512 bytes Fixed handle table storage remains after native release. Candidate count and native result do not measure private kernel storage. | Each worker; successful consumes populate named candidates. | worker static storage → worker exit | — |
 | fw9 | Launch-only descriptors — host | source: Evidence/authority launch descriptors close after spawn; policy/ready pipes have their own close boundaries. Mapping references survive descriptor close. | Prepared host resources; actual setup failures retain their own cleanup outcomes. | host setup → spawn or setup failure closes each descriptor | — |
 | fw10 | ordinary held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,107,987,125–1,128,846,875 ns; worker:0 CPU 1,101,612,917–1,123,613,417 ns. Hold class 3: conservative elapsed 3,115,067,458–3,144,625,083 ns; worker:0 CPU 3,108,671,500–3,143,494,666 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
@@ -99,10 +94,6 @@ acknowledged gate.
 
 ## Response storage and transport
 
-![Response collection](footprint-response.svg)
-
-[Figure IDs and citations](ARCHITECTURE.md#response-collection).
-
 <!-- BEGIN GENERATED FOOTPRINT RESPONSE -->
 
 | ID | Resource / owner | Quantity / mechanism | Conditions | Interval | At CLI return |
@@ -124,6 +115,11 @@ acknowledged gate.
 
 <!-- END GENERATED FOOTPRINT RESPONSE -->
 
+The source rows describe representations in the order they arise: validator
+records (fr3), host collection copies (fr2), the encoded reply (fr4), client
+capture and stdout (fr5), the controller’s raw streams (fr1), generic and typed
+capture (fr6), decoded host bytes (fr7) and the envelope (fr8).
+
 The native response rows describe single repetitions. Memory values are maxima
 among successful samples with verified lifetime coverage; resident and physical
 footprint maxima can occur in different samples and are not added. A sampled
@@ -133,10 +129,6 @@ inspection, not zero memory. Unit assertions establish representation
 coexistence at their own boundaries, in a separate process.
 
 ## State remaining after a run
-
-![Host retirement](footprint-aftermath.svg)
-
-[Figure IDs and citations](ARCHITECTURE.md#host-retirement).
 
 <!-- BEGIN GENERATED FOOTPRINT AFTERMATH -->
 

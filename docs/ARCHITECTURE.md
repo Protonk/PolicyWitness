@@ -5,7 +5,7 @@ Read it after the README's [The Experiment](../README.md#the-experiment) section
 and before the directory READMEs. Each section links to the relevant field
 reference, contract, module list, test map or build guide.
 
-The <!-- span architecture.documents.architecture.graphs -->7<!-- /span --> figures are generated from [architecture.json](architecture.json)
+The <!-- span architecture.documents.architecture.graphs -->4<!-- /span --> figures are generated from [architecture.json](architecture.json)
 by [generate_architecture.py](generate_architecture.py). Every node and edge in
 a figure has an id, and the table beside the figure names, for that id, the
 source symbol that implements it and the test or rule the manifest names. The
@@ -590,7 +590,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 *Figure: the document graph. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-documents.dot](architecture-documents.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>The document graph: 53 nodes and 76 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>The document graph: 53 nodes and 75 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### The document graph nodes
 
@@ -645,10 +645,10 @@ which copies a rule keeps equal, and where the build runs the checks.
 | worker_md | docs/WORKER.md | document |  | resource inventory, capability figure and tables |  | [`SPAN_DOCUMENTS`](../docs/generate_architecture.py) | [`test_routing_and_second_document_refusals`](../tests/suites/source_drift/architecture.py) |  |
 | markdown_reader | markdown_reader.py | library | the only import of the vendored markdown-it-py 3.0.0 and mdurl 0.1.2, and the Markdown structure the generators and checks read: blocks, headings and anchors, sections, links, inline code, list items and table cells |  |  | [`PARSER`](../docs/markdown_reader.py); [`__version__ = "3.0.0"`](../tests/lib/vendor/markdown_it/__init__.py) | [`markdown_reader`](../tests/suites/source_drift/run.sh); [`test_vendored_files_are_the_wheels_bytes`](../tests/suites/source_drift/markdown.py); [`test_only_the_reader_imports_the_parser`](../tests/suites/source_drift/markdown.py) |  |
 | extensions_md | docs/EXTENSIONS.md | document |  | the shared sandbox-extension coverage the guide copies |  | [`BEGIN SHARED EXTENSION COVERAGE`](../docs/EXTENSIONS.md) | [`test_extension_coverage_is_copied_from_its_document_demoted_and_standalone`](../tests/suites/source_drift/limits.py) |  |
-| footprint_json | docs/footprint.json | manifest | resource claims, quantities, conditions, ownership and ending boundaries |  |  | [`MANIFEST_NAME`](../docs/generate_footprint.py) | [`test_strict_manifest_and_correspondence`](../tests/suites/source_drift/footprint.py) |  |
+| footprint_json | docs/footprint.json | manifest | resource claims, quantities, conditions, ownership and ending boundaries |  |  | [`MANIFEST_NAME`](../docs/generate_footprint.py) | [`test_strict_manifest`](../tests/suites/source_drift/footprint.py) |  |
 | gen_footprint | generate_footprint.py | generator | footprint tables, coverage and scalar spans |  |  | [`render_document`](../docs/generate_footprint.py) | [`test_regions_spans_and_authored_text`](../tests/suites/source_drift/footprint.py) |  |
 | footprint_md | docs/FOOTPRINT.md | document |  | waiting demand, response storage and state remaining after runs |  | [`BEGIN GENERATED FOOTPRINT WAITING`](../docs/FOOTPRINT.md) | [`test_current_document`](../tests/suites/source_drift/footprint.py) |  |
-| drift_footprint | source_drift footprint.py | check |  |  | qualified quantities, exact row/figure correspondence and generated copies | [`FootprintDocumentationTests`](../tests/suites/source_drift/footprint.py) | [`test_stale_refusal_and_no_check_writes`](../tests/suites/source_drift/footprint.py) |  |
+| drift_footprint | source_drift footprint.py | check |  |  | qualified quantities and generated copies | [`FootprintDocumentationTests`](../tests/suites/source_drift/footprint.py) | [`test_stale_refusal_and_no_check_writes`](../tests/suites/source_drift/footprint.py) |  |
 
 #### The document graph edges
 
@@ -725,8 +725,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D71 | markdown_reader | drift_check | reads | sections, tables, lists, links and guidance routes | [`import markdown_reader`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D72 | markdown_reader | drift_generators | reads | G9 prose lines, citation pairs and G11 links | [`import markdown_reader`](../tests/suites/source_drift/generators.py) | [`test_prose_links_resolve_anchors_and_symbol_links`](../tests/suites/source_drift/generators.py); [`test_prose_baseline_is_consistent_and_growth_is_explicit`](../tests/suites/source_drift/generators.py) |  |
 | D63 | extensions_md | gen_limits | reads | shared extension coverage | [`COVERAGE_SHARED_START`](../docs/generate_limits.py) | [`test_extension_coverage_copy_rejects_staleness_dependencies_and_missing_regions_without_writes`](../tests/suites/source_drift/limits.py) |  |
-| D73 | footprint_json | gen_footprint | reads | qualified resource rows | [`load_manifest`](../docs/generate_footprint.py) | [`test_strict_manifest_and_correspondence`](../tests/suites/source_drift/footprint.py) |  |
-| D74 | architecture_json | gen_footprint | reads | exact row / figure association | [`load_manifest`](../docs/generate_footprint.py) | [`test_strict_manifest_and_correspondence`](../tests/suites/source_drift/footprint.py) |  |
+| D73 | footprint_json | gen_footprint | reads | qualified resource rows | [`load_manifest`](../docs/generate_footprint.py) | [`test_strict_manifest`](../tests/suites/source_drift/footprint.py) |  |
 | D75 | gen_footprint | footprint_md | writes | tables, coverage and spans | [`render_document`](../docs/generate_footprint.py) | [`test_regions_spans_and_authored_text`](../tests/suites/source_drift/footprint.py) |  |
 | D76 | drift_footprint | gen_footprint | checks | stale and malformed controls | [`load_manifest`](../docs/generate_footprint.py) | [`test_stale_refusal_and_no_check_writes`](../tests/suites/source_drift/footprint.py) |  |
 | D77 | build | gen_footprint | checks | --check before compilation | [`generate_footprint.py`](../build.sh) | [`test_build_checks_every_generator_before_signing`](../tests/suites/source_drift/generators.py) |  |
@@ -865,154 +864,6 @@ Every node and edge above cites at least one test or rule.
 
 </details>
 <!-- END GENERATED ARCHITECTURE GRAPH byoxpc -->
-
-## Waiting ownership
-
-<!-- BEGIN GENERATED ARCHITECTURE GRAPH footprint_waiting -->
-![Waiting ownership](footprint-waiting.svg)
-
-*Figure: waiting ownership. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [footprint-waiting.dot](footprint-waiting.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
-
-<details>
-<summary>Waiting ownership: 9 nodes and 7 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
-
-#### Waiting ownership nodes
-
-| Id | Node | Kind | Owner | Interval | Ending | Sources | Checks | Limits |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| fw1 | Active worker: polls release Ends: release / expiry / cancellation | reporting | active worker | phase arrival → release accepted, expiry sampled or cancellation observed | release, expiry or cancellation | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`cpu_relax`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`proceed_delayed_observed_quiescence`](../tests/suites/runner_c_worker_harness/run.sh) |  |
-| fw2 | Parked actor: polls activation Ends: activation / expiry / exit request | reporting | parked worker | setup or previous visit completion → named activation, cutoff or exit request | activation, expiry or cancellation | [`wait_for_activation`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`activation_named_ordinal`](../tests/suites/runner_c_worker_harness/run.sh) |  |
-| fw3 | Host collections / validator Ends: collection / validator exit | reporting | host / validator | worker readiness or arrival → collection ends; validator ends independently | collection completion and validator exit | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`walkSchedule`](../runner/Sources/PWRunnerCore/ActorScheduler.swift); [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) |  |
-| fw4 | Host evidence view Unmap attempted at host teardown | reporting | host | mapping preparation → host session teardown | host view unmapping attempted | [`PWShmLayout`](../runner/Sources/PWRunnerCore/CWorker.swift); [`tearDown`](../runner/Sources/PWRunnerCore/ActorSession.swift) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) |  |
-| fw5 | Worker evidence view Same backing; ends: worker exit | reporting | worker | worker maps launch descriptor → worker process exit | worker exit ends its references | [`mmap`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`init`](../runner/Sources/PWRunnerCore/ActorSession.swift) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) |  |
-| fw6 | Actor authority views Erase / unmap / exit separately | authority | host / actor workers | authority setup before launch → host detachment and worker exit, independently | shared erase eligibility, host unmap and worker exit are separate | [`PWAuthorityLayout`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`ActorAuthorityRegion`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`runActorAuthorityTests`](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift) |  |
-| fw7 | Host private custody Erase retains allocation; finish disposes | authority | host | custody preparation → custody finish | final erase and private buffer disposal | [`TokenCustody`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`erase`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift) | [`runActorAuthorityTests`](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift) |  |
-| fw8 | Worker candidates / fixed table Native release differs from table disposal | authority | actor worker | worker static storage → worker exit | native release and table disposal are separate | [`handle_table`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`attempt_extension_release_actor`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`terminal_erasure`](../tests/suites/runner_c_worker_harness/run.sh) |  |
-| fw9 | Host launch descriptors Close after spawn; mappings survive | reporting | host | host setup → spawn or setup failure closes each descriptor | descriptor close, not mapping disposal | [`init`](../runner/Sources/PWRunnerCore/ActorSession.swift); [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`check`](../tests/suites/runner_unit/launch_descriptor_controls.py) |  |
-
-#### Waiting ownership edges
-
-| Id | From | To | Kind | Edge | Sources | Checks | Limits |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| F101 | fw3 | fw1 | writes | release after collection | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`walkSchedule`](../runner/Sources/PWRunnerCore/ActorScheduler.swift); [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`cpu_relax`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) |  |
-| F102 | fw3 | fw2 | writes | named activation | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`walkSchedule`](../runner/Sources/PWRunnerCore/ActorScheduler.swift); [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`wait_for_activation`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) |  |
-| F103 | fw4 | fw5 | channel | views of same backing | [`PWShmLayout`](../runner/Sources/PWRunnerCore/CWorker.swift); [`tearDown`](../runner/Sources/PWRunnerCore/ActorSession.swift); [`mmap`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`init`](../runner/Sources/PWRunnerCore/ActorSession.swift) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) |  |
-| F104 | fw9 | fw4 | prepares | close does not unmap | [`init`](../runner/Sources/PWRunnerCore/ActorSession.swift); [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PWShmLayout`](../runner/Sources/PWRunnerCore/CWorker.swift); [`tearDown`](../runner/Sources/PWRunnerCore/ActorSession.swift) | [`check`](../tests/suites/runner_unit/launch_descriptor_controls.py) |  |
-| F105 | fw7 | fw6 | copies | custody to delivery | [`TokenCustody`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`erase`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`PWAuthorityLayout`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`ActorAuthorityRegion`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift) | [`runActorAuthorityTests`](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift) |  |
-| F106 | fw6 | fw8 | supplies_authority | consume candidate | [`PWAuthorityLayout`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`ActorAuthorityRegion`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`handle_table`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`attempt_extension_release_actor`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`runActorAuthorityTests`](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift) |  |
-| F107 | fw2 | fw6 | reads | parked inbound service | [`wait_for_activation`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`PWAuthorityLayout`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`ActorAuthorityRegion`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift) | [`activation_named_ordinal`](../tests/suites/runner_c_worker_harness/run.sh) |  |
-
-Notes:
-
-- `fw1`: Continuously samples release/cancellation and expiry, with batches of yield hints. Requested-action quiescence is not CPU idleness.
-- `fw2`: Polls its activation word and can service inbound authority while parked.
-- `fw3`: Host polls/sleeps while collecting; an eligible phase launches a separate validator. Their demand is separate from worker polling.
-- `fw4`: One fixed evidence backing per worker, initialized before spawn; host and worker mappings are views of the same object.
-- `fw5`: Aliases the evidence backing; do not add its logical capacity to the host view as a second backing object.
-- `fw6`: Per actor: 1152 + (inbound slots + outbound slots) × 16448 logical bytes, including actors with no slots. Bearer bytes are outside the encoded reply.
-- `fw7`: One fixed private buffer per admitted token. Last-use erasure resets payload state but retains its allocation.
-- `fw8`: Fixed handle table storage remains after native release. Candidate count and native result do not measure private kernel storage.
-- `fw9`: Evidence/authority launch descriptors close after spawn; policy/ready pipes have their own close boundaries. Mapping references survive descriptor close.
-
-Every node and edge above cites at least one test or rule.
-
-</details>
-<!-- END GENERATED ARCHITECTURE GRAPH footprint_waiting -->
-
-## Response collection
-
-<!-- BEGIN GENERATED ARCHITECTURE GRAPH footprint_response -->
-![Response collection](footprint-response.svg)
-
-*Figure: response collection. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [footprint-response.dot](footprint-response.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
-
-<details>
-<summary>Response collection: 8 nodes and 7 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
-
-#### Response collection nodes
-
-| Id | Node | Kind | Owner | Interval | Ending | Sources | Checks | Limits |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| fr1 | Controller: complete raw stdout/stderr Drops before final rendering | reporting | controller | child pipes opened → run_client_stdin returns | raw Output drops on caller return | [`run_with_stdin`](../controller/src/utils.rs); [`run_client_stdin`](../controller/src/runner_client.rs) | [`response_footprint_success_boundaries`](../controller/src/runner_client.rs); [`valid_oversized_producer_is_receiver_loss_not_malformed_json`](../controller/src/runner_client.rs) |  |
-| fr2 | Host: collected publication copies Mappings detach before encoding | reporting | host | output collection → last reply-model use; source mappings end earlier | source mappings detach before later encoding | [`collectOutput`](../runner/Sources/PWRunnerCore/ActorSession.swift); [`finish`](../runner/Sources/PWRunnerCore/ActorScheduler.swift) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift); [`runActorAuthorityTests`](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift) |  |
-| fr3 | Host: validator raw / parsed records Raw scope ends; records retained | reporting | host | validator output drain → raw Data last use; decoded records retained separately | validator receive scope ends | [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`runValidatorEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift) |  |
-| fr4 | Host model → encoded Data → XPC Framework copy count unknown | reporting | host / client | reply assembly → callback and representation last use | host/client representation disposal is not externally observed | [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`PWRunnerReplyCapture`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift) | [`runReplyMaximumTests`](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift); [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) |  |
-| fr5 | Client: host Data → base64 capture Capture → encoded stdout → exit | reporting | client | reply capture → client emit and exit | client representation lifetime ends with exit | [`PWRunnerReplyCapture`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift); [`emit`](../runner/Clients/PWRunnerClient/main.swift) | [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) |  |
-| fr6 | Controller: generic + typed capture Typed scope ends before rendering | reporting | controller | capture parsing → typed capture scope ends; generic capture survives into assembly | typed capture disposal before final rendering | [`capture_json_output`](../controller/src/utils.rs); [`parse_runner_client_output`](../controller/src/runner_client.rs) | [`response_footprint_success_boundaries`](../controller/src/runner_client.rs); [`multibyte_cut_counts_bytes_before_lossy_conversion`](../controller/src/runner_client.rs) |  |
-| fr7 | Controller: decoded bytes + host Value Decoded bytes drop; host Value survives | reporting | controller | base64 decoding → decoded vector scope ends; parsed reply retained | decoded bytes drop before envelope rendering | [`validate_capture`](../controller/src/runner_client.rs); [`decode_base64`](../controller/src/runner_client.rs) | [`response_footprint_success_boundaries`](../controller/src/runner_client.rs) |  |
-| fr8 | Controller: envelope + pretty String Last use / CLI exit | reporting | controller | envelope construction → print returns and CLI exits | Value/String disposal after last use | [`sort_value`](../controller/src/json_contract.rs); [`render_envelope`](../controller/src/json_contract.rs) | [`response_footprint_success_boundaries`](../controller/src/runner_client.rs) |  |
-
-#### Response collection edges
-
-| Id | From | To | Kind | Edge | Sources | Checks | Limits |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| F201 | fr3 | fr2 | copies | decoded query records | [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`collectOutput`](../runner/Sources/PWRunnerCore/ActorSession.swift); [`finish`](../runner/Sources/PWRunnerCore/ActorScheduler.swift) | [`runValidatorEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift) |  |
-| F202 | fr2 | fr4 | copies | after session teardown | [`collectOutput`](../runner/Sources/PWRunnerCore/ActorSession.swift); [`finish`](../runner/Sources/PWRunnerCore/ActorScheduler.swift); [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`PWRunnerReplyCapture`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift); [`runActorAuthorityTests`](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift) |  |
-| F203 | fr4 | fr5 | channel | encoded host bytes | [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`PWRunnerReplyCapture`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift); [`PWRunnerReplyCapture`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift); [`emit`](../runner/Clients/PWRunnerClient/main.swift) | [`runReplyMaximumTests`](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift); [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) |  |
-| F204 | fr5 | fr1 | channel | client stdout | [`PWRunnerReplyCapture`](../runner/Sources/PWRunnerCore/PWRunnerTransport.swift); [`emit`](../runner/Clients/PWRunnerClient/main.swift); [`run_with_stdin`](../controller/src/utils.rs); [`run_client_stdin`](../controller/src/runner_client.rs) | [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) |  |
-| F205 | fr1 | fr6 | copies | parse; raw still borrowed | [`run_with_stdin`](../controller/src/utils.rs); [`run_client_stdin`](../controller/src/runner_client.rs); [`capture_json_output`](../controller/src/utils.rs); [`parse_runner_client_output`](../controller/src/runner_client.rs) | [`response_footprint_success_boundaries`](../controller/src/runner_client.rs); [`valid_oversized_producer_is_receiver_loss_not_malformed_json`](../controller/src/runner_client.rs) |  |
-| F206 | fr6 | fr7 | copies | base64 decode / host parse | [`capture_json_output`](../controller/src/utils.rs); [`parse_runner_client_output`](../controller/src/runner_client.rs); [`validate_capture`](../controller/src/runner_client.rs); [`decode_base64`](../controller/src/runner_client.rs) | [`response_footprint_success_boundaries`](../controller/src/runner_client.rs); [`multibyte_cut_counts_bytes_before_lossy_conversion`](../controller/src/runner_client.rs) |  |
-| F207 | fr7 | fr8 | copies | raw / typed / decoded dropped | [`validate_capture`](../controller/src/runner_client.rs); [`decode_base64`](../controller/src/runner_client.rs); [`sort_value`](../controller/src/json_contract.rs); [`render_envelope`](../controller/src/json_contract.rs) | [`response_footprint_success_boundaries`](../controller/src/runner_client.rs) |  |
-
-Notes:
-
-- `fr1`: Collects complete stdout/stderr before making retained prefixes. Raw Output remains borrowed through capture and host parsing, then drops before final rendering.
-- `fr2`: Copies published slots/profile/phase values while source mappings still exist; session teardown precedes later reply assembly. Actor reply metadata survives authority teardown.
-- `fr3`: Raw bounded validator output and decoded records coexist during decoding; returned records/counts outlive the temporary raw Data.
-- `fr4`: Reply model overlaps encoded host Data; XPC and Foundation physical copy/backing behavior is unestablished. The synthesized maximum bounds encoded reply size, not live memory.
-- `fr5`: Incoming host Data, retained prefix and base64 text overlap during capture. Capture and encoded capture bytes coexist during emit; stdout adds a newline. Prefix backing identity is unestablished.
-- `fr6`: Retained text is made before parsing. Generic capture JSON survives a clone into typed Capture; generic and typed base64 coexist during validation. Lossy text length need not equal retained source-byte count.
-- `fr7`: Strict base64 decode allocates host bytes. Raw client Output, generic capture, typed base64 and decoded bytes coexist; parsed host Value is added before decoded bytes leave scope.
-- `fr8`: Borrowed input and envelope coexist. Recursive sorting clones subtrees; pretty serialization adds a String while the Value remains live. Sort temporaries are not claimed to survive the sort.
-
-Every node and edge above cites at least one test or rule.
-
-</details>
-<!-- END GENERATED ARCHITECTURE GRAPH footprint_response -->
-
-## Host retirement
-
-<!-- BEGIN GENERATED ARCHITECTURE GRAPH footprint_aftermath -->
-![Host retirement](footprint-aftermath.svg)
-
-*Figure: host retirement. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [footprint-aftermath.dot](footprint-aftermath.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
-
-<details>
-<summary>Host retirement: 6 nodes and 4 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
-
-#### Host retirement nodes
-
-| Id | Node | Kind | Owner | Interval | Ending | Sources | Checks | Limits |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| fa1 | Host: asynchronous retirement Reply precedes scheduled exit | reporting | host | reply sent → host exit | host process exit | [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) |  |
-| fa2 | Submitted host / worker work Client timeout does not cancel it | reporting | host / workers | irreversible submission → resource-specific completion or failure | each identified process exits independently | [`deadline`](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift); [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) |  |
-| fa3 | Authority / custody owners Erase ≠ detach ≠ release ≠ exit | authority | host / actor workers | actor cleanup → each owner-specific ending | shared erasure, host unmap, private disposal and worker exit | [`tearDown`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`finish`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`finish`](../runner/Sources/PWRunnerCore/ActorScheduler.swift) | [`runActorAuthorityTests`](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift) |  |
-| fa4 | Pre-existing registry / plists Baseline comparison only | reporting | registry / launchd files | before invocation → post-run inventory comparison | baseline comparison; no run-owned removal implied | [`inventory`](../tests/suites/run_effects/check_installs_nothing.py) | [`main`](../tests/suites/run_effects/check_installs_nothing.py) |  |
-| fa5 | Requested effects / descendants Own endings; leader exit insufficient | reporting | specimen | requested operation → effect-specific removal or descendant exit | independent descendant exit or owned effect removal | [`observe_survivor`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) | [`main`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) |  |
-| fa6 | Output / observer resources Explicit caller / harness cleanup | reporting | caller / harness | caller/harness preparation → recorded owned cleanup | explicit output/observer cleanup | [`close`](../tests/lib/run_capture.py); [`cleanup`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) | [`main`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) |  |
-
-#### Host retirement edges
-
-| Id | From | To | Kind | Edge | Sources | Checks | Limits |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| F301 | fa2 | fa1 | joins | reply before retirement | [`deadline`](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift); [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) |  |
-| F302 | fa2 | fa3 | joins | owner-qualified endings | [`deadline`](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift); [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`tearDown`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`finish`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`finish`](../runner/Sources/PWRunnerCore/ActorScheduler.swift) | [`runReservationAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift) |  |
-| F303 | fa4 | fa2 | observes | baseline, not run residue | [`inventory`](../tests/suites/run_effects/check_installs_nothing.py); [`deadline`](../runner/Clients/PWRunnerClient/PWRunnerClientSession.swift); [`replyAndExit`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`main`](../tests/suites/run_effects/check_installs_nothing.py) |  |
-| F304 | fa5 | fa6 | observes | observe before cleanup | [`observe_survivor`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py); [`close`](../tests/lib/run_capture.py); [`cleanup`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) | [`main`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) |  |
-
-Notes:
-
-- `fa1`: Schedules retirement after replying. A live host at CLI return may still be in this interval; its generation needs an independent end observation.
-- `fa2`: A post-invocation client deadline ends the client wait without cancelling submitted work. Gate release, signalling and fixture cleanup are later interventions.
-- `fa3`: Shared erasure requires a reaped or never-launched owner; unresolved workers withhold erasure while host detachment proceeds. Private custody is erased/disposed separately. Native release does neither.
-- `fa4`: Plain run inventory compares registry state and directory names. Pre-existing installed services are baseline, not run-created apparatus. Name equality does not establish every object identity.
-- `fa5`: Requested file effects and surviving exec descendants remain separate from apparatus residue. Leader exit or stream EOF does not establish descendant exit.
-- `fa6`: Envelope files, gates, meters, staging and exit watchers have caller/harness ownership. Their removal cannot substitute for the pre-intervention product snapshot.
-
-Every node and edge above cites at least one test or rule.
-
-</details>
-<!-- END GENERATED ARCHITECTURE GRAPH footprint_aftermath -->
 
 ## Known gaps
 

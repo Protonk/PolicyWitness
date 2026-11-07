@@ -238,11 +238,8 @@ stale-copy, marker and build-refusal controls.
 
 The footprint manifest, [docs/footprint.json](../../../docs/footprint.json),
 is rendered by [docs/generate_footprint.py](../../../docs/generate_footprint.py).
-Its three principal tables, backing groups, endings and coverage share stable
-row IDs with the footprint graphs in the architecture manifest. Validation
-requires exact bidirectional depicted-row/node correspondence; measured rows
-may have a null figure. It also checks closed field sets,
-quantity evidence and units, explicit aftermath states and defined citations.
+Validation checks closed field sets, quantity evidence and units, explicit
+aftermath states and defined citations.
 Check citations distinguish assertions, receipt validation and compiled values;
 `pins` records their reviewed scope. The `footprint_documentation` case checks
 freshness, stale-copy refusal without writes, invalid manifests, region markers
