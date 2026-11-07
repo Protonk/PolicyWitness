@@ -638,6 +638,25 @@ static inline void cpu_relax(void);
 #ifndef PW_ATTEMPT_PUBLISHED
 #define PW_ATTEMPT_PUBLISHED(slot) ((void)0)
 #endif
+/* Compile-time seams for the inbound-scan and exchange measurement fixtures;
+ * the shipped worker compiles them away and no request can enable them.
+ * PW_INBOUND_SCAN_LOAD is the scan's acquire load itself, so a counting
+ * fixture counts exactly the loads the production scan performs. */
+#ifndef PW_INBOUND_SCAN_PASS
+#define PW_INBOUND_SCAN_PASS() ((void)0)
+#endif
+#ifndef PW_INBOUND_SCAN_VISIT
+#define PW_INBOUND_SCAN_VISIT(index) ((void)0)
+#endif
+#ifndef PW_INBOUND_SCAN_LOAD
+#define PW_INBOUND_SCAN_LOAD(word) atomic_load_explicit((word), memory_order_acquire)
+#endif
+#ifndef PW_INBOUND_ACKNOWLEDGED
+#define PW_INBOUND_ACKNOWLEDGED(index, problem) ((void)0)
+#endif
+#ifndef PW_EXCHANGE_ANSWERED
+#define PW_EXCHANGE_ANSWERED(slot_index, value) ((void)0)
+#endif
 #ifndef PW_ISSUE_OBSERVE
 #define PW_ISSUE_OBSERVE(stage, nonnull) ((void)0)
 #endif
@@ -744,17 +763,20 @@ decision:
  * delivery. Acceptance is framing only: nothing is consumed and no byte
  * leaves the slot. Parked and waiting actors call this between polls. */
 static void service_inbound_once(void) {
+    PW_INBOUND_SCAN_PASS();
     if (!authority) return;
     for (uint32_t i = 0; i < authority->inbound_count; i++) {
         pw_authority_slot_t *slot = pw_authority_inbound(authority, i);
-        if (atomic_load_explicit(&slot->committed, memory_order_acquire) != 1u) continue;
-        if (atomic_load_explicit(&slot->acknowledged, memory_order_acquire) != PW_AUTHORITY_ACK_NONE) continue;
+        PW_INBOUND_SCAN_VISIT(i);
+        if (PW_INBOUND_SCAN_LOAD(&slot->committed) != 1u) continue;
+        if (PW_INBOUND_SCAN_LOAD(&slot->acknowledged) != PW_AUTHORITY_ACK_NONE) continue;
         PW_INBOUND_OBSERVE(slot);
         uint32_t problem = pw_authority_slot_problem(slot, PW_AUTHORITY_FAMILY_FILE,
             inbound_assignment[i].writer, inbound_assignment[i].operation, inbound_assignment[i].resource);
         slot->reject_detail = problem;
         atomic_store_explicit(&slot->acknowledged,
                               problem ? PW_AUTHORITY_ACK_REJECTED : PW_AUTHORITY_ACK_ACCEPTED, memory_order_release);
+        PW_INBOUND_ACKNOWLEDGED(i, problem);
         return;
     }
 }
@@ -772,7 +794,7 @@ static uint32_t wait_exchange(_Atomic uint32_t *word, pw_timing_t *timing, uint3
     }
     for (;;) {
         uint32_t value = atomic_load_explicit(word, memory_order_acquire);
-        if (value) return value;
+        if (value) { PW_EXCHANGE_ANSWERED(slot_index, value); return value; }
         if (pw_clock_sample(&timing->clock, PW_CLOCK_EXCHANGE_OBSERVE, slot_index, PW_CLOCK_NO_SCOPE, &now)) {
             *status = PW_CUSTODY_CLOCK_FAULT; return 0;
         }
@@ -1076,6 +1098,27 @@ static inline void cpu_relax(void) {
 #ifndef PW_PROCEED_CANCEL_LOADED
 #define PW_PROCEED_CANCEL_LOADED(phase) ((void)0)
 #endif
+/* Seams for the wait measurement fixture, likewise compiled away. The
+ * *_LOADED seams receive the pass's already validated sample, so a fixture
+ * adds no clock read between a decision and its acknowledgement store. */
+#ifndef PW_PROCEED_ARRIVED
+#define PW_PROCEED_ARRIVED(phase) ((void)0)
+#endif
+#ifndef PW_PROCEED_ORDINAL_LOADED
+#define PW_PROCEED_ORDINAL_LOADED(phase, ordinal, now) ((void)0)
+#endif
+#ifndef PW_PROCEED_ACKNOWLEDGED
+#define PW_PROCEED_ACKNOWLEDGED(phase, ordinal) ((void)0)
+#endif
+#ifndef PW_ACTIVATION_LOADED
+#define PW_ACTIVATION_LOADED(visit, ordinal, now) ((void)0)
+#endif
+#ifndef PW_ACTIVATION_STORED
+#define PW_ACTIVATION_STORED(visit, ordinal) ((void)0)
+#endif
+#ifndef PW_APPLIED_PUBLISHED
+#define PW_APPLIED_PUBLISHED(hdr) ((void)0)
+#endif
 
 static _Noreturn void proceed_refused(pw_shm_header_t *hdr, pw_shm_evidence_t *e, uint32_t op, uint32_t phase_index,
                                       uint32_t reason, const char *diagnostic) {
@@ -1121,9 +1164,11 @@ static void wait_for_activation(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
         uint32_t cancelled = atomic_load_explicit(&hdr->exit_requested, memory_order_acquire);
         if (cancelled != 0u) { erase_accepted_token(); _exit(0); }
         uint32_t ordinal = atomic_load_explicit(&hdr->activation, memory_order_acquire);
+        PW_ACTIVATION_LOADED(visit, ordinal, now);
         if (ordinal == expected) {
             timing->plan_deadline = extended;
             atomic_store_explicit(&hdr->activation_observed, ordinal, memory_order_release);
+            PW_ACTIVATION_STORED(visit, ordinal);
             pw_progress(e, PW_OP_ACTIVATE, PW_PROGRESS_RETURNED, phase->first_slot);
             return;
         }
@@ -1149,6 +1194,7 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
     pw_shm_phase_t *phase = &hdr->phases[phase_index];
     pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_STARTED, phase->first_slot);
     atomic_store_explicit(&phase->arrived, 1u, memory_order_release);
+    PW_PROCEED_ARRIVED(phase_index);
     if (timing->clock.fault.reason) {
         /* An earlier exec rejected a sample: refuse without another read. */
         char text[PW_SHM_ERROR_MAX];
@@ -1182,6 +1228,7 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
                             "proceed wait: exec plan deadline cannot exclude this wait (reason in detail)");
         PW_PROCEED_DECIDED(phase_index);
         uint32_t ordinal = atomic_load_explicit(&hdr->proceed, memory_order_acquire);
+        PW_PROCEED_ORDINAL_LOADED(phase_index, ordinal, now);
         if (ordinal > phase_index + 1u) {
             pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PHASE_RELEASE, PW_NATIVE_NONE,
                        0, 0, 0, phase_index, ordinal);
@@ -1195,6 +1242,7 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
             timing->plan_deadline = extended;
             atomic_store_explicit(&phase->acknowledged, 1u, memory_order_release);
             atomic_store_explicit(&hdr->proceed_observed, ordinal, memory_order_release);
+            PW_PROCEED_ACKNOWLEDGED(phase_index, ordinal);
             pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_RETURNED, phase->first_slot);
             return;
         }
@@ -1593,6 +1641,7 @@ int main(int argc, char **argv) {
     }
     atomic_store_explicit(&hdr->applied, 1u, memory_order_release);
     atomic_store_explicit(&hdr->actor_setup, PW_ACTOR_SETUP_APPLIED, memory_order_release);
+    PW_APPLIED_PUBLISHED(hdr);
 
 visits:
     for (uint32_t phase_index = 0; phase_index < hdr->phase_count; phase_index++) {
