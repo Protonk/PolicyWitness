@@ -214,6 +214,30 @@ No `mach_wait_until` use was found in runner/controller history. The recollectio
 of a preceding problematic wait remains unresolved and is not equated with the
 separately evidenced CLOCK_MONOTONIC failure.
 
+### Dispositions from the worker wait exploration
+
+The [worker wait pilot](WORKER-WAIT-PILOT.md) decomposed held phases on the
+production path with continuous-clock stamps in disposable instrumented hosts
+and seam-built workers. In every ordinary trial the worker applied, arrived and
+spun while the host slept in its 10 ms readiness poll, which lasted 12.5 ms, so
+the first arrival was observed 5.6 to 8.1 ms late; worker response to release
+and activation was below the 1.3 µs instrument floor throughout; the validator
+exit grace never slept in 72 eligible phases and EOF to reap took 2 to 15 µs,
+which closes the cleanup-delay question negatively.
+
+HOST-01 (accepted, `fc089ef7`): the readiness wait became a bounded wait for
+pipe readability under the same allowance. In sixty matched pairs the arrival
+to observation interval and the held total fell beyond the instrument
+uncertainty in every pair of every ordinary cell and regime, by 0.4 to 8.1 ms
+per pair with medians of 2.9 to 5.3 ms; no resolved actor-form or
+whole-request regression; every response bound credited. The remaining first
+arrival delay is the 2 ms sentinel poll during the worker's application.
+
+Not nominated, carried here: the 2 ms detection of the worker's terminal
+publication (outside the held interval); decoding cost at `-Onone`, 17 µs per
+verdict frame; the roughly 25 percent overshoot of every requested host sleep
+on this equipment (a measured condition, not a tunable).
+
 ### Remaining questions
 
 Release and parked pacing remain unaccepted on this equipment. Reopening either
