@@ -81,6 +81,29 @@ int main(void) {
             }
             return total == strlen(prefix) + 200000 ? 24 : 95;
         }
+        if (strchr(mode, '\n') && !strncmp(mode, "ready_", 6)) {
+            /* ready_after_<ms> or ready_never, then input longer than the pipe
+             * buffer: delivery ends, and the host's readiness wait starts,
+             * only while this process is reading. After EOF, ready_after_
+             * spins on CLOCK_MONOTONIC for <ms> and writes the ready byte;
+             * ready_never keeps fd 4 open without writing. */
+            char bytes[4096];
+            while ((n = read(0, bytes, sizeof(bytes))) != 0) {
+                if (n < 0 && errno != EINTR) return 93;
+            }
+            alarm(5);
+            if (!strncmp(mode, "ready_after_", 12)) {
+                long ms = strtol(mode + 12, NULL, 10);
+                if (ms < 1 || ms > 100) return 95;
+                uint64_t until = clock_gettime_nsec_np(CLOCK_MONOTONIC) + (uint64_t)ms * 1000000u;
+                while (clock_gettime_nsec_np(CLOCK_MONOTONIC) < until) {}
+                if (write(4, "R", 1) != 1) return 97;
+            } else if (strncmp(mode, "ready_never\n", 12)) {
+                return 95;
+            }
+            while (!atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) usleep(1000);
+            return 0;
+        }
         if (used == sizeof(mode) - 1) return 94;
     }
     if (!strncmp(mode, "reap_ack_", 9)) {

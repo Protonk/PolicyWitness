@@ -77,10 +77,12 @@ runActorEquipmentTests(tk)
 runActorAccountTests(tk)
 runActorReplyTests(tk)
 // Production host driver against the separately built ABI fixture with
-// controlled kill/waitpid faults; host lifecycle observations only. The fixture
-// never applies a sandbox, so no policy cause can be claimed here.
+// controlled kill/waitpid faults and delayed or absent ready bytes; host
+// lifecycle observations only. The fixture never applies a sandbox, so no
+// policy cause can be claimed here.
 runCWorkerLifecycleTests(tk)
-// Host waits are elapsed monotonic allowances under a controlled clock and sleep.
+// Host waits are elapsed monotonic allowances under a controlled clock, sleep
+// and readability wait.
 runCWorkerClockTests(tk)
 // Production C main with isolated native-call substitutions: worker progress and
 // failure publication, missing step evidence, policy-write partial results,

@@ -5,7 +5,7 @@ import Foundation
 // Real driver, separately built ABI producer, and narrowly controlled OS calls.
 // The fixture never applies a sandbox. These tests establish host observations,
 // not policy causes. Required equipment must fail clearly instead of SKIP+pass.
-private func lifecycleFixture(_ mode: String,
+private func lifecycleFixture(_ mode: String, readyMs: Int = 1_000,
                               calls: ChildProcessCalls = ChildProcessCalls()) throws -> CWorkerOutput {
     guard let path = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"],
           FileManager.default.isExecutableFile(atPath: path) else {
@@ -14,7 +14,7 @@ private func lifecycleFixture(_ mode: String,
     let result = runCWorker(CWorkerInput(
         workerExecutablePath: path, policy: mode,
         slots: [CWorkerSlotInput(stepId: "lifecycle", attemptKind: .fileOpenRead, target: "/fixture")],
-        sentinelTimeoutMs: 100, exitGraceMs: 50
+        readyByteTimeoutMs: readyMs, sentinelTimeoutMs: 100, exitGraceMs: 50
     ), processCalls: calls)
     guard case .success(let out) = result else {
         throw TestFailure(message: "fixture driver failed: \(result)")
@@ -201,7 +201,66 @@ func runCWorkerReapedAcknowledgementControls(_ tk: TestKit) {
     }
 }
 
+/// Records the bound and measured duration of each production readability wait.
+private final class ReadinessWaits {
+    private(set) var bounds: [UInt64] = []
+    private(set) var durations: [UInt64] = []
+    var calls: ChildProcessCalls {
+        var calls = ChildProcessCalls()
+        calls.waitReadable = { [unowned self] fd, ns in
+            let start = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+            waitReadableNs(fd, ns)
+            self.durations.append(clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - start)
+            self.bounds.append(ns)
+        }
+        return calls
+    }
+}
+
+/// The fixture's input exceeds the pipe buffer, so policy delivery, and with it
+/// the start of the readiness wait, completes only while the fixture is
+/// reading; its ready-byte delay starts at its EOF.
+private func runReadinessWaitControls(_ tk: TestKit) {
+    let padding = String(repeating: "x", count: 200_000)
+    tk.run("a ready byte written 3 ms after delivery is received within a 6 ms tolerance, before the 10 ms poll period ends") {
+        // Delay plus tolerance stays below one 10 ms poll period, which a wait
+        // that slept through the period could not record.
+        let delayMs: UInt64 = 3, toleranceMs: UInt64 = 6
+        let waits = ReadinessWaits()
+        let out = try lifecycleFixture("ready_after_\(delayMs)\n" + padding, calls: waits.calls)
+        guard let ready = out.readyWait, let elapsed = ready.elapsed_ms else {
+            throw TestFailure(message: "missing ready_wait elapsed time: \(String(describing: out.readyWait))")
+        }
+        try expectEqual(ready.stop, "received"); try expectTrue(out.readyByteReceived)
+        try expectEqual(ready.budget_ms, 1_000); try expectEqual(ready.clock_fault, false)
+        try expectTrue(elapsed <= delayMs + toleranceMs,
+                       "elapsed \(elapsed) ms for a \(delayMs) ms delay; waits \(waits.bounds) ns lasted \(waits.durations) ns")
+        try expectEqual(waits.bounds.first, UInt64(10_000_000), "the byte must arrive during a wait: \(waits.bounds)")
+        try expectTrue(waits.durations.last! < waits.bounds.last!,
+                       "the receiving read must follow a wait that returned on readability: \(waits.durations) ns")
+    }
+    tk.run("a ready byte that never arrives ends the wait at its allowance") {
+        let budgetMs = 60, toleranceMs: UInt64 = 12
+        let waits = ReadinessWaits()
+        let out = try lifecycleFixture("ready_never\n" + padding, readyMs: budgetMs, calls: waits.calls)
+        guard let ready = out.readyWait, let elapsed = ready.elapsed_ms else {
+            throw TestFailure(message: "missing ready_wait elapsed time: \(String(describing: out.readyWait))")
+        }
+        try expectEqual(ready.stop, "deadline"); try expectFalse(out.readyByteReceived)
+        try expectEqual(ready.budget_ms, budgetMs); try expectEqual(ready.clock_fault, false)
+        try expectTrue(elapsed >= UInt64(budgetMs) && elapsed <= UInt64(budgetMs) + toleranceMs,
+                       "elapsed \(elapsed) ms must sit on the \(budgetMs) ms allowance")
+        // An open, silent pipe never makes a wait return early, so the passes are
+        // bounded by allowance / period, not by how often a wait can return.
+        try expectTrue(waits.bounds.count <= budgetMs / 10 + 2 && waits.bounds.allSatisfy { $0 <= 10_000_000 },
+                       "waits \(waits.bounds) ns lasted \(waits.durations) ns")
+    }
+}
+
 func runCWorkerLifecycleTests(_ tk: TestKit) {
+    tk.group("CWorker readiness wait on the ready pipe") {
+        runReadinessWaitControls(tk)
+    }
     tk.group("CWorker host lifecycle observations") {
         runCWorkerReapedAcknowledgementControls(tk)
         tk.run("completed report followed by cleanup kill is not sentinel expiry") {

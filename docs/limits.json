@@ -781,7 +781,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runCWorker measures the readiness wait as elapsed monotonic time starting after policy transfer, after making the read end nonblocking; a failed prerequisite is recorded as setup_failed and no wait runs. CWorkerClockTests drive the clock and sleep; expiry leaves ready_byte_received false and the run continues. The ready_wait record carries the budget, elapsed time and stop reason."
+      "behavior": "runCWorker measures the readiness wait as elapsed monotonic time starting after policy transfer, after making the read end nonblocking; a failed prerequisite is recorded as setup_failed and no wait runs. Between nonblocking reads the host polls the read end for readability for at most the smaller of 10 ms and the remaining allowance; readiness, hangup, interruption or timeout each lead to the next read and are charged their measured time, and a failed or regressing clock spends only the remaining allowance in nominal waits. CWorkerClockTests drive the clock and the readability wait, including early returns and clock faults; CWorkerLifecycleTests record the production wait while the lifecycle fixture writes its ready byte 3 ms after delivery, received within a stated tolerance below the 10 ms period, or never writes it, ending at the allowance. Expiry leaves ready_byte_received false and the run continues. The ready_wait record carries the budget, elapsed time and stop reason."
     },
     {
       "id": "worker_sentinel_wait",

@@ -408,6 +408,9 @@ final class ActorSession {
         // starts after policy transfer completed. The read end must be
         // nonblocking first: a blocking read would turn the allowance into an
         // unbounded wait, so a failed prerequisite is recorded and no wait runs.
+        // Between reads the host waits for the pipe to become readable for at
+        // most the smaller of 10 ms and the remaining allowance; readability,
+        // hangup, interruption or timeout all lead to the next read.
         var readyByte: UInt8 = 0
         if transferFailure == nil {
             let readyBudgetMs = min(input.readyByteTimeoutMs, setupRemainingMs?() ?? input.readyByteTimeoutMs)
@@ -426,7 +429,7 @@ final class ActorSession {
                     if n == 1 { readyByteReceived = true; stop = "received"; break }
                     if n == 0 { stop = "eof"; break }     // EOF — worker exited without writing
                     if n < 0 && errno != EAGAIN && errno != EINTR { stop = "read_error"; readErrno = errno; break }
-                    if clock.expiredAfterSleeping() { break }
+                    if clock.expiredAfterWaiting(readable: readyPipe[0]) { break }
                 }
                 readyWait = clock.record(stop: stop, nativeErrno: readErrno)
             }

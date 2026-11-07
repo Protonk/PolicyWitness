@@ -47,6 +47,13 @@ production native-call and live-exec controls establish actual observations.
 
 The ready byte is sent after fixture publication for deterministic controls;
 real-worker readiness and deadline/grace behavior remain separate tests.
+`ready_after_<ms>` (1 to 100) and `ready_never` exercise the host's readiness
+wait itself. Their input is followed by more bytes than the pipe buffer holds,
+so policy delivery ends, and the host's readiness wait starts, only while the
+fixture is reading. After EOF the first spins on `CLOCK_MONOTONIC` for the
+stated delay and writes the ready byte; the second keeps fd 4 open without
+writing. Both then wait for the exit request under a five-second alarm and
+publish nothing else.
 
 The worker evidence scenarios also publish unfamiliar/zero failure records, late slots,
 started-but-unpublished slots, and rich/missing/empty/truncated diagnostics.

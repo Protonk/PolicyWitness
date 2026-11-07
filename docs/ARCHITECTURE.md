@@ -357,11 +357,12 @@ and, for actors, accepted parked activation waits.
 The worker's release wait and exec allowances count continuous Mach time,
 which includes system sleep, in one validated tick domain; host waits keep
 their own clock, and no worker time is compared with them.
-The ready and sentinel budgets are elapsed monotonic allowances: each sleep is
-bounded by what remains, polling costs consume it, the sentinel allowance
-excludes measured phase collection intervals, and expiry starts cleanup rather
-than promising a total response time. These `HostWaitClock` waits fall back
-to remaining nominal sleeps on a clock fault.
+The ready and sentinel budgets are elapsed monotonic allowances: each sentinel
+sleep, and each readiness wait for the ready pipe to become readable, is bounded
+by what remains, polling costs consume it, the sentinel allowance excludes
+measured phase collection intervals, and expiry starts cleanup rather than
+promising a total response time. These `HostWaitClock` waits fall back to
+remaining nominal sleeps or waits on a clock fault.
 Their values and checks are in [LIMITS.md](LIMITS.md).
 
 Actors instead have one setup allowance starting before authority-region

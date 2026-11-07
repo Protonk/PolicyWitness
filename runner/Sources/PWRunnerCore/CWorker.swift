@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "160149e86953317fc6e4a24ce5ed79ab5ccd16311bb01da5a8ad76e5ccebc2cf"
-    static let abiIdentity: [UInt8] = [0x16, 0x01, 0x49, 0xe8, 0x69, 0x53, 0x31, 0x7f, 0xc6, 0xe4, 0xa2, 0x4c, 0xe5, 0xed, 0x79, 0xab, 0x5c, 0xcd, 0x16, 0x31, 0x1b, 0xb0, 0x1d, 0xa5, 0xa8, 0xad, 0x76, 0xe5, 0xcc, 0xeb, 0xc2, 0xcf]
+    static let abiIdentityHex = "a729571df02255983f5bf8e76883a7fb94166f6404cb869780e86997c4e57894"
+    static let abiIdentity: [UInt8] = [0xa7, 0x29, 0x57, 0x1d, 0xf0, 0x22, 0x55, 0x98, 0x3f, 0x5b, 0xf8, 0xe7, 0x68, 0x83, 0xa7, 0xfb, 0x94, 0x16, 0x6f, 0x64, 0x04, 0xcb, 0x86, 0x97, 0x80, 0xe8, 0x69, 0x97, 0xc4, 0xe5, 0x78, 0x94]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -860,18 +860,21 @@ struct ChildProcessCalls {
         Darwin.waitpid($0, $1, $2)
     }
     var kill: (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) }
-    /// The monotonic clock and the bounded sleep every host wait uses. Tests
-    /// may drive them; production reads CLOCK_MONOTONIC and nanosleeps.
+    /// The monotonic clock, the bounded sleep and the bounded readability wait
+    /// host waits use. Tests may drive them; production reads CLOCK_MONOTONIC,
+    /// nanosleeps and polls.
     var clock: () -> UInt64? = MonotonicDeadline.now
     var sleep: (UInt64) -> Void = sleepNs
+    var waitReadable: (Int32, UInt64) -> Void = waitReadableNs
 }
 
 /// One host wait measured as elapsed monotonic time against an allowance.
-/// Progress, interrupted calls and sleep overruns never renew it; each sleep is
-/// bounded by the remaining allowance. Excluded intervals (synchronous phase
-/// collection) extend the allowance by exactly their measured length. When the
-/// clock fails or runs backwards the wait spends only the last remaining
-/// allowance in nominal sleeps; it never restores time already charged.
+/// Progress, interrupted calls and sleep overruns never renew it; each sleep or
+/// readability wait is bounded by the remaining allowance. Excluded intervals
+/// (synchronous phase collection) extend the allowance by exactly their
+/// measured length. When the clock fails or runs backwards the wait spends only
+/// the last remaining allowance in nominal sleeps or waits; it never restores
+/// time already charged.
 struct HostWaitClock {
     let budgetNs: UInt64
     let pollNs: UInt64
@@ -932,6 +935,19 @@ struct HostWaitClock {
         // A working clock measures the actual interval on its next reading.
         fallbackRemainingNs -= sleep
         calls.sleep(sleep)
+        return false
+    }
+
+    /// Decide whether the allowance is exhausted; otherwise wait for `fd` to
+    /// become readable for at most the remaining allowance (bounded by the poll
+    /// period) and report that the wait continues. An early return is a pass.
+    mutating func expiredAfterWaiting(readable fd: Int32) -> Bool {
+        _ = remainingNs()
+        if fallbackRemainingNs == 0 { return true }
+        let wait = min(pollNs, fallbackRemainingNs)
+        // As with a sleep: if the next clock read fails, this requested wait is already charged.
+        fallbackRemainingNs -= wait
+        calls.waitReadable(fd, wait)
         return false
     }
 
@@ -1183,6 +1199,16 @@ func loadAcquire(_ base: UnsafePointer<UInt8>, offset: Int) -> UInt32 {
 func sleepNs(_ ns: UInt64) {
     var ts = timespec(tv_sec: Int(ns / 1_000_000_000), tv_nsec: Int(ns % 1_000_000_000))
     _ = nanosleep(&ts, nil)
+}
+
+/// Wait at most `ns`, rounded up to whole milliseconds, for `fd` to become
+/// readable. Readiness, timeout, an error and EINTR all return without retry;
+/// the caller's clock charges whatever elapsed, so an early return is one more
+/// pass, never progress.
+func waitReadableNs(_ fd: Int32, _ ns: UInt64) {
+    let ms = ns == 0 ? 0 : min((ns - 1) / 1_000_000 + 1, UInt64(Int32.max))
+    var entry = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+    _ = poll(&entry, 1, Int32(ms))
 }
 
 /// Convert a [String] into a NULL-terminated argv array of C strings the
