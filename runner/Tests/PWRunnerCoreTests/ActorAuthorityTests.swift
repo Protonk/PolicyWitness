@@ -14,7 +14,9 @@ import Foundation
  * delivery and acceptance are host and recipient facts recorded apart from it.
  * A native refusal on this host is a legitimate observation here; what these
  * cases cannot accept is a skipped call, a missing publication or a credited
- * association the evidence does not support.
+ * association the evidence does not support. The calibration case also times
+ * the host's requested sleeps against its activation stores and its delivery
+ * commit, through the production clock and sleep.
  */
 
 private func equipment(_ name: String) -> String {
@@ -241,12 +243,46 @@ func runActorAuthorityTests(_ tk: TestKit) {
             input.authority = AuthorityPlan(
                 tokens: [AuthorityPlanToken(index: 0, actorIndex: 0, slot: index["a_issue"]!, lastUseSlot: index["a_to_b"]!, outboundPosition: 0)],
                 deliveries: [AuthorityPlanDelivery(index: 0, tokenIndex: 0, sourceActorIndex: 0, recipientActorIndex: 1, slot: index["a_to_b"]!, inboundPosition: 0)], inboundCounts: [0, 1], outboundCounts: [1, 0])
-            let scheduler = ActorScheduler(input)
+            // Host waits observed through the production clock and sleep: each
+            // requested sleep with the time it was requested, each collection's
+            // start (the host observed that visit's arrival just before), and the
+            // first clock reading at which B's inbound slot was committed but
+            // neither acknowledged nor settled.
+            var scheduler: ActorScheduler!
+            defer { scheduler = nil }
+            func acknowledgementPending() -> Bool {
+                guard let slot = scheduler?.custody?.regions[1].inbound(0) else { return false }
+                return loadAcquire(slot, offset: PWAuthorityLayout.slotCommittedOffset) == 1
+                    && loadAcquire(slot, offset: PWAuthorityLayout.slotAcknowledgedOffset) == PWAuthorityAck.none
+                    && loadAcquire(slot, offset: PWAuthorityLayout.slotSettledOffset) == 0
+            }
+            var pendingFrom: UInt64? = nil
+            var pendingReadings = 0
+            var sleeps: [(at: UInt64, pendingFrom: UInt64?)] = []
+            var collectionStarts: [Int: UInt64] = [:]
+            var calls = ChildProcessCalls()
+            calls.clock = {
+                let now = MonotonicDeadline.now()
+                if acknowledgementPending() {
+                    pendingReadings += 1
+                    if pendingFrom == nil { pendingFrom = now }
+                } else {
+                    pendingFrom = nil
+                }
+                return now
+            }
+            calls.sleep = { ns in
+                let requested = (at: MonotonicDeadline.now() ?? 0, pendingFrom: acknowledgementPending() ? pendingFrom : nil)
+                sleeps.append(requested)
+                sleepNs(ns)
+            }
+            scheduler = ActorScheduler(input, processCalls: calls)
             // Independent observation at B's consume phase: B accepted the
             // delivery while parked (its inbound slot is acknowledged) and has
             // completed nothing since its first visit.
             var parkedAcceptance: (acknowledged: UInt32, completedBefore: Int)? = nil
             let outcome = scheduler.run { phase, actor, _ in
+                collectionStarts[phase] = MonotonicDeadline.now()
                 if phase == 2, actor == 1, let custody = scheduler.custody,
                    let inbound = custody.regions[1].inbound(0) {
                     parkedAcceptance = (loadAcquire(inbound, offset: PWAuthorityLayout.slotAcknowledgedOffset),
@@ -297,6 +333,36 @@ func runActorAuthorityTests(_ tk: TestKit) {
                 try expectTrue(bAfter?.completed == true && bRelease.completed && bRelease.unavailableCode == 2)
             }
             try expectEqual(outcome.actors[1].output?.phases.map { $0.completed }, [true, true])
+            // Where the actor answers at once the host observes the answer
+            // without sleeping: a sleep between an activation store and that
+            // visit's arrival is requested no sooner than the re-sampling budget
+            // after the store, and a sleep while the delivery awaits B's
+            // acknowledgement no sooner than the budget after the first reading
+            // that saw the commit. The budget runs on the clock these times use.
+            let budget = HostWaitClock.resampleBudgetNs
+            var arrivalSleeps = 0
+            for visit in outcome.visits {
+                guard let activated = visit.activationObservation?.observed_ns,
+                      let arrived = collectionStarts[visit.phaseIndex] else {
+                    throw TestFailure(message: "phase \(visit.phaseIndex): activation and collection times must be observed")
+                }
+                for requested in sleeps where requested.at >= activated && requested.at <= arrived {
+                    arrivalSleeps += 1
+                    try expectTrue(requested.at - activated >= budget,
+                                   "phase \(visit.phaseIndex): a sleep \(requested.at - activated) ns after the activation store preceded arrival")
+                }
+            }
+            let acknowledgementSleeps: [(at: UInt64, from: UInt64)] = sleeps.compactMap { requested in
+                requested.pendingFrom.map { (at: requested.at, from: $0) }
+            }
+            for (at, from) in acknowledgementSleeps {
+                try expectTrue(at >= from && at - from >= budget,
+                               "a sleep \(Int64(bitPattern: at &- from)) ns after the commit was first observed preceded B's acknowledgement")
+            }
+            try expectEqual(delivery.recipientWait?.stop, "acknowledged")
+            FileHandle.standardError.write(Data(("host waits after publication on this host: \(arrivalSleeps) sleeps across "
+                + "\(outcome.visits.count) arrival waits; acknowledgement pending at \(pendingReadings) clock readings, "
+                + "\(acknowledgementSleeps.count) sleeps\n").utf8))
         }
         tk.run("principal shape: B issues under a consumed extension and re-delegates to C") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }

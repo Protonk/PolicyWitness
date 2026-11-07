@@ -68,7 +68,8 @@ runCWorkerTests(tk)
 // repeated visits, parked quiescence, setup failure, death and cutoff.
 runActorSchedulerTests(tk)
 // The native file authority path: issue, host custody, explicit transfer,
-// parked acceptance, consume after release, release and the faults between.
+// parked acceptance, consume after release, release and the faults between;
+// live arrival and acknowledgement waits sleep only after their re-sampling budget.
 runActorAuthorityTests(tk)
 // The actor form through the production orchestrator: assembled, encoded and decoded.
 // Static role inventory and live signature read-back binding controls.
@@ -82,7 +83,7 @@ runActorReplyTests(tk)
 // policy cause can be claimed here.
 runCWorkerLifecycleTests(tk)
 // Host waits are elapsed monotonic allowances under a controlled clock, sleep
-// and readability wait.
+// and readability wait, including the bounded re-sampling before a first sleep.
 runCWorkerClockTests(tk)
 // Production C main with isolated native-call substitutions: worker progress and
 // failure publication, missing step evidence, policy-write partial results,

@@ -11,8 +11,9 @@ import Foundation
  * overrun or cost nothing, a wait may return early, the clock may jump, fail
  * or run backwards, and a phase hook may consume time the sentinel wait must
  * not charge. Every assertion reads the wait records the host publishes
- * beside the disposition it already recorded. These are host observations
- * under controlled time, never policy evidence.
+ * beside the disposition it already recorded. Direct controls also drive the
+ * clock's bounded re-sampling of an answer before its first sleep. These are
+ * host observations under controlled time, never policy evidence.
  */
 
 /// A controlled monotonic clock. `sleep` advances it by the requested interval
@@ -223,6 +224,76 @@ func runCWorkerClockTests(_ tk: TestKit) {
                 clock.failAfter = clock.readings
                 while !wait.expiredAfterWaiting(readable: 0) {}
                 try expectEqual(clock.waits.reduce(0, +), UInt64(10_000_000), "early=\(early)")
+                try expectEqual(wait.record(stop: "deadline").clock_fault, true)
+            }
+        }
+        tk.run("an answer visible when re-sampling starts continues the wait without a sleep") {
+            let clock = ControlledClock(); clock.realSleepNs = 0
+            var wait = HostWaitClock(milliseconds: 100, pollNs: 1_000_000, calls: clock.calls)
+            var samples = 0
+            let expired = wait.expiredAfterResampling({ samples += 1; return true }, budgetNs: HostWaitClock.resampleBudgetNs)
+            try expectFalse(expired)
+            try expectEqual(clock.sleeps, [])
+            try expectEqual(samples, 2, "the loop's first sample and the confirming one")
+            try expectEqual(clock.readings, 2, "the wait's start and the re-sampling's start")
+        }
+        tk.run("an answer that appears within the re-sampling budget is observed without a sleep and its time is charged") {
+            let clock = ControlledClock(); clock.realSleepNs = 0; clock.costNs = 10_000   // each reading costs 10 µs
+            var wait = HostWaitClock(milliseconds: 100, pollNs: 1_000_000, calls: clock.calls)
+            var samples = 0
+            let expired = wait.expiredAfterResampling({ samples += 1; return samples >= 4 }, budgetNs: HostWaitClock.resampleBudgetNs)
+            try expectFalse(expired)
+            try expectEqual(clock.sleeps, [])
+            try expectEqual(samples, 5, "three absent, the fourth present, then the confirming sample")
+            try expectEqual(clock.readings, 5, "the wait's start, the re-sampling's start and three re-samples")
+            // 40 µs of readings precede this one, which costs 10 µs more: all of it is charged.
+            try expectEqual(wait.remainingNs(), UInt64(100_000_000 - 50_000))
+        }
+        tk.run("an answer absent for the whole re-sampling budget is followed by exactly one sleep bounded by the remaining allowance") {
+            for (spentNs, expectedSleep) in [(UInt64(0), UInt64(1_000_000)), (UInt64(99_500_000), UInt64(380_000))] {
+                let clock = ControlledClock(); clock.realSleepNs = 0; clock.costNs = 10_000
+                var wait = HostWaitClock(milliseconds: 100, pollNs: 1_000_000, calls: clock.calls)
+                clock.now += spentNs
+                var samples = 0
+                let expired = wait.expiredAfterResampling({ samples += 1; return false }, budgetNs: HostWaitClock.resampleBudgetNs)
+                try expectFalse(expired, "spent=\(spentNs)")
+                try expectEqual(samples, 11, "ten samples across the 100 µs budget, then the confirming one; spent=\(spentNs)")
+                // With 99.5 ms spent, re-sampling starts at 99.51 ms elapsed and spends
+                // its 100 µs; the sleep's own reading at 99.62 ms leaves 380 µs.
+                try expectEqual(clock.sleeps, [expectedSleep], "spent=\(spentNs)")
+                if expectedSleep < 1_000_000 { try expectTrue(wait.expiredAfterSleeping()) }
+                try expectEqual(clock.sleeps.count, 1, "spent=\(spentNs)")
+            }
+        }
+        tk.run("zero allowance re-samples for the budget, then expires without a sleep unless the answer appeared") {
+            for appears in [false, true] {
+                let clock = ControlledClock(); clock.realSleepNs = 0; clock.costNs = 10_000
+                var wait = HostWaitClock(milliseconds: 0, pollNs: 1_000_000, calls: clock.calls)
+                var samples = 0
+                let expired = wait.expiredAfterResampling({ samples += 1; return appears && samples >= 3 },
+                                                          budgetNs: HostWaitClock.resampleBudgetNs)
+                // An answer seen while re-sampling continues the wait, so the caller's next pass observes it.
+                try expectEqual(expired, !appears, "appears=\(appears)")
+                try expectEqual(clock.sleeps, [], "appears=\(appears)")
+                try expectEqual(samples, appears ? 4 : 11, "appears=\(appears)")
+            }
+        }
+        tk.run("an unusable clock ends re-sampling at once and the sleep path spends only the remaining fallback") {
+            // The clock fails at the re-sampling's start, or after its first
+            // re-sample; the nominal sleeps then spend what remained at the last
+            // good reading, which includes the re-sampling time already measured.
+            for (goodReadings, expectedSamples, remaining) in [(0, 0, UInt64(9_990_000)), (2, 3, UInt64(9_970_000))] {
+                let clock = ControlledClock(); clock.realSleepNs = 0; clock.costNs = 10_000
+                var wait = HostWaitClock(milliseconds: 100, pollNs: 7_000_000, calls: clock.calls)
+                clock.now += 90_000_000
+                _ = wait.remainingNs()
+                clock.failAfter = clock.readings + goodReadings
+                var samples = 0
+                let expired = wait.expiredAfterResampling({ samples += 1; return false }, budgetNs: HostWaitClock.resampleBudgetNs)
+                try expectFalse(expired, "good readings \(goodReadings)")
+                try expectEqual(samples, expectedSamples, "good readings \(goodReadings)")
+                while !wait.expiredAfterSleeping() {}
+                try expectEqual(clock.sleeps, [UInt64(7_000_000), remaining - 7_000_000], "good readings \(goodReadings)")
                 try expectEqual(wait.record(stop: "deadline").clock_fault, true)
             }
         }

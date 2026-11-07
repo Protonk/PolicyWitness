@@ -812,7 +812,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runCWorker measures the publication wait as elapsed monotonic time from the end of the readiness wait, with each synchronous phase collection interval measured and excluded; every sleep is bounded by the remaining allowance, and a failed or regressing clock spends only the last remaining allowance in nominal sleeps, including the last requested sleep, and sentinel_wait.clock_fault reports the fault. CWorkerClockTests cover oversleep, irregular polling costs, zero allowance, interrupted waits, clock failure, regression and excluded intervals; the live deadline cases assert the measured allowance within a stated scheduling tolerance. The worker uses a separate local active-time exec budget, configured below this window without an end-to-end guarantee."
+      "behavior": "runCWorker measures the publication wait as elapsed monotonic time from the end of the readiness wait, with each synchronous phase collection interval measured and excluded; every sleep is bounded by the remaining allowance, and a failed or regressing clock spends only the last remaining allowance in nominal sleeps, including the last requested sleep, and sentinel_wait.clock_fault reports the fault. After a phase release, the first wait re-samples the next phase's arrival for at most 100 microseconds of this clock, charged like any pass, and then sleeps for at most 2 ms only when the arrival is still absent; an unusable clock ends the re-sampling at once. CWorkerClockTests cover oversleep, irregular polling costs, zero allowance, interrupted waits, clock failure, regression and excluded intervals, and drive the re-sampling directly with an answer present, appearing within the budget or absent throughout, with zero allowance and with an unusable clock; the live deadline cases assert the measured allowance within a stated scheduling tolerance. The worker uses a separate local active-time exec budget, configured below this window without an end-to-end guarantee."
     },
     {
       "id": "actor_setup_allowance",
@@ -880,9 +880,15 @@
           "symbol": "runActorSchedulerTests",
           "kind": "path",
           "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift",
+          "symbol": "runActorAuthorityTests",
+          "kind": "path",
+          "form": "test"
         }
       ],
-      "behavior": "Collection time is excluded through the same clock discipline as the single-worker sentinel wait. Qualification measures charged execution separately from elapsed execution; no production-duration expiry is established by those finite workloads."
+      "behavior": "Collection time is excluded through the same clock discipline as the single-worker sentinel wait. After each activation store and each release store, the first arrival or completion wait re-samples the actor's publication for at most 100 microseconds of this clock, charged to the allowance, and then sleeps for at most 1 ms only when it is still absent; the live calibration case in ActorAuthorityTests checks that no sleep between an activation store and that visit's arrival came sooner. Qualification measures charged execution separately from elapsed execution; no production-duration expiry is established by those finite workloads."
     },
     {
       "id": "actor_collection_allowance",
@@ -981,7 +987,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Worker waits sample the shared lifetime cutoff when an answer is not already visible. The host recipient wait has its own clock. Timing qualification measures host recipient waits only; it does not measure every worker custody or answer wait."
+      "behavior": "Worker waits sample the shared lifetime cutoff when an answer is not already visible. The host recipient wait has its own clock; after the inbound commit its first wait re-samples the recipient's acknowledgement for at most 100 microseconds of that clock, charged to the wait, and then sleeps for at most 1 ms only when it is still absent. The live calibration case in ActorAuthorityTests checks that no sleep in that wait came sooner. Timing qualification measures host recipient waits only; it does not measure every worker custody or answer wait."
     },
     {
       "id": "actor_lifetime_cutoff",

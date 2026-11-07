@@ -362,7 +362,10 @@ sleep, and each readiness wait for the ready pipe to become readable, is bounded
 by what remains, polling costs consume it, the sentinel allowance excludes
 measured phase collection intervals, and expiry starts cleanup rather than
 promising a total response time. These `HostWaitClock` waits fall back to
-remaining nominal sleeps or waits on a clock fault.
+remaining nominal sleeps or waits on a clock fault. After a release,
+activation or inbound delivery commit, the first wait re-samples the worker's
+answer for at most 100 microseconds of the same clock before it sleeps, so an
+answer published within that interval is observed without waiting a poll period.
 Their values and checks are in [LIMITS.md](LIMITS.md).
 
 Actors instead have one setup allowance starting before authority-region

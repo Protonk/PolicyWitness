@@ -346,6 +346,10 @@ final class ActorScheduler {
             }
             visit.activationObservation=session.activate(globalPhase: UInt32(entry.phaseIndex + 1))
             visit.activationStored = true
+            // The first wait after each host store (this activation, then the
+            // release) re-samples the actor's answer before it sleeps.
+            var resampleArrival = true
+            var resampleCompletion = false
             let activatedAt = calls.clock()
             var arrivedAt: UInt64? = nil
             var releasedAt: UInt64? = nil
@@ -368,6 +372,11 @@ final class ActorScheduler {
                 case .reaped: reason = "died_before_arrival"
                 case .failed: reason = "wait_error"
                 case .pending: break
+                }
+                if reason == nil && resampleArrival {
+                    resampleArrival = false
+                    if clock.expiredAfterResampling({ session.arrived(index) }, budgetNs: HostWaitClock.resampleBudgetNs) { reason = "arrival_timeout" }
+                    continue
                 }
                 if reason == nil && clock.expiredAfterSleeping() { reason = "arrival_timeout" }
             }
@@ -418,6 +427,7 @@ final class ActorScheduler {
                     && !session.completed(index) && (index == 0 || session.completed(index - 1))
                     && session.phaseOutputs[index].violations.isEmpty {
                     session.releaseVisit(index)
+                    resampleCompletion = true
                     visit.releaseStored = true
                     releasedAt = calls.clock()
                     visit.arrivalToReleaseMs = millis(arrivedAt, releasedAt)
@@ -439,6 +449,11 @@ final class ActorScheduler {
                 case .reaped: reason = "died_before_completion"
                 case .failed: reason = "wait_error"
                 case .pending: break
+                }
+                if reason == nil && resampleCompletion {
+                    resampleCompletion = false
+                    if clock.expiredAfterResampling({ session.completed(index) }, budgetNs: HostWaitClock.resampleBudgetNs) { reason = "completion_timeout" }
+                    continue
                 }
                 if reason == nil && clock.expiredAfterSleeping() { reason = "completion_timeout" }
             }

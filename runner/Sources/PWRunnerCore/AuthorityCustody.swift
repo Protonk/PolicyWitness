@@ -556,6 +556,8 @@ final class AuthorityCustody {
         }
         observation.copyStatus = "copied"
         storeRelease(inbound, offset: PWAuthorityLayout.slotCommittedOffset, 1)
+        // The first wait after this commit re-samples the acknowledgement before it sleeps.
+        var resampleAcknowledgement = true
         // The recipient validates and acknowledges while parked or, for a
         // self-transfer, inside its own request wait.
         var clock = HostWaitClock(milliseconds: min(PWAuthorityLayout.exchangeWaitMs, waitAllowanceMs), pollNs: 1_000_000, calls: calls)
@@ -565,6 +567,12 @@ final class AuthorityCustody {
             ack = loadAcquire(inbound, offset: PWAuthorityLayout.slotAcknowledgedOffset)
             if ack != PWAuthorityAck.none { break }
             if !recipientUsable(recipient) { stop = "recipient_unavailable"; break }
+            if resampleAcknowledgement {
+                resampleAcknowledgement = false
+                if clock.expiredAfterResampling({ loadAcquire(inbound, offset: PWAuthorityLayout.slotAcknowledgedOffset) != PWAuthorityAck.none },
+                                               budgetNs: HostWaitClock.resampleBudgetNs) { stop = "deadline"; break }
+                continue
+            }
             if clock.expiredAfterSleeping() { stop = "deadline"; break }
         }
         observation.recipientWait = clock.record(stop: stop)

@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "a729571df02255983f5bf8e76883a7fb94166f6404cb869780e86997c4e57894"
-    static let abiIdentity: [UInt8] = [0xa7, 0x29, 0x57, 0x1d, 0xf0, 0x22, 0x55, 0x98, 0x3f, 0x5b, 0xf8, 0xe7, 0x68, 0x83, 0xa7, 0xfb, 0x94, 0x16, 0x6f, 0x64, 0x04, 0xcb, 0x86, 0x97, 0x80, 0xe8, 0x69, 0x97, 0xc4, 0xe5, 0x78, 0x94]
+    static let abiIdentityHex = "2137e35c5b37cdb27345057399d9ac15f3a5c9416b175660d649ccfdf689daa7"
+    static let abiIdentity: [UInt8] = [0x21, 0x37, 0xe3, 0x5c, 0x5b, 0x37, 0xcd, 0xb2, 0x73, 0x45, 0x05, 0x73, 0x99, 0xd9, 0xac, 0x15, 0xf3, 0xa5, 0xc9, 0x41, 0x6b, 0x17, 0x56, 0x60, 0xd6, 0x49, 0xcc, 0xfd, 0xf6, 0x89, 0xda, 0xa7]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -951,6 +951,23 @@ struct HostWaitClock {
         return false
     }
 
+    /// The clock time one re-sampling may spend before the first sleep after a publication.
+    static let resampleBudgetNs: UInt64 = 100_000
+
+    /// Before the first sleep after a publication whose answer arrives within
+    /// microseconds, re-sample `answered` for at most `budgetNs` of clock time,
+    /// then sleep as usual when it is still false. The re-sampling is charged
+    /// like any pass; an unusable clock ends it at once.
+    mutating func expiredAfterResampling(_ answered: () -> Bool, budgetNs: UInt64) -> Bool {
+        if let start = elapsedNs() {
+            while !answered() {
+                guard let now = elapsedNs(), now - start < budgetNs else { break }
+            }
+            if answered() { return false }
+        }
+        return expiredAfterSleeping()
+    }
+
     /// Mark the start of an interval the wait does not charge.
     mutating func mark() -> UInt64? {
         guard elapsedNs() != nil else { return nil }
@@ -1076,6 +1093,9 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         // costs more than the detection latency saves.
         var nextExitCheckNs: UInt64 = 0
         var passes = 0
+        // Set by a release store and cleared by the next wait, which re-samples
+        // the next phase's arrival before its first sleep.
+        var resampleArrival = false
         polling: while true {
             passes += 1
             if !sawApplied && session.appliedObserved {
@@ -1129,6 +1149,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                     && (index == 0 || session.completed(index - 1))
                     && session.phaseOutputs[index].violations.isEmpty {
                     session.releaseVisit(index)
+                    resampleArrival = true
                 }
                 nextPhase += 1
             }
@@ -1156,6 +1177,12 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             }
             // done was read above: a publication observed as the allowance
             // runs out is done, not a deadline.
+            if resampleArrival && nextPhase < input.phases.count {
+                resampleArrival = false
+                if clock.expiredAfterResampling({ session.arrived(nextPhase) }, budgetNs: HostWaitClock.resampleBudgetNs) { break }
+                continue
+            }
+            resampleArrival = false
             if clock.expiredAfterSleeping() { break }
         }
         session.sentinelWait = clock.record(stop: session.pollStopReason, excluded: true)
