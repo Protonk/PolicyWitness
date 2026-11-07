@@ -50,7 +50,9 @@ parked activation.
 Use the shared `records/WORKER-WAIT-PILOT.md` decomposition to choose the benefit
 metric and minimum worthwhile improvement. This pilot is measured in an arranged
 quiet window with stable power conditions; it is not the later ARM comparison
-baseline. Recheck the threshold's rationale against the accepted source at
+baseline. Its production-shaped timestamps decompose held time; extended
+held-footprint runs supply separately labeled CPU rates, not production hold
+durations. Recheck the threshold's rationale against the accepted source at
 baseline freeze, before candidate comparisons. A later accepted host, scan or
 hint change affecting the comparison requires a new baseline and candidate
 comparison on the same source foundation, not reuse across source changes.
@@ -136,6 +138,9 @@ that creates a dependency. Retain application facts, entered/returned markers,
 native clock samples, parent-observed live generation, signal/exception status,
 exit and independently observed reap. Start with three repetitions per profile
 and condition; qualification failure stops that candidate before integration.
+Retain first-execution observations in qualification. The performance protocol's
+excluded initial run does not discard a qualification failure or authorize
+warming a wait before applying the policy in a measured child.
 
 Use a supervisor with owned-child cleanup and a declared finite watchdog. It
 must survive the loss of the experimental host and retain the child's ending.
@@ -222,19 +227,29 @@ worthwhile improvement from the shared pilot record, beyond mere detectability
 given the new platform dependency, and freeze it before candidate comparisons.
 Record revisions explicitly, preserving earlier frozen definitions and results;
 do not amend one wait's protocol silently to fit the other's later findings.
+Use the worker plan's [power, warm-up and pacing protocol](WORKER-WAIT-EXPLORATION-PLAN.md#conditions-and-the-pilot-window)
+for performance comparisons: name the power state, retain an excluded initial
+execution of each staged artifact, and separate rapid from idle-gap trials.
+Do not keep an unreported busy helper active to erase idle behavior. New
+workloads and checker fixtures needed for these observations are in scope,
+under the existing test registration and fixture-ownership rules.
 Isolated prototype measurements may proceed with an unresolved deployment gate;
 they cannot authorize adoption. Use the held-footprint controls and generation-qualified samples
 described in [change verification](../tests/CHANGE-VERIFICATION.md#footprint-observations).
 Freeze a separate baseline for release and parked integration. The current
 held-footprint reader requires worker CPU to exceed a matched sleeper; that is
-a baseline characterization, not a requirement for a quieter candidate. Reuse the
-worker exploration's mechanism-neutral measurement reader, with independent
-acceptance/rejection controls retaining generation, observer-sensitivity,
-interval and effect checks. Each acceptance record names that reader's source
-identity. A reader change after baseline freeze invalidates comparisons against
-that baseline until re-frozen with the new reader. Candidate-specific benefit
-criteria remain separate from shared measurement validity. Preserve the old
-busy-worker reader and the meaning of its recorded evidence.
+a baseline characterization, not a requirement for a quieter candidate. The
+first plan needing quieter-candidate comparisons builds the shared
+mechanism-neutral CPU reader before freezing its baseline; this need not be a pilot
+deliverable. Reuse it here with independent acceptance/rejection controls for
+generation, observer sensitivity, intervals and effects. Response comparisons
+also need the separate timestamp reader and the worker plan's
+[resolution gate](WORKER-WAIT-EXPLORATION-PLAN.md#instruments-and-response-resolution):
+at most 0.5 ms combined timing uncertainty for the 2 ms regression criterion.
+Each acceptance record identifies every reader it uses; both sides use the
+same versions. A reader change invalidates affected frozen comparisons until
+re-frozen with that reader. Candidate-specific benefit criteria remain separate
+from measurement validity. Preserve the old busy-worker reader and its evidence.
 
 CPU time, instruction activity, available CPU capacity, energy and wake
 coalescing are different claims. A WFE thread may perform less work while
@@ -282,7 +297,8 @@ accounts through their owning generators. Retain the support scope and fallback
 reason in evidence without inventing specimen-policy conclusions. If the
 production evidence shape needs to change, apply the wire/evidence contracts.
 
-The coordinator owns source integration, native scheduling and acceptance.
+The coordinator is whoever is running the plan and owns source integration,
+native scheduling and acceptance.
 Read-only architecture and checker review may run in parallel; builds and native
 trials run serially with compiler concurrency at most two. Start pilots with at
 most two busy processes, counting controls and any competitor. Existing actor
@@ -294,6 +310,11 @@ Request a quiet window for sensitive comparisons and announce its start/end.
 Arrange actual sleep or a competing-workload trial with the user before use.
 Follow [test retention and ownership rules](../tests/AGENTS.md); preserve partial
 observations and unfinished cleanup rather than replacing them with a summary.
+Exploration runs may remain unpinned, with existing pins left in place. Defer
+pruning and decisions about exceeding the normal pin maximum until acceptance.
+If required raw evidence disappears, repeat the affected observations and
+re-freeze comparisons where necessary; summaries alone cannot retain credit.
+Keep raw output under the dispatcher rather than moving it into `records/`.
 
 Close with one of: unsupported equipment; unestablished independent wake or
 deployment contract; qualified but no worthwhile measured benefit; release-only
@@ -303,7 +324,10 @@ accepted current-behavior documentation and implementation, or the negative
 result with production unchanged. Retire this plan and its completed acceptance
 records after disposition; preserve needed raw observations through the retention
 helpers. Keep the shared pilot while either plan needs it and the outflow while
-another associated direction needs it. Before deleting either plan, remove its
+another associated direction needs it. Once both plans retire, delete the pilot
+record after preserving lasting conclusions and evidence references where they
+belong; do not create a separate records archive. Raw-evidence retention is
+decided at acceptance. Before deleting either plan, remove its
 reciprocal links from the remaining plan and retain coordination facts still
 needed there. A genuinely pending observation keeps its branch and plan active
 unless that scope is explicitly closed; it is not a negative qualification result.

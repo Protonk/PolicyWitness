@@ -143,11 +143,12 @@ gain from shortening the workers' held interval.
 
 ## 2. Remove demonstrated host detection or cleanup delay
 
-Instrument a disposable fixture to distinguish these intervals before choosing
-a change: worker arrival publication to host observation; static preparation;
+Build the pilot's production-shaped timestamp fixture before choosing a change.
+Distinguish worker arrival publication to host observation; static preparation;
 live planning; validator launch and duplex I/O; decoding; EOF to owned reap;
-and collection closure to release. Use timestamps at both ends where possible;
-host observations alone cannot locate an earlier worker publication precisely.
+and collection closure to release. Timestamp host and worker boundaries under
+the measurement rules below; host observations alone cannot locate an earlier
+worker publication precisely. Reuse this fixture for branch 2.
 
 [CWorker.swift](Sources/PWRunnerCore/CWorker.swift) owns ordinary publication
 polling, throttled child-death checks and `HostWaitClock`;
@@ -162,8 +163,13 @@ milliseconds do not prove the interval is free. Do not shorten every poll on
 the assumption that a constant is a measured bottleneck. More frequent host
 wakes can oppose coalescing even when worker response improves.
 
-Choose at most one measured delay for a first candidate. A bounded host exit
-notification may be worth investigating if EOF-to-reap delay is material.
+The pilot may nominate at most two material delays, each as a separate host
+candidate. Evaluate `HOST-01`, then `HOST-02` if nominated, before branch 1 while
+the fixture is current. Each gets its own acceptance record and baseline on
+accepted source; a second candidate includes the first only if accepted.
+Further delays go to the outflow for later work, not an open-ended tuning loop.
+A bounded host exit notification may be worth investigating if EOF-to-reap
+delay is material.
 Registration must cover a child that already exited; a notification prompts an
 owned `waitpid` observation and never substitutes for reap. Preserve EINTR,
 ownership-loss, failed-clock, timeout and final-cleanup paths. Charge any new
@@ -185,6 +191,10 @@ polls, including already acknowledged slots. The
 defines one-shot slots. First measure repeated slot visits with test-only
 instrumentation, then try a worker-local completed-prefix cursor. A fixed local
 mask is a second candidate only if holes defeat the prefix's useful savings.
+This opportunity applies to actor workers with inbound slots: no authority
+region means an immediate return, and the admitted slot count is bounded.
+Include sparse and inbound-dense actor workloads with repeated completed scans;
+ordinary execution is a no-benefit control, not evidence for this branch.
 
 Remember completion from this worker's own validation and acknowledgement,
 reset the state during authority preparation, and retain immutable association
@@ -219,13 +229,77 @@ generation-qualified live hold and response control.
 
 ## Measurement, selection and acceptance
 
-Start with a bounded baseline pilot to locate held time and quantify observer
-resolution. Treat the quantitative pilot as sensitive: arrange and announce a
-quiet window, hold power mode/source stable within each measurement block, and
-retain power and sleep observations. Battery operation is acceptable; AC is not
-a prerequisite. Interrupted or power-transition blocks remain diagnostic evidence
-and need replacement before supporting the decomposition. Opportunistic fixture
-dry runs may establish mechanics, not supply the quantitative pilot record.
+### Instruments and response resolution
+
+The pilot needs two instruments with separate claims:
+
+- The production-shaped fixture from branch 2 measures the ordinary and actor
+  timelines using the actual planning/validator path, without an artificial
+  collection hold. Bracket publication, observation, release and acknowledgement
+  in host and worker with validated continuous-clock timestamps; verify clock
+  alignment and record bracket widths. Recover the bounded test-only stamps
+  through prepared storage after the interval. Do not add post-apply I/O or
+  public wire telemetry, accelerate host polling for observation, or depend on
+  discovering a short-lived PID after execution. Retain independent effects,
+  live-generation/ownership facts and cleanup.
+- The existing [held-footprint fixture](../tests/suites/witness_contract/check_held_phase_footprint.py)
+  measures worker CPU rate during deliberately extended holds. Its declared
+  accounting quantum is at least 10 ms and its minimum hold is the greater of
+  1 s and 100 quanta. These are fixture bounds, not production hold durations or a universal
+  CPU-counter resolution. Its busy control also changes the workload's idle
+  conditions. Label those CPU observations separately; do not splice their
+  rates into short production intervals as if directly measured there.
+
+The ordinary host's 2 ms poll and actor host's 1 ms poll are behavior to measure,
+not the timestamp instrument's resolution. CPU-accounting increments cannot
+establish sub-millisecond response. Before crediting the 2 ms response bound,
+require combined timing uncertainty for each baseline/candidate comparison of
+at most 0.5 ms, including endpoint brackets, cross-process clock alignment and
+calibrated capture overhead. Use zero-delay and injected-delay controls on both
+sides of the acceptance boundary; measure the actual injected interval rather
+than assuming a requested sleep lasted exactly that long. Check uninstrumented
+neighbors for observer effects. Scheduler delay in the workload is response,
+not noise to subtract. Calibration establishes finite-run sensitivity, not a
+universal bound. If resolution is insufficient, improve the instrument or leave
+that response claim and dependent acceptance unestablished; do not relax 2 ms.
+
+### Conditions and the pilot window
+
+Treat the quantitative pilot as sensitive. Prepare builds, fixture dry runs,
+checker controls and a finite trial schedule before requesting an initial
+five-minute quiet window. Allow up to four minutes for calibration, excluded
+warm executions and measurements, reserving the final minute for owned cleanup.
+Do not start a trial unless its watchdog and cleanup fit the remaining time.
+Announce start/end; do not extend automatically. Missing coverage or inadequate
+resolution is an incomplete pilot requiring a separately arranged window.
+Opportunistic dry runs establish mechanics, not the quantitative decomposition.
+
+Name power source, power mode, executable identities, warm/cold status, pacing
+and competing load in each pilot cell and acceptance record. Keep conditions
+stable within a block; never pool battery/AC or different pacing regimes.
+Battery operation is acceptable. Retain power and sleep observations; interrupted
+or power-transition blocks remain diagnostic and need replacement for credit.
+
+For performance series, retain one excluded initial execution of each exact
+staged baseline/candidate executable before counted trials, using fresh processes for
+every run. Do not discard additional slow trials as warm-up. Warming a build
+output does not warm a newly copied fixture executable: stage and reuse the
+same executable through fresh processes, or label those trials as cold. Keep
+first-execution cost separately visible; warm measurements make no cold-start
+claim. This exclusion does not apply to ARM's first-use qualification evidence.
+
+Pilot both separated launches, with a requested idle gap of at least one second
+after observed cleanup, and rapid launches after cleanup with no added gap.
+Record actual gaps and use the same rule for both members of each pair. Freeze
+the exact pacing and eligible gap range before candidate measurements; retain
+out-of-range trials diagnostically and replace them only under that declared
+rule. Treat the historically observed idle-gap effect as a condition to examine,
+not a universal timing multiplier. No busy helper may silently keep a core
+active to remove it. Label the held-CPU fixture's concurrent busy control as
+such; calibration outside a response interval must finish before its idle gap.
+Keep benefit claims scoped by regime and check the other regime for regression.
+
+### Records, workloads and readers
 
 Commit the pilot as `records/WORKER-WAIT-PILOT.md` before candidate optimization
 work. Report host-side intervals within the held timeline and worker polling
@@ -236,8 +310,9 @@ checks that rationale against its later frozen production baseline.
 
 Use a separate acceptance record for each independently evaluated candidate,
 committed as that candidate opens and before its comparison measurements:
-`records/WORKER-WAIT-<candidate>-ACCEPTANCE.md`. Use candidate names `HOST`,
-`PREPARATION`, `SCAN`, `HINT-RELEASE`, `HINT-ACTIVATION`, and, if reached,
+`records/WORKER-WAIT-<candidate>-ACCEPTANCE.md`. Use candidate names `HOST-01`,
+`HOST-02` if nominated, `PREPARATION`, `SCAN`, `HINT-RELEASE`,
+`HINT-ACTIVATION`, and, if reached,
 `HINT-EXCHANGE`. This lets hint workloads be fixed after the relevant ARM result
 without rewriting another branch's frozen protocol. Record the current source,
 reader and build identities, workloads, trial counts/durations, uncertainty,
@@ -247,19 +322,31 @@ silently replace them. Use five matched baseline/candidate pairs in
 alternating order for each claimed performance workload. Keep contrary pairs;
 do not extend sampling until a preferred result appears.
 
-Use [held-footprint equipment and controls](../tests/CHANGE-VERIFICATION.md#footprint-observations):
-an acknowledged hold, matching live process generations around observations,
-and independent termination/reap. Do not start a short-lived process and then
-try to discover its PID. Keep fixture timing effects separate from production
-timing and show that instrumentation can detect an injected delay or extra
-scan. Avoid permanent wire telemetry and token-content capture. Its current
-reader also asserts that workers use more CPU than the matched sleeper. Keep
-that baseline characterization separate from candidate acceptance; any new
-reader must retain identity, sensitivity, interval and effect checks without
-requiring the candidate to remain busy. The ARM plan compares with the same
-reader. Record the reader's source identity in every acceptance record, and
-treat a reader change after a frozen baseline as invalidating comparisons made
-against that baseline until it is re-frozen with the new reader.
+New specimens, timestamp fixtures and checker controls needed to cover the
+declared workloads are in scope. Inventory existing coverage before authoring
+them: `tests/lib/footprint_workloads.py`, phase controls, actor compositions and
+authority-binding controls are starting points, not proof that query-dense,
+no-eligible-query, early-failure, unreached-phase and inbound-dense workloads
+already exist. Register new runnable cases and update their coverage accounts;
+variants within an existing registered case need no separate catalog entry per
+specimen. Retain exact inputs, observed phase reachability and independent
+effects. Follow fixture ownership rules rather than regenerating default
+fixtures during ordinary test execution.
+
+The pilot owns the timestamp reader and its independent controls. Existing
+held-footprint readers may serve busy baseline characterization in the pilot
+and branches 1/2. Build the shared mechanism-neutral CPU measurement reader
+when the first candidate could invalidate their busy-worker assertion, before
+freezing that comparison's baseline; the coordinator executing that candidate
+owns this work. Hint tuning and ARM must use it, and scan work must do so if
+needed. Preserve generation, sensitivity, interval and effect checks and the
+meaning of historical busy-worker evidence. Keep the CPU reader distinct from
+the timestamp reader; each acceptance record identifies all readers it uses.
+Both sides of a comparison use the same versions. A reader change invalidates
+affected frozen comparisons until re-frozen with that reader; do not rewrite
+earlier records to pretend they used it. Avoid token-content capture.
+
+### Acceptance
 
 Each acceptance record must separate these quantities:
 
@@ -274,8 +361,14 @@ Each acceptance record must separate these quantities:
 For a latency/CPU claim, require improvement beyond declared uncertainty in
 every matched pair of the named workload. A scan-only change may instead stand
 on strictly reduced production-path work with unchanged behavior even if CPU
-or sampled memory is unchanged. Frame preparation needs a measured reduction
-in held time or held-worker demand; merely relocating work is insufficient.
+or sampled memory is unchanged. For the small cursor, demonstrate fewer actual
+slot visits/atomic loads in the declared inbound workloads with behavioral
+controls; an unused cache or a source-code count alone is insufficient. Report
+its state and added bookkeeping, and do not infer a CPU/energy benefit from
+the ratio of loads to instruction hints. Additional scan-state complexity needs
+its own demonstrated saving over the simpler cursor. Frame preparation needs a
+measured reduction in held time or held-worker demand; merely relocating work
+is insufficient.
 
 For every changed wait role, additional worst-observed release, activation,
 cancellation, cutoff and inbound-delivery response, as applicable, must be at
@@ -317,8 +410,9 @@ oracle. Follow [test evidence rules](../tests/AGENTS.md) for applicable reuse,
 fresh output, snapshots and retention. Regenerate worker identity for changed
 native inputs and update generated resource/limit accounts through their owners.
 
-The coordinator owns integration, evidence and disposition. Read-only research
-and review can run in parallel; builds and native trials run serially under the
+The coordinator is whoever is running the plan and owns integration, evidence
+and disposition. Read-only research and review can run in parallel; builds and
+native trials run serially under the
 checkout lock, with compiler concurrency capped at two. Start pilots with at
 most two busy processes, including calibration children, and reduce load on
 contention. Existing actor-footprint and timing qualification can exceed that
@@ -331,6 +425,16 @@ actual sleep/wake test explicitly with the user. No generic logger is required:
 direct publications, native observations and independent effects are primary;
 unified logs are supplemental, and missing logs do not establish absence.
 
+Exploration runs may remain unpinned. Leave existing pins in place and defer
+pruning and decisions about the normal pin maximum until acceptance. Keep raw
+evidence in dispatcher-owned output, with identities and locations in the
+records; do not move runs under `records/` to avoid retention rules. If required
+raw evidence disappears, rebuild and repeat the affected observations, revising
+the baseline if conditions changed. A surviving summary cannot replace it.
+At acceptance, choose which runs or identified copies remain necessary, decide
+whether an ongoing dependency warrants exceeding the normal maximum, and only
+then prune through the existing helpers. No pin rotation is prescribed now.
+
 ## Closeout
 
 Accept, reject or explicitly block each branch with its evidence and claim
@@ -341,7 +445,11 @@ and LIMITS for counting semantics. Remove completed plan-specific acceptance
 records and retire this plan once all three branches are accepted or rejected,
 including hint tails superseded by accepted ARM changes. Preserve necessary raw
 evidence through the retention helpers. Keep the shared pilot record while
-either plan needs it, and the outflow while any associated direction needs it.
+either plan needs it; once both plans retire, delete the pilot record after
+carrying forward any lasting conclusions and evidence references into the
+outflow or current-behavior documentation as appropriate. Do not create a
+separate records archive for it. Keep the outflow while an associated direction
+needs it; raw-evidence retention is decided separately at acceptance.
 Before deleting either plan, remove its reciprocal links from the remaining
 plan and retain any coordination facts that still apply there.
 The ARM plan retires independently. Stop for a genuine correctness, attribution
