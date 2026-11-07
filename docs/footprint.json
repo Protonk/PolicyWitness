@@ -793,10 +793,7 @@
         "ends": "host exit",
         "ending_event": "host process exit"
       },
-      "aftermath": {
-        "at_cli_return": "unknown",
-        "expected_ending": "host process exit"
-      },
+      "aftermath": null,
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
@@ -835,10 +832,7 @@
         "ends": "resource-specific completion or failure",
         "ending_event": "each identified process exits independently"
       },
-      "aftermath": {
-        "at_cli_return": "unknown",
-        "expected_ending": "each identified process exits independently"
-      },
+      "aftermath": null,
       "sources": [
         {
           "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
@@ -881,10 +875,7 @@
         "ends": "each owner-specific ending",
         "ending_event": "shared erasure, host unmap, private disposal and worker exit"
       },
-      "aftermath": {
-        "at_cli_return": "unknown",
-        "expected_ending": "shared erasure, host unmap, private disposal and worker exit"
-      },
+      "aftermath": null,
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
@@ -931,10 +922,7 @@
         "ends": "post-run inventory comparison",
         "ending_event": "baseline comparison; no run-owned removal implied"
       },
-      "aftermath": {
-        "at_cli_return": "unknown",
-        "expected_ending": "baseline comparison; no run-owned removal implied"
-      },
+      "aftermath": null,
       "sources": [
         {
           "path": "tests/suites/run_effects/check_installs_nothing.py",
@@ -973,10 +961,7 @@
         "ends": "effect-specific removal or descendant exit",
         "ending_event": "independent descendant exit or owned effect removal"
       },
-      "aftermath": {
-        "at_cli_return": "unknown",
-        "expected_ending": "independent descendant exit or owned effect removal"
-      },
+      "aftermath": null,
       "sources": [
         {
           "path": "tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py",
@@ -1015,10 +1000,7 @@
         "ends": "recorded owned cleanup",
         "ending_event": "explicit output/observer cleanup"
       },
-      "aftermath": {
-        "at_cli_return": "unknown",
-        "expected_ending": "explicit output/observer cleanup"
-      },
+      "aftermath": null,
       "sources": [
         {
           "path": "tests/lib/run_capture.py",
@@ -1296,8 +1278,7 @@
         "ending_event": "independent generation-qualified NOTE_EXIT events"
       },
       "aftermath": {
-        "at_cli_return": "absence_confirmed",
-        "expected_ending": "independent generation-qualified NOTE_EXIT events"
+        "at_cli_return": "absence_confirmed"
       },
       "sources": [
         {
@@ -1338,8 +1319,7 @@
         "ending_event": "recorded gate release followed by independent exits"
       },
       "aftermath": {
-        "at_cli_return": "present",
-        "expected_ending": "recorded gate release followed by independent exits"
+        "at_cli_return": "present"
       },
       "sources": [
         {

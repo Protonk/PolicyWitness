@@ -1,26 +1,13 @@
 # Resource footprint
 
-This account separates measured demand, logical capacity, constructed bounds
-and source-supported mechanisms. Conditions and intervals belong to each row;
-none establishes a universal memory ceiling. A retention allowance does not
-bound collection memory. Elapsed waiting does not establish idle CPU.
-
-A backing identity denotes one object; its mappings are views, not additional
-backing. Add quantities only when their units, backing and overlapping lifetimes
-support the sum. Erasure, native release, unmapping, exit and reap are different
-endings. CLI return does not establish any of them.
-
-Checks identify assertions to inspect after a change. An assertion pins its
-stated relation; a receipt check validates observations without imposing a
-machine-dependent threshold. Source citations identify mechanisms, not measured
-consumption. At CLI return, `present`, `absence confirmed` and `unknown` refer
-to the stated inventory and boundary. Failed inspection remains unknown.
-
-Native memory metrics remain separate and are not added to logical backing
-capacity or encoded bytes. The response observations use fresh
-shipped controllers. Actor lifecycle observations use a disposable instrumented
-host with unchanged signed workers; their timing does not describe an
-uninstrumented host.
+Each row is one of three kinds. A measured row reports an observation under
+its stated conditions. A logical row states a capacity that follows from the
+compiled layout and the admitted plan, not a measurement. A source row
+describes a mechanism and carries no quantity of its own. Conditions and
+intervals belong to each row; no row establishes a universal memory ceiling.
+Add quantities only when their units, backing and overlapping lifetimes
+support the sum; native memory metrics are never added to logical capacity or
+encoded bytes.
 
 ## Provenance of measured rows
 
@@ -60,6 +47,10 @@ archived binaries are the ones rebuilt.
 
 ## Waiting and retained resources
 
+Elapsed waiting does not establish idle CPU. Measured actor rows come from a
+disposable instrumented host with unchanged signed workers; their timing does
+not describe an uninstrumented host.
+
 <!-- BEGIN GENERATED FOOTPRINT WAITING -->
 
 | ID | Resource / owner | Quantity / mechanism | Conditions | Interval | At CLI return |
@@ -94,6 +85,14 @@ acknowledged gate.
 
 ## Response storage and transport
 
+The source rows describe representations in the order they arise: validator
+records (fr3), host collection copies (fr2), the encoded reply (fr4), client
+capture and stdout (fr5), the controller’s raw streams (fr1), generic and typed
+capture (fr6), decoded host bytes (fr7) and the envelope (fr8).
+
+A retention allowance does not bound collection memory. The measured rows use
+fresh shipped controllers.
+
 <!-- BEGIN GENERATED FOOTPRINT RESPONSE -->
 
 | ID | Resource / owner | Quantity / mechanism | Conditions | Interval | At CLI return |
@@ -115,11 +114,6 @@ acknowledged gate.
 
 <!-- END GENERATED FOOTPRINT RESPONSE -->
 
-The source rows describe representations in the order they arise: validator
-records (fr3), host collection copies (fr2), the encoded reply (fr4), client
-capture and stdout (fr5), the controller’s raw streams (fr1), generic and typed
-capture (fr6), decoded host bytes (fr7) and the envelope (fr8).
-
 The native response rows describe single repetitions. Memory values are maxima
 among successful samples with verified lifetime coverage; resident and physical
 footprint maxima can occur in different samples and are not added. A sampled
@@ -130,29 +124,38 @@ coexistence at their own boundaries, in a separate process.
 
 ## State remaining after a run
 
+Source rows here describe what can remain after a run and who owns its ending;
+only a measured row carries a state. At CLI return, `present`,
+`absence confirmed` and `unknown` refer to the stated inventory and boundary,
+and a failed inspection remains unknown. Erasure, native release, unmapping,
+exit and reap are different endings, and CLI return establishes none of them.
+
 <!-- BEGIN GENERATED FOOTPRINT AFTERMATH -->
 
 | ID | Resource / owner | Quantity / mechanism | Conditions | Interval | At CLI return |
 | --- | --- | --- | --- | --- | --- |
-| fa1 | Asynchronous host retirement — host | source: [LIMITS `host_exit_delay`](LIMITS.md) Schedules retirement after replying. A live host at CLI return may still be in this interval; its generation needs an independent end observation. | Completion with delivered reply. | reply sent → host exit | unknown |
-| fa2 | Submitted work after client timeout — host / workers | source: A post-invocation client deadline ends the client wait without cancelling submitted work. Gate release, signalling and fixture cleanup are later interventions. | Client deadline after submission, including actor form. | irreversible submission → resource-specific completion or failure | unknown |
-| fa3 | Authority erasure and detachment — host / actor workers | source: Shared erasure requires a reaped or never-launched owner; unresolved workers withhold erasure while host detachment proceeds. Private custody is erased/disposed separately. Native release does neither. Native process exits do not directly observe shared-byte erasure, host unmapping, private disposal, native release or parent reap in the timed-out run. | Authority-bearing actor teardown; component receipts do not establish this run’s native unmapping. | actor cleanup → each owner-specific ending | unknown |
-| fa4 | Baseline installation state — registry / launchd files | source: Plain run inventory compares registry state and directory names. Pre-existing installed services are baseline, not run-created apparatus. Name equality does not establish every object identity. | Explicit baseline inventory around a plain run. | before invocation → post-run inventory comparison | unknown |
-| fa5 | Requested effects and descendants — specimen | source: Requested file effects and surviving exec descendants remain separate from apparatus residue. Leader exit or stream EOF does not establish descendant exit. | Specimens that request writes or exec. | requested operation → effect-specific removal or descendant exit | unknown |
-| fa6 | Requested output and observer resources — caller / harness | source: Envelope files, gates, meters, staging and exit watchers have caller/harness ownership. Their removal cannot substitute for the pre-intervention product snapshot. | Artifacts explicitly requested or created for observation. | caller/harness preparation → recorded owned cleanup | unknown |
+| fa1 | Asynchronous host retirement — host | source: [LIMITS `host_exit_delay`](LIMITS.md) Schedules retirement after replying. A live host at CLI return may still be in this interval; its generation needs an independent end observation. | Completion with delivered reply. | reply sent → host exit | — |
+| fa2 | Submitted work after client timeout — host / workers | source: A post-invocation client deadline ends the client wait without cancelling submitted work. Gate release, signalling and fixture cleanup are later interventions. | Client deadline after submission, including actor form. | irreversible submission → resource-specific completion or failure | — |
+| fa3 | Authority erasure and detachment — host / actor workers | source: Shared erasure requires a reaped or never-launched owner; unresolved workers withhold erasure while host detachment proceeds. Private custody is erased/disposed separately. Native release does neither. Native process exits do not directly observe shared-byte erasure, host unmapping, private disposal, native release or parent reap in the timed-out run. | Authority-bearing actor teardown; component receipts do not establish this run’s native unmapping. | actor cleanup → each owner-specific ending | — |
+| fa4 | Baseline installation state — registry / launchd files | source: Plain run inventory compares registry state and directory names. Pre-existing installed services are baseline, not run-created apparatus. Name equality does not establish every object identity. | Explicit baseline inventory around a plain run. | before invocation → post-run inventory comparison | — |
+| fa5 | Requested effects and descendants — specimen | source: Requested file effects and surviving exec descendants remain separate from apparatus residue. Leader exit or stream EOF does not establish descendant exit. | Specimens that request writes or exec. | requested operation → effect-specific removal or descendant exit | — |
+| fa6 | Requested output and observer resources — caller / harness | source: Envelope files, gates, meters, staging and exit watchers have caller/harness ownership. Their removal cannot substitute for the pre-intervention product snapshot. | Artifacts explicitly requested or created for observation. | caller/harness preparation → recorded owned cleanup | — |
 | fa7 | Serial completion process observations — inventoried hosts / workers / validators | measured: 6 observations Three ordinary and three actor completions: every inventoried host, worker and validator generation had exited in its first post-return snapshot. Snapshot starts 87,334–145,583 ns and ends 5,234,792–6,125,000 ns after the recorded CLI-return observation. Repetitions are serial with intervening fixture cleanup; no accumulation or instant-return claim. | Ordinary shipped app; actor disposable instrumented host with unchanged signed workers. Snapshot follows return and precedes fixture cleanup. | CLI return observed → first post-return snapshot complete | absence confirmed |
 | fa8 | Held timeout process observations — invoked host / worker(s) / validator | measured: 2 observations One ordinary and one actor timeout: every inventoried required generation remained present through the primary post-return snapshot. Later independent exits followed explicitly recorded harness gate release; they establish assisted continuation, not autonomous teardown at CLI return. | Held invoked work; actor metadata retains accepted custody, settled delivery and a candidate handle with releases pending. | CLI return observed while gate remains closed → primary snapshot completes before gate release | present |
 
 <!-- END GENERATED FOOTPRINT AFTERMATH -->
 
-For measured aftermath rows, the state column refers to the first post-return
-snapshot, not the mathematical instant of CLI exit. Established process exit
-is distinct from parent reap or disappearance of every process record.
-Mapping disposal and token erasure remain unknown without their own observation.
-Owned staging cleanup and retained evidence belong to the harness; neither
-rewrites the primary snapshot.
+The state column refers to the first post-return snapshot, not the
+mathematical instant of CLI exit. Established process exit is distinct from
+parent reap or disappearance of every process record. No measured row observes
+erasure, unmapping, native release or parent reap after CLI return; the
+measured rows observe process presence only. Owned staging cleanup and
+retained evidence belong to the harness; neither rewrites the primary snapshot.
 
 ## Shared backing
+
+A backing identity denotes one object; its mappings are views, not additional
+backing.
 
 <!-- BEGIN GENERATED FOOTPRINT BACKING -->
 
@@ -202,6 +205,11 @@ rewrites the primary snapshot.
 <!-- END GENERATED FOOTPRINT ENDINGS -->
 
 ## Grounding and coverage
+
+Checks identify assertions to inspect after a change. An assertion pins its
+stated relation; a receipt check validates observations without imposing a
+machine-dependent threshold. Source citations identify mechanisms, not
+measured consumption.
 
 <!-- BEGIN GENERATED FOOTPRINT COVERAGE -->
 

@@ -93,13 +93,15 @@ def load_manifest(path, root=ROOT):
         for value in row['interval'].values():
             text(value, ident, True)
         a = row['aftermath']
+        measured_aftermath = row['case'] == 'aftermath' and q['evidence'] == 'measured'
+        if a is None and measured_aftermath:
+            raise ValueError(f'{ident}: measured aftermath row needs its observed state')
         if a is not None:
-            fields(a, 'at_cli_return expected_ending', ident)
+            if not measured_aftermath:
+                raise ValueError(f'{ident}: aftermath state belongs to a measured aftermath row')
+            fields(a, 'at_cli_return', ident)
             if a['at_cli_return'] not in {'present','absence_confirmed','unknown'}:
                 raise ValueError(f'{ident}: invalid aftermath state')
-            text(a['expected_ending'], ident, True)
-        if row['case'] == 'aftermath' and a is None:
-            raise ValueError(f'{ident}: aftermath state required')
         for group in ('sources','checks'):
             refs = row[group]
             if not isinstance(refs,list) or not refs:

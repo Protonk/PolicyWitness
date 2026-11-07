@@ -50,6 +50,10 @@ class FootprintDocumentationTests(receipts.TestCase):
             lambda d: d['rows'][0]['checks'][0].update(symbol='missing_footprint_assertion'),
             lambda d: d['rows'][0]['sources'][0].update(path='../outside'),
             lambda d: d['rows'][0].update(conditions='7 bytes'),
+            lambda d: next(r for r in d['rows'] if r['case'] == 'aftermath'
+                           and r['quantity']['evidence'] == 'measured').update(aftermath=None),
+            lambda d: next(r for r in d['rows'] if r['case'] == 'aftermath'
+                           and r['quantity']['evidence'] == 'source').update(aftermath={'at_cli_return': 'unknown'}),
         ]
         for mutate in mutations:
             data = copy.deepcopy(self.manifest)
