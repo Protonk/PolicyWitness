@@ -34,7 +34,12 @@ stays with the 2 ms sentinel poll and is recorded as a further delay.
 - Baseline source: `fc089ef7` on `main` (HOST-01 integrated); worker identity
   `a729571df02255983f5bf8e76883a7fb94166f6404cb869780e86997c4e57894`. Baseline
   app: the distribution build of that source in the main checkout, provenance
-  commit `fc089ef7`, dirty false.
+  commit `fc089ef7`, dirty false. Baseline verification: default battery 222 of
+  222 pass in run `20261107T221005Z_e35b4797` (`main-host01-default-01`), during
+  which one case, `preflight/build_provenance_controls`, overlapped a system
+  sleep and was rerun without sleep in `20261107T231019Z_79b8e96c`
+  (`main-host01-provenance-rerun-01`, pass); `order_barrier_mutations` pass in
+  `20261107T230830Z_c4725a38`.
 - Candidate source: branch `wait/host-02` in the worktree
   `PolicyWitness-wait-host02`; commit, identity and build receipt are recorded
   under Revisions when frozen.

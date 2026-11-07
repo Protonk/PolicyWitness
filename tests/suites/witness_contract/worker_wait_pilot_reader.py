@@ -1149,6 +1149,9 @@ def evaluate_stamps(bundle, row, calibration):
     for p in row['phases']:
         if p.get('eligible_planned') is not None and p['eligible_planned'] != p['expected_eligible']:
             problems.append('eligible_count_mismatch')
+    row['detection_total'] = detection_total(row)
+    if row['detection_total'].get('ns') is not None and row['detection_total'].get('uncertainty_ns') is not None:
+        row['detection_total']['below_instrument_floor'] = row['detection_total']['ns'] <= row['detection_total']['uncertainty_ns']
     row['host_ms_cross_checks'] = cross_checks(row, (bundle['validation'] or {}).get('host_ms_fields') or {})
     row['observer_overlap'] = observer_overlap(bundle['host_exit'], row['phases'])
     if row['observer_overlap'].get('overlaps_held'):
@@ -1189,8 +1192,38 @@ def group_key(row):
             json.dumps(row.get('flavour'), sort_keys=True))
 
 
+DETECTION_LEAVES = ('arrival_detection', 'arrival_first_check_positive', 'completion_detection',
+                    'completion_first_check_positive', 'inbound_ack_to_host_observed', 'inbound_ack_first_check_positive')
+
+
+def detection_total(row):
+    """The per-trial sum of the host's post-publication detection latencies: arrival after an activation or a
+    release (every actor visit; ordinary phases after the first, whose arrival follows readiness), completion after
+    a release, and the recipient acknowledgement after an inbound commit. Uncertainty is the sum of the parts'.
+    The worker's terminal publication follows no host publication and is excluded."""
+    parts = []
+    for name, record in component_values(row):
+        if record.get('ns') is None or name == 'detection_total':
+            continue
+        prefix, _, leaf = name.rpartition('.')
+        if leaf not in DETECTION_LEAVES:
+            continue
+        if row.get('form') == 'ordinary' and leaf.startswith('arrival') and prefix == 'p0':
+            continue
+        parts.append((name, record))
+    if not parts:
+        return dict(ns=None, unobserved='no post-publication detection in this form', components=[])
+    uncertainties = [r.get('uncertainty_ns') for _, r in parts]
+    return dict(ns=sum(r['ns'] for _, r in parts), components=[n for n, _ in parts],
+                uncertainty_ns=None if None in uncertainties else sum(uncertainties),
+                uncertainty_basis='sum of the parts' if None not in uncertainties else 'a part is not established',
+                cross_process=True, below_instrument_floor=None)
+
+
 def component_values(row):
-    """(name, record) for every interval record in a row, including custody rows."""
+    """(name, record) for every interval record in a row, including custody rows and the detection total."""
+    if isinstance(row.get('detection_total'), dict) and 'ns' in row['detection_total']:
+        yield 'detection_total', row['detection_total']
     for p in row.get('phases') or []:
         prefix = f"p{p['phase']}."
         for name, value in p.items():

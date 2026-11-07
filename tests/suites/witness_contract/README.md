@@ -97,7 +97,11 @@ publication: the exact sleep when the host recorded it as a stamped event pair
 (its first 64 sleeps per wait key), otherwise a register pair, otherwise
 marked unattributed. The ordinary host's detection of the worker's terminal
 publication is a component of its own, and exchange waits appear in the wait
-table with their pass counts and an upper-bound period. Each interval's uncertainty is the sum of its two endpoint
+table with their pass counts and an upper-bound period. Each trial also
+carries `detection_total`, the sum of the host's post-publication detection
+latencies (arrival after an activation or release, completion after a
+release, recipient acknowledgement after an inbound commit), which a
+comparison can pair as one quantity when the parts are bimodal. Each interval's uncertainty is the sum of its two endpoint
 terms, where a publication's term is the width from the nearest preceding
 stamp in the same process to its post-store stamp, floored at the clock-pair
 receipt's endpoint term and, for host endpoints, at twice the host's in-situ

@@ -289,6 +289,7 @@ def endpoint(process, stamp, bracket_from, bracket_ns):
 
 
 def check_ordinary(row):
+    check_detection_total(row)
     assert row['status'] == 'accepted' and not row['problems'] and not row['exclusions'], row
     (phase,) = row['phases']
     value = lambda name: phase[name]['ns']
@@ -428,6 +429,7 @@ def per_wait_expected():
 
 
 def check_actor(row):
+    check_detection_total(row)
     assert row['status'] == 'accepted' and not row['problems'] and not row['exclusions'], row
     phases = row['phases']
     assert [p['eligible_planned'] for p in phases] == [0, 0, 2, 0, 0]
@@ -799,6 +801,22 @@ COMPARISON = dict(apps=['baseline', 'candidate'], pairing_rule='constructed: sam
 VERDICTS = ('improves_beyond_uncertainty_in_every_pair', 'improves_beyond_spread_in_every_pair',
             'worsens_beyond_instrument_uncertainty', 'worsens_beyond_spread_in_any_pair',
             'worsens_beyond_spread_in_every_pair')
+
+
+def check_detection_total(row):
+    """detection_total is the sum of the row's post-publication detection records, excluding the first ordinary
+    phase's arrival, with the parts' uncertainties summed."""
+    total = row['detection_total']
+    parts = [(n, r) for n, r in reader.component_values(row) if n != 'detection_total' and r.get('ns') is not None
+             and n.rpartition('.')[2] in reader.DETECTION_LEAVES
+             and not (row.get('form') == 'ordinary' and n.startswith('p0.arrival'))]
+    if not parts:
+        assert total['ns'] is None and total['components'] == [], total
+        return 0
+    assert total['ns'] == sum(r['ns'] for _, r in parts) and total['components'] == [n for n, _ in parts], total
+    assert total['uncertainty_ns'] == sum(r['uncertainty_ns'] for _, r in parts), total
+    assert ('detection_total', total) in list(reader.component_values(row))
+    return len(parts)
 
 
 def check_every_pair_worsening(pairs, required):
