@@ -21,7 +21,6 @@ later change does not discover either role by accident.
 
 | Direction | Rows | Demand mechanism | Possible bounded change |
 | --- | --- | --- | --- |
-| [1](#direction-1-rebuild-sorted-envelope-maps-from-owned-entries) | fr8 | Recursive envelope sorting clones complete subtrees while source and destination coexist. | Rebuild sorted maps from owned entries, preserving key order and rendered bytes. |
 | [2](#direction-2-remove-one-redundant-capture-conversion-copy) | fr6–fr7 | Generic capture is cloned into a typed capture while raw output and decoded host bytes coexist. | Remove one redundant conversion copy while preserving the generic capture retained for diagnostics. |
 | [3](#direction-3-pace-the-sandboxed-workers-waits) | fw1–fw2 | Active and parked workers continuously poll protocol words. | Introduce a bounded paced wait, separately from serialization changes. |
 | [4](#direction-4-right-size-the-evidence-region) | fw4–fw5 | Every worker initializes fixed evidence capacity even for a small request. | Investigate right-sized evidence only in a separate ABI change. |
@@ -30,70 +29,6 @@ later change does not discover either role by accident.
 A small follow-on should change one mechanism at a time and compare matched
 workloads against the same signed baseline. No expected gain, changed assertion
 or claim of incidental structure is established by this candidate list alone.
-The [bounded plan](../docs/FOOTPRINT-OPTIMIZATION-PLAN.md) takes direction 1 only.
-
-## Direction 1: rebuild sorted envelope maps from owned entries
-
-Rows: fr8.
-
-### Present mechanism
-
-[`sort_value`](../controller/src/json_contract.rs) visits every object in the
-envelope, clones each key and each subtree into a temporary vector, sorts the
-copies, recursively sorts each copied subtree, builds a new map and replaces
-the old one. By the time it runs, `envelope_value` has already converted the
-caller's borrowed `data` into an owned `Value`, so the clone is a second
-complete copy of the envelope tree while the first is live. Pretty rendering
-then adds the output `String` while the sorted `Value` remains live. The
-test-only stage seam records stage order, borrowed input and scalar lengths at
-these boundaries; it does not count copies.
-
-### Proposed direction
-
-Take the old map, collect its owned entries, sort them, recursively rebuild and
-reinsert. Keep the explicit sort rather than relying on the map's storage
-order, so the rendered bytes stay the same if the `serde_json` feature set later
-changes.
-
-### Promises the direction must keep
-
-Envelope shape, sorted keys at every object level with array order preserved,
-byte-exact rendering for fixed inputs, and the error mapping of a failed encode
-are promises. The clone is an implementation fact: the fr8 source wording must
-change even if the scalar boundary assertions still pass.
-
-### Evidentiary risks
-
-Protective roles the present habit may have:
-
-- Sorted-key determinism is the property that makes two envelopes comparable
-  by bytes. Consumers in the blackbox and shape controls, retained evidence, and
-  any custody tooling that hashes an envelope depend on it. The one existing
-  ordering test covers a single nested object; it does not establish array
-  element order, nested arrays of objects or escaped strings. A rebuild that
-  reorders array elements, or sorts only the top level, passes that test and
-  silently changes every envelope hash. The protective role belongs to the sort,
-  not to the clone; the plan's byte-fixture check is what carries it across.
-- The stage seam reports `borrowed_input: true` and lengths only. Passing seam
-  assertions after the change is not evidence that copies were removed, and a
-  lower native sample is not evidence either, because sampling cannot attribute
-  a sample to sorting. The gain is source-established or it is not established.
-  The risk is a claim of a measured reduction that the evidence cannot support.
-
-Ways the present habit may obstruct witnessing:
-
-- The duplicate tree raises the controller's peak after the host has replied.
-  The envelope is the only durable record of a run, and a lost reply has no
-  retrieval or replay. The present copy makes the window in which the controller
-  could fail for memory reasons larger than it needs to be. No such failure has
-  been observed; the measured peaks (fr9–fr13) are well below any limit on the
-  recorded machine.
-
-### Before crediting a result
-
-Exact-byte rendering of a fixed nested fixture with arrays and escaping, the
-existing envelope tests, `response_footprint_success_boundaries`, and the
-response footprint case against the same signed baseline.
 
 ## Direction 2: remove one redundant capture conversion copy
 
@@ -159,8 +94,9 @@ Ways the present habit may obstruct witnessing:
 - Raw streams, lossy text, generic `Value`, typed capture, decoded host bytes
   and the parsed host reply coexist on the largest replies, and the retention
   cap is a retention cap, not a streaming limit. The controller's peak is set by
-  what the client emits, not by what PW retains. This is the same loss-of-record
-  exposure as direction 1, and equally unobserved.
+  what the client emits, not by what PW retains. A memory failure in the
+  controller could lose the run's durable envelope. No such failure has been
+  observed.
 - The opposite habit would be worse for evidence: collecting every byte is what
   makes `stdout_bytes_received` exact and lets the oversized-producer control
   distinguish receiver loss from a malformed reply. A streaming cut that stopped

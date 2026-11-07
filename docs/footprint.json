@@ -749,7 +749,7 @@
         "value": null,
         "unit": null,
         "limit": null,
-        "behavior": "Borrowed input and envelope coexist. Recursive sorting clones subtrees; pretty serialization adds a String while the Value remains live. Sort temporaries are not claimed to survive the sort."
+        "behavior": "Borrowed input and envelope coexist. Recursive sorting takes owned map entries, explicitly sorts their keys and rebuilds maps without cloning keys or subtrees; pretty serialization adds a String while the Value remains live. Sort temporaries are not claimed to survive the sort."
       },
       "conditions": "Final envelope rendering; successful stdout adds a newline.",
       "interval": {
@@ -775,6 +775,13 @@
           "kind": "assertion",
           "form": "test",
           "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
+        },
+        {
+          "path": "controller/src/json_contract.rs",
+          "symbol": "sorted_envelope_value_has_exact_pretty_bytes",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Fixed nested envelope-shaped input preserves exact pretty bytes, array order, Unicode and escaping; source review establishes owned-entry traversal and explicit sorting."
         }
       ]
     },
@@ -1039,10 +1046,10 @@
       },
       "quantity": {
         "evidence": "measured",
-        "value": 9435,
+        "value": 9441,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 13,420 bytes; final envelope 32,035 bytes. Sampled maximum resident 6,750,208 bytes and physical footprint 1,556,816 bytes; 32 successful samples over 43,041,375 ns, starting 1,277,166\u20131,458,000 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Host reply bytes; client stdout 13,428 bytes; final envelope 32,056 bytes. Sampled maximum resident 6,766,592 bytes and physical footprint 1,573,200 bytes; 36 successful samples over 52,777,333 ns, starting 1,310,875\u20132,938,375 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1078,10 +1085,10 @@
       },
       "quantity": {
         "evidence": "measured",
-        "value": 1826055,
+        "value": 1826061,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 2,435,586 bytes; final envelope 4,737,755 bytes. Sampled maximum resident 57,966,592 bytes and physical footprint 52,593,048 bytes; 138 successful samples over 187,629,834 ns, starting 1,340,792\u20131,468,791 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Host reply bytes; client stdout 2,435,594 bytes; final envelope 4,737,776 bytes. Sampled maximum resident 32,784,384 bytes and physical footprint 27,378,048 bytes; 132 successful samples over 180,653,250 ns, starting 1,345,041\u20131,511,667 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1117,10 +1124,10 @@
       },
       "quantity": {
         "evidence": "measured",
-        "value": 1830373,
+        "value": 1830379,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 2,441,346 bytes; final envelope 4,751,545 bytes. Sampled maximum resident 57,606,144 bytes and physical footprint 52,232,600 bytes; 150 successful samples over 202,997,208 ns, starting 1,129,000\u20131,465,916 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Host reply bytes; client stdout 2,441,354 bytes; final envelope 4,751,566 bytes. Sampled maximum resident 32,882,688 bytes and physical footprint 27,476,352 bytes; 144 successful samples over 195,090,375 ns, starting 1,115,000\u20131,470,625 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1156,10 +1163,10 @@
       },
       "quantity": {
         "evidence": "measured",
-        "value": 603354,
+        "value": 603360,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 805,316 bytes; final envelope 1,904,230 bytes. Sampled maximum resident 38,879,232 bytes and physical footprint 31,506,816 bytes; 300 successful samples over 424,208,000 ns, starting 1,213,000\u20133,434,375 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Host reply bytes; client stdout 805,324 bytes; final envelope 1,904,251 bytes. Sampled maximum resident 21,577,728 bytes and physical footprint 16,138,624 bytes; 290 successful samples over 419,666,542 ns, starting 1,230,500\u20132,019,083 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
@@ -1195,10 +1202,10 @@
       },
       "quantity": {
         "evidence": "measured",
-        "value": 9491469,
+        "value": 9491475,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 12,656,138 bytes; final envelope 22,740,116 bytes. Sampled maximum resident 159,973,376 bytes and physical footprint 154,665,464 bytes; 578 successful samples over 786,891,792 ns, starting 1,112,750\u20131,546,875 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Host reply bytes; client stdout 12,656,146 bytes; final envelope 22,740,137 bytes. Sampled maximum resident 91,095,040 bytes and physical footprint 85,737,928 bytes; 572 successful samples over 780,180,041 ns, starting 1,107,416\u20131,567,709 ns apart against a requested 1,000,000 ns cadence."
       },
       "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {

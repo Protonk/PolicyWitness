@@ -147,8 +147,7 @@ fn sort_value(value: &mut Value) {
         }
         Value::Object(map) => {
             // Sort object keys to keep output deterministic across runs.
-            let mut entries: Vec<(String, Value)> =
-                map.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+            let mut entries: Vec<(String, Value)> = std::mem::take(map).into_iter().collect();
             entries.sort_by(|a, b| a.0.cmp(&b.0));
             let mut sorted = Map::new();
             for (key, mut val) in entries {
@@ -267,6 +266,66 @@ mod tests {
 
         let parsed: serde_json::Value = serde_json::from_str(&text).expect("parse");
         assert_eq!(parsed["schema_version"], SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn sorted_envelope_value_has_exact_pretty_bytes() {
+        let mut value = json!({
+            "schema_version": 12,
+            "result": {
+                "stdout": null, "stderr": null, "rc": null, "ok": true,
+                "normalized_outcome": "finished", "exit_code": 0,
+                "error": null, "errno": null
+            },
+            "kind": "run",
+            "generated_at_unix_ms": 123,
+            "data": {
+                "z": [{"z": "line\n\"quoted\"\\path\t", "a": [2, 1]}, false, null],
+                "a": {"z": [], "a": "雪"}
+            },
+            "build": {"version": "fixture", "number": "0", "describe": "fixed", "commit": "abc"}
+        });
+        sort_value(&mut value);
+        let text = serde_json::to_string_pretty(&value).expect("render fixed envelope");
+        let expected = r#"{
+  "build": {
+    "commit": "abc",
+    "describe": "fixed",
+    "number": "0",
+    "version": "fixture"
+  },
+  "data": {
+    "a": {
+      "a": "雪",
+      "z": []
+    },
+    "z": [
+      {
+        "a": [
+          2,
+          1
+        ],
+        "z": "line\n\"quoted\"\\path\t"
+      },
+      false,
+      null
+    ]
+  },
+  "generated_at_unix_ms": 123,
+  "kind": "run",
+  "result": {
+    "errno": null,
+    "error": null,
+    "exit_code": 0,
+    "normalized_outcome": "finished",
+    "ok": true,
+    "rc": null,
+    "stderr": null,
+    "stdout": null
+  },
+  "schema_version": 12
+}"#;
+        assert_eq!(text.as_bytes(), expected.as_bytes());
     }
 }
 
