@@ -2787,6 +2787,14 @@
         {
           "path": "controller/tools/pw_probe_runner/pw_authority_bytes.h",
           "symbol": "PW_EXTENSION_TOKEN_BYTES"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "PWAuthorityLayout"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
+          "symbol": "TokenCustody"
         }
       ],
       "checks": [
@@ -2809,7 +2817,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Actor authority controls exercise framing, unavailable operations, native results, owned byte erasure and independent cleanup; shared scalar admission is checked separately."
+      "behavior": "This capacity sizes token fields and each private host custody buffer. Value checks establish agreement with PWAuthorityLayout.tokenBytes; TokenCustody uses it for its allocation. Actor authority controls exercise framing, unavailable operations, native results, owned byte erasure and independent cleanup; shared scalar admission is checked separately."
     },
     {
       "id": "extension_token_payload",

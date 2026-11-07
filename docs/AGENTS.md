@@ -55,6 +55,10 @@ Edit [footprint.json](footprint.json), then run
 Keep its reading guide outside the generated regions; quantities belong in
 manifest rows or authored `footprint.<row>.<field>` spans. Do not add literal
 size/time prose to the prose baseline.
+When a footprint resource uses an existing LIMITS capacity or budget, reference
+that limit through the row's `quantity.limit` instead of repeating its value.
+Keep allocation counts, derived storage geometry, backing identity and resource
+lifetimes in FOOTPRINT; the capacity's boundary and consequence belong in LIMITS.
 Each check's `pins` phrase identifies its assertion scope; receipt validation
 is distinct from a fixed value assertion. Measured, logical and source-supported
 claims keep their stated units, conditions and intervals.

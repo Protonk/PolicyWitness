@@ -285,9 +285,9 @@
       },
       "quantity": {
         "evidence": "logical",
-        "value": 16384,
-        "unit": "bytes",
-        "limit": null,
+        "value": null,
+        "unit": null,
+        "limit": "extension_token_storage",
         "behavior": "One fixed private buffer per admitted token; delivery copies it into the recipient actor's inbound slot. Last-use erasure resets payload state but retains its allocation."
       },
       "conditions": "Authority-bearing actor plan; accepted lengths are separate from capacity.",
@@ -314,6 +314,13 @@
           "kind": "assertion",
           "form": "test",
           "pins": "Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls."
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test",
+          "pins": "The extension storage bound and host custody layout agree; not residency."
         }
       ]
     },
