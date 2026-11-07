@@ -14,6 +14,40 @@ Its `nanosleep` and direct `mach_wait_until` trials both failed under the tested
 deny-default profiles. Do not retry those calls in a loop, broaden the specimen
 profile, or hide pre-application resources to make this alternative pass.
 
+## Coordination with worker wait exploration
+
+The worker exploration's ready builds and native trials have scheduling
+priority. Its order is quantitative pilot, branch 2 (host delay), branch 1
+(preparation), then branch 3 (scan work and separately selected hint tails).
+Read-only ARM contract research, checker design and pinned-source review can
+proceed in parallel. ARM disposable-child applicability builds and trials use
+time the worker exploration is not using, under the same serialized checkout
+execution rule and with separate builds, output directories and acceptance
+records. Do not interpret priority as waiting for the other plan to retire.
+
+Branches 1 and 2 must be accepted or rejected, with dispositions recorded in
+the outflow, before this plan freezes a production comparison baseline. Include
+their accepted changes and exclude unaccepted candidates. The worker plan's
+[coordination decisions](WORKER-WAIT-EXPLORATION-PLAN.md#coordination-decisions-awaiting-the-user)
+identify the pending exception for a blocked preparation branch; until resolved,
+retain this prerequisite while continuing independent qualification work.
+
+Successful native qualification reserves the corresponding release or activation
+tail for this plan's deployment and benefit evaluation. Accepted ARM adoption
+supersedes hint tuning there; closing that ARM path without adoption returns
+the tail to the worker exploration. Pending qualification does neither by
+itself. The same coordination decisions govern any explicit deferral to allow
+hint tuning while an ARM observation remains pending. Track the two wait roles
+separately; release success cannot dispose of the parked-activation question.
+
+Use the shared `records/WORKER-WAIT-PILOT.md` decomposition to choose the benefit
+metric and minimum worthwhile improvement. This pilot is measured in an arranged
+quiet window with stable power conditions; it is not the later ARM comparison
+baseline. Recheck the threshold's rationale against the accepted source at
+baseline freeze, before candidate comparisons. A later accepted host, scan or
+hint change affecting the comparison requires a new baseline and candidate
+comparison on the same source foundation, not reuse across source changes.
+
 ## What the primary sources support
 
 These are research leads, not observations of the installed Mac. The XNU links
@@ -169,21 +203,31 @@ in that design. Preserve ordinary acquire loads in this experiment.
 
 ## 4. Establish the actual benefit
 
-Before candidate comparison, commit an associated acceptance record naming
-the qualified mechanism, deployment gate, workload/hold classes, exact durations,
-five alternating matched baseline/candidate pairs, uncertainty and the primary
-benefit metric. During the baseline pilot, select and justify a quantitative
-minimum worthwhile improvement for that metric, beyond mere detectability,
-given the new platform dependency. Freeze it before candidate comparisons.
+Use separate records under `records/`: `ARM-WAIT-QUALIFICATION.md` for the
+declared native applicability matrix and its results, and
+`ARM-WAIT-RELEASE-ACCEPTANCE.md` and `ARM-WAIT-ACTIVATION-ACCEPTANCE.md` as each
+production candidate opens. Commit the qualification protocol before native
+trials and each acceptance protocol before candidate comparisons. Name the
+qualified mechanism, deployment gate, source/build/reader identities, workload
+and hold classes, exact durations, five alternating matched pairs, uncertainty
+and the primary benefit metric. Select and justify a quantitative minimum
+worthwhile improvement from the shared pilot record, beyond mere detectability
+given the new platform dependency, and freeze it before candidate comparisons.
+Record revisions explicitly, preserving earlier frozen definitions and results;
+do not amend one wait's protocol silently to fit the other's later findings.
 Isolated prototype measurements may proceed with an unresolved deployment gate;
 they cannot authorize adoption. Use the held-footprint controls and generation-qualified samples
 described in [change verification](../tests/CHANGE-VERIFICATION.md#footprint-observations).
 Freeze a separate baseline for release and parked integration. The current
 held-footprint reader requires worker CPU to exceed a matched sleeper; that is
-a baseline characterization, not a requirement for a quieter candidate. Give
-comparisons a mechanism-neutral reader with independent acceptance/rejection
-controls, retaining generation, observer-sensitivity, interval and effect checks.
-Preserve the old reader and the meaning of its recorded evidence.
+a baseline characterization, not a requirement for a quieter candidate. Reuse the
+worker exploration's mechanism-neutral measurement reader, with independent
+acceptance/rejection controls retaining generation, observer-sensitivity,
+interval and effect checks. Each acceptance record names that reader's source
+identity. A reader change after baseline freeze invalidates comparisons against
+that baseline until re-frozen with the new reader. Candidate-specific benefit
+criteria remain separate from shared measurement validity. Preserve the old
+busy-worker reader and the meaning of its recorded evidence.
 
 CPU time, instruction activity, available CPU capacity, energy and wake
 coalescing are different claims. A WFE thread may perform less work while
@@ -251,4 +295,8 @@ the narrow result, contrary trials and apparatus limits in the outflow. Commit
 accepted current-behavior documentation and implementation, or the negative
 result with production unchanged. Retire this plan and its completed acceptance
 records after disposition; preserve needed raw observations through the retention
-helpers. Keep the shared outflow while another associated direction needs it.
+helpers. Keep the shared pilot while either plan needs it and the outflow while
+another associated direction needs it. Before deleting either plan, remove its
+reciprocal links from the remaining plan and retain coordination facts still
+needed there. A genuinely pending observation keeps its branch and plan active
+unless that scope is explicitly closed; it is not a negative qualification result.

@@ -12,25 +12,51 @@ builds and comparisons separate until each accepted change has its own evidence.
 
 ## Order of work
 
-This plan's builds and native trials run before the ARM plan's. Open with the
-baseline pilot described under measurement, then dispose of branch 2 while its
-fixture and decomposition are current, then branch 1, then branch 3. Accepting
-or rejecting a branch remains independent of the others; the order fixes
-sequence, not outcome.
+This plan's ready builds and native trials take priority over the ARM plan's;
+this is scheduling priority, not a requirement to finish this plan before ARM
+trials begin. Open with the baseline pilot described under measurement, then
+dispose of branch 2 while its fixture and decomposition are current, then
+branch 1, then branch 3. Accepting or rejecting a branch remains independent of
+the others; the order fixes sequence, not outcome.
 
 Within branch 3, the scan cursor may proceed as soon as branch 1 is disposed.
 Hint-batch tuning for the release and parked-activation tails waits for the
-ARM plan's qualification result for that wait. A qualified ARM candidate at a
-tail removes hint tuning there from this plan; a failed qualification leaves
-hint tuning as the only remaining tail candidate for it.
+ARM plan's result for that wait. Successful native qualification reserves the
+tail for ARM deployment and benefit evaluation; it does not establish adoption.
+An accepted ARM change supersedes hint tuning at that tail. ARM closure without
+adoption, including failed qualification or insufficient benefit, leaves hint
+tuning as the remaining tail candidate. Pending observations are not failures;
+the pending-work decision below governs whether hint tuning can proceed earlier.
 
-The ARM plan's contract research, checker fixtures and pinned-source review run
-in parallel as read-only work. Its disposable-child applicability trials use
-native trial time this plan is not using and never share a build, output
-directory or acceptance record with this plan's candidates. Dispose of
+Read-only ARM contract research, checker design and pinned-source review can
+run in parallel. Its disposable-child applicability trials use native trial
+time this plan is not using; their builds and executions remain serialized
+with this plan's. They never share a build, output directory or acceptance
+record with this plan's candidates. Dispose of
 branches 1 and 2 before the ARM plan freezes its production comparison
 baseline, so that baseline includes every accepted host-side and preparation
 change. Record each of those dispositions in the outflow when it lands.
+
+Freeze comparisons against identified accepted source, excluding other candidate
+changes. Any later accepted scan, hint or host change that affects a frozen
+comparison requires a new baseline and candidate comparison on the same source
+foundation; do not combine results from before and after that change.
+
+### Coordination decisions awaiting the user
+
+- If ARM qualification is pending on an external observation or user
+  availability, may the coordinator explicitly defer that wait's ARM work and
+  open hint tuning? Recommendation: permit recorded deferral, preserving the
+  pending ARM status and requiring a new baseline if ARM later resumes after
+  an accepted hint change. Until decided, reserve the affected tail; elapsed
+  time alone does not release it. Independent work may continue.
+- If branch 1 is blocked on a tradeoff decision, may ARM freeze on accepted
+  production source with that candidate excluded? Recommendation: permit this,
+  recording the exclusion and requiring a new comparison if branch 1 later
+  lands. Until decided, keep the existing host-branch disposition prerequisite;
+  ARM research and disposable-child qualification may continue. Excluding a
+  candidate never permits bypassing a correctness or ownership blocker in the
+  accepted source or measurement apparatus.
 
 ## Starting point and boundaries
 
@@ -192,12 +218,30 @@ generation-qualified live hold and response control.
 ## Measurement, selection and acceptance
 
 Start with a bounded baseline pilot to locate held time and quantify observer
-resolution. Commit the pilot's decomposition of held time into worker polling
-and each host-side interval before any candidate work; the ARM plan selects
-its minimum worthwhile improvement from that record. Then commit an acceptance
-record associated with this plan, before candidate measurements. Identify
-source/build hashes, workloads, exact trial counts and durations, uncertainty
-calculation, cache bounds, the selected branch and its claimed benefit. Use five matched baseline/candidate pairs in
+resolution. Treat the quantitative pilot as sensitive: arrange and announce a
+quiet window, hold power mode/source stable within each measurement block, and
+retain power and sleep observations. Battery operation is acceptable; AC is not
+a prerequisite. Interrupted or power-transition blocks remain diagnostic evidence
+and need replacement before supporting the decomposition. Opportunistic fixture
+dry runs may establish mechanics, not supply the quantitative pilot record.
+
+Commit the pilot as `records/WORKER-WAIT-PILOT.md` before candidate optimization
+work. Report host-side intervals within the held timeline and worker polling
+CPU separately: they overlap and must not be added as disjoint elapsed time.
+Keep unobserved intervals explicit. Both plans own this shared record; the ARM
+plan uses it to select and justify its minimum worthwhile improvement, then
+checks that rationale against its later frozen production baseline.
+
+Use a separate acceptance record for each independently evaluated candidate,
+committed as that candidate opens and before its comparison measurements:
+`records/WORKER-WAIT-<candidate>-ACCEPTANCE.md`. Use candidate names `HOST`,
+`PREPARATION`, `SCAN`, `HINT-RELEASE`, `HINT-ACTIVATION`, and, if reached,
+`HINT-EXCHANGE`. This lets hint workloads be fixed after the relevant ARM result
+without rewriting another branch's frozen protocol. Record the current source,
+reader and build identities, workloads, trial counts/durations, uncertainty,
+cache bounds where applicable, and the benefit claimed. Preserve frozen
+definitions and superseded observations when recording a revision; do not
+silently replace them. Use five matched baseline/candidate pairs in
 alternating order for each claimed performance workload. Keep contrary pairs;
 do not extend sampling until a preferred result appears.
 
@@ -215,7 +259,7 @@ reader. Record the reader's source identity in every acceptance record, and
 treat a reader change after a frozen baseline as invalidating comparisons made
 against that baseline until it is re-frozen with the new reader.
 
-The acceptance record must separate these quantities:
+Each acceptance record must separate these quantities:
 
 | Claim | Required observation |
 | --- | --- |
@@ -293,8 +337,11 @@ preserve compact negative evidence in the outflow where it informs remaining
 directions. Update FOOTPRINT only for established mechanism/resource changes,
 and LIMITS for counting semantics. Remove completed plan-specific acceptance
 records and retire this plan once all three branches are accepted or rejected,
-preserving necessary raw evidence through the retention helpers. Do not delete
-the shared outflow while the ARM plan or another unfinished direction uses it.
+including hint tails superseded by accepted ARM changes. Preserve necessary raw
+evidence through the retention helpers. Keep the shared pilot record while
+either plan needs it, and the outflow while any associated direction needs it.
+Before deleting either plan, remove its reciprocal links from the remaining
+plan and retain any coordination facts that still apply there.
 The ARM plan retires independently. Stop for a genuine correctness, attribution
 or resource-ownership blocker and keep the plan active unless that scope is
 explicitly closed by the user; ordinary negative results require no review
