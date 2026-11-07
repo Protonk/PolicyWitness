@@ -140,6 +140,12 @@ prepared representation, and release it when no later phase needs it. Compare
 query-dense workloads with no-eligible-query, early-failure and unreached-phase
 controls. Increased memory residence and wasted preparation count against the
 gain from shortening the workers' held interval.
+If the pilot's query-dense cell shows the whole serialization interval below
+the combined timing uncertainty the comparison can achieve, reject this
+candidate on that evidence without building it: no comparison could resolve
+the reduction it promises. Record the measured interval and the uncertainty as
+the rejection's limit, so a later instrument with better resolution can reopen
+it deliberately.
 
 ## 2. Remove demonstrated host detection or cleanup delay
 
@@ -164,9 +170,12 @@ the assumption that a constant is a measured bottleneck. More frequent host
 wakes can oppose coalescing even when worker response improves.
 
 The pilot may nominate at most two material delays, each as a separate host
-candidate. Evaluate `HOST-01`, then `HOST-02` if nominated, before branch 1 while
-the fixture is current. Each gets its own acceptance record and baseline on
-accepted source; a second candidate includes the first only if accepted.
+candidate. A delay is material when its measured host-side component exceeds
+the pilot's combined timing uncertainty in every repetition of a named cell;
+report sub-threshold components as observed but not nominated. Evaluate
+`HOST-01`, then `HOST-02` if nominated, before branch 1 while the fixture is
+current. Each gets its own acceptance record and baseline on accepted source;
+a second candidate includes the first only if accepted.
 Further delays go to the outflow for later work, not an open-ended tuning loop.
 A bounded host exit notification may be worth investigating if EOF-to-reap
 delay is material.
@@ -273,6 +282,11 @@ Do not start a trial unless its watchdog and cleanup fit the remaining time.
 Announce start/end; do not extend automatically. Missing coverage or inadequate
 resolution is an incomplete pilot requiring a separately arranged window.
 Opportunistic dry runs establish mechanics, not the quantitative decomposition.
+Held workers are busy processes: the pilot's actor cells use two actors, one
+active and one parked with inbound delivery, so the held workers are the only
+busy processes under the cap below. Three- and eight-actor compositions are
+characterized only in a separately announced qualification window with their
+load stated.
 
 Name power source, power mode, executable identities, warm/cold status, pacing
 and competing load in each pilot cell and acceptance record. Keep conditions
