@@ -265,18 +265,33 @@ func runCWorkerClockTests(_ tk: TestKit) {
                 try expectEqual(clock.sleeps.count, 1, "spent=\(spentNs)")
             }
         }
-        tk.run("zero allowance re-samples for the budget, then expires without a sleep unless the answer appeared") {
-            for appears in [false, true] {
-                let clock = ControlledClock(); clock.realSleepNs = 0; clock.costNs = 10_000
-                var wait = HostWaitClock(milliseconds: 0, pollNs: 1_000_000, calls: clock.calls)
-                var samples = 0
-                let expired = wait.expiredAfterResampling({ samples += 1; return appears && samples >= 3 },
-                                                          budgetNs: HostWaitClock.resampleBudgetNs)
-                // An answer seen while re-sampling continues the wait, so the caller's next pass observes it.
-                try expectEqual(expired, !appears, "appears=\(appears)")
-                try expectEqual(clock.sleeps, [], "appears=\(appears)")
-                try expectEqual(samples, appears ? 4 : 11, "appears=\(appears)")
-            }
+        tk.run("zero allowance expires before any re-sample, and a nearly spent allowance bounds the window") {
+            // Exhausted: no sample is taken and no sleep follows, exactly as the sleep path expires.
+            let clock = ControlledClock(); clock.realSleepNs = 0; clock.costNs = 10_000
+            var wait = HostWaitClock(milliseconds: 0, pollNs: 1_000_000, calls: clock.calls)
+            var samples = 0
+            try expectTrue(wait.expiredAfterResampling({ samples += 1; return true }, budgetNs: HostWaitClock.resampleBudgetNs))
+            try expectEqual(samples, 0)
+            try expectEqual(clock.sleeps, [])
+            // 40 µs remaining and 10 µs per reading: the window is what remains, not the 100 µs budget; the
+            // re-sampling spends it, so the wait expires with no sleep, as the sleep path would after its 40 µs.
+            let short = ControlledClock(); short.realSleepNs = 0; short.costNs = 10_000
+            var nearly = HostWaitClock(milliseconds: 1, pollNs: 1_000_000, calls: short.calls)
+            short.now += 960_000
+            _ = nearly.remainingNs()
+            var count = 0
+            try expectTrue(nearly.expiredAfterResampling({ count += 1; return false }, budgetNs: HostWaitClock.resampleBudgetNs))
+            try expectTrue(count >= 2 && count <= 5, "samples \(count)")
+            try expectEqual(short.sleeps, [])
+        }
+        tk.run("a clock that stops advancing cannot hold the re-sampling loop") {
+            let clock = ControlledClock(); clock.realSleepNs = 0; clock.costNs = 0
+            var wait = HostWaitClock(milliseconds: 100, pollNs: 1_000_000, calls: clock.calls)
+            var samples = 0
+            try expectFalse(wait.expiredAfterResampling({ samples += 1; return false }, budgetNs: HostWaitClock.resampleBudgetNs))
+            // The loop samples up to the cap, then the final check samples once more.
+            try expectEqual(samples, HostWaitClock.resampleSampleCap + 1)
+            try expectEqual(clock.sleeps.count, 1)
         }
         tk.run("an unusable clock ends re-sampling at once and the sleep path spends only the remaining fallback") {
             // The clock fails at the re-sampling's start, or after its first

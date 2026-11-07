@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "2137e35c5b37cdb27345057399d9ac15f3a5c9416b175660d649ccfdf689daa7"
-    static let abiIdentity: [UInt8] = [0x21, 0x37, 0xe3, 0x5c, 0x5b, 0x37, 0xcd, 0xb2, 0x73, 0x45, 0x05, 0x73, 0x99, 0xd9, 0xac, 0x15, 0xf3, 0xa5, 0xc9, 0x41, 0x6b, 0x17, 0x56, 0x60, 0xd6, 0x49, 0xcc, 0xfd, 0xf6, 0x89, 0xda, 0xa7]
+    static let abiIdentityHex = "69a3977788506b4f1dc818d5b1afcd8fad44994593737a6106871b1db1a719fb"
+    static let abiIdentity: [UInt8] = [0x69, 0xa3, 0x97, 0x77, 0x88, 0x50, 0x6b, 0x4f, 0x1d, 0xc8, 0x18, 0xd5, 0xb1, 0xaf, 0xcd, 0x8f, 0xad, 0x44, 0x99, 0x45, 0x93, 0x73, 0x7a, 0x61, 0x06, 0x87, 0x1b, 0x1d, 0xb1, 0xa7, 0x19, 0xfb]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -954,14 +954,22 @@ struct HostWaitClock {
     /// The clock time one re-sampling may spend before the first sleep after a publication.
     static let resampleBudgetNs: UInt64 = 100_000
 
+    /// Bounds the re-sampling loop's iterations when the clock stops advancing;
+    /// a working clock ends the budget long before it is reached.
+    static let resampleSampleCap = 16_384
+
     /// Before the first sleep after a publication whose answer arrives within
     /// microseconds, re-sample `answered` for at most `budgetNs` of clock time,
-    /// then sleep as usual when it is still false. The re-sampling is charged
-    /// like any pass; an unusable clock ends it at once.
+    /// never beyond the remaining allowance, then sleep as usual when it is
+    /// still false. The re-sampling is charged like any pass; an unusable
+    /// clock, an exhausted allowance or the sample cap ends it at once.
     mutating func expiredAfterResampling(_ answered: () -> Bool, budgetNs: UInt64) -> Bool {
-        if let start = elapsedNs() {
+        if let start = elapsedNs(), fallbackRemainingNs > 0 {
+            let window = min(budgetNs, fallbackRemainingNs)
+            var samples = 0
             while !answered() {
-                guard let now = elapsedNs(), now - start < budgetNs else { break }
+                samples += 1
+                guard samples < HostWaitClock.resampleSampleCap, let now = elapsedNs(), now - start < window else { break }
             }
             if answered() { return false }
         }
