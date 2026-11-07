@@ -78,12 +78,15 @@ observations, requires every envelope to finish and validate, and decomposes
 each held phase into worker publication, host detection, planning, validator,
 closure, release and acknowledgement intervals. Those intervals describe the
 stamped disposable flavour, not production executables; their combined
-uncertainty is established only with a clock-pair calibration receipt. Default
+uncertainty is established only with a clock-pair calibration receipt. Its
+comparison mode stages a baseline and a candidate, each from its own source
+tree, and reports matched-pair differences and verdicts. Default
 `witness_contract/worker_wait_pilot_controls` accepts constructed stamp
 receipts before rejecting corrupted pages, clock-order violations, missing
 files, condition exclusions, pooled aggregates, unpaired or inconsistent host
 sleep events and pass-count records, and a reader using the superseded
-uncertainty formula. See the
+uncertainty formula, and checks matched-pair verdicts, response bounds and the
+stager's identity refusals on constructed inputs. See the
 [pilot verification account](CHANGE-VERIFICATION.md#worker-wait-pilot).
 
 The opt-in `runner_exec_inheritance/launch_inventory` case records external

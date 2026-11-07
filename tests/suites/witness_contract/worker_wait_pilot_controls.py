@@ -1,7 +1,10 @@
 """Constructed worker-wait pilot receipts: accepted first, then each fault rejected.
 
 Establishes the reader's decoding, arithmetic and refusal rules on constructed
-inputs only; no stamp, timing or live trial is credited here. Worker pages are
+inputs only; no stamp, timing or live trial is credited here. Comparison
+controls pair constructed baseline and candidate rows and check each verdict
+and response bound, and the stager's identity rules run on a constructed app
+and source tree up to, never including, signing. Worker pages are
 packed with offsets written from the C layout, in program order, including
 loaded-record pairs, pass-count records and inbound pass samples appended after
 later reads. Host exports carry each sleep as a 180/181 event pair beside its
@@ -12,6 +15,7 @@ functions.
 import base64
 import copy
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import shutil
@@ -22,6 +26,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import worker_wait_pilot_reader as reader
 import worker_wait_clock_pair as clock_pair
+
+HOST_STAMPS = HERE.parents[2] / 'tests/fixtures/worker_wait/host_stamps.py'
 
 OFFSETS = dict(header=0, stages=40, scan=280, events=848, event_size=24, size=24848)
 C_STAGES = ['worker_start', 'proceed_start', 'proceed_observe', 'exec_admit', 'exec_observe', 'exec_reap',
@@ -787,6 +793,324 @@ def refused_as_pooled(rows):
     return False
 
 
+# ---- comparison runs ---------------------------------------------------------------
+
+COMPARISON = dict(apps=['baseline', 'candidate'], pairing_rule='constructed: same cell, regime and repetition index')
+VERDICTS = ('improves_beyond_uncertainty_in_every_pair', 'improves_beyond_spread_in_every_pair',
+            'worsens_beyond_instrument_uncertainty', 'worsens_beyond_spread_in_any_pair',
+            'worsens_beyond_spread_in_every_pair')
+
+
+def check_every_pair_worsening(pairs, required):
+    """The every-pair worsening verdict follows its definition on every series: refuted by an established pair
+    that is not worse, established only when all required pairs are established and worse, else withheld."""
+    checked = 0
+    for entry in pairs.get('entries', []):
+        for section in ('components', 'waits', 'whole_request'):
+            series = entry.get(section) or {}
+            series = series if 'pairs' not in series else {'whole_request': series}
+            for name, value in series.items():
+                if not isinstance(value, dict) or 'pairs' not in value or 'improves_beyond_spread_in_every_pair' not in value:
+                    continue
+                outcomes = [r['spread_outcome'] for r in value['pairs']]
+                established = [o for o in outcomes if o in ('improved', 'worsened', 'within_spread')]
+                complete = len(established) == len(outcomes) >= required
+                expected = False if any(o != 'worsened' for o in established) else True if complete else None
+                assert value['worsens_beyond_spread_in_every_pair'] is expected, (entry.get('cell'), name, outcomes, value['worsens_beyond_spread_in_every_pair'])
+                checked += 1
+    assert checked > 0, 'no paired series were checked'
+    return checked
+BASELINE_ARRIVAL, BASELINE_HELD, CANDIDATE_ARRIVAL, CANDIDATE_HELD = 7_100_000, 8_900_000, 900_000, 2_700_000
+
+
+def pair_row(base, app, index, values=(), *, form=None, passes=3000, whole_ms=50, ready=(1, 12_500_000), status='accepted', **fields):
+    """A baseline or candidate row from the evaluated constructed O1 row. values maps a phase-0 component to
+    (ns, uncertainty ns); form renames the constructed arrival_detection record."""
+    row = copy.deepcopy(base)
+    row.update(app=app, index=index, status=status, dir=f'constructed/{app}/O1/rapid/{index}', **fields)
+    phase = row['phases'][0]
+    if form:
+        phase[form] = phase.pop('arrival_detection')
+    for name, (value, uncertainty) in dict(values).items():
+        phase[name].update(ns=value, uncertainty_ns=uncertainty)
+    phase['release_wait']['passes'] = passes
+    row['whole_request'] = dict(elapsed_ns=whole_ms * 1_000_000)
+    row['host_sleeps']['ready_byte_wait'].update(count=ready[0], sum_ns=ready[1])
+    return row
+
+
+def improving_rows(base, count=3, candidate_edits=None):
+    """The candidate's arrival and held total are shorter by 6.2 to 6.4 ms in every pair, with 1.3 us per side.
+    candidate_edits maps an index to replacement (ns, uncertainty) values."""
+    rows = []
+    for i in range(count):
+        step = 100_000 * i
+        rows.append(pair_row(base, 'baseline', i, {'arrival_first_check_positive': (BASELINE_ARRIVAL + step, 1300),
+                                                   'held_total': (BASELINE_HELD + step, 1300)},
+                             form='arrival_first_check_positive', passes=3000 + 10 * i, whole_ms=50 + i))
+        values = {'arrival_detection': (CANDIDATE_ARRIVAL, 1300), 'held_total': (CANDIDATE_HELD, 1300)}
+        values.update((candidate_edits or {}).get(i, {}))
+        rows.append(pair_row(base, 'candidate', i, values, passes=1000, whole_ms=44 + i, ready=(2, 3_000_000)))
+    return rows
+
+
+def pairs_of(rows, required=3, gate=True):
+    pairs = reader.matched_pairs(rows, dict(COMPARISON, pairs_required=required), gate)
+    if pairs is not None:
+        check_every_pair_worsening(pairs, required)
+    return pairs
+
+
+def outcomes(series):
+    return [(r['index'], r['difference'], r['combined_uncertainty'], r['outcome']) for r in series['pairs']]
+
+
+def verdicts(series):
+    """(improves: instrument, spread; worsens: instrument, spread any). The every-pair worsening verdict is
+    checked against its definition on every series by check_every_pair_worsening."""
+    return tuple(series[v] for v in VERDICTS[:4])
+
+
+def comparison_controls(base):
+    """Matched-pair verdicts, spreads and response bounds on constructed baseline and candidate rows."""
+    names = []
+    (entry,) = pairs_of(improving_rows(base))['entries']
+    arrival = entry['components']['p0.arrival_to_observation']
+    assert verdicts(arrival) == (True, True, False, False) and 'withheld' not in arrival, arrival
+    assert outcomes(arrival) == [(i, 6_200_000 + 100_000 * i, 2600, 'improved') for i in range(3)], arrival
+    assert all(r['forms'] == dict(baseline='arrival_first_check_positive', candidate='arrival_detection') for r in arrival['pairs'])
+    # Baseline arrivals 7.1 to 7.3 ms, candidate arrivals all 0.9 ms.
+    assert arrival['spread_ns'] == dict(baseline=dict(ns=200_000, trials=3), candidate=dict(ns=0, trials=3)), arrival['spread_ns']
+    assert [(r['improve_threshold'], r['worsen_threshold'], r['spread_outcome']) for r in arrival['pairs']] == [(2600, 202_600, 'improved')] * 3
+    held = entry['components']['p0.held_total']
+    assert verdicts(held) == (True, True, False, False) and outcomes(held) == [(i, 6_200_000 + 100_000 * i, 2600, 'improved') for i in range(3)], held
+    # Components left equal differ by zero, within their uncertainty and spread: not improved, not worse.
+    serialize = entry['components']['p0.serialize']
+    assert verdicts(serialize) == (False, False, False, False) and [o[3] for o in outcomes(serialize)] == ['within_uncertainty'] * 3, serialize
+    passes = entry['waits']['p0.release_wait']
+    assert verdicts(passes) == (True, True, False, False) and outcomes(passes) == [(i, 2000 + 10 * i, 0, 'improved') for i in range(3)], passes
+    assert passes['spread_ns'] == dict(baseline=dict(ns=20, trials=3), candidate=dict(ns=0, trials=3)), passes['spread_ns']
+    # Whole request: no instrument uncertainty, so spread verdicts only; 6 ms shorter against a 2 ms candidate spread.
+    whole = entry['whole_request']
+    assert whole['spread_ns'] == dict(baseline=dict(ns=2_000_000, trials=3), candidate=dict(ns=2_000_000, trials=3)), whole
+    assert verdicts(whole) == (None, True, None, False) and 'instrument_verdicts' in whole and 'withheld' not in whole, whole
+    assert outcomes(whole) == [(i, 6_000_000, 0, 'not_applicable') for i in range(3)], whole
+    assert entry['response'] == {'p0.release_to_ack': dict(
+        candidate_upper_ns=6000, baseline_lower_ns=6000, bound_ns=0, limit_ns=2_000_000, within_limit=True, combined_uncertainty_ns=6200,
+        uncertainty_at_most_0_5_ms=True, instrument_gate_credited=True, credited=True, trials=dict(baseline=3, candidate=3))}, entry['response']
+    assert entry['host_sleeps']['ready_byte_wait'] == [dict(index=i, baseline=dict(count=1, sum_ns=12_500_000),
+                                                            candidate=dict(count=2, sum_ns=3_000_000)) for i in range(3)]
+    assert entry['host_sleeps']['ordinary_sentinel'][0]['candidate'] == dict(count=2, sum_ns=4_350_000)
+    assert [p['index'] for p in entry['pairs']] == [0, 1, 2] and pairs_of(improving_rows(base))['unpaired'] == []
+    names.append('candidate arrival and held total shorter beyond uncertainty and beyond its spread in every pair: improvement')
+
+    within = {1: {'arrival_detection': (BASELINE_ARRIVAL + 100_000 - 2000, 1300)}}
+    (entry,) = pairs_of(improving_rows(base, candidate_edits=within))['entries']
+    arrival = entry['components']['p0.arrival_to_observation']
+    assert verdicts(arrival) == (False, False, False, False) and outcomes(arrival)[1] == (1, 2000, 2600, 'within_uncertainty'), arrival
+    names.append('one pair within uncertainty: no improvement verdict')
+
+    # One candidate arrival of 6.0 ms: 1.3 ms shorter than its baseline, beyond uncertainty but not beyond the 5.1 ms candidate spread.
+    spread = {2: {'arrival_detection': (6_000_000, 1300)}}
+    (entry,) = pairs_of(improving_rows(base, candidate_edits=spread))['entries']
+    arrival = entry['components']['p0.arrival_to_observation']
+    assert verdicts(arrival) == (True, False, False, False), arrival
+    assert arrival['spread_ns']['candidate'] == dict(ns=5_100_000, trials=3)
+    assert [(r['difference'], r['improve_threshold'], r['spread_outcome']) for r in arrival['pairs']] == [
+        (6_200_000, 5_102_600, 'improved'), (6_300_000, 5_102_600, 'improved'), (1_300_000, 5_102_600, 'within_spread')], arrival['pairs']
+    names.append('improvement beyond uncertainty in every pair but within the candidate spread in one: no spread improvement verdict')
+
+    # 10 us worse in one pair: beyond the instrument uncertainty, within the 200 us baseline spread.
+    worse = {2: {'held_total': (BASELINE_HELD + 200_000 + 10_000, 1300)}}
+    (entry,) = pairs_of(improving_rows(base, candidate_edits=worse))['entries']
+    held = entry['components']['p0.held_total']
+    assert verdicts(held) == (False, False, True, False) and outcomes(held)[2] == (2, -10_000, 2600, 'worsened'), held
+    assert (held['pairs'][2]['worsen_threshold'], held['pairs'][2]['spread_outcome']) == (202_600, 'within_spread'), held['pairs'][2]
+    assert verdicts(entry['components']['p0.arrival_to_observation']) == (True, True, False, False)
+    names.append('one pair worse beyond uncertainty but within the baseline spread: instrument worsening only')
+
+    # 500 us worse in one pair: beyond the baseline spread plus both uncertainties.
+    worse_spread = {2: {'held_total': (BASELINE_HELD + 200_000 + 500_000, 1300)}}
+    (entry,) = pairs_of(improving_rows(base, candidate_edits=worse_spread))['entries']
+    held = entry['components']['p0.held_total']
+    assert verdicts(held) == (False, False, True, True), held
+    assert (held['pairs'][2]['difference'], held['pairs'][2]['worsen_threshold'], held['pairs'][2]['spread_outcome']) == (
+        -500_000, 202_600, 'worsened'), held['pairs'][2]
+    names.append('one pair worse beyond the baseline spread: spread worsening')
+
+    # Fewer pairs than required: an improvement is withheld, a refutation or a worse pair is not.
+    (entry,) = pairs_of(improving_rows(base), required=5)['entries']
+    arrival = entry['components']['p0.arrival_to_observation']
+    assert verdicts(arrival) == (None, None, None, None) and arrival['withheld'] == '3 established of 5 required pairs', arrival
+    assert verdicts(entry['components']['p0.serialize']) == (False, False, None, None)
+    (entry,) = pairs_of(improving_rows(base, candidate_edits=worse), required=5)['entries']
+    assert verdicts(entry['components']['p0.held_total']) == (False, False, True, None)
+    names.append('fewer pairs than required: improvement withheld, refutation and worsening kept')
+
+    slow = {0: {'release_to_ack': (2_506_000, 3100)}}
+    (entry,) = pairs_of(improving_rows(base, candidate_edits=slow))['entries']
+    response = entry['response']['p0.release_to_ack']
+    assert (response['bound_ns'], response['within_limit'], response['credited']) == (2_500_000, False, False), response
+    wide = {0: {'release_to_ack': (1_006_000, 600_000)}}
+    (entry,) = pairs_of(improving_rows(base, candidate_edits=wide))['entries']
+    response = entry['response']['p0.release_to_ack']
+    assert (response['bound_ns'], response['within_limit'], response['combined_uncertainty_ns'], response['uncertainty_at_most_0_5_ms'],
+            response['credited']) == (1_000_000, True, 603_100, False, False), response
+    (entry,) = pairs_of(improving_rows(base), gate=False)['entries']
+    response = entry['response']['p0.release_to_ack']
+    assert (response['within_limit'], response['instrument_gate_credited'], response['credited']) == (True, False, False), response
+    names.append('response bound beyond 2 ms, or within it without the resolution or the gate: not credited')
+
+    rows = improving_rows(base) + [
+        pair_row(base, 'baseline', 3, {'arrival_first_check_positive': (BASELINE_ARRIVAL, 1300)}, form='arrival_first_check_positive', whole_ms=51),
+        pair_row(base, 'candidate', 3, {'arrival_detection': (CANDIDATE_ARRIVAL, 1300)}, status='excluded', exclusions=['observer_overlap']),
+        pair_row(base, 'baseline', 4, whole_ms=51),
+        pair_row(base, 'candidate', 4, power_source='AC Power')]
+    found = pairs_of(rows)
+    battery = next(e for e in found['entries'] if e['power_source'] == 'Battery Power')
+    assert [p['index'] for p in battery['pairs']] == [0, 1, 2], battery['pairs']
+    assert verdicts(battery['components']['p0.arrival_to_observation']) == (True, True, False, False)
+    assert [(u['app'], u['index'], u['status'], u['reason'], u['other_status']) for u in found['unpaired']] == [
+        ('baseline', 3, 'accepted', 'not accepted on both sides', 'excluded'),
+        ('candidate', 3, 'excluded', 'not accepted on both sides', 'accepted'),
+        ('baseline', 4, 'accepted', 'conditions differ (power source, low power mode or host flavour)', 'accepted'),
+        ('candidate', 4, 'accepted', 'conditions differ (power source, low power mode or host flavour)', 'accepted')], found['unpaired']
+    # Unpaired accepted trials still count in their own side's spreads and response bounds, never as pairs.
+    assert battery['response']['p0.release_to_ack']['trials'] == dict(baseline=5, candidate=3)
+    assert battery['whole_request']['spread_ns'] == dict(baseline=dict(ns=2_000_000, trials=5), candidate=dict(ns=2_000_000, trials=3))
+    mains = next(e for e in found['entries'] if e['power_source'] == 'AC Power')
+    assert mains['pairs'] == [] and mains['components'] == {} and mains['response'] == {}, mains
+    names.append('unpaired trials (one side excluded, conditions differ) listed and never paired')
+
+    # Identical receipts on both sides: every difference is zero, so no improvement and no worsening.
+    same = [pair_row(base, app, i) for i in range(2) for app in reader.PAIR_APPS]
+    (entry,) = pairs_of(same, required=2)['entries']
+    series = [*entry['components'].values(), *entry['waits'].values()]
+    assert series and all(verdicts(v) == (False, False, False, False) for v in series), [
+        (v, verdicts(v)) for v in series if verdicts(v) != (False, False, False, False)]
+    assert verdicts(entry['whole_request']) == (None, False, None, False)
+    uncalibrated = reader.evaluate_bundle(ordinary_bundle(), None)
+    (entry,) = pairs_of([pair_row(uncalibrated, app, i) for i in range(2) for app in reader.PAIR_APPS], required=2)['entries']
+    arrival = entry['components']['p0.arrival_to_observation']
+    assert verdicts(arrival) == (None, None, None, None), arrival
+    assert arrival['withheld'] == '0 established of 2 required pairs; absent or unestablished in 2', arrival
+    assert verdicts(entry['waits']['p0.release_wait']) == (False, False, False, False)
+    assert reader.matched_pairs(same, None, True) is None
+    names.append('identical receipts: no improvement or worsening verdict; uncalibrated: verdicts withheld; not a comparison: no pairs')
+    return names
+
+
+def spread_ignored_rejected(base):
+    """The matched-pair controls fail when the reader's spread term is replaced by zero."""
+    kept = reader.side_spread
+    reader.side_spread = lambda values: 0
+    try:
+        comparison_controls(base)
+    except AssertionError:
+        return dict(control='spread_term_ignored', status='rejected', codes=['spread verdict mismatch'])
+    finally:
+        reader.side_spread = kept
+    raise AssertionError('the comparison controls accepted a reader that ignores the spread term')
+
+
+def comparison_round_trip(out):
+    """A comparison run's receipts through the loader and writers: baseline and candidate stay separate groups."""
+    root = out / 'constructed-comparison'
+    shutil.rmtree(root, ignore_errors=True)
+    for index in range(3):
+        for app in reader.PAIR_APPS:
+            bundle = ordinary_bundle(index=index)
+            bundle['trial']['app'] = app
+            if (app, index) == ('candidate', 2):
+                watch_inside_held(bundle)
+            write_bundle(root, bundle)
+    (root / 'schedule.json').write_text(json.dumps(dict(required={f'{app}/O1/rapid': 2 for app in reader.PAIR_APPS},
+                                                        comparison=dict(COMPARISON, pairs_required=2))))
+    write_calibration(root)
+    decomposition, summary = reader.read_artifacts(root)
+    assert [(g['app'], g['counts']['accepted']) for g in summary['groups']] == [('baseline', 3), ('candidate', 2)], summary['groups']
+    (entry,) = summary['pairs']['entries']
+    assert [p['index'] for p in entry['pairs']] == [0, 1] and len(summary['pairs']['unpaired']) == 2
+    assert all(verdicts(v) == (False, False, False, False) for v in (*entry['components'].values(), *entry['waits'].values()))
+    assert verdicts(entry['whole_request']) == (None, False, None, False)
+    # Each pair's uncertainty is the sum of its two trials' own uncertainties.
+    side = {(r['app'], r['index']): r['phases'][0]['arrival_detection']['uncertainty_ns'] for r in decomposition['rows']}
+    combined = [side[('baseline', i)] + side[('candidate', i)] for i in range(2)]
+    assert [r['combined_uncertainty'] for r in entry['components']['p0.arrival_to_observation']['pairs']] == combined
+    assert [r['app'] for r in summary['observer_overlap']] == ['baseline'] * 3 + ['candidate'] * 3
+    text = (root / 'summary.md').read_text()
+    for needle in ('## Matched pairs', '### O1 rapid (Battery Power, lowpowermode 0)', 'Pairs: 2 of 2 required (repetitions 0, 1)',
+                   "candidate r2 excluded (not accepted on both sides) ['observer_overlap']",
+                   f'| p0.arrival_to_observation | no / no | no / no / no | 0.0 / 0.0 | r0 0.0 ± {combined[0] / 1000:.1f} (detected/detected); '
+                   f'r1 0.0 ± {combined[1] / 1000:.1f} (detected/detected) |',
+                   '| p0.release_wait | no / no | no / no / no | 0 / 0 | r0 0 ± 0; r1 0 ± 0 |', 'Whole request (spread baseline / candidate 0.00 ms / 0.00 ms): improves n/a / no; worsens n/a / no / no; r0 0.00 ms; r1 0.00 ms.', '| p0.release_to_ack | 6.0 | 6.0 | 0.0 | yes |',
+                   '| ordinary_sentinel | r0 2, 4.35 ms -> 2, 4.35 ms; r1 2, 4.35 ms -> 2, 4.35 ms |', '## baseline O1 rapid', '## candidate O1 rapid'):
+        assert needle in text, needle
+    shutil.rmtree(root)
+    return ['comparison receipts through the loader: separate app groups, two pairs, the excluded trial unpaired, matched-pair section']
+
+
+class Reached(Exception):
+    """The stager passed both identity checks and reached the source-tree record."""
+
+
+def stager_identity_controls(out):
+    """The stager's identity rules on a constructed candidate app and source tree, stopped before any copy or signature."""
+    spec = importlib.util.spec_from_file_location('worker_wait_host_stamps', HOST_STAMPS)
+    stamps = importlib.util.module_from_spec(spec); spec.loader.exec_module(stamps)
+    base = out / 'constructed-stager'
+    shutil.rmtree(base, ignore_errors=True)
+    tree = base / 'candidate-tree'
+    (tree / 'tests/lib').mkdir(parents=True)
+    contract = tree / 'tests/lib/contract.py'
+    declared, other = 'ab' * 32, 'cd' * 32
+    contract.write_text(f'RUNNER_PROTOCOL = 1\nWORKER_IDENTITY = "{declared}"\n')
+    assert stamps.tree_worker_identity(tree) == declared
+    for text in ('', f'WORKER_IDENTITY = "{declared}"\nWORKER_IDENTITY = "{other}"\n', f"WORKER_IDENTITY = '{declared}'\n",
+                 f'WORKER_IDENTITY = "{declared[:-1]}"\n'):
+        contract.write_text(text)
+        try:
+            stamps.tree_worker_identity(tree)
+        except AssertionError as error:
+            assert 'worker identities' in str(error), error
+            continue
+        raise AssertionError(f'identity read from {text!r}')
+    contract.write_text(f'WORKER_IDENTITY = "{declared}"\n')
+    app = base / 'source/PolicyWitness.app'
+    (app / stamps.EQUIPMENT).parent.mkdir(parents=True)
+    host = base / 'host/PWRunner'
+    host.parent.mkdir()
+    host.write_bytes(b'constructed host\n')
+    host.with_name('host-build.json').write_text(json.dumps(dict(kind='instrumented', output=dict(sha256=hashlib.sha256(b'constructed host\n').hexdigest()))))
+    worker = base / 'worker/pw-probe-runner-stamps'
+    worker.parent.mkdir()
+    def attempt(name, equipment, reported):
+        (app / stamps.EQUIPMENT).write_text(json.dumps(dict(worker_identity=equipment)))
+        worker.write_text(f'#!/bin/sh\necho "pw-probe-runner abi_identity={reported}"\n'); worker.chmod(0o755)
+        try:
+            stamps.stage(app, base / name / 'staging/candidate', 'constructed identity', host, worker, worker, True, tree)
+        except Reached:
+            return 'reached'
+        except AssertionError as error:
+            return str(error)
+        raise AssertionError('stage completed on constructed inputs')
+    def reached(tree, receipts):
+        raise Reached()
+    kept, stamps.tree_commit = stamps.tree_commit, reached
+    try:
+        refused = attempt('equipment-mismatch', other, declared)
+        assert refused.startswith(f'app equipment identity {other} is not') and declared in refused, refused
+        refused = attempt('worker-mismatch', declared, other)
+        assert f'abi_identity={other}' in refused and f'declared {declared}' in refused, refused
+        assert attempt('agreeing', declared, declared) == 'reached'
+    finally:
+        stamps.tree_commit = kept
+    shutil.rmtree(base)
+    return ['stager identity read from a tree\'s contract.py text; malformed, missing or duplicated constants refused',
+            'candidate stager refuses an app whose equipment identity differs from its tree\'s',
+            'candidate stager refuses a stamp worker reporting another identity', 'agreeing identities reach the source-tree record']
+
+
 def main(out):
     out = Path(out).resolve()
     assert {k: reader.LAYOUT[k] for k in OFFSETS} == OFFSETS, reader.LAYOUT
@@ -854,7 +1178,7 @@ def main(out):
     decomposition, summary = reader.read_artifacts(root)
     assert summary['calibration_status'] == 'established' and summary['counts']['accepted'] == 4 and summary['counts']['excluded'] == 1, (
         summary['calibration_status'], summary['counts'])
-    assert decomposition['version'] == summary['version'] == 3
+    assert decomposition['version'] == summary['version'] == 5
     calibration = decomposition['calibration']
     term = resolution['readers']['busy']['endpoint_term_ns']
     assert calibration['stamp_ns'] == -(-resolution['stamp_ns'] // 1) and calibration['alignment_ns'] == resolution['alignment']['bound_ns']
@@ -1032,6 +1356,10 @@ def main(out):
         rejected.append(dict(control=name, status='refused', codes=['pooled']))
     split = reader.summarize([base_row, dict(copy.deepcopy(base_row), lowpowermode='1')])
     assert [(g['lowpowermode'], g['counts']['accepted']) for g in split] == [('0', 1), ('1', 1)], split
+    accepted += comparison_controls(reader.evaluate_bundle(ordinary_bundle(), CALIBRATION))
+    rejected.append(spread_ignored_rejected(reader.evaluate_bundle(ordinary_bundle(), CALIBRATION)))
+    accepted += comparison_round_trip(out)
+    accepted += stager_identity_controls(out)
     (out / 'controls.json').write_text(json.dumps(dict(scope='constructed reader sensitivity; no live stamps or timings credited',
         accepted=accepted + rule_controls[:1], rejected=rejected), indent=2) + '\n')
     print(f'{len(rejected)} constructed worker-wait pilot faults rejected after {len(accepted) + 1} constructed receipts accepted')

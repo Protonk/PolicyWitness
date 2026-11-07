@@ -2027,7 +2027,7 @@
         },
         {
           "id": "worker_wait_pilot_controls",
-          "description": "Worker-wait pilot reader accepts constructed host and worker stamp receipts, then rejects page, clock-order, missing-file, sleep, pacing, power and pooling faults",
+          "description": "Worker-wait pilot reader accepts constructed host and worker stamp receipts, then rejects page, clock-order, missing-file, sleep, pacing, power and pooling faults; checks matched-pair verdicts and the stager's identity refusals",
           "command": [
             "bash",
             "tests/suites/witness_contract/worker_wait_pilot_controls.sh"
@@ -2037,7 +2037,7 @@
         },
         {
           "id": "worker_wait_pilot",
-          "description": "Paced trials through staged stamped and neighbor apps on the production validator path, with continuous-clock host and worker stamps, per-trial conditions and a timeline decomposition",
+          "description": "Paced trials through staged stamped and neighbor apps, or baseline and candidate apps as matched pairs, on the production validator path, with continuous-clock host and worker stamps, per-trial conditions and a timeline decomposition",
           "command": [
             "bash",
             "tests/suites/witness_contract/opt_in/worker_wait_pilot.sh"

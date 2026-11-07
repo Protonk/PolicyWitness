@@ -12,9 +12,19 @@ watch. Envelope validation runs after the window so it never occupies an idle
 gap. The reader then writes decomposition.json, summary.json and summary.md.
 A final cleanup inventories processes running from either staged bundle.
 
+Comparison mode (--compare-app, --compare-tree, --compare-worker-build)
+replaces the two apps with `baseline`, this checkout's app staged with the
+stamped host and stamp worker built from this checkout, and `candidate`, the
+compare app staged with the same host patches over the compare tree's runner/
+and the stamp worker built from the compare tree's worker source. Both are
+instrumented and observe cleanup by the same rule; there is no neighbor.
+Trials pair by cell, regime and repetition index, and the reader writes the
+matched-pair analysis.
+
 Usage: app_dir artifacts_dir identity --worker-build DIR --observer PATH
        [--cells O1,...] [--repetitions N] [--regimes rapid,idle] [--window-seconds S]
        [--trial-watchdog-seconds S] [--clock-pair-trials N] [--no-clock-pair] [--dry-run]
+       [--compare-app PATH --compare-tree DIR --compare-worker-build DIR]
 
 The clock-pair calibration runs first inside the window; without it the
 reader leaves combined uncertainty not established. A schedule whose planning
@@ -70,21 +80,30 @@ def load_module(name, path):
     return module
 
 
-def build_host(module, kind, artifacts, scratch, stamp_dir):
-    """One host binary; the instrumented kind bakes stamp_dir, the neighbor applies no patch."""
+def build_host(module, kind, artifacts, scratch, stamp_dir, tree):
+    """One host binary from tree's runner/; stamped kinds bake stamp_dir, the neighbor applies no patch."""
     work = scratch / f'host-{kind}'
     return Path(module.build_host(work / 'runner', work, artifacts / f'host-{kind}',
-                                  module.PATCHES if kind == 'instrumented' else [], stamp_dir))
+                                  [] if kind == UNSTAMPED else module.PATCHES, stamp_dir, tree / 'runner'))
 
 
 def host_flavour(artifacts, kind):
     return json.loads((artifacts / f'host-{kind}' / 'host-build.json').read_text())['flavour']
 
 
-def stage_app(module, kind, source_app, staging, identity, host, worker_build):
+def stage_app(module, kind, source_app, staging, identity, host, worker_build, tree):
     """One durable signed copy; the stager writes staging.json and returns the app path."""
     return Path(module.stage(source_app, staging / kind, identity, host, worker_build / WORKERS['stamps'],
-                             worker_build / WORKERS['plain'], kind == 'instrumented'))
+                             worker_build / WORKERS['plain'], kind != UNSTAMPED, tree))
+
+
+def worker_build_record(worker_build, tree):
+    """The worker build must come from `tree` and report no refusal."""
+    receipt = json.loads((worker_build / 'worker-build.json').read_text())
+    assert receipt['ok'] and Path(receipt.get('source_tree') or '/').resolve() == tree, \
+        f"worker build {worker_build} is from {receipt.get('source_tree')}, not {tree}"
+    return dict(path=str(worker_build), source_tree=receipt['source_tree'], declared_identity=receipt['declared_identity'],
+                stamps_sha256=receipt['outputs']['stamps']['sha256'])
 
 
 def calibrate(module, binary, artifacts, trials):
@@ -94,6 +113,12 @@ def calibrate(module, binary, artifacts, trials):
 # ---- end of integration points ---------------------------------------------------
 
 APPS = ('instrumented', 'neighbor')
+COMPARE_APPS = ('baseline', 'candidate')
+UNSTAMPED = 'neighbor'
+# The acceptance record's five matched pairs per cell and regime; the reader withholds an improvement verdict with fewer.
+COMPARE_REPETITIONS = PAIRS_REQUIRED = reader.PAIRS_REQUIRED
+PAIRING_RULE = ('a baseline trial and a candidate trial with the same cell, regime and repetition index, both accepted and '
+                'with the same power source, low power mode and host flavour; any other trial is listed as unpaired')
 CELLS = ('O1', 'O64', 'O256', 'O0', 'O2P', 'A2')
 REGIMES = ('rapid', 'idle')
 REQUESTED_GAP_NS = {'rapid': 0, 'idle': 1_000_000_000}
@@ -159,15 +184,19 @@ def capture_power():
     return dict(batt=batt, settings=settings, source=source and source.group(1), lowpowermode=low and low.group(1))
 
 
-def static_conditions(app):
+def app_record(app):
+    return dict(path=str(app), provenance_sha256=sha256(app / 'Contents/Resources/Evidence/provenance.json'),
+                manifest_sha256=sha256(app / 'Contents/Resources/Evidence/manifest.json'))
+
+
+def static_conditions(app, compare_app=None):
     sysctl = text(['/usr/sbin/sysctl', 'kern.osversion', 'kern.boottime', 'hw.model', 'machdep.cpu.brand_string', 'hw.ncpu', 'hw.memsize'])
     sources = [Path(__file__), Path(reader.__file__), ROOT / 'tests/lib/run_capture.py', ROOT / 'tests/lib/footprint_observer.py',
                ROOT / 'tests/lib/footprint_workloads.py', HERE / 'check_ordering.py', HOST_STAMPS, CLOCK_PAIR]
     return dict(sw_vers=text(['/usr/bin/sw_vers']), sysctl=sysctl, power=capture_power(), loadavg=os.getloadavg(),
                 python=dict(executable=sys.executable, sha256=sha256(sys.executable), version=sys.version),
                 source_hashes={str(p.relative_to(ROOT)): sha256(p) if p.exists() else None for p in sources},
-                source_app=dict(path=str(app), provenance_sha256=sha256(app / 'Contents/Resources/Evidence/provenance.json'),
-                                manifest_sha256=sha256(app / 'Contents/Resources/Evidence/manifest.json')))
+                source_app=app_record(app), compare_app=compare_app and app_record(compare_app))
 
 
 def staged_identity(app):
@@ -232,14 +261,14 @@ def cell_request(cell, targets):
     raise ValueError(cell)
 
 
-def build_schedule(cells, regimes, repetitions):
+def build_schedule(cells, regimes, repetitions, kinds=APPS):
     """Regime blocks, rapid first; per repetition and cell both apps, alternating which goes first.
 
     required maps app/cell/regime to the accepted trials one homogeneous group needs."""
     entries = []
     for regime in [r for r in REGIMES if r in regimes]:
         for i in range(repetitions):
-            apps = APPS if i % 2 == 0 else APPS[::-1]
+            apps = kinds if i % 2 == 0 else kinds[::-1]
             entries += [dict(app=a, cell=c, regime=regime, index=i) for c in cells for a in apps]
     required = {f"{e['app']}/{e['cell']}/{e['regime']}": min(COVERAGE_MIN_ACCEPTED, repetitions) for e in entries}
     return entries, required
@@ -361,8 +390,8 @@ class Pilot:
                     if time.monotonic() >= deadline:
                         receipt['status'] = 'harness_timeout'
                         break
-                    # Both apps stat; only the instrumented host writes the marker.
-                    if started is None and started_path.exists() and kind == 'instrumented':
+                    # Both apps stat; only a stamped host writes the marker.
+                    if started is None and started_path.exists() and kind != UNSTAMPED:
                         started, exits, watch = self.observe_started(started_path, app, WAKE_CAUSES[cause])
                         if watching_dir:
                             kq.control([select.kevent(self.stamp_dir_fd, filter=select.KQ_FILTER_VNODE, flags=select.KQ_EV_DELETE)], 0, 0)
@@ -381,7 +410,7 @@ class Pilot:
             if receipt['status'] == 'harness_timeout':
                 run.close()
             rc = run.poll()
-            if kind == 'instrumented' and started is None and started_path.exists():
+            if kind != UNSTAMPED and started is None and started_path.exists():
                 started, exits, watch = self.observe_started(started_path, app, 'after the CLI exit')
             receipt['cli'] = dict(returncode=rc, exit_clock=exit_clock)
             event = self.collect_host_exit(kind, stamps_path, started, exits)
@@ -434,7 +463,7 @@ class Pilot:
 
     def collect_host_exit(self, kind, stamps, started, exits):
         """Bounded wait for the stamp export and, when registered, the host exit event."""
-        if kind != 'instrumented':
+        if kind == UNSTAMPED:
             return None
         deadline = time.monotonic() + STAMP_WAIT_S
         event = None
@@ -617,14 +646,19 @@ def parse(argv):
     parser.add_argument('--repetitions', type=int); parser.add_argument('--window-seconds', type=float, default=240.0)
     parser.add_argument('--trial-watchdog-seconds', type=float, default=15.0)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--compare-app', help="the candidate's signed app"); parser.add_argument('--compare-tree', help='the candidate checkout root')
+    parser.add_argument('--compare-worker-build', help="build.sh output over the compare tree (the wrapper builds it)")
     args = parser.parse_args(argv)
     args.cells = [c for c in args.cells.split(',') if c]; args.regimes = [r for r in args.regimes.split(',') if r]
     assert args.cells and set(args.cells) <= set(CELLS), args.cells
     assert args.regimes and set(args.regimes) <= set(REGIMES), args.regimes
-    if args.repetitions is None: args.repetitions = 1 if args.dry_run else DEFAULT_REPETITIONS
+    compare = (args.compare_app, args.compare_tree, args.compare_worker_build)
+    assert all(compare) or not any(compare), 'a comparison needs --compare-app, --compare-tree and --compare-worker-build together'
+    args.compare = all(compare)
+    if args.repetitions is None: args.repetitions = 1 if args.dry_run else COMPARE_REPETITIONS if args.compare else DEFAULT_REPETITIONS
     assert args.repetitions >= 1 and args.window_seconds > 0 and args.trial_watchdog_seconds > 0
     assert args.dry_run or args.repetitions >= COVERAGE_MIN_ACCEPTED, \
-        f'a counted pilot needs at least {COVERAGE_MIN_ACCEPTED} repetitions per app, cell and regime'
+        f'a counted run needs at least {COVERAGE_MIN_ACCEPTED} repetitions per app, cell and regime'
     assert args.identity, 'signing identity required before any build'
     return args
 
@@ -648,35 +682,57 @@ def main(argv=None):
     source_app, artifacts = Path(args.app).resolve(), Path(args.artifacts).resolve()
     assert os.environ.get('PW_TEST_SCRATCH'), 'PW_TEST_SCRATCH is required for build intermediates'
     scratch = Path(os.environ['PW_TEST_SCRATCH']); scratch.mkdir(parents=True, exist_ok=True)
-    entries, required = build_schedule(args.cells, args.regimes, args.repetitions)
+    worker_build = Path(args.worker_build).resolve()
+    side = lambda app, tree, build: dict(source=app, tree=tree, worker_build=build)
+    if args.compare:
+        compare_app, compare_tree = Path(args.compare_app).resolve(), Path(args.compare_tree).resolve()
+        sides = dict(zip(COMPARE_APPS, (side(source_app, ROOT, worker_build),
+                                        side(compare_app, compare_tree, Path(args.compare_worker_build).resolve()))))
+    else:
+        compare_app = None
+        sides = {kind: side(source_app, ROOT, worker_build) for kind in APPS}
+    kinds = tuple(sides)
+    entries, required = build_schedule(args.cells, args.regimes, args.repetitions, kinds)
     warm = warm_cells(args.cells)
-    estimate = window_estimate(entries, len(warm) * len(APPS), not args.no_clock_pair, args.trial_watchdog_seconds)
+    estimate = window_estimate(entries, len(warm) * len(kinds), not args.no_clock_pair, args.trial_watchdog_seconds)
     assert estimate['total_s'] <= args.window_seconds, f'declared schedule does not fit the window: {estimate}'
-    source_before = inventory(source_app)
-    save(artifacts / 'conditions-start.json', static_conditions(source_app))
+    sources_before = {app: inventory(app) for app in {source_app, compare_app} - {None}}
+    save(artifacts / 'conditions-start.json', static_conditions(source_app, compare_app))
+    worker_builds = {kind: worker_build_record(value['worker_build'], value['tree']) for kind, value in sides.items()}
     module = load_module('worker_wait_host_stamps', HOST_STAMPS)
     stamp_dir = Path(module.default_stamp_dir())
     assert stamp_dir.parent == STAMP_ROOT, stamp_dir
-    worker_build = Path(args.worker_build).resolve()
     failures, apps, staging, stamp_dir_fd, cleanup = [], {}, artifacts / 'staging', None, None
     target_root = Path(tempfile.mkdtemp(prefix='pw-wait-', dir='/private/tmp'))
     try:
-        hosts = {kind: build_host(module, kind, artifacts, scratch, stamp_dir) for kind in APPS}
-        flavours = {kind: host_flavour(artifacts, kind) for kind in APPS}
-        assert all(value == flavours['instrumented'] for value in flavours.values()), flavours
-        apps = {kind: stage_app(module, kind, source_app, staging, args.identity, hosts[kind], worker_build) for kind in APPS}
+        hosts = {kind: build_host(module, kind, artifacts, scratch, stamp_dir, value['tree']) for kind, value in sides.items()}
+        flavours = {kind: host_flavour(artifacts, kind) for kind in kinds}
+        assert all(value == flavours[kinds[0]] for value in flavours.values()), flavours
+        skipped = {kind: json.loads((artifacts / f'host-{kind}' / 'host-build.json').read_text())['patches_skipped'] for kind in kinds}
+        if any(skipped.values()): announce(f'optional host patches skipped: {skipped}')
+        apps = {kind: stage_app(module, kind, value['source'], staging, args.identity, hosts[kind], value['worker_build'], value['tree'])
+                for kind, value in sides.items()}
         clock_pair = None
         if not args.no_clock_pair:
             clock_pair = load_module('worker_wait_clock_pair', CLOCK_PAIR)
             clock_binary = scratch / 'clock-pair' / 'clock_pair'
             clock_pair.build(clock_binary, artifacts / 'clock-pair-build')
-        staged_before = {kind: staged_identity(apps[kind]) for kind in APPS}
+        staged_before = {kind: staged_identity(apps[kind]) for kind in kinds}
         save(artifacts / 'staged-identity-before.json', staged_before)
         stamp_dir.mkdir(parents=True, mode=0o700)
         stamp_dir_fd = os.open(stamp_dir, os.O_EVTONLY)
         targets = make_targets(target_root)
         save(artifacts / 'targets.json', dict(root=str(target_root), files=len(targets['files']), ownership='driver temporary directory'))
-        save(artifacts / 'schedule.json', dict(version=2, entries=entries, required=required, cells=args.cells, regimes=args.regimes,
+        comparison = None
+        if args.compare:
+            comparison = dict(apps=list(kinds), pairing_rule=PAIRING_RULE, pairs_required=PAIRS_REQUIRED,
+                              cleanup_rule='host exit event for both apps; CLI exit plus 100 ms, labeled cli_exit_plus_margin, where the watch was unavailable',
+                              sides={kind: dict(source_app=str(value['source']), tree=str(value['tree']), worker_build=worker_builds[kind],
+                                                host_patches_skipped=skipped[kind],
+                                                source_tree=json.loads((staging / kind / 'staging.json').read_text())['source_tree'])
+                                     for kind, value in sides.items()})
+        save(artifacts / 'schedule.json', dict(version=3, mode='comparison' if args.compare else 'pilot', comparison=comparison,
+             entries=entries, required=required, cells=args.cells, regimes=args.regimes,
              repetitions=args.repetitions, dry_run=args.dry_run, window_seconds=args.window_seconds, window_estimate=estimate,
              trial_watchdog_seconds=args.trial_watchdog_seconds, trial_cleanup_seconds=TRIAL_CLEANUP_S,
              requested_gap_ns=REQUESTED_GAP_NS, eligible_gap_ns=ELIGIBLE_GAP_NS, cli_timeout_ms=CLI_TIMEOUT_MS,
@@ -685,13 +741,13 @@ def main(argv=None):
              declared_exclusions=DECLARED_EXCLUSIONS, started_check=STARTED_CHECK,
              stamp_wait_s=STAMP_WAIT_S, cli_exit_margin_ns=CLI_MARGIN_NS, stamp_dir=str(stamp_dir),
              clock_pair=None if args.no_clock_pair else dict(trials=args.clock_pair_trials, out='clock-pair'),
-             host_flavour=flavours['instrumented'], worker_build=str(worker_build),
+             host_flavour=flavours[kinds[0]], worker_build=str(worker_build),
              warm_cells=warm, apps={k: str(v) for k, v in apps.items()},
-             order='rapid block, then idle block; per repetition and cell both apps, instrumented first in even repetitions'))
+             order=f'rapid block, then idle block; per repetition and cell both apps, {kinds[0]} first in even repetitions'))
         with FootprintObserver(args.observer) as observer:
             save(artifacts / 'observer-provenance.json', observer.provenance)
             pilot = Pilot(args, observer, apps, stamp_dir, stamp_dir_fd, module.stamp_paths, module.exported_path,
-                          targets, flavours['instrumented'])
+                          targets, flavours[kinds[0]])
             driver_clock = driver_clock_check(observer)
             assert driver_clock['agrees'], f'driver clock is not the observer clock domain: {driver_clock}'
             window_start = observer.clock()
@@ -705,7 +761,7 @@ def main(argv=None):
                     failures.append(f'clock-pair calibration failed: {exc!r}')
             elif not args.dry_run:
                 failures.append('clock-pair calibration not run (--no-clock-pair outside a dry run)')
-            for kind in APPS:
+            for kind in kinds:
                 for cell in warm:
                     if pilot.stopped_for is not None or not pilot.fits('rapid')[0]:
                         failures.append(f'warm {kind} {cell}: not run (stopped_for={pilot.stopped_for})'); continue
@@ -731,7 +787,7 @@ def main(argv=None):
             if receipt['status'] == 'completed':
                 problems = validate(path.parent, receipt)
                 if problems and receipt.get('warm'): failures.append(f'warm validation {path.parent}: {problems}')
-        staged_after = {kind: staged_identity(apps[kind]) for kind in APPS}
+        staged_after = {kind: staged_identity(apps[kind]) for kind in kinds}
         save(artifacts / 'staged-identity-after.json', staged_after)
         if staged_after != staged_before: failures.append('staged executables changed during the pilot')
         _, summary = reader.read_artifacts(artifacts)
@@ -758,7 +814,7 @@ def main(argv=None):
         # Staging stays until no staged process is known to remain.
         if args.dry_run and staging.exists() and (cleanup is None or cleanup['settled']):
             shutil.rmtree(staging)
-        assert inventory(source_app) == source_before, 'selected source app changed'
+        assert all(inventory(app) == before for app, before in sources_before.items()), 'a selected source app changed'
     rows = json.loads((artifacts / 'decomposition.json').read_text())['rows']
     blocking = [dict(dir=r['dir'], status=r['status'], problems=r['problems'], exclusions=r['exclusions'])
                 for r in rows if r['status'] in ('failed', 'incomplete', 'refused')]
@@ -766,7 +822,10 @@ def main(argv=None):
                 for status in ('excluded', 'skipped')}
     covered = coverage(summary['groups'], required)
     incomplete = sorted(key for key, value in covered.items() if value['accepted'] < value['required'])
-    save(artifacts / 'pilot.json', dict(version=2, dry_run=args.dry_run, failures=failures, blocking=blocking,
+    pairs = summary.get('pairs')
+    paired = pairs and dict(entries=len(pairs['entries']), pairs=sum(len(e['pairs']) for e in pairs['entries']), unpaired=len(pairs['unpaired']))
+    save(artifacts / 'pilot.json', dict(version=3, mode='comparison' if args.compare else 'pilot', pairs=paired,
+                                        dry_run=args.dry_run, failures=failures, blocking=blocking,
                                         excluded=retained['excluded'], skipped=retained['skipped'], coverage=covered,
                                         incomplete=incomplete, counts=summary['counts'], calibration=summary['calibration_status'],
                                         cleanup_settled=(cleanup or {}).get('settled'), staging_retained=staging.exists()))
@@ -776,7 +835,9 @@ def main(argv=None):
     assert not incomplete, f'incomplete pilot coverage: {incomplete}'
     print(f"worker-wait pilot: {summary['counts']['accepted']} accepted, {len(retained['excluded'])} excluded and "
           f"{len(retained['skipped'])} skipped trials; {len(covered)} app/cell/regime keys covered; "
-          f"calibration {summary['calibration_status']}{'; dry run' if args.dry_run else ''}")
+          f"calibration {summary['calibration_status']}"
+          + (f"; {paired['pairs']} matched pairs in {paired['entries']} cell and regime groups, {paired['unpaired']} unpaired trials" if paired else '')
+          + ('; dry run' if args.dry_run else ''))
 
 
 if __name__ == '__main__':

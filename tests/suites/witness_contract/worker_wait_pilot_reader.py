@@ -2,10 +2,11 @@
 
 Reads the receipts check_worker_wait_pilot.py writes under <artifacts>/trials
 and writes decomposition.json (one row per trial), summary.json (aggregates
-per app, cell, regime, power source, low power mode and host flavour) and
-summary.md. Every check appends a named problem, so combined faults stay
-visible. Refused, incomplete, failed, skipped and excluded trials stay in
-decomposition.json and are left out of aggregates.
+per app, cell, regime, power source, low power mode and host flavour, and the
+matched pairs of a comparison run) and summary.md. Every check appends a
+named problem, so combined faults stay visible. Refused, incomplete, failed,
+skipped and excluded trials stay in decomposition.json and are left out of
+aggregates and pairs.
 
 Interpretation rules, repeated in summary.json:
 - Stamps are mach_continuous_time ticks. Each stamp converts to ns as
@@ -61,6 +62,29 @@ Interpretation rules, repeated in summary.json:
   release and acknowledgement components); never add them.
 - A trial whose driver exit-watch registration overlapped a held interval is
   excluded (observer_overlap) and kept as a diagnostic.
+- A comparison run (schedule.json comparison) pairs a baseline and a candidate
+  trial with the same cell, regime and repetition index when both are accepted
+  under the same power source, low power mode and host flavour; any other
+  trial is listed as unpaired. Per pair and component the difference is
+  baseline minus candidate and its instrument uncertainty the sum of both
+  sides'. A split observation is compared under one *_to_observation name,
+  publication to the host's first positive sample, with each side's form kept.
+  Worker release and activation passes are exact counts; whole request has no
+  instrument uncertainty and only spread verdicts. A side's spread of a
+  quantity is max - min over its accepted trials in the group.
+  improves_beyond_uncertainty_in_every_pair compares each difference with the
+  instrument uncertainty; improves_beyond_spread_in_every_pair requires it to
+  exceed the candidate's spread plus that uncertainty. Each is false once any
+  established pair falls short and true only when all of the declared
+  pairs_required pass. worsens_beyond_instrument_uncertainty and
+  worsens_beyond_spread_in_any_pair (candidate minus baseline beyond the
+  baseline's spread plus the instrument uncertainty) are true once any pair
+  is worse and false only when all required pairs are established and none
+  is; otherwise a verdict is withheld. For release_to_ack and activation_response the
+  response bound is the candidate's largest accepted value minus the
+  baseline's smallest, against 2 ms; it is credited only with their combined
+  uncertainty at most 0.5 ms and the instrument gate credited. The two apps
+  are never pooled.
 """
 import base64
 import hashlib
@@ -71,7 +95,7 @@ import statistics
 import struct
 import sys
 
-READER_VERSION = 3
+READER_VERSION = 5
 HERE = Path(__file__).resolve().parent
 
 # Worker stamp page; mirrors tests/fixtures/worker_wait/pww_stamp_page.h.
@@ -131,6 +155,19 @@ DROPPED_KINDS = ('events', 'register_samples', 'sleeps', 'custody_passes', 'work
 SLEEP_KEYS = {'0': 'ready_byte_wait', '1': 'ordinary_sentinel', '2': 'actor_setup', '3': 'actor_execution',
               '4': 'validator_grace', '5': 'worker_grace', '6': 'custody_recipient', '7': 'termination_gate'}
 ALIGNMENT_REFUSAL_NS = 50_000
+PAIR_APPS = ('baseline', 'candidate')
+PAIRS_REQUIRED = 5
+# Split observations compared under one name: publication to the host's first positive sample, either form.
+OBSERVATION_FORMS = {'arrival_detection': 'arrival_to_observation', 'arrival_first_check_positive': 'arrival_to_observation',
+                     'ack_observation': 'ack_to_observation', 'ack_first_check_positive': 'ack_to_observation',
+                     'completion_detection': 'completion_to_observation',
+                     'completion_first_check_positive': 'completion_to_observation',
+                     'done_detection': 'done_to_observation', 'done_first_check_positive': 'done_to_observation',
+                     'inbound_ack_to_host_observed': 'inbound_ack_to_observation',
+                     'inbound_ack_first_check_positive': 'inbound_ack_to_observation'}
+PAIRED_WAITS = ('release_wait', 'activation_wait')
+RESPONSE_COMPONENTS = ('release_to_ack', 'activation_response')
+RESPONSE_LIMIT_NS, RESPONSE_UNCERTAINTY_GATE_NS = 2_000_000, 500_000
 STATUS_ORDER = ('failed', 'skipped', 'incomplete', 'refused', 'excluded', 'accepted')
 EXCLUSIONS = {'sleep_overlapped', 'pacing_out_of_range', 'power_transition', 'power_unobserved', 'observer_overlap'}
 INCOMPLETE = {'stamps_missing', 'started_missing', 'validation_missing', 'conditions_missing',
@@ -1278,6 +1315,186 @@ def summarize(rows, required=None):
     return out
 
 
+# ---- matched pairs (comparison runs) ----------------------------------------------
+
+def pair_key(row):
+    """The group a pair belongs to: every grouping key except the app."""
+    return group_key(row)[1:]
+
+
+def pair_components(row):
+    """name -> (value, uncertainty, form) for each observed interval; split observations under one *_to_observation name."""
+    out = {}
+    for name, record in component_values(row):
+        if record['ns'] is None:
+            continue
+        prefix, _, leaf = name.rpartition('.')
+        out[f'{prefix}.{OBSERVATION_FORMS[leaf]}' if leaf in OBSERVATION_FORMS else name] = (
+            record['ns'], record.get('uncertainty_ns'), leaf if leaf in OBSERVATION_FORMS else None)
+    return out
+
+
+def pair_waits(row):
+    """Release and activation pass counts; exact counts, so their uncertainty is zero."""
+    return {name: (passes, 0, None) for name, passes, _, _ in wait_values(row)
+            if name.rsplit('.', 1)[1] in PAIRED_WAITS and passes is not None}
+
+
+IMPROVES, IMPROVES_SPREAD = 'improves_beyond_uncertainty_in_every_pair', 'improves_beyond_spread_in_every_pair'
+WORSENS, WORSENS_SPREAD = 'worsens_beyond_instrument_uncertainty', 'worsens_beyond_spread_in_any_pair'
+WORSENS_SPREAD_EVERY = 'worsens_beyond_spread_in_every_pair'
+
+
+def side_spread(values):
+    """One side's spread of one quantity: max - min over its accepted trials in the group."""
+    return max(values) - min(values)
+
+
+def settle(outcomes, required, within):
+    """(improves in every pair, worsens in any pair) from per-pair outcomes; outcomes other than
+    improved, worsened and `within` are not established."""
+    established = [o for o in outcomes if o in ('improved', 'worsened', within)]
+    complete = len(established) == len(outcomes) >= required
+    return (False if any(o != 'improved' for o in established) else True if complete else None,
+            True if 'worsened' in outcomes else False if complete else None)
+
+
+def settle_every_worse(outcomes, required, within):
+    """Worsening in every pair: refuted by any established pair that is not worse, established only when all
+    required pairs are established and worse; a resolved regression rather than one noisy pair."""
+    established = [o for o in outcomes if o in ('improved', 'worsened', within)]
+    complete = len(established) == len(outcomes) >= required
+    return False if any(o != 'worsened' for o in established) else True if complete else None
+
+
+def pair_series(pairs, values, required, accepted, instrument=True):
+    """Per pair baseline minus candidate, judged against the instrument uncertainty (the sum of both sides')
+    and against each side's spread plus that uncertainty, with the four verdicts.
+
+    values(row) maps a name to (value, uncertainty, form); accepted maps each app to its accepted rows in the
+    group, the spread's population. Improvement is refuted by any established pair that falls short and
+    established only when all required pairs pass; worsening is established by any pair and refuted only when
+    all required pairs are established and none is worse. Without instrument uncertainty (whole request) only
+    the spread verdicts are given."""
+    measured = [(index, values(b), values(c)) for index, b, c in pairs]
+    population = {app: [values(r) for r in accepted.get(app, [])] for app in PAIR_APPS}
+    out = {}
+    for name in sorted({n for _, vb, vc in measured for n in set(vb) | set(vc)}):
+        spread = {}
+        for app in PAIR_APPS:
+            seen = [v[name][0] for v in population[app] if name in v]
+            spread[app] = dict(ns=side_spread(seen) if seen else None, trials=len(seen))
+        rows = []
+        for index, vb, vc in measured:
+            if name not in vb or name not in vc:
+                absent = [app for app, v in zip(PAIR_APPS, (vb, vc)) if name not in v]
+                rows.append(dict(index=index, outcome='absent', spread_outcome='absent', absent_on=absent))
+                continue
+            (b, ub, fb), (c, uc, fc) = vb[name], vc[name]
+            combined = None if ub is None or uc is None else ub + uc
+            outcome = ('uncertainty_not_established' if combined is None else 'improved' if b - c > combined
+                       else 'worsened' if c - b > combined else 'within_uncertainty')
+            better = None if combined is None or spread['candidate']['ns'] is None else spread['candidate']['ns'] + combined
+            worse = None if combined is None or spread['baseline']['ns'] is None else spread['baseline']['ns'] + combined
+            spread_outcome = ('not_established' if better is None or worse is None else 'improved' if b - c > better
+                              else 'worsened' if c - b > worse else 'within_spread')
+            row = dict(index=index, baseline=b, candidate=c, difference=b - c, combined_uncertainty=combined,
+                       outcome=outcome if instrument else 'not_applicable', improve_threshold=better, worsen_threshold=worse,
+                       spread_outcome=spread_outcome)
+            if fb or fc:
+                row['forms'] = dict(baseline=fb, candidate=fc)
+            rows.append(row)
+        improves, worsens = settle([r['outcome'] for r in rows], required, 'within_uncertainty')
+        improves_spread, worsens_spread = settle([r['spread_outcome'] for r in rows], required, 'within_spread')
+        worsens_spread_every = settle_every_worse([r['spread_outcome'] for r in rows], required, 'within_spread')
+        entry = {'pairs': rows, 'spread_ns': spread, IMPROVES: improves if instrument else None, IMPROVES_SPREAD: improves_spread,
+                 WORSENS: worsens if instrument else None, WORSENS_SPREAD: worsens_spread, WORSENS_SPREAD_EVERY: worsens_spread_every}
+        if not instrument:
+            entry['instrument_verdicts'] = 'not applicable: no instrument uncertainty; see the spread verdicts'
+        if None in (improves_spread, worsens_spread) or (instrument and None in (improves, worsens)):
+            established = sum(r['spread_outcome'] in ('improved', 'worsened', 'within_spread') for r in rows)
+            entry['withheld'] = (f'{established} established of {required} required pairs'
+                                 + (f'; absent or unestablished in {len(rows) - established}' if established < len(rows) else ''))
+        out[name] = entry
+    return out
+
+
+def response_bounds(accepted, gate_credited):
+    """Candidate upper bound minus baseline lower bound per response component, over each side's accepted trials."""
+    sides = {app: [pair_components(r) for r in accepted.get(app, [])] for app in PAIR_APPS}
+    present = lambda app: {n for values in sides[app] for n in values if n.rsplit('.', 1)[1] in RESPONSE_COMPONENTS}
+    out = {}
+    for name in sorted(present('candidate') & present('baseline')):
+        upper = max((v[name] for v in sides['candidate'] if name in v), key=lambda item: item[0])
+        lower = min((v[name] for v in sides['baseline'] if name in v), key=lambda item: item[0])
+        bound = upper[0] - lower[0]
+        combined = None if upper[1] is None or lower[1] is None else upper[1] + lower[1]
+        resolved = combined is not None and combined <= RESPONSE_UNCERTAINTY_GATE_NS
+        out[name] = dict(candidate_upper_ns=upper[0], baseline_lower_ns=lower[0], bound_ns=bound, limit_ns=RESPONSE_LIMIT_NS,
+                         within_limit=bound <= RESPONSE_LIMIT_NS, combined_uncertainty_ns=combined,
+                         uncertainty_at_most_0_5_ms=resolved, instrument_gate_credited=gate_credited,
+                         credited=bound <= RESPONSE_LIMIT_NS and resolved and gate_credited,
+                         trials={app: sum(name in v for v in sides[app]) for app in PAIR_APPS})
+    return out
+
+
+def host_sleep_pairs(pairs):
+    """Per pair, each host sleep or bounded wait key with a sleep on either side: count and total duration."""
+    out = {}
+    for index, b, c in pairs:
+        both = [r.get('host_sleeps') or {} for r in (b, c)]
+        for wait in sorted(set(both[0]) | set(both[1])):
+            sides = [side.get(wait) or dict(count=0, sum_ns=0) for side in both]
+            if any(side['count'] for side in sides):
+                out.setdefault(wait, []).append(dict(index=index, **{app: dict(count=side['count'], sum_ns=side['sum_ns'])
+                                                                     for app, side in zip(PAIR_APPS, sides)}))
+    return out
+
+
+def whole_request(row):
+    """Whole-request latency, which carries no instrument uncertainty: only its spread verdicts apply."""
+    elapsed = (row.get('whole_request') or {}).get('elapsed_ns')
+    return {} if elapsed is None else {'whole_request': (elapsed, 0, None)}
+
+
+def matched_pairs(rows, comparison, gate_credited):
+    """Matched baseline/candidate pairs per cell, regime and conditions; None outside a comparison run."""
+    if not comparison:
+        return None
+    required = comparison.get('pairs_required', PAIRS_REQUIRED)
+    trials, accepted, groups, unpaired = {}, {}, {}, []
+    for row in rows:
+        if row.get('app') in PAIR_APPS and row.get('index') is not None:
+            trials.setdefault((row['cell'], row['regime'], row['index']), {})[row['app']] = row
+            if row['status'] == 'accepted':
+                accepted.setdefault(pair_key(row), {}).setdefault(row['app'], []).append(row)
+    for (cell, regime, index), sides in sorted(trials.items(), key=lambda item: tuple(map(str, item[0]))):
+        b, c = sides.get('baseline'), sides.get('candidate')
+        reason = ('the other app has no receipt' if b is None or c is None
+                  else 'not accepted on both sides' if (b['status'], c['status']) != ('accepted', 'accepted')
+                  else 'conditions differ (power source, low power mode or host flavour)' if pair_key(b) != pair_key(c) else None)
+        if reason is None:
+            groups.setdefault(pair_key(b), []).append((index, b, c))
+            continue
+        for app, row in sorted(sides.items()):
+            other = sides.get(PAIR_APPS[1 - PAIR_APPS.index(app)])
+            unpaired.append(dict(app=app, cell=cell, regime=regime, index=index, dir=row['dir'], status=row['status'],
+                                 problems=row['problems'], exclusions=row['exclusions'], reason=reason,
+                                 other_status=other and other['status']))
+    entries = []
+    for key in sorted(set(groups) | set(accepted), key=lambda k: tuple(map(str, k))):
+        cell, regime, power, lowpower, flavour = key
+        pairs, members = groups.get(key, []), accepted.get(key, {})
+        entries.append(dict(cell=cell, regime=regime, power_source=power, lowpowermode=lowpower, flavour=json.loads(flavour),
+                            pairs_required=required, pairs=[dict(index=i, baseline=b['dir'], candidate=c['dir']) for i, b, c in pairs],
+                            components=pair_series(pairs, pair_components, required, members),
+                            waits=pair_series(pairs, pair_waits, required, members),
+                            whole_request=pair_series(pairs, whole_request, required, members, instrument=False).get('whole_request') or dict(pairs=[]),
+                            response=response_bounds(members, gate_credited), host_sleeps=host_sleep_pairs(pairs)))
+    return dict(rule=comparison.get('pairing_rule'), pairs_required=required, difference='baseline minus candidate',
+                entries=entries, unpaired=unpaired)
+
+
 def fixture_identity(artifacts):
     """Hashes of the fixture builds a run measured, from its build and staging receipts."""
     out, absent = {}, []
@@ -1294,11 +1511,14 @@ def fixture_identity(artifacts):
         out['clock_pair'] = dict(binary=pair.get('binary_sha256'), source=pair.get('source_sha256'))
     else:
         absent.append('clock-pair-build/clock-pair-build.json')
-    host = load_json(artifacts / 'host-instrumented' / 'host-build.json')
-    if host:
-        out['host_stamps_source'] = (host.get('stamp_source') or {}).get('fixture_sha256')
+    hosts = {path.parent.name[len('host-'):]: load_json(path) for path in sorted(artifacts.glob('host-*/host-build.json'))}
+    stamped = {kind: host for kind, host in hosts.items() if host.get('kind') == 'instrumented'}
+    if stamped:
+        sources = {(host.get('stamp_source') or {}).get('fixture_sha256') for host in stamped.values()}
+        out['host_stamps_source'] = sources.pop() if len(sources) == 1 else 'differs between hosts'
+        out['host_patches_skipped'] = {kind: [entry['index'] for entry in host.get('patches_skipped', [])] for kind, host in stamped.items()}
     else:
-        absent.append('host-instrumented/host-build.json')
+        absent.append('host-<app>/host-build.json for a stamped host')
     return dict(executables=out, receipts_absent=absent,
                 note='Fixture builds and staged copies, not production bytes: the hosts are disposable -Onone builds and the workers are recipe builds.')
 
@@ -1306,7 +1526,7 @@ def fixture_identity(artifacts):
 def overlap_rows(rows):
     return [dict(dir=r['dir'], app=r['app'], cell=r['cell'], regime=r['regime'], index=r['index'], status=r['status'],
                  overlaps_held=(r.get('observer_overlap') or {}).get('overlaps_held'))
-            for r in rows if r.get('app') == 'instrumented' and 'observer_overlap' in r]
+            for r in rows if r.get('app') != 'neighbor' and 'observer_overlap' in r]
 
 
 def read_artifacts(artifacts, *, write=True):
@@ -1331,7 +1551,8 @@ def read_artifacts(artifacts, *, write=True):
                    counts={s: sum(1 for r in rows if r['status'] == s) for s in STATUS_ORDER},
                    observer_overlap=overlap_rows(rows),
                    excluded=[dict(dir=r['dir'], exclusions=r['exclusions']) for r in rows if r['status'] == 'excluded'],
-                   groups=summarize(rows, schedule.get('required')), warm=warm)
+                   groups=summarize(rows, schedule.get('required')), warm=warm,
+                   pairs=matched_pairs(rows, schedule.get('comparison'), bool(((calibration or {}).get('instrument_gate') or {}).get('credited'))))
     if write:
         (artifacts / 'decomposition.json').write_text(json.dumps(decomposition, indent=2) + '\n')
         (artifacts / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
@@ -1361,6 +1582,91 @@ def sleeps(counts, scopes=None):
 
 def format_stats(value):
     return 'none' if not value.get('n') else f"n {value['n']}, median {us(value['median'])}, min {us(value['min'])}, max {us(value['max'])}"
+
+
+def verdict(value):
+    return {True: 'yes', False: 'no'}.get(value, 'withheld')
+
+
+def verdicts(entry, improves):
+    """'instrument / spread' for the improvement verdicts, 'instrument / spread any / spread every' for the worsening
+    verdicts of one series."""
+    keys = (IMPROVES, IMPROVES_SPREAD) if improves else (WORSENS, WORSENS_SPREAD, WORSENS_SPREAD_EVERY)
+    instrument = 'n/a' if entry.get('instrument_verdicts') else verdict(entry[keys[0]])
+    return f'{instrument} / ' + ' / '.join(verdict(entry[k]) for k in keys[1:])
+
+
+def per_pair(entry, fmt):
+    """'r<index> difference ± combined uncertainty' per pair, with each side's observation form where it has one."""
+    form = lambda leaf: 'first check' if leaf and leaf.endswith('first_check_positive') else 'detected'
+    parts = []
+    for r in entry['pairs']:
+        if r['outcome'] == 'absent':
+            parts.append(f"r{r['index']} absent on {'/'.join(r['absent_on'])}")
+            continue
+        bound = 'not established' if r['combined_uncertainty'] is None else fmt(r['combined_uncertainty'])
+        bound = '' if r['outcome'] == 'not_applicable' else f' ± {bound}'
+        forms = r.get('forms')
+        parts.append(f"r{r['index']} {fmt(r['difference'])}{bound}" + (f" ({form(forms['baseline'])}/{form(forms['candidate'])})" if forms else ''))
+    return ('; '.join(parts) or 'none') + (f" [withheld: {entry['withheld']}]" if entry.get('withheld') else '')
+
+
+def spreads(entry, fmt):
+    return ' / '.join('-' if entry['spread_ns'][app]['ns'] is None else fmt(entry['spread_ns'][app]['ns']) for app in PAIR_APPS)
+
+
+def pairs_markdown(pairs):
+    ms = lambda value: f'{value / 1e6:.2f} ms'
+    lines = ['## Matched pairs', '',
+             f"Pairing: {pairs['rule']}. Each per-pair value is baseline minus candidate (positive: the candidate is shorter or "
+             'made fewer passes) ± the sum of both sides\' instrument uncertainties; components are microseconds. Each verdict '
+             'cell reads instrument / spread. Instrument verdicts compare each difference with that uncertainty. Spread verdicts '
+             'also add a side\'s spread (max - min over its accepted trials in this group): an improvement must exceed the '
+             'candidate\'s spread plus the uncertainty, a worsening the baseline\'s. An improvement verdict is no once any '
+             f"established pair falls short and yes only when all {pairs['pairs_required']} required pairs pass; a worsening "
+             'verdict is yes once any pair is worse and no only when all required pairs are established and none is; the third '
+             'worsening cell, spread in every pair, is yes only when every required pair is worse beyond the spread, which is a '
+             'resolved regression rather than one noisy pair; otherwise '
+             'it is withheld. *_to_observation rows run from publication to the host\'s first positive sample in either form, '
+             'shown per pair as baseline/candidate (first check or detected). Worker passes are exact counts. Whole request has '
+             'no instrument uncertainty (n/a) and only spread verdicts. A response bound is the candidate\'s largest value minus the '
+             'baseline\'s smallest, credited only within 2 ms with combined uncertainty at most 0.5 ms and the instrument gate '
+             'credited. The apps are never pooled.', '']
+    for entry in pairs['entries']:
+        unpaired = [u for u in pairs['unpaired'] if (u['cell'], u['regime']) == (entry['cell'], entry['regime'])]
+        lines += [f"### {entry['cell']} {entry['regime']} ({entry['power_source']}, lowpowermode {entry['lowpowermode']})", '',
+                  f"Pairs: {len(entry['pairs'])} of {entry['pairs_required']} required (repetitions "
+                  f"{', '.join(str(p['index']) for p in entry['pairs']) or 'none'}). Unpaired: "
+                  + ('; '.join(f"{u['app']} r{u['index']} {u['status']} ({u['reason']}) {u['problems'] + u['exclusions']}" for u in unpaired)
+                     or 'none') + '.', '']
+        for title, series, fmt in (('Component', entry['components'], us), ('Worker wait passes', entry['waits'], str)):
+            if not series:
+                continue
+            lines += [f'| {title} | improves in every pair | worsens in any pair | spread baseline / candidate | per pair |',
+                      '| --- | --- | --- | --- | --- |']
+            for name, value in series.items():
+                lines.append(f"| {name} | {verdicts(value, True)} | {verdicts(value, False)} | {spreads(value, fmt)} | {per_pair(value, fmt)} |")
+            lines.append('')
+        whole = entry['whole_request']
+        if whole.get('pairs'):
+            lines += [f"Whole request (spread baseline / candidate {spreads(whole, ms)}): improves {verdicts(whole, True)}; "
+                      f"worsens {verdicts(whole, False)}; {per_pair(whole, ms)}.", '']
+        if entry['response']:
+            lines += ['| Response | candidate upper | baseline lower | bound | within 2 ms | combined uncertainty | credited |',
+                      '| --- | --- | --- | --- | --- | --- | --- |']
+            for name, value in entry['response'].items():
+                lines.append(f"| {name} | {us(value['candidate_upper_ns'])} | {us(value['baseline_lower_ns'])} | {us(value['bound_ns'])} "
+                             f"| {'yes' if value['within_limit'] else 'no'} | {us(value['combined_uncertainty_ns'])} "
+                             f"| {'yes' if value['credited'] else 'no'} |")
+            lines.append('')
+        if entry['host_sleeps']:
+            lines += ['| Host sleep or bounded wait | per pair: baseline count, total -> candidate count, total |', '| --- | --- |']
+            for wait, rows in entry['host_sleeps'].items():
+                lines.append(f'| {wait} | ' + '; '.join(
+                    f"r{r['index']} {r['baseline']['count']}, {ms(r['baseline']['sum_ns'])} -> {r['candidate']['count']}, {ms(r['candidate']['sum_ns'])}"
+                    for r in rows) + ' |')
+            lines.append('')
+    return lines
 
 
 def markdown(summary):
@@ -1393,6 +1699,11 @@ def markdown(summary):
              f'have no first-pass stamp: their period is an {UPPER_PERIOD}.',
              f'custody recipient_wait rows show min and max only: {RECIPIENT_NOTE}.', '',
              'Trial counts: ' + ', '.join(f'{k} {v}' for k, v in summary['counts'].items()), '']
+    skipped = identity['executables'].get('host_patches_skipped')
+    if skipped is not None:
+        lines += ['Optional host patches skipped (patch index): ' + '; '.join(f'{app} {v or "none"}' for app, v in skipped.items()) + '.', '']
+    if summary.get('pairs'):
+        lines += pairs_markdown(summary['pairs'])
     for group in summary['groups']:
         lines += [f"## {group['app']} {group['cell']} {group['regime']} ({group['power_source']}, lowpowermode {group['lowpowermode']})", '',
                   f"Counts: {group['counts']}; coverage {group.get('coverage', 'not declared')}"

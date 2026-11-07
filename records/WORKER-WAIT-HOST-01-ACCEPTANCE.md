@@ -80,4 +80,28 @@ Pending.
 
 ## Revisions
 
-None yet.
+### Revision 1, before any comparison measurement
+
+A null comparison of the baseline app against itself (run
+`20261107T211415Z_022b0097`, `tests/out/runs/worker-wait-compare-null-01`,
+two repetitions, dry run) showed that polled host detections vary between
+trials by 5 µs to 1.26 ms while the instrument uncertainty is about 1.3 µs,
+so the frozen regression clause "no actor-form pair worsens beyond
+uncertainty" would fail for identical bytes. The clause is replaced; the
+improvement claim is unchanged.
+
+- Improvement, as frozen: `improves_beyond_uncertainty_in_every_pair` for the
+  arrival-to-observation component and the held total in every ordinary cell
+  and both regimes, with the stricter `improves_beyond_spread_in_every_pair`
+  reported beside it.
+- Resolved regression, actor form and whole request: a quantity worsens in a
+  resolved way only when `worsens_beyond_spread_in_every_pair` holds, that is
+  the candidate exceeds the baseline by more than the baseline group's
+  trial spread plus both instrument uncertainties in every required pair.
+  Such a result requires the written tradeoff decision the plan names before
+  acceptance. `worsens_beyond_spread_in_any_pair` and the instrument-only
+  verdict are reported, not gating, because the null control met them with
+  identical bytes.
+- Response bound: unchanged.
+- Reader: the comparison mode's matched-pair reader, version 5 or later, with
+  the five verdicts above; hashes recorded at freeze.

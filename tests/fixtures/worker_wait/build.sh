@@ -3,23 +3,29 @@
 # production source with one flag list: meson.build's c_executable_flags and
 # link arguments for pw-probe-runner, plus -Werror. The two commands differ
 # only in their source file, so the twin can stand as the uninstrumented
-# neighbor. Writes <output directory>/worker-build.json with the commands,
-# toolchain, sha256 of every repository input and output, the seam call sites
+# neighbor. The production source and the identity it declares come from the
+# source tree (this repository by default); the wrapper and recipe always come
+# from this repository. Writes <output directory>/worker-build.json with the
+# commands, toolchain, sha256 of every input and output, the seam call sites
 # found in the production source, warm-up and --version observations.
-#   build.sh <output directory>
+#   build.sh <output directory> [source tree]
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 FIXTURE_DIR="${ROOT_DIR}/tests/fixtures/worker_wait"
-OUTPUT_DIR="${1:?usage: build.sh <output directory>}"
+OUTPUT_DIR="${1:?usage: build.sh <output directory> [source tree]}"
+TREE_DIR="$(cd "${2:-${ROOT_DIR}}" && pwd -P)"
+WORKER_DIR="${TREE_DIR}/controller/tools/pw_probe_runner"
+[[ -f "${WORKER_DIR}/pw_probe_runner.c" && -f "${TREE_DIR}/tests/lib/contract.py" ]] \
+  || { echo "build refused: ${TREE_DIR} is not a source tree with the worker source and tests/lib/contract.py" >&2; exit 1; }
 : "${PW_PYTHON:?build.sh needs the resolved PW_PYTHON that tests/run.sh and tests/lib/python.sh export}"
 mkdir -p "${OUTPUT_DIR}"
 OUTPUT_DIR="$(cd "${OUTPUT_DIR}" && pwd)"
 
 FLAGS=(-Wall -Wextra -Werror -O2 -std=c11 -mmacosx-version-min=26.0 -arch arm64
-       -I "${ROOT_DIR}/controller/tools/pw_probe_runner" -I "${FIXTURE_DIR}")
+       -I "${WORKER_DIR}" -I "${FIXTURE_DIR}")
 STAMPS=(/usr/bin/xcrun --sdk macosx clang "${FLAGS[@]}" "${FIXTURE_DIR}/stamp_worker.c"
         -lsandbox -o "${OUTPUT_DIR}/pw-probe-runner-stamps")
-PLAIN=(/usr/bin/xcrun --sdk macosx clang "${FLAGS[@]}" "${ROOT_DIR}/controller/tools/pw_probe_runner/pw_probe_runner.c"
+PLAIN=(/usr/bin/xcrun --sdk macosx clang "${FLAGS[@]}" "${WORKER_DIR}/pw_probe_runner.c"
        -lsandbox -o "${OUTPUT_DIR}/pw-probe-runner-plain")
 "${STAMPS[@]}"
 "${PLAIN[@]}"
@@ -30,18 +36,18 @@ PLAIN=(/usr/bin/xcrun --sdk macosx clang "${FLAGS[@]}" "${ROOT_DIR}/controller/t
 # milliseconds; copies staged into an app are new files and stay cold until
 # their own excluded execution. Elapsed time is diagnostic only. Any refusal
 # still writes the receipt, then fails the build.
-"${PW_PYTHON}" -B -S -P - "${ROOT_DIR}" "${OUTPUT_DIR}" "${#FLAGS[@]}" "${FLAGS[@]}" \
+"${PW_PYTHON}" -B -S -P - "${ROOT_DIR}" "${TREE_DIR}" "${OUTPUT_DIR}" "${#FLAGS[@]}" "${FLAGS[@]}" \
   "${#STAMPS[@]}" "${STAMPS[@]}" "${#PLAIN[@]}" "${PLAIN[@]}" <<'PY'
 import hashlib, json, os, re, subprocess, sys, time
 from pathlib import Path
 
 argv = sys.argv[1:]
-root, out = Path(argv[0]), Path(argv[1])
-rest, lists = argv[2:], []
+root, tree, out = Path(argv[0]), Path(argv[1]), Path(argv[2])
+rest, lists = argv[3:], []
 while rest:
     count = int(rest[0]); lists.append(rest[1:1 + count]); rest = rest[1 + count:]
 flags, commands = lists[0], dict(stamps=lists[1], plain=lists[2])
-production_dir = root / 'controller/tools/pw_probe_runner'
+production_dir = tree / 'controller/tools/pw_probe_runner'
 fixture_dir = root / 'tests/fixtures/worker_wait'
 problems = []
 
@@ -79,6 +85,7 @@ def run(command, **kwargs):
 
 
 def relative(path):
+    """Repository-relative inside this repository, absolute elsewhere (another source tree)."""
     resolved = Path(path).resolve()
     return str(resolved.relative_to(root)) if resolved.is_relative_to(root) else str(resolved)
 
@@ -116,7 +123,7 @@ def seam_sites(paths):
 
 def declared_identity():
     abi = (production_dir / 'pw_probe_runner_abi.h').read_text()
-    contract = (root / 'tests/lib/contract.py').read_text()
+    contract = (tree / 'tests/lib/contract.py').read_text()
     header = re.search(r'#define PW_WORKER_ABI_IDENTITY_HEX "([0-9a-f]{64})"', abi)
     tests = re.search(r'^WORKER_IDENTITY = "([0-9a-f]{64})"$', contract, re.M)
     value = dict(abi_header=header and header.group(1), tests_lib_contract=tests and tests.group(1))
@@ -155,12 +162,12 @@ if not sdk: problems.append('the macosx SDK path is unavailable')
 listings, inputs, sdk_inputs = {}, {}, {}
 for role in ('stamps', 'plain'):
     listings[role], inputs[role], sdk_inputs[role] = dependencies(role, sdk)
-if inputs['plain'] and any(p.startswith('tests/') for p in inputs['plain']):
+if any((root / p).resolve().is_relative_to(fixture_dir) for p in inputs['plain']):
     problems.append('plain: the uninstrumented twin read fixture sources')
 sites = seam_sites(inputs['stamps'])
 outputs = {role: output_record(role, identity) for role in ('stamps', 'plain')}
 receipt = dict(
-    version=1, kind='worker_wait_stamp_worker_build', root=str(root), ok=not problems, problems=problems,
+    version=1, kind='worker_wait_stamp_worker_build', root=str(root), source_tree=str(tree), ok=not problems, problems=problems,
     flags=flags, toolchain=toolchain, declared_identity=identity,
     inputs={role: {p: digest(root / p) for p in paths} for role, paths in inputs.items()},
     sdk_inputs={role: {p: digest(p) for p in paths} for role, paths in sdk_inputs.items()},

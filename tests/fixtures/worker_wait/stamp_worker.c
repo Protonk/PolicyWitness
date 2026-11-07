@@ -62,7 +62,8 @@ static void pww_attempt_published(const pw_shm_slot_t *slot);
     pww_stamp(PWW_EVENT_INBOUND_ACKNOWLEDGED, (uint32_t)(index), (uint32_t)(problem))
 #define PW_ATTEMPT_PUBLISHED(slot) pww_attempt_published(slot)
 #define PW_TERMINAL_PUBLISHED(hdr) ((void)(hdr), pww_stamp(PWW_EVENT_TERMINAL_PUBLISHED, PWW_PHASE_NONE, 0u))
-#include "../../../controller/tools/pw_probe_runner/pw_probe_runner.c"
+/* From the source tree whose worker directory build.sh puts first on the include path. */
+#include "pw_probe_runner.c"
 
 _Static_assert(PW_CLOCK_EXCHANGE_OBSERVE + 1 == PWW_STAGE_COUNT, "stage registers cover enum pw_clock_phase");
 _Static_assert(sizeof(pw_clock_stage_names) / sizeof(*pw_clock_stage_names) == PWW_STAGE_COUNT,

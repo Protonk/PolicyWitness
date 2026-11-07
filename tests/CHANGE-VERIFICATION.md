@@ -716,10 +716,17 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   continuous-clock stamps in a disposable stamped host and seam-built worker.
   An unpatched neighbor built with the same recipe exposes observer effects on
   whole-request latency. Rapid and idle pacing, power, Low Power Mode, sleep and
-  load are recorded per trial and never pooled.
+  load are recorded per trial and never pooled. Comparison mode
+  (`--compare-app`, `--compare-tree`) replaces the two apps with a baseline
+  and a candidate, each staged with the stamped host and stamp worker built
+  from its own source tree under one patch set and recorder, and analyzes them
+  as matched pairs by cell, regime and repetition index.
 - **Execution considerations:** Builds and signs two disposable hosts, stages
   two app copies once and reuses them through fresh processes after one
-  excluded first execution each. Trials start only when their watchdog and
+  excluded first execution each. A comparison also builds the stamp worker
+  from the compare tree and reads that tree's `runner/`, worker source,
+  `tests/lib/contract.py`, entitlement files and git state; it writes nothing
+  there. Trials start only when their watchdog and
   cleanup reserve fit the declared window. Competing builds, batteries or busy
   processes change the measured response; run it in an announced quiet window.
 - **Resource dependency:** Built signed app, matching Developer ID Application
@@ -731,7 +738,10 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - **When to run:** Before selecting a worker-wait host, preparation, scan or
   hint candidate, and to re-establish the baseline decomposition after an
   accepted change to host polling, planning, the validator path, the worker
-  wait seams or the pilot reader. Select with
+  wait seams or the pilot reader. Run comparison mode for a candidate's
+  acceptance comparison, after a dry run that uses the selected app on both
+  sides (`--compare-app` naming that app and `--compare-tree .`) as a check of
+  the mechanics. Select with
   `tests/run.sh --case witness_contract/worker_wait_pilot`;
   `PW_WORKER_WAIT_PILOT_ARGS` passes driver options such as `--dry-run`.
 - **Artifacts:** `<run>/suites/witness_contract/worker_wait_pilot/artifacts/`:
@@ -742,15 +752,23 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   `conditions.json`, `started.json`, `stamps.json`, `exported.json` when
   present, `host-exit.json` and `validation.json`, then `decomposition.json`,
   `summary.json`, `summary.md`, `cleanup.json` and `pilot.json`. The staged
-  apps stay in `staging/` unless the run is a dry run.
+  apps stay in `staging/` unless the run is a dry run. A comparison adds
+  `worker-build-candidate/`, `host-baseline/` and `host-candidate/` receipts,
+  each `staging.json` with its source tree's commit and status, the
+  comparison block in `schedule.json`, and the matched pairs under `pairs` in
+  `summary.json` and in `summary.md`.
 - **Gating:** Not a default acceptance control. A missing identity fails before
   any build. A failed, incomplete or refused trial fails the case; excluded and
   skipped trials stay diagnostic, and the case passes only when every app, cell
   and regime keeps at least five accepted trials in one homogeneous group and
   the calibration receipt is accepted, so fewer accepted trials is an
-  incomplete pilot. A dry run establishes mechanics only. The default controls
-  establish the reader's interpretation on constructed receipts, not live
-  sensitivity or resolution.
+  incomplete pilot. A dry run establishes mechanics only. In a comparison an
+  improvement verdict needs all five declared pairs, and a dry run's fewer
+  pairs withhold it. Each verdict is given against the instrument uncertainty
+  and, separately, against the trial spread of the side it is judged from. The matched-pair verdicts are evidence for an acceptance
+  record, not a pass condition of the case. The default controls establish the
+  reader's interpretation and the stager's identity refusals on constructed
+  inputs, not live sensitivity or resolution.
 
 ### BYOXPC entitlement read-back
 

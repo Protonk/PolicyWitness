@@ -8,8 +8,9 @@ these pieces into a disposable signed app copy.
 ## Stamp worker
 
 `stamp_worker.c` is the production worker: it defines the worker's
-compile-time measurement seams, then includes
-`controller/tools/pw_probe_runner/pw_probe_runner.c` unchanged. Every seam
+compile-time measurement seams, then includes `pw_probe_runner.c` unchanged
+from the worker directory that `build.sh` puts first on the include path,
+`controller/tools/pw_probe_runner/` of the selected source tree. Every seam
 defaults to a no-op in the production source; this wrapper defines them to
 store into a stamp page whose layout is `pww_stamp_page.h`. The
 [header comment](pww_stamp_page.h) is the byte-offset table that a Python
@@ -91,7 +92,7 @@ so the worker's clock history and sticky fault are unchanged.
 
 ## Build
 
-`build.sh <output directory>` writes:
+`build.sh <output directory> [source tree]` writes:
 
 - `pw-probe-runner-stamps`, the stamp worker.
 - `pw-probe-runner-plain`, the unmodified production source built with the
@@ -99,18 +100,26 @@ so the worker's clock history and sticky fault are unchanged.
   the two staged workers differ only in the wrapper.
 - `worker-build.json`, the receipt.
 
+The source tree defaults to this repository. Another tree, such as a
+candidate checkout, supplies the worker source, its ABI header and the identity
+its `tests/lib/contract.py` declares; the wrapper, the stamp page header and
+the recipe always come from this repository. Both outputs then report that
+tree's identity, which a host built from the same tree enforces. The receipt
+records the tree as `source_tree`, and inputs outside this repository by
+absolute path.
+
 The flags are those of `meson.build`'s worker target plus `-Werror`:
 `-Wall -Wextra -Werror -O2 -std=c11 -mmacosx-version-min=26.0 -arch arm64`,
-linked with `-lsandbox`, with the worker and fixture directories as include
-paths. The receipt retains the exact commands and the toolchain (clang path and
+linked with `-lsandbox`, with the tree's worker directory and this fixture
+directory as include paths. The receipt retains the exact commands and the toolchain (clang path and
 version, SDK path and version, any `SDKROOT`/`DEVELOPER_DIR` in the
 environment). Each output's repository inputs come from clang's `-MM` listing
 with the same flags, and each is recorded with its sha256, as are the SDK
 files clang reads. The receipt also records the build script's hash, every
 seam call site found, and each output's sha256, size, device, inode and mode.
 It retains both outputs' warm-up and `--version` executions with return codes,
-output and elapsed time, plus the declared identity from the ABI header and
-`tests/lib/contract.py`. The script needs the resolved `PW_PYTHON` that
+output and elapsed time, plus the declared identity from the tree's ABI header
+and `tests/lib/contract.py`, which must agree. The script needs the resolved `PW_PYTHON` that
 `tests/run.sh` and `tests/lib/python.sh` export.
 
 Each output is executed once with no arguments, stdin at EOF and only the
@@ -122,8 +131,8 @@ Any refusal still writes the receipt, then fails the build.
 
 ## What the stamp worker establishes and what it does not
 
-- **It is not the production worker.** It reports the production
-  `abi_identity`, and the host's identity checks accept it, because that
+- **It is not the production worker.** It reports its source tree's
+  production `abi_identity`, and that tree's host accepts it, because the
   identity digests production sources only. The identity does not describe the
   stamp wrapper. Records name the stamp worker's actual bytes with
   `provenance_kind: substitution`. Actual bytes and substitution provenance
@@ -178,7 +187,12 @@ host sleep that contained it; later sleeps update only the registers. Polled
 publications keep
 `last_negative`, `first_positive` and a negative-sample count. Host sleeps keep
 count, last pre/post, requested and actual sums, and min/max, keyed 1 to 7 by
-caller; key 0 is the ready-byte wait. Custody passes in the actor completion
+caller; key 0 is the ready-byte wait. Sleep registers and events record
+bounded waits, whether sleeping or readiness-driven: in a tree whose ready-byte
+wait is readiness-driven (`HostWaitClock.expiredAfterWaiting`), an optional
+patch brackets each bounded wait with the same hook, so it appears under key 0
+exactly as a sleep does, and a wait that returns early records an actual
+duration below the requested one. Custody passes in the actor completion
 loop are registers; events 153/154 are appended only for passes that changed
 the custody or transfer record count.
 
@@ -202,27 +216,39 @@ worker had been reaped. Overflow and out-of-range samples are counted under
 
 `host_stamps.py` owns the patch set: an ordered list of replace-once edits over
 copies of nine runner files. Each anchor must occur exactly once or the build
-fails before compiling. `build_host` copies `runner/`, applies the patches and
-compiles the Meson PWRunner source list with
+fails before compiling. A patch marked optional applies when its anchor occurs
+once, is skipped when the anchor is absent, and fails when it occurs more than
+once; skipped patches are listed under `patches_skipped` in `host-build.json`.
+The one optional patch brackets the readiness-driven ready-byte wait described
+above, so a tree without that wait builds unchanged. `build_host` copies a
+source tree's `runner/` (this repository's by default), applies the patches and
+compiles that tree's Meson PWRunner source list with
 `swiftc -j 2 -Onone -g -target arm64-apple-macosx<minimum>`; the shim is built
 with `clang -c -arch arm64 -mmacosx-version-min=<minimum>`. Its `host-build.json`
-records the exact argv, flavour, the tree and compiled sha256 of every source
-with its patched flag, the full patch texts, the generated recorder source, the
-toolchain versions and the output hash. With no patches it builds the
-uninstrumented neighbor by the same recipe, without `HostStamps.swift`. `stage`
-copies a signed app into a durable caller-supplied directory, places one fixture
-worker in both worker roles, installs the host, gives the app and service fresh
-bundle identifiers, regenerates `worker-equipment.json` and signs in the
-order-barrier control's order, then inspects the result and writes
-`staging.json` with inventory hashes, per-executable sha256 with device and
-inode, bundle identifiers, identity, recipe and stamp directory.
+records the source tree, the exact argv, flavour, the tree and compiled sha256
+of every source with its patched flag, the full patch texts with whether each
+applied, the generated recorder source, the toolchain versions and the output
+hash. With no patches it builds the uninstrumented neighbor by the same recipe,
+without `HostStamps.swift`. `stage` copies a signed app into a durable
+caller-supplied directory, places one fixture worker in both worker roles,
+installs the host, gives the app and service fresh bundle identifiers,
+regenerates `worker-equipment.json` and signs in the order-barrier control's
+order, then inspects the result and writes `staging.json` with inventory
+hashes, per-executable sha256 with device and inode, bundle identifiers,
+identity, recipe and stamp directory. It is given the source tree the app and
+workers came from and reads that tree's `WORKER_IDENTITY` from the text of its
+`tests/lib/contract.py`, without importing it. Before any copy is signed, the
+app's equipment identity and the worker's `--version` must both equal it, and
+it is the identity the regenerated equipment declares; the tree's entitlement
+files sign the copy. `staging.json` records the tree's `HEAD` and its
+`git status --porcelain` output, read without taking the index lock.
 
 The instrumented host's timings describe a `-Onone -g` disposable rebuild with
 added clock reads, register stores and file I/O outside the held interval. They
 do not describe the Meson-built distribution host; the neighbor separates
 instrument cost from recipe cost only between those two rebuilds. Fixture hosts
-and workers report the baseline ABI identity, which does not describe their
-bytes; the receipts' hashes and substitution provenance do. A missing
+and workers report their source tree's ABI identity, which does not describe
+their bytes; the receipts' hashes and substitution provenance do. A missing
 `stamps.json` is an incomplete trial.
 
 ## Calibration pair
@@ -268,7 +294,9 @@ placement, and its busy pass is not the worker's pass.
 caller. It builds the stamped host with `PATCHES` and the neighbor with no
 patches through `build_host`, requires both receipts to report the same flavour,
 and stages each app once into `<artifacts>/staging/<kind>/` with the two workers
-`build.sh` writes. It creates the stamp directory only after both hosts are
+`build.sh` writes. In comparison mode both hosts carry `PATCHES`: the baseline
+host over this repository's `runner/` and the candidate host over the compare
+tree's, each staged with the stamp worker `build.sh` built from the same tree. It creates the stamp directory only after both hosts are
 built, finds both stamp files through `stamp_paths()` and the marker through
 `exported_path()`, and copies them into each trial directory (the marker, when
 present, as `exported.json`) before removing them; residue left at cleanup is

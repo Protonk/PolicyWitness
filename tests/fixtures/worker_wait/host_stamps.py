@@ -1,14 +1,16 @@
 """Instrumented disposable host for the worker-wait pilot: patch set, builder, stager.
 
-Only copies change. build_host copies runner/, applies PATCHES with an
-assert-once replacement, prepends the literal stamp directory to
-HostStamps.swift and compiles the Meson source list with fixed flags. With no
+Only copies change. build_host copies a source tree's runner/ (this
+checkout's by default), applies PATCHES with an assert-once replacement,
+prepends the literal stamp directory to HostStamps.swift and compiles that
+tree's Meson source list with fixed flags. An optional patch applies when its
+anchor occurs once and is skipped, and recorded, when it is absent. With no
 patches it builds the uninstrumented neighbor by the same recipe, without
 HostStamps.swift. stage substitutes the host and one worker in both roles into
 a copy of a signed app, the way the order-barrier control's signed_copy does.
 
-Both workers keep the baseline generated ABI identity, which does not describe
-their bytes; receipts name the actual hashes and the substitution.
+Both workers keep the generated ABI identity of their source tree, which does
+not describe their bytes; receipts name the actual hashes and the substitution.
 
 The request's specimen_id reaches the recorder from PWRunnerService's
 runReservedSpecimen, right after the request decodes and before admission.
@@ -64,7 +66,7 @@ HOST_EVENTS = {
     180: 'HOST_SLEEP_BEGIN', 181: 'HOST_SLEEP_END',
 }
 SLEEP_KEYS = {
-    0: 'unkeyed (ActorSession ready-byte wait, 10 ms)', 1: 'ordinary sentinel 2 ms', 2: 'actor setup 1 ms',
+    0: 'ready-byte wait (10 ms sleep on the baseline, bounded readability wait on HOST-01)', 1: 'ordinary sentinel 2 ms', 2: 'actor setup 1 ms',
     3: 'actor execution 1 ms', 4: 'validator grace 10 ms', 5: 'worker grace 10 ms',
     6: 'custody recipient 1 ms', 7: 'termination gate 1 ms',
 }
@@ -105,6 +107,11 @@ def _swap(file, old, new):
     return (file, old, new)
 
 
+def _optional(patch):
+    """Applied when its anchor occurs once, skipped and recorded when absent; more than once fails."""
+    return (*patch, 'optional')
+
+
 CW = 'Sources/PWRunnerCore/CWorker.swift'
 AS = 'Sources/PWRunnerCore/ActorSession.swift'
 SCH = 'Sources/PWRunnerCore/ActorScheduler.swift'
@@ -120,8 +127,8 @@ _PLAN = ('            queryPlans[index] = planValidatorQueries(phases[index].act
 _GLOBAL = 'UInt32(truncatingIfNeeded: (input.phases[index].globalPhase ?? (index + 1)) - 1)'
 _CUSTODY_WORK = '(custody?.custody.count ?? 0) + (custody?.transfers.count ?? 0)'
 
-# Ordered (runner-relative file, old, new). Each old text must occur exactly once
-# in its file when its turn comes.
+# Ordered (runner-relative file, old, new[, 'optional']). Each old text must occur
+# exactly once in its file when its turn comes; an optional one may also be absent.
 PATCHES = [
     # HostWaitClock: a caller key per wait, and the actual length of every sleep.
     _after(CW, '    let calls: ChildProcessCalls\n    let started: UInt64?\n', '    let stampLabel: UInt32\n'),
@@ -131,6 +138,11 @@ PATCHES = [
     _swap(CW, '        fallbackRemainingNs -= sleep\n        calls.sleep(sleep)\n',
           '        fallbackRemainingNs -= sleep\n        let stampPre = mach_continuous_time()\n        calls.sleep(sleep)\n'
           '        HostStamps.shared.sleep(stampLabel, pre: stampPre, requestedNs: sleep)\n'),
+    # A readiness-driven ready-byte wait (HostWaitClock.expiredAfterWaiting in a tree that has it) is
+    # bracketed by the same hook, so its bounded waits appear under key 0 like the sleeps it replaces.
+    _optional(_swap(CW, '        fallbackRemainingNs -= wait\n        calls.waitReadable(fd, wait)\n',
+                    '        fallbackRemainingNs -= wait\n        let stampPre = mach_continuous_time()\n        calls.waitReadable(fd, wait)\n'
+                    '        HostStamps.shared.sleep(stampLabel, pre: stampPre, requestedNs: wait)\n')),
     # Owned reaps: the stamp precedes the observed_ns read of the same reap.
     _after(CW, '    private var captureOrdinal: UInt64 = 0\n',
            '    var stampEvent: UInt32 = 0\n    var stampPhase: UInt32 = UInt32.max\n'),
@@ -303,21 +315,21 @@ def replace_once(source, old, new, label=''):
     return source.replace(old, new, 1)
 
 
-def macos_minimum():
-    values = re.findall(r"^macos_minimum = '([0-9.]+)'$", (ROOT / 'meson.build').read_text(), re.M)
+def macos_minimum(tree=ROOT):
+    values = re.findall(r"^macos_minimum = '([0-9.]+)'$", (Path(tree) / 'meson.build').read_text(), re.M)
     assert len(values) == 1, values
     return values[0]
 
 
-def host_sources(out):
-    """The PWRunner source list read from meson.build in file mode.
+def host_sources(out, tree=ROOT):
+    """The PWRunner source list read from the tree's meson.build in file mode.
 
     The same reading as the order-barrier control's meson_host_sources, built
     on tests/lib/native_sources directly so this fixture does not import an
     opt-in checker and its check_ordering dependency."""
-    command(out / 'introspect', ['meson', 'introspect', ROOT / 'meson.build', '--targets'], timeout=60)
-    targets, problems = native_sources.parse_targets((out / 'introspect/stdout').read_text(), ROOT, 'meson.build')
-    problems += native_sources.problems(targets, native_sources.expected(ROOT), 'meson.build')
+    command(out / 'introspect', ['meson', 'introspect', Path(tree) / 'meson.build', '--targets'], timeout=60)
+    targets, problems = native_sources.parse_targets((out / 'introspect/stdout').read_text(), tree, 'meson.build')
+    problems += native_sources.problems(targets, native_sources.expected(tree), 'meson.build')
     assert not problems, 'meson.build disagrees with the tree:\n' + '\n'.join(problems)
     sources = [s[len('runner/'):] for s in targets['PWRunner']]
     core = [s for s in sources if s.startswith('Sources/PWRunnerCore/') and s.endswith('.swift')]
@@ -327,26 +339,33 @@ def host_sources(out):
 
 
 def apply_patches(package, patches, out):
-    """Apply in order; returns the patched files, runner-relative, in first-touch order."""
-    touched = []
-    for index, (relative, old, new) in enumerate(patches):
+    """Apply in order; returns the patched files, runner-relative, in first-touch order, and the skipped
+    optional patches."""
+    touched, skipped = [], []
+    for index, (relative, old, new, *mode) in enumerate(patches):
         path = package / relative
-        path.write_text(replace_once(path.read_text(), old, new, f' (patch {index}, {relative})'))
+        source = path.read_text()
+        if mode == ['optional'] and old not in source:
+            skipped.append(dict(index=index, file=relative, old=old))
+            continue
+        path.write_text(replace_once(source, old, new, f' (patch {index}, {relative})'))
         if relative not in touched: touched.append(relative)
     for relative in touched:
         copy = out / 'patched-sources' / relative
         copy.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(package / relative, copy)
-    return touched
+    return touched, skipped
 
 
-def build_host(package, work, out, patches, stamp_dir):
-    """Copy runner/ to `package`, patch it and compile PWRunner into `work`.
+def build_host(package, work, out, patches, stamp_dir, runner=ROOT / 'runner'):
+    """Copy `runner` (a source tree's runner/) to `package`, patch it and compile PWRunner into `work`.
 
     `out` receives the command logs, patched-file copies and host-build.json;
     the same receipt is written beside the binary for stage(). No patches build
     the neighbor: same flags, Meson source list only, `stamp_dir` unused."""
     package, work, out = Path(package), Path(work), Path(out)
+    runner = Path(runner).resolve(); tree = runner.parent
+    assert runner.name == 'runner' and (tree / 'meson.build').is_file(), f'not a source tree runner/ directory: {runner}'
     assert not package.exists(), package
     work.mkdir(parents=True, exist_ok=True); out.mkdir(parents=True, exist_ok=True)
     patches = list(patches)
@@ -354,12 +373,12 @@ def build_host(package, work, out, patches, stamp_dir):
     if instrumented:
         stamp_dir = str(stamp_dir)
         assert STAMP_DIR_PATTERN.fullmatch(stamp_dir) and '..' not in stamp_dir.split('/'), stamp_dir
-    shutil.copytree(ROOT / 'runner', package, ignore=shutil.ignore_patterns('.build', '.swiftpm'))
-    sources, entry = host_sources(out)
+    shutil.copytree(runner, package, ignore=shutil.ignore_patterns('.build', '.swiftpm'))
+    sources, entry = host_sources(out, tree)
     compiled = [*sources, entry]
-    for relative, _, _ in patches:
+    for relative, *_ in patches:
         assert relative in compiled, f'patch outside the host source list: {relative}'
-    touched = apply_patches(package, patches, out)
+    touched, skipped = apply_patches(package, patches, out)
     stamp = None
     if instrumented:
         generated = package / 'WorkerWait/HostStamps.swift'
@@ -371,7 +390,7 @@ def build_host(package, work, out, patches, stamp_dir):
         shutil.copy2(generated, out / 'HostStamps.generated.swift')
         stamp = dict(fixture_path=str(STAMP_SOURCE.relative_to(ROOT)), fixture_sha256=digest(STAMP_SOURCE),
                      generated_path=str(generated), generated_sha256=digest(generated))
-    minimum = macos_minimum()
+    minimum = macos_minimum(tree)
     shim = work / 'PWCWorkerShim.o'
     shim_argv = ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-c', '-arch', 'arm64', f'-mmacosx-version-min={minimum}',
                  package / 'Sources/PWCWorkerShim/PWCWorkerShim.c', '-o', shim]
@@ -394,10 +413,13 @@ def build_host(package, work, out, patches, stamp_dir):
         commands=dict(shim=list(map(str, shim_argv)), host=list(map(str, host_argv))),
         stamp_dir=stamp_dir if instrumented else None, stamp_source=stamp,
         builder=dict(path=str(Path(__file__).resolve().relative_to(ROOT)), sha256=digest(Path(__file__).resolve())),
-        sources=[dict(path=p, tree_sha256=digest(ROOT / 'runner' / p), compiled_sha256=digest(package / p),
+        source_tree=dict(root=str(tree), runner=str(runner)),
+        sources=[dict(path=p, tree_sha256=digest(runner / p), compiled_sha256=digest(package / p),
                       patched=p in touched) for p in compiled],
         patched_files=touched,
-        patches=[dict(file=f, old=o, new=n) for f, o, n in patches],
+        patches=[dict(file=f, old=o, new=n, optional=mode == ['optional'],
+                      applied=not any(s['index'] == i for s in skipped)) for i, (f, o, n, *mode) in enumerate(patches)],
+        patches_skipped=skipped,
         shim_object_sha256=digest(shim), output=dict(path=str(host), sha256=digest(host)),
         toolchain=toolchain,
         note=('Disposable host compiled from patched copies; never the tree or the signed app.' if instrumented else
@@ -413,18 +435,41 @@ def _volatile(path):
     return any(path == root or root in path.parents for root in VOLATILE_ROOTS)
 
 
+IDENTITY_LINE = re.compile(r'^WORKER_IDENTITY = "([0-9a-f]{64})"$', re.M)
+
+
+def tree_worker_identity(tree):
+    """The worker identity a source tree declares in its tests/lib/contract.py, read as text and never imported."""
+    found = IDENTITY_LINE.findall((Path(tree) / 'tests/lib/contract.py').read_text())
+    assert len(found) == 1, f'{tree}: tests/lib/contract.py declares {len(found)} worker identities'
+    return found[0]
+
+
+def tree_commit(tree, receipts):
+    """HEAD and the porcelain status of a source tree, read without taking its index lock."""
+    git = ['/usr/bin/git', '-C', Path(tree), '--no-optional-locks']
+    command(receipts / 'source-tree-head', [*git, 'rev-parse', 'HEAD'])
+    command(receipts / 'source-tree-status', [*git, 'status', '--porcelain'])
+    status = (receipts / 'source-tree-status/stdout').read_text()
+    return dict(root=str(tree), head=(receipts / 'source-tree-head/stdout').read_text().strip(), dirty=bool(status.strip()),
+                porcelain=status.splitlines())
+
+
 def _canonical_sha256(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
-def stage(source_app, staging_dir, identity, host, worker_stamps, worker_plain, instrumented):
+def stage(source_app, staging_dir, identity, host, worker_stamps, worker_plain, instrumented, tree=ROOT):
     """Assemble and sign one durable staged app; returns its path.
 
     The worker in both roles is `worker_stamps` when instrumented, else
-    `worker_plain`. Signing order, flags and entitlements follow the
-    order-barrier control's signed_copy. The only executions are the two
-    worker version probes staging.json lists; no request runs here."""
-    source_app = Path(source_app).resolve(); staging_dir = Path(staging_dir).resolve()
+    `worker_plain`. `tree` is the source tree the app and workers were built
+    from: its declared worker identity must be the app's equipment identity and
+    the worker's reported one, and its entitlements sign the copy. Signing
+    order, flags and entitlements follow the order-barrier control's
+    signed_copy. The only executions are the two worker version probes
+    staging.json lists; no request runs here."""
+    source_app = Path(source_app).resolve(); staging_dir = Path(staging_dir).resolve(); tree = Path(tree).resolve()
     assert not _volatile(staging_dir), f'staging directory must be durable, not under a temporary root: {staging_dir}'
     host = Path(host).resolve()
     recipe_path = host.with_name('host-build.json')
@@ -439,24 +484,28 @@ def stage(source_app, staging_dir, identity, host, worker_stamps, worker_plain, 
     receipts = staging_dir / 'staging-receipts'
     assert not app.exists() and not receipts.exists(), staging_dir
     receipts.mkdir()
+    worker_identity = tree_worker_identity(tree)
+    assert tree != ROOT or worker_identity == WORKER_IDENTITY, (worker_identity, WORKER_IDENTITY)
     source_before = inventory(source_app); save(receipts / 'source-inventory.json', source_before)
     command(receipts / 'copy', ['/usr/bin/ditto', source_app, app])
     common_hash = digest(worker)
     original_equipment = json.loads((app / EQUIPMENT).read_bytes())
-    assert original_equipment['worker_identity'] == WORKER_IDENTITY
     save(receipts / 'source-equipment.json', original_equipment)
+    assert original_equipment['worker_identity'] == worker_identity, \
+        f"app equipment identity {original_equipment['worker_identity']} is not {tree}'s declared {worker_identity}"
     command(receipts / 'common-worker-identity', [worker, '--version'])
     reported = (receipts / 'common-worker-identity/stdout').read_text().split()
-    assert 'abi_identity=' + WORKER_IDENTITY in reported, reported
+    assert 'abi_identity=' + worker_identity in reported, f'{worker} reports {reported}, not {tree}\'s declared {worker_identity}'
+    source_tree = tree_commit(tree, receipts)
     for relative in (WORKER, UNENTITLED):
         shutil.copy2(worker, app / relative)
         assert digest(app / relative) == common_hash
     shutil.copy2(host, app / HOST)
     assert digest(app / HOST) == digest(host), 'host copy differs from its build output'
-    assembly = dict(variant=flavour, common_input_sha256=common_hash, declared_worker_identity=WORKER_IDENTITY,
+    assembly = dict(variant=flavour, common_input_sha256=common_hash, declared_worker_identity=worker_identity,
                     generated_identity_regenerated_for_mutation=False, identity_is_mutated_source_digest=False,
                     provenance_kind='substitution',
-                    note='Fixture workers and host retain the baseline ABI identity; it does not describe their bytes. '
+                    note='Fixture workers and host retain their source tree\'s ABI identity; it does not describe their bytes. '
                          'Actual bytes and substitution provenance remain separate.',
                     stages=['copy_common_worker_to_both_roles', 'copy_host'])
     save(receipts / 'equipment-assembly.json', assembly)
@@ -465,7 +514,7 @@ def stage(source_app, staging_dir, identity, host, worker_stamps, worker_plain, 
     for bundle, identifier in ((app, app_id), (app / SERVICE, service_id)):
         plist = bundle / 'Contents/Info.plist'; value = plistlib.loads(plist.read_bytes())
         value['CFBundleIdentifier'] = identifier; plist.write_bytes(plistlib.dumps(value))
-    selected_entitlements = ROOT / 'runner/Services/PWRunner/Entitlements.plist'
+    selected_entitlements = tree / 'runner/Services/PWRunner/Entitlements.plist'
     assert plistlib.loads(selected_entitlements.read_bytes()) == {}, 'this fixture requires empty worker entitlements'
     command(receipts / 'sign-worker', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
         '--entitlements', selected_entitlements, '-s', identity, app / WORKER], timeout=90)
@@ -474,12 +523,12 @@ def stage(source_app, staging_dir, identity, host, worker_stamps, worker_plain, 
         '-s', identity, app / UNENTITLED], timeout=90)
     assembly['stages'].append('sign_unentitled'); save(receipts / 'equipment-assembly.json', assembly)
     command(receipts / 'equipment', [sys.executable, '-B', '-S', ROOT / 'tests/build_equipment.py',
-        '--bundle', app / SERVICE, '--unsigned-worker', worker, '--worker-identity', WORKER_IDENTITY], timeout=90)
+        '--bundle', app / SERVICE, '--unsigned-worker', worker, '--worker-identity', worker_identity], timeout=90)
     equipment_bytes = (app / EQUIPMENT).read_bytes()
     (receipts / 'worker-equipment.json').write_bytes(equipment_bytes)
     equipment = json.loads(equipment_bytes)
     assert equipment['unsigned_worker_sha256'] == common_hash and digest(worker) == common_hash
-    assert equipment['worker_identity'] == WORKER_IDENTITY
+    assert equipment['worker_identity'] == worker_identity
     assert {row['role'] for row in equipment['workers']} == {'selected', 'unentitled'} and len(equipment['workers']) == 2
     for row in equipment['workers']:
         expected = WORKER if row['role'] == 'selected' else UNENTITLED
@@ -488,13 +537,13 @@ def stage(source_app, staging_dir, identity, host, worker_stamps, worker_plain, 
         assert plistlib.loads(row['entitlements_xml'].encode()) == {}, row
     assembly['stages'].append('emit_inventory'); save(receipts / 'equipment-assembly.json', assembly)
     command(receipts / 'sign-service', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
-        '--entitlements', ROOT / 'runner/Services/PWRunner/Entitlements.plist', '-s', identity, app / SERVICE], timeout=90)
+        '--entitlements', selected_entitlements, '-s', identity, app / SERVICE], timeout=90)
     assembly['stages'].append('seal_service'); save(receipts / 'equipment-assembly.json', assembly)
     assert (app / EQUIPMENT).read_bytes() == equipment_bytes, 'service sealing changed inventory bytes'
     command(receipts / 'evidence', [sys.executable, '-B', '-S', ROOT / 'tests/build-evidence.py', '--app-bundle', app,
-        '--app-entitlements', ROOT / 'PolicyWitness.entitlements', '--substitution-of', source_app, '--identity', identity], timeout=120)
+        '--app-entitlements', tree / 'PolicyWitness.entitlements', '--substitution-of', source_app, '--identity', identity], timeout=120)
     command(receipts / 'sign-app', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
-        '--entitlements', ROOT / 'PolicyWitness.entitlements', '-s', identity, app], timeout=90)
+        '--entitlements', tree / 'PolicyWitness.entitlements', '-s', identity, app], timeout=90)
     report = inspect(app); save(receipts / 'artifact.json', report)
     assert report['ok'], report
     assembly['stages'].append('substitution_evidence_and_app_seal'); save(receipts / 'equipment-assembly.json', assembly)
@@ -509,6 +558,7 @@ def stage(source_app, staging_dir, identity, host, worker_stamps, worker_plain, 
     record = dict(
         schema_version=1, flavour=flavour, app=str(app), staging_dir=str(staging_dir), identity=identity,
         bundle_ids=dict(app=app_id, service=service_id),
+        source_tree=dict(source_tree, worker_identity=worker_identity, identity_source='tests/lib/contract.py WORKER_IDENTITY, read as text'),
         source_app=dict(path=str(source_app), inventory_sha256=_canonical_sha256(source_before),
                         inventory_file='staging-receipts/source-inventory.json', unchanged_by_staging=True),
         staged_inventory=dict(sha256=_canonical_sha256(staged), file='staging-receipts/staged-inventory.json'),
@@ -539,12 +589,13 @@ def main():
     parser = argparse.ArgumentParser(description='Build an instrumented or neighbor host (no signing).')
     parser.add_argument('work', type=Path, help='new scratch directory for the copy, objects and binary')
     parser.add_argument('out', type=Path, help='receipt directory')
+    parser.add_argument('--runner', type=Path, default=ROOT / 'runner', help="a source tree's runner/ (default: this checkout's)")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--stamp-dir', type=Path)
     group.add_argument('--neighbor', action='store_true')
     args = parser.parse_args()
     work = args.work.resolve()
-    host = build_host(work / 'runner', work, args.out.resolve(), [] if args.neighbor else PATCHES, args.stamp_dir)
+    host = build_host(work / 'runner', work, args.out.resolve(), [] if args.neighbor else PATCHES, args.stamp_dir, args.runner)
     print(json.dumps(dict(host=str(host), sha256=digest(host)), indent=2))
 
 

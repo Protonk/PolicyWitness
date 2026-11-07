@@ -114,6 +114,56 @@ accepted trials is an incomplete pilot.
 `--clock-pair-trials`; `--no-clock-pair` is accepted only in a dry run. A dry
 run establishes mechanics only and removes its staged apps.
 
+Comparison mode measures a baseline and a candidate as matched pairs.
+`--compare-app PATH --compare-tree DIR` name the candidate's signed app and the
+checkout it was built from; the wrapper then also builds the stamp worker from
+that tree's worker source and passes it as `--compare-worker-build`. The two
+apps are `baseline`, the selected app staged with the stamped host and stamp
+worker built from this checkout, and `candidate`, the compare app staged with
+a host built by the same patch set over the compare tree's `runner/` and with
+that tree's stamp worker. There is no neighbor. The stager requires each app's
+equipment identity and its stamp worker's reported identity to equal the
+`WORKER_IDENTITY` its own tree declares, and records each tree's `HEAD` and
+porcelain status in `staging.json`; the hosts' skipped optional patches are
+announced and recorded. Five repetitions are the default; both regimes run with
+baseline and candidate alternating per cell and their order alternating per
+repetition, and both observe cleanup by the host exit event or, labeled, the
+CLI exit plus 100 ms. `schedule.json` records the mode, the pairing rule and
+both sides. The reader pairs a baseline and a candidate trial with the same
+cell, regime and repetition index when both are accepted under the same power
+source, Low Power Mode and host flavour, and lists every other trial as
+unpaired. For each component present on both sides, the arrival, ack,
+completion, done and inbound acknowledgement observations under one
+`*_to_observation` name whichever form each side took, worker release and
+activation passes and whole-request latency, it reports each pair's baseline
+minus candidate difference and the sum of both sides' instrument
+uncertainties (zero for pass counts; none for whole request), together with
+each side's spread of that quantity, its maximum minus minimum over that
+side's accepted trials in the group. Four verdicts judge the pairs:
+`improves_beyond_uncertainty_in_every_pair` and
+`worsens_beyond_instrument_uncertainty` against the instrument uncertainty
+alone, and `improves_beyond_spread_in_every_pair` and
+`worsens_beyond_spread_in_any_pair`, where an improvement must exceed the
+candidate's spread plus that uncertainty and a worsening the baseline's
+spread plus it, with `worsens_beyond_spread_in_every_pair` marking a
+regression resolved in every required pair. Polled detections vary between
+trials by far more than the instrument uncertainty, so identical apps can meet
+the instrument worsening verdict and, with few trials, the any-pair spread
+verdict; the every-pair spread verdict is the one an acceptance record treats
+as a resolved increase.
+Whole request has only the spread verdicts. An improvement verdict is
+refuted by any established pair that falls short and is given only when all
+five declared pairs pass; a worsening verdict is given by any worse pair and
+refuted only when all five are established and none is worse; otherwise the
+verdict is withheld. For `release_to_ack` and
+`activation_response` it compares the candidate's largest accepted value with
+the baseline's smallest against 2 ms, credited only with combined uncertainty
+at most 0.5 ms and the instrument gate credited. Host sleep and bounded-wait
+counts and durations are reported per pair. The matched pairs appear in
+`summary.json` under `pairs` and in a Matched pairs section of `summary.md`;
+the two apps are never pooled. The comparison measures fixture builds of both
+trees with one recorder; it does not compare distribution executables.
+
 Artifacts include `conditions-start.json`, the worker build receipt, host
 build and staging receipts, the clock-pair build and `clock-pair/` receipt,
 `staged-identity-before.json` and `-after.json` (hashes, device and inode),
@@ -141,7 +191,21 @@ start marker and the export, an arrival with no negative sample, pooling across
 cells, power sources, low power mode and flavours, a calibration receipt whose
 endpoint-bracket outlier exceeds the gate, the per-wait pass events and
 pre-store host stamps, and a copy of the reader with the earlier uncertainty
-formula, which must fail. Combined faults keep every code.
+formula, which must fail. Combined faults keep every code. Constructed
+comparison rows must give an improvement verdict when the candidate's arrival
+and held total are shorter beyond uncertainty and spread in every pair, none
+when one pair is within uncertainty, an instrument but no spread improvement
+when one pair falls within the candidate's spread, an instrument but no spread
+worsening for a pair worse within the baseline's spread, both worsening
+verdicts for a pair worse beyond it, a withheld
+improvement with fewer pairs than required, an uncredited response bound
+beyond 2 ms or without the resolution or the gate, unpaired trials for an
+excluded side or differing conditions, and neither verdict for identical
+receipts, and they must fail when the reader's spread term is replaced by
+zero. A comparison's receipts go through the loader and writers with
+separate app groups. The stager, given a constructed candidate app and source
+tree and stopped before any copy is signed, refuses an equipment identity or a
+stamp worker identity that differs from the tree's declared one.
 
 ## Public phases
 
