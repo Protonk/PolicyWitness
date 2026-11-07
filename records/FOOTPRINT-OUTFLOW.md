@@ -111,73 +111,79 @@ consumer controls, and the response footprint case.
 
 ## Direction 3: pace the sandboxed worker's waits
 
-Rows: fw1–fw2. The same loop shape also serves the active actor's
-acknowledgement wait, `wait_exchange`, which the rows do not name.
+Rows: fw1–fw2. The active actor's acknowledgement wait, `wait_exchange`,
+also polls continuously, but has different precedence and is not isolated by
+the existing held-phase measurements.
 
 ### Present mechanism
 
-After `sandbox_apply`, [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c),
-[`wait_for_activation`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-and `wait_exchange` each loop over: one continuous-clock sample, the shared
-cutoff and the phase or exchange allowance, the cancellation word, the protocol
-word they are waiting on, and for actors one inbound delivery service; then a
-batch of one thousand `yield` instruction hints from `cpu_relax`. The comment on
-the release wait states the rule: no allocation, sleep or I/O after apply. The
-`yield` hint is an instruction, not a kernel entry. The clock read is
-[`mach_continuous_time`](../controller/tools/pw_probe_runner/pw_worker_timing.h),
-chosen because the libc monotonic path's fallback was refused under a
-deny-default profile; its header promises neither a user-space read nor a kernel
-entry, and the `native_clock` control exists to show it produces no deny record
-under deny-default on the recorded machine. The only post-apply sleeps in the
-worker are test seams, and their comments say that `nanosleep` is a syscall a
-sufficiently restrictive policy could deny. The unsandboxed host, by contrast,
-already paces: `HostWaitClock` sleeps between polls at 2 ms for the sentinel wait
-and 1 ms for exchange servicing.
+In [the worker](../controller/tools/pw_probe_runner/pw_probe_runner.c),
+`wait_for_proceed` samples continuous time, checks cutoff, proceed allowance
+and deadline arithmetic, rejects a future release ordinal, observes cancellation
+and then accepts the exact release. It does not service inbound delivery.
+`wait_for_activation` checks time, cutoff and arithmetic, observes cancellation,
+checks the named activation and services one inbound delivery without consuming
+it. It has no separate proceed allowance. `wait_exchange` accepts a nonzero
+acknowledgement before its loop's clock sample; otherwise it checks time, cutoff,
+exchange allowance and cancellation, then services inbound delivery.
+
+All three end unsuccessful polls with one thousand `cpu_relax` instruction
+hints. The instruction is not an OS scheduler yield. The release wait's
+no-allocation/sleep/I/O comment describes its present discipline. The
+[continuous clock](../controller/tools/pw_probe_runner/pw_worker_timing.h) has
+native applicability controls because a previous libc monotonic path failed
+after apply. Test-only sleep seams warn of possible policy refusal; those
+comments do not establish native applicability or refusal of a replacement.
+The unsandboxed host already paces through `HostWaitClock`, with separate
+sentinel and exchange-service cadences.
 
 ### Proposed direction
 
-A bounded paced wait between samples, made separately from any serialization
-change, with the existing barrier, activation, expiry and cancellation controls.
+A bounded requested pause between unsuccessful polls, qualified under the
+applied policy. Start with release and parked activation; isolate exchange
+waiting separately. Keeping a worker alive for a PID query requires the lifetime
+and collection barrier, but does not itself establish a need for continuous CPU
+use. Native queries of the paced worker must establish that the proposed
+implementation preserves that observation.
 
 ### Promises the direction must keep
 
 Collection before release, cancellation precedence as the loads observe it,
-continuous-clock expiry including system sleep, named activation, parked
-delivery service, and one-shot process lifetimes are promises. CPU ratios are
-observations. A held worker's CPU exceeding a sleeping control may still hold
-after pacing; that assertion is not a detector of every blocking wait.
+continuous-clock accounting including system sleep, each loop's decision order,
+named activation, parked delivery service, and one-shot process lifetimes are
+promises. CPU ratios and response intervals are observations. A held worker's
+CPU exceeding a sleeping control may still hold after pacing; that assertion
+is not a detector of every blocking wait.
 
 ### Evidentiary risks
 
 Protective roles the present habit may have:
 
-- The wait makes no kernel entry the specimen can refuse. Every post-apply
-  syscall the worker makes today belongs to a requested action or to the clock
-  read, so a denial recorded against the worker's PID is attributable to one of
-  those. A sleep is a kernel entry under the applied profile. If a specimen
-  refuses it, the worker must classify a failed wait without inventing a native
-  result, and the refusal is logged as a denial that belongs to the apparatus,
-  not to a requested action. A loop that retries a refused sleep produces one
-  such record per iteration, which also competes with the records a log-based
-  observer is trying to read. Whether a given sleep primitive is refusable under
-  a given profile is an OS-sensitive fact of the same kind the clock needed its
-  own control for; the source comments assert only that it could be.
-- The spin keeps reaction to release, cancellation and activation at memory
-  latency. The ordering controls, the race-gate and precedence tests, and the
+- The instruction-hint batch adds no sleep-call dependency. A replacement's
+  native calls, first-use resources, errors and policy applicability need
+  inspection and observation. A wait refusal is apparatus evidence; any
+  associated log event must not be attributed to a requested action. Repeated
+  failed calls could also affect log-based observation, but this record has no
+  measurement of their logging rate or coverage. Neither broad syscall safety
+  nor one-denial-record-per-call behavior follows from the present source.
+- Continuous polling avoids a deliberate pause before the next observation,
+  but does not establish memory-latency response. Clock reads, service work,
+  instruction batches and scheduling intervene. The ordering controls and the
   [order-barrier mutation control](../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls)
   anchor on the present loop. `proceed_delayed_observed_quiescence` asserts that
   effects stay absent across a delayed release; a slower worker passes that more
   easily, so it cannot detect a regression in reaction time. The mutation
   control's anchors must be reviewed, not just rerun, because a paced loop can
   make the "worker bypasses the release wait" mutation fail to apply.
-- Expiry is decided from a validated continuous-time sample before release or
-  cancellation is consulted. A sleep primitive has its own clock basis and its
-  own behavior across system sleep, which is already untested. Pacing adds a
-  second time source to a wait whose correctness argument rests on one.
-- The parked actor acknowledges inbound deliveries between polls. Pacing turns
-  a microsecond acknowledgement into one or more sleep quanta, bounded by the
-  5,000 ms exchange allowance. Transfer timing fields, and any fixture that
-  shortens that allowance, observe the difference.
+- Release and activation decide expiry from validated continuous samples;
+  exchange acknowledgement has different precedence. A pause's clock basis
+  and behavior across system sleep must not change those decisions or renew
+  allowances. Actual sleep/wake remains untested. A bounded requested pause
+  does not bound scheduling delay before the next decision.
+- A parked actor services inbound delivery between polls. Pacing can delay
+  that acknowledgement and spend the active sender's exchange allowance even
+  if `wait_exchange` is unchanged. There is no measured microsecond baseline
+  here. Transfer timing and shortened-allowance controls must expose the cost.
 - The held-phase receipt asserts worker CPU above a matched sleeping control,
   characterizing the current polling behavior. Unit calibration belongs to the
   independent [observer controls](../tests/suites/witness_contract/footprint_observer_controls.py),
@@ -186,35 +192,30 @@ Protective roles the present habit may have:
   unity. After pacing, the worker-versus-sleep assertion may still pass or may
   fail without indicating a defect. Review its meaning before reusing it;
   preserve the independent unit calibration.
-- "Requested-action quiescence is not CPU idleness" is currently an honest
-  statement because nothing idles. A paced worker invites an idle-wait claim
-  that would need its own observation under the same unit calibration.
+- Requested-action quiescence and CPU idleness remain different claims under
+  either implementation. Lower CPU demand needs calibrated observation;
+  absent requested effects alone cannot establish it.
 
 Ways the present habit may obstruct witnessing:
 
-- Each waiting worker occupies a core. The host's collection and the validator's
-  `sandbox_check` run on the same machine during the same interval, and the
-  cumulative collection allowance (30,000 ms) is spent in host time. On a small
-  core count, three polling actors compete with the processes that produce the
-  predictions; a slower collection makes `prediction_unavailable` more likely
-  under load. This is not measured.
-- Scheduling latency differs between an idle core and a busy one. The
-  apparatus's own polling decides which regime the host and validator run in,
-  in a way no footprint row records. Pacing would change that regime for every
-  timing observation at once, which is a reason to measure before and after on
-  the same machine rather than a reason to prefer either.
-- Machine load and power are stated conditions of every footprint row. A spin
-  of one to three cores through a held phase on battery is heat and throttling
-  that the apparatus brings to its own measurement. Comparisons across holds
-  carry that condition without being able to separate it.
+- Recorded held intervals show approximately one CPU-second per elapsed second
+  per worker. They do not establish core affinity. Competition with host
+  collection and validator queries could spend more of their allowances;
+  increased `prediction_unavailable` under load has not been measured.
+- Pacing may change scheduling conditions for host and validator as well as
+  worker response. Compare those roles and response intervals on matched
+  equipment instead of treating lower worker CPU as the whole result.
+- Battery/AC state is recorded, but heat, energy use and throttling are not
+  measured by these CPU receipts. Those consequences remain hypotheses.
 
 ### Before crediting a result
 
 The order-barrier mutation control with reviewed anchors, the worker harness
 proceed and activation scenarios including the deny-default variants, the
 ordering and worker-clock unit tests, a `native_clock`-style control for the
-chosen sleep primitive under deny-default, the held-phase footprint case with
-its receipt's meaning restated, and the response footprint case.
+chosen pause under deny-default, live queries of the paced worker generation,
+response-interval and parked-delivery observations, the held-phase footprint
+case with its receipt's meaning restated, and the response footprint case.
 
 ## Direction 4: right-size the evidence region
 
