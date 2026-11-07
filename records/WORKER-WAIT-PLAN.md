@@ -90,14 +90,38 @@ is known about their failure modes and qualify the proposed path independently.
    Use fresh children, the intended production initialization order and first
    pause after apply. Cover allow-default, bare deny-default, the historical
    version-2 deny-default plus file-read-data policy, and unapplied actor mode;
-   retain three repetitions per configuration. Record actual return/error,
-   elapsed and CPU intervals, live process generation, interruption behavior,
-   independent exit/reap, and worker-PID log observations with a known-denial
-   control. Unavailable logging cannot establish absence. Demonstrate an actual
-   pause rather than treating zero return as proof. In the integrated candidate,
+   retain three repetitions per configuration. Required observations are
+   successful application or declared unapplied setup, actual return/error,
+   elapsed and CPU intervals, live process generation, interruption behavior
+   and independent exit/reap. Demonstrate an actual pause rather than treating
+   zero return as proof. In the integrated candidate,
    have the validator query the same held generation while pacing; process
    existence alone is insufficient. Scope applicability to the observed system
    and profiles, not all possible policies or OS versions.
+
+   Unified logs are supplemental diagnostics, not a qualification prerequisite
+   or a trusted absence detector. The [logging account](../docs/QUESTIONS.md#can-policywitness-collect-sandbox-denial-logs)
+   identifies PW's former observer as archived; this investigation does not
+   restore it or make its availability part of the worker protocol. Attempt
+   bounded worker-PID log collection and a known-denial control when available,
+   separately from the matched CPU/response windows. If the automation sandbox
+   refuses access, retry the same query once outside it as prescribed. If logs
+   remain unavailable, record the command/status, reason and unavailable control,
+   then proceed with qualification from the required direct observations.
+   Distinguish unavailable collection, an unobserved positive control and a
+   successful query with no matching records; none establishes absence of
+   sandbox denials or complete log coverage. A positive control only establishes
+   that its own event was observed.
+
+   Report successful qualification with its explicit limit: the pause worked
+   under the recorded policies and equipment, but log silence, missing logs
+   and a permission-shaped failure establish no sandbox-cause attribution.
+   Retain and investigate relevant positive log evidence without automatically
+   assigning it to the pause or a requested action. Missing logs cannot excuse
+   failed native calls, missing generation/query evidence, ordering or lifecycle
+   failures, or failure of the CPU/response bars. Give the applicability checker
+   independent controls showing that unavailable logs permit otherwise complete
+   qualification and do not mask a simultaneous failure of required evidence.
 
 2. **Insert pacing without moving decisions.** Replace only the unsuccessful
    poll's relax batch. Keep each loop's loads, stores, service and precedence in
@@ -198,7 +222,10 @@ is known about their failure modes and qualify the proposed path independently.
    separately. Include coordinated failure/consumer checks if failure evidence
    or its interpretation changes. These checks must retain cleanup and custody
    endings, not merely final success. Keep failed observations and diagnose
-   equipment failures without changing the artifact to conceal them.
+   equipment failures without changing the artifact to conceal them. Report
+   log availability separately from the applicability verdict; unavailable
+   supplemental logs do not skip the native case or block an otherwise
+   supported acceptance.
 
 6. **Publish the supported result and retire the plan.** Update the changed
    mechanism rows (fw1 for release-only; fw1–fw2 for both waits) and affected
@@ -209,7 +236,9 @@ is known about their failure modes and qualify the proposed path independently.
    Keep budgets in LIMITS and measured demand in FOOTPRINT. Claim lower measured
    CPU only for the observed changed waits; identify any unchanged parked
    polling and retain its measured cost. Exchange polling remains. Actual system
-   sleep/wake remains unverified unless separately arranged and observed.
+   sleep/wake remains unverified unless separately arranged and observed. Carry
+   the log-availability and attribution limits into the retained acceptance
+   evidence; do not promote qualified operation into a denial-free claim.
    Retain current default and complementary evidence through the normal helpers,
    commit implementation, tests and documentation, remove the consumed part of
    outflow Direction 3 while retaining its exchange question and any unresolved
@@ -230,9 +259,11 @@ changes and do not pair runs across changed conditions. Do not induce system
 sleep; any dedicated sleep/wake experiment needs an arranged window.
 
 No scheduled approval pause is needed during execution. Stop dependent work for
-unqualified native behavior, changed query eligibility or ordering, ambiguous
-attribution, a new resource/authority requirement, unresolved cleanup, missing
-required observations or failure of the stated CPU/response acceptance bars.
+unqualified native behavior, changed query eligibility or ordering, unsupported
+causal claims needed for acceptance, a new resource/authority requirement,
+unresolved cleanup, missing required direct observations or failure of the
+stated CPU/response acceptance bars. Unavailable supplemental logs, or an
+explicitly withheld sandbox-cause claim, are not blockers by themselves.
 An independently failing parked stage permits the release-only outcome above.
 Preserve the baseline and the negative evidence so stopping remains an
 informative result.
