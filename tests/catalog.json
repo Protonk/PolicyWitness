@@ -986,6 +986,27 @@
           "requires": [
             "clang"
           ]
+        },
+        {
+          "id": "native_pause_controls",
+          "description": "Independent native-pause oracle rejects missing direct evidence even with unavailable supplemental logs",
+          "requires": [],
+          "command": [
+            "bash",
+            "tests/suites/runner_c_worker_harness/native_pause_controls.sh"
+          ]
+        },
+        {
+          "id": "native_pause",
+          "default": false,
+          "description": "First post-apply 1 ms nanosleep or mach_wait_until in fresh children: native results, elapsed/CPU intervals, generation, interruption and reap; logs are supplemental",
+          "requires": [
+            "clang"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_c_worker_harness/opt_in/native_pause.sh"
+          ]
         }
       ]
     },
@@ -2278,6 +2299,7 @@
         "witness_contract/path_query_observations",
         "witness_contract/path_query_integrated",
         "runner_c_worker_harness/native_clock",
+        "runner_c_worker_harness/native_pause",
         "runner_exec_inheritance/launch_inventory",
         "runner_unit/host_setup_oracle_sensitivity",
         "runner_unit/reaped_ack_mutation",

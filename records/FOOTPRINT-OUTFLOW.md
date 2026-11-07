@@ -137,85 +137,100 @@ comments do not establish native applicability or refusal of a replacement.
 The unsandboxed host already paces through `HostWaitClock`, with separate
 sentinel and exchange-service cadences.
 
-### Proposed direction
+### Qualification result: retain the current waits
 
-A bounded requested pause between unsuccessful polls, qualified under the
-applied policy. Start with release and parked activation; isolate exchange
-waiting separately. Keeping a worker alive for a PID query requires the lifetime
-and collection barrier, but does not itself establish a need for continuous CPU
-use. Native queries of the paced worker must establish that the proposed
-implementation preserves that observation.
+The requested 1 ms `nanosleep(&request, NULL)` and the one permitted
+alternative, direct `mach_wait_until`, both fail first-use qualification under
+bare version-2 deny-default and the historical version-2 deny-default plus
+file-read-data profile. In each native run, all twelve children using those
+profiles applied successfully, recorded matching live process generations,
+returned an unexpected native failure on the first pause, then exited and
+were independently reaped. No refused call was retried. `nanosleep` returned
+-1 with errno 22 (`EINVAL`); `mach_wait_until` returned 53 (`KERN_DENIED`,
+without POSIX errno). Neither return alone assigns a sandbox cause.
 
-### Promises the direction must keep
+Allow-default and explicitly unapplied children completed the requested pauses
+and observed interruption in their separate signal mode. Each configuration
+has three repetitions of each mode. These controls qualify no production wait:
+the dependency failures stop both release and parked pacing before integration.
+There is no changed-worker CPU benefit, matched responsiveness result, live
+validator-query claim or actual system sleep/wake observation. Removing parked
+pacing would not cure a dependency that also fails at release waiting.
 
-Collection before release, cancellation precedence as the loads observe it,
-continuous-clock accounting including system sleep, each loop's decision order,
-named activation, parked delivery service, and one-shot process lifetimes are
-promises. CPU ratios and response intervals are observations. A held worker's
-CPU exceeding a sleeping control may still hold after pacing; that assertion
-is not a detector of every blocking wait.
+The equipment is Mac17,3, native arm64, macOS 26.7.1 (25G241), SDK 27.2,
+Apple clang 21.0.0, Mach timebase 125/3. Baseline source is
+`d46f1ea646ed1d37c31062ec43669642f5b6c980`; worker identity is
+`71deec287a0734104807dd909c56cb506ffbe9e97c58123a1911ae5a64242bd2`.
+The signed app and production sources remain unchanged. Power capture initially
+reported AC and subsequently battery; native observations record their own
+state. No matched CPU/response comparison pairs runs across that transition.
 
-### Evidentiary risks
+Installed disassembly shows `nanosleep` using `__semwait_signal` (Unix syscall
+334), skipping clock-service reads when the remainder pointer is NULL, and
+rewriting unexpected errors to EINVAL. The clock port and semaphore are acquired
+by libc initialization and refreshed by its fork-child path, before the probe's
+application; no explicit pause warm-up was added. Direct `mach_wait_until`
+uses Mach trap -90 and acquires neither resource. Its absolute deadline is
+constructed from `mach_absolute_time` with checked addition, separately from
+continuous elapsed observations. Success or interruption returns to the probe;
+no unslept remainder is retried. Neither installed user-space path inspection
+nor these runs establish actual system sleep/wake behavior.
 
-Protective roles the present habit may have:
+A failing nanosleep child had a PID-matched syscall-334 denial event inside its
+call's continuous-time bracket. That mechanism-specific observation justified
+testing the direct Mach path; it did not establish the alternative's safety.
+The alternative independently failed. Bounded supplemental log queries
+succeeded, with some nanosleep events and no matching Mach-wait events in the
+initial run. The separate file-open positive controls returned -1/EPERM, but
+their events were not observed in those queries. Positive evidence establishes
+only its own event; silence establishes neither denial absence nor complete
+coverage. A corrected final-partial-second log window was rerun diagnostically,
+preserving the earlier refusals and their original windows. The final Mach
+query retained twelve PID-matched `syscall-mach 90` denial events inside the
+failed-call brackets and the known file-open control's own syscall-5 event;
+the final nanosleep query retained eight PID-matched syscall-334 events, with
+its file-open positive control still unobserved. These events remain separate
+from any requested PolicyWitness operation.
 
-- The instruction-hint batch adds no sleep-call dependency. A replacement's
-  native calls, first-use resources, errors and policy applicability need
-  inspection and observation. A wait refusal is apparatus evidence; any
-  associated log event must not be attributed to a requested action. Repeated
-  failed calls could also affect log-based observation, but this record has no
-  measurement of their logging rate or coverage. Neither broad syscall safety
-  nor one-denial-record-per-call behavior follows from the present source.
-- Continuous polling avoids a deliberate pause before the next observation,
-  but does not establish memory-latency response. Clock reads, service work,
-  instruction batches and scheduling intervene. The ordering controls and the
-  [order-barrier mutation control](../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls)
-  anchor on the present loop. `proceed_delayed_observed_quiescence` asserts that
-  effects stay absent across a delayed release; a slower worker passes that more
-  easily, so it cannot detect a regression in reaction time. The mutation
-  control's anchors must be reviewed, not just rerun, because a paced loop can
-  make the "worker bypasses the release wait" mutation fail to apply.
-- Release and activation decide expiry from validated continuous samples;
-  exchange acknowledgement has different precedence. A pause's clock basis
-  and behavior across system sleep must not change those decisions or renew
-  allowances. Actual sleep/wake remains untested. A bounded requested pause
-  does not bound scheduling delay before the next decision.
-- A parked actor services inbound delivery between polls. Pacing can delay
-  that acknowledgement and spend the active sender's exchange allowance even
-  if `wait_exchange` is unchanged. There is no measured microsecond baseline
-  here. Transfer timing and shortened-allowance controls must expose the cost.
-- The held-phase receipt asserts worker CPU above a matched sleeping control,
-  characterizing the current polling behavior. Unit calibration belongs to the
-  independent [observer controls](../tests/suites/witness_contract/footprint_observer_controls.py),
-  which compare normalized CPU counters with the child's `getrusage` accounting
-  and check sensitivity to unconverted ticks when the timebase differs from
-  unity. After pacing, the worker-versus-sleep assertion may still pass or may
-  fail without indicating a defect. Review its meaning before reusing it;
-  preserve the independent unit calibration.
-- Requested-action quiescence and CPU idleness remain different claims under
-  either implementation. Lower CPU demand needs calibrated observation;
-  absent requested effects alone cannot establish it.
+The native cases, required-evidence reader and independent rejection controls
+are described in the [suite account](../tests/suites/runner_c_worker_harness/README.md#native-pause-applicability).
+The initial native runs are `worker-wait-native-02`
+(`20261107T151329Z_7d189e62`) and `worker-wait-mach-01`
+(`20261107T151443Z_70904b70`); final diagnostic repetitions are
+`worker-wait-native-final` (`20261107T151803Z_8759d3a9`) and
+`worker-wait-mach-final` (`20261107T151818Z_a72ee735`). Their raw results,
+source copies, disassembly, app evidence, power, native positive controls,
+log status, exit/reap observations and original run identities are preserved
+with a hash index in `worker-wait-evidence/` under the retained
+`tests/out/runs/footprint-opt-targeted-final-02` run. This evidence is gitignored
+and available only in the local checkout. The early `worker-wait-native-01`
+hardware-query refusal is preserved separately; its unsandboxed retry passed.
+The unchanged app's sandboxed signature-check failure likewise passed the
+identical verification outside the automation sandbox.
 
-Ways the present habit may obstruct witnessing:
+History identifies the C exit wait's original nanosleep in `c8355d9e` and its
+precautionary removal in `ab1d9707`, not an observed refusal in that commit.
+No `mach_wait_until` use was found in runner/controller history. The recollection
+of a preceding problematic wait remains unresolved and is not equated with the
+separately evidenced CLOCK_MONOTONIC failure.
 
-- Recorded held intervals show approximately one CPU-second per elapsed second
-  per worker. They do not establish core affinity. Competition with host
-  collection and validator queries could spend more of their allowances;
-  increased `prediction_unavailable` under load has not been measured.
-- Pacing may change scheduling conditions for host and validator as well as
-  worker response. Compare those roles and response intervals on matched
-  equipment instead of treating lower worker CPU as the whole result.
-- Battery/AC state is recorded, but heat, energy use and throttling are not
-  measured by these CPU receipts. Those consequences remain hypotheses.
+### Remaining questions
 
-### Before crediting a result
+Release and parked pacing remain unaccepted on this equipment. Reopening either
+requires a newly justified dependency or changed-equipment qualification,
+followed by live queries of the same held generation, preserved decision order,
+error publication, response brackets, the ordering mutation controls, and the
+original matched CPU/response acceptance bars. The failed calls above are not
+an invitation to add policy exceptions or silently spin on refused sleeps.
+Parked delivery acknowledgement, self-transfer, revisits and shortened exchange
+allowances still need independent responsiveness observations before parked
+pacing can be accepted.
 
-The order-barrier mutation control with reviewed anchors, the worker harness
-proceed and activation scenarios including the deny-default variants, the
-ordering and worker-clock unit tests, a `native_clock`-style control for the
-chosen pause under deny-default, live queries of the paced worker generation,
-response-interval and parked-delivery observations, the held-phase footprint
-case with its receipt's meaning restated, and the response footprint case.
+`wait_exchange` remains unchanged and has separate acknowledgement precedence.
+It still needs its own isolated hold and acknowledgement experiment before any
+optimization. Requested-action quiescence is not CPU idleness; retained footprint
+measurements continue to describe the existing polling loops. Their budgets,
+mechanism rows and measured values have not changed.
 
 ## Direction 4: right-size the evidence region
 

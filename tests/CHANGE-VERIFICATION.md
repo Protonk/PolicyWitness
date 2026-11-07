@@ -681,6 +681,28 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - **Gating:** Required for worker clock changes; it does not test an actual
   system sleep/wake, which needs separately arranged equipment.
 
+### Native worker pause applicability
+
+- **Cases:** opt-in `runner_c_worker_harness/native_pause` and default
+  `runner_c_worker_harness/native_pause_controls`.
+- **Purpose:** Qualify first explicit post-apply pause behavior, independently of
+  supplemental logs. Fresh children retain native results, elapsed/CPU intervals,
+  application or unapplied setup, live generations, interruption and reap under
+  four configurations with three repetitions each.
+- **Selection:** `tests/run.sh --case runner_c_worker_harness/native_pause`.
+  `PW_NATIVE_PAUSE_PRIMITIVE` selects `nanosleep` (default) or `mach_wait_until`.
+  A native failure refuses qualification; opt-in membership does not imply a
+  supported production dependency. The
+  [suite account](suites/runner_c_worker_harness/README.md#native-pause-applicability)
+  defines the controls, artifacts and limits.
+- **Equipment:** clang and an unsandboxed shell for application and process
+  observation. A log failure is recorded separately and cannot mask missing
+  direct evidence. Installed call-path inspection is a separate process.
+- **Gating:** Run before introducing either pause into a worker wait, and after
+  OS/toolchain changes when crediting earlier applicability. Passing this native
+  control alone does not establish integrated live queries, order, responsiveness,
+  CPU reduction or actual sleep/wake behavior.
+
 ### BYOXPC entitlement read-back
 
 - **Case:** `runner_byoxpc/entitlement_readback`

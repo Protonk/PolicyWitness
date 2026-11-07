@@ -586,3 +586,47 @@ and establish association checks, not native sandbox authority.
 
 The authority binding control also maps a maximum-inbound POSIX shared-memory
 object with its actual page-rounded length and verifies recipient preparation.
+
+## Native pause applicability
+
+`native_pause` is an opt-in qualification gate for a requested 1 ms pause,
+not a production-wait or performance acceptance test. It compiles the worker's
+timing setup into a standalone probe; every invocation forks a fresh child,
+sets up timing before apply, and makes its first explicit pause after apply.
+The four configurations are allow-default, bare version-2 deny-default,
+version-2 deny-default plus file-read-data, and explicitly unapplied.
+There are three repetitions of ordinary and signal-interrupted modes per
+configuration. Each ordinary child requests 64 pauses; an unexpected native
+failure stops that child after preserving the result. No refused pause is
+retried. The interruption mode leaves first use alone, then sends SIGUSR1
+from the observing parent. The handler is test equipment installed before
+apply. Neither mode restarts a remainder.
+
+Select with `tests/run.sh --case runner_c_worker_harness/native_pause`.
+`PW_NATIVE_PAUSE_PRIMITIVE=nanosleep` is the default; the only alternative is
+`PW_NATIVE_PAUSE_PRIMITIVE=mach_wait_until`. Mach deadlines use absolute ticks
+from a fresh `mach_absolute_time` read and checked addition; continuous ticks
+measure elapsed time. Actual system sleep/wake is not exercised. A failing
+qualification exits nonzero and retains all observations; an opt-in result
+must not be turned into a pass merely because refusal was anticipated.
+
+Artifacts retain per-call native result/errno and continuous-time brackets,
+parent libproc CPU counters and their timebase, bracketing live generations,
+application or declared unapplied state, delivered signals, exit and reap,
+installed disassembly and platform/power state. A generous independent CPU
+margin distinguishes an idle interval from continuous execution in ordinary
+controls; it does not establish the integrated 90% reduction or a response
+time guarantee. First explicit call does not exclude loader/library use.
+The installed libc initialization and fork-child call paths are inspected
+separately so inspection cannot warm the measured children.
+
+The bounded unified-log query and a separate denied file-open control are
+supplemental. `summary.json` distinguishes unavailable collection, an
+unobserved positive control and observed PID events. None supplies general
+absence or sandbox-cause attribution. Run in an unsandboxed shell for process
+inspection and native policy application. The default `native_pause_controls`
+uses independent constructed evidence to accept both primitives, reject missing
+or combined required observations despite unavailable logs, and distinguish
+log availability from positive-control observation. Live PID queries of an
+integrated candidate, barrier ordering and matched response/CPU acceptance
+remain separate requirements before changing production waits.
