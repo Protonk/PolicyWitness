@@ -193,42 +193,33 @@ extension PWRunnerAttemptResult {
 }
 
 struct PWRunnerAttemptResult: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerAttemptResult
     /// Submitted intent, not proof that the named native operation ran. See
     /// the "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
     /// for PW status versus missing reasons.
-    // BEGIN GENERATED PORCELAIN PWRunnerAttemptResult
     var requested_kind: String? = nil
     var requested_action: String? = nil
     var result_source: String? = nil
     var missing_reason: String? = nil
+    /// Projection of this step's disposition claims. It is the evidence for
+    /// whether a `no_completed_result`/`slot_incomplete` step started.
     var lifecycle: PWAttemptLifecycle? = nil
     var fresh_read: PWRunnerFreshRead? = nil
     var fresh_write: PWRunnerFreshWrite? = nil
     var exec_observation: PWExecObservation? = nil
+    // Host-local corruption diagnostic, checked by typed reporting admission.
     var execObservationDecodeProblem: String? = nil
+    /// PW's attempt status, not a raw syscall return.
     var rc: Int
     var errno: Int?
     var outcome: String
     var error: String?
     var requested_path: String?
+    /// Host-resolved forms of the attempt target; absent for non-path attempts.
     var path_diagnostics: PWRunnerAttemptPathDiagnostics?
     var observed_path: String?
-    var child_pid: Int?
-    var child_exit_code: Int?
-    var child_term_signal: Int?
-    var stdout: String?
-    var stderr: String?
-    // END GENERATED PORCELAIN PWRunnerAttemptResult
-    /// Projection of this step's disposition claims. It is the evidence for
-    /// whether a `no_completed_result`/`slot_incomplete` step started.
-    /// PW's attempt status, not a raw syscall return.
-    // Host-local corruption diagnostic, checked by ordinary-reply encoding.
-    /// Host-resolved forms of the attempt target; absent for non-path attempts.
-
-    /// Exec-attempt outputs. All five are nil for non-exec attempts and
-    /// are emitted as explicit JSON null (when populated) or omitted
-    /// entirely (when nil) so a sysctl/file/mach result envelope does
-    /// not grow five new null fields it has no use for.
+    /// Exec-attempt outputs. All five are nil and omitted for non-exec
+    /// attempts. Present values retain the observed child status or stream text.
     ///
     /// `child_pid > 0` means `posix_spawn` produced a child; it does not
     /// establish reaping. Unconfirmed status keeps exit -1 / signal 0.
@@ -240,6 +231,13 @@ struct PWRunnerAttemptResult: Codable {
     /// spawn failure from a child non-zero exit. EPERM/EACCES without
     /// a child remain ambiguous: execute permissions can also prevent
     /// spawning.
+    var child_pid: Int?
+    var child_exit_code: Int?
+    var child_term_signal: Int?
+    var stdout: String?
+    var stderr: String?
+    // END GENERATED PORCELAIN PWRunnerAttemptResult
+
 
     init(
         rc: Int,

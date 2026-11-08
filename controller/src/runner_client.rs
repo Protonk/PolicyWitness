@@ -2,7 +2,12 @@
 //!
 //! Client observations are admitted before decoding any host reply. Neither a
 //! transport failure nor missing helper output authorizes another invocation.
-use serde::{Deserialize, Serialize};
+use crate::porcelain_records::{
+    PWRunnerClientCapture as Capture, PWRunnerControlObservation as Control, PWRunnerRunResult,
+    PWRunnerTransportError as TransportError,
+};
+use serde::Serialize;
+#[cfg(test)]
 use serde_json::Value;
 use std::ffi::OsString;
 use std::process::Command;
@@ -11,12 +16,10 @@ use crate::app_layout::resolve_contents_macos_tool;
 use crate::runner_select::RunnerConnectionKind;
 #[cfg(test)]
 use crate::utils::RUNNER_CAPTURE_BYTES;
-use crate::utils::{
-    JsonOutputCapture, RequestDelivery, capture_json_output, now_unix_ms, run_with_stdin,
-};
+use crate::utils::{JsonOutputCapture, RequestDelivery, now_unix_ms, run_with_stdin};
 
 const REPLY_CAPTURE_BYTES: usize = 92 * 1024 * 1024;
-const CONTROL_BYTES: u64 = 64 * 1024;
+const CONTROL_BYTES: i64 = 64 * 1024;
 const ATTEMPT_LIMIT: usize = 256;
 
 #[derive(Serialize)]
@@ -29,82 +32,84 @@ pub struct RunnerClientRun {
     pub request_delivery: Option<RequestDelivery>,
     #[serde(flatten)]
     pub output: JsonOutputCapture,
-    /// Parsed client frame, including opaque rejected versions/structures.
-    pub transport: Option<Value>,
+    /// Typed admitted capture, or the exact retained bytes of a rejected frame.
+    pub transport: Option<TransportCapture>,
     pub transport_admission: String,
     pub transport_error: Option<String>,
     /// Unknown unless a complete current capture was admitted.
     pub submission: String,
-    /// Host bytes were received but cannot be read as a complete JSON reply.
+    /// Host bytes were received but cannot be read as a complete typed reply.
     pub runner_reply_error: Option<String>,
 }
 
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Capture {
-    kind: String,
-    protocol_version: u32,
-    client_pid: i32,
-    clock: String,
-    clock_available: bool,
-    started_continuous_ns: Option<u64>,
-    deadline_continuous_ns: Option<u64>,
-    ended_continuous_ns: Option<u64>,
-    timeout_ms: u64,
-    attempts: Vec<Attempt>,
-    acquisition_stop: String,
-    submission: Submission,
-    terminal: String,
-    error: Option<TransportError>,
-    runner_reply: Option<ReplyCapture>,
-    submission_refusal: Option<Control>,
+#[derive(Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(Clone))]
+#[serde(untagged)]
+pub enum TransportCapture {
+    Typed(Capture),
+    Rejected {
+        format: &'static str,
+        #[serde(serialize_with = "serialize_rejected_bytes")]
+        data_base64: Vec<u8>,
+    },
+    /// Historical JSON comparison controls only; never selected by production.
+    #[cfg(test)]
+    Legacy(Value),
 }
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Attempt {
-    ordinal: usize,
-    attempt_id: String,
-    started_elapsed_ms: Option<u64>,
-    ended_elapsed_ms: Option<u64>,
-    outcome: String,
-    control: Option<Control>,
-    error: Option<TransportError>,
+
+fn serialize_rejected_bytes<S: serde::Serializer>(
+    bytes: &[u8],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    crate::porcelain::Base64(bytes).serialize(serializer)
 }
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Submission {
-    state: String,
-    invoked_elapsed_ms: Option<u64>,
+
+impl TransportCapture {
+    fn reply_truncated(&self) -> bool {
+        match self {
+            Self::Typed(v) => v.runner_reply.as_ref().is_some_and(|r| r.truncated),
+            Self::Rejected { .. } => false,
+            #[cfg(test)]
+            Self::Legacy(v) => v["runner_reply"]["truncated"] == true,
+        }
+    }
+    fn terminal(&self) -> Option<&str> {
+        match self {
+            Self::Typed(v) => Some(&v.terminal),
+            Self::Rejected { .. } => None,
+            #[cfg(test)]
+            Self::Legacy(v) => v["terminal"].as_str(),
+        }
+    }
+    fn failure_message(&self) -> Option<&str> {
+        match self {
+            Self::Typed(v) => v.error.as_ref().map(|e| e.message.as_str()).or_else(|| {
+                v.submission_refusal
+                    .as_ref()
+                    .and_then(|r| r.reason.as_deref())
+            }),
+            Self::Rejected { .. } => None,
+            #[cfg(test)]
+            Self::Legacy(v) => v["error"]["message"]
+                .as_str()
+                .or_else(|| v["submission_refusal"]["reason"].as_str()),
+        }
+    }
+    #[cfg(test)]
+    fn legacy_value(&self) -> &Value {
+        match self {
+            Self::Legacy(v) => v,
+            _ => panic!("JSON comparison control requires legacy storage"),
+        }
+    }
 }
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Control {
-    bytes_received: u64,
-    sha256: String,
-    status: Option<String>,
-    host_pid: Option<i32>,
-    host_instance: Option<String>,
-    lease_ms: Option<u64>,
-    reason: Option<String>,
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct TransportError {
-    stage: String,
-    reason: String,
-    domain: Option<String>,
-    code: Option<i64>,
-    message: String,
-    domain_truncated: bool,
-    message_truncated: bool,
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ReplyCapture {
-    bytes_received: u64,
-    bytes_retained: usize,
-    truncated: bool,
-    data_base64: String,
+
+#[cfg(test)]
+impl std::ops::Index<&str> for TransportCapture {
+    type Output = Value;
+    fn index(&self, key: &str) -> &Value {
+        &self.legacy_value()[key]
+    }
 }
 
 fn require(condition: bool, diagnostic: &str) -> Result<(), String> {
@@ -171,10 +176,7 @@ fn validate_error(value: &TransportError) -> Result<(), String> {
     )
 }
 fn validate_control(value: &Control) -> Result<(), String> {
-    require(
-        value.bytes_received <= i64::MAX as u64,
-        "invalid control byte count",
-    )?;
+    require(value.bytes_received >= 0, "invalid control byte count")?;
     require(
         value.sha256.len() == 64
             && value
@@ -197,7 +199,9 @@ fn validate_control(value: &Control) -> Result<(), String> {
         "admitted control exceeds its byte boundary",
     )?;
     require(
-        value.host_pid.is_some_and(|pid| pid > 0)
+        value
+            .host_pid
+            .is_some_and(|pid| pid > 0 && i32::try_from(pid).is_ok())
             && value.host_instance.as_deref().is_some_and(uuid),
         "admitted control lacks host-reported identity",
     )?;
@@ -223,7 +227,8 @@ fn validate_control(value: &Control) -> Result<(), String> {
 
 /// Strict standard base64: no ignored bytes, alternate alphabet, excess
 /// padding, or nonzero padding bits. Decode only the bounded retained bytes.
-fn decode_base64(text: &str) -> Result<Vec<u8>, String> {
+#[cfg(test)]
+pub(crate) fn decode_base64(text: &str) -> Result<Vec<u8>, String> {
     fn digit(byte: u8) -> Option<u8> {
         match byte {
             b'A'..=b'Z' => Some(byte - b'A'),
@@ -271,14 +276,17 @@ fn decode_base64(text: &str) -> Result<Vec<u8>, String> {
     Ok(output)
 }
 
-fn validate_capture(value: &Capture) -> Result<Option<Vec<u8>>, String> {
+fn validate_capture(value: &Capture) -> Result<(), String> {
     require(
         value.kind == "runner_client_capture"
-            && value.protocol_version == crate::json_contract::RUNNER_PROTOCOL_VERSION,
+            && value.protocol_version == i64::from(crate::json_contract::RUNNER_PROTOCOL_VERSION),
         "invalid client capture identity",
     )?;
     require(
-        value.client_pid > 0 && value.clock == "mach_continuous_time_ns" && value.timeout_ms > 0,
+        value.client_pid > 0
+            && i32::try_from(value.client_pid).is_ok()
+            && value.clock == "mach_continuous_time_ns"
+            && value.timeout_ms > 0,
         "invalid client clock or identity",
     )?;
     if value.clock_available {
@@ -327,7 +335,7 @@ fn validate_capture(value: &Capture) -> Result<Option<Vec<u8>>, String> {
     let mut ids = std::collections::HashSet::new();
     for (index, attempt) in value.attempts.iter().enumerate() {
         require(
-            attempt.ordinal == index + 1
+            usize::try_from(attempt.ordinal).ok() == Some(index + 1)
                 && uuid(&attempt.attempt_id)
                 && ids.insert(attempt.attempt_id.to_ascii_lowercase()),
             "invalid acquisition attempt identity",
@@ -583,21 +591,18 @@ fn validate_capture(value: &Capture) -> Result<Option<Vec<u8>>, String> {
     }
     if let Some(reply) = &value.runner_reply {
         require(
-            reply.bytes_received <= i64::MAX as u64
-                && reply.bytes_retained as u64
-                    == reply.bytes_received.min(REPLY_CAPTURE_BYTES as u64)
-                && reply.truncated == ((reply.bytes_retained as u64) < reply.bytes_received),
+            reply.bytes_received >= 0
+                && reply.bytes_retained >= 0
+                && reply.bytes_retained == reply.bytes_received.min(REPLY_CAPTURE_BYTES as i64)
+                && reply.truncated == (reply.bytes_retained < reply.bytes_received),
             "inconsistent reply byte retention",
         )?;
-        let decoded = decode_base64(&reply.data_base64)?;
         require(
-            decoded.len() == reply.bytes_retained,
-            "reply base64 length disagrees with retained count",
+            usize::try_from(reply.bytes_retained).ok() == Some(reply.data.len()),
+            "reply bytes disagree with retained count",
         )?;
-        Ok(Some(decoded))
-    } else {
-        Ok(None)
     }
+    Ok(())
 }
 
 impl RunnerClientRun {
@@ -628,7 +633,7 @@ impl RunnerClientRun {
             let truncated = self
                 .transport
                 .as_ref()
-                .is_some_and(|v| v["runner_reply"]["truncated"] == true);
+                .is_some_and(TransportCapture::reply_truncated);
             return Some((
                 if truncated {
                     "runner_reply_truncated"
@@ -639,7 +644,9 @@ impl RunnerClientRun {
             ));
         }
         let value = self.transport.as_ref().unwrap();
-        let terminal = value["terminal"].as_str().unwrap();
+        let terminal = value
+            .terminal()
+            .expect("accepted capture has a terminal event");
         let outcome = match terminal {
             "runner_reply" => return None,
             "xpc_error" => "xpc_error",
@@ -649,10 +656,7 @@ impl RunnerClientRun {
             "protocol_error" => "xpc_protocol_error",
             _ => "runner_client_error",
         };
-        let message = value["error"]["message"]
-            .as_str()
-            .or_else(|| value["submission_refusal"]["reason"].as_str())
-            .unwrap_or(terminal);
+        let message = value.failure_message().unwrap_or(terminal);
         Some((outcome, message.to_string()))
     }
     pub fn fallback_eligible(&self) -> bool {
@@ -664,11 +668,124 @@ impl RunnerClientRun {
             && self
                 .transport
                 .as_ref()
-                .is_some_and(|v| v["terminal"] == "xpc_error")
+                .is_some_and(|v| v.terminal() == Some("xpc_error"))
     }
 }
 
+/// Binary capture admission keeps original rejected bytes and interprets only
+/// complete retained frames. The helper has already drained both output pipes;
+/// this cap changes retained evidence, never producer reception or execution.
 fn parse_runner_client_output(
+    argv: &[OsString],
+    started: u64,
+    ended: u64,
+    out: &std::process::Output,
+    request_delivery: Option<RequestDelivery>,
+) -> (RunnerClientRun, Option<PWRunnerRunResult>) {
+    let limit = crate::utils::RUNNER_CAPTURE_BYTES;
+    let retained = &out.stdout[..out.stdout.len().min(limit)];
+    let stdout_truncated = out.stdout.len() > limit;
+    let stderr_retained = &out.stderr[..out.stderr.len().min(limit)];
+    let mut run = RunnerClientRun {
+        argv: argv.iter().map(|s| s.to_string_lossy().into_owned()).collect(),
+        started_at_unix_ms: started,
+        ended_at_unix_ms: ended,
+        exit_code: out.status.code().unwrap_or(1),
+        request_delivery,
+        output: JsonOutputCapture {
+            stdout_parse_error: None,
+            stdout_truncated,
+            stdout_capture_error: stdout_truncated.then(|| format!(
+                "controller truncated runner client stdout: received {} bytes, retained {} bytes (cap {})",
+                out.stdout.len(), retained.len(), limit)),
+            stdout_bytes_received: Some(out.stdout.len()),
+            stdout_bytes_retained: Some(retained.len()),
+            stderr_bytes_received: Some(out.stderr.len()),
+            stderr_bytes_retained: Some(stderr_retained.len()),
+            capture_limit_bytes: limit,
+            stdout_raw: None,
+            stderr: String::from_utf8_lossy(stderr_retained).into_owned(),
+            stderr_truncated: out.stderr.len() > limit,
+        },
+        transport: None,
+        transport_admission: "missing".into(),
+        transport_error: None,
+        submission: "unknown".into(),
+        runner_reply_error: None,
+    };
+    let admission = (|| -> Result<Capture, (&str, String)> {
+        if let Some(error) = run.request_delivery.as_ref().and_then(|d| d.error.as_ref()) {
+            return Err(("delivery_failed", error.clone()));
+        }
+        if let Some(error) = &run.output.stdout_capture_error {
+            return Err(("malformed", error.clone()));
+        }
+        if retained.is_empty() {
+            return Err(("missing", "runner client produced no capture".into()));
+        }
+        let capture: Capture = crate::porcelain::decode(retained).map_err(|error| {
+            let status = if error == "unsupported porcelain schema" {
+                "unsupported"
+            } else {
+                "malformed"
+            };
+            run.output.stdout_parse_error = Some(error.clone());
+            (status, error)
+        })?;
+        if capture.protocol_version != i64::from(crate::json_contract::RUNNER_PROTOCOL_VERSION) {
+            return Err((
+                "unsupported",
+                format!(
+                    "client capture protocol {} is unsupported",
+                    capture.protocol_version
+                ),
+            ));
+        }
+        validate_capture(&capture).map_err(|error| ("malformed", error))?;
+        Ok(capture)
+    })();
+    match admission {
+        Ok(capture) => {
+            run.transport_admission = "accepted".into();
+            run.submission = capture.submission.state.clone();
+            let reply = capture.runner_reply.as_ref().and_then(|raw| {
+                if raw.truncated {
+                    run.runner_reply_error = Some(
+                        "runner reply retention was truncated; no complete host reply is available"
+                            .into(),
+                    );
+                    None
+                } else {
+                    match crate::porcelain::decode::<PWRunnerRunResult>(&raw.data) {
+                        Ok(reply) => Some(reply),
+                        Err(error) => {
+                            run.runner_reply_error = Some(format!(
+                                "runner reply is not a complete typed record: {error}"
+                            ));
+                            None
+                        }
+                    }
+                }
+            });
+            run.transport = Some(TransportCapture::Typed(capture));
+            (run, reply)
+        }
+        Err((status, error)) => {
+            run.transport_admission = status.into();
+            run.transport_error = Some(error);
+            if !retained.is_empty() {
+                run.transport = Some(TransportCapture::Rejected {
+                    format: "porcelain",
+                    data_base64: retained.to_vec(),
+                });
+            }
+            (run, None)
+        }
+    }
+}
+
+#[cfg(test)]
+fn parse_runner_client_output_json_control(
     argv: &[OsString],
     started: u64,
     ended: u64,
@@ -683,7 +800,7 @@ fn parse_runner_client_output(
         ..Default::default()
     });
     let (output, transport) =
-        capture_json_output(out, "runner client", crate::utils::RUNNER_CAPTURE_BYTES);
+        crate::utils::capture_json_output(out, "runner client", crate::utils::RUNNER_CAPTURE_BYTES);
     let mut run = RunnerClientRun {
         argv: argv
             .iter()
@@ -694,7 +811,7 @@ fn parse_runner_client_output(
         exit_code: out.status.code().unwrap_or(1),
         request_delivery,
         output,
-        transport,
+        transport: transport.map(TransportCapture::Legacy),
         transport_admission: "missing".into(),
         transport_error: None,
         submission: "unknown".into(),
@@ -716,7 +833,8 @@ fn parse_runner_client_output(
         let value = run
             .transport
             .as_ref()
-            .ok_or(("missing", "runner client produced no capture".into()))?;
+            .ok_or(("missing", "runner client produced no capture".into()))?
+            .legacy_value();
         let protocol = match value.get("protocol_version") {
             Some(Value::Number(number)) if number.is_u64() || number.is_i64() => number,
             _ => {
@@ -734,7 +852,8 @@ fn parse_runner_client_output(
         }
         let capture: Capture = serde_json::from_value(value.clone())
             .map_err(|e| ("malformed", format!("malformed client capture: {e}")))?;
-        let bytes = validate_capture(&capture).map_err(|e| ("malformed", e))?;
+        validate_capture(&capture).map_err(|e| ("malformed", e))?;
+        let bytes = capture.runner_reply.as_ref().map(|r| &r.data);
         #[cfg(test)]
         let footprint_decoding = crate::json_contract::footprint_test::Summary {
             stage: Some(
@@ -743,14 +862,17 @@ fn parse_runner_client_output(
             raw_stdout: Some((out.stdout.len(), out.stdout.capacity())),
             raw_stderr: Some((out.stderr.len(), out.stderr.capacity())),
             generic_base64: value["runner_reply"]["data_base64"].as_str().map(str::len),
-            typed_base64: capture.runner_reply.as_ref().map(|r| r.data_base64.len()),
-            host_retained: capture.runner_reply.as_ref().map(|r| r.bytes_retained),
+            typed_base64: None, // The comparison reader now shares generated byte storage.
+            host_retained: capture
+                .runner_reply
+                .as_ref()
+                .and_then(|r| usize::try_from(r.bytes_retained).ok()),
             decoded: bytes.as_ref().map(|b| (b.len(), b.capacity())),
             ..Default::default()
         };
         #[cfg(test)]
         crate::json_contract::footprint_test::record(footprint_decoding);
-        run.submission = capture.submission.state;
+        run.submission = capture.submission.state.clone();
         if let Some(bytes) = bytes {
             if capture.runner_reply.as_ref().unwrap().truncated {
                 run.runner_reply_error = Some(
@@ -853,7 +975,7 @@ pub fn run_pw_runner_client(
     request: &str,
     timeout_ms: u64,
     connection: &RunnerConnectionKind,
-) -> Result<(RunnerClientRun, Option<Value>), String> {
+) -> Result<(RunnerClientRun, Option<PWRunnerRunResult>), String> {
     let timeout_ms = timeout_ms.max(1);
     let deadline = continuous_deadline(timeout_ms)?;
     let mut argv = client_argv(timeout_ms, deadline, connection)?;
@@ -865,10 +987,38 @@ pub fn run_pw_runner_client(
 fn run_client_stdin(
     argv: &[OsString],
     request: Vec<u8>,
-) -> Result<(RunnerClientRun, Option<Value>), String> {
+) -> Result<(RunnerClientRun, Option<PWRunnerRunResult>), String> {
     run_client_stdin_with_clock(argv, request, now_unix_ms)
 }
 fn run_client_stdin_with_clock(
+    argv: &[OsString],
+    request: Vec<u8>,
+    mut clock: impl FnMut() -> u64,
+) -> Result<(RunnerClientRun, Option<PWRunnerRunResult>), String> {
+    let started = clock();
+    let mut command = Command::new(&argv[0]);
+    command.args(&argv[1..]);
+    let (out, delivery) = run_with_stdin(command, request)
+        .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
+    let ended = clock();
+    Ok(parse_runner_client_output(
+        argv,
+        started,
+        ended,
+        &out,
+        Some(delivery),
+    ))
+}
+
+#[cfg(test)]
+fn run_client_stdin_json_control(
+    argv: &[OsString],
+    request: Vec<u8>,
+) -> Result<(RunnerClientRun, Option<Value>), String> {
+    run_client_stdin_with_clock_json_control(argv, request, now_unix_ms)
+}
+#[cfg(test)]
+fn run_client_stdin_with_clock_json_control(
     argv: &[OsString],
     request: Vec<u8>,
     mut clock: impl FnMut() -> u64,
@@ -879,7 +1029,7 @@ fn run_client_stdin_with_clock(
     let (out, delivery) = run_with_stdin(command, request)
         .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
     let ended = clock();
-    Ok(parse_runner_client_output(
+    Ok(parse_runner_client_output_json_control(
         argv,
         started,
         ended,
@@ -968,7 +1118,7 @@ pub(crate) fn test_client_run(reply: Option<&Value>) -> RunnerClientRun {
         stdout: serde_json::to_vec(&frame).unwrap(),
         stderr: b"fixed runner-client diagnostic".to_vec(),
     };
-    parse_runner_client_output(
+    parse_runner_client_output_json_control(
         &["controlled-client".into()],
         1000,
         2500,
@@ -984,6 +1134,12 @@ pub(crate) fn test_client_run(reply: Option<&Value>) -> RunnerClientRun {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // These retained fixtures exercise the JSON comparison control explicitly.
+    use super::{
+        parse_runner_client_output_json_control as parse_runner_client_output,
+        run_client_stdin_json_control as run_client_stdin,
+        run_client_stdin_with_clock_json_control as run_client_stdin_with_clock,
+    };
 
     #[test]
     fn response_footprint_success_boundaries() {
@@ -1047,7 +1203,10 @@ mod tests {
                 assert_eq!(r.generic_base64, Some(host.len().div_ceil(3) * 4));
             }
             if (2..=3).contains(&index) {
-                assert_eq!(r.typed_base64, Some(host.len().div_ceil(3) * 4));
+                assert_eq!(
+                    r.typed_base64, None,
+                    "generated comparison storage owns decoded bytes"
+                );
                 assert_eq!(r.host_retained, Some(host.len()));
                 assert_eq!(r.decoded.unwrap().0, host.len());
             }
@@ -1259,7 +1418,9 @@ mod tests {
         );
         assert_eq!(
             run.transport,
-            Some(serde_json::json!({"bytes": request.len(), "uniform": true}))
+            Some(TransportCapture::Legacy(
+                serde_json::json!({"bytes": request.len(), "uniform": true})
+            ))
         );
         assert!(
             reply.is_none(),
@@ -1546,7 +1707,7 @@ mod tests {
             let (capture, host) = captured(&frame);
             assert_eq!(capture.transport_admission, "malformed", "{frame}");
             assert_eq!(capture.submission, "unknown");
-            assert_eq!(capture.transport, Some(frame));
+            assert_eq!(capture.transport, Some(TransportCapture::Legacy(frame)));
             assert!(host.is_none() && capture.runner_reply_error.is_none());
         }
         for version in [
@@ -1657,7 +1818,7 @@ mod tests {
             }),
         );
         assert_eq!(capture.transport_admission, "delivery_failed");
-        assert_eq!(capture.transport, Some(frame));
+        assert_eq!(capture.transport, Some(TransportCapture::Legacy(frame)));
         assert_eq!(capture.submission, "unknown");
         assert!(host.is_none() && capture.runner_reply_error.is_none());
         assert!(!capture.fallback_eligible());
@@ -1736,5 +1897,274 @@ mod tests {
         );
         assert!(deadline_ticks(0, 1, 0, 1).is_err());
         assert!(deadline_ticks(0, 1, 1, 0).is_err());
+    }
+}
+
+#[cfg(test)]
+mod binary_tests {
+    use super::*;
+
+    // Authored independently of the generated writer/schema field tables. Only
+    // the negotiated fingerprint follows the candidate so field/tag mistakes
+    // are not silently copied into these admission expectations.
+    fn value(kind: u8, bytes: &[u8]) -> Vec<u8> {
+        let mut out = vec![kind];
+        out.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+        out.extend_from_slice(bytes);
+        out
+    }
+    fn signed(n: i64) -> Vec<u8> {
+        value(2, &n.to_le_bytes())
+    }
+    fn unsigned(n: u64) -> Vec<u8> {
+        value(3, &n.to_le_bytes())
+    }
+    fn text(s: &str) -> Vec<u8> {
+        value(4, s.as_bytes())
+    }
+    fn boolean(b: bool) -> Vec<u8> {
+        value(1, &[u8::from(b)])
+    }
+    fn list(items: &[Vec<u8>]) -> Vec<u8> {
+        let mut bytes = (items.len() as u32).to_le_bytes().to_vec();
+        for item in items {
+            bytes.extend_from_slice(item);
+        }
+        value(7, &bytes)
+    }
+    fn record(id: u16, fields: &[(u16, Vec<u8>)]) -> Vec<u8> {
+        let mut bytes = id.to_le_bytes().to_vec();
+        for (tag, item) in fields {
+            bytes.extend_from_slice(&tag.to_le_bytes());
+            bytes.extend_from_slice(item);
+        }
+        value(6, &bytes)
+    }
+    fn frame(record: Vec<u8>) -> Vec<u8> {
+        let mut bytes = b"PWP1".to_vec();
+        bytes.extend_from_slice(&crate::porcelain_records::FINGERPRINT);
+        bytes.extend_from_slice(&record);
+        bytes
+    }
+    fn host() -> Vec<u8> {
+        frame(record(
+            55,
+            &[
+                (
+                    1,
+                    signed(i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION)),
+                ),
+                (2, text("typed\0é")),
+                (4, signed(1)),
+                (5, text("future_native_outcome")),
+                (7, signed(42)),
+                (13, list(&[])),
+                (17, list(&[])),
+            ],
+        ))
+    }
+    fn capture(host: Option<&[u8]>, protocol: i64, client_pid: i64, received: i64) -> Vec<u8> {
+        let control = record(
+            34,
+            &[
+                (1, signed(200)),
+                (2, text(&"a".repeat(64))),
+                (3, text("granted")),
+                (4, signed(42)),
+                (5, text("22222222-2222-4222-8222-222222222222")),
+                (6, signed(5000)),
+            ],
+        );
+        let attempt = record(
+            19,
+            &[
+                (1, signed(1)),
+                (2, text("11111111-1111-4111-8111-111111111111")),
+                (3, unsigned(0)),
+                (4, unsigned(1)),
+                (5, text("granted")),
+                (6, control),
+            ],
+        );
+        let submission = record(60, &[(1, text("invoked")), (2, unsigned(2))]);
+        let mut fields = vec![
+            (1, text("runner_client_capture")),
+            (2, signed(protocol)),
+            (3, signed(client_pid)),
+            (4, text("mach_continuous_time_ns")),
+            (5, boolean(true)),
+            (6, unsigned(1_000_000_000)),
+            (7, unsigned(61_000_000_000)),
+            (8, unsigned(1_005_000_000)),
+            (9, unsigned(60_000)),
+            (10, list(&[attempt])),
+            (11, text("granted")),
+            (12, submission),
+            (
+                13,
+                text(if host.is_some() {
+                    "runner_reply"
+                } else {
+                    "xpc_error"
+                }),
+            ),
+        ];
+        if let Some(bytes) = host {
+            fields.push((
+                15,
+                record(
+                    51,
+                    &[
+                        (1, signed(received)),
+                        (2, signed(bytes.len() as i64)),
+                        (3, boolean(false)),
+                        (4, value(5, bytes)),
+                    ],
+                ),
+            ));
+        } else {
+            fields.push((
+                14,
+                record(
+                    67,
+                    &[
+                        (1, text("submission")),
+                        (2, text("xpc_error")),
+                        (5, text("independent failure")),
+                        (6, boolean(false)),
+                        (7, boolean(false)),
+                    ],
+                ),
+            ));
+        }
+        frame(record(32, &fields))
+    }
+    fn parse(
+        bytes: Vec<u8>,
+        delivery: Option<&str>,
+    ) -> (RunnerClientRun, Option<PWRunnerRunResult>) {
+        let output = std::process::Output {
+            status: std::os::unix::process::ExitStatusExt::from_raw(0),
+            stdout: bytes,
+            stderr: b"diagnostic".to_vec(),
+        };
+        parse_runner_client_output(
+            &[],
+            10,
+            20,
+            &output,
+            Some(RequestDelivery {
+                bytes_written: 2,
+                error: delivery.map(str::to_string),
+            }),
+        )
+    }
+    fn protocol() -> i64 {
+        i64::from(crate::json_contract::RUNNER_PROTOCOL_VERSION)
+    }
+
+    #[test]
+    fn independent_binary_records_reach_typed_storage_without_text_conversion() {
+        let host = host();
+        let bytes = capture(Some(&host), protocol(), 123, host.len() as i64);
+        let count = bytes.len();
+        let (run, reply) = parse(bytes, None);
+        assert_eq!(
+            run.transport_admission, "accepted",
+            "{:?}",
+            run.transport_error
+        );
+        assert_eq!(run.submission, "invoked");
+        assert!(run.failure().is_none());
+        assert_eq!(reply.unwrap().specimen_id, "typed\0é");
+        let Some(TransportCapture::Typed(capture)) = run.transport else {
+            panic!("not typed");
+        };
+        assert_eq!(capture.runner_reply.unwrap().data, host);
+        assert_eq!(run.output.stdout_bytes_received, Some(count));
+        assert_eq!(run.output.stdout_bytes_retained, Some(count));
+        assert!(run.output.stdout_raw.is_none());
+    }
+
+    #[test]
+    fn arbitrary_rejected_host_bytes_survive_and_do_not_become_claims() {
+        for host in [vec![], vec![0, 255, 0], b"{}".to_vec()] {
+            let (run, reply) = parse(
+                capture(Some(&host), protocol(), 123, host.len() as i64),
+                None,
+            );
+            assert_eq!(run.transport_admission, "accepted");
+            assert_eq!(run.failure().unwrap().0, "malformed_runner_response");
+            assert!(!run.fallback_eligible());
+            assert!(reply.is_none());
+            let Some(TransportCapture::Typed(capture)) = run.transport else {
+                panic!("not typed");
+            };
+            assert_eq!(capture.runner_reply.unwrap().data, host);
+        }
+    }
+
+    #[test]
+    fn malformed_capture_keeps_exact_bytes_and_no_recovered_submission() {
+        let good = capture(None, protocol(), 123, 0);
+        let mut unsupported = good.clone();
+        unsupported[4] ^= 1;
+        let mut trailing = good.clone();
+        trailing.push(0);
+        for bytes in [
+            vec![0, 255, 0],
+            good[..good.len() - 1].to_vec(),
+            unsupported,
+            trailing,
+            capture(None, protocol(), i64::MAX, 0),
+            capture(Some(&[0]), protocol(), 123, -1),
+        ] {
+            let (run, reply) = parse(bytes.clone(), None);
+            assert_ne!(run.transport_admission, "accepted");
+            assert_eq!(run.submission, "unknown");
+            assert!(reply.is_none() && run.runner_reply_error.is_none());
+            assert!(run.output.stdout_raw.is_none());
+            assert!(!run.fallback_eligible());
+            let Some(TransportCapture::Rejected { data_base64, .. }) = run.transport else {
+                panic!("no raw rejection");
+            };
+            assert_eq!(data_base64, bytes);
+        }
+    }
+
+    #[test]
+    fn unsupported_protocol_and_delivery_failure_preserve_boundaries() {
+        let (run, reply) = parse(capture(None, protocol() + 1, 123, 0), None);
+        assert_eq!(run.transport_admission, "unsupported");
+        assert_eq!(run.submission, "unknown");
+        assert!(reply.is_none());
+        let bytes = capture(Some(&host()), protocol(), 123, host().len() as i64);
+        let (run, reply) = parse(bytes.clone(), Some("controlled delivery failure"));
+        assert_eq!(run.transport_admission, "delivery_failed");
+        assert_eq!(run.failure().unwrap().0, "tool_error");
+        assert_eq!(run.submission, "unknown");
+        assert!(reply.is_none() && run.runner_reply_error.is_none());
+        let Some(TransportCapture::Rejected { data_base64, .. }) = run.transport else {
+            panic!("no receipt");
+        };
+        assert_eq!(data_base64, bytes);
+    }
+
+    #[test]
+    fn typed_transport_failure_owns_fallback_and_public_rejection_formats_at_output() {
+        let (run, reply) = parse(capture(None, protocol(), 123, 0), None);
+        assert_eq!(run.transport_admission, "accepted");
+        assert_eq!(
+            run.failure().unwrap(),
+            ("xpc_error", "independent failure".into())
+        );
+        assert!(run.fallback_eligible());
+        assert!(reply.is_none());
+        let (bad, _) = parse(vec![0, 255, 0], None);
+        // Presentation alone converts opaque bytes to base64.
+        let json = serde_json::to_value(&bad).unwrap();
+        assert_eq!(json["transport"]["format"], "porcelain");
+        assert_eq!(json["transport"]["data_base64"], "AP8A");
+        assert!(json["stdout_raw"].is_null());
     }
 }

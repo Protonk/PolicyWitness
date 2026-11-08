@@ -29,7 +29,7 @@ test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_lifecycle/build.sh" \
   "${PW_LIFECYCLE_WORKER_FIXTURE}" "${PW_TEST_ARTIFACTS}/lifecycle-fixture-build.log"
 
 set +e
-swift run --package-path "${PACKAGE_DIR}" PWRunnerCoreTests >"${RUN_LOG}" 2>&1
+swift run --jobs 2 --scratch-path "${PW_TEST_SCRATCH}/swift" --package-path "${PACKAGE_DIR}" PWRunnerCoreTests >"${RUN_LOG}" 2>&1
 RC=$?
 set -e
 
@@ -54,22 +54,26 @@ if [[ -z "${SUMMARY}" ]]; then
   test_fail "PWRunnerCoreTests output missing summary line" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
+test_step porcelain_readers "independently replay normal, rich and minimal binary replies and interrupted prefixes"
+test_check_python "${PW_TEST_ARTIFACTS}/porcelain-readers.log" "porcelain reporting receipt replay failed" \
+  "${ROOT_DIR}/tests/suites/runner_unit/porcelain_replies.py" "${PW_TEST_ARTIFACTS}"
+
 test_step transfer_readers "replay actual driver replies through Rust assembly and the independent consumer"
 export PW_POLICY_TRANSFER_REPLIES="${PW_TEST_ARTIFACTS}"
 test_run_logged "${PW_TEST_ARTIFACTS}/transfer-readers.log" "policy transfer reader replay failed" \
-  cargo test --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
+  cargo test --jobs 2 --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
   --include-ignored --exact run_flow::tests::policy_transfer_driver_replies_cross_assembly_and_consumer
 if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/transfer-readers.log"; then test_fail "transfer replay did not run"; fi
 
 test_step clock_readers "replay actual worker clock refusal replies through Rust assembly and the independent consumer"
 test_run_logged "${PW_TEST_ARTIFACTS}/clock-readers.log" "worker clock reader replay failed" \
-  cargo test --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
+  cargo test --jobs 2 --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
   --include-ignored --exact run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer
 if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/clock-readers.log"; then test_fail "worker clock replay did not run"; fi
 
 test_step actor_readers "read actual actor setup, interrupted issue and completed replies with rejected variants"
 test_run_logged "${PW_TEST_ARTIFACTS}/actor-readers.log" "actor reader replay failed" \
-  cargo test --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
+  cargo test --jobs 2 --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
   --include-ignored --exact run_flow::tests::actor_driver_replies_cross_readers
 if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/actor-readers.log"; then test_fail "actor replay did not run"; fi
 

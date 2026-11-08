@@ -22,7 +22,7 @@ def save(path, data):
     path.write_text(json.dumps(data, indent=2) + '\n')
 
 
-def envelope_errors(envelope, witness):
+def envelope_errors(envelope, witness, *, allow_fixture_json=False):
     """Compare PW's claims to the request and independently observed identities."""
     spec = witness['specimen']
     expected_steps = []
@@ -37,7 +37,7 @@ def envelope_errors(envelope, witness):
         if allowed:
             expected['errno'] = None
         expected_steps.append(expected)
-    common_errors, matched = validate_run_shape(envelope, expected_steps)
+    common_errors, matched = validate_run_shape(envelope, expected_steps, allow_fixture_json=allow_fixture_json)
     errors = [f"{witness['label']}: {error}" for error in common_errors]
 
     def equal(field, actual, expected):
@@ -136,7 +136,7 @@ def exercise_checker(witnesses, envelopes, out):
                 and isinstance(transport, dict) and isinstance(transport.get('runner_reply'), dict)):
             recapture_host_reply(document)
         save(controls / f'{name}.json', document)
-        errors = envelope_errors(document, witness)
+        errors = envelope_errors(document, witness, allow_fixture_json=True)
         diagnostic = '\n'.join(errors)
         (controls / f'{name}.log').write_text(diagnostic + '\n')
         if required:

@@ -659,5 +659,16 @@ tags and map keys, unknown records and variant cases, invalid UTF-8, truncated
 or trailing bytes, impossible collection counts, stale fingerprints and excess
 depth. Positive controls distinguish absent fields, explicit public nulls and
 zero, preserve full-width integers and expose uninterpreted bytes as base64.
-These establish structural admission, not witness semantics or native behavior.
+A manually assembled current root record also preserves conflicting observations
+and an unsupported semantic version; the separate semantic reader refuses that
+version. These establish structural admission, not witness semantics or native behavior.
+The same case runs the generator in disposable fixtures containing its declared
+inputs and output owners. Literal malformed IDs, variants, recursive and deep
+models, duplicate JSON keys and an unreadable late output must refuse without
+changing any fixture bytes. An optional-field addition must change every codec
+output; restoring only the old Rust output must make check mode refuse without
+writing. The independent Python reader separately rejects the old fingerprint.
+These controls establish schema and stale-output admission without compiling a
+native artifact.
+
 The retained log is `suites/source_drift/porcelain_codec/artifacts/porcelain.log`.

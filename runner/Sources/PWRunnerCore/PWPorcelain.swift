@@ -16,7 +16,7 @@ func pwPorcelainLE<T: FixedWidthInteger>(_ value: T) -> Data {
 }
 
 func pwPorcelainValue(_ kind: UInt8, _ payload: Data) throws -> Data {
-    guard payload.count <= pwPorcelainByteLimit else {
+    guard payload.count <= pwPorcelainByteLimit - 41 else {
         throw PWPorcelainError.invalid("value exceeds byte limit")
     }
     var bytes = Data([kind])
@@ -58,7 +58,10 @@ extension Bool: PWPorcelainValue {
     func porcelainWrite() throws -> Data { try pwPorcelainValue(1, Data([self ? 1 : 0])) }
 }
 extension String: PWPorcelainValue {
-    func porcelainWrite() throws -> Data { try pwPorcelainValue(4, Data(utf8)) }
+    func porcelainWrite() throws -> Data {
+        guard utf8.count <= pwPorcelainByteLimit - 41 else { throw PWPorcelainError.invalid("text exceeds byte limit") }
+        return try pwPorcelainValue(4, Data(utf8))
+    }
 }
 extension Data: PWPorcelainValue {
     func porcelainWrite() throws -> Data { try pwPorcelainValue(5, self) }

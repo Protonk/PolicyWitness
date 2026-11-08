@@ -916,7 +916,7 @@
         "full",
         "partial"
       ],
-      "reads": "the native sources through builddir/; a changed option triggers regeneration, which runs the policy assertions first",
+      "reads": "the native sources through builddir/; a changed option triggers regeneration, which runs the policy assertions first; Meson schedules at most two commands and both shipped Swift drivers use -j 1",
       "writes": "builddir/ outputs and the Swift module cache under it",
       "refusals": [
         "meson_policy",
@@ -927,6 +927,10 @@
         {
           "path": "build.sh",
           "symbol": "Compiling native executables"
+        },
+        {
+          "path": "meson.build",
+          "symbol": "swift_flags = ['-j', '1', '-module-cache-path',"
         }
       ],
       "checks": [
@@ -934,6 +938,12 @@
           "path": "tests/suites/source_drift/build_rules.py",
           "symbol": "check_banner_order",
           "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_swift_driver_job_cap_reaches_both_shipped_targets",
+          "form": "test",
           "coverage": "textual"
         }
       ]

@@ -92,6 +92,14 @@ remain separate controls.
 - The test executable exits 0 and its final stdout line matches
   `^\d+/\d+ tests passed$`.
 
+The porcelain reply controls retain normal, evidence-preserving and minimal
+binary receipts beside JSON comparison receipts. The wrapper independently
+decodes them with the Python reader, compares public projection, checks retained
+facts and rejects interrupted prefixes. `porcelain-replies/replay.json` records
+the result. These are constructed reporting controls; native endings and actual
+pipe interruption have separate cases. Compilation uses two jobs and SwiftPM
+intermediates remain in case scratch.
+
 ## System sleep
 
 Host and worker allowances count system sleep. TestKit reads

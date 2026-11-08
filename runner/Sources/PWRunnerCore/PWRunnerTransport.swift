@@ -154,6 +154,10 @@ struct PWRunnerSubmission: Codable {
 }
 
 struct PWRunnerReplyCapture: Codable {
+    enum CodingKeys: String, CodingKey {
+        case bytes_received, bytes_retained, truncated
+        case data = "data_base64"
+    }
     // BEGIN GENERATED PORCELAIN PWRunnerReplyCapture
     var bytes_received: Int
     var bytes_retained: Int
@@ -164,7 +168,7 @@ struct PWRunnerReplyCapture: Codable {
         bytes_received = data.count
         let held = data.prefix(PWRunnerTransportLimits.runnerReplyBytes)
         bytes_retained = held.count; truncated = held.count != data.count
-        data_base64 = held.base64EncodedString()
+        self.data = Data(held)
     }
 }
 
@@ -190,11 +194,7 @@ struct PWRunnerClientCapture: Codable {
     // END GENERATED PORCELAIN PWRunnerClientCapture
 }
 
-/// Base64 can contain a slash in every position. Escaping those slashes would
-/// double the retained-byte expansion; this encoder owns only the new capture,
-/// leaving the host RunResult encoder and its exact bytes unchanged.
+/// Client-owned binary frame; host bytes remain opaque through this boundary.
 func pwRunnerEncodeClientCapture(_ capture: PWRunnerClientCapture) throws -> Data {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-    return try encoder.encode(capture)
+    try pwPorcelainEncode(capture)
 }

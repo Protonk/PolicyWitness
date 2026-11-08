@@ -86,7 +86,8 @@ if get_option('xpc')
 
   # Module caches live under the build directory, which is writable wherever
   # Meson can build at all. The inspection option selects the Swift flavour.
-  swift_flags = ['-module-cache-path', meson.current_build_dir() / 'swift-module-cache']
+  # Meson runs at most two commands; each Swift driver schedules one job.
+  swift_flags = ['-j', '1', '-module-cache-path', meson.current_build_dir() / 'swift-module-cache']
   swift_flags += get_option('inspection') ? ['-Onone', '-g'] : ['-O']
   swift_flags += swift_target
 

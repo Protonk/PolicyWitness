@@ -226,3 +226,9 @@ version and a changed library name as `dylibs`, a changed platform minimum
 version as `build_version`. A larger program differs by `__TEXT,__text`
 section size, and a program importing `sandbox_check` fails the host's
 no-sandbox-imports requirement. It needs clang but no app or signing identity.
+
+Authored host-record controls retain their JSON fixture bytes explicitly. Their
+reader calls use `validate_fixture` or `--authored-json-fixture`; ordinary live
+validation requires the porcelain binary host bytes. The opt-in changes only
+fixture byte admission, not semantic assertions or version gates. Direct client
+captures are decoded independently from their retained binary stdout.

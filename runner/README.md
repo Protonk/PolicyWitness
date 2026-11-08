@@ -35,7 +35,18 @@ executable; it does not build the shipped service bundle.
 | Actor equipment and setup | [ActorEquipment.swift](Sources/PWRunnerCore/ActorEquipment.swift): sealed inventory, static bindings and live code inspection; [PWRunnerEquipment.swift](Sources/PWRunnerCore/PWRunnerEquipment.swift): shared evidence/readers; [AuthoritySetupRuntime.swift](Sources/PWRunnerCore/AuthoritySetupRuntime.swift) and [PWRunnerAuthoritySetup.swift](Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift): automatic setup account. |
 | Time and native shim | [MonotonicDeadline.swift](Sources/PWRunnerCore/MonotonicDeadline.swift): deadlines and policy-pipe delivery; [PWCWorkerShim/](Sources/PWCWorkerShim/): fixed-argument shared-memory opening and acquire/release helpers. |
 | Request and path helpers | [ProbeRunner.swift](Sources/PWRunnerCore/ProbeRunner.swift): request meaning and prediction-exclusion definitions; [SandboxApply.swift](Sources/PWRunnerCore/SandboxApply.swift): policy hashing; [PathUtils.swift](Sources/PWRunnerCore/PathUtils.swift): planning and later host path observations. |
-| Client and tests | [Clients/PWRunnerClient/main.swift](Clients/PWRunnerClient/main.swift): JSON-over-Data XPC client; [Tests/PWRunnerCoreTests/](Tests/PWRunnerCoreTests/): explicitly registered TestKit groups. |
+| Client and tests | [Clients/PWRunnerClient/main.swift](Clients/PWRunnerClient/main.swift): JSON request and binary reply XPC client; [Tests/PWRunnerCoreTests/](Tests/PWRunnerCoreTests/): explicitly registered TestKit groups. |
+
+The experimental reply representation is owned by
+[docs/porcelain.json](../docs/porcelain.json). Its generator writes stored-field
+regions, direct Swift binary writers, owned Rust records/readers and independent
+Python structural tables. `PWPorcelain.swift` implements the closed primitive
+format. `validateForReporting` runs the semantic gates before normal writing;
+rich degradation retains observations while withholding comparisons, and an
+independent minimal writer reports lost evidence. The client relays opaque host
+bytes in a binary capture. JSON request/control decoding and the JSON comparison
+encoders remain separate; equipment metadata's existing JSON-size checks have
+not migrated.
 
 The native [C worker](../controller/tools/pw_probe_runner/pw_probe_runner.c) and
 [batch validator](../controller/tools/sb_api_validator/sb_api_validator.c) live outside this directory. The build embeds the worker twice and the validator as `pw-probe-runner`,
@@ -154,7 +165,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 27, controller envelope 12, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 28, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL

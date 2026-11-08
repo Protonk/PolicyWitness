@@ -10,6 +10,32 @@ Cases assert contract claims independently. The suite reads as a
 behavior specification — what PolicyWitness promises, regardless of
 the architecture behind it.
 
+## Experimental public-output interruption
+
+The opt-in `porcelain_output_controls` case runs one read-only specimen with
+256 `/etc/hosts` queries/opens across eight phases. Its complete positive run
+must succeed, pass the independent consumer, preserve exact binary host bytes
+and establish every phase's query order and the worker's reap. Independent
+reads confirm that `/etc/hosts` stayed unchanged. Two subsequent invocations
+of the same specimen run serially: the harness reads exactly 128 and 4096
+stdout bytes respectively, then closes the real pipe. Each CLI must exit
+nonzero and leave an incomplete JSON document; harness timeout or cleanup
+kill cannot supply that outcome.
+
+This experimental case requires the prototype's binary transport and is opt-in
+because it deliberately interrupts public output. Each invocation has a
+120-second harness bound and a 60-second client allowance. Only the owned CLI
+is signalled on harness timeout. The specimen creates no mutable worker resource.
+A partial document establishes no complete envelope or worker disposition.
+
+Artifacts retain source/executable hashes, request files, argv, statuses,
+stderr, exact prefixes and the positive `run.json`/`host-reply.pwp` receipts.
+`complete/measurements.json` records full public stdout, host and client-capture
+byte counts and one elapsed duration; these are descriptive observations, with
+no baseline, memory or performance-superiority claim. `output-controls.json`
+collects the complete and interrupted outcomes. Run through
+`tests/run.sh --case witness_contract/porcelain_output_controls`.
+
 ## Footprint observations
 
 The opt-in `held_phase_footprint` case repeats matched ordinary and actor holds

@@ -111,8 +111,8 @@ struct PWWorkerPolicyRead: Codable, Equatable {
 /// `PWShmLayout.policyBytes`.
 let policyReceiptCapacityBytes = 262_143
 struct PWWorkerEvidence: Codable {
-    /// Host-selected source identity, not proof that a child reached ABI validation.
     // BEGIN GENERATED PORCELAIN PWWorkerEvidence
+    /// Host-selected source identity, not proof that a child reached ABI validation.
     var abi_identity: String
     var progress: PWWorkerProgress?
     var failure_publication: UInt32
@@ -148,49 +148,49 @@ struct PWHostWait: Codable, Equatable {
 struct PWRunnerSubprocess: Codable {
     // BEGIN GENERATED PORCELAIN PWRunnerSubprocess
     var pid: Int
+    /// JSON integers, meaningful only after waitpid returned this child's PID.
+    /// Both may be absent/null when status was not obtained; zero is a real exit.
     var term_signal: Int?
     var exit_code: Int?
     var partial_steps: Bool
+    /// Worker publication snapshot; absent before spawn.
     var worker_evidence: PWWorkerEvidence? = nil
+    /// Host transfer observation independent of any child publication.
     var policy_transfer_timeout: PWWorkerPolicyTransferTimeout? = nil
     var policy_transfer_error: PWWorkerPolicyTransferError? = nil
-    var ready_byte_received: Bool?
-    var done_observed: Bool?
-    var poll_stop_reason: String?
-    var exit_requested: Bool?
-    var termination_request: PWRunnerTerminationRequest?
-    var reaped: Bool?
-    var wait_errors: [PWRunnerWaitError]?
-    var cleanup_trigger: String? = nil
-    var grace_end: String? = nil
-    var collection_basis: String? = nil
-    var ready_wait: PWHostWait? = nil
-    var sentinel_wait: PWHostWait? = nil
-    var exit_grace_wait: PWHostWait? = nil
-    var disposition: PWDispositionRecord? = nil
-    // END GENERATED PORCELAIN PWRunnerSubprocess
-    /// JSON integers, meaningful only after waitpid returned this child's PID.
-    /// Both may be absent/null when status was not obtained; zero is a real exit.
-    /// Worker publication snapshot; absent before spawn.
-    /// Host transfer observation independent of any child publication.
     /// Host read of the ready byte; false does not prove compilation failed.
+    var ready_byte_received: Bool?
     /// Final acquire observation of done after cleanup, not successful application.
     /// poll_stop_reason separately retains the reason the polling stage ended.
+    var done_observed: Bool?
     /// Host string: done, child_reaped, sentinel_deadline, wait_error, policy_write_error, or policy_transfer_deadline.
     /// Identifies why polling stopped; later cleanup must not rewrite it.
     /// Only sentinel_deadline establishes exhaustion of the polling budget.
     /// Unknown strings survive decoding; they do not imply a known condition.
+    var poll_stop_reason: String?
     /// Host performed the release-store of exit_requested; not worker receipt.
+    var exit_requested: Bool?
+    var termination_request: PWRunnerTerminationRequest?
     /// True only when waitpid actually returned this PID. False is explicitly
     /// unconfirmed disposition, distinct from an absent/null observation.
+    var reaped: Bool?
+    var wait_errors: [PWRunnerWaitError]?
     /// Host facts recorded where the host acts (tests/FAILURE-PROPAGATION-CONTRACT.md,
     /// "Worker disposition record"): why exit was requested, how the exit-grace
     /// wait ended, and whether the final reads followed a confirmed reap.
     /// Absence is unreported, not observed false.
+    var cleanup_trigger: String? = nil
+    var grace_end: String? = nil
+    var collection_basis: String? = nil
     /// Measured host waits: readiness hint, publication (sentinel) and exit grace.
     /// Absent when the stage did not run.
+    var ready_wait: PWHostWait? = nil
+    var sentinel_wait: PWHostWait? = nil
+    var exit_grace_wait: PWHostWait? = nil
     /// The canonical lifecycle account, resolved once by the host. Mandatory
     /// whenever this object is present.
+    var disposition: PWDispositionRecord? = nil
+    // END GENERATED PORCELAIN PWRunnerSubprocess
 
     init(
         pid: Int,

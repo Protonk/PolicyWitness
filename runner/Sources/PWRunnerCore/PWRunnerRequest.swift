@@ -490,15 +490,15 @@ struct PWRunnerAdmissionFailure: Codable {
     var actual: Int
     var maximum: Int
     var unit: String
-    var step_id: String?
-    var step_index: Int?
-    var parameter_key: String?
-    var index: Int?
-    // END GENERATED PORCELAIN PWRunnerAdmissionFailure
     /// The offending step's ID, omitted when the step ID itself is the refused
     /// field: a refusal never echoes the string it refused. `step_index` is the
     /// step's position in `probe_plan` and accompanies every per-step refusal.
+    var step_id: String?
+    var step_index: Int?
     /// The offending parameter's key, omitted when the key itself is refused;
     /// the field name and byte count identify it.
+    var parameter_key: String?
     /// The offending argv position for exec argument refusals.
+    var index: Int?
+    // END GENERATED PORCELAIN PWRunnerAdmissionFailure
 }

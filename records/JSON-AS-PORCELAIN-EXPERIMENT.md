@@ -114,69 +114,96 @@ from the apparatus. No speed or energy improvement claim is planned; any later
 quantitative claim needs a separately frozen matched schedule and arranged quiet
 conditions. Unknown measurements remain unknown.
 
-## Disposition
+## Implemented representation and ownership
 
-Pending implementation and controls. Choose pursue adoption, retain a narrower
-result, revise one bounded assumption, or close without adoption. A working binary
-codec alone is insufficient. Record source/build identities, exact test selections,
-raw receipt locations, limitations and bounded migration work before completion.
+The prototype chooses the repository-owned codec. The schema closes over 83
+records: 81 Swift source records and two fixed lifecycle-question adapters. Its
+606 stored-field entries produce 605 wire fields; the host-local exec decode
+problem is deliberately excluded. This is below the approximate 150-record
+budget even though the closure includes supporting actor records whose semantic
+admission is not yet migrated. Existing hex/digest evidence stays text. Client
+host payloads become Data/Vec<u8>, with base64 only at the public JSON boundary.
 
-## Orderly pause — 2026-11-08
+The exact format is `PWP1`, a 32-byte schema fingerprint and one TLV root. TLVs
+carry kind:u8, length:u32LE and payload; records carry identity:u16 and ascending
+nonzero tag:u16/value pairs. Signed/unsigned integers occupy eight bytes with
+native-width range checks; bool accepts only 0/1. Lists and ordered unique UTF-8
+maps carry u32 counts, and the one declared claim-value variant carries a u16
+case. Unknown tags, record identities, cases and fingerprints refuse admission.
+Absence is distinct from zero/false. Limits are 128 MiB per frame, depth 32 and
+128 MiB of charged decoded slots/strings/bytes per Rust frame. These are logical
+bounds, not measured peak memory. Schema prose/source-location changes do not
+change the wire fingerprint; structural and projection changes do.
 
-Paused at the user's request before any compilation or native trial. This is an
-**unfinished, unbuilt prototype checkpoint**, not an accepted implementation.
-All delegated agents were interrupted; no build/test child or native resource
-ownership was created by this exploration. Only source reads, generation and
-editorial/static checks have run. `git diff --check` passes at this checkpoint.
+| Process/boundary | Owner, overlap and release |
+| --- | --- |
+| Host | Typed observed records survive validation and writing. Each nested writer creates Data; ancestors append those bytes. Returned whole Data goes to XPC. There is no borrowed or streaming writer claim. |
+| XPC | Foundation/process copying and physical backing identity are unestablished. |
+| Client | Received Data, retained prefix and encoded capture Data can overlap. The capture contains opaque bytes, not a decoded host model. It writes one binary frame without a newline. |
+| Controller collection | Existing full stdout/stderr collection remains; the retention cap applies afterwards. Decoding borrows the collection while constructing owned fields; rejected retained bytes are copied into an exact-byte carrier. |
+| Controller interpretation | Accepted capture owns raw host bytes; the decoded reply separately owns its fields. Raw observation and interpreted model intentionally coexist. No generic response Value, base64 decode or stringify/parse adapter mediates coherence. |
+| Public output | A borrowed envelope serializes typed records into one complete String. Base64 temporaries exist for public byte fields. Printing can fail after a prefix; that prefix is not a complete artifact. |
 
-Work present in this branch:
+Generated Rust JSON Deserialize implementations, the path-compression fixture
+marker and the legacy generic readers are test-only. Request JSON, dossier
+construction, reservation control JSON and validator NDJSON remain separate
+adapters. Swift's old response Codable implementations remain comparison code;
+removing them is adoption work. Equipment metadata's existing JSON-size check
+and Swift's string-keyed lifecycle-question construction are explicit remaining
+representation dependencies, not credited as JSON-free admission.
 
-- 83 schema records / 606 stored fields, generated Swift field regions/direct
-  writers, Rust owned records/readers/JSON projection, Python structural tables.
-- Closed Swift/Rust primitive codecs; explicit typed Swift reporting gates,
-  binary service reply path, rich degradation and independent minimal fallback.
-- Draft typed Rust admission and generic run assembly bridge (legacy Value path
-  is a test-only comparison control), direct typed envelope serialization.
-- Independent Python decoder and malformed-byte controls, generator/build/source
-  registration, binary-reader adaptations and explicit authored-JSON fixture mode.
-- Swift controls emit binary and JSON comparison receipts when run later.
+## Semantic boundary
 
-Resume integration before attempting a build:
+Swift reporting validation now runs before the binary writer. It includes the
+former encoder-only gates and root/actor compiled-profile context. The rich
+failure writer preserves observations and removes comparisons; the independent
+minimal writer reports evidence loss and original summary. Total emission failure
+can yield no decodable reply; outer observations must carry the failure.
 
-1. Finish root-owned client capture integration. `runner_client.rs` and client
-   emission still use the old JSON path/signatures; switch to generated capture
-   and binary readers, retaining exact bytes and typed acquisition validation.
-   `PWRunnerReplyCapture` now declares Data but its initializer/legacy tests still
-   need adaptation. Add Rust module declarations for porcelain, records and
-   admission. Do not add a JSON reconstruction adapter for old semantic readers.
-2. Resolve generator registration details: input_paths must expose relative
-   complete fixture inputs/outputs, and the drift mutation harness must match
-   the generator's __main__ call. Check current files in case the interrupted
-   agent completed these. Restore per-field source comments into schema-owned
-   documentation; the bootstrap moved some away from their declarations.
-3. Audit JSON presence rules against custom coders (explicit encodeNil and
-   conditional native_rc/team_id), path-form compaction and fixture decoding.
-   Bootstrap field aliases were corrected to inspect CodingKeys only. Generated
-   tables and runtime readers must agree on exact widths/depth/count bounds.
-4. Review typed admission's declared unconverted scopes. Actor setup/equipment,
-   exec/fresh-I/O and resource settlement may remain withheld, never silently
-   credited as migrated. Finish real typed tests; legacy Value tests cannot
-   establish the new runtime path. Account for the temporary generic bridge in
-   maintenance costs rather than making it permanent by default.
-5. Update prototype protocol/response versions through contract.json and its
-   generator; regenerate worker identity after sources/build inputs settle.
-   Check architecture/build accounts and independent readers. The build edits
-   cap Cargo and Meson jobs at two; confirm Swift frontend behavior.
-6. Run registered offline codec/generator controls, compile through the signed
-   pipeline, fix failures, then run the bounded signed slices and coordinated
-   independent/order/failure controls. Preserve receipts in managed test output.
-   No test or performance result is credited yet.
-7. Complete the maintenance-change exercises, cost account, structural-claim
-   dispositions and bounded adoption recommendation. This pause does not close
-   the experiment or authorize merging prototype implementation into main.
+Rust admits the ordinary publication/order and lifecycle slice through direct
+fields, including association, collection closure, acknowledgement, native PID,
+phase ordinal, policy receipt and witness-basis checks. Partial publication,
+requested signal, actual status and owned reap remain distinct. Supporting actor
+records are typed and cross-actor references can be challenged, but full actor
+setup/equipment, activation/reap gates, authority settlement and fresh-I/O/exec
+semantic families remain `unconverted_scope`. Scope alone yields integrity
+`unestablished` and withholds the aggregate; contradictions yield `invalid`.
+Independent per-actor observations survive both. No opaque JSON is reconstructed
+to feed the old production validator.
 
-Durable work is on `experiment/json-porcelain`; worktree is
-`/private/tmp/pw-json-porcelain`. The protocol was committed as `ca1758cb` before
-implementation. The pause commit preserves all current source independently of
-the temporary worktree. Main-checkout user changes are untouched; at pause it has
-a modified JSON-AS-PORCELAIN plan and an untracked records/DESCHEMA-PLAN.md.
+The typed model does not make arbitrary observation construction impossible.
+Raw structs can represent conflicts; named admission controls eligibility. A
+schema/generator cannot replace the independently authored Swift, Rust and Python
+semantic rules. Neither PID fields nor carried timestamps establish an independent
+process generation or a genuinely late validator arrival; native ordering controls
+remain necessary.
+
+## Maintenance exercises and cost scope
+
+The authoritative field inventory, primitive sizes and evidence selections are
+reported below after final verification. Line counts are inventory, not a proof
+of maintainability; review triggers count normal formatting, not compressed code.
+
+| Change exercise | Observed edit path |
+| --- | --- |
+| Add optional reporting diagnostic | One schema entry changes its Swift stored-field region and three whole generated files. No primitive edit or build-source addition. A useful value also requires a producer assignment and populated independent fixture; explicit Rust test literals must acknowledge the new field. |
+| Widen progress raw UInt32 to UInt64 | One schema kind change generates the same owners; native construction and semantic progress checks require deliberate numeric edits. Wire integers stay eight bytes. No text conversion is needed. This was an in-memory generation/edit-site exercise, not an executed widened native protocol. |
+| Change final-status witness rule | Swift dispositionBasisSufficient, Rust sufficient/validate_lifecycle and Python lifecycle_oracle.sufficient_basis remain independent owners. A paired typed control removes or substitutes a resolvable witness reference and requires withholding while preserving native facts. No schema or codec change supplies semantic acceptance. |
+| Change a field comment | Only the owning documented Swift field region changes; all generated wire fingerprints remain identical. |
+| Regenerate only one side | Added/dropped fields, renumbered tags, changed kinds and an added record make the unchanged side stale. Drift refusal precedes replacement; independently authored malformed bytes challenge the actual readers. |
+
+The representation removes generic response trees and internal base64 text, but
+retains raw bytes plus decoded ownership, nested Swift Data copies and a complete
+public JSON String. It establishes no zero-copy or peak-memory reduction. Existing
+FOOTPRINT JSON-control samples are explicitly unavailable as prototype cost
+evidence. Current receipts describe byte sizes and whole-request wall duration;
+parser-stage CPU, per-process physical memory, energy and comparative speed remain
+unestablished. No performance superiority claim or matched statistical comparison
+is made. Flat or modestly worse performance remains acceptable under the user's
+maintenance criterion, subject to bounded costs and preserved evidence.
+
+## Verification and dispositions
+
+Final verification and claim dispositions are being assembled from retained runs.
+The implementation is isolated on `experiment/json-porcelain`; it is not merged
+into the main checkout. Main-checkout user edits remain untouched.

@@ -12,8 +12,8 @@ use std::path::{Path, PathBuf};
 use crate::app_layout::{BUNDLE_UNENTITLED_WORKER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
-use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::porcelain_records::PWRunnerRunResult;
+use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::{
     self, RunnerKind, RunnerOwnership, RunnerRecord, RunnerRegistry, RunnerScope, RunnerState,
 };
@@ -547,9 +547,15 @@ fn verify_request() -> Value {
 fn project_verify_typed_reply(runner_result: Option<&PWRunnerRunResult>) -> (Option<i64>, String) {
     match runner_result {
         Some(reply) => match crate::run_flow::reply_version(reply) {
-            crate::run_flow::ReplyVersion::Supported => (Some(reply.pid), reply.normalized_outcome.clone()),
-            crate::run_flow::ReplyVersion::Unsupported(_) => (None, "unsupported_runner_response".into()),
-            crate::run_flow::ReplyVersion::Malformed(_) => (None, "malformed_runner_response".into()),
+            crate::run_flow::ReplyVersion::Supported => {
+                (Some(reply.pid), reply.normalized_outcome.clone())
+            }
+            crate::run_flow::ReplyVersion::Unsupported(_) => {
+                (None, "unsupported_runner_response".into())
+            }
+            crate::run_flow::ReplyVersion::Malformed(_) => {
+                (None, "malformed_runner_response".into())
+            }
         },
         None => (None, "runner_output_not_json".into()),
     }

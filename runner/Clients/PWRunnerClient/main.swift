@@ -27,7 +27,6 @@ private func emit(_ capture: PWRunnerClientCapture) -> Never {
     do {
         let bytes = try pwRunnerEncodeClientCapture(capture)
         FileHandle.standardOutput.write(bytes)
-        FileHandle.standardOutput.write(Data("\n".utf8))
         exit(capture.terminal == "runner_reply" ? 0 : 1)
     } catch {
         // A missing capture leaves submission unknown to the caller.

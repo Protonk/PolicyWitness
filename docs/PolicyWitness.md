@@ -1174,10 +1174,10 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 27, controller envelope 12, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 28, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
-The runner reply is the host's JSON: its `schema_version` is the response schema, and it
+The runner reply's JSON projection carries the response `schema_version` and
 holds `normalized_outcome`, `steps`, `runner_subprocess`, `phases`
 and the policy identity (`specimen_id`, `policy_format`, `policy_sha256`). It is
 readable on its own. The controller envelope is what `policy-witness run`
@@ -1188,7 +1188,7 @@ fallback compilation (`policy_check`), the controller's projections
 (`runner_sandbox_diagnostics`) and `timeout_ms`. Readers that interpret either
 document accept exactly the current numbers; another version is reported as
 unsupported, with the bytes retained (see [CONTRACT.md](CONTRACT.md)).
-`pw-runner-client` prints a separate `runner_client_capture` at the current
+`pw-runner-client` emits a binary `runner_client_capture` at the current
 runner protocol. It carries acquisition and submission observations and the
 received host bytes, rather than manufacturing host results for client errors.
 
@@ -1462,7 +1462,7 @@ structurally valid diagnostic outcomes remain visible even when their per-step s
 `exit_code`, exact received/retained stdout and stderr byte counts and
 `capture_limit_bytes`. `stdout_capture_error` means the controller truncated
 its own retained reply; `stdout_parse_error` means the untruncated bytes could
-not be decoded as JSON. Records inside a lost envelope are unavailable. The
+not be decoded as a supported binary capture. Records inside a lost envelope are unavailable. The
 independent fallback helper's admission refusal remains `policy_too_large`.
 
 The parsed client frame is retained in `transport`. `transport_admission`
@@ -1471,7 +1471,7 @@ is `accepted`, `missing`, `unsupported`, `malformed` or `delivery_failed`;
 explains rejection. The controller's `submission` projection is `invoked`,
 `not_invoked` or `unknown`. It is known only from an admitted capture.
 `runner_reply_error` reports truncated host bytes or a host body that is not
-JSON; the retained bytes remain available inside the capture.
+a complete supported typed record; the retained bytes remain available inside the capture.
 
 The admitted frame records `clock: "mach_continuous_time_ns"`,
 `clock_available`, available absolute start/deadline/end readings, `timeout_ms`,
@@ -1494,19 +1494,21 @@ establish invocation or execution.
 `runner_reply` contains the exact retained host bytes as base64, received and
 retained byte counts, and a truncation flag. Only a reply accepted before the
 deadline can populate it. The capture retains a prefix up to the documented
-limit; an incomplete body cannot become `runner_result`. A complete JSON host
-body is preserved as `runner_result` and independently admitted under the
+limit; an incomplete body cannot become `runner_result`. A complete typed host
+body is projected as `runner_result` and independently admitted under the
 response schema before its meaning is used. Client transport failures do not
-create synthetic host results. The helper writes this versioned capture to
-stdout, including when no host reply arrived.
+create synthetic host results. The helper writes this versioned binary capture to
+stdout, including when no host reply arrived. The controller presents its retained
+byte fields as base64 in public JSON. Rejected client frames retain bounded exact
+bytes with `format: "porcelain"`; they establish no submission state.
 
 The controller delivers the request to the client on stdin (`--request -`)
 and records that delivery in `runner_client.request_delivery`:
 `bytes_written` and `error`. This is a controller observation: an accepted
 pipe write and a closed writer do not prove that the client read the bytes or
 that XPC delivered them. A delivery error makes the run a controller
-`tool_error` (exit 2) that takes precedence over any captured reply; the reply
-stays unchanged in `data.runner_result`. `runner_client` is null when the
+`tool_error` (exit 2) that takes precedence over any captured reply; the client
+bytes remain retained without host interpretation. `runner_client` is null when the
 client was not invoked.
 
 `steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no

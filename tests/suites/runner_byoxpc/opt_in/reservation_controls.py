@@ -345,7 +345,8 @@ class ReservationArrangement(Arrangement):
             raise AssertionError('client watchdog: ' + record['name'])
         finally:
             record['end_ns'] = time.monotonic_ns(); save(folder / 'record.json', record)
-        value = decode_porcelain((folder / 'stdout').read_bytes(), 'capture')
+        raw = (folder / 'stdout').read_bytes()
+        value = json.loads(raw) if record['public'] else decode_porcelain(raw, 'capture')
         problems = validate(value) if record['public'] else validate_capture(value)
         if unsupported is None:
             assert not problems, problems

@@ -103,6 +103,7 @@ struct PWRunnerExtensionEvent: Codable {
     var step_id: String
     var operation: String
     var token_ref: String?
+    /// Present for consume/release; absent on issue and transfer.
     var handle_ref: String?
     var call_boundary_observed: Bool
     var result_published: Bool
@@ -111,6 +112,7 @@ struct PWRunnerExtensionEvent: Codable {
     var errno: Int32?
     var unavailable_reason: String?
     var lifecycle: PWAttemptLifecycle?
+    // Actor form: the acting actor, the family operands and references.
     var actor_id: String?
     var family: String?
     var target: String?
@@ -120,6 +122,4 @@ struct PWRunnerExtensionEvent: Codable {
     var native_nonnull: Bool?
     var token_length: Int?
     // END GENERATED PORCELAIN PWRunnerExtensionEvent
-    /// Present for consume/release; absent on issue and transfer.
-    // Actor form: the acting actor, the family operands and references.
 }

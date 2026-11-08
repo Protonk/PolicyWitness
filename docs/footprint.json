@@ -426,7 +426,7 @@
         "limit": "controller_output",
         "behavior": "Collects complete stdout/stderr before making retained prefixes. Raw Output remains borrowed through capture and host parsing, then drops before final rendering."
       },
-      "conditions": "Client reply or failure output; complete received counts differ from retained counts.",
+      "conditions": "Binary client capture or failure output; complete received counts differ from retained counts. The retention allowance does not cap collection memory.",
       "interval": {
         "starts": "child pipes opened",
         "ends": "run_client_stdin returns",
@@ -446,17 +446,17 @@
       "checks": [
         {
           "path": "controller/src/runner_client.rs",
-          "symbol": "response_footprint_success_boundaries",
-          "kind": "assertion",
+          "symbol": "independent_binary_records_reach_typed_storage_without_text_conversion",
           "form": "test",
-          "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
+          "kind": "assertion",
+          "pins": "Authored binary records establish typed admission, exact retained host bytes and byte counts; not a memory measurement."
         },
         {
           "path": "controller/src/runner_client.rs",
-          "symbol": "valid_oversized_producer_is_receiver_loss_not_malformed_json",
-          "kind": "assertion",
+          "symbol": "malformed_capture_keeps_exact_bytes_and_no_recovered_submission",
           "form": "test",
-          "pins": "Oversized producer reports full received count and receiver loss, not malformed JSON."
+          "kind": "assertion",
+          "pins": "Malformed binary captures retain their exact bytes and cannot recover a submission claim; not a memory measurement."
         }
       ]
     },
@@ -552,7 +552,7 @@
     {
       "id": "fr4",
       "case": "response",
-      "title": "Reply model, encoded bytes and XPC",
+      "title": "Typed reply, encoded bytes and XPC",
       "subject": {
         "kind": "allocation",
         "owner": "host / client",
@@ -562,10 +562,10 @@
         "evidence": "source",
         "value": null,
         "unit": null,
-        "limit": "runner_reply_maximum",
-        "behavior": "Reply model overlaps encoded host Data; XPC and Foundation physical copy/backing behavior is unestablished. The synthesized maximum bounds encoded reply size, not live memory."
+        "limit": null,
+        "behavior": "Typed reply fields overlap binary host Data during encoding. Primitive and frame bounds constrain encoded representations, not live memory; XPC and Foundation physical copying remain unestablished."
       },
-      "conditions": "Successful encoding, including actor setup/events/resources metadata.",
+      "conditions": "Production binary reporting, including rich degradation or an independent minimal report.",
       "interval": {
         "starts": "reply assembly",
         "ends": "callback and representation last use",
@@ -575,34 +575,27 @@
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-          "symbol": "replyAndExit"
+          "symbol": "pwRunnerPorcelainReplyData"
         },
         {
-          "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
-          "symbol": "PWRunnerReplyCapture"
+          "path": "runner/Sources/PWRunnerCore/PWPorcelain.swift",
+          "symbol": "pwPorcelainEncode"
         }
       ],
       "checks": [
         {
-          "path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
-          "symbol": "runReplyMaximumTests",
-          "kind": "assertion",
+          "path": "runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift",
+          "symbol": "runReplyFailureTests",
           "form": "test",
-          "pins": "Constructed field-complete reply fits transport allowance; not a reachable specimen or memory measurement."
-        },
-        {
-          "path": "runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift",
-          "symbol": "runReservationAdmissionTests",
           "kind": "assertion",
-          "form": "test",
-          "pins": "Reply capture round-trips retained bytes and counts; reservation/retirement ownership controls."
+          "pins": "Retains binary normal, rich-failure and minimal-failure receipts; component reporting controls do not measure memory or XPC backing."
         }
       ]
     },
     {
       "id": "fr5",
       "case": "response",
-      "title": "Base64 capture and client stdout",
+      "title": "Binary capture and client stdout",
       "subject": {
         "kind": "allocation",
         "owner": "client",
@@ -612,10 +605,10 @@
         "evidence": "source",
         "value": null,
         "unit": null,
-        "limit": null,
-        "behavior": "Incoming host Data, retained prefix and base64 text overlap during capture. Capture and encoded capture bytes coexist during emit; stdout adds a newline. Prefix backing identity is unestablished."
+        "limit": "client_reply_retention",
+        "behavior": "Incoming host Data and the retained byte prefix overlap during capture. The typed capture and its binary encoded Data coexist during emit; client stdout has no newline. Base64 is deferred to controller JSON presentation. Prefix backing identity remains unestablished."
       },
-      "conditions": "Versioned client capture; host bytes and client stdout bytes are different representations.",
+      "conditions": "Versioned binary client capture; host reply and capture frame are distinct byte sequences.",
       "interval": {
         "starts": "reply capture",
         "ends": "client emit and exit",
@@ -645,7 +638,7 @@
     {
       "id": "fr6",
       "case": "response",
-      "title": "Generic and typed capture",
+      "title": "Typed capture and rejected bytes",
       "subject": {
         "kind": "allocation",
         "owner": "controller",
@@ -656,46 +649,46 @@
         "value": null,
         "unit": null,
         "limit": null,
-        "behavior": "Retained text is made before parsing. Generic capture JSON survives a clone into typed Capture; generic and typed base64 coexist during validation. Lossy text length need not equal retained source-byte count."
+        "behavior": "The complete raw Output is borrowed while binary decoding allocates owned typed fields. An admitted capture survives into envelope rendering; rejected retained bytes are kept without lossy text conversion. No generic capture JSON tree is built."
       },
-      "conditions": "Accepted capture; malformed/oversized paths have separate retention behavior.",
+      "conditions": "Production capture admission; received counts, retained counts and submission evidence remain separate.",
       "interval": {
-        "starts": "capture parsing",
-        "ends": "typed capture scope ends; generic capture survives into assembly",
-        "ending_event": "typed capture disposal before final rendering"
+        "starts": "binary capture decoding",
+        "ends": "typed capture or rejected-byte last use during presentation",
+        "ending_event": "raw Output drops before final rendering"
       },
       "aftermath": null,
       "sources": [
         {
-          "path": "controller/src/utils.rs",
-          "symbol": "capture_json_output"
+          "path": "controller/src/runner_client.rs",
+          "symbol": "parse_runner_client_output"
         },
         {
           "path": "controller/src/runner_client.rs",
-          "symbol": "parse_runner_client_output"
+          "symbol": "TransportCapture"
         }
       ],
       "checks": [
         {
           "path": "controller/src/runner_client.rs",
-          "symbol": "response_footprint_success_boundaries",
-          "kind": "assertion",
+          "symbol": "independent_binary_records_reach_typed_storage_without_text_conversion",
           "form": "test",
-          "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
+          "kind": "assertion",
+          "pins": "Authored binary records establish typed admission, exact retained host bytes and byte counts; not a memory measurement."
         },
         {
           "path": "controller/src/runner_client.rs",
-          "symbol": "multibyte_cut_counts_bytes_before_lossy_conversion",
-          "kind": "assertion",
+          "symbol": "malformed_capture_keeps_exact_bytes_and_no_recovered_submission",
           "form": "test",
-          "pins": "Retained source bytes are counted before lossy conversion."
+          "kind": "assertion",
+          "pins": "Malformed binary captures retain their exact bytes and cannot recover a submission claim; not a memory measurement."
         }
       ]
     },
     {
       "id": "fr7",
       "case": "response",
-      "title": "Decoded bytes and parsed host reply",
+      "title": "Retained host bytes and typed reply",
       "subject": {
         "kind": "allocation",
         "owner": "controller",
@@ -706,39 +699,50 @@
         "value": null,
         "unit": null,
         "limit": null,
-        "behavior": "Strict base64 decode allocates host bytes. Raw client Output, generic capture, typed base64 and decoded bytes coexist; parsed host Value is added before decoded bytes leave scope."
+        "behavior": "The admitted capture owns retained host bytes while binary decoding creates typed reply fields. Both survive into final rendering. Decoded collection slots and owned text/byte lengths consume a per-document budget; this is not a process-memory ceiling."
       },
-      "conditions": "Successful capture validation and host JSON parsing.",
+      "conditions": "Complete admitted capture and host frame; malformed host bytes remain retained beside a decode diagnostic.",
       "interval": {
-        "starts": "base64 decoding",
-        "ends": "decoded vector scope ends; parsed reply retained",
-        "ending_event": "decoded bytes drop before envelope rendering"
+        "starts": "host binary decoding",
+        "ends": "capture and typed reply last use during rendering",
+        "ending_event": "owned records drop after presentation"
       },
       "aftermath": null,
       "sources": [
         {
           "path": "controller/src/runner_client.rs",
-          "symbol": "validate_capture"
+          "symbol": "parse_runner_client_output"
         },
         {
-          "path": "controller/src/runner_client.rs",
-          "symbol": "decode_base64"
+          "path": "controller/src/porcelain.rs",
+          "symbol": "charge"
+        },
+        {
+          "path": "controller/src/porcelain.rs",
+          "symbol": "decode"
         }
       ],
       "checks": [
         {
           "path": "controller/src/runner_client.rs",
-          "symbol": "response_footprint_success_boundaries",
-          "kind": "assertion",
+          "symbol": "independent_binary_records_reach_typed_storage_without_text_conversion",
           "form": "test",
-          "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
+          "kind": "assertion",
+          "pins": "Authored binary records establish typed admission, exact retained host bytes and byte counts; not a memory measurement."
+        },
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "arbitrary_rejected_host_bytes_survive_and_do_not_become_claims",
+          "form": "test",
+          "kind": "assertion",
+          "pins": "Arbitrary rejected host bytes survive without a decoded reply or fallback eligibility; not a memory measurement."
         }
       ]
     },
     {
       "id": "fr8",
       "case": "response",
-      "title": "Envelope and rendered text",
+      "title": "Borrowed envelope and rendered JSON",
       "subject": {
         "kind": "allocation",
         "owner": "controller",
@@ -749,39 +753,36 @@
         "value": null,
         "unit": null,
         "limit": null,
-        "behavior": "Borrowed input and envelope coexist. Recursive sorting takes owned map entries, explicitly sorts their keys and rebuilds maps without cloning keys or subtrees; pretty serialization adds a String while the Value remains live. Sort temporaries are not claimed to survive the sort."
+        "behavior": "The envelope borrows typed inputs. Generated serializers project converted records directly; public byte fields create base64 text during rendering. Pretty serialization adds a complete String while the typed inputs remain live; converted records do not pass through a generic JSON tree or recursive sorting."
       },
       "conditions": "Final envelope rendering; successful stdout adds a newline.",
       "interval": {
         "starts": "envelope construction",
         "ends": "print returns and CLI exits",
-        "ending_event": "Value/String disposal after last use"
+        "ending_event": "typed records and rendered String drop after last use"
       },
       "aftermath": null,
       "sources": [
         {
           "path": "controller/src/json_contract.rs",
-          "symbol": "sort_value"
+          "symbol": "render_envelope"
         },
         {
-          "path": "controller/src/json_contract.rs",
-          "symbol": "render_envelope"
+          "path": "controller/src/porcelain.rs",
+          "symbol": "Base64"
+        },
+        {
+          "path": "docs/generate_porcelain.py",
+          "symbol": "rust"
         }
       ],
       "checks": [
         {
-          "path": "controller/src/runner_client.rs",
-          "symbol": "response_footprint_success_boundaries",
-          "kind": "assertion",
-          "form": "test",
-          "pins": "Ordered parser/render boundaries assert lengths, capacity at least length and scoped coexistence in the unit process."
-        },
-        {
           "path": "controller/src/json_contract.rs",
-          "symbol": "sorted_envelope_value_has_exact_pretty_bytes",
-          "kind": "assertion",
+          "symbol": "renderer_borrows_nonclone_typed_payload_and_serializes_it_once",
           "form": "test",
-          "pins": "Fixed nested envelope-shaped input preserves exact pretty bytes, array order, Unicode and escaping; source review establishes owned-entry traversal and explicit sorting."
+          "kind": "assertion",
+          "pins": "A non-clone typed payload is borrowed and serialized once; its public scalar facts are checked independently. This does not measure allocation or residency."
         }
       ]
     },
@@ -1041,7 +1042,7 @@
       "title": "ordinary_small",
       "subject": {
         "kind": "allocation",
-        "owner": "fresh shipped controller",
+        "owner": "historical JSON controller",
         "backing": null
       },
       "quantity": {
@@ -1051,7 +1052,7 @@
         "limit": null,
         "behavior": "Host reply bytes; client stdout 13,428 bytes; final envelope 32,056 bytes. Sampled maximum resident 6,766,592 bytes and physical footprint 1,573,200 bytes; 36 successful samples over 52,777,333 ns, starting 1,310,875\u20132,938,375 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Historical JSON/base64 control measurement; unavailable as prototype evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1070,7 +1071,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Historical JSON-control receipt validation only; no typed/binary prototype measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
       ]
     },
@@ -1080,7 +1081,7 @@
       "title": "independent_query",
       "subject": {
         "kind": "allocation",
-        "owner": "fresh shipped controller",
+        "owner": "historical JSON controller",
         "backing": null
       },
       "quantity": {
@@ -1090,7 +1091,7 @@
         "limit": null,
         "behavior": "Host reply bytes; client stdout 2,435,594 bytes; final envelope 4,737,776 bytes. Sampled maximum resident 32,784,384 bytes and physical footprint 27,378,048 bytes; 132 successful samples over 180,653,250 ns, starting 1,345,041\u20131,511,667 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Historical JSON/base64 control measurement; unavailable as prototype evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1109,7 +1110,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Historical JSON-control receipt validation only; no typed/binary prototype measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
       ]
     },
@@ -1119,7 +1120,7 @@
       "title": "eight_phase_maximum",
       "subject": {
         "kind": "allocation",
-        "owner": "fresh shipped controller",
+        "owner": "historical JSON controller",
         "backing": null
       },
       "quantity": {
@@ -1129,7 +1130,7 @@
         "limit": null,
         "behavior": "Host reply bytes; client stdout 2,441,354 bytes; final envelope 4,751,566 bytes. Sampled maximum resident 32,882,688 bytes and physical footprint 27,476,352 bytes; 144 successful samples over 195,090,375 ns, starting 1,115,000\u20131,470,625 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Historical JSON/base64 control measurement; unavailable as prototype evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1148,7 +1149,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Historical JSON-control receipt validation only; no typed/binary prototype measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
       ]
     },
@@ -1158,7 +1159,7 @@
       "title": "actor_maximum",
       "subject": {
         "kind": "allocation",
-        "owner": "fresh shipped controller",
+        "owner": "historical JSON controller",
         "backing": null
       },
       "quantity": {
@@ -1168,7 +1169,7 @@
         "limit": null,
         "behavior": "Host reply bytes; client stdout 805,324 bytes; final envelope 1,904,251 bytes. Sampled maximum resident 21,577,728 bytes and physical footprint 16,138,624 bytes; 290 successful samples over 419,666,542 ns, starting 1,230,500\u20132,019,083 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Historical JSON/base64 control measurement; unavailable as prototype evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1187,7 +1188,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Historical JSON-control receipt validation only; no typed/binary prototype measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
       ]
     },
@@ -1197,7 +1198,7 @@
       "title": "control_character_exec",
       "subject": {
         "kind": "allocation",
-        "owner": "fresh shipped controller",
+        "owner": "historical JSON controller",
         "backing": null
       },
       "quantity": {
@@ -1207,7 +1208,7 @@
         "limit": null,
         "behavior": "Host reply bytes; client stdout 12,656,146 bytes; final envelope 22,740,137 bytes. Sampled maximum resident 91,095,040 bytes and physical footprint 85,737,928 bytes; 572 successful samples over 780,180,041 ns, starting 1,107,416\u20131,567,709 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Historical JSON/base64 control measurement; unavailable as prototype evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1226,7 +1227,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Historical JSON-control receipt validation only; no typed/binary prototype measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
         }
       ]
     },
@@ -1246,7 +1247,7 @@
         "limit": null,
         "behavior": "Logical evidence-plus-authority backing capacity, counted once; separate private custody 524,288 bytes. Issuer authority requested 132,736 bytes, worker mapped 147,456 bytes; subject requested 264,320 bytes, mapped 278,528 bytes. Observed page size 16,384 bytes explains padding. These are capacities/view lengths, not reply bytes or measured residency."
       },
-      "conditions": "Actor maximum response workload; distinct backing per actor. Source geometry and native worker mapping metadata corroborate each other.",
+      "conditions": "Historical JSON response workload geometry; no fresh prototype memory observation. Actor maximum response workload; distinct backing per actor. Source geometry and native worker mapping metadata corroborate each other.",
       "interval": {
         "starts": "actor setup",
         "ends": "owner-specific teardown",

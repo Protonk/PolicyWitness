@@ -156,7 +156,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 6
-    static let responseSchema: Int = 27
-    static let runnerProtocol: Int = 3
+    static let responseSchema: Int = 28
+    static let runnerProtocol: Int = 4
 }
 // END GENERATED CONTRACT VERSIONS

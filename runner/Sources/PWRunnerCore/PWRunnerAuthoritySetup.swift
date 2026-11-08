@@ -21,9 +21,9 @@ struct PWAuthorityCleanupReference: Codable, Equatable {
     var name: String
     var host_pid: Int
     var session_nonce: UInt64
+    /// A receipt cannot establish identity after name reuse. No automatic unlink is authorized.
     var recovery_state: String = "unresolved_manual"
     // END GENERATED PORCELAIN PWAuthorityCleanupReference
-    /// A receipt cannot establish identity after name reuse. No automatic unlink is authorized.
 }
 struct PWRunnerAuthorityScope: Codable, Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerAuthorityScope

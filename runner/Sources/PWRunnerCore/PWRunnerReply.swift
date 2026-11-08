@@ -116,14 +116,14 @@ struct PWRunnerPhaseResult: Codable {
     var ordering: PWRunnerOrdering?
     var validator_subprocess: PWRunnerValidatorSubprocess?
     var validator_spawn_failure: PWRunnerSpawnFailure?
+    /// Actor form: the activated actor and its 1-based visit ordinal, and the
+    /// host-measured intervals of the visit.
     var actor_id: String? = nil
     var actor_visit: Int? = nil
     var visit_timing: PWRunnerVisitTiming? = nil
     var termination_gate: PWRunnerTerminationGate? = nil
     var activation_observation: PWRunnerActorActivation? = nil
     // END GENERATED PORCELAIN PWRunnerPhaseResult
-    /// Actor form: the activated actor and its 1-based visit ordinal, and the
-    /// host-measured intervals of the visit.
 
     var collectionEvidenceConsistent: Bool {
         let disposition = ordering?.validator_disposition
@@ -151,9 +151,9 @@ struct PWRunnerPhaseResult: Codable {
 private enum RetiredProfileKey: String, CodingKey { case applied_profile }
 
 struct PWRunnerRunResult: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerRunResult
     // Response wire version. Semantic decoding and encoding accept exactly
     // PWContract.responseSchema; docs/CONTRACT.md, "Supported versions".
-    // BEGIN GENERATED PORCELAIN PWRunnerRunResult
     var schema_version: Int
     var specimen_id: String
     var run_kind: String?
@@ -162,6 +162,8 @@ struct PWRunnerRunResult: Codable {
     var error: String?
     var pid: Int
     var bundle_id: String?
+    /// The legacy form's policy format and hash; absent for the actor form,
+    /// whose actors carry their own.
     var policy_format: String?
     var policy_sha256: String?
     var compiled_profile: CompiledProfileCapture?
@@ -174,6 +176,7 @@ struct PWRunnerRunResult: Codable {
     var extension_events: [PWRunnerExtensionEvent]?
     var test_overrides: PWRunnerTestOverrides?
     var reporting_failure: PWRunnerReportingFailure?
+    /// `single_worker` or `actors`; emitted from the integrated actor contract.
     var execution_form: String?
     var actors: [PWRunnerActorResult]?
     var transfers: [PWRunnerTransferRecord]?
@@ -185,9 +188,6 @@ struct PWRunnerRunResult: Codable {
     var equipment_entitlements: [PWRunnerEquipmentEntitlements]?
     var authority_setup: PWRunnerAuthoritySetup?
     // END GENERATED PORCELAIN PWRunnerRunResult
-    /// The legacy form's policy format and hash; absent for the actor form,
-    /// whose actors carry their own.
-    /// `single_worker` or `actors`; emitted from the integrated actor contract.
 
     init(
         schema_version: Int = PWContract.responseSchema,

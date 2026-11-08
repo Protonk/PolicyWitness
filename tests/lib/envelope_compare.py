@@ -178,7 +178,7 @@ def classify(path, candidate, baseline):
     return client_argument_class(path, candidate, baseline) if path.startswith('data.runner_client.argv[') else None
 
 
-def compare(candidate_dir, baseline_dir, *, across_builds=False, expect_identity=None):
+def compare(candidate_dir, baseline_dir, *, across_builds=False, expect_identity=None, allow_fixture_json=False):
     report = dict(candidate=str(candidate_dir), baseline=str(baseline_dir), across_builds=across_builds,
                   expect_identity=expect_identity, fixtures={}, ok=True)
     for fixture in sorted(FIXTURES.glob('*.json')):
@@ -188,7 +188,7 @@ def compare(candidate_dir, baseline_dir, *, across_builds=False, expect_identity
         for side, directory in (('candidate', candidate_dir), ('baseline', baseline_dir)):
             try:
                 documents[side] = json.loads((Path(directory) / f'{name}.json').read_text())
-                entry['validation'][side] = consumer.validate(documents[side])
+                entry['validation'][side] = consumer.validate(documents[side], allow_fixture_json=allow_fixture_json)
             except (OSError, ValueError) as error:
                 entry['validation'][side] = [f'unreadable envelope: {error}']
         if any(entry['validation'].values()) or len(documents) != 2:
@@ -236,13 +236,14 @@ def main():
     comparer.add_argument('--out', type=Path, required=True)
     comparer.add_argument('--across-builds', action='store_true')
     comparer.add_argument('--expect-identity')
+    comparer.add_argument('--authored-json-fixture', action='store_true', help='admit authored JSON host-byte controls only')
     args = parser.parse_args()
     if args.mode == 'run':
         results = run_fixtures(args.app.resolve(), args.out.resolve())
         print(json.dumps(results, indent=2))
         return 0
     report = compare(args.candidate.resolve(), args.baseline.resolve(), across_builds=args.across_builds,
-                     expect_identity=args.expect_identity)
+                     expect_identity=args.expect_identity, allow_fixture_json=args.authored_json_fixture)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2) + '\n')
     summary = {name: dict(ok=e['ok'], validation=e['validation'], explained=len(e['explained']),

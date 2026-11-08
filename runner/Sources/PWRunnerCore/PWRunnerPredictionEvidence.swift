@@ -2,10 +2,10 @@ import Foundation
 import Darwin
 
 struct PWRunnerSandboxCheckResult: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerSandboxCheckResult
     /// Result provenance. See the "Worker evidence contract" in
     /// tests/FAILURE-PROPAGATION-CONTRACT.md for native returns versus PW
     /// status and missing reasons.
-    // BEGIN GENERATED PORCELAIN PWRunnerSandboxCheckResult
     var result_source: String? = nil
     var native_rc: Int? = nil
     var missing_reason: String? = nil
@@ -178,9 +178,9 @@ struct PWValidatorAssociationIssue: Codable {
 /// evidence, independently retained even when association/transport/cleanup fails.
 /// A null-ID record is never assigned an invented step identity.
 struct PWRunnerValidatorSubprocess: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerValidatorSubprocess
     /// The phase this collection served, stamped by the host from the
     /// collection it ran. Readers require agreement with the containing phase.
-    // BEGIN GENERATED PORCELAIN PWRunnerValidatorSubprocess
     var phase_id: String?
     var ordinal: Int?
     var pid: Int
@@ -199,9 +199,9 @@ struct PWRunnerValidatorSubprocess: Codable {
     var records: [ValidatorVerdict]?
     var expected_step_ids: [String]?
     var association_issues: [PWValidatorAssociationIssue]?
+    /// The measured exit-grace wait after collection closed.
     var exit_grace_wait: PWHostWait? = nil
     // END GENERATED PORCELAIN PWRunnerValidatorSubprocess
-    /// The measured exit-grace wait after collection closed.
 
     init(pid: Int, term_signal: Int? = nil, exit_code: Int? = nil) {
         self.pid = pid

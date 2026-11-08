@@ -88,7 +88,9 @@ class Reader:
                         result[name] = None
                 result['same_as_input'] = same
             for name, condition in meta.get('conditional_null', {}).items():
-                if condition in result and result[condition] is not None and name not in result:
+                if result.get(condition) is None:
+                    result.pop(name, None)
+                elif name not in result:
                     result[name] = None
         elif shape in ('list', 'map'):
             count, cursor = self.number(start, stop, 4)

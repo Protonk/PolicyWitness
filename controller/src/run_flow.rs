@@ -11,6 +11,7 @@
 
 use serde::Serialize;
 use serde_json::Value;
+#[cfg(test)]
 use serde_json::json;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -20,14 +21,14 @@ use crate::augments::{AugmentResolution, resolve_augments};
 use crate::cli;
 #[cfg(test)]
 use crate::disposition::{RunnerExecutionDiagnostics, execution_diagnostics};
-use crate::porcelain_admission::{self, TypedRunnerExecutionDiagnostics};
-use crate::porcelain_records::{PWRunnerRunResult, PWRunnerRequestFailure};
 use crate::dossier::{
     AppProvenance, Augmentation, Binaries, HostFacts, Imports, PolicyDossier, Specimen,
 };
 use crate::evidence::{self, EvidenceManifest};
 use crate::json_contract;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
+use crate::porcelain_admission::{self, TypedRunnerExecutionDiagnostics};
+use crate::porcelain_records::{PWRunnerRequestFailure, PWRunnerRunResult};
 use crate::request_patch::{RequestError, parse_request, validate_request_version};
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
@@ -165,28 +166,51 @@ impl ReplyRecord for PWRunnerRunResult {
             return ReplyVersion::Unsupported(self.schema_version.into());
         }
         match porcelain_admission::admission_problem(self) {
-            Some(problem) => ReplyVersion::Malformed(problem), None => ReplyVersion::Supported,
+            Some(problem) => ReplyVersion::Malformed(problem),
+            None => ReplyVersion::Supported,
         }
     }
-    fn outcome(&self) -> &str { &self.normalized_outcome }
-    fn error(&self) -> Option<&str> { self.error.as_deref() }
-    fn request_failure(&self) -> Option<RequestFailureProjection> {
-        self.request_failure.clone().map(RequestFailureProjection::Runner)
+    fn outcome(&self) -> &str {
+        &self.normalized_outcome
     }
-    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics { porcelain_admission::execution_diagnostics(reply) }
+    fn error(&self) -> Option<&str> {
+        self.error.as_deref()
+    }
+    fn request_failure(&self) -> Option<RequestFailureProjection> {
+        self.request_failure
+            .clone()
+            .map(RequestFailureProjection::Runner)
+    }
+    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics {
+        porcelain_admission::execution_diagnostics(reply)
+    }
 }
 #[cfg(test)]
 impl ReplyRecord for Value {
     type Diagnostics = RunnerExecutionDiagnostics;
-    fn version(&self) -> ReplyVersion { legacy_reply_version(self) }
-    fn outcome(&self) -> &str { self.get("normalized_outcome").and_then(Value::as_str).unwrap_or("runner_output_not_json") }
-    fn error(&self) -> Option<&str> { self.get("error").and_then(Value::as_str) }
-    fn request_failure(&self) -> Option<RequestFailureProjection> {
-        self.get("request_failure").cloned().map(RequestFailureProjection::Comparison)
+    fn version(&self) -> ReplyVersion {
+        legacy_reply_version(self)
     }
-    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics { execution_diagnostics(reply) }
+    fn outcome(&self) -> &str {
+        self.get("normalized_outcome")
+            .and_then(Value::as_str)
+            .unwrap_or("runner_output_not_json")
+    }
+    fn error(&self) -> Option<&str> {
+        self.get("error").and_then(Value::as_str)
+    }
+    fn request_failure(&self) -> Option<RequestFailureProjection> {
+        self.get("request_failure")
+            .cloned()
+            .map(RequestFailureProjection::Comparison)
+    }
+    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics {
+        execution_diagnostics(reply)
+    }
 }
-pub(crate) fn reply_version<R: ReplyRecord>(reply: &R) -> ReplyVersion { reply.version() }
+pub(crate) fn reply_version<R: ReplyRecord>(reply: &R) -> ReplyVersion {
+    reply.version()
+}
 
 /// The dossier and any execution records available before reply admission.
 fn execution_only<R: ReplyRecord>(
@@ -414,7 +438,10 @@ pub(crate) enum ReplyAdmission {
     Admitted,
 }
 
-pub(crate) fn admit_reply<R: ReplyRecord>(client: &RunnerClientRun, reply: Option<&R>) -> ReplyAdmission {
+pub(crate) fn admit_reply<R: ReplyRecord>(
+    client: &RunnerClientRun,
+    reply: Option<&R>,
+) -> ReplyAdmission {
     if let Some(error) = client
         .request_delivery
         .as_ref()
@@ -442,7 +469,9 @@ pub(crate) fn admit_reply<R: ReplyRecord>(client: &RunnerClientRun, reply: Optio
 }
 
 fn runner_outcome<R: ReplyRecord>(reply: Option<&R>) -> &str {
-    reply.map(ReplyRecord::outcome).unwrap_or("runner_output_not_json")
+    reply
+        .map(ReplyRecord::outcome)
+        .unwrap_or("runner_output_not_json")
 }
 
 /// The independent fallback compilation, requested only for an admitted
@@ -840,11 +869,7 @@ fn complete_execution<R: ReplyRecord>(mut data: ExecutionData<R>) -> CompletedEx
     let client_output = data.runner_client.as_ref().map(|c| &c.output);
     let error = if ok {
         None
-    } else if let Some(v) = data
-        .runner_result
-        .as_ref()
-        .and_then(ReplyRecord::error)
-    {
+    } else if let Some(v) = data.runner_result.as_ref().and_then(ReplyRecord::error) {
         Some(v.to_string())
     } else if let Some(v) = client_output.and_then(|o| o.stdout_capture_error.as_ref()) {
         Some(v.clone())
@@ -865,7 +890,9 @@ fn complete_execution<R: ReplyRecord>(mut data: ExecutionData<R>) -> CompletedEx
     }
 }
 
-fn execution_envelope<R: ReplyRecord>(execution: CompletedExecution<R>) -> (json_contract::JsonResult, RunData<R>, i32) {
+fn execution_envelope<R: ReplyRecord>(
+    execution: CompletedExecution<R>,
+) -> (json_contract::JsonResult, RunData<R>, i32) {
     let data = RunData {
         execution: execution.data,
         runner_sandbox_diagnostics: Some(execution.diagnostics),
@@ -879,7 +906,50 @@ mod tests {
     use crate::disposition::integrity_issue;
     use crate::reply_fixtures::*;
     use crate::utils::{JsonOutputCapture, RequestDelivery};
+    #[cfg(test)]
     use serde_json::json;
+
+    #[test]
+    fn typed_completion_preserves_native_failure_beside_finished_summary() {
+        // Authored JSON is fixture input only; production receives binary records.
+        let mut reply: PWRunnerRunResult = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/ordinary_phase_reply.json"
+        ))
+        .unwrap();
+        reply.schema_version = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
+        reply.steps[0].attempt.rc = -1;
+        reply.steps[0].attempt.errno = Some(1);
+        reply.steps[0].attempt.outcome = "open_failed".into();
+        let data = ExecutionData::<PWRunnerRunResult> {
+            specimen: specimen(),
+            policy_check: None,
+            actor_policy_checks: None,
+            timeout_ms: Some(DEFAULT_TIMEOUT_MS),
+            runner_client: None,
+            runner_result: Some(reply.clone()),
+            request_failure: None,
+        };
+        let execution = complete_execution(data);
+        assert_eq!(execution.exit_code, 0);
+        assert!(execution.result.ok);
+        assert_eq!(
+            execution.data.runner_result.as_ref().unwrap().steps[0]
+                .attempt
+                .rc,
+            -1
+        );
+        let (result, data, code) = execution_envelope(execution);
+        let public: Value =
+            serde_json::from_str(&json_contract::render_envelope("run", result, &data).unwrap())
+                .unwrap();
+        assert_eq!(code, 0);
+        assert_eq!(
+            public["data"]["runner_result"]["steps"][0]["attempt"]["errno"],
+            1
+        );
+        assert_eq!(public["result"]["normalized_outcome"], "finished");
+        assert_eq!(data.execution.runner_result, Some(reply));
+    }
 
     /// Fixed host facts for constructed execution envelopes.
     fn host() -> HostFacts {
@@ -1160,7 +1230,7 @@ mod tests {
             }
             let mut child = Command::new("/usr/bin/python3").args(["-B", "-c", r#"import json,sys
 sys.path.insert(0,sys.argv[1])
-from consumer import validate,lifecycle
+from consumer import validate_fixture as validate,lifecycle
 from lifecycle_oracle import check_record
 from blackbox import recapture_host_reply
 e=json.load(sys.stdin); errors=validate(e); assert not errors,errors
@@ -1341,7 +1411,7 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
 import json, sys
 from copy import deepcopy
 sys.path.insert(0, sys.argv[1])
-from consumer import validate, validate_shape, REPLY_SHAPE
+from consumer import validate_fixture as validate, validate_shape, REPLY_SHAPE
 for control in json.load(sys.stdin):
     errors = validate(control['reply'])
     assert (not errors) == control['accepted'], (control['name'], errors)
@@ -1481,7 +1551,7 @@ for control in json.load(sys.stdin):
                     "-c",
                     r#"import json,sys
 sys.path.insert(0,sys.argv[1])
-from consumer import validate,lifecycle
+from consumer import validate_fixture as validate,lifecycle
 from lifecycle_oracle import check_record
 e=json.load(sys.stdin); errors=validate(e); assert not errors,errors
 errors=check_record(e); assert not errors,errors
@@ -1714,7 +1784,7 @@ else:
         assert!(wire["data"]["runner_result"].is_null());
         assert_eq!(
             wire["data"]["runner_client"]["transport"],
-            retained_transport.unwrap()
+            serde_json::to_value(retained_transport.unwrap()).unwrap()
         );
         assert_eq!(wire["data"]["runner_client"]["submission"], "unknown");
         assert_eq!(
@@ -3350,7 +3420,9 @@ else:
                             error: Some("constructed".into()),
                         }),
                         output: capture(crate::utils::RUNNER_CAPTURE_BYTES),
-                        transport: Some(crate::runner_client::test_shape_capture()),
+                        transport: Some(crate::runner_client::TransportCapture::Legacy(
+                            crate::runner_client::test_shape_capture(),
+                        )),
                         transport_admission: "accepted".into(),
                         transport_error: Some("constructed".into()),
                         submission: "invoked".into(),

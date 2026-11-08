@@ -297,7 +297,7 @@
           "checks": [
             {
               "path": "controller/src/runner_client.rs",
-              "symbol": "path_wire_fixtures_survive_capture_serialization_and_independent_consumer",
+              "symbol": "independent_binary_records_reach_typed_storage_without_text_conversion",
               "form": "test"
             },
             {
@@ -638,8 +638,8 @@
           "from": "controller",
           "to": "client",
           "kind": "spawn",
-          "label": "spawn once; held request on stdin, read to EOF; versioned client capture on stdout",
-          "short": "spawn; stdin, stdout",
+          "label": "spawn once; held request JSON on stdin to EOF; binary typed client capture on stdout",
+          "short": "request JSON; binary capture",
           "sources": [
             {
               "path": "controller/src/runner_client.rs",
@@ -647,13 +647,17 @@
             },
             {
               "path": "runner/Clients/PWRunnerClient/main.swift",
-              "symbol": "readToEnd"
+              "symbol": "emit"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "parse_runner_client_output"
             }
           ],
           "checks": [
             {
               "path": "controller/src/runner_client.rs",
-              "symbol": "path_wire_fixtures_survive_capture_serialization_and_independent_consumer",
+              "symbol": "independent_binary_records_reach_typed_storage_without_text_conversion",
               "form": "test"
             },
             {
@@ -668,8 +672,8 @@
           "from": "client",
           "to": "host",
           "kind": "channel",
-          "label": "effect-free NSXPC reservation, then one runReservedSpecimen call and its reply",
-          "short": "NSXPC reservation and submission",
+          "label": "effect-free reservation, then one runReservedSpecimen call; request JSON and binary typed host reply",
+          "short": "reserve; invoke; binary reply",
           "sources": [
             {
               "path": "runner/Clients/PWRunnerClient/PWRunnerClientSession.swift",
@@ -682,6 +686,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
               "symbol": "authorizedCaller"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "pwRunnerPorcelainReplyData"
             }
           ],
           "checks": [
@@ -1129,6 +1137,13 @@
             "evidence_manifest",
             "runner_registry"
           ]
+        },
+        {
+          "id": "client_side",
+          "label": "client",
+          "nodes": [
+            "client_capture"
+          ]
         }
       ],
       "nodes": [
@@ -1292,28 +1307,32 @@
           "kind": "record",
           "facts": {
             "Owner": "the host",
-            "Form": "response schema; shape golden"
+            "Form": "schema-owned Swift fields; typed reporting admission; bounded binary frame with schema fingerprint"
           },
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
-              "symbol": "PWRunnerRunResult"
+              "symbol": "validateForReporting"
             },
             {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
-              "symbol": "PWContract"
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "pwRunnerPorcelainReplyData"
+            },
+            {
+              "path": "docs/generate_porcelain.py",
+              "symbol": "wire_identity"
             }
           ],
           "checks": [
             {
-              "path": "runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift",
-              "symbol": "replyShapeDocuments",
+              "path": "runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift",
+              "symbol": "runReplyFailureTests",
               "form": "test"
             },
             {
-              "path": "tests/fixtures/contract/response_shape.json",
-              "symbol": "schema_version",
-              "form": "control"
+              "path": "tests/suites/source_drift/porcelain_codec.py",
+              "symbol": "test_actual_reply_schema_preserves_conflicting_observations",
+              "form": "test"
             }
           ]
         },
@@ -1349,13 +1368,9 @@
           "kind": "record",
           "facts": {
             "Owner": "the controller",
-            "Form": "envelope frame; shape golden"
+            "Form": "public JSON envelope rendered from borrowed typed capture, reply and diagnostic records before stdout"
           },
           "sources": [
-            {
-              "path": "controller/src/json_contract.rs",
-              "symbol": "SCHEMA_VERSION"
-            },
             {
               "path": "controller/src/json_contract.rs",
               "symbol": "render_envelope"
@@ -1363,12 +1378,16 @@
             {
               "path": "controller/src/run_flow.rs",
               "symbol": "complete_execution"
+            },
+            {
+              "path": "controller/src/porcelain_admission.rs",
+              "symbol": "execution_diagnostics"
             }
           ],
           "checks": [
             {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "envelope_shape_golden_agrees_with_the_manifest",
+              "path": "controller/src/json_contract.rs",
+              "symbol": "renderer_borrows_nonclone_typed_payload_and_serializes_it_once",
               "form": "test"
             }
           ]
@@ -1590,6 +1609,41 @@
             }
           ],
           "note": "Constructed setup trailer cells establish independently published cleanup eligibility before a terminal decision and malformed-cell rejection. Native authority exercises separately observe mapped regions and symbol bits; this is not exhaustive apparatus-failure coverage. Scheduler controls preserve application observed during cleanup after setup expiry, retain healthy actor progress after another setup failure, and distinguish natural termination-gate completion from later cleanup. These observations do not infer unobserved application."
+        },
+        {
+          "id": "client_capture",
+          "label": "binary client capture",
+          "kind": "record",
+          "facts": {
+            "Owner": "client records transport; controller owns admitted typed capture or exact rejected bytes",
+            "Form": "binary frame; retained host bytes remain opaque to the client; base64 appears only in public JSON"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+              "symbol": "PWRunnerReplyCapture"
+            },
+            {
+              "path": "runner/Clients/PWRunnerClient/main.swift",
+              "symbol": "emit"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "TransportCapture"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "independent_binary_records_reach_typed_storage_without_text_conversion",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "malformed_capture_keeps_exact_bytes_and_no_recovered_submission",
+              "form": "test"
+            }
+          ]
         }
       ],
       "edges": [
@@ -1903,37 +1957,24 @@
         {
           "id": "B7",
           "from": "reply",
-          "to": "envelope",
+          "to": "client_capture",
           "kind": "guard",
-          "label": "exact response version; disposition validated and projected; reply retained unread when refused",
-          "short": "exact version; projection",
+          "label": "typed reporting gate; binary encoding with rich and minimal failure paths; exact retained host bytes",
+          "short": "typed admission; binary capture",
           "sources": [
             {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "reply_version"
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "pwRunnerReportData"
             },
             {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "complete_execution"
-            },
-            {
-              "path": "controller/src/disposition.rs",
-              "symbol": "execution_diagnostics"
-            },
-            {
-              "path": "controller/src/disposition.rs",
-              "symbol": "validate_disposition"
+              "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+              "symbol": "PWRunnerReplyCapture"
             }
           ],
           "checks": [
             {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "reply_versions_are_gated_exactly",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/blackbox_e2e/disposition_controls.py",
-              "symbol": "rust_wrapper_controls",
+              "path": "runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift",
+              "symbol": "runReplyFailureTests",
               "form": "test"
             }
           ]
@@ -2250,6 +2291,46 @@
             }
           ],
           "note": "Constructed setup trailer cells establish independently published cleanup eligibility before a terminal decision and malformed-cell rejection. Native authority exercises separately observe mapped regions and symbol bits; this is not exhaustive apparatus-failure coverage. Scheduler controls preserve application observed during cleanup after setup expiry, retain healthy actor progress after another setup failure, and distinguish natural termination-gate completion from later cleanup. These observations do not infer unobserved application."
+        },
+        {
+          "id": "B24",
+          "from": "client_capture",
+          "to": "envelope",
+          "kind": "guard",
+          "label": "bounded binary decode and exact versions; typed coherence checks; rejected bytes retained; JSON projection borrows records",
+          "short": "decode; typed checks; JSON",
+          "sources": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "parse_runner_client_output"
+            },
+            {
+              "path": "controller/src/porcelain_admission.rs",
+              "symbol": "admit_reply"
+            },
+            {
+              "path": "controller/src/json_contract.rs",
+              "symbol": "render_envelope"
+            }
+          ],
+          "checks": [
+            {
+              "path": "controller/src/runner_client.rs",
+              "symbol": "independent_binary_records_reach_typed_storage_without_text_conversion",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/porcelain_admission.rs",
+              "symbol": "typed_degradation_never_certifies_surviving_comparison",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/json_contract.rs",
+              "symbol": "renderer_borrows_nonclone_typed_payload_and_serializes_it_once",
+              "form": "test"
+            }
+          ],
+          "note": "Converted coherence checks govern certification; unconverted scopes retain observations and withhold aggregate certification."
         }
       ]
     },
@@ -2277,7 +2358,8 @@
             "prose_baseline",
             "build_json",
             "build_baseline",
-            "footprint_json"
+            "footprint_json",
+            "porcelain_json"
           ]
         },
         {
@@ -2291,7 +2373,8 @@
             "gen_common",
             "gen_build",
             "markdown_reader",
-            "gen_footprint"
+            "gen_footprint",
+            "gen_porcelain"
           ]
         },
         {
@@ -2329,7 +2412,8 @@
             "cli_rs",
             "identity_sources",
             "meson_build",
-            "suites"
+            "suites",
+            "porcelain_records"
           ]
         },
         {
@@ -3666,6 +3750,69 @@
             {
               "path": "tests/suites/source_drift/footprint.py",
               "symbol": "test_stale_refusal_and_no_check_writes",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "porcelain_json",
+          "label": "docs/porcelain.json",
+          "kind": "manifest",
+          "facts": {
+            "Owns": "converted record fields, tags, primitive kinds and public presence rules"
+          },
+          "sources": [
+            {
+              "path": "docs/generate_porcelain.py",
+              "symbol": "wire_identity"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/porcelain_codec.py",
+              "symbol": "test_comment_only_change_preserves_wire_fingerprint_and_codecs",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "gen_porcelain",
+          "label": "generate_porcelain.py",
+          "kind": "generator",
+          "facts": {
+            "Owns": "Swift stored-field regions, Swift writers, Rust records/readers and Python structural tables"
+          },
+          "sources": [
+            {
+              "path": "docs/generate_porcelain.py",
+              "symbol": "outputs"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/porcelain_codec.py",
+              "symbol": "test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "porcelain_records",
+          "label": "generated typed records and tables",
+          "kind": "source",
+          "facts": {
+            "Carries": "binary structure shared by producers and readers; semantic checks remain authored"
+          },
+          "sources": [
+            {
+              "path": "docs/generate_porcelain.py",
+              "symbol": "OUTPUTS"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/porcelain_codec.py",
+              "symbol": "test_literal_invalid_ids_variants_and_cycles_do_not_write",
               "form": "test"
             }
           ]
@@ -5319,6 +5466,69 @@
             {
               "path": "tests/suites/source_drift/generators.py",
               "symbol": "test_build_checks_every_generator_before_signing",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D78",
+          "from": "porcelain_json",
+          "to": "gen_porcelain",
+          "kind": "reads",
+          "label": "record schema and presentation rules",
+          "short": "record schema and presentation rules",
+          "sources": [
+            {
+              "path": "docs/generate_porcelain.py",
+              "symbol": "wire_identity"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/porcelain_codec.py",
+              "symbol": "test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D79",
+          "from": "gen_porcelain",
+          "to": "porcelain_records",
+          "kind": "writes",
+          "label": "stored fields and typed codecs",
+          "short": "stored fields and typed codecs",
+          "sources": [
+            {
+              "path": "docs/generate_porcelain.py",
+              "symbol": "outputs"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/porcelain_codec.py",
+              "symbol": "test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D80",
+          "from": "build",
+          "to": "gen_porcelain",
+          "kind": "checks",
+          "label": "refuse stale outputs before compilation",
+          "short": "refuse stale outputs before compilation",
+          "sources": [
+            {
+              "path": "docs/generate_porcelain.py",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/porcelain_codec.py",
+              "symbol": "test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused",
               "form": "test"
             }
           ]

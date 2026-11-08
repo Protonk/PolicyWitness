@@ -54,7 +54,7 @@ def main():
         report_path = directory / 'comparison.json'
         process = subprocess.run(
             [sys.executable, '-B', '-S', str(COMPARER), 'compare', str(directory / 'candidate'),
-             str(directory / 'baseline'), '--out', str(report_path), *options],
+             str(directory / 'baseline'), '--authored-json-fixture', '--out', str(report_path), *options],
             text=True, capture_output=True, timeout=30)
         (directory / 'stdout.txt').write_text(process.stdout)
         (directory / 'stderr.txt').write_text(process.stderr)

@@ -92,7 +92,7 @@ func runClientSessionControls() throws -> Int {
         let bytes = Data([0, 255, 10, 13])
         current.submissionReply?(true, bytes)
         try check(f.frame.terminal == "runner_reply", "result admitted as bytes")
-        try check(Data(base64Encoded: f.frame.runner_reply!.data_base64) == bytes, "exact original host bytes")
+        try check(f.frame.runner_reply!.data == bytes, "exact original host bytes")
         current.fail(); old.fail(); f.advance(30_000)
         try check(f.frames.count == 1 && f.connections.count == 2, "no later replay")
     }

@@ -13,6 +13,7 @@ import uuid
 
 import contract
 import porcelain
+import porcelain_schema
 
 REPLY_BYTES = 92 * 1024 * 1024
 U64_MAX = 2**64 - 1
@@ -316,6 +317,51 @@ def validate_capture(value):
     return errors
 
 
+def _raw_rejection(value, client, errors):
+    """Validate the receipt wrapper without admitting anything inside its bytes."""
+    if set(value) != {'format', 'data_base64'} or value.get('format') != 'porcelain':
+        errors.append('rejected raw capture requires exactly format=porcelain and data_base64')
+    encoded = value.get('data_base64')
+    raw = None
+    if not isinstance(encoded, str):
+        errors.append('rejected raw capture data_base64 is not a string')
+    else:
+        try:
+            raw = base64.b64decode(encoded, validate=True)
+            if base64.b64encode(raw).decode('ascii') != encoded:
+                errors.append('rejected raw capture base64 is not canonical')
+        except (ValueError, binascii.Error):
+            errors.append('rejected raw capture base64 is malformed')
+    received, retained, cap = (client.get(name) for name in
+                             ('stdout_bytes_received', 'stdout_bytes_retained', 'capture_limit_bytes'))
+    counts = (_integer(received) and _integer(retained) and _integer(cap, 1)
+              and retained == min(received, cap))
+    if not counts or raw is None or not raw or len(raw) != retained:
+        errors.append('rejected raw capture bytes disagree with received/retained counts')
+    truncated = client.get('stdout_truncated')
+    if type(truncated) is not bool or (counts and truncated != (retained < received)):
+        errors.append('rejected raw capture truncation disagrees with counts')
+    complete = (counts and raw is not None and len(raw) == retained == received
+                and truncated is False and client.get('stdout_capture_error') is None)
+    return raw, complete
+
+
+def _raw_rejection_admission(raw):
+    """Independent structure/version classification; decoded claims never escape."""
+    if (len(raw) <= porcelain.MAX_BYTES and len(raw) >= 36 and raw[:4] == b'PWP1'
+            and raw[4:36] != bytes.fromhex(porcelain_schema.SCHEMA_FINGERPRINT)):
+        # The version gate precedes payload interpretation, just as on admitted
+        # captures. A plausible body cannot change an unsupported fingerprint.
+        return 'unsupported', ['unsupported porcelain schema fingerprint']
+    try:
+        decoded = porcelain.decode(raw, 'capture')
+    except ValueError as error:
+        return 'malformed', ['malformed porcelain capture: ' + str(error)]
+    capture_errors = validate_capture(decoded)
+    return ('unsupported' if capture_errors and capture_errors[0].startswith('unsupported ')
+            else 'malformed' if capture_errors else 'accepted'), capture_errors
+
+
 def validate_client(client, runner, *, allow_fixture_json=False):
     """Check controller admission/projection without interpreting rejected bodies."""
     if client is None:
@@ -337,11 +383,19 @@ def validate_client(client, runner, *, allow_fixture_json=False):
         elif delivery.get('error') is not None:
             delivery_failed = True
     capture = client.get('transport')
+    if not allow_fixture_json and capture is None and _integer(client.get('stdout_bytes_retained'), 1):
+        errors.append('received retained client bytes require a raw rejection or admitted capture')
+    raw_rejected = isinstance(capture, dict) and ('format' in capture or 'data_base64' in capture)
+    raw, complete_raw = _raw_rejection(capture, client, errors) if raw_rejected else (None, False)
     outer_failed = (client.get('stdout_truncated') is True or
                     client.get('stdout_parse_error') is not None or
                     client.get('stdout_capture_error') is not None)
     if delivery_failed:
         expected, capture_errors = 'delivery_failed', []
+    elif raw_rejected:
+        expected, capture_errors = (_raw_rejection_admission(raw) if complete_raw else ('malformed', []))
+        if expected == 'accepted':
+            errors.append('complete valid capture cannot be represented as rejected raw bytes')
     elif outer_failed:
         expected, capture_errors = 'malformed', []
         if capture is not None:
@@ -364,11 +418,11 @@ def validate_client(client, runner, *, allow_fixture_json=False):
             errors.append('accepted runner client capture carries an admission error')
     elif not isinstance(diagnostic, str) or not diagnostic:
         errors.append('rejected runner client capture lacks an admission error')
-    projection = capture['submission']['state'] if expected == 'accepted' else 'unknown'
+    projection = capture['submission']['state'] if expected == 'accepted' and not raw_rejected else 'unknown'
     if client.get('submission') != projection:
         errors.append('runner client submission projection requires admitted complete capture')
     reply_error = client.get('runner_reply_error')
-    if expected != 'accepted':
+    if expected != 'accepted' or raw_rejected:
         if runner is not None or reply_error is not None:
             errors.append('rejected client capture cannot supply host result or host-byte diagnostics')
         return errors

@@ -187,7 +187,7 @@
         },
         {
           "id": "porcelain_codec",
-          "description": "Independent binary reader rejects malformed widths, kinds, tags, counts, ordering, schema fingerprints and depth while preserving optionality and raw bytes",
+          "description": "Independent binary reader preserves observations and rejects malformed wire values; generator refuses malformed schemas and late output faults without writes, and one-sided regeneration is detected",
           "requires": []
         }
       ]
@@ -1998,6 +1998,18 @@
             "witness_contract/footprint_observer_controls",
             "witness_contract/response_footprint_controls"
           ]
+        },
+        {
+          "id": "porcelain_output_controls",
+          "description": "Experimental typed-reply pipeline: complete dense read-only public output and nonzero incomplete documents after closing stdout at fixed prefixes",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/porcelain_output_controls.sh"
+          ],
+          "requires": [
+            "app"
+          ],
+          "default": false
         },
         {
           "id": "held_phase_footprint_controls",

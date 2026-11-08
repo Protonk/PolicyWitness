@@ -378,7 +378,7 @@
     }
   },
   "sandboxed_after_apply": true,
-  "schema_version": 27,
+  "schema_version": 28,
   "specimen_id": "M01",
   "steps": [
     {

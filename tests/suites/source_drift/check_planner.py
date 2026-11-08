@@ -302,7 +302,8 @@ def meson_scenarios(repo):
     client_line = "    pwrunner_contract, files('runner/Clients/PWRunnerClient/main.swift', 'runner/Clients/PWRunnerClient/PWRunnerClientSession.swift'),"
     assert original.count(client_line) == 1, 'fixture requires the explicit client contract boundary'
     client_without_coding = [
-        'PWRunnerAPI', 'PWRunnerTransport', 'PWRunnerRequest', 'PWRunnerExtension',
+        'PWRunnerAPI', 'PWPorcelain', 'PWPorcelainRecords',
+        'PWRunnerTransport', 'PWRunnerRequest', 'PWRunnerExtension',
         'PWRunnerActors', 'PWRunnerEquipment', 'PWRunnerAuthoritySetup',
         'PWRunnerPathEvidence', 'PWRunnerAttemptEvidence', 'PWRunnerPredictionEvidence',
         'PWRunnerStepEvidence', 'PWRunnerLifecycleEvidence', 'PWRunnerDisposition',

@@ -65,7 +65,7 @@ def compile_worker(out, body):
 
 def driver(package, out, lifecycle, expected):
     meta = command(out / 'driver', ['/usr/bin/env', 'PW_LIFECYCLE_WORKER_FIXTURE=' + str(lifecycle),
-        '/usr/bin/xcrun', 'swift', 'run', '--package-path', package, 'PWRunnerCoreTests'], timeout=180, check=False)
+        '/usr/bin/xcrun', 'swift', 'run', '--jobs', '2', '--package-path', package, 'PWRunnerCoreTests'], timeout=180, check=False)
     log = (out / 'driver/stdout').read_text() + (out / 'driver/stderr').read_text()
     assert 'SKIP' not in log, log
     if expected:
@@ -118,7 +118,7 @@ def build_host(package, work, out):
     # Follow the production source inventory; the reader has already refused divergence from the tree.
     sources, entry = meson_host_sources(out)
     host = work / 'PWRunner'
-    command(out / 'compile-host', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-Onone', '-g',
+    command(out / 'compile-host', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-j', '2', '-Onone', '-g',
         '-module-cache-path', work / 'module-cache', '-o', host,
         *[package / p for p in sources], package / entry, *objects], timeout=180)
     return host

@@ -188,7 +188,7 @@ func runReservationAdmissionTests(_ tk: TestKit) {
                 try expectEqual(captured.bytes_received, n)
                 try expectEqual(captured.bytes_retained, min(n, 96_468_992))
                 try expectEqual(captured.truncated, n > 96_468_992)
-                try expectEqual(Data(base64Encoded: captured.data_base64)?.count, min(n, 96_468_992))
+                try expectEqual(captured.data.count, min(n, 96_468_992))
             }
             try expectTrue(try maximalReplyEncodedSize() < 96_468_992, "normal maximum must fit retained reply bytes")
             // Escapable ASCII uses six JSON bytes per retained UTF8 byte. This
@@ -212,7 +212,7 @@ func runReservationAdmissionTests(_ tk: TestKit) {
             frame.runner_reply = PWRunnerReplyCapture(Data(repeating: 0xff, count: 96_468_992))
             frame.submission = PWRunnerSubmission(state: "invoked", invoked_elapsed_ms: UInt64.max)
             let encoded = try pwRunnerEncodeClientCapture(frame)
-            try expectTrue(encoded.count + 1 < 152 * 1024 * 1024, "max capture plus newline fits public stdout frame")
+            try expectTrue(encoded.count + 1 < 152 * 1024 * 1024, "max binary capture fits stdout frame")
         }
     }
 }

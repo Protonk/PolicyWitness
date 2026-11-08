@@ -16,13 +16,13 @@ import consumer
 from blackbox import validate_run_shape, validate_step
 
 
-def validate_run(run, step_id, operation, filter_value, attempt_contract):
+def validate_run(run, step_id, operation, filter_value, attempt_contract, *, allow_fixture_json=False):
     expected = {"step_id": step_id, "sandbox_outcome": "prediction_unavailable"}
     if attempt_contract == "sysctl_denied":
         expected["attempt_ok"] = False
     if attempt_contract == "mach_lookup_allowed":
         expected["attempt_ok"] = True
-    errors, matched = validate_run_shape(run, [expected], policy_format="sbpl")
+    errors, matched = validate_run_shape(run, [expected], policy_format="sbpl", allow_fixture_json=allow_fixture_json)
     for step, exp in matched:
         errors.extend(validate_step(step, exp))
         sb = step.get("sandbox_check")
@@ -89,6 +89,7 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run", type=Path)
+    parser.add_argument("--authored-json-fixture", action="store_true", help="admit authored JSON host-byte controls only")
     parser.add_argument("--step-id", required=True)
     parser.add_argument("--operation", required=True)
     parser.add_argument("--filter-value", required=True)
@@ -99,7 +100,7 @@ def main():
     except (OSError, ValueError) as exc:
         print(f"cannot read run JSON: {exc}", file=sys.stderr)
         return 1
-    errors = validate_run(run, args.step_id, args.operation, args.filter_value, args.attempt)
+    errors = validate_run(run, args.step_id, args.operation, args.filter_value, args.attempt, allow_fixture_json=args.authored_json_fixture)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

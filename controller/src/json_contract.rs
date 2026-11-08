@@ -2,23 +2,23 @@
 //! prints (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
 //! `data`). `policy-witness` uses this file as a module; `sbpl-check`
 //! includes it by `#[path]`, so one frame
-//! and one version (`SCHEMA_VERSION`) cover the family. Keys are sorted so
-//! envelopes are stable for diffing and hashing.
+//! and one version (`SCHEMA_VERSION`) cover the family. The frame and generated
+//! record projections emit deterministic fields without a semantic JSON tree.
 
 use serde::Serialize;
-use serde_json::Value;
 #[cfg(test)]
 use serde_json::Map;
+use serde_json::Value;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-pub const SCHEMA_VERSION: u32 = 12;
+pub const SCHEMA_VERSION: u32 = 13;
 /// The accepted request contract, independent of implementation revisions.
 pub const REQUEST_SCHEMA_VERSION: u32 = 6;
 /// The one runner response schema this controller reads; any other version is refused.
-pub const RESPONSE_SCHEMA_VERSION: u32 = 27;
+pub const RESPONSE_SCHEMA_VERSION: u32 = 28;
 /// Required reservation RPC and client capture protocol.
-pub const RUNNER_PROTOCOL_VERSION: u32 = 3;
+pub const RUNNER_PROTOCOL_VERSION: u32 = 4;
 // END GENERATED CONTRACT VERSIONS
 
 /// Test-only scalar observations. No payload, address, or borrowed owner is retained.
@@ -187,21 +187,29 @@ pub fn render_envelope<T: Serialize>(
     data: &T,
 ) -> Result<String, String> {
     let envelope = Envelope {
-        build: build_stamp(), data, generated_at_unix_ms: now_unix_ms(),
-        kind, result, schema_version: SCHEMA_VERSION,
+        build: build_stamp(),
+        data,
+        generated_at_unix_ms: now_unix_ms(),
+        kind,
+        result,
+        schema_version: SCHEMA_VERSION,
     };
     #[cfg(test)]
     footprint_test::record(footprint_test::Summary {
         stage: Some(footprint_test::Stage::EnvelopeConstructionSorting),
-        borrowed_input: true, envelope: true, ..Default::default()
+        borrowed_input: true,
+        envelope: true,
+        ..Default::default()
     });
     let text = serde_json::to_string_pretty(&envelope)
         .map_err(|e| format!("failed to encode JSON: {e}"))?;
     #[cfg(test)]
     footprint_test::record(footprint_test::Summary {
         stage: Some(footprint_test::Stage::FinalRendering),
-        borrowed_input: true, envelope: true,
-        rendered: Some((text.len(), text.capacity())), ..Default::default()
+        borrowed_input: true,
+        envelope: true,
+        rendered: Some((text.len(), text.capacity())),
+        ..Default::default()
     });
     Ok(text)
 }
@@ -232,6 +240,31 @@ mod tests {
             stderr: None,
             stdout: None,
         }
+    }
+
+    #[test]
+    fn renderer_borrows_nonclone_typed_payload_and_serializes_it_once() {
+        use std::cell::Cell;
+        struct Payload<'a> {
+            calls: &'a Cell<u32>,
+        }
+        impl Serialize for Payload<'_> {
+            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                use serde::ser::SerializeStruct;
+                self.calls.set(self.calls.get() + 1);
+                let mut record = serializer.serialize_struct("Payload", 2)?;
+                record.serialize_field("native_rc", &-1i64)?;
+                record.serialize_field("published", &false)?;
+                record.end()
+            }
+        }
+        let calls = Cell::new(0);
+        let payload = Payload { calls: &calls };
+        let text = render_envelope("typed_fixture", result_ok(), &payload).unwrap();
+        assert_eq!(calls.get(), 1);
+        let public: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(public["data"]["native_rc"], -1);
+        assert_eq!(public["data"]["published"], false);
     }
 
     #[test]

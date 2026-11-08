@@ -126,7 +126,9 @@ struct PWRunnerActorResult: Codable {
     var index: Int
     var mode: String
     var policy_format: String?
+    /// Host hash of the submitted (controller-resolved) source bytes.
     var policy_sha256: String?
+    /// The worker's own hash of the bytes it read before compiling, when published.
     var policy_received_sha256: String?
     var setup_status: String
     var applied: Bool?
@@ -139,8 +141,6 @@ struct PWRunnerActorResult: Codable {
     var application: PWRunnerActorApplication? = nil
     var owned_reap: PWOwnedReapObservation? = nil
     // END GENERATED PORCELAIN PWRunnerActorResult
-    /// Host hash of the submitted (controller-resolved) source bytes.
-    /// The worker's own hash of the bytes it read before compiling, when published.
 }
 
 /// Token, delivery and handle tables, keyed by the request's references.
@@ -234,7 +234,7 @@ struct PWRunnerTransferRecord: Codable {
     var source_acknowledged: Bool
     var status: String
     var lifecycle: PWAttemptLifecycle?
+    /// The host's wait for the recipient's acknowledgement, when a copy was made.
     var recipient_wait: PWHostWait?
     // END GENERATED PORCELAIN PWRunnerTransferRecord
-    /// The host's wait for the recipient's acknowledgement, when a copy was made.
 }

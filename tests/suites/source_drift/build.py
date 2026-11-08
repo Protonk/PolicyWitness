@@ -373,6 +373,35 @@ class BuildDocumentationTests(receipts.TestCase):
                 self.assertEqual(moved, [p for p in paths if p != 'Contents/MacOS/sbpl-check'])
                 self.assertEqual(moved_services, services)
 
+    def test_swift_driver_job_cap_reaches_both_shipped_targets(self):
+        """Source controls pin each driver cap; native receipts own executed commands."""
+        original = (ROOT / 'meson.build').read_text()
+        cap = "swift_flags = ['-j', '1', '-module-cache-path',"
+        targets = ('pw-runner-client', 'PWRunner')
+
+        def problems(text):
+            failures = []
+            if text.count(cap) != 1:
+                failures.append('Swift driver job cap')
+            for target in targets:
+                blocks = re.findall(r"executable\('" + re.escape(target)
+                    + r"',\n(.*?)override_options: executable_options\)", text, re.S)
+                if len(blocks) != 1 or not re.search(r'^\s*swift_args: swift_flags,$', blocks[0], re.M):
+                    failures.append(target)
+            return failures
+
+        self.assertEqual(problems(original), [])
+        for replacement in ("swift_flags = ['-module-cache-path',", "swift_flags = ['-j', '2', '-module-cache-path',"):
+            changed = self.mutated(cap, replacement, text=original)
+            self.assertEqual(problems(changed), ['Swift driver job cap'])
+        for target in targets:
+            start = original.index("executable('" + target + "',")
+            end = original.index('override_options: executable_options)', start)
+            block = original[start:end]
+            self.assertEqual(block.count('swift_args: swift_flags,'), 1)
+            changed = original[:start] + block.replace('swift_args: swift_flags,', 'swift_args: [],') + original[end:]
+            self.assertEqual(problems(changed), [target])
+
     def test_meson_makefile_inventory_and_baseline_mutations_are_named(self):
         manifest = generator.load_manifest(ROOT / generator.MANIFEST_NAME, ROOT)
         model = generator.parse_script(SCRIPT)

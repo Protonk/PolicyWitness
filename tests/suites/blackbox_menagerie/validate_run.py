@@ -8,10 +8,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib"))
 from blackbox import validate_run_shape, validate_step
 
 
-def validate_run(expected_steps, run_data):
+def validate_run(expected_steps, run_data, *, allow_fixture_json=False):
     errors, matched = validate_run_shape(
         run_data, expected_steps, require_sandboxed_after_apply=True,
-        require_policy_sha256=True,
+        require_policy_sha256=True, allow_fixture_json=allow_fixture_json,
     )
     mismatch_notes = []
     pending_skips = []
@@ -67,12 +67,16 @@ def validate_run(expected_steps, run_data):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("usage: validate_run.py <run.json> <expected.json>", file=sys.stderr)
+    args = sys.argv[1:]
+    fixture = bool(args and args[0] == "--authored-json-fixture")
+    if fixture:
+        args = args[1:]
+    if len(args) != 2:
+        print("usage: validate_run.py [--authored-json-fixture] <run.json> <expected.json>", file=sys.stderr)
         return 2
-    run = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    expected = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-    status, message = validate_run(expected["steps"], run)
+    run = json.loads(Path(args[0]).read_text(encoding="utf-8"))
+    expected = json.loads(Path(args[1]).read_text(encoding="utf-8"))
+    status, message = validate_run(expected["steps"], run, allow_fixture_json=fixture)
     print(message)
     return status
 

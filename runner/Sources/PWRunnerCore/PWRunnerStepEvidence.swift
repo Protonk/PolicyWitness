@@ -61,12 +61,12 @@ struct PWRunnerStepResult: Codable {
     var step_id: String
     var sandbox_check: PWRunnerSandboxCheckResult
     var attempt: PWRunnerAttemptResult
-    var comparison: PWRunnerComparison?
-    var actor_id: String?
-    // END GENERATED PORCELAIN PWRunnerStepResult
     /// Present on every step of an ordinary reply; withheld by a
     /// `runner_reporting_failed` reply.
+    var comparison: PWRunnerComparison?
     /// Actor form: the actor whose process ran this step.
+    var actor_id: String?
+    // END GENERATED PORCELAIN PWRunnerStepResult
 
     init(
         step_id: String,
@@ -124,10 +124,10 @@ struct PWRunnerOrdering: Codable {
     var proceed_set: Bool
     var proceed_observed: Bool
     var validator_disposition: String
+    /// Ownership through acknowledgement, not the eventual cleanup outcome.
     var worker_lifetime_established: Bool
     var protocol_violations: [String]
     // END GENERATED PORCELAIN PWRunnerOrdering
-    /// Ownership through acknowledgement, not the eventual cleanup outcome.
 
     var chainEstablished: Bool {
         collection_closed_before_proceed && proceed_set && proceed_observed

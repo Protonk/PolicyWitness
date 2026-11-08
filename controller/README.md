@@ -120,7 +120,7 @@ evidence. The built-in selection control uses an app root without an Info.plist.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 27, controller envelope 12, runner protocol 3. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 28, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
@@ -138,15 +138,24 @@ attempts, submission decision, structured transport errors and exact host reply
 bytes. Client-reported host identity is not an independently observed kernel
 generation. Capture admission precedes host-response admission. Missing,
 truncated, malformed or unsupported capture leaves submission unknown.
-`runner_result` contains only a received parsed host reply; client failures do
+`runner_result` contains only a received typed host reply; client failures do
 not manufacture one. `runner verify` uses this same path and admission order.
+
+The experimental response transport uses the schema in
+[porcelain.json](../docs/porcelain.json). Generated records hold owned strings,
+bytes and collections; binary reception and semantic admission are separate.
+The public JSON projection borrows those records. Original host bytes remain in
+the capture and become base64 only at this output boundary. A rejected client
+frame retains its exact bounded bytes in a `format: "porcelain"` capture;
+it supplies no submission claim. Authored JSON response decoders are test-only
+comparison controls.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
 received/retained byte counts. Each stream retains at
 most <!-- span limits.controller_output.binary -->272 MiB<!-- /span -->;
 full output is collected first, so this is not a streaming allocation bound.
 `stdout_capture_error` identifies prefix loss and `stdout_parse_error` malformed
-untruncated JSON/UTF-8. Accepted stdin writes prove neither client reads nor XPC
+untruncated binary framing or an unsupported fingerprint. Accepted stdin writes prove neither client reads nor XPC
 delivery. Capture is null when the client was not invoked.
 
 `data.policy_check` is an independent compilation report, available only on the
@@ -163,10 +172,17 @@ the minimal reply when evidence-preserving serialization also failed.
 [`complete_execution`](src/run_flow.rs) derives CLI status from the admitted
 runner outcome and preserves the reply unchanged. `execution_envelope` assembles
 the dossier, transport, acquisition history, independent fallback compilation
-and execution diagnostics. [disposition.rs](src/disposition.rs) validates the
-carried worker disposition against supporting facts before projecting
+and execution diagnostics. [porcelain_admission.rs](src/porcelain_admission.rs)
+validates the carried worker disposition against supporting facts before projecting
 `process_disposition`, `termination_cause`, `stop_reason`,
 `disposition_integrity` and `disposition_issues`.
+
+This prototype admits the ordinary order and lifecycle slice. Explicit
+`unconverted_scope` issues withhold aggregate claims for actor setup/equipment,
+authority settlement and fresh-I/O/exec families whose full semantic checks
+have not migrated. Scope-only withholding has integrity `unestablished`;
+contradictory evidence has integrity `invalid`. Raw observations remain present.
+The generic disposition and actor readers survive as test comparison controls.
 
 Worker identity comes only from `runner_subprocess.pid`; a host or client PID
 is never a fallback. The client's start/end timestamps remain raw execution
