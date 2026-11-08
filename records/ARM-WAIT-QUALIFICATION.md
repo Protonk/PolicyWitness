@@ -79,3 +79,16 @@ All raw evidence will be dispatcher-owned, gitignored and available only in the
 local checkout. Builds/native trials remain serial, compiler concurrency at
 most two, initial trials at most two busy processes, with announced bounded
 windows and independent owned cleanup.
+
+## First-use screen implementation bounds
+
+The screen uses a 500 ms child-owned cutoff. The supervisor observes the live
+generation and CPU before go and after a silent interval of at least 150 ms,
+then sleeps another 400 ms without child inspection or publication. Completion
+must be recorded by the child within 550 ms of its start, with the second
+endpoint before completion. All 64 retained first instruction brackets and
+aggregate pass/max-span counters are required. The eight-second supervisor
+watchdog plus three-second cleanup reserve fit within a prepared, announced
+180-second window for twelve children. The setup can wait at the identity gate
+for five minutes; no native child executes before release. These bounds screen
+applicability and do not replace the integrated 2 ms response criterion.

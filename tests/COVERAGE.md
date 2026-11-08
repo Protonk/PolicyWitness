@@ -60,6 +60,15 @@ decoder stage. Opt-in `run_effects/aftermath_footprint` inventories repeated
 completion and held post-invocation timeout paths before harness interventions,
 with independent required-worker exit observations.
 
+`witness_contract/worker_wait_cpu_controls` separately validates the
+mechanism-neutral held-CPU reader with both busy and quiet constructed workers;
+generation, effects, interval and sensitivity remain required. The original
+busy-worker checker still refuses a quiet worker. Opt-in
+`runner_c_worker_harness/arm_wait` observes first explicit post-apply WFE/WFET,
+a silent interval and autonomous cutoff; its default `arm_wait_controls`
+rejects missing instruction, application, generation, cutoff and reap evidence.
+This screen supplies no integrated protocol, deployment or resource-benefit claim.
+
 Default scalar/ledger controls first accept valid constructed evidence, then
 reject missing boundaries, incorrect counts, units, ownership and false absence.
 The native observer controls separately establish acknowledged live sensitivity

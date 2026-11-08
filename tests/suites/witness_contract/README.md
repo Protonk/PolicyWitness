@@ -21,6 +21,16 @@ disposable signed host fixture. Busy and sleeping controls calibrate observable
 CPU increments. The case requires complete repeated observations; it establishes
 neither idle waiting nor a universal CPU threshold.
 
+`check_wait_measurement` is the mechanism-neutral counterpart: it retains the
+same held-generation, effects, sampling, sleep and busy/sleep sensitivity checks
+without requiring worker CPU to exceed the sleeping control. The default
+`worker_wait_cpu_controls` accepts a constructed quiet worker and refuses bad
+generation, missing effects, native errors, early release and invalid intervals.
+The existing `check_measurement` and live `held_phase_footprint` case retain
+their busy-worker requirement and historical meaning. Neither reader by itself
+establishes a matched improvement or converts artificial holds into production
+hold durations.
+
 The opt-in `response_footprint` case samples fresh shipped controllers handling a
 small known-byte read, the fixed-action independent-query and phased pair, the
 control-character exec workload and the existing actor maximum read workload.

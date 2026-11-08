@@ -1007,6 +1007,30 @@
             "bash",
             "tests/suites/runner_c_worker_harness/opt_in/native_pause.sh"
           ]
+        },
+        {
+          "id": "arm_wait_controls",
+          "description": "Independent ARM first-use screen oracle rejects missing progress, generation, cutoff and reap evidence",
+          "requires": [],
+          "command": [
+            "bash",
+            "tests/suites/runner_c_worker_harness/arm_wait_controls.sh"
+          ]
+        },
+        {
+          "id": "arm_wait",
+          "default": false,
+          "description": "Gated first post-apply WFE or WFET screen in fresh children with silent interval, autonomous cutoff, generation and owned reap; no deployment credit",
+          "requires": [
+            "clang"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_c_worker_harness/opt_in/arm_wait.sh"
+          ],
+          "depends_on": [
+            "runner_c_worker_harness/arm_wait_controls"
+          ]
         }
       ]
     },
@@ -2005,6 +2029,15 @@
           "default": true
         },
         {
+          "id": "worker_wait_cpu_controls",
+          "description": "Mechanism-neutral held CPU reader permits quiet workers while retaining generation, effect, interval and sensitivity checks and the historical busy oracle",
+          "requires": [],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/worker_wait_cpu_controls.sh"
+          ]
+        },
+        {
           "id": "held_phase_footprint",
           "description": "Matched live CPU observations across ordinary and actor holds, including extension custody and independent ending observations",
           "command": [
@@ -2331,6 +2364,7 @@
         "witness_contract/path_query_integrated",
         "runner_c_worker_harness/native_clock",
         "runner_c_worker_harness/native_pause",
+        "runner_c_worker_harness/arm_wait",
         "runner_exec_inheritance/launch_inventory",
         "runner_unit/host_setup_oracle_sensitivity",
         "runner_unit/reaped_ack_mutation",

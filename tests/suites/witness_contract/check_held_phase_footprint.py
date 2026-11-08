@@ -19,7 +19,8 @@ def save(path,value):
 def cpu(sample): return sample['user_ns']+sample['system_ns']
 
 
-def check_measurement(row):
+def check_wait_measurement(row):
+    """Mechanism-neutral evidence; worker idleness is neither required nor refused."""
     assert set(row)=={'version','name','repetition','multiplier','quantum_ns','hold_min_ns','requested_ns','ready','effects','before','after','clock_before','clock_after','roles','snapshot','release','actual_min_ns','deltas_ns','observer','conditions','held_generations'}
     assert row['version']==1 and row['repetition'] in range(3) and row['multiplier'] in (1,3)
     q=row['quantum_ns']; minimum=max(1_000_000_000,100*q)
@@ -56,7 +57,6 @@ def check_measurement(row):
         deltas.append(cpu(b)-cpu(a))
     assert row['deltas_ns']==deltas
     assert deltas[-3]>deltas[-2], 'busy CPU must exceed sleeping control'
-    assert all(delta>deltas[-2] for delta in deltas[:-5]), 'worker CPU must exceed sleeping control'
     assert row['observer']==dict(pid=pids[-1],delta_ns=deltas[-1],cadence_ns=row['conditions']['cadence_ns'])
     assert pids[-1]!=row['ready']['target_pid'], 'observer presented as worker'
     a,b=row['clock_before'],row['clock_after']
@@ -71,6 +71,13 @@ def check_measurement(row):
         assert {a['pid'] for a in row['snapshot']['actors']}==set(pids[:-5])
         assert row['snapshot']['actors'][row['snapshot']['active_actor']]['pid']==row['ready']['target_pid']
     else: assert row['name']=='ordinary'
+    return row
+
+
+def check_measurement(row):
+    """Historical busy-worker oracle; keep its original meaning and callers."""
+    check_wait_measurement(row)
+    assert all(delta>row['deltas_ns'][-2] for delta in row['deltas_ns'][:-5]), 'worker CPU must exceed sleeping control'
     return row
 
 

@@ -707,6 +707,24 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   control alone does not establish integrated live queries, order, responsiveness,
   CPU reduction or actual sleep/wake behavior.
 
+### ARM wait first-use screen
+
+- **Cases:** opt-in `runner_c_worker_harness/arm_wait` and default
+  `runner_c_worker_harness/arm_wait_controls`.
+- **Selection:** `PW_ARM_WAIT_GATE` names a fresh coordinator gate path;
+  `PW_ARM_WAIT_PRIMITIVE=wfe` (default) or `wfet` selects the instruction for
+  `tests/run.sh --case runner_c_worker_harness/arm_wait`. The case prepares
+  identities and waits up to five minutes for the token in `prepared.json`.
+- **Scope:** three fresh children per profile, no explicit pre-application wait
+  warm-up, one silent observation interval and a child-owned cutoff. The
+  supervisor owns and reaps each child; watchdog rescue fails the screen.
+  Logs are not an oracle. No live-query protocol, deployment, migration,
+  sleep/resume or resource-benefit credit follows from passing this screen.
+- **Artifacts:** source copies, platform/build/disassembly evidence, prepared
+  binary hash, raw receipts, ownership and finite-window receipts, independent
+  reader result. Quiet-worker CPU interpretation additionally requires the
+  neutral reader checked by `witness_contract/worker_wait_cpu_controls`.
+
 ### Worker wait pilot
 
 - **Cases:** opt-in `witness_contract/worker_wait_pilot` and default
