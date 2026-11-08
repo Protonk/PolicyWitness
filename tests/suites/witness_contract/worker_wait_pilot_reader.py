@@ -78,6 +78,14 @@ Interpretation rules, repeated in summary.json:
   181 of the same key and raw, refuses the trial.
 - A trial whose driver exit-watch registration overlapped a held interval is
   excluded (observer_overlap) and kept as a diagnostic.
+- final_wait counts ordinary key-1 sleeps/waits between the last release and
+  exit request, separating plain sleeps, timeouts, notifications and unusable
+  returns. Missing boundaries or incomplete/truncated sleep events withhold
+  counts; completion before an entered wait is a complete zero, not a notification.
+- terminal_to_reap and terminal_to_teardown use the bracketed terminal
+  publication directly. spawn_to_teardown runs from spawn return to the end of
+  ActorSession.tearDown (172). Teardown stamps locate cleanup program points,
+  not successful native deallocation or kernel resource absence.
 - A comparison run (schedule.json comparison) pairs a baseline and a candidate
   trial with the same cell, regime and repetition index when both are accepted
   under the same power source, low power mode and host flavour; any other
@@ -150,7 +158,7 @@ import statistics
 import struct
 import sys
 
-READER_VERSION = 10
+READER_VERSION = 11
 HERE = Path(__file__).resolve().parent
 
 # Worker stamp page; mirrors tests/fixtures/worker_wait/pww_stamp_page.h.
@@ -196,7 +204,8 @@ HOST_EVENTS = {100: 'request_start', 101: 'worker_spawned', 102: 'ready_observed
                154: 'custody_service_end', 155: 'transfer_wait_start', 156: 'transfer_wait_end',
                157: 'worker_grace_finished', 158: 'inbound_commit_begin', 159: 'inbound_committed',
                160: 'setup_done', 161: 'schedule_done',
-               170: 'stamp_page_copied', 171: 'flush_begin', 180: 'host_sleep_begin', 181: 'host_sleep_end',
+               170: 'stamp_page_copied', 171: 'flush_begin', 172: 'teardown_finished',
+               180: 'host_sleep_begin', 181: 'host_sleep_end',
                182: 'wait_outcome'}
 H = {name: code for code, name in HOST_EVENTS.items()}
 # Host events appended with a raw the caller read earlier (spawn return, custody pass start, sleep pre read).
@@ -565,6 +574,49 @@ def grace_counts(doc):
                                        settle_sleeps=settle, unrecorded=unrecorded))
 
 
+def final_wait_record(doc, layout):
+    """Ordinary key-1 waits after the final release and before exit request.
+
+    A prefix of the sleep trace cannot prove zero waits in this suffix. Withhold
+    the counts if any key-1 pair is missing, truncated or crosses its boundaries.
+    """
+    if layout['form'] != 'ordinary':
+        return dict(state='not_applicable')
+    events = doc['events']
+    releases = [e for e in events if e[0] == H['release_stored'] and e[1] == len(layout['phases']) - 1]
+    exits = [e for e in events if e[0] == H['exit_requested'] and e[1] == 0]
+    unknown = lambda reason: dict(state='unobserved', reason=reason)
+    if len(releases) != 1 or len(exits) != 1 or releases[0][3] > exits[0][3]:
+        return unknown('final_release_or_exit_boundary_missing_or_invalid')
+    register = (doc.get('sleeps') or {}).get('1')
+    if not isinstance(register, dict) or not _int(register.get('count')):
+        return unknown('sentinel_register_missing_or_invalid')
+    if register['count'] > SLEEP_EVENTS_PER_KEY:
+        return unknown('sentinel_events_truncated')
+    record = sleep_record(events)
+    pairs = record['pairs'].get('1', [])
+    if '1' in record['unpaired'] or len(pairs) != register['count']:
+        return unknown('sentinel_pairs_incomplete')
+    lo, hi = releases[0][3], exits[0][3]
+    counts = dict(plain_sleep=0, timed_out=0, notified=0, unusable=0)
+    for index, e in enumerate(events):
+        if e[0] != SLEEP_BEGIN or e[1] != 1:
+            continue
+        end = events[index + 1]
+        if end[3] <= lo or e[3] >= hi:
+            continue
+        if e[3] < lo or end[3] > hi:
+            return unknown('sentinel_pair_crosses_final_boundary')
+        follower = events[index + 2] if index + 2 < len(events) else None
+        if follower is not None and follower[0] == WAIT_OUTCOME:
+            if follower[1] != 1 or follower[3] != end[3] or follower[2] not in WAIT_OUTCOMES:
+                return unknown('final_wait_outcome_invalid')
+            counts[WAIT_OUTCOMES[follower[2]]] += 1
+        else:
+            counts['plain_sleep'] += 1
+    return dict(state='complete', waits=sum(counts.values()), **counts)
+
+
 def actor_intervals(doc, pages, interval):
     """Per actor: the worker's terminal publication to the host's exit request, that request to the host's reaping
     sample, and the grace wait between its program points (148, 157), all program-point intervals."""
@@ -573,11 +625,17 @@ def actor_intervals(doc, pages, interval):
         terminal = first(records(pages[actor]), W['terminal_published'])
         at = lambda name: (lambda e: point(e and e[3], 'host', name))(first(events, H[name], phase=actor))
         finished = first(events, H['worker_grace_finished'], phase=actor)
+        ev = records(pages[actor])
+        publication = published(ev, index_of(ev, W['terminal_published']), f'worker{actor}',
+                                WORKER_EVENTS, tuple(pages[actor]['timebase']))
         rows.append(dict(actor=actor,
                          terminal_to_exit_request=interval(point(terminal and terminal[3], f'worker{actor}', 'terminal_published'),
                                                            at('exit_requested'), missing='terminal_or_exit_request_unobserved'),
                          exit_request_to_reap=interval(at('exit_requested'), at('worker_reaped'), missing='exit_request_or_reap_unobserved'),
                          grace_wait=interval(at('worker_grace_begin'), at('worker_grace_finished'), missing='grace_not_stamped'),
+                         terminal_to_reap=interval(publication, at('worker_reaped'), missing='terminal_or_reap_unobserved'),
+                         terminal_to_teardown=interval(publication, at('teardown_finished'), missing='terminal_or_teardown_unobserved'),
+                         spawn_to_teardown=interval(at('worker_spawned'), at('teardown_finished'), missing='spawn_or_teardown_unobserved'),
                          grace_stop_code=finished and finished[2]))
     return rows
 
@@ -1280,6 +1338,7 @@ def evaluate_stamps(bundle, row, calibration):
     row['host_stamp_cost'] = (host_stamp_cost(doc, tb) if 'host_stamp_cost_malformed' not in problems
                               else dict(median_ns=None, unobserved='stamp_cost malformed'))
     row['custody_passes'] = doc.get('custody_passes')
+    row['final_wait'] = final_wait_record(doc, trial['layout'])
     counts = grace_counts(doc) if 'host_sleep_register_malformed' not in problems else None
     row.update(counts or {name: None for name in GRACE_COUNTS})
     if counts is None:
@@ -1533,7 +1592,15 @@ def aggregate(rows):
     scan = {actor: dict(inbound_count=sorted(entry.pop('inbound_count')),
                         **{name: dict(stats(values), sum=sum(values)) for name, values in entry.items()})
             for actor, entry in sorted(scan.items(), key=lambda item: int(item[0]))}
+    final = [r.get('final_wait') or dict(state='unobserved') for r in rows]
+    complete = [r for r in final if r['state'] == 'complete']
+    final_summary = dict(states={state: sum(r['state'] == state for r in final)
+                                 for state in ('complete', 'unobserved', 'not_applicable')},
+                         counts={name: sum(r[name] for r in complete)
+                                 for name in ('waits', 'plain_sleep', 'timed_out', 'notified', 'unusable')},
+                         trials_without_wait=sum(r['waits'] == 0 for r in complete))
     return dict(components=out, whole_request_ns=stats(whole), export_duration_ns=stats(exports), scan=scan,
+                final_wait=final_summary,
                 envelope_ms={k: stats(v) for k, v in sorted(envelope.items())},
                 waits={k: dict(passes=stats(v['passes']), mean_pass_period_ns=stats(v['periods']), unavailable=v['unavailable'],
                                period_definition=sorted(v['definitions']))
@@ -2117,6 +2184,11 @@ def markdown(summary):
                 f"{name} {value['sum']} (max per trial {value.get('max', '-')}"
                 + (f", unavailable {value['unavailable']}" if value['unavailable'] else '') + ')'
                 for name, value in group['grace_counts'].items()) + '.', '']
+        if group.get('final_wait'):
+            final = group['final_wait']
+            lines += [f"Final ordinary wait accounting: {final['states']}; "
+                      f"sums over complete trials {final['counts']}; "
+                      f"complete trials without an entered wait {final['trials_without_wait']}.", '']
         if group.get('scan'):
             lines += ['Inbound scan per actor, sum (median) over accepted trials: ' + '; '.join(
                 f"w{actor} inbound_count {'/'.join(map(str, value['inbound_count']))}: " + ', '.join(

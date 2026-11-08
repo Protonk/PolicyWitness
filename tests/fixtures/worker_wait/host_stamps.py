@@ -64,7 +64,7 @@ HOST_EVENTS = {
     148: 'WORKER_GRACE_BEGIN', 149: 'ACTIVATION_STORE_BEGIN', 150: 'ACTIVATION_STORED', 151: 'COLLECTION_START', 152: 'COLLECTION_END',
     153: 'CUSTODY_SERVICE_START', 154: 'CUSTODY_SERVICE_END', 155: 'TRANSFER_WAIT_START',
     156: 'TRANSFER_WAIT_END', 157: 'WORKER_GRACE_FINISHED', 160: 'SETUP_DONE', 161: 'SCHEDULE_DONE',
-    170: 'STAMP_PAGE_COPIED', 171: 'FLUSH_BEGIN',
+    170: 'STAMP_PAGE_COPIED', 171: 'FLUSH_BEGIN', 172: 'TEARDOWN_FINISHED',
     180: 'HOST_SLEEP_BEGIN', 181: 'HOST_SLEEP_END', 182: 'WAIT_OUTCOME',
 }
 SLEEP_KEYS = {
@@ -220,6 +220,9 @@ PATCHES = [
     _after(AS, '            graceEnd = "exhausted"\n', f'            HostStamps.shared.record(148, input.actorIndex, {_GRACE_END})\n'),
     _after(AS, '            graceWait = clock.record(stop: graceEnd)\n',
            f'            HostStamps.shared.record(157, input.actorIndex, {_GRACE_END})\n'),
+    # Program point after mapping/fd/spawn-state cleanup, not proof that each native operation succeeded.
+    _after(AS, '        if attributesInitialized { posix_spawnattr_destroy(&spawnAttributes); attributesInitialized = false }\n',
+           '        HostStamps.shared.record(172, input.actorIndex)\n'),
     # ActorScheduler: setup, schedule walk, activation/arrival/collection/completion, custody passes.
     _swap(SCH, '        var clock = HostWaitClock(milliseconds: input.setupAllowanceMs, pollNs: 1_000_000, calls: calls)\n',
           '        var clock = HostWaitClock(milliseconds: input.setupAllowanceMs, pollNs: 1_000_000, calls: calls, label: 2)\n'),

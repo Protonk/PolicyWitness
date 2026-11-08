@@ -209,7 +209,16 @@ sleep does, and a wait that returns early records an actual duration below the
 requested one. In a tree whose worker grace waits for the exit notification
 (`HostWaitClock.expiredAfterWaiting(exit:)`), a second optional patch records
 each such wait under key 5 with `HostStamps.wait`, which adds its outcome
-event. Custody passes in the actor completion
+event. The same patch records a final ordinary sentinel exit wait under key 1.
+The reader separates final key-1 waits after the last release and before the
+exit request; missing boundaries or a truncated trace leave that accounting
+unobserved. Plain sleeps and each native wait outcome stay distinct.
+Event 172 marks the end of session teardown, after its mapping, descriptor and
+spawn-state cleanup calls. Direct terminal-to-reap and terminal-to-teardown
+intervals retain the terminal publication bracket; spawn-to-teardown describes
+the host's session residence between program points. The teardown stamp does
+not establish that each native cleanup operation succeeded or that resources
+are absent from the kernel. Custody passes in the actor completion
 loop are registers; events 153/154 are appended only for passes that changed
 the custody or transfer record count.
 

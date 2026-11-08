@@ -389,12 +389,16 @@ def check_actor_intervals(row, grace=None):
     from 11.52 to 11.61 ms when stamped. Program points: worker floor 300, host max(300, 2 x 500), alignment 100."""
     (actor,) = row['actors']
     assert actor['actor'] == 0 and set(actor) == {'actor', 'terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait',
-                                                  'grace_stop_code'}, actor
+                                                  'grace_stop_code', 'terminal_to_reap', 'terminal_to_teardown',
+                                                  'spawn_to_teardown'}, actor
     values = lambda name: (actor[name]['ns'], actor[name]['uncertainty_ns'], actor[name]['cross_process'])
     assert values('terminal_to_exit_request') == (2_010_000, WORKER_FLOOR + HOST_FLOOR + ALIGN, True), actor
     assert actor['terminal_to_exit_request']['endpoints'] == [endpoint('worker0', 'terminal_published', None, 0),
                                                               endpoint('host', 'exit_requested', None, 0)]
     assert values('exit_request_to_reap') == (90_000, 2 * HOST_FLOOR, False), actor
+    assert values('terminal_to_reap') == (2_100_000, 100_000 + HOST_FLOOR + ALIGN, True), actor
+    assert actor['terminal_to_teardown'] == dict(ns=None, unobserved='terminal_or_teardown_unobserved')
+    assert actor['spawn_to_teardown'] == dict(ns=None, unobserved='spawn_or_teardown_unobserved')
     if grace is None:
         assert actor['grace_wait'] == dict(ns=None, unobserved='grace_not_stamped') and actor['grace_stop_code'] is None, actor
     else:
@@ -430,7 +434,7 @@ def check_actor_exits(row, plain):
                                             plain_sleeps=0, plain_sleeps_by_requested_ns={}, settle_sleeps=0, unrecorded=0), row['grace_wait_record']
     assert row['host_sleep_events'] == dict(state='complete', truncated_keys=[], pairs={'3': 4, '5': 2, '6': 2}), row['host_sleep_events']
     assert row['host_sleeps']['worker_grace']['event_durations_ns'] == [200_000, 10_050_000], row['host_sleeps']['worker_grace']
-    exit_names = {f'w{a}.{n}' for a in ACTOR_EXITS for n in ('terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait')}
+    exit_names = {f'w{a}.{n}' for a in ACTOR_EXITS for n in ('terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait', 'terminal_to_reap')}
     others = lambda r: {name: record['ns'] for name, record in reader.component_values(r) if name not in exit_names}
     assert exit_names <= {name for name, _ in reader.component_values(row)}
     assert others(row) == others(plain), {k: (v, others(plain).get(k)) for k, v in others(row).items() if v != others(plain).get(k)}
@@ -516,6 +520,46 @@ def grace_rule_controls():
     assert reader.wait_outcome_problems([[157, 1, 1, 10], [148, 1, 0, 10]]) == {'host_grace_interval_reversed'}
     return ['grace waits past 64 recorded pairs counted as timeouts', 'settle and poll sleeps without an outcome counted as timeouts by requested ns',
             'outcome and grace order rules on minimal exports']
+
+
+def final_wait_controls():
+    """Separate final waits from earlier ordinary sleeps; missing suffixes never establish zero work."""
+    layout = dict(form='ordinary', phases=[{}, {}])
+    events = [[180, 1, 2000000, 10], [181, 1, 2000000, 20], [141, 0, 1, 30],
+              [180, 1, 2000000, 40], [181, 1, 2000000, 50], [141, 1, 2, 60]]
+    for i, outcome in enumerate((None, 0, 1, 2)):
+        t = 70 + 20 * i
+        events += [[180, 1, 2000000, t], [181, 1, 2000000, t + 10]]
+        if outcome is not None:
+            events.append([182, 1, outcome, t + 10])
+    events.append([146, 0, 0, 200])
+    doc = dict(events=events, sleeps={'1': dict(count=6)})
+    assert reader.final_wait_record(doc, layout) == dict(state='complete', waits=4, plain_sleep=1, timed_out=1, notified=1, unusable=1)
+    before = dict(events=events[:6] + [[146, 0, 0, 200]], sleeps={'1': dict(count=2)})
+    assert reader.final_wait_record(before, layout) == dict(state='complete', waits=0, plain_sleep=0, timed_out=0, notified=0, unusable=0)
+    faults = []
+    missing = copy.deepcopy(doc); missing['events'] = [e for e in missing['events'] if e[0] != 146]; faults.append(missing)
+    missing = copy.deepcopy(doc); missing['events'] = [e for e in missing['events'] if not (e[0] == 141 and e[1] == 1)]; faults.append(missing)
+    missing = copy.deepcopy(doc); del missing['events'][6:8]; faults.append(missing)
+    missing = copy.deepcopy(doc); missing['sleeps']['1']['count'] = 65; faults.append(missing)
+    missing = copy.deepcopy(doc); missing['events'][6][3] = 59; faults.append(missing)
+    missing = copy.deepcopy(doc); next(e for e in missing['events'] if e[0] == 182)[2] = 3; faults.append(missing)
+    assert all(reader.final_wait_record(f, layout)['state'] == 'unobserved' for f in faults)
+    assert reader.final_wait_record(doc, dict(form='actors')) == dict(state='not_applicable')
+    # Direct terminal-to-reap carries the publication bracket, not the sum of other intervals.
+    base = ordinary_bundle()
+    end = [172, 0, 0, tk(10_000_000 + 11700)]
+    at = next(i for i, e in enumerate(base['stamps']['events']) if e[3] > end[3])
+    base['stamps']['events'].insert(at, end)
+    row = reader.evaluate_bundle(base, CALIBRATION)
+    assert row['status'] == 'accepted', row['problems']
+    actor = row['actors'][0]
+    assert (actor['terminal_to_teardown']['ns'], actor['terminal_to_teardown']['uncertainty_ns']) == (2_200_000, 101_100)
+    spawn = next(e[3] for e in base['stamps']['events'] if e[0] == 101)
+    assert actor['spawn_to_teardown']['ns'] == (end[3] - spawn) * 125 // 3
+    assert actor['spawn_to_teardown']['uncertainty_ns'] == 2000
+    return ['final-only wait outcomes and zero waits distinguished from incomplete suffixes',
+            'terminal-to-reap and teardown intervals retain publication brackets and independent endpoints']
 
 
 def move_grace_finished(raw_us):
@@ -1684,7 +1728,7 @@ def main(out):
     assert [(a['actor'], a['terminal_to_exit_request']['unobserved'], a['exit_request_to_reap']['unobserved']) for a in actor_row['actors']] == [
         (0, 'terminal_or_exit_request_unobserved', 'exit_request_or_reap_unobserved'),
         (1, 'terminal_or_exit_request_unobserved', 'exit_request_or_reap_unobserved')], actor_row['actors']
-    grace_controls = grace_rule_controls()
+    grace_controls = grace_rule_controls() + final_wait_controls()
     check_actor(reader.evaluate_bundle(copy.deepcopy(actor), CALIBRATION))
     check_actor_exits(reader.evaluate_bundle(actor_bundle(exits=True), CALIBRATION), actor_row)
     assert reader.evaluate_bundle(copy.deepcopy(neighbor), CALIBRATION)['status'] == 'accepted'
@@ -1751,7 +1795,7 @@ def main(out):
     decomposition, summary = reader.read_artifacts(root)
     assert summary['calibration_status'] == 'established' and summary['counts']['accepted'] == 4 and summary['counts']['excluded'] == 1, (
         summary['calibration_status'], summary['counts'])
-    assert decomposition['version'] == summary['version'] == 10
+    assert decomposition['version'] == summary['version'] == 11
     calibration = decomposition['calibration']
     term = resolution['readers']['busy']['endpoint_term_ns']
     assert calibration['stamp_ns'] == -(-resolution['stamp_ns'] // 1) and calibration['alignment_ns'] == resolution['alignment']['bound_ns']
