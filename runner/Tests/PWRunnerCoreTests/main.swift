@@ -84,6 +84,8 @@ runActorReplyTests(tk)
 runCWorkerLifecycleTests(tk)
 // Final sentinel notification, publication and owned reap remain distinct.
 runCWorkerFinalWaitTests(tk)
+// Initial resampling preserves application, ownership and fallback boundaries.
+runCWorkerInitialWaitTests(tk)
 // Host waits are elapsed monotonic allowances under a controlled clock, sleep
 // and readability wait, including the bounded re-sampling before a first sleep.
 runCWorkerClockTests(tk)

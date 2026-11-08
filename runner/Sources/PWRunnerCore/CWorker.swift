@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "6e8e46469c1ebf0677b799ad63adac5af20be68b20902e18450c5b6e70a8a9ba"
-    static let abiIdentity: [UInt8] = [0x6e, 0x8e, 0x46, 0x46, 0x9c, 0x1e, 0xbf, 0x06, 0x77, 0xb7, 0x99, 0xad, 0x63, 0xad, 0xac, 0x5a, 0xf2, 0x0b, 0xe6, 0x8b, 0x20, 0x90, 0x2e, 0x18, 0x45, 0x0c, 0x5b, 0x6e, 0x70, 0xa8, 0xa9, 0xba]
+    static let abiIdentityHex = "aaa8056c79c242fde5740449049246e3ed88facdc2c8efd143f6344c856da8e5"
+    static let abiIdentity: [UInt8] = [0xaa, 0xa8, 0x05, 0x6c, 0x79, 0xc2, 0x42, 0xfd, 0xe5, 0x74, 0x04, 0x49, 0x04, 0x92, 0x46, 0xe3, 0xed, 0x88, 0xfa, 0xcd, 0xc2, 0xc8, 0xef, 0xd1, 0x43, 0xf6, 0x34, 0x4c, 0x85, 0x6d, 0xa8, 0xe5]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -1155,6 +1155,9 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         // Set by a release store and cleared by the next wait, which re-samples
         // the next phase's arrival before its first sleep.
         var resampleArrival = false
+        // Readiness precedes application and first arrival. Give that answer
+        // one bounded opportunity before attaching a whole poll period to it.
+        var resampleInitialArrival = session.readyByteReceived
         polling: while true {
             passes += 1
             if !sawApplied && session.appliedObserved {
@@ -1236,6 +1239,14 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             }
             // done was read above: a publication observed as the allowance
             // runs out is done, not a deadline.
+            if resampleInitialArrival {
+                resampleInitialArrival = false
+                if nextPhase == 0 {
+                    if clock.expiredAfterResampling({ session.arrived(0) || session.doneObserved },
+                                                   budgetNs: HostWaitClock.resampleBudgetNs) { break }
+                    continue
+                }
+            }
             if resampleArrival && nextPhase < input.phases.count {
                 resampleArrival = false
                 if clock.expiredAfterResampling({ session.arrived(nextPhase) }, budgetNs: HostWaitClock.resampleBudgetNs) { break }

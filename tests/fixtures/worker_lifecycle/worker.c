@@ -106,6 +106,52 @@ int main(void) {
         }
         if (used == sizeof(mode) - 1) return 94;
     }
+    if (!strncmp(mode, "initial_wait_", 13)) {
+        char *gate = strchr(mode, '|');
+        if (!gate) return 99;
+        *gate++ = 0;
+        char marker[180];
+        alarm(5);
+        snprintf(marker, sizeof(marker), "%s.ready", gate);
+        int fd = open(marker, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd < 0) return 96;
+        close(fd);
+        if (strcmp(mode, "initial_wait_missing") && write(4, "R", 1) != 1) return 97;
+        while (access(gate, F_OK) != 0) {
+            if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) return 0;
+            usleep(1000);
+        }
+        int failure = !strcmp(mode, "initial_wait_failure");
+        int early_exit = !strcmp(mode, "initial_wait_exit");
+        pw_shm_phase_t *phase = &hdr->phases[0];
+        if (!early_exit) {
+            hdr->apply_rc = failure ? -1 : 0;
+            if (failure) atomic_store_explicit(&hdr->done, 1, memory_order_release);
+            else {
+                atomic_store_explicit(&hdr->applied, 1, memory_order_release);
+                atomic_store_explicit(&phase->arrived, 1, memory_order_release);
+            }
+        }
+        snprintf(marker, sizeof(marker), "%s.settled", gate);
+        fd = open(marker, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd < 0) return 96;
+        close(fd);
+        if (early_exit) return 17;
+        if (!failure) {
+            while (atomic_load_explicit(&hdr->proceed, memory_order_acquire) != 1) {
+                if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) return 0;
+                usleep(1000);
+            }
+            atomic_store_explicit(&phase->acknowledged, 1, memory_order_release);
+            atomic_store_explicit(&hdr->proceed_observed, 1, memory_order_release);
+            pw_shm_slot_t *slot = (void *)((char *)base + PW_SHM_HEADER_BYTES);
+            slot->rc = 0;
+            atomic_store_explicit(&slot->completed, 1, memory_order_release);
+            atomic_store_explicit(&phase->completed, 1, memory_order_release);
+            atomic_store_explicit(&hdr->done, 1, memory_order_release);
+        }
+        return 0;
+    }
     if (!strncmp(mode, "final_wait_", 11)) {
         /* Control the real final sentinel boundary with a filesystem gate.
          * This producer applies no policy. Publication, pipe close and exit
