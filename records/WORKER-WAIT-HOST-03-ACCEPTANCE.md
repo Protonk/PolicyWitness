@@ -196,7 +196,106 @@ Main checkout (readers):
 
 ## Results
 
-Pending the comparison window.
+Run `20261108T033212Z_afb24188` in `tests/out/runs/worker-wait-host03-compare-01`
+(gitignored, local checkout only). Announced quiet window of 240 s, of which
+73.7 s were used; AC power at 86 to 87 percent and charging, low power mode
+off, load average 2.7 to 5.2 at trial starts (the candidate's verification
+reruns had finished minutes before), no system sleep, no observer overlap, one
+counted clock inversion of 84 ns, no excluded trials. 120 trials accepted, 60
+matched pairs, none unpaired; five pairs in each of the twelve cell and regime
+groups. Actual gaps: `rapid` 12.8 to 20.9 ms, `idle` 1005.1 to 1005.5 ms.
+Calibration credited the instrument at a 291 ns endpoint term and 83 ns
+alignment bound. The staged instrumented builds, not production bytes, were
+host `62e77e70…` and worker `868ce273…` for the baseline and host `c96c3d90…`
+and worker `424030b4…` for the candidate; the exit-wait patch applied to the
+candidate tree and was recorded as skipped on the baseline tree, both trees
+clean at `b9add1fc` and `50cd7695`.
+
+### Shorter held intervals in the actor form (claim 1)
+
+Baseline minus candidate per pair, microseconds, with the frozen verdict and
+the stricter spread verdict.
+
+| Regime | `detection_total`, five pairs | Verdicts | Baseline median (range) | Candidate median (range) |
+| --- | --- | --- | --- | --- |
+| idle | 6187, 4909, 7464, 3694, 7447 | yes / yes | 6188 (4940 to 8693) | 1246 (1 to 1246) |
+| rapid | 6210, 8695, 9929, 9922, 8757 | yes / yes | 9925 (6213 to 9970) | 3 (2 to 1213) |
+
+The combined uncertainty per pair was 47 to 50 µs. Of the candidate's 112
+post-publication detections in A2, 108 ended within 3.6 µs of the publication;
+the other four, the phase 2 completion whose attempts outlast the re-sample
+budget, in three idle trials and one rapid trial, cost the sleep as before.
+The two actors made 16,156 to 67,112 fewer wait passes per pair. The host's
+execution sleeps fell from four to eight per trial to one or two, and its
+recipient sleeps from one or two to none. The claim holds.
+
+### The exit grace wait ends at the worker's exit (claim 2)
+
+In every candidate trial of every cell `grace_unusable` and `grace_timeouts`
+are 0, and every actor's grace ended reaped (`grace_stop_code` 1 in all 70
+candidate actor rows, as in all 70 baseline rows). In A2 the first actor's
+grace made one notified wait per trial, ending 169 to 361 µs after the exit
+request at the pipe's hangup, followed in two of the ten trials by one 100 µs
+settle sleep before the reap; the second actor had already exited and was
+reaped on its first sample on both apps. No other cell made a grace wait on
+either app in this run; the baseline's O256 idle grace sleeps of the HOST-02
+run did not recur. Per actor, terminal publication to reap: first actor,
+baseline 1309 to 2578 µs, candidate 199 to 398 µs; second actor, baseline 1514
+to 1563 µs, candidate 400 to 653 µs. The claim holds.
+
+### Whole request in the actor form (claim 3)
+
+Baseline minus candidate per pair, milliseconds.
+
+| Regime | Five pairs | Direction | Baselines (ms) | Beyond spread in every pair |
+| --- | --- | --- | --- | --- |
+| idle | 7.0, 2.6, 1.5, 4.8, 5.6 | faster 5, slower 0 | 90.4 to 96.6 | no (threshold 3.3) |
+| rapid | 4.2, 8.6, 8.9, 10.2, 7.8 | faster 5, slower 0 | 58.3 to 67.0 | no (threshold 6.3) |
+
+The guard holds in both regimes, and the candidate is faster in every pair of
+both regimes, which the frozen rule states as the whole-request improvement
+in each regime. HOST-02 alone had been slower in nine of ten pairs. In the
+ordinary cells, O2P rapid is faster in all five pairs by 1.9 to 3.1 ms
+(threshold 5.4 ms); every other group lies within spread in both directions,
+with single pairs beyond spread in O0 idle (9.8 ms slower), O0 rapid (11.5 ms
+slower) and O64 idle, and none in every pair.
+
+### Regression, response and carried observations
+
+- `worsens_beyond_spread_in_every_pair` holds for exactly two quantities,
+  `w0.exit_request_to_reap` and `w0.grace_wait` in A2, in both regimes:
+  baseline 2 to 7 µs, candidate 169 to 362 µs. These are the intervals the
+  candidate changes by construction. The baseline stored its exit request
+  after its final 1.25 ms detection sleep (and a further sleep in nine of ten
+  trials), by which time the worker had exited, so its first grace sample
+  reaped; the candidate stores the request 26 to 36 µs after the terminal
+  publication and waits for the exit itself. The enclosing interval, terminal
+  publication to reap, fell in every pair (above), as did the whole request.
+  No other quantity worsened beyond spread in every pair; the any-pair spread
+  verdict fired in isolated pairs as the null control predicts.
+- Response: 32 bounds, 0.08 to 0.33 µs against the 2 ms limit, all credited.
+- O2P phase 1, carried from HOST-02 and not gated: arrival to observation
+  and held total improved beyond uncertainty and beyond spread in every pair
+  of both regimes in this run (idle 2021 to 2440 µs, rapid 2440 to 2445 µs).
+  First-phase ordinary arrival is unchanged, bimodal at 0 or 2.5 ms on both
+  sides.
+- Added host activity: one poll return per grace wait, one settle sleep in
+  two of 120 trials; HOST-02's re-sample spent its full budget in the four A2
+  trials named above.
+
+### Decision
+
+Every gate holds except one clause as literally frozen: "no quantity, in any
+cell, worsens beyond spread in every pair" fires for the two reported grace
+intervals whose increase is the mechanism itself, since the host now waits for
+the worker's actual exit instead of finding it already done after a longer
+detection sleep. The frozen rule sends that case to the owner, so neither
+candidate is integrated by this record. The coordinator's recommendation is to
+accept HOST-02 and HOST-03 together: the plan's tradeoff clause names total
+CPU, whole-request latency, sampled memory and peer interference, none of
+which worsened; the whole request improved in every A2 pair of both regimes;
+and the two flagged intervals lie inside an interval that shrank in every
+pair. Pending the owner's decision.
 
 ## Revisions
 
