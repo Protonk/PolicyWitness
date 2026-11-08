@@ -1370,7 +1370,7 @@ def pair_components(row):
 def pair_waits(row):
     """Release and activation pass counts; exact counts, so their uncertainty is zero."""
     return {name: (passes, 0, None) for name, passes, _, _ in wait_values(row)
-            if name.rsplit('.', 1)[1] in PAIRED_WAITS and passes is not None}
+            if name.rpartition('.')[2] in PAIRED_WAITS and passes is not None}
 
 
 IMPROVES, IMPROVES_SPREAD = 'improves_beyond_uncertainty_in_every_pair', 'improves_beyond_spread_in_every_pair'
@@ -1455,7 +1455,7 @@ def pair_series(pairs, values, required, accepted, instrument=True):
 def response_bounds(accepted, gate_credited):
     """Candidate upper bound minus baseline lower bound per response component, over each side's accepted trials."""
     sides = {app: [pair_components(r) for r in accepted.get(app, [])] for app in PAIR_APPS}
-    present = lambda app: {n for values in sides[app] for n in values if n.rsplit('.', 1)[1] in RESPONSE_COMPONENTS}
+    present = lambda app: {n for values in sides[app] for n in values if n.rpartition('.')[2] in RESPONSE_COMPONENTS}
     out = {}
     for name in sorted(present('candidate') & present('baseline')):
         upper = max((v[name] for v in sides['candidate'] if name in v), key=lambda item: item[0])
