@@ -14,7 +14,9 @@ whose pair is followed by its outcome event; a candidate-shaped A2 receipt gives
 each actor its own exit request, reap, grace program points, bounded exit wait
 and grace stop. A2 receipts with constructed inbound scan counters check the
 per-actor scan pairs: lower in every pair, a pair not lower, a ratio that only
-exact arithmetic separates, and a pair refused for differing inbound counts.
+exact arithmetic separates, identical scans on both sides whose pass counts
+differ (not lower although the ratio is), and pairs refused for differing
+inbound counts or for acknowledged slots that differ from the layout.
 Expected values are written from
 the constructed microsecond times, not computed with the reader's functions.
 """
@@ -1247,21 +1249,32 @@ def comparison_controls(base):
     return names
 
 
-# Subject (two inbound slots) scan counters: the baseline visits both slots on every pass; the candidate's
-# passes visit two, one or no slots. The issuer has no inbound slot and makes 30 zero-visit passes on both sides.
+# Subject (two inbound slots) scan counters. The baseline scans from index 0: every pass visits both slots except
+# the one acknowledging slot 0, so 2 * 400 - 1 visits, its full-scan floor. The candidate's passes visit two, one
+# or no slots. The issuer has no inbound slot and makes 30 zero-visit passes on both sides.
 ISSUER_SCAN = dict(passes_activation=30, histogram={0: 30})
-BASELINE_SCAN = dict(passes_activation=400, visits_activation=800, loads_activation=840, histogram={2: 400})
+BASELINE_SCAN = dict(passes_activation=400, visits_activation=799, loads_activation=840, histogram={1: 1, 2: 399})
 CANDIDATE_SCAN = dict(passes_activation=400, visits_activation=140, loads_activation=160, histogram={0: 300, 1: 60, 2: 40})
-# 1/3 against 10**17 / (3 * 10**17 + 1): equal as floats, lower exactly.
-THIRD_SCAN = dict(passes_activation=3, visits_activation=1, loads_activation=1, histogram={0: 2, 1: 1})
-NEAR_THIRD_SCAN = dict(passes_activation=3 * 10**17 + 1, visits_activation=10**17, loads_activation=10**17,
-                       histogram={0: 2 * 10**17 + 1, 1: 10**17})
+# The baseline's scan in fewer passes: 599/300 is below 799/400 although both are full scans (floor 599).
+BASELINE_FEWER_SCAN = dict(passes_activation=300, visits_activation=599, loads_activation=620, histogram={1: 1, 2: 299})
+# The candidate's scan in fewer passes: 100/300 is below 140/400 although both are below their floors.
+CANDIDATE_FEWER_SCAN = dict(passes_activation=300, visits_activation=100, loads_activation=115, histogram={0: 230, 1: 40, 2: 30})
+# 5/3 (a full scan, floor 5) against 5 * 10**17 / (3 * 10**17 + 1) (floor 6 * 10**17 + 1): equal as floats, lower exactly.
+THIRDS_SCAN = dict(passes_activation=3, visits_activation=5, loads_activation=5, histogram={1: 1, 2: 2})
+NEAR_THIRDS_SCAN = dict(passes_activation=3 * 10**17 + 1, visits_activation=5 * 10**17, loads_activation=5 * 10**17,
+                        histogram={0: 1, 1: 10**17, 2: 2 * 10**17})
 SCAN_NAMES = [f'w{a}.scan_{m}_per_pass_{r}' for a in (0, 1) for r in ('activation', 'exchange') for m in ('visits', 'loads')]
+SCAN_FLOOR = 'candidate_not_below_full_scan_floor'
 
 
-def scan_row(app, index, subject, inbound=2):
+def drop_subject_ack(slot):
+    """A worker edit removing the subject page's INBOUND_ACKNOWLEDGED event for slot; the layout keeps the slot."""
+    return lambda actor, events: [e for e in events if not (actor == 1 and e[0] == 10 and e[1] == slot)]
+
+
+def scan_row(app, index, subject, inbound=2, worker_edit=None):
     """An evaluated A2 row with the given subject scan counters; inbound changes the subject's layout deliveries."""
-    bundle = actor_bundle(scan={0: ISSUER_SCAN, 1: subject})
+    bundle = actor_bundle(scan={0: ISSUER_SCAN, 1: subject}, worker_edit=worker_edit)
     bundle['trial'].update(app=app, index=index)
     bundle['trial']['layout']['deliveries'] = [dict(delivery=d, source=0, recipient=1, slot=d) for d in range(inbound)]
     row = reader.evaluate_bundle(bundle, CALIBRATION)
@@ -1269,14 +1282,36 @@ def scan_row(app, index, subject, inbound=2):
     return dict(row, dir=f'constructed/{app}/A2/rapid/{index}')
 
 
-def scan_rows(candidates, baseline=BASELINE_SCAN, inbound=None):
-    """Baseline and candidate rows per index; candidates lists each index's candidate subject counters."""
+def scan_rows(candidates, baseline=BASELINE_SCAN, inbound=None, edits=None):
+    """Baseline and candidate rows per index; candidates lists each index's candidate subject counters, inbound and
+    edits an index's candidate layout deliveries and worker edit."""
     return [row for i, scan in enumerate(candidates)
-            for row in (scan_row('baseline', i, baseline), scan_row('candidate', i, scan, (inbound or {}).get(i, 2)))]
+            for row in (scan_row('baseline', i, baseline), scan_row('candidate', i, scan, (inbound or {}).get(i, 2), (edits or {}).get(i)))]
+
+
+def scan_side(count, passes, floor):
+    return dict(count=count, passes=passes, per_pass=count / passes, full_scan_floor=floor, below_full_scan_floor=count < floor)
 
 
 def scan_outcomes(entry, name):
     return [r['outcome'] for r in entry['scan']['series'][name]['pairs']]
+
+
+def scan_identical_controls():
+    """Identical scans on both sides whose pass counts differ: each per-pass ratio is lower on the side with fewer
+    passes, and the pair is not lower because both sides are full scans or both are below their floors."""
+    for baseline, candidate, unmet in ((BASELINE_SCAN, BASELINE_FEWER_SCAN, [SCAN_FLOOR]),
+                                       (CANDIDATE_SCAN, CANDIDATE_FEWER_SCAN, ['baseline_below_full_scan_floor'])):
+        (entry,) = pairs_of(scan_rows([candidate] * 3, baseline=baseline))['entries']
+        for measure in ('visits', 'loads'):
+            value = entry['scan']['series'][f'w1.scan_{measure}_per_pass_activation']
+            (b, c), = {(r['baseline']['count'], r['candidate']['count']) for r in value['pairs']}
+            assert c * baseline['passes_activation'] < b * candidate['passes_activation'], (measure, b, c)
+            assert value[reader.SCAN_LOWER] is False and [(r['outcome'], r['unmet']) for r in value['pairs']] == [('not_lower', unmet)] * 3, value
+    assert [r['candidate']['full_scan_floor'] for r in entry['scan']['series']['w1.scan_loads_per_pass_activation']['pairs']] == [599] * 3
+    text = '\n'.join(reader.pairs_markdown(pairs_of(scan_rows([BASELINE_FEWER_SCAN] * 3))))
+    assert f'| w1.scan_visits_per_pass_activation | no | r0 799/400 -> 599/300 ({SCAN_FLOOR});' in text, text
+    return 'identical scans whose pass counts differ, both full scans or both below their floors: lower ratio, not lower'
 
 
 def scan_controls():
@@ -1285,20 +1320,26 @@ def scan_controls():
     row = scan_row('baseline', 0, BASELINE_SCAN)
     assert row['scan'] == {
         '0': dict(passes_activation=30, visits_activation=0, loads_activation=0, passes_exchange=0, visits_exchange=0, loads_exchange=0,
-                  zero_visit_passes=30, inbound_count=0, inbound_count_source=reader.SCAN_INBOUND_SOURCE, role_unknown_passes_uncounted=False),
-        '1': dict(passes_activation=400, visits_activation=800, loads_activation=840, passes_exchange=0, visits_exchange=0, loads_exchange=0,
-                  zero_visit_passes=0, inbound_count=2, inbound_count_source=reader.SCAN_INBOUND_SOURCE, role_unknown_passes_uncounted=False)}, row['scan']
-    assert row['worker_waits']['1']['scan']['visits_per_pass_activation'] == 2.0
+                  zero_visit_passes=30, inbound_count=0, inbound_count_source=reader.SCAN_INBOUND_SOURCE, acknowledged_slots=[],
+                  inbound_observed=True, role_unknown_passes_uncounted=False),
+        '1': dict(passes_activation=400, visits_activation=799, loads_activation=840, passes_exchange=0, visits_exchange=0, loads_exchange=0,
+                  zero_visit_passes=0, inbound_count=2, inbound_count_source=reader.SCAN_INBOUND_SOURCE, acknowledged_slots=[0, 1],
+                  inbound_observed=True, role_unknown_passes_uncounted=False)}, row['scan']
+    assert row['worker_waits']['1']['scan']['visits_per_pass_activation'] == 1.9975
+    dropped = scan_row('candidate', 0, CANDIDATE_SCAN, worker_edit=drop_subject_ack(1))['scan']['1']
+    assert dropped['inbound_count'] == 2 and dropped['acknowledged_slots'] == [0] and dropped['inbound_observed'] is False, dropped
+    names.append('scan record: inbound_count from the layout, acknowledged slots from the page, observed only when they agree')
 
     (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN] * 3))['entries']
     scan = entry['scan']
     assert sorted(scan['series']) == sorted(SCAN_NAMES) and scan['refusals'] == [] and scan['problems'] == [], scan
     visits = scan['series']['w1.scan_visits_per_pass_activation']
     assert visits[reader.SCAN_LOWER] is True and 'withheld' not in visits, visits
-    assert visits['pairs'] == [dict(index=i, baseline=dict(count=800, passes=400, per_pass=2.0), candidate=dict(count=140, passes=400, per_pass=0.35),
+    assert visits['pairs'] == [dict(index=i, baseline=scan_side(799, 400, 799), candidate=scan_side(140, 400, 799),
                                     inbound_count=dict(baseline=2, candidate=2), outcome='lower') for i in range(3)], visits['pairs']
     loads = scan['series']['w1.scan_loads_per_pass_activation']
-    assert loads[reader.SCAN_LOWER] is True and [(r['baseline']['count'], r['candidate']['count']) for r in loads['pairs']] == [(840, 160)] * 3
+    assert loads[reader.SCAN_LOWER] is True and [(r['baseline'], r['candidate']) for r in loads['pairs']] == [
+        (scan_side(840, 400, 799), scan_side(160, 400, 799))] * 3, loads['pairs']
     for name in ('w1.scan_visits_per_pass_exchange', 'w1.scan_loads_per_pass_exchange'):
         value = scan['series'][name]
         assert value[reader.SCAN_LOWER] is None and scan_outcomes(entry, name) == ['no_passes'] * 3, value
@@ -1306,14 +1347,15 @@ def scan_controls():
         assert value['pairs'][0]['no_passes_on'] == ['baseline', 'candidate']
     issuer = scan['series']['w0.scan_visits_per_pass_activation']
     assert issuer[reader.SCAN_LOWER] is False and scan_outcomes(entry, 'w0.scan_visits_per_pass_activation') == ['not_lower'] * 3, issuer
+    assert [r['unmet'] for r in issuer['pairs']] == [[SCAN_FLOOR, 'ratio_not_lower']] * 3, issuer['pairs']
     zero = scan['zero_visit_passes']
     assert zero['w1.scan_zero_visit_passes'] == dict(pairs=[dict(index=i, baseline=0, candidate=300, difference=-300) for i in range(3)],
                                                      sums=dict(baseline=0, candidate=900)), zero
     assert zero['w0.scan_zero_visit_passes']['sums'] == dict(baseline=90, candidate=90)
     assert all(reader.SCAN_LOWER not in value for value in zero.values())
     text = '\n'.join(reader.pairs_markdown(pairs_of(scan_rows([CANDIDATE_SCAN] * 3))))
-    for needle in ('| w1.scan_visits_per_pass_activation | yes | r0 800/400 -> 140/400; r1 800/400 -> 140/400; r2 800/400 -> 140/400 |',
-                   '| w0.scan_visits_per_pass_activation | no | r0 0/30 -> 0/30;',
+    for needle in ('| w1.scan_visits_per_pass_activation | yes | r0 799/400 -> 140/400; r1 799/400 -> 140/400; r2 799/400 -> 140/400 |',
+                   f'| w0.scan_visits_per_pass_activation | no | r0 0/30 -> 0/30 ({SCAN_FLOOR}, ratio_not_lower);',
                    '| w1.scan_zero_visit_passes (sum baseline / candidate 0 / 900) | no verdict | r0 0 -> 300; r1 0 -> 300; r2 0 -> 300 |'):
         assert needle in text, needle
     names.append('candidate subject visits and loads per scan pass lower in every pair: lower_in_every_pair; zero-visit passes per side')
@@ -1325,30 +1367,46 @@ def scan_controls():
 
     (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN, BASELINE_SCAN, CANDIDATE_SCAN]))['entries']
     assert scan_outcomes(entry, 'w1.scan_visits_per_pass_activation') == ['lower', 'not_lower', 'lower']
-    assert entry['scan']['series']['w1.scan_visits_per_pass_activation'][reader.SCAN_LOWER] is False
+    visits = entry['scan']['series']['w1.scan_visits_per_pass_activation']
+    assert visits[reader.SCAN_LOWER] is False and visits['pairs'][1]['unmet'] == [SCAN_FLOOR, 'ratio_not_lower'], visits['pairs'][1]
     names.append('one scan pair equal to its baseline: not lower in every pair')
 
-    (entry,) = pairs_of(scan_rows([NEAR_THIRD_SCAN] * 3, baseline=THIRD_SCAN))['entries']
+    names.append(scan_identical_controls())
+
+    (entry,) = pairs_of(scan_rows([NEAR_THIRDS_SCAN] * 3, baseline=THIRDS_SCAN))['entries']
     visits = entry['scan']['series']['w1.scan_visits_per_pass_activation']
     assert visits['pairs'][0]['baseline']['per_pass'] == visits['pairs'][0]['candidate']['per_pass'], visits['pairs'][0]
+    assert visits['pairs'][0]['baseline'] == scan_side(5, 3, 5) and visits['pairs'][0]['candidate']['full_scan_floor'] == 6 * 10**17 + 1
     assert visits[reader.SCAN_LOWER] is True and scan_outcomes(entry, 'w1.scan_visits_per_pass_activation') == ['lower'] * 3, visits
     names.append('a candidate ratio below the baseline that floats round to equal: lower by exact arithmetic')
 
     (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN] * 3, inbound={2: 3}))['entries']
     scan = entry['scan']
-    assert scan['refusals'] == [dict(index=2, actor=1, problem=reader.SCAN_REFUSAL, inbound_count=dict(baseline=2, candidate=3))], scan['refusals']
-    assert scan['problems'] == [reader.SCAN_REFUSAL]
+    both = [reader.SCAN_REFUSAL, reader.SCAN_ACK_REFUSAL]
+    assert scan['refusals'] == [dict(index=2, actor=1, problems=both, inbound_count=dict(baseline=2, candidate=3),
+                                     acknowledged_slots=dict(baseline=[0, 1], candidate=[0, 1]))], scan['refusals']
+    assert scan['problems'] == sorted(both)
     for name in SCAN_NAMES[4:]:
-        assert scan_outcomes(entry, name)[2] == 'refused' and scan['series'][name]['pairs'][2]['problem'] == reader.SCAN_REFUSAL, name
+        assert scan_outcomes(entry, name)[2] == 'refused' and scan['series'][name]['pairs'][2]['problems'] == both, name
     visits = scan['series']['w1.scan_visits_per_pass_activation']
     assert visits[reader.SCAN_LOWER] is None and visits['withheld'] == '2 established of 3 required pairs; absent, without passes or refused in 1', visits
-    assert scan['zero_visit_passes']['w1.scan_zero_visit_passes']['pairs'][2]['problem'] == reader.SCAN_REFUSAL
+    assert scan['zero_visit_passes']['w1.scan_zero_visit_passes']['pairs'][2]['problems'] == both
     assert scan_outcomes(entry, 'w0.scan_visits_per_pass_activation') == ['not_lower'] * 3
     (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN, BASELINE_SCAN, CANDIDATE_SCAN], inbound={2: 3}))['entries']
     assert entry['scan']['series']['w1.scan_visits_per_pass_activation'][reader.SCAN_LOWER] is False
     text = '\n'.join(reader.pairs_markdown(pairs_of(scan_rows([CANDIDATE_SCAN] * 3, inbound={2: 3}))))
-    assert 'Refused scan pairs: r2 w1 scan_inbound_count_mismatch (inbound_count 2 / 3).' in text and 'r2 800/400 -> 140/400 (refused)' in text, text
-    names.append('a scan pair whose subject inbound_count differs between the sides: refused, verdict withheld or refuted by the rest')
+    assert ('Refused scan pairs: r2 w1 scan_inbound_count_mismatch, scan_inbound_acknowledgement_mismatch '
+            '(inbound_count 2 / 3; acknowledged slots 2 / 2).') in text and 'r2 799/400 -> 140/400 (refused)' in text, text
+    names.append('a scan pair whose subject inbound_count differs between the sides: refused with the acknowledgement mismatch it implies')
+
+    (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN] * 3, edits={1: drop_subject_ack(1)}))['entries']
+    scan = entry['scan']
+    assert scan['refusals'] == [dict(index=1, actor=1, problems=[reader.SCAN_ACK_REFUSAL], inbound_count=dict(baseline=2, candidate=2),
+                                     acknowledged_slots=dict(baseline=[0, 1], candidate=[0]))], scan['refusals']
+    assert scan_outcomes(entry, 'w1.scan_visits_per_pass_activation') == ['lower', 'refused', 'lower']
+    assert scan['series']['w1.scan_visits_per_pass_activation'][reader.SCAN_LOWER] is None
+    assert scan_outcomes(entry, 'w0.scan_visits_per_pass_activation') == ['not_lower'] * 3
+    names.append('a scan pair whose candidate page acknowledges fewer slots than the layout addresses: refused, verdict withheld')
 
     (group,) = reader.summarize([scan_row('candidate', i, CANDIDATE_SCAN) for i in range(3)])
     stat = lambda value, n=3: dict(n=n, median=value, min=value, max=value, sum=n * value)
@@ -1370,6 +1428,20 @@ def scan_float_rejected():
     finally:
         reader.scan_lower = kept
     raise AssertionError('the scan controls accepted a reader that compares per-pass ratios as floats')
+
+
+def scan_floor_ignored_rejected():
+    """The identical-scan controls fail when the reader credits a lower per-pass ratio without the full-scan floor
+    conditions."""
+    kept = reader.scan_unmet
+    reader.scan_unmet = lambda vb, vc: [name for name in kept(vb, vc) if name == 'ratio_not_lower']
+    try:
+        scan_identical_controls()
+    except AssertionError:
+        return dict(control='scan_full_scan_floor_ignored', status='rejected', codes=['scan outcome mismatch'])
+    finally:
+        reader.scan_unmet = kept
+    raise AssertionError('the scan controls accepted a reader that compares per-pass ratios without the full-scan floor')
 
 
 def spread_ignored_rejected(base):
@@ -1767,6 +1839,7 @@ def main(out):
     rejected.append(spread_ignored_rejected(reader.evaluate_bundle(ordinary_bundle(), CALIBRATION)))
     accepted += scan_controls()
     rejected.append(scan_float_rejected())
+    rejected.append(scan_floor_ignored_rejected())
     accepted += comparison_round_trip(out)
     accepted += stager_identity_controls(out)
     (out / 'controls.json').write_text(json.dumps(dict(scope='constructed reader sensitivity; no live stamps or timings credited',

@@ -87,9 +87,10 @@ files, condition exclusions, pooled aggregates, unpaired or inconsistent host
 sleep events and pass-count records, invalid or unpaired grace-wait outcome
 events, a grace finished before it begins, and a reader using the superseded
 uncertainty formula, and checks grace counts, matched-pair verdicts,
-whole-request direction, response bounds, per-actor scan pairs with the
-refusal of a pair whose inbound counts differ, and the stager's identity
-refusals on constructed inputs. See the
+whole-request direction, response bounds, per-actor scan pairs against the
+full-scan floor with identical scans whose pass counts differ left not lower,
+the refusal of a pair whose inbound counts or acknowledged slots disagree,
+and the stager's identity refusals on constructed inputs. See the
 [pilot verification account](CHANGE-VERIFICATION.md#worker-wait-pilot).
 
 The opt-in `runner_exec_inheritance/launch_inventory` case records external

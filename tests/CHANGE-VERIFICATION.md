@@ -773,9 +773,12 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   and, separately, against the trial spread of the side it is judged from;
   whole request also counts the pairs in which the candidate was faster,
   slower or equal, and grace counts are paired as exact differences. Scan
-  visits and loads per pass carry `lower_in_every_pair`, given only when all
-  five declared pairs are strictly lower, and a pair whose `inbound_count`
-  differs between the sides is refused. The matched-pair verdicts are evidence for an acceptance
+  visits and loads per pass carry `lower_in_every_pair`, given only when in
+  all five declared pairs the baseline is at or above its full-scan floor,
+  the candidate is below its own and its ratio is strictly lower; the ratio
+  alone follows the pass count. A pair whose `inbound_count` differs between
+  the sides, or whose acknowledged slots differ from the layout, is refused.
+  The matched-pair verdicts are evidence for an acceptance
   record, not a pass condition of the case. The default controls establish the
   reader's interpretation and the stager's identity refusals on constructed
   inputs, not live sensitivity or resolution.

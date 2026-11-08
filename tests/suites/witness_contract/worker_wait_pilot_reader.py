@@ -107,18 +107,33 @@ Interpretation rules, repeated in summary.json:
 - Per actor, scan carries the worker's inbound scan counters (passes, visits
   and loads per caller role, and zero_visit_passes, histogram bucket 0, over
   both roles) beside inbound_count, the deliveries the trial layout addresses
-  to that actor, one inbound slot each. A comparison pairs them as exact
-  counts: w<actor>.scan_visits_per_pass_<role> and
-  w<actor>.scan_loads_per_pass_<role> (role activation or exchange) compare
-  count / passes by integer cross-multiplication, with no uncertainty. A pair
-  is lower when the candidate's ratio is strictly below the baseline's,
-  no_passes when either side made no pass in that role, and refused
-  (scan_inbound_count_mismatch) when the actor's inbound_count differs between
-  the sides. lower_in_every_pair is false once any established pair is not
-  lower and true only when all of at least pairs_required pairs are
-  established and lower; otherwise it is withheld. w<actor>.scan_zero_visit_passes
-  is reported per side with each side's sum over the pairs, without a verdict.
-  Groups carry each counter's sum and median per actor.
+  to that actor, one inbound slot each, and the slots the page's
+  INBOUND_ACKNOWLEDGED events name. inbound_observed is true when those events
+  name each layout slot exactly once.
+- A scan that visits from index 0 visits all n inbound slots on every pass
+  except one that ends on acknowledging slot i, which visits i + 1, and
+  acknowledges each slot once; each visit makes at least one load. Over P
+  passes in one role it therefore makes at least n * P - n * (n - 1) / 2
+  visits and as many loads: the full-scan floor. For such a scan visits per
+  pass are n - n * (n - 1) / (2 * P) whenever every acknowledgement falls in
+  that role, so a per-pass ratio alone follows the pass count and is lower
+  for whichever side made fewer passes.
+- A comparison pairs the counters as exact counts:
+  w<actor>.scan_visits_per_pass_<role> and w<actor>.scan_loads_per_pass_<role>
+  (role activation or exchange), with no uncertainty. A pair is lower when the
+  baseline's count is at or above its full-scan floor, the candidate's is
+  below its own, and the candidate's count / passes is strictly below the
+  baseline's by integer cross-multiplication; a not_lower pair names the
+  conditions it failed. A pair is no_passes when either side made no pass in
+  that role, and refused when the actor's inbound_count differs between the
+  sides (scan_inbound_count_mismatch) or either side's inbound_observed is
+  false (scan_inbound_acknowledgement_mismatch); a refused pair names every
+  problem it has. lower_in_every_pair is false once any established pair is
+  not lower and true only when all of at least pairs_required pairs are
+  established and lower; otherwise it is withheld.
+  w<actor>.scan_zero_visit_passes is reported per side with each side's sum
+  over the pairs, without a verdict. Groups carry each counter's sum and
+  median per actor.
 """
 import base64
 import hashlib
@@ -216,7 +231,11 @@ SCAN_ROLES, SCAN_MEASURES = ('activation', 'exchange'), ('visits', 'loads')
 SCAN_COUNTERS = tuple(f'{kind}_{role}' for role in SCAN_ROLES for kind in ('passes',) + SCAN_MEASURES) + ('zero_visit_passes',)
 SCAN_LOWER = 'lower_in_every_pair'
 SCAN_REFUSAL = 'scan_inbound_count_mismatch'
-SCAN_INBOUND_SOURCE = 'trial layout: deliveries addressed to the actor, one inbound slot each'
+SCAN_ACK_REFUSAL = 'scan_inbound_acknowledgement_mismatch'
+SCAN_INBOUND_SOURCE = ('trial layout: deliveries addressed to the actor, one inbound slot each; checked against the slots '
+                       "the actor's INBOUND_ACKNOWLEDGED events name")
+# Conditions of a lower scan pair; a not_lower pair names the ones it failed.
+SCAN_UNMET = ('baseline_below_full_scan_floor', 'candidate_not_below_full_scan_floor', 'ratio_not_lower')
 STATUS_ORDER = ('failed', 'skipped', 'incomplete', 'refused', 'excluded', 'accepted')
 EXCLUSIONS = {'sleep_overlapped', 'pacing_out_of_range', 'power_transition', 'power_unobserved', 'observer_overlap'}
 INCOMPLETE = {'stamps_missing', 'started_missing', 'validation_missing', 'conditions_missing',
@@ -1278,21 +1297,24 @@ def evaluate_stamps(bundle, row, calibration):
         row['exclusions'].append('observer_overlap')
 
 
-def inbound_counts(layout):
-    """Inbound slots per actor index: the deliveries the layout addresses to it (none in the ordinary form)."""
-    counts = {}
+def inbound_slots(layout):
+    """Inbound slot indices per actor index: the deliveries the layout addresses to it (none in the ordinary form)."""
+    slots = {}
     for delivery in layout.get('deliveries') or []:
-        counts[delivery['recipient']] = counts.get(delivery['recipient'], 0) + 1
-    return counts
+        slots.setdefault(delivery['recipient'], []).append(delivery['slot'])
+    return slots
 
 
 def scan_record(layout, pages):
-    """Per actor: the page's scan counters with the actor's inbound_count."""
-    counts, out = inbound_counts(layout), {}
+    """Per actor: the page's scan counters, the actor's inbound_count from the layout and the slots the page's
+    INBOUND_ACKNOWLEDGED events name; inbound_observed when they name each layout slot exactly once."""
+    slots, out = inbound_slots(layout), {}
     for actor, page in sorted(pages.items()):
-        scan = page['scan']
+        scan, declared = page['scan'], sorted(slots.get(actor, []))
+        acknowledged = sorted(e['phase'] for e in page['events'] if e['event'] == W['inbound_acknowledged'])
         out[str(actor)] = dict({name: scan[name] for name in SCAN_COUNTERS[:-1]}, zero_visit_passes=scan['visits_histogram'].get('0', 0),
-                               inbound_count=counts.get(actor, 0), inbound_count_source=SCAN_INBOUND_SOURCE,
+                               inbound_count=len(declared), inbound_count_source=SCAN_INBOUND_SOURCE,
+                               acknowledged_slots=acknowledged, inbound_observed=acknowledged == declared,
                                role_unknown_passes_uncounted=scan['role_unknown_passes_uncounted'])
     return out
 
@@ -1661,14 +1683,31 @@ def scan_lower(baseline_count, baseline_passes, candidate_count, candidate_passe
     return candidate_count * baseline_passes < baseline_count * candidate_passes
 
 
+def scan_floor(passes, inbound):
+    """The fewest visits, and so loads, a scan from index 0 over inbound slots makes in passes passes: each pass
+    visits every slot except one ending on acknowledging slot i, which visits i + 1, and each slot is acknowledged
+    once."""
+    return inbound * passes - inbound * (inbound - 1) // 2
+
+
 def scan_side(record, measure, role):
     count, passes = record[f'{measure}_{role}'], record[f'passes_{role}']
-    return dict(count=count, passes=passes, per_pass=count / passes if passes else None)
+    floor = scan_floor(passes, record['inbound_count'])
+    return dict(count=count, passes=passes, per_pass=count / passes if passes else None,
+                full_scan_floor=floor, below_full_scan_floor=count < floor)
+
+
+def scan_unmet(vb, vc):
+    """The conditions of a lower pair (SCAN_UNMET) that this pair fails; empty when it is lower."""
+    failed = (vb['below_full_scan_floor'], not vc['below_full_scan_floor'],
+              not scan_lower(vb['count'], vb['passes'], vc['count'], vc['passes']))
+    return [name for name, fails in zip(SCAN_UNMET, failed) if fails]
 
 
 def scan_pairs(pairs, required):
-    """Per actor and caller role, visits and loads per scan pass as exact counts with lower_in_every_pair, and the
-    zero-visit passes per side. A pair whose inbound_count differs between the sides is refused."""
+    """Per actor and caller role, visits and loads per scan pass as exact counts against the full-scan floor with
+    lower_in_every_pair, and the zero-visit passes per side. A pair whose inbound_count differs between the sides, or
+    whose acknowledged slots differ from the layout on either side, is refused."""
     series, zero, refusals = {}, {}, []
     actors = sorted({a for _, b, c in pairs for r in (b, c) for a in (r.get('scan') or {})}, key=int)
     for actor in actors:
@@ -1685,20 +1724,25 @@ def scan_pairs(pairs, required):
                 continue
             sb, sc = sides
             inbound = dict(baseline=sb['inbound_count'], candidate=sc['inbound_count'])
-            refused = sb['inbound_count'] != sc['inbound_count']
+            acknowledged = dict(baseline=sb['acknowledged_slots'], candidate=sc['acknowledged_slots'])
+            refused = ([SCAN_REFUSAL] if sb['inbound_count'] != sc['inbound_count'] else []) + (
+                [SCAN_ACK_REFUSAL] if not (sb['inbound_observed'] and sc['inbound_observed']) else [])
             if refused:
-                refusals.append(dict(index=index, actor=int(actor), problem=SCAN_REFUSAL, inbound_count=inbound))
+                refusals.append(dict(index=index, actor=int(actor), problems=refused, inbound_count=inbound, acknowledged_slots=acknowledged))
             zero_rows.append(dict(index=index, baseline=sb['zero_visit_passes'], candidate=sc['zero_visit_passes'],
-                                  difference=sb['zero_visit_passes'] - sc['zero_visit_passes'], **({'problem': SCAN_REFUSAL} if refused else {})))
+                                  difference=sb['zero_visit_passes'] - sc['zero_visit_passes'], **({'problems': refused} if refused else {})))
             for name, (measure, role) in named.items():
                 vb, vc = scan_side(sb, measure, role), scan_side(sc, measure, role)
                 row = dict(index=index, baseline=vb, candidate=vc, inbound_count=inbound)
                 if refused:
-                    row.update(outcome='refused', problem=SCAN_REFUSAL)
+                    row.update(outcome='refused', problems=refused)
                 elif not vb['passes'] or not vc['passes']:
                     row.update(outcome='no_passes', no_passes_on=[app for app, v in zip(PAIR_APPS, (vb, vc)) if not v['passes']])
                 else:
-                    row['outcome'] = 'lower' if scan_lower(vb['count'], vb['passes'], vc['count'], vc['passes']) else 'not_lower'
+                    unmet = scan_unmet(vb, vc)
+                    row['outcome'] = 'not_lower' if unmet else 'lower'
+                    if unmet:
+                        row['unmet'] = unmet
                 rows[name].append(row)
         for name, found in rows.items():
             outcomes = [r['outcome'] for r in found]
@@ -1710,9 +1754,11 @@ def scan_pairs(pairs, required):
                                      + (f'; absent, without passes or refused in {len(found) - len(established)}' if len(established) < len(found) else ''))
             series[name] = entry
         zero[f'w{actor}.scan_zero_visit_passes'] = dict(pairs=zero_rows, sums={app: sum(r[app] for r in zero_rows if app in r) for app in PAIR_APPS})
-    return dict(series=series, zero_visit_passes=zero, refusals=refusals, problems=sorted({r['problem'] for r in refusals}),
-                rule='per pair count / passes, candidate strictly below baseline by integer cross-multiplication; exact counts, no uncertainty; '
-                     'a pair whose inbound_count differs between the sides is refused',
+    return dict(series=series, zero_visit_passes=zero, refusals=refusals, problems=sorted({p for r in refusals for p in r['problems']}),
+                rule='per pair: the baseline count at or above its full-scan floor n * passes - n * (n - 1) / 2, the candidate count below '
+                     'its own, and the candidate count / passes strictly below the baseline by integer cross-multiplication; exact counts, '
+                     'no uncertainty; a pair whose inbound_count differs between the sides, or whose acknowledged slots differ from the '
+                     'layout on either side, is refused',
                 zero_visit_rule='histogram bucket 0 (passes that visited no slot, both roles) per side; no verdict')
 
 
@@ -1937,13 +1983,16 @@ def pairs_markdown(pairs):
         scan = entry.get('scan') or {}
         if scan.get('series'):
             ratio = lambda side: f"{side['count']}/{side['passes']}"
-            lines += ['Inbound scan rows are exact counts per actor and caller role, count/passes per pair: lower when the candidate\'s '
-                      'ratio is strictly below the baseline\'s; a pair whose inbound_count differs between the sides is refused.', '',
+            lines += ['Inbound scan rows are exact counts per actor and caller role, count/passes per pair: lower when the baseline\'s '
+                      'count is at or above its full-scan floor (n * passes - n * (n - 1) / 2), the candidate\'s is below its own and the '
+                      'candidate\'s ratio is strictly below the baseline\'s; a not_lower pair names the conditions it failed. A pair whose '
+                      'inbound_count differs between the sides, or whose acknowledged slots differ from the layout, is refused.', '',
                       '| Inbound scan (exact counts) | lower in every pair | per pair: baseline -> candidate (count/passes) |', '| --- | --- | --- |']
             for name, value in scan['series'].items():
                 lines.append(f"| {name} | {verdict(value[SCAN_LOWER])} | " + '; '.join(
                     f"r{r['index']} absent on {'/'.join(r['absent_on'])}" if r['outcome'] == 'absent'
-                    else f"r{r['index']} {ratio(r['baseline'])} -> {ratio(r['candidate'])}" + ('' if r['outcome'] in ('lower', 'not_lower') else f" ({r['outcome']})")
+                    else f"r{r['index']} {ratio(r['baseline'])} -> {ratio(r['candidate'])}" + (
+                        '' if r['outcome'] == 'lower' else f" ({', '.join(r['unmet'])})" if r['outcome'] == 'not_lower' else f" ({r['outcome']})")
                     for r in value['pairs']) + (f" [withheld: {value['withheld']}]" if value.get('withheld') else '') + ' |')
             for name, value in scan['zero_visit_passes'].items():
                 lines.append(f"| {name} (sum baseline / candidate {value['sums']['baseline']} / {value['sums']['candidate']}) | no verdict | " + '; '.join(
@@ -1951,8 +2000,10 @@ def pairs_markdown(pairs):
                     for r in value['pairs']) + ' |')
             lines.append('')
             if scan['refusals']:
-                lines += ['Refused scan pairs: ' + '; '.join(f"r{r['index']} w{r['actor']} {r['problem']} (inbound_count {r['inbound_count']['baseline']} / "
-                                                              f"{r['inbound_count']['candidate']})" for r in scan['refusals']) + '.', '']
+                lines += ['Refused scan pairs: ' + '; '.join(
+                    f"r{r['index']} w{r['actor']} {', '.join(r['problems'])} (inbound_count {r['inbound_count']['baseline']} / "
+                    f"{r['inbound_count']['candidate']}; acknowledged slots {len(r['acknowledged_slots']['baseline'])} / "
+                    f"{len(r['acknowledged_slots']['candidate'])})" for r in scan['refusals']) + '.', '']
         if entry['response']:
             lines += ['| Response | candidate upper | baseline lower | bound | within 2 ms | combined uncertainty | credited |',
                       '| --- | --- | --- | --- | --- | --- | --- |']

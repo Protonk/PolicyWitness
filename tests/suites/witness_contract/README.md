@@ -178,16 +178,27 @@ are paired as exact per-pair differences with each side's sum over the pairs,
 without verdicts. Per actor, the worker's inbound scan counters are paired
 as exact counts: `w<actor>.scan_visits_per_pass_<role>` and
 `w<actor>.scan_loads_per_pass_<role>`, for the parked-activation and exchange
-roles, compare each side's count divided by its passes by integer
-cross-multiplication with the verdict `lower_in_every_pair`, which is false once an
-established pair is not strictly lower and true only when all five declared
-pairs are lower; a pair in which either side made no pass in that role is not
+roles. A scan that starts every pass at index 0 visits all `n` inbound slots
+except on a pass that ends by acknowledging slot `i`, which visits `i + 1`,
+and makes at least one load per visit, so over `P` passes it makes at least
+`n * P - n * (n - 1) / 2` visits and loads, its full-scan floor. Its visits
+per pass are therefore fixed by its pass count, and the side with fewer passes
+has the lower ratio without any change to the scan. A pair is lower only when
+the baseline's count is at or above its floor, the candidate's is below its
+own, and the candidate's count divided by its passes is strictly below the
+baseline's by integer cross-multiplication; a pair that is not lower names the
+conditions it failed. The verdict `lower_in_every_pair` is false once an
+established pair is not lower and true only when all five declared pairs are
+lower; a pair in which either side made no pass in that role is not
 established. `w<actor>.scan_zero_visit_passes`, the histogram's zero-visit
 bucket, is reported per side with each side's sum. Each actor's
 `inbound_count` is the number of deliveries the trial layout addresses to it,
-and a pair whose `inbound_count` differs between the sides is refused
-(`scan_inbound_count_mismatch`). Groups carry each scan counter's sum and
-median per actor. An improvement verdict is
+and its page's `INBOUND_ACKNOWLEDGED` events must name each of those slots
+once (`inbound_observed`). A pair is refused when its `inbound_count` differs
+between the sides (`scan_inbound_count_mismatch`) or either side's
+acknowledged slots differ from the layout
+(`scan_inbound_acknowledgement_mismatch`), and names each problem it has.
+Groups carry each scan counter's sum and median per actor. An improvement verdict is
 refuted by any established pair that falls short and is given only when all
 five declared pairs pass; a worsening verdict is given by any worse pair and
 refuted only when all five are established and none is worse; otherwise the
@@ -252,11 +263,15 @@ events without the actor, or only the stop without it, must fail. Constructed wh
 direction counts, and constructed counts the paired grace differences.
 Constructed A2 receipts with inbound scan counters must give
 `lower_in_every_pair` when the candidate's subject visits and loads per pass
-are lower in every pair, withhold it with fewer pairs than required, refute it
-for a pair equal to its baseline, separate a ratio that rounds to the
-baseline's as a float, refuse a pair whose subject `inbound_count` differs,
-and sum and take medians of the counters per actor in a group; a copy of the
-reader that compares the ratios as floats must fail. A comparison's receipts go through the loader and writers with
+are lower in every pair and below its full-scan floor, withhold it with fewer
+pairs than required, refute it for a pair equal to its baseline and for
+identical scans on both sides whose pass counts differ (two full scans, and
+two scans below their floors, each with the lower ratio on the side with fewer
+passes), separate a ratio that rounds to the baseline's as a float, refuse a
+pair whose subject `inbound_count` differs and a pair whose candidate page
+lacks one slot's acknowledgement, and sum and take medians of the counters
+per actor in a group; copies of the reader that compare the ratios as floats
+or credit a lower ratio without the floor conditions must fail. A comparison's receipts go through the loader and writers with
 separate app groups. The stager, given a constructed candidate app and source
 tree and stopped before any copy is signed, refuses an equipment identity or a
 stamp worker identity that differs from the tree's declared one.
