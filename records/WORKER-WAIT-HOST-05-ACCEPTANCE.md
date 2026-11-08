@@ -111,3 +111,48 @@ Both host compiler receipts specify `-O`; production remains inspection.
 | `tests/out/runs/host05-optimized-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `caee7223532f747f7ab53580044c05b2896ed43e673d161ca78c940854626be1` |
 | `tests/out/runs/host05-optimized-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/host-instrumented/host-build.json` | `db5dd838fd7a2dafc7f9ada9a12ca17b8640cf7debcd17341781c3d239c0653d` |
 | `tests/out/runs/host05-optimized-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/host-neighbor/host-build.json` | `414b17b2aab6dc8f82719b9e0058f79cac082c12d7350e122f777478885292e0` |
+
+## Diagnostic result and selected source comparison
+
+Both diagnostic blocks accepted all 80 trials, with no exclusions, skipped or
+incomplete trials, credited calibration and settled cleanup. All were on AC
+power with low-power mode off. The inspection/optimized decoder medians were:
+
+| Verdict count | Inspection rapid / idle (µs) | Optimized rapid / idle (µs) |
+| --- | --- | --- |
+| 1 | 96.0 / 102.9 | 62.7 / 67.3 |
+| 64 | 1192.6 / 1296.0 | 821.8 / 886.3 |
+| 256 | 4253.8 / 4515.9 | 2958.9 / 3136.8 |
+
+These separately scheduled blocks establish remaining decoder cost in each
+flavour, not a matched causal estimate of changing flags. The decoder interval
+exceeds uncertainty in every query-bearing trial. O0 has no validator decode.
+Production remains inspection. Reader v11's fixture-identity prose says
+“disposable -Onone builds” even for the optimized block; the actual compiler
+commands, build receipts and exported flavour establish `-O`. That prose is
+not used to classify or pool trials; it will be corrected after these frozen runs.
+
+Select one candidate: retain each native integer conversion during structural
+validation and reuse it for required-field checks and verdict construction.
+Keep validation order and the same `validatorInteger` conversion. A valid
+allow/deny frame with all three native integer fields goes from nine conversions
+(including schema) to four. This count is a source observation, not CPU savings.
+The local value holds three optional integers for one frame, without a heap
+cache or new cross-frame lifetime. Production adoption requires the measured
+criteria below; reduced conversion count alone does not suffice.
+
+Compare accepted HOST-04 with this candidate in inspection flavour, O0/O1/O64/
+O256, rapid and idle, five alternating pairs per cell/regime (80 trials total).
+The selected performance workloads are O64 and O256 in both regimes: **every
+pair must shorten both `p0.decode` and `p0.held_total` beyond combined
+uncertainty**. O0/O1 remain no-query/small controls. The common response and
+regression rules above apply. Use a 180-second native window, the same 100-trial
+calibration, pacing, warm exclusion and cleanup reserve. Do not extend sampling
+or add a favorable workload after seeing the candidate comparison. A failure
+of this gate rejects this sole decoder candidate and closes HOST-05.
+
+Before comparison, build/sign the isolated candidate, run runner evidence,
+ABI and affected validator/failure controls, and freeze exact staged identities.
+Full default and remaining qualification checks are required before adoption;
+if the measurement rejects it, production source remains HOST-04 and its
+integrated verification remains applicable.
