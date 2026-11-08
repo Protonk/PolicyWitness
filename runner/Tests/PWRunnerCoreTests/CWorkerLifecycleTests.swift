@@ -5,7 +5,7 @@ import Foundation
 // Real driver, separately built ABI producer, and narrowly controlled OS calls.
 // The fixture never applies a sandbox. These tests establish host observations,
 // not policy causes. Required equipment must fail clearly instead of SKIP+pass.
-private func lifecycleFixture(_ mode: String, readyMs: Int = 1_000,
+private func lifecycleFixture(_ mode: String, readyMs: Int = 1_000, graceMs: Int = 50,
                               calls: ChildProcessCalls = ChildProcessCalls()) throws -> CWorkerOutput {
     guard let path = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"],
           FileManager.default.isExecutableFile(atPath: path) else {
@@ -14,7 +14,7 @@ private func lifecycleFixture(_ mode: String, readyMs: Int = 1_000,
     let result = runCWorker(CWorkerInput(
         workerExecutablePath: path, policy: mode,
         slots: [CWorkerSlotInput(stepId: "lifecycle", attemptKind: .fileOpenRead, target: "/fixture")],
-        readyByteTimeoutMs: readyMs, sentinelTimeoutMs: 100, exitGraceMs: 50
+        readyByteTimeoutMs: readyMs, sentinelTimeoutMs: 100, exitGraceMs: graceMs
     ), processCalls: calls)
     guard case .success(let out) = result else {
         throw TestFailure(message: "fixture driver failed: \(result)")
@@ -257,7 +257,135 @@ private func runReadinessWaitControls(_ tk: TestKit) {
     }
 }
 
+private func unwrap<T>(_ value: T?, _ what: String = "value", file: StaticString = #file, line: UInt = #line) throws -> T {
+    guard let value else { throw TestFailure(message: "missing \(what) (at \(file):\(line))") }
+    return value
+}
+
+/// Records each production exit wait's outcome and every sleep requested after
+/// the first exit wait, which in these single-worker runs are the grace sleeps.
+private final class GraceRecorder {
+    private(set) var outcomes: [ExitWatchOutcome] = []
+    private(set) var watchedFDs: Set<Int32> = []
+    private(set) var graceSleeps: [UInt64] = []
+    var calls: ChildProcessCalls {
+        var calls = ChildProcessCalls()
+        calls.sleep = { [unowned self] ns in
+            if !self.outcomes.isEmpty { self.graceSleeps.append(ns) }
+            sleepNs(ns)
+        }
+        calls.waitExit = { [unowned self] watch, ns in
+            self.watchedFDs.insert(watch.fd)
+            let outcome = waitExitNs(watch, ns)
+            self.outcomes.append(outcome)
+            return outcome
+        }
+        return calls
+    }
+}
+
+/// Virtual time for the injected exit-wait controls: the clock advances only by
+/// the requested length of each sleep, readability wait and timed-out exit
+/// wait, so pass counts follow allowance / period exactly. Each call also takes
+/// real time (at most 1 ms, or until the pipe is readable) so the child makes
+/// progress. `outcome` chooses each exit wait's result by call index.
+private final class InjectedExitWaits {
+    var now: UInt64 = 1_000_000_000_000
+    let outcome: (Int) -> ExitWatchOutcome
+    private(set) var exitWaits: [UInt64] = []
+    private(set) var graceSleeps: [UInt64] = []
+    init(_ outcome: @escaping (Int) -> ExitWatchOutcome) { self.outcome = outcome }
+    var calls: ChildProcessCalls {
+        var calls = ChildProcessCalls()
+        calls.clock = { [unowned self] in self.now }
+        calls.sleep = { [unowned self] ns in
+            if !self.exitWaits.isEmpty { self.graceSleeps.append(ns) }
+            self.now += ns
+            sleepNs(min(ns, 1_000_000))
+        }
+        calls.waitReadable = { [unowned self] fd, ns in
+            self.now += ns
+            waitReadableNs(fd, ns)
+        }
+        calls.waitExit = { [unowned self] _, ns in
+            let result = self.outcome(self.exitWaits.count)
+            self.exitWaits.append(ns)
+            if result == .timedOut {
+                self.now += ns
+                sleepNs(1_000_000)
+            }
+            return result
+        }
+        return calls
+    }
+}
+
+/// The grace wait between waitpid samples waits for the ready pipe's hangup.
+private func runExitWaitControls(_ tk: TestKit) {
+    tk.run("a worker that exits on the exit request is reaped by the sample after its hangup, within 3 ms") {
+        let recorder = GraceRecorder()
+        let out = try lifecycleFixture("complete_exit_0", calls: recorder.calls)
+        try checkCompletedReport(out)
+        try expectEqual(out.pollStopReason, "done"); try expectEqual(out.reaped, true)
+        try expectEqual(out.exitCode, Int32(0)); try expectNil(out.termSignal)
+        try expectNil(out.terminationRequest)
+        let grace = try unwrap(out.graceWait)
+        try expectEqual(grace.stop, "reaped_during_grace"); try expectEqual(out.graceEnd, "reaped_during_grace")
+        try expectEqual(grace.clock_fault, false)
+        let elapsed = try unwrap(grace.elapsed_ms)
+        try expectTrue(elapsed <= 3, "elapsed \(elapsed) ms; exit waits \(recorder.outcomes), grace sleeps \(recorder.graceSleeps) ns")
+        try expectEqual(recorder.outcomes, [.notified], "one exit wait, ended by the hangup")
+        try expectEqual(recorder.watchedFDs.count, 1); try expectTrue(recorder.watchedFDs.allSatisfy { $0 >= 0 })
+        try expectTrue(recorder.graceSleeps.allSatisfy { $0 == HostWaitClock.exitSettleNs },
+                       "only settle sleeps may follow the hangup: \(recorder.graceSleeps)")
+    }
+    tk.run("a hangup before exit is followed by ten 100 µs settle sleeps, then 10 ms sleeps, then the reap") {
+        let recorder = GraceRecorder()
+        let out = try lifecycleFixture("complete_linger", graceMs: 1_000, calls: recorder.calls)
+        try checkCompletedReport(out)
+        try expectEqual(out.pollStopReason, "done"); try expectEqual(out.reaped, true)
+        try expectEqual(out.exitCode, Int32(0)); try expectNil(out.termSignal)
+        try expectNil(out.terminationRequest)
+        let grace = try unwrap(out.graceWait)
+        try expectEqual(grace.stop, "reaped_during_grace")
+        let elapsed = try unwrap(grace.elapsed_ms)
+        try expectTrue(elapsed >= 29, "the fixture lingers 30 ms after its hangup: elapsed \(elapsed) ms")
+        try expectEqual(recorder.outcomes, [.notified], "no exit wait follows a notification")
+        let sleeps = recorder.graceSleeps
+        try expectEqual(Array(sleeps.prefix(HostWaitClock.exitSettleSleeps)),
+                        Array(repeating: HostWaitClock.exitSettleNs, count: HostWaitClock.exitSettleSleeps), "\(sleeps)")
+        let polls = sleeps.dropFirst(HostWaitClock.exitSettleSleeps)
+        try expectTrue(!polls.isEmpty && polls.allSatisfy { $0 == 10_000_000 }, "then the 10 ms poll until the reap: \(sleeps)")
+    }
+    tk.run("exit waits that always time out end the grace by exhaustion and SIGKILL at the allowance") {
+        let control = InjectedExitWaits { _ in .timedOut }
+        let out = try lifecycleFixture("complete_hang", calls: control.calls)
+        try checkCompletedReport(out)
+        try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGKILL)
+        let grace = try unwrap(out.graceWait)
+        try expectEqual(grace.stop, "exhausted"); try expectEqual(grace.elapsed_ms, UInt64(50))
+        try expectEqual(control.exitWaits, Array(repeating: UInt64(10_000_000), count: 50 / 10), "allowance / poll period")
+        try expectEqual(control.graceSleeps, [], "a timed-out exit wait is the pass; no sleep follows it")
+        try expectEqual(out.terminationRequest?.signal, SIGKILL); try expectEqual(out.terminationRequest?.rc, 0)
+        try expectEqual(out.waitErrors?.count, 0)
+    }
+    tk.run("an unusable exit wait falls back to the 10 ms sleeping poll for the rest of the grace") {
+        let control = InjectedExitWaits { _ in .unusable }
+        let out = try lifecycleFixture("complete_hang", calls: control.calls)
+        try checkCompletedReport(out)
+        try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGKILL)
+        let grace = try unwrap(out.graceWait)
+        try expectEqual(grace.stop, "exhausted"); try expectEqual(grace.elapsed_ms, UInt64(50))
+        try expectEqual(control.exitWaits.count, 1, "the watch is abandoned after the first unusable wait")
+        try expectEqual(control.graceSleeps, Array(repeating: UInt64(10_000_000), count: 50 / 10), "allowance / poll period")
+        try expectEqual(out.terminationRequest?.signal, SIGKILL); try expectEqual(out.terminationRequest?.rc, 0)
+    }
+}
+
 func runCWorkerLifecycleTests(_ tk: TestKit) {
+    tk.group("CWorker exit grace waits for the worker's exit") {
+        runExitWaitControls(tk)
+    }
     tk.group("CWorker readiness wait on the ready pipe") {
         runReadinessWaitControls(tk)
     }

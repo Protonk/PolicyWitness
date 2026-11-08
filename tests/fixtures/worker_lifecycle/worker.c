@@ -340,8 +340,9 @@ int main(void) {
         while (!atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) usleep(1000);
         return 0;
     }
+    int linger = !strcmp(mode, "complete_linger");
     int complete = !strcmp(mode, "complete_hang") || !strcmp(mode, "complete_exit_0") ||
-                   !strcmp(mode, "complete_exit_17") || !strcmp(mode, "complete_signal");
+                   !strcmp(mode, "complete_exit_17") || !strcmp(mode, "complete_signal") || linger;
     int failure = !strcmp(mode, "reported_failure_hang");
     if (!complete && !failure && strcmp(mode, "no_report_hang")) return 95;
     if (complete) {
@@ -361,11 +362,21 @@ int main(void) {
         atomic_store_explicit(&hdr->done, 1, memory_order_release);
     }
     /* Readiness follows publication in this fixture to make driver fault
-     * controls deterministic; this is not production readiness coverage. */
+     * controls deterministic; this is not production readiness coverage. Like
+     * the production worker, these modes keep fd 4 open until they exit, so
+     * its close marks the exit for the host's grace wait. */
     if (write(4, "R", 1) != 1) return 97;
-    close(4);
+    if (linger) alarm(5);
     for (;;) {
         if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) {
+            if (linger) {
+                /* Hang up the ready pipe, then stay alive for 30 ms before
+                 * honouring the exit request: a notification before exit. */
+                close(4);
+                uint64_t until = clock_gettime_nsec_np(CLOCK_MONOTONIC) + 30000000u;
+                while (clock_gettime_nsec_np(CLOCK_MONOTONIC) < until) usleep(1000);
+                _exit(0);
+            }
             if (!strcmp(mode, "complete_exit_0")) _exit(0);
             if (!strcmp(mode, "complete_exit_17")) _exit(17);
             if (!strcmp(mode, "complete_signal")) {

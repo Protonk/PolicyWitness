@@ -20,8 +20,14 @@ exit request, a published status-word failure that ignores exit, or no publicati
 It publishes through the ABI's release/acquire protocol. Completed exit/signal
 scenarios wait for the host's exit-request flag, proving that the host observed
 the report before the abnormal disposition. The hang cases require cleanup by
-the host or the owning test. Swift tests use real spawn/mapping/polling/cleanup;
-internal OS-call controls inject only otherwise unreliable kill/wait failures.
+the host or the owning test. Like the production worker, these modes keep the
+ready pipe's fd 4 open after the ready byte until they exit, so its hangup
+marks the exit for the host's grace wait. `complete_linger` publishes the same
+completed report, then on the exit request closes fd 4 and stays alive for
+30 ms before exiting 0: a hangup that precedes reapability, for the settle and
+sleeping-poll controls. A five-second alarm bounds it. Swift tests use real
+spawn/mapping/polling/cleanup; internal OS-call controls inject only otherwise
+unreliable kill/wait failures and the grace wait's exit-wait outcomes.
 They independently clean up their child after a simulated unconfirmed reap.
 
 `reap_ack_clean|<gate>` and `reap_ack_signal|<gate>` publish arrival, then wait

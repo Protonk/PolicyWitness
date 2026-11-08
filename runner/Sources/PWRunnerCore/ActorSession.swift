@@ -17,6 +17,8 @@ import Foundation
  *   4. Create ready + policy pipes; parent ends FD_CLOEXEC.
  *   5. posix_spawn the worker with FDs dup'd to 0/3/4 (and 5 for a token channel).
  *   6. Deliver the policy under its deadline; read the pre-apply ready byte.
+ *      The ready pipe's read end stays open until tearDown: the exit grace
+ *      waits on its hangup, which follows the worker's exit.
  * A refusal before spawn leaves `spawned` false with `failure` set; a transfer
  * failure after spawn leaves the child running for the caller's cleanup.
  */
@@ -32,6 +34,9 @@ final class ActorSession {
     private var shmFD: Int32 = -1
     private var ownsShmFD = false
     private var tokenFD: Int32 = -1
+    /// The host's read end of the readiness pipe, owned from spawn until
+    /// tearDown; -1 before spawn and after close.
+    private(set) var readyReadFD: Int32 = -1
     private var fileActions: posix_spawn_file_actions_t? = nil
     private var actionsInitialized = false
     private var spawnAttributes: posix_spawnattr_t? = nil
@@ -370,6 +375,7 @@ final class ActorSession {
         pid = child
         closeAuthorityDuplicate()
         spawned = true
+        readyReadFD = readyPipe[0]
         // The transfer calls (clock, write, poll) are one injection point: the
         // deadline and the writer share the supplied clock, and production keeps
         // the Darwin defaults.
@@ -434,7 +440,6 @@ final class ActorSession {
                 readyWait = clock.record(stop: stop, nativeErrno: readErrno)
             }
         }
-        close(readyPipe[0])
     }
 
     deinit { tearDown() }
@@ -449,6 +454,7 @@ final class ActorSession {
         if ownsShmFD && shmFD >= 0 { close(shmFD) }
         ownsShmFD = false
         closeAuthorityDuplicate()
+        if readyReadFD >= 0 { close(readyReadFD); readyReadFD = -1 }
         if actionsInitialized { posix_spawn_file_actions_destroy(&fileActions); actionsInitialized = false }
         if attributesInitialized { posix_spawnattr_destroy(&spawnAttributes); attributesInitialized = false }
     }
@@ -549,9 +555,17 @@ final class ActorSession {
 
     /// Grace, termination and the post-reap acknowledgement reconciliation.
     /// How the grace wait ended is recorded directly, never inferred later.
+    /// Between waitpid samples the host waits for the ready pipe's hangup
+    /// for at most 10 ms; a hangup is followed by the next sample, at most
+    /// ten 100 µs settle sleeps if the child is not yet reapable, then the
+    /// 10 ms sleeping poll. An unusable pipe falls back to that poll at once.
+    /// A hangup never ends the grace by itself; only a sample's reap or wait
+    /// failure does.
     func finishCleanup() {
         if process.status == nil && !process.childUnavailable {
             var clock = HostWaitClock(milliseconds: input.exitGraceMs, pollNs: 10_000_000, calls: calls)
+            var watch = ExitWatch(fd: readyReadFD)
+            var settleSleeps = 0
             graceEnd = "exhausted"
             grace: while true {
                 observeAcknowledgement()
@@ -566,7 +580,20 @@ final class ActorSession {
                 case .pending:
                     break
                 }
-                if clock.expiredAfterSleeping() { break }
+                if watch.usable && !watch.notified {
+                    let (expired, outcome) = clock.expiredAfterWaiting(exit: watch)
+                    if expired { break }
+                    switch outcome {
+                    case .notified: watch.notified = true
+                    case .unusable: watch.usable = false
+                    case .timedOut, .none: break
+                    }
+                } else if watch.notified && settleSleeps < HostWaitClock.exitSettleSleeps {
+                    settleSleeps += 1
+                    if clock.expiredAfterSleeping(atMost: HostWaitClock.exitSettleNs) { break }
+                } else {
+                    if clock.expiredAfterSleeping() { break }
+                }
             }
             graceWait = clock.record(stop: graceEnd)
             observeAcknowledgement()

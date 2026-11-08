@@ -405,6 +405,48 @@ func runActorSchedulerTests(_ tk: TestKit) {
             try expectTrue(independentlyReaped, "fixture must independently reap the child hidden by ECHILD")
             try expectEqual(result.actors[0].quiescence, "unresolved", "later fixture cleanup cannot upgrade the retained result")
         }
+        tk.run("an earlier actor's ready pipe hangs up while a later actor lives, and both exit graces end by reap") {
+            guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
+            let input = ActorScheduleInput(actors: [actorInput(policy: allowAll, visits: [(0, [read("a", hosts)])]),
+                                                    actorInput(policy: allowAll, visits: [(1, [read("b", hosts)])])],
+                                           applies: [true, true], schedule: schedule([[0], [1]]))
+            var calls = ChildProcessCalls()
+            var outcomes: [ExitWatchOutcome] = []
+            calls.waitExit = { watch, ns in let outcome = waitExitNs(watch, ns); outcomes.append(outcome); return outcome }
+            let scheduler = ActorScheduler(input, processCalls: calls)
+            var validatorRuns = 0, hangupBeforeLaterExit = false, laterAlive = false, eof = false
+            let outcome = scheduler.run { phase, _, pid in
+                // A real validator runs against each live actor before the check.
+                if !verdicts(pid: pid).isEmpty { validatorRuns += 1 }
+                guard phase == 1, let first = scheduler.sessions[0], let later = scheduler.sessions[1] else { return }
+                // Actor 0 finished its only visit and exits on its own. Its write end
+                // has no other holder (actor 1 and the validators were spawned after
+                // the host closed its copy), so the hangup arrives while actor 1 lives.
+                var entry = pollfd(fd: first.readyReadFD, events: Int16(POLLIN), revents: 0)
+                let rc = poll(&entry, 1, 1_000)
+                hangupBeforeLaterExit = rc == 1 && entry.revents & Int16(POLLHUP | POLLIN) != 0
+                var byte: UInt8 = 0
+                eof = Darwin.read(first.readyReadFD, &byte, 1) == 0
+                laterAlive = kill(pid, 0) == 0 && later.process.status == nil
+            }
+            try expectNil(outcome.cancelled)
+            try expectEqual(outcome.visits.map { $0.endReason }, ["completed", "completed"])
+            try expectEqual(validatorRuns, 2)
+            try expectTrue(hangupBeforeLaterExit && eof, "actor 0's ready pipe must reach EOF while actor 1 is alive")
+            try expectTrue(laterAlive, "actor 1 was alive and unreaped at the check")
+            try expectFalse(outcomes.contains(.unusable), "exit waits: \(outcomes)")
+            for record in outcome.actors {
+                guard let out = record.output, let grace = out.graceWait else {
+                    throw TestFailure(message: "missing grace record for actor \(record.index)")
+                }
+                try expectEqual(record.quiescence, "reaped")
+                try expectEqual(out.graceEnd, "reaped_during_grace", "actor \(record.index)")
+                try expectEqual(grace.stop, "reaped_during_grace", "actor \(record.index)")
+                try expectNil(out.terminationRequest, "actor \(record.index)")
+                try expectTrue(out.done && out.exitCode == 0, "actor \(record.index)")
+            }
+            try expectTrue(scheduler.sessions.allSatisfy { $0?.readyReadFD == -1 }, "teardown closes every ready pipe read end")
+        }
         tk.run("two policies reach two identified processes, each applied once, across repeated visits") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let both = [read("hosts", hosts), read("passwd", passwd)]

@@ -6,8 +6,8 @@ import Foundation
  * CWorkerClockTests — the host's ready, sentinel and exit-grace waits are
  * elapsed monotonic allowances, not iteration counts.
  *
- * The real driver runs the ABI fixture worker while the clock, the sleep and
- * the readability wait the driver consults are controlled: a sleep may
+ * The real driver runs the ABI fixture worker while the clock, the sleep, the
+ * readability wait and the exit wait the driver consults are controlled: a sleep may
  * overrun or cost nothing, a wait may return early, the clock may jump, fail
  * or run backwards, and a phase hook may consume time the sentinel wait must
  * not charge. Every assertion reads the wait records the host publishes
@@ -21,7 +21,9 @@ import Foundation
 /// child can make progress; `failAfter` turns the clock unusable after that
 /// many readings. A readability wait advances it like a sleep, or by
 /// `waitReturnsAfterNs` when set (an early return), after `onWait` runs; its
-/// real part polls the descriptor.
+/// real part polls the descriptor. An exit wait advances it like a sleep, or
+/// returns `exitOutcome` at once without advancing it when that is set; its
+/// real part polls the watched pipe for `realSleepNs` and reports that outcome.
 private final class ControlledClock {
     var now: UInt64 = 1_000_000_000_000
     var overrun: UInt64 = 1
@@ -35,6 +37,9 @@ private final class ControlledClock {
     var onWait: ((Int32) -> Void)? = nil
     private(set) var waits: [UInt64] = []
     private(set) var waitedFDs: Set<Int32> = []
+    var exitOutcome: ExitWatchOutcome? = nil
+    private(set) var exitWaits: [UInt64] = []
+    private(set) var exitOutcomes: [ExitWatchOutcome] = []
     func read() -> UInt64? {
         readings += 1
         if let limit = failAfter, readings > limit { return nil }
@@ -54,11 +59,20 @@ private final class ControlledClock {
         now += waitReturnsAfterNs ?? ns * overrun
         if realSleepNs > 0 { waitReadableNs(fd, realSleepNs) }
     }
+    func exitWait(_ watch: ExitWatch, _ ns: UInt64) -> ExitWatchOutcome {
+        exitWaits.append(ns)
+        if let outcome = exitOutcome { exitOutcomes.append(outcome); return outcome }
+        now += ns * overrun
+        let outcome = waitExitNs(watch, realSleepNs)
+        exitOutcomes.append(outcome)
+        return outcome
+    }
     var calls: ChildProcessCalls {
         var calls = ChildProcessCalls()
         calls.clock = { [unowned self] in self.read() }
         calls.sleep = { [unowned self] ns in self.sleep(ns) }
         calls.waitReadable = { [unowned self] fd, ns in self.wait(fd, ns) }
+        calls.waitExit = { [unowned self] watch, ns in self.exitWait(watch, ns) }
         return calls
     }
 }
@@ -227,6 +241,45 @@ func runCWorkerClockTests(_ tk: TestKit) {
                 try expectEqual(wait.record(stop: "deadline").clock_fault, true)
             }
         }
+        tk.run("an exit wait is bounded by the poll period and the remaining allowance and charged like a sleep") {
+            let clock = ControlledClock(); clock.realSleepNs = 0
+            var wait = HostWaitClock(milliseconds: 25, pollNs: 10_000_000, calls: clock.calls)
+            var outcomes: [ExitWatchOutcome?] = []
+            while true {
+                let (expired, outcome) = wait.expiredAfterWaiting(exit: ExitWatch(fd: -1))
+                if expired { try expectNil(outcome); break }
+                outcomes.append(outcome)
+            }
+            try expectEqual(clock.exitWaits, [UInt64(10_000_000), UInt64(10_000_000), UInt64(5_000_000)])
+            try expectEqual(outcomes.count, 3)
+            try expectTrue(outcomes.allSatisfy { $0 == .unusable }, "a watch without a descriptor is unusable: \(outcomes)")
+            try expectEqual(clock.sleeps, [])
+            try expectEqual(wait.record(stop: "exhausted").elapsed_ms, UInt64(25))
+        }
+        tk.run("zero allowance expires before any exit wait") {
+            let clock = ControlledClock(); clock.realSleepNs = 0
+            var wait = HostWaitClock(milliseconds: 0, pollNs: 10_000_000, calls: clock.calls)
+            let (expired, outcome) = wait.expiredAfterWaiting(exit: ExitWatch(fd: -1))
+            try expectTrue(expired); try expectNil(outcome)
+            try expectEqual(clock.exitWaits, [])
+        }
+        tk.run("an exit wait that returns at once is a pass; a failed clock still charges its bound") {
+            let clock = ControlledClock(); clock.realSleepNs = 0; clock.exitOutcome = .timedOut
+            var wait = HostWaitClock(milliseconds: 100, pollNs: 7_000_000, calls: clock.calls)
+            clock.now += 90_000_000
+            try expectFalse(wait.expiredAfterWaiting(exit: ExitWatch(fd: -1)).expired)
+            clock.failAfter = clock.readings
+            while !wait.expiredAfterWaiting(exit: ExitWatch(fd: -1)).expired {}
+            try expectEqual(clock.exitWaits.reduce(0, +), UInt64(10_000_000))
+            try expectEqual(wait.record(stop: "exhausted").clock_fault, true)
+        }
+        tk.run("a settle sleep is bounded by its own length and the remaining allowance") {
+            let clock = ControlledClock(); clock.realSleepNs = 0
+            var wait = HostWaitClock(milliseconds: 1, pollNs: 10_000_000, calls: clock.calls)
+            clock.now += 750_000
+            while !wait.expiredAfterSleeping(atMost: HostWaitClock.exitSettleNs) {}
+            try expectEqual(clock.sleeps, [UInt64(100_000), UInt64(100_000), UInt64(50_000)])
+        }
         tk.run("an answer visible when re-sampling starts continues the wait without a sleep") {
             let clock = ControlledClock(); clock.realSleepNs = 0
             var wait = HostWaitClock(milliseconds: 100, pollNs: 1_000_000, calls: clock.calls)
@@ -322,9 +375,14 @@ func runCWorkerClockTests(_ tk: TestKit) {
             let elapsed = try unwrap(wait.elapsed_ms)
             try expectTrue(elapsed >= 100 && elapsed <= 112, "elapsed \(elapsed) ms must sit on the allowance, not on a pass count")
             try expectTrue(clock.sleeps.count < 50, "an iteration-counted wait would take 50 passes; the clock ended it after \(clock.sleeps.count)")
-            // The grace wait sleeps at most 10 ms, the sentinel 2 ms; the readiness wait polls the pipe for at most 10 ms.
-            try expectTrue(clock.sleeps.allSatisfy { $0 <= 10_000_000 }, "each sleep is bounded by its poll interval and the remaining allowance")
+            // The sentinel sleeps at most 2 ms and the readiness wait polls the pipe for at most 10 ms. The grace
+            // wait polls the ready pipe for the worker's exit for at most 10 ms; this fixture keeps the pipe open
+            // and never exits, so it never sleeps, and exhaustion follows at most 50/10 exit waits.
+            try expectTrue(clock.sleeps.allSatisfy { $0 <= 2_000_000 }, "each sleep is bounded by its poll interval and the remaining allowance")
             try expectTrue(clock.waits.allSatisfy { $0 <= 10_000_000 }, "each readability wait is bounded by its poll interval and the remaining allowance")
+            try expectTrue(!clock.exitWaits.isEmpty && clock.exitWaits.count <= 5 && clock.exitWaits.allSatisfy { $0 <= 10_000_000 },
+                           "each exit wait is bounded by its poll interval and the remaining allowance: \(clock.exitWaits)")
+            try expectEqual(try unwrap(out.graceWait).stop, "exhausted")
         }
         tk.run("irregular polling costs consume the allowance") {
             let clock = ControlledClock(); clock.costNs = 7_000_000   // each clock reading costs 7 ms of scheduler time
@@ -369,7 +427,7 @@ func runCWorkerClockTests(_ tk: TestKit) {
         tk.run("a failed clock falls back to a bounded number of nominal sleeps and says so") {
             // The clock dies during the readiness wait, so every later wait runs on its
             // bounded fallback: 1000/10 readiness waits, 100/2 sentinel passes and 50/10
-            // grace passes at most, each recorded as a clock fault.
+            // grace exit waits at most, each recorded as a clock fault.
             let clock = ControlledClock(); clock.failAfter = 6; clock.realSleepNs = 0
             let out = try drive("no_report_hang", clock: clock, sentinelMs: 100)
             try expectEqual(out.pollStopReason, "sentinel_deadline")
@@ -377,8 +435,9 @@ func runCWorkerClockTests(_ tk: TestKit) {
             try expectEqual(wait.clock_fault, true)
             try expectNil(wait.elapsed_ms)
             try expectEqual(try unwrap(out.readyWait).clock_fault, true)
-            try expectTrue(clock.sleeps.count + clock.waits.count <= 100 + 50 + 5 + 10,
-                           "the fallback is bounded by budget / poll: \(clock.sleeps.count) sleeps, \(clock.waits.count) waits")
+            try expectTrue(clock.sleeps.count + clock.waits.count + clock.exitWaits.count <= 100 + 50 + 5 + 10,
+                           "the fallback is bounded by budget / poll: \(clock.sleeps.count) sleeps, \(clock.waits.count) waits, \(clock.exitWaits.count) exit waits")
+            try expectTrue(clock.exitWaits.count <= 5, "grace exit waits: \(clock.exitWaits)")
         }
         tk.run("a clock that runs backwards is a fault, not extra allowance") {
             let clock = ControlledClock(); clock.regressAt = 5
@@ -388,8 +447,8 @@ func runCWorkerClockTests(_ tk: TestKit) {
             // active records the fault, and no wait is extended by it.
             let faulted = [out.readyWait, out.sentinelWait, out.graceWait].compactMap { $0 }.filter { $0.clock_fault }
             try expectTrue(!faulted.isEmpty, "a regressing clock must be recorded as a fault")
-            try expectTrue(clock.sleeps.count + clock.waits.count <= 100 + 50 + 5 + 10,
-                           "a regression never extends a wait: \(clock.sleeps.count) sleeps, \(clock.waits.count) waits")
+            try expectTrue(clock.sleeps.count + clock.waits.count + clock.exitWaits.count <= 100 + 50 + 5 + 10,
+                           "a regression never extends a wait: \(clock.sleeps.count) sleeps, \(clock.waits.count) waits, \(clock.exitWaits.count) exit waits")
         }
         tk.run("synchronous collection intervals extend the allowance by exactly their measured length") {
             let clock = ControlledClock()
@@ -420,7 +479,11 @@ func runCWorkerClockTests(_ tk: TestKit) {
             let ready = try unwrap(out.readyWait)
             try expectEqual(ready.budget_ms, 1_000)
             try expectTrue(["received", "eof"].contains(ready.stop), ready.stop)
-            try expectEqual(try unwrap(out.graceWait).budget_ms, 50)
+            let grace = try unwrap(out.graceWait)
+            try expectEqual(grace.budget_ms, 50)
+            // The fixture keeps the ready pipe open until it exits; the grace ends by a reap, never by exhaustion.
+            try expectEqual(grace.stop, "reaped_during_grace")
+            try expectEqual(clock.sleeps.filter { $0 > 2_000_000 }, [], "no 10 ms grace sleep while the exit wait is usable")
             let encoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: pwRunnerEncodeJSON(buildWorkerSubprocess(out)))
             try expectEqual(encoded.sentinel_wait, out.sentinelWait)
             try expectEqual(encoded.ready_wait, out.readyWait)

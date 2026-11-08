@@ -26,8 +26,9 @@ import CryptoKit
  *   8. Read the pre-apply ready byte (deadline).
  *   9. Acquire applied and each phase arrival; collect, then release its ordinal;
  *      retain per-phase acknowledgement/completion with bounded sentinel polling.
- *  10. Release-store `exit_requested = 1`; waitpid with grace timer;
- *      SIGKILL fallback if the worker hangs.
+ *  10. Release-store `exit_requested = 1`; waitpid samples under the grace
+ *      allowance, waiting between them for the ready pipe's hangup at the
+ *      worker's exit; SIGKILL fallback if the worker hangs.
  *  11. Reconstruct CWorkerStepResult per slot by reading the shm
  *      output fields once `completed == 1`.
  *
@@ -48,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "69a3977788506b4f1dc818d5b1afcd8fad44994593737a6106871b1db1a719fb"
-    static let abiIdentity: [UInt8] = [0x69, 0xa3, 0x97, 0x77, 0x88, 0x50, 0x6b, 0x4f, 0x1d, 0xc8, 0x18, 0xd5, 0xb1, 0xaf, 0xcd, 0x8f, 0xad, 0x44, 0x99, 0x45, 0x93, 0x73, 0x7a, 0x61, 0x06, 0x87, 0x1b, 0x1d, 0xb1, 0xa7, 0x19, 0xfb]
+    static let abiIdentityHex = "d6c3e5e51d082e0db805502022389deb6a77364d2e2cd9b5881f27cdedc4df52"
+    static let abiIdentity: [UInt8] = [0xd6, 0xc3, 0xe5, 0xe5, 0x1d, 0x08, 0x2e, 0x0d, 0xb8, 0x05, 0x50, 0x20, 0x22, 0x38, 0x9d, 0xeb, 0x6a, 0x77, 0x36, 0x4d, 0x2e, 0x2c, 0xd9, 0xb5, 0x88, 0x1f, 0x27, 0xcd, 0xed, 0xc4, 0xdf, 0x52]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -866,11 +867,34 @@ struct ChildProcessCalls {
     var clock: () -> UInt64? = MonotonicDeadline.now
     var sleep: (UInt64) -> Void = sleepNs
     var waitReadable: (Int32, UInt64) -> Void = waitReadableNs
+    /// The bounded exit wait host grace uses; tests may drive it.
+    var waitExit: (ExitWatch, UInt64) -> ExitWatchOutcome = waitExitNs
+}
+
+/// How one bounded wait for a child's exit ended.
+enum ExitWatchOutcome { case notified, timedOut, unusable }
+
+/// The host's handle for waiting on one child's exit without a timer sleep.
+/// `fd` is the host's read end of the worker's readiness pipe, whose only
+/// write end the worker holds until it exits (its exec children spawn with
+/// close-on-exec default), so hangup marks the worker's exit by any cause;
+/// -1 when the session holds none. `usable` false means the primitive cannot
+/// inform this wait and the grace falls back to the sleeping poll. `notified`
+/// records that the hangup was seen; it never substitutes for a reap.
+struct ExitWatch {
+    let fd: Int32
+    var usable: Bool
+    var notified = false
+
+    init(fd: Int32) {
+        self.fd = fd
+        usable = fd >= 0
+    }
 }
 
 /// One host wait measured as elapsed monotonic time against an allowance.
-/// Progress, interrupted calls and sleep overruns never renew it; each sleep or
-/// readability wait is bounded by the remaining allowance. Excluded intervals
+/// Progress, interrupted calls and sleep overruns never renew it; each sleep,
+/// readability wait or exit wait is bounded by the remaining allowance. Excluded intervals
 /// (synchronous phase collection) extend the allowance by exactly their
 /// measured length. When the clock fails or runs backwards the wait spends only
 /// the last remaining allowance in nominal sleeps or waits; it never restores
@@ -928,9 +952,14 @@ struct HostWaitClock {
     /// Decide whether the allowance is exhausted; otherwise sleep for at most
     /// the remaining allowance and report that the wait continues.
     mutating func expiredAfterSleeping() -> Bool {
+        expiredAfterSleeping(atMost: pollNs)
+    }
+
+    /// Like expiredAfterSleeping, bounded by `atMost` instead of the poll period.
+    mutating func expiredAfterSleeping(atMost ns: UInt64) -> Bool {
         _ = remainingNs()
         if fallbackRemainingNs == 0 { return true }
-        let sleep = min(pollNs, fallbackRemainingNs)
+        let sleep = min(max(1, ns), fallbackRemainingNs)
         // If the next clock read fails, this requested sleep is already charged.
         // A working clock measures the actual interval on its next reading.
         fallbackRemainingNs -= sleep
@@ -950,6 +979,23 @@ struct HostWaitClock {
         calls.waitReadable(fd, wait)
         return false
     }
+
+    /// Decide whether the allowance is exhausted; otherwise wait for the
+    /// child's exit notification for at most the remaining allowance (bounded
+    /// by the poll period) and report how the wait ended. Charged like a sleep.
+    mutating func expiredAfterWaiting(exit watch: ExitWatch) -> (expired: Bool, outcome: ExitWatchOutcome?) {
+        _ = remainingNs()
+        if fallbackRemainingNs == 0 { return (true, nil) }
+        let wait = min(pollNs, fallbackRemainingNs)
+        // As with a sleep: if the next clock read fails, this requested wait is already charged.
+        fallbackRemainingNs -= wait
+        let outcome = calls.waitExit(watch, wait)
+        return (false, outcome)
+    }
+
+    /// A short settle sleep after a notification that preceded reapability.
+    static let exitSettleNs: UInt64 = 100_000
+    static let exitSettleSleeps = 10
 
     /// The clock time one re-sampling may spend before the first sleep after a publication.
     static let resampleBudgetNs: UInt64 = 100_000
@@ -1244,6 +1290,22 @@ func waitReadableNs(_ fd: Int32, _ ns: UInt64) {
     let ms = ns == 0 ? 0 : min((ns - 1) / 1_000_000 + 1, UInt64(Int32.max))
     var entry = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
     _ = poll(&entry, 1, Int32(ms))
+}
+
+/// Wait at most `ns`, rounded up to whole milliseconds, for the hangup of the
+/// watched pipe. Hangup or readability (a byte or EOF) is a notification, an
+/// invalid or failed descriptor makes the watch unusable, and a timeout or EINTR
+/// is a timed-out pass the caller's clock charges. Never retried here.
+func waitExitNs(_ watch: ExitWatch, _ ns: UInt64) -> ExitWatchOutcome {
+    guard watch.usable && watch.fd >= 0 else { return .unusable }
+    let ms = ns == 0 ? 0 : min((ns - 1) / 1_000_000 + 1, UInt64(Int32.max))
+    var entry = pollfd(fd: watch.fd, events: Int16(POLLIN), revents: 0)
+    let rc = poll(&entry, 1, Int32(ms))
+    if rc < 0 { return errno == EINTR ? .timedOut : .unusable }
+    if rc == 0 { return .timedOut }
+    if entry.revents & Int16(POLLNVAL | POLLERR) != 0 { return .unusable }
+    if entry.revents & Int16(POLLHUP | POLLIN) != 0 { return .notified }
+    return .timedOut
 }
 
 /// Convert a [String] into a NULL-terminated argv array of C strings the

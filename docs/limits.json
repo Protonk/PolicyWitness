@@ -1053,7 +1053,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runCWorker measures the exit grace as elapsed monotonic time after storing exit_requested when the child is not already reaped, then attempts SIGKILL and reaping; exit_grace_wait records the budget, elapsed time and how the wait ended. Terminal worker publication exits without waiting for that request; cancellation and fallback cleanup remain. Deadline/cleanup paths use controlled children and a controlled clock; the production duration is source-inspected."
+      "behavior": "runCWorker measures the exit grace as elapsed monotonic time after storing exit_requested when the child is not already reaped. Between waitpid samples the host waits at most 10 ms for the hangup of the readiness pipe, whose read end it holds until session teardown and whose only write end the worker holds until it exits; a hangup is followed by the next sample, then by at most ten 100 µs settle sleeps while the child is not yet reapable, then by the 10 ms sleeping poll, which an unusable pipe uses from the start. A hangup never ends the grace by itself: only a sample's reap or wait failure does. On expiry the host attempts SIGKILL and reaping; exit_grace_wait records the budget, elapsed time and how the wait ended. Terminal worker publication exits without waiting for that request; cancellation and fallback cleanup remain. Deadline/cleanup paths use controlled children and a controlled clock; the production duration is source-inspected."
     },
     {
       "id": "worker_proceed_wait",
