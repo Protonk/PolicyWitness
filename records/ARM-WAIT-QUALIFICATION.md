@@ -202,3 +202,11 @@ The screen and neutral readers are respectively
 `65cf178013915d5f803cea94b95ee6c830bc7da53dde238f25a1ca84bc560b18`.
 The constructed controls passed in `arm-cost-controls-01`; production source
 and the distributed signed app are unchanged.
+
+The actor baseline is staged at `arm-cost-baseline-activation-01` with the
+same readers. Its frozen `prepared.json` SHA-256 is
+`d60a2a14d456eeb074888247b463beac47170300660a463278cc24d284c75e5b`.
+The ordinary baseline finished in 6.871 seconds, with CPU rates 1.0007 and
+1.0008 CPU-seconds/second, eligible rapid and idle pacing, 10 ms declared quantum
+and settled cleanup. These are fresh extended-hold observations, not a request
+latency or energy result.
