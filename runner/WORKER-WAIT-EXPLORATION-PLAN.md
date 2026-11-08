@@ -26,10 +26,10 @@ retains the local decoder improvement and failed held-time gate. HOST-06 is
 accepted; its [record](../records/WORKER-WAIT-HOST-06-ACCEPTANCE.md) preserves the
 first-arrival comparison, added resampling cost and integrated verification.
 The [host follow-on round](#host-follow-on-round) is complete. Further host
-candidates require a separate scope decision. ARM research/native trials and
-all hint-batch tuning remain explicitly deferred. Deferral is a priority
-decision, not failed qualification or evidence of no benefit; completing this
-round does not itself resume ARM or open hint tuning.
+candidates require a separate scope decision. ARM research and native trials
+are resumed under coordinator acceptance authority. Hint tuning follows each
+wait's ARM disposition under the rule below; it is not opened merely by elapsed
+time or incomplete qualification.
 
 Freeze each comparison against identified accepted source, including preceding
 accepted changes and excluding other candidates. Keep the two plans' builds,

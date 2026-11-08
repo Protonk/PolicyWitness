@@ -16,11 +16,11 @@ profile, or hide pre-application resources to make this alternative pass.
 
 ## Status and shared rules
 
-**Deferred**, alongside hint tuning. The worker plan's
+**Resumed** under coordinator acceptance authority. The worker plan's
 [host follow-on round](WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
 is complete: HOST-04 and HOST-06 are accepted; HOST-05 is closed without
-adoption. Deferral remains a priority decision, not an ARM qualification result.
-Record explicit resumption before proceeding, then freeze a fresh production
+adoption. The [qualification record](../records/ARM-WAIT-QUALIFICATION.md)
+owns the staged native investigation and deployment decision. Freeze a fresh production
 baseline containing HOST-04 and HOST-06 and excluding HOST-05. Historical host
 measurements do not substitute for that baseline.
 

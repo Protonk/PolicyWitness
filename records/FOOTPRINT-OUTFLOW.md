@@ -368,11 +368,17 @@ The [host follow-on round](../runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow
 is complete. The integrated signed app passed all 222 default cases, all 597
 runner assertions and the six-case targeted selection, including ordering
 mutations and 24 held-footprint measurements. ARM and hint tails remain deferred;
-completion of this round does not resume them or retire their common plan.
+completion of this round alone did not resume them or retire their common plan.
 The roughly 25 percent overshoot of requested host sleeps on this equipment
 remains a measured condition, not a separate tuning candidate.
 
 ### Remaining questions
+
+ARM investigation is resumed under coordinator acceptance authority, starting
+from the accepted HOST-04/HOST-06 source. `ARM-WAIT-QUALIFICATION.md` records
+the staged applicability and deployment work. Hint tuning opens per wait only
+after ARM closes without adoption or receives an explicit recorded deferral.
+The prior deferral supplied no qualification result.
 
 Release and parked pacing remain unaccepted on this equipment. Reopening either
 requires a newly justified dependency or changed-equipment qualification,
