@@ -2,8 +2,8 @@
 
 Recorded 2026-11-06. Source revision: `79ad8a447066113474900e29617991cafe5c9cab`.
 
-Status: deferred investigation, not an execution plan, acceptance gate or release
-commitment. The question is which current demands can be reduced while preserving
+Status: recorded dispositions and deferred directions, not an execution plan,
+acceptance gate or release commitment. The question is which current demands can be reduced while preserving
 PW's observations and claims. [FOOTPRINT](../docs/FOOTPRINT.md) establishes scoped
 CPU demand, representation coexistence, backing identity and resource-specific
 endings; [LIMITS](../docs/LIMITS.md) supplies the corresponding allowances. Row IDs
@@ -204,9 +204,11 @@ log status, exit/reap observations and original run identities are preserved
 with a hash index in `worker-wait-evidence/` in the identified copy of
 `footprint-opt-targeted-final-02`. Its archive remains inside the preserved
 `worker-wait-review-final-01/worker-wait-review/archives/` tree, now in
-`tests/out/runs/host06-main-targeted-01/host-followon/archives/worker-wait-review-final-01.tar.gz`.
-`WORKER-WAIT-REVIEW.md` and the outer `host-followon/archive-index.json`
-identify these nested copies and file hashes. This evidence is gitignored
+`host06-main-targeted-01`'s `host-followon/archives/worker-wait-review-final-01.tar.gz`.
+That former retained run is itself preserved in
+`tests/out/runs/worker-wait-closeout-01/worker-wait-closeout/archives/host06-main-targeted-01.tar.gz`.
+The nested archive indexes and source snapshot of the retired review identify
+these copies and file hashes. This evidence is gitignored
 and available only in the local checkout. The early `worker-wait-native-01`
 hardware-query refusal is preserved separately; its unsandboxed retry passed.
 The unchanged app's sandboxed signature-check failure likewise passed the
@@ -220,14 +222,14 @@ separately evidenced CLOCK_MONOTONIC failure.
 
 ### Dispositions from the worker wait exploration
 
-The [acceptance review](WORKER-WAIT-REVIEW.md) reaffirms the dispositions below
+The completed acceptance review reaffirms the dispositions below
 with timestamp reader version 10: uncertainty-expanded response extrema,
 complete response coverage, and conservative publication brackets for legacy
 inbound commits. All corrected response bounds pass; the largest is 185.541 µs
 against 2 ms. It also identifies the retained raw observations and replacement
 reader controls. The original summaries remain preserved separately.
 
-The [worker wait pilot](WORKER-WAIT-PILOT.md) decomposed held phases on the
+The worker wait pilot decomposed held phases on the
 production path with continuous-clock stamps in disposable instrumented hosts
 and seam-built workers. In every ordinary trial the worker applied, arrived and
 spun while the host slept in its 10 ms readiness poll, which lasted 12.5 ms, so
@@ -244,8 +246,7 @@ per pair with medians of 2.9 to 5.3 ms; no resolved actor-form or
 whole-request regression; every response bound credited. The remaining first
 arrival delay is the 2 ms sentinel poll during the worker's application.
 
-HOST-02 (accepted with HOST-03 on 2026-11-07, `c7648e8e` and `5d1c888d`; see its
-[acceptance record](WORKER-WAIT-HOST-02-ACCEPTANCE.md)): the host re-samples a
+HOST-02 (accepted with HOST-03 on 2026-11-07, `c7648e8e` and `5d1c888d`): the host re-samples a
 just-published answer for at most 100 µs before its first sleep after an
 activation, release or inbound commit. In every actor-form pair of both regimes
 the per-trial detection total fell from 4.9 to 11.1 ms to at most 1.26 ms, the
@@ -259,8 +260,7 @@ poll once per request (12.5 ms slept), where the baseline's final detection
 sleep had covered the worker's exit. The owner admitted one further candidate
 for that poll rather than accepting the tradeoff.
 
-HOST-03 (accepted with HOST-02 on 2026-11-07, `46e2b578` and `66430db5`; see its
-[acceptance record](WORKER-WAIT-HOST-03-ACCEPTANCE.md)): between exit grace
+HOST-03 (accepted with HOST-02 on 2026-11-07, `46e2b578` and `66430db5`): between exit grace
 samples the host waits on the readiness pipe's hangup, which the worker's exit
 produces, instead of sleeping 10 ms; a hangup that precedes reapability is
 followed by at most ten 100 µs settle sleeps, and a pipe that cannot inform
@@ -276,8 +276,7 @@ On this machine a pipe hangup and a kqueue `NOTE_EXIT` wake with the same
 latency, and the production worker's hangup precedes its reapability more
 often than a trivial child's, hence the settle sleep.
 
-SCAN (accepted 2026-11-08, `d7d19a6b` and `d1821df6`; see its
-[acceptance record](WORKER-WAIT-SCAN-ACCEPTANCE.md)): the recipient's inbound
+SCAN (accepted 2026-11-08, `d7d19a6b` and `d1821df6`): the recipient's inbound
 scan starts at a worker-local completed-prefix cursor, the count of leading
 slots this worker has itself acknowledged, instead of index 0; 68 bytes of
 static state reset at authority preparation, every visited slot checked as
@@ -292,17 +291,12 @@ credited, and the only every-pair worsening was the subject's parked pass
 count, which rises because shorter passes fit more into the same parked time.
 Counts, not CPU: no CPU or energy claim is made.
 
-Branch 3's hint tails (`HINT-RELEASE`, `HINT-ACTIVATION`) and the
-[ARM option plan](../runner/ARM-WAIT-OPTION-PLAN.md) are explicitly deferred
-after completion of the host follow-on round below. This is a priority decision,
-not a negative qualification or benefit result. The pilot and three comparisons
-measured a pass period of 0.26 to 0.28 µs with one thousand `cpu_relax` hints;
-these observations inform a later comparison but do not freeze its baseline.
-Hint tuning could reduce repeated work and warrants separate CPU/peer-progress
-observations; ARM qualification would establish applicability and progress,
-with deployment and resource benefit evaluated separately. The scan mask
-alternative remains unopened, conditional on measured savings from skipping
-acknowledged slots behind holes.
+The pilot and three comparisons measured a pass period of 0.26 to 0.28 µs
+with one thousand `cpu_relax` hints. These observations nominated a later
+comparison; they were not its baseline. The ARM and hint round below used
+fresh accepted source after HOST-04 and HOST-06. The scan mask remains outside
+this round: no measurement showed holes defeating the accepted cursor's
+savings. Correctness coverage of holes alone does not nominate another mask.
 
 Branch 1, PREPARATION (rejected 2026-11-07 without building, on the plan's cost
 clause): the pilot measured the whole frame-serialization interval at 142 to
@@ -323,8 +317,8 @@ sleeps. No resource or worker write was added. All fifty ordinary candidate
 comparison trials ended that wait on notification, against one plain sleep in
 each baseline trial. Terminal detection and reap improved beyond uncertainty in
 every ordinary pair, and every response bound was credited. The source account
-is FOOTPRINT `fw15`; `WORKER-WAIT-HOST-04-ACCEPTANCE.md` retains exact identities,
-all 120 comparison receipts and the separate observer-effect comparison.
+is FOOTPRINT `fw15`; the retained host archive preserves all 120 comparison
+receipts, exact identities and the separate observer-effect comparison.
 
 This is a structural adoption, with no universal request-speed, CPU, energy or
 coalescing claim. One O2P idle whole-request pair was 1.970 ms slower and crossed
@@ -344,8 +338,8 @@ Its 40-pair comparison improved decode in all 20 query-dense pairs, saving
 requirement that every selected pair shorten both decode and hold. Planning
 and validator intervals account for the contrary elapsed differences; their
 cause is unestablished. No further sampling was added and the source change
-was not integrated. `WORKER-WAIT-HOST-05-ACCEPTANCE.md` retains exact identities,
-contrary observations and incomplete-verification limits. A later less-work
+was not integrated. The retained host archive preserves exact identities, contrary observations
+and incomplete-verification limits. A later less-work
 proposal needs a new scope decision; this result is not uniform hold improvement.
 
 HOST-06 is accepted (`7f67e5cd`): after a received readiness byte, the ordinary
@@ -360,41 +354,134 @@ All response bounds were credited across sixty pairs. One O0 idle whole request
 was 1.982 ms slower despite its shorter hold; no whole-request group worsened
 beyond spread in every pair. Observer costs remain separately recorded without
 a fixed correction. No resource, worker IPC or public evidence field was added.
-FOOTPRINT `fw16` describes the mechanism; `WORKER-WAIT-HOST-06-ACCEPTANCE.md`
-retains exact identities and claim limits. CPU, energy and coalescing gains
+FOOTPRINT `fw16` describes the mechanism; the retained host archive preserves
+exact identities and claim limits. CPU, energy and coalescing gains
 remain unmeasured.
 
-The [host follow-on round](../runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
-is complete. The integrated signed app passed all 222 default cases, all 597
-runner assertions and the six-case targeted selection, including ordering
-mutations and 24 held-footprint measurements. ARM and hint tails remain deferred;
-completion of this round alone did not resume them or retire their common plan.
+The host follow-on round is complete. The integrated signed app passed all
+222 default cases, all 597 runner assertions and the six-case targeted selection, including ordering
+mutations and 24 held-footprint measurements. Its completion supplied the
+production foundation for the separate ARM/hint investigation below.
 The roughly 25 percent overshoot of requested host sleeps on this equipment
 remains a measured condition, not a separate tuning candidate.
 
-### Remaining questions
+### ARM and hint dispositions
 
-ARM investigation is resumed under coordinator acceptance authority, starting
-from the accepted HOST-04/HOST-06 source. `ARM-WAIT-QUALIFICATION.md` records
-the staged applicability and deployment work. Hint tuning opens per wait only
-after ARM closes without adoption or receives an explicit recorded deferral.
-The prior deferral supplied no qualification result.
+The bounded round on Mac17,3, macOS 26.7.1 (25G241), closes without a worker
+wait change. Production native identity is
+`aaa8056c79c242fde5740449049246e3ed88facdc2c8efd143f6344c856da8e5`, including
+HOST-04/HOST-06 and excluding HOST-05. The signed app is unchanged.
 
-Release and parked pacing remain unaccepted on this equipment. Reopening either
-requires a newly justified dependency or changed-equipment qualification,
-followed by live queries of the same held generation, preserved decision order,
-error publication, response brackets, the ordering mutation controls, and the
-original matched CPU/response acceptance bars. The failed calls above are not
-an invitation to add policy exceptions or silently spin on refused sleeps.
-Parked delivery acknowledgement, self-transfer, revisits and shortened exchange
-allowances still need independent responsiveness observations before parked
-pacing can be accepted.
+WFE and WFET each passed twelve first-use children: three each under unapplied,
+version-2 allow-default, bare deny-default and deny-default with file-read-data.
+Each child executed the first explicit wait after application, published entry
+and return, and reached its own 500 ms continuous-clock cutoff. Supervisors
+observed live generations around a silent interval and reaped every child;
+no rescue supplied progress. This establishes native first-use applicability
+on this configuration, not integrated protocol or deployment qualification.
+WFE's largest repeated instruction bracket was 3.336 ms, including possible
+descheduling; these are not the integrated response measurements.
 
-`wait_exchange` remains unchanged and has separate acknowledgement precedence.
-It still needs its own isolated hold and acknowledgement experiment before any
-optimization. Requested-action quiescence is not CPU idleness; retained footprint
-measurements continue to describe the existing polling loops. Their budgets,
-mechanism rows and measured values have not changed.
+Untimed WFE has no established supported selection rule for an independent
+maximum wake interval across configuration, migration and resume. The
+[pinned XNU event-stream implementation](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/arm64/machine_routines.c)
+and its internal capability flag do not supply that contract. Its production option therefore closed without an enablement
+rule. The installed public SDK header exposes `hw.optional.arm.caps`, with
+stable ABI bit 26 for FEAT_WFxT, a better feature-detection lead for the timed
+alternative. It does not by itself qualify all EL0 counter and resume assumptions.
+All first-use children read 24 MHz; no model-based 1 GHz assumption was used.
+
+The timed prototype then replaced one unsuccessful tail with one WFET, a
+checked CNTVCT deadline limited to 100 microseconds and the last sampled
+remaining allowances. It kept ordinary acquire loads and decision order.
+These were explicitly labelled signed source substitutions, not production
+integration. The CPU screen used fresh held baselines, live queries, effect
+guards, generation binding, busy/sleep controls and observed cleanup. The
+ordinary cell isolates a release wait. The actor lifecycle cell isolates the
+parked, unapplied issuer alongside the applied queried subject and retained
+extension custody; it does not qualify a restrictively applied parked actor.
+
+Each row below has five alternating matched pairs in each of rapid and
+one-second-idle regimes, with one excluded first request per exact staged app.
+All twenty measured holds per row were eligible, on AC with low-power mode 0,
+without recorded system sleep. Holds of at least one second measure CPU demand;
+they are not production hold durations. Both sides used byte-identical readers,
+a 10 ms declared accounting quantum, one quantum of allowance per endpoint and
+full elapsed brackets. First baselines were approximately one CPU-second per
+second. ARM's added dependency had a frozen 10% minimum beyond those allowances;
+the smaller hint change had a 1% minimum. No candidate met its criterion in any
+pair, and no extra samples were added.
+
+| Candidate and run | Baseline CPU-seconds/second | Candidate CPU-seconds/second | Pairs meeting criterion |
+| --- | --- | --- | --- |
+| Release WFET, `arm-cost-wfet-release-01` | 0.9932–1.0017 | 0.9927–1.0033 | 0/10 |
+| Parked WFET, `arm-cost-wfet-activation-01` | 0.9946–1.0039 | 0.9965–1.0027 | 0/10 |
+| Release 10,000 hints, `hint-cost-release-01` | 0.9966–1.0017 | 0.9936–1.0054 | 0/10 |
+| Parked 10,000 hints, `hint-cost-activation-01` | 0.9929–1.0019 | 0.9952–1.0063 | 0/10 |
+
+Both WFET roles and the sole hint alternative per role are closed without
+adoption on those CPU criteria. The existing 1,000-hint tails remain. All live
+held-generation, query, ordering, effect, custody where applicable and cleanup
+checks passed. These negative benefit screens do not label the candidates fully
+qualified, prove energy equivalence, or establish native inapplicability.
+Whole-request CPU, energy, peer capacity, wake coalescing and integrated response
+bounds were not established here. Adoption-only restrictive protocol, host-loss,
+migration and actual sleep/resume qualification was not pursued after closure.
+
+The first ARM build failed before trials because Apple's assembler rejected
+`.arch_extension wfxt`. The isolated helper instead uses fixed X17 and the
+independently specified [LLVM encoding](https://github.com/llvm/llvm-project/blob/main/llvm/test/MC/AArch64/armv8.7a-wfxt.s), `d5031011`; retained disassembly identifies
+`wfet x17`. The failure and repaired first-use runs are both preserved. The
+mechanism-neutral CPU reader accepts quiet workers without weakening the old
+busy-worker oracle. Independent controls reject missing/misbound evidence,
+no-op gain claims, contrary pairs, pacing/power mismatches and label changes;
+a real alarm exercises watchdog cleanup. Generic logging is not an oracle.
+
+### Retention and reopening
+
+The worker and ARM plans, shared pilot and completed acceptance records are
+retired after explicit dispositions. Their frozen definitions and source
+identities remain in Git history and the local evidence snapshot. The retained
+production default battery remains `host06-main-default-01` (222 cases); it is
+not relabelled as a new run of the expanded default catalog. The focused closeout
+run passed all 21 selected cases: signing, source/document contracts, dispatcher,
+ARM oracle, neutral/historical CPU readers and native observer. It recorded no
+sleep or harness errors. The production app inventory is identical to the
+retained baseline. No new full-default-battery claim is made.
+
+The complementary retained run is `worker-wait-closeout-01`. Its
+`worker-wait-closeout/archive-index.json` locates thirteen verified historical
+archives, including the former `host06-main-targeted-01` with its twelve host
+archives and nested pilot/review evidence, both ARM first-use screens, the
+pre-trial assembler failure, two fresh baselines and all four CPU comparisons.
+Original run IDs, file hashes, source copies, binaries, disassembly, conditions,
+claims and ownership receipts remain intact. Copies do not relocate cleanup
+ownership or add passing cases. Evidence is gitignored and local to this checkout.
+The four CPU comparisons replay identically with their frozen readers.
+Archive-index SHA-256 is
+`3ca6a9f9065344c28acc726eaae0cc5c655236db7d62c09319b6485e9f18143b`;
+replay SHA-256 is
+`1cfeaf9a44f6d8b912138e6e73843f817c064b6361191c90e7a7b7b62fb54505`.
+The preserved public SDK header has SHA-256
+`4fc509ff0ba41255900b7fe3efa679590b7f05b7ddfafc113404c440f73d9a5a`.
+`tests/RETAINED.json` pins only the production baseline and complementary
+closeout run, alongside the unchanged release-managed entry.
+
+Reopening ARM needs a newly justified benefit observable (for example reliable
+energy evidence) or changed-equipment evidence, plus a defensible deployment
+contract and the full per-role protocol/response gates. More CPU sampling of
+these same candidates is not nominated. Counts alone cannot establish energy
+or available execution capacity; a wait may remain scheduled while doing less
+instruction work. Reopening hints needs a measured resource or response
+opportunity, not an assumption that a shorter or longer batch is better.
+
+`wait_exchange` is closed as outside this round, unchanged: no isolated live
+hold was nominated, and its acknowledgement-before-clock precedence prevents
+borrowing release or activation measurements. A future exchange proposal needs
+its own generation-qualified hold and response controls. The scan mask remains
+unopened for lack of measured holes defeating the prefix. These are scope
+closures, not pending acceptances or negative native trials. Existing FOOTPRINT
+mechanisms and LIMITS allowances remain unchanged by the ARM/hint round.
 
 ## Direction 4: right-size the evidence region
 
@@ -576,17 +663,3 @@ Every reduction must preserve the [core ideas](../AGENTS.md#core-ideas): fresh
 sandboxed processes, host/worker separation, observations supporting effects,
 predictions before attempts, honest attribution and simple runner ownership.
 Keep token erasure, native release, unmapping, process exit and reap distinct.
-
-The release WFET prototype completed ten matched CPU pairs in
-`arm-cost-wfet-release-01` and missed the frozen 10% CPU criterion in every
-pair: both versions remained near one CPU-second per second. The release
-option is closed without adoption; full protocol/deployment/resume qualification
-was not completed. This is neither instruction inapplicability nor evidence
-that energy cannot improve. Release hint tuning is now open.
-
-The parked WFET prototype also missed the 10% CPU threshold in all ten
-pairs (`arm-cost-wfet-activation-01`), while preserving the lifecycle fixture
-observations. Its selected worker was the unapplied parked issuer, alongside
-the applied queried subject. Both WFET roles are closed without adoption,
-not labelled qualified; energy, migration and actual sleep/resume remain
-unmeasured. One 10,000-hint candidate per role is now opened.

@@ -12,16 +12,16 @@
     {
       "path": "runs/host06-main-default-01",
       "run_id": "20261108T212111Z_e990d462",
-      "reason": "Current accepted production default battery: all 222 cases pass with no skips, unrun cases, harness errors or recorded sleep. Includes HOST-04 final notification and HOST-06 bounded initial resampling, 597 runner assertions and actor qualification. Native identity aaa8056c79c242fde5740449049246e3ed88facdc2c8efd143f6344c856da8e5; signed app built at f6877809. Later documentation precision is verified by host06-main-targeted-01.",
+      "reason": "Retained 222-case production baseline: no skips, unrun cases, harness errors or recorded sleep. Native identity aaa8056c79c242fde5740449049246e3ed88facdc2c8efd143f6344c856da8e5 and signed app built at f6877809 remain unchanged. Includes accepted HOST-04/HOST-06 and 597 runner assertions. This historical battery is not a run of the expanded default catalog; subsequent test-only changes are verified by worker-wait-closeout-01.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
     },
     {
-      "path": "runs/host06-main-targeted-01",
-      "run_id": "20261108T213828Z_47b268bc",
-      "reason": "Complementary acceptance: six cases pass, including ordering mutations, ABI, updated LIMITS, observer/reader controls and 24 held-footprint measurements. No recorded sleep; app unchanged. Separate host-followon attachments preserve twelve identified historical archives, the earlier pilot/review needed by deferred ARM/hint plans, all host-round comparisons and observer diagnostics, the HOST-04 equipment failure/retry and selected rejected HOST-05 correctness evidence. All files verified; seven new timestamp datasets replay identically using their frozen readers. Historical copies add no passing cases and relocate no cleanup ownership.",
+      "path": "runs/worker-wait-closeout-01",
+      "run_id": "20261108T224956Z_565f0e6d",
       "source": null,
-      "app_inventory": "artifact-integrity/before.json"
+      "app_inventory": "artifact-integrity/before.json",
+      "reason": "21 focused closeout cases pass with unchanged app, no harness errors or recorded sleep: signing, all source/document contracts, dispatcher, ARM oracle, neutral/historical CPU readers and native observer. worker-wait-closeout/archive-index.json verifies thirteen historical archives, including former host06 targeted evidence with its nested host/pilot/review archives, ARM first-use screens and assembler failure, two fresh baselines and all four negative CPU comparisons. Four comparisons replay exactly with frozen readers. Copies add no case credits and relocate no cleanup ownership; unrelated planning edits prevent a pristine whole-tree commit claim."
     }
   ]
 }
