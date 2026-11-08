@@ -98,3 +98,16 @@ Pacing prose correction: the frozen driver schedules use a rapid eligible gap
 of [0, 100 ms], not the 250 ms initially transcribed here. The hashed schedules
 and retained trial conditions already carry 100 ms; every credited trial met
 that stricter range. No selection, exclusion or result was changed.
+
+## Prepared optimized diagnostic
+
+The optimized block uses the same source and reader as the inspection block.
+Its exact staged identities are frozen while the measurement gate is closed.
+Both host compiler receipts specify `-O`; production remains inspection.
+
+| Receipt / input | SHA-256 |
+| --- | --- |
+| `tests/out/runs/host05-optimized-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/staged-identity-before.json` | `122040c52e0430a998142cbe5991a7102f2a411529ffb37a0bb8f8d946dab0a6` |
+| `tests/out/runs/host05-optimized-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `caee7223532f747f7ab53580044c05b2896ed43e673d161ca78c940854626be1` |
+| `tests/out/runs/host05-optimized-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/host-instrumented/host-build.json` | `db5dd838fd7a2dafc7f9ada9a12ca17b8640cf7debcd17341781c3d239c0653d` |
+| `tests/out/runs/host05-optimized-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/host-neighbor/host-build.json` | `414b17b2aab6dc8f82719b9e0058f79cac082c12d7350e122f777478885292e0` |
