@@ -266,5 +266,10 @@ process/resource ownership. Evidence is gitignored and local to this checkout.
 `75b8889a58d09d02d7dfe0c3c616c01dce52ee251f6444ad113de69e1b5dc81d`.
 `host-followon/replay.json` SHA-256:
 `2de0a4a5d917aff77d3950f96d830774903be2fd10cccc01026917497515c9eb`.
-Superseded runs are now eligible for the ordinary pruner; its receipts are
-attached separately after cleanup.
+The ordinary pruner removed 20 completed unretained runs in the main checkout
+and six in the three candidate worktrees, with no deletion failures. Its
+preview/apply receipts are under `host-followon/pruning/`. The three owned
+temporary worktrees were then removed; candidate branches remain reachable.
+Release-managed evidence, the release-rotation directory and unmanaged output
+remain protected. `host-followon/pruning/index.json` SHA-256:
+`55fefbdb6a15eda8ab38286e7da91d235b72956a2d712072cb9244e6a7cb4e13`.

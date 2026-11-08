@@ -239,6 +239,6 @@ native cases from that incomplete verification selection are superseded or
 outside this rejected candidate's necessary evidence; its recorded outcomes
 remain unchanged. The outer `archive-index.json` names exact selections,
 original paths/run IDs, file hashes and archive hashes. Candidate commit
-`b433da29` remains reachable on `wait/host-05`; the temporary checkout is
-disposable. These gitignored, local copies supply no new passing case or
+`b433da29` remains reachable on `wait/host-05`; its temporary checkout has been
+removed after helper-based pruning. These gitignored, local copies supply no new passing case or
 relocated cleanup ownership.
