@@ -177,6 +177,20 @@ report sub-threshold components as observed but not nominated. Evaluate
 current. Each gets its own acceptance record and baseline on accepted source;
 a second candidate includes the first only if accepted.
 Further delays go to the outflow for later work, not an open-ended tuning loop.
+Course of action, recommended by the coordinator and awaiting the owner's
+decision: `HOST-02` is blocked, not accepted or rejected, because its prompt
+detection of the last completion reaches the worker exit grace wait's 10 ms
+poll before the worker exits, which made the actor form's whole request slower
+while its held intervals shortened. The recommendation is one further host
+candidate beyond the cap, `HOST-03`, for that grace wait alone: wait for the
+worker's exit under the unchanged 1 s grace allowance without a new thread,
+descriptor or registration where an existing one serves (the readiness pipe's
+hangup is one mechanism to examine), preserve the reap, termination and
+ownership paths, and prevent attempt children from inheriting the descriptor.
+Compare `HOST-02` and `HOST-03` together against the HOST-01 baseline under
+the pilot's protocol and decide both on that evidence. The alternatives are
+to accept `HOST-02` with the latency tradeoff written or to reject it and
+carry both delays to the outflow.
 A bounded host exit notification may be worth investigating if EOF-to-reap
 delay is material.
 Registration must cover a child that already exited; a notification prompts an

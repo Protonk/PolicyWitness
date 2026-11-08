@@ -233,6 +233,29 @@ per pair with medians of 2.9 to 5.3 ms; no resolved actor-form or
 whole-request regression; every response bound credited. The remaining first
 arrival delay is the 2 ms sentinel poll during the worker's application.
 
+HOST-02 (blocked, `628a1ccc` on `wait/host-02`, not integrated; see its
+[acceptance record](WORKER-WAIT-HOST-02-ACCEPTANCE.md)): the host re-samples a
+just-published answer for at most 100 µs before its first sleep after an
+activation, release or inbound commit. In every actor-form pair of both regimes
+the per-trial detection total fell from 4.9 to 11.1 ms to at most 1.26 ms, the
+host's execution sleeps from four to eight to two, and the two actors made
+23,568 to 59,493 fewer wait passes per request; a later ordinary phase's
+arrival was observed within 4 µs in every rapid pair and in three of five idle
+pairs, the other two arriving after the budget. The request as a whole became
+slower in the actor form in nine of ten pairs, by 0.1 to 13.9 ms: the host now
+reaches the worker exit grace wait before the worker exits and sleeps its 10 ms
+poll once per request (12.5 ms slept), where the baseline's final detection
+sleep had covered the worker's exit. The tradeoff decision is the owner's and
+is open.
+
+Exposed by HOST-02, not nominated under the two-candidate cap: the worker exit
+grace wait's 10 ms poll in `ActorSession.finishCleanup`, which any prompt
+detection of the last completion reaches before the worker exits. The worker
+keeps the readiness pipe's write end open until exit while the host closes its
+read end after the byte, so a hangup wait on that pipe under the same grace
+allowance is one mechanism to examine; attempt children must not inherit the
+descriptor.
+
 Not nominated, carried here: the 2 ms detection of the worker's terminal
 publication (outside the held interval); decoding cost at `-Onone`, 17 µs per
 verdict frame; the roughly 25 percent overshoot of every requested host sleep
