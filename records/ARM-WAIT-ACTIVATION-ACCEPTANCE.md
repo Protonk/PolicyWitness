@@ -45,3 +45,12 @@ record's CPU result alone.
 Raw evidence stays in dispatcher-owned output, gitignored and local. Serial
 native work, announced five-minute maximum window, 60-second measurement
 watchdog plus 60-second cleanup reserve; no trial starts without that reserve.
+
+## Frozen executable comparison
+
+Run `arm-cost-wfet-activation-01`, prepared from `d561fa2b`.
+Prepared identity SHA-256: `40ebe2afeae2251e0deadaa4e5bbad11fde291900c82c0a007d9da993618422e`.
+Cost reader: `273c64dc93a7e6e78886441378f87a5613b806abc55454c664669684432aa6a9`.
+Neutral reader: `8120a459ae28b52df102ed2d9ffafef2ca487a970677f1c44ce849e20717e094`.
+The source substitution changes only the parked-activation tail; both sides
+use the same custody-snapshot host. Power is AC, low-power mode 0.
