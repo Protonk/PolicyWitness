@@ -80,6 +80,9 @@ creates no validator spawn failure.
    host; at EOF it publishes the count it read and refuses a different length
    before compiling, so a delivery cut short is never applied as a shorter policy.
 3. The worker applies the policy once, then publishes arrival at each phase.
+   After a received ready byte, the ordinary host may resample first arrival
+   or done once before sleeping, under its existing clock and sample bounds.
+   This observation opportunity does not authorize collection by itself.
    The host checks successful application, identity and worker ownership, plans
    that phase's queries afresh and collects eligible queries with a fresh
    `sb_api_validator --batch` child. No eligible queries means no validator.
