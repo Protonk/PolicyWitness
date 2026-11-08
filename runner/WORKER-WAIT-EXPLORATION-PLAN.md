@@ -94,7 +94,8 @@ failed the frozen every-pair gate. Production decoding and inspection policy
 remain unchanged. Preserve the flavour apparatus, controls, candidate source
 and negative evidence; do not reopen this candidate in this round.
 
-**HOST-06 — first arrival.** After the first two dispositions, measure readiness
+**HOST-06 — first arrival.** The [acceptance record](../records/WORKER-WAIT-HOST-06-ACCEPTANCE.md)
+freezes the sole candidate and comparison. After the first two dispositions, measure readiness
 observation, application publication and first arrival separately on accepted
 source. Open at most one bounded initial-resampling candidate only if those
 distributions support worthwhile savings; otherwise close. Do not shorten every

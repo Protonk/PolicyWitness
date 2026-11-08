@@ -88,3 +88,30 @@ actor qualification gets its own announced bounded quiet window. Keep useful
 negative findings and apparatus even if the candidate fails. Finalize retention
 and pruning with the host round; this record is plan-specific, not permanent
 behavior documentation.
+
+## Preparation and correctness evidence
+
+The separate v12 nomination is attached under
+`tests/out/runs/host06-reader-controls-03/host06-nomination/`; `source.json`
+identifies the original inspection run `20261108T202647Z_be14bf79`, the attachment
+run `20261108T205644Z_fafb53d6`, reader and original-report hashes. It does not
+replace the original reports or relocate process ownership.
+
+Candidate production source is `f341d37d`, native identity
+`aaa8056c79c242fde5740449049246e3ed88facdc2c8efd143f6344c856da8e5`.
+The signed candidate app was built there; subsequent `20acc233`, `6fd0394b`
+and `101bdf70` change only fixture documentation/control code. The candidate
+checkout is `/private/tmp/pw-wait-host06`.
+
+`host06-correctness-01` failed to compile a test's optional-reap assertion;
+its mutation build failure supplied no detection evidence.
+`host06-correctness-02` passed ABI and ordering mutations but failed the new
+apply-failure fixture assertion: it had not published the native failure record
+that the production decoder requires. The corrected fixture publishes that
+record before done. Its gate now advances only after the first owned polling
+check, so startup scheduling cannot satisfy the no-sleep test accidentally.
+`host06-correctness-03` passes all 597 runner assertions and both ordering
+bypasses are detected. These controls are unsandboxed and establish decisions,
+not native timing. The ABI case in `-02` remains applicable: its C header,
+Swift layout, generated identity, implementation inputs and independent layout
+fixtures are unchanged by the subsequent lifecycle fixture and Swift test edits.
