@@ -122,3 +122,35 @@ under `tests/out/runs/arm-wfe-screen-02/suites/runner_c_worker_harness/arm_wait/
 Power is AC, battery full; an observed Xcode process briefly used about 0.4 of
 one core during staging. This is an applicability screen, not a matched resource
 comparison. The three-minute maximum window contains one measured child at a time.
+
+## WFE result and alternative trigger
+
+`arm-wfe-screen-02` (`20261108T221744Z_ae4c13b8`) passed both registered cases;
+all twelve children passed the screen, with no rescue, unsettled cleanup or
+recorded system sleep. Native trials took 7.294 seconds. All profiles executed
+WFE and reached their own cutoff. First brackets were 0–83.333 ns at the Mach
+clock's resolution, while the repeated loop made approximately 375,000 passes
+in 500 ms. A zero first bracket is below resolution, not proof of no instruction.
+The largest recorded per-pass bracket was 3.336 ms; descheduling is included.
+CPU observations stayed near elapsed time and are diagnostic, not a matched
+benefit or response qualification.
+
+WFE deployment remains unestablished: the pinned kernel's configurable event
+stream and internal capability flag do not provide a supported user-space
+selection rule for an independent maximum wake period across boot configuration,
+migration and resume. A finite startup probe cannot supply that contract. Close
+the untimed WFE production option on that ground, while preserving its positive
+first-use observation. This invokes the plan's sole timed alternative, WFET,
+whose local deadline can avoid dependence on the periodic event interval.
+
+The WFET first-use screen is staged as `arm-wfet-screen-01` using the same
+source, reader, disassembled helpers and numerical rules. Its exact executable
+identity is frozen before gate release below. No integrated role or deployment
+credit transfers from WFE.
+
+WFET staged binary SHA-256 is
+`c344a7294ca92d6f11b898eaba05b43ab8cdcadb24bcf2bc39525f410793aea8`, identical
+to the WFE screen executable; only the selected argument differs. All WFE
+children read `CNTFRQ_EL0=24000000`. This observed frequency, not a model-based
+expectation of 1 GHz, supplies the timed conversion. Its configuration cause
+has not been established.
