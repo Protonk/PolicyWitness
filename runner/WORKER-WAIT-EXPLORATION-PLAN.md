@@ -27,7 +27,10 @@ accepted; its [record](../records/WORKER-WAIT-HOST-06-ACCEPTANCE.md) preserves t
 first-arrival comparison, added resampling cost and integrated verification.
 The [host follow-on round](#host-follow-on-round) is complete. Further host
 candidates require a separate scope decision. ARM research and native trials
-are resumed under coordinator acceptance authority. Hint tuning follows each
+are resumed under coordinator acceptance authority. Both WFET CPU screens closed without adoption. The
+[release hint record](../records/WORKER-WAIT-HINT-RELEASE-ACCEPTANCE.md) and
+[activation hint record](../records/WORKER-WAIT-HINT-ACTIVATION-ACCEPTANCE.md)
+freeze one 10,000-hint candidate per tail. Hint tuning follows each
 wait's ARM disposition under the rule below; it is not opened merely by elapsed
 time or incomplete qualification.
 

@@ -54,3 +54,14 @@ Cost reader: `273c64dc93a7e6e78886441378f87a5613b806abc55454c664669684432aa6a9`.
 Neutral reader: `8120a459ae28b52df102ed2d9ffafef2ca487a970677f1c44ce849e20717e094`.
 The source substitution changes only the parked-activation tail; both sides
 use the same custody-snapshot host. Power is AC, low-power mode 0.
+
+## Disposition
+
+Closed without adoption on the selected CPU criterion. Run `20261108T223952Z_fa88d4c7`
+completed all twenty measured holds and two excluded first requests in
+45.875 seconds. Every pair was eligible; none met the 10% threshold.
+Baseline rates were 0.9946–1.0039 CPU-seconds/second and candidate rates
+0.9965–1.0027. Held generation, queries, extension custody, effects and owned
+endings passed. This unapplied-issuer cost result is not restrictive parked
+qualification or an energy result. Remaining adoption-only qualification was
+not attempted. Activation hint tuning is open.

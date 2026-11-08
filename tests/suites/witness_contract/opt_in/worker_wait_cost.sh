@@ -22,5 +22,5 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "worker wait cost screen
  "${ROOT_DIR}/tests/suites/witness_contract/worker_wait_cost.py" \
  "${PW_APP_DIR}" "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}" \
  "${PW_TEST_ARTIFACTS}/observer-bin" "${PW_TEST_ARTIFACTS}/bridge-bin" "${PW_TEST_ARTIFACTS}/helper" \
- --role "${ROLE}" --candidate "${CANDIDATE}" --gate "${PW_WAIT_COST_GATE}"
+ --role "${ROLE}" --candidate "${CANDIDATE}" --gate "${PW_WAIT_COST_GATE}" --minimum "${PW_WAIT_COST_MINIMUM:-0.1}"
 test_pass "fixed CPU screen complete; result is not deployment or response acceptance"

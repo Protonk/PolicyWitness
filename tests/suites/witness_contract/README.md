@@ -84,7 +84,8 @@ not a production deployment gate. The hint prototype changes one batch to
 10,000 hints. Both retain the baseline ABI identity as labelled substitutions;
 source and executable hashes identify their actual bytes. Comparison allows
 one calibrated quantum per CPU endpoint and brackets elapsed time. Every pair
-must save the declared fraction (10% by default) beyond those bounds. Controls
+must save the declared fraction (`PW_WAIT_COST_MINIMUM`, 10% by default)
+beyond those bounds. Controls
 credit a constructed gain, refuse no-op/contrary-pair credit and reject missing,
 excluded or power-mismatched pairs. A positive CPU screen does not qualify
 response, whole-request cost, energy, capacity, restrictive parked operation,

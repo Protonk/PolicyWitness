@@ -583,3 +583,10 @@ pair: both versions remained near one CPU-second per second. The release
 option is closed without adoption; full protocol/deployment/resume qualification
 was not completed. This is neither instruction inapplicability nor evidence
 that energy cannot improve. Release hint tuning is now open.
+
+The parked WFET prototype also missed the 10% CPU threshold in all ten
+pairs (`arm-cost-wfet-activation-01`), while preserving the lifecycle fixture
+observations. Its selected worker was the unapplied parked issuer, alongside
+the applied queried subject. Both WFET roles are closed without adoption,
+not labelled qualified; energy, migration and actual sleep/resume remain
+unmeasured. One 10,000-hint candidate per role is now opened.
