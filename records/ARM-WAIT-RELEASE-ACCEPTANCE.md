@@ -45,3 +45,13 @@ record's CPU result alone.
 Raw evidence stays in dispatcher-owned output, gitignored and local. Serial
 native work, announced five-minute maximum window, 60-second measurement
 watchdog plus 60-second cleanup reserve; no trial starts without that reserve.
+
+## Frozen executable comparison
+
+Run `arm-cost-wfet-release-01`, prepared from `892593e4`.
+Prepared identity SHA-256: `4f14501c18d9c41fbd72a9893c1aaffd20189244ae2fc8ba5cb0f0a0d479e375`.
+Cost reader: `273c64dc93a7e6e78886441378f87a5613b806abc55454c664669684432aa6a9`.
+Neutral reader: `8120a459ae28b52df102ed2d9ffafef2ca487a970677f1c44ce849e20717e094`.
+The retained disassembly contains `wfet x17`; the alternative changes only
+the release tail. Actual staged worker hashes and device/inode identities
+are in the frozen preparation receipt. Power is AC, low-power mode 0.
