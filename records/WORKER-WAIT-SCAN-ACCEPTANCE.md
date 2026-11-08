@@ -296,6 +296,20 @@ every response bound credited; the only every-pair worsening is the exempt
 parked pass count. The candidate is integrated into `main`; the integration
 verification is recorded under Outcome.
 
+Outcome: integrated into `main` as `d7d19a6b` and `d1821df6`, the candidate's
+two commits cherry-picked with the session's trailer; main's production source
+then equals `b93cb5c4` and its worker identity is `564477bc…`. Verification on
+`main` against its rebuilt signed app (provenance `d1821df6`, dirty false):
+`runner_unit` with its opt-in cases (the four cursor mutations among them),
+`runner_abi_layout`, `source_drift` and `runner_exec_inheritance`, 26 of 26 in
+`20261108T160653Z_473a7f18` (`main-scan-unit-01`); the named selection with
+`order_barrier_mutations`, 72 pass in `20261108T161327Z_42310146`
+(`main-scan-named-01`) with `native_pause` failing as the intentionally
+failing applicability gate; default battery 222 of 222 in
+`20261108T161704Z_e29fe638` (`main-scan-default-01`); no case overlapped
+system sleep. The candidate worktree and its runs are retained until the
+plan's closeout decides raw-evidence retention.
+
 ## Revisions
 
 ### Revision 1, before the comparison measurement

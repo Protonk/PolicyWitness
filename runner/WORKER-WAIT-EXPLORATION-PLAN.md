@@ -238,6 +238,15 @@ an OS scheduler yield. Try at most one alternative batch per affected wait,
 chosen from the baseline response/work measurements. Fewer scans or hints can
 establish less repeated work; neither establishes descheduling, lower CPU
 accounting, lower energy or better timer coalescing.
+Disposition, 2026-11-08: the scan cursor is accepted and integrated (see the
+[SCAN record](../records/WORKER-WAIT-SCAN-ACCEPTANCE.md)). The hint tails
+remain pending on the ARM plan, which has not started. Coordinator's
+recommendation, awaiting the owner's decision: leave the tails pending rather
+than open hint tuning by deferral, because a hint-batch change can be credited
+only on pass counts, which the cursor already reduced where loads mattered,
+while the benefit the tails exist for (less CPU while held) is what ARM's
+qualification would establish; if the ARM plan will not be run, close the
+tails with that negative disposition and retire this plan.
 
 Preserve each loop's distinct decision order rather than factoring a common
 wait algorithm:

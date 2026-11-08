@@ -265,6 +265,28 @@ On this machine a pipe hangup and a kqueue `NOTE_EXIT` wake with the same
 latency, and the production worker's hangup precedes its reapability more
 often than a trivial child's, hence the settle sleep.
 
+SCAN (accepted 2026-11-08, `d7d19a6b` and `d1821df6`; see its
+[acceptance record](WORKER-WAIT-SCAN-ACCEPTANCE.md)): the recipient's inbound
+scan starts at a worker-local completed-prefix cursor, the count of leading
+slots this worker has itself acknowledged, instead of index 0; 68 bytes of
+static state reset at authority preparation, every visited slot checked as
+before, lowest-index selection and one acknowledgement per pass preserved. In
+seventy matched pairs the subject's scan loads per pass fell below the
+full-scan floor in every A2 and A2D pair of both regimes: by 19 to 33 percent
+in A2 (two slots, most passes preceding the first commit) and by 41 to 47
+percent in the inbound-dense A2D (64 deliveries committed in index order,
+13 to 15 million fewer loads per request), with zero-visit passes only on the
+candidate; every activation, release and inbound-delivery response bound was
+credited, and the only every-pair worsening was the subject's parked pass
+count, which rises because shorter passes fit more into the same parked time.
+Counts, not CPU: no CPU or energy claim is made.
+
+Branch 3's hint tails (`HINT-RELEASE`, `HINT-ACTIVATION`) remain pending on the
+[ARM option plan](../runner/ARM-WAIT-OPTION-PLAN.md), which has not started;
+the baseline for either tail is the pass period of 0.26 to 0.28 µs per pass
+with one thousand `cpu_relax` hints, measured in the pilot and the three
+comparisons, and a host that now answers publications within microseconds.
+
 Branch 1, PREPARATION (rejected 2026-11-07 without building, on the plan's cost
 clause): the pilot measured the whole frame-serialization interval at 142 to
 163 µs for one query, 323 to 364 µs for 64 and 788 to 848 µs for 256, far above
