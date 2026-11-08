@@ -536,8 +536,12 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   `runner_c_worker_harness/actor_operations` and the opt-in
   `runner_unit/actor_handoff_mutations`.
 - **Purpose:** Assigned frame references, delayed answers, independent native
-  call counts and fresh descriptor use; a copied host with aliased outbound
-  slots must fail the designated custody-copy observation.
+  call counts, exact inbound scan work per pass and fresh descriptor use; a
+  copied host with aliased outbound slots must fail the designated custody-copy
+  observation, and worker copies whose scan starts at slot 0, whose prefix
+  steps over a hole or follows shared acknowledgement words, or whose
+  preparation keeps the previous prefix must each fail a designated scan
+  observation.
 - **When to run:** After changing actor authority transport, payload ownership,
   native operation dispatch or the corresponding observers.
 - **Equipment:** The C controls need clang; the host mutation also needs Swift.

@@ -1,4 +1,5 @@
-"""Refute reusable payload/answer cells and premature erasure in disposable sources.
+"""Refute reusable payload/answer cells, premature erasure and inbound scan cursor
+errors in disposable sources.
 
 Synthetic authority bytes establish channel and publication ownership only.
 No sandbox extension API is called; no shipped app is changed.
@@ -127,6 +128,47 @@ do {
         marker='CONTROL_REJECTED: termination gate precedes dependent collection' if removed else 'TERMINATION_GATE_ACCEPTED')
 
 
+# Each C mutation: production anchor, replacement and the designated
+# authority_binding observation it must fail. The scan markers name the
+# scenario, pass and the counts or prefix that diverge from the cursor design.
+C_MUTATIONS = {
+    'shared_answer': (
+        'wait_exchange(&cell->acknowledged, timing, index, &status)',
+        'wait_exchange(&authority->transfers[0].acknowledged, timing, index, &status)',
+        'CONTROL_REJECTED: late first answer cannot complete second transfer'),
+    'early_erase': (
+        '    slot->ext_custody_status = status;\n',
+        '    slot->ext_custody_status = status;\n    pw_extension_erase(out->token, PW_EXTENSION_TOKEN_BYTES);\n',
+        'CONTROL_REJECTED: custody timeout preserves host-owned publication'),
+    # The scan visits from slot 0 on every pass, as before the cursor: the
+    # pass after the single slot's acknowledgement still visits and loads it.
+    'scan_from_zero': (
+        'for (uint32_t i = inbound_acknowledged_prefix; i < authority->inbound_count; i++)',
+        'for (uint32_t i = 0; i < authority->inbound_count; i++)',
+        'CONTROL_REJECTED: scan single pass 3 observed passes=1 visits=1 loads=2 first=0'),
+    # The prefix follows the last acknowledged slot, stepping over an
+    # uncommitted lower slot.
+    'advance_past_hole': (
+        '        while (inbound_acknowledged_prefix < authority->inbound_count && inbound_acknowledged_prefix < PW_AUTHORITY_MAX_INBOUND\n'
+        '               && inbound_acknowledged_local[inbound_acknowledged_prefix]) inbound_acknowledged_prefix++;\n',
+        '        inbound_acknowledged_prefix = i + 1;\n',
+        'CONTROL_REJECTED: scan early_hole pass 0 observed passes=1 visits=2 loads=3 first=0 acknowledged=1 prefix=2'),
+    # The prefix advances over shared acknowledgement words instead of this
+    # worker's own stores, so a word it did not store moves the cursor.
+    'shared_prefix': (
+        '               && inbound_acknowledged_local[inbound_acknowledged_prefix]) inbound_acknowledged_prefix++;\n',
+        '               && atomic_load_explicit(&pw_authority_inbound(authority, inbound_acknowledged_prefix)->acknowledged,\n'
+        '                                       memory_order_acquire)) inbound_acknowledged_prefix++;\n',
+        'CONTROL_REJECTED: scan foreign_acknowledgement pass 0 observed passes=1 visits=2 loads=4 first=0 acknowledged=1 prefix=2'),
+    # Preparation keeps the previous region's prefix, so the next prepared
+    # region's committed slot 0 is never visited.
+    'missing_reset': (
+        '    inbound_acknowledged_prefix=0;\n    memset(inbound_acknowledged_local,0,sizeof(inbound_acknowledged_local));\n',
+        '',
+        'CONTROL_REJECTED: a fresh preparation services its committed slot'),
+}
+
+
 def c_variant(out, scratch, variant):
     out.mkdir(parents=True)
     scratch.mkdir(parents=True)
@@ -139,16 +181,9 @@ def c_variant(out, scratch, variant):
     fixture.parent.mkdir(parents=True)
     shutil.copyfile(ROOT / 'tests/fixtures/extension_controls/authority_binding.c', fixture)
     marker = None
-    if variant == 'shared_answer':
-        mutate(worker / 'pw_probe_runner.c',
-               'wait_exchange(&cell->acknowledged, timing, index, &status)',
-               'wait_exchange(&authority->transfers[0].acknowledged, timing, index, &status)', out)
-        marker = 'CONTROL_REJECTED: late first answer cannot complete second transfer'
-    elif variant == 'early_erase':
-        mutate(worker / 'pw_probe_runner.c',
-               '    slot->ext_custody_status = status;\n',
-               '    slot->ext_custody_status = status;\n    pw_extension_erase(out->token, PW_EXTENSION_TOKEN_BYTES);\n', out)
-        marker = 'CONTROL_REJECTED: custody timeout preserves host-owned publication'
+    if variant != 'baseline':
+        old, new, marker = C_MUTATIONS[variant]
+        mutate(worker / 'pw_probe_runner.c', old, new, out)
     product = scratch / 'authority-binding'
     command(out, 'build', ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-Wall', '-Wextra', '-Werror',
                             '-Wno-deprecated-declarations', '-O2', '-std=c11', str(fixture), '-lsandbox', '-o', str(product)])
@@ -177,11 +212,13 @@ def main(out, scratch):
         name='gate_removed' if removed else 'gate_baseline'
         results[name]=gate_variant(out/name,scratch/name,removed)
         save(out/'results.json',results)
-    for variant in ('baseline', 'shared_answer', 'early_erase'):
+    for variant in ('baseline', *C_MUTATIONS):
         name = 'c_' + variant
         results[name] = c_variant(out / name, scratch / name, variant)
         save(out / 'results.json', results)
-    print('Three baselines passed; outbound alias, removed termination gate, shared answer and early erasure failed designated observations.')
+    print('Three baselines passed; outbound alias, removed termination gate, shared answer, early erasure, '
+          'scan from slot 0, prefix past a hole, prefix from shared words and missing prefix reset '
+          'failed designated observations.')
 
 
 if __name__ == '__main__':

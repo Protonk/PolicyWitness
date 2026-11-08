@@ -321,7 +321,12 @@ fixture independently reaps its child.
 copy must preserve the first issue's bytes while a later issue is published.
 Aliasing the later outbound slot to the first must fail that exact observation.
 C controls independently reject a shared answer cell and premature outbound
-erasure. Compilation errors or unrelated failures do not establish sensitivity.
+erasure. Four C variants of the inbound scan cursor must each fail a designated
+`authority_binding` pass: a scan from slot 0 still visits and loads the single
+slot after its acknowledgement, a prefix set past the last acknowledged slot
+steps over an early hole, a prefix advanced over shared acknowledgement words
+moves past a word this worker did not store, and a preparation that keeps the
+previous prefix never services the next region's committed slot. Compilation errors or unrelated failures do not establish sensitivity.
 A removed termination gate must fail an independent native reap observation
 before dependent collection; the source remains alive after its final phase.
 This opt-in control requires the built app, Swift and clang. Handoff controls

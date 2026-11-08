@@ -602,7 +602,10 @@ acknowledgement word this worker did not store (skipped but never advancing
 the prefix), and re-preparation resetting the prefix and its local record.
 Each scenario then checks acknowledgement words, `reject_detail`, consume
 refusal before settlement, consumption of each accepted slot's own bytes and
-erasure of settled bytes.
+erasure of settled bytes. The opt-in
+[`runner_unit/actor_handoff_mutations`](../runner_unit/README.md#actor-interruption-and-handoff-controls)
+compiles this control against disposable worker copies with the cursor broken
+four ways and requires each to fail a named pass.
 
 ## Native pause applicability
 

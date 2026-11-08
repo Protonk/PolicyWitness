@@ -404,6 +404,7 @@ int main(void) {
         if (mutation == 3) slot->resource_index = 4;
         atomic_store_explicit(&slot->committed, 1, memory_order_release);
         service_inbound_once();
+        require(atomic_load(&slot->acknowledged) != 0, "a fresh preparation services its committed slot");
         assert(atomic_load(&slot->acknowledged) == (rejected ? PW_AUTHORITY_ACK_REJECTED : PW_AUTHORITY_ACK_ACCEPTED));
         const unsigned reasons[] = {0, PW_AUTHORITY_REJECT_OWNER, PW_AUTHORITY_REJECT_ORDINAL, PW_AUTHORITY_REJECT_RESOURCE, 0};
         assert(slot->reject_detail == reasons[mutation]);

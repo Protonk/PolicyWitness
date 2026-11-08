@@ -461,7 +461,7 @@
         },
         {
           "id": "actor_handoff_mutations",
-          "description": "Disposable outbound alias, shared answer and early erasure mutations fail designated independent observations while unmodified baselines pass",
+          "description": "Disposable outbound alias, removed termination gate, shared answer, early erasure and inbound scan cursor mutations fail designated independent observations while unmodified baselines pass",
           "command": [
             "bash",
             "tests/suites/runner_unit/actor_handoff_mutations.sh"

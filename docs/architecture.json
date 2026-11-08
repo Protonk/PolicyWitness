@@ -9166,6 +9166,12 @@
               "scope": "Assigned owner/action/delivery mismatches are rejected and consume waits for accepted host settlement; worker cleanup preserves unsettled inbound bytes and clears settled bytes. Counted scan seams assert exact visits and loads per pass: the scan starts at the prefix of slots this worker acknowledged, accepted or rejected, an uncommitted lower slot is visited every pass without blocking higher slots, and re-preparation resets the prefix."
             },
             {
+              "path": "tests/suites/runner_unit/actor_handoff_mutations.py",
+              "symbol": "main",
+              "form": "test",
+              "scope": "Disposable worker copies whose scan starts at slot 0, whose prefix steps over an uncommitted slot or advances over shared acknowledgement words, or whose preparation keeps the previous prefix each fail a designated authority_binding pass observation while the unmodified copy passes."
+            },
+            {
               "path": "tests/suites/runner_c_worker_harness/check_terminal_erasure.py",
               "symbol": "main",
               "form": "test",
