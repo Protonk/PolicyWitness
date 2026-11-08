@@ -1,4 +1,12 @@
 import Foundation
+
+/// Evidence cannot support an ordinary report. This error carries a diagnostic,
+/// not an encoder context or a copy of the full observation graph.
+struct PWRunnerReportingValidationError: Error, CustomStringConvertible {
+    let message: String
+    var description: String { message }
+}
+
 import Darwin
 
 /// Reading rules for the EOF receipt (tests/FAILURE-PROPAGATION-CONTRACT.md,
@@ -76,7 +84,7 @@ func validatorOwnershipProblem(phase: PWRunnerPhaseResult, steps: [PWRunnerStepR
 
 /// Host reply failure, separate from execution classification. Retained evidence
 /// has no per-step comparison claims; original_* fields are diagnostic only.
-struct PWRunnerReportingFailure: Codable {
+struct PWRunnerReportingFailure {
     // BEGIN GENERATED PORCELAIN PWRunnerReportingFailure
     var origin: String = "runner_host"
     var diagnostic: String
@@ -90,7 +98,7 @@ struct PWRunnerReportingFailure: Codable {
 /// Host observation of a failed validator launch; no child PID is implied.
 /// posix_spawn returns the error code directly, independently of ambient errno.
 /// Keep unfamiliar codes intact; diagnostic is descriptive, not a classifier.
-struct PWRunnerSpawnFailure: Codable {
+struct PWRunnerSpawnFailure {
     // BEGIN GENERATED PORCELAIN PWRunnerSpawnFailure
     var origin: String = "runner_host"
     var operation: String = "posix_spawn"
@@ -100,12 +108,10 @@ struct PWRunnerSpawnFailure: Codable {
     // END GENERATED PORCELAIN PWRunnerSpawnFailure
 }
 
-// Encoding is explicit to enforce response invariants. When adding a stored
-// field, update CodingKeys and encode(to:), and populate the field-coverage
-// round-trip fixture in ReplyFailureTests. Reflection stays in that test.
+// Reporting admission is explicit; the schema owns stored fields and binary writing.
 /// One phase's immutable publications and its own collection. Unobserved
 /// arrival/completion stay false; later progress never manufactures them.
-struct PWRunnerPhaseResult: Codable {
+struct PWRunnerPhaseResult {
     // BEGIN GENERATED PORCELAIN PWRunnerPhaseResult
     var phase_id: String
     var ordinal: Int
@@ -148,11 +154,10 @@ struct PWRunnerPhaseResult: Codable {
     }
 }
 
-private enum RetiredProfileKey: String, CodingKey { case applied_profile }
 
-struct PWRunnerRunResult: Codable {
+struct PWRunnerRunResult {
     // BEGIN GENERATED PORCELAIN PWRunnerRunResult
-    // Response wire version. Semantic decoding and encoding accept exactly
+    // Response wire version. Reporting admission accepts exactly
     // PWContract.responseSchema; docs/CONTRACT.md, "Supported versions".
     var schema_version: Int
     var specimen_id: String
@@ -233,87 +238,12 @@ struct PWRunnerRunResult: Codable {
         self.reporting_failure = reporting_failure
     }
 
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, compiled_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, phases, extension_events, test_overrides, reporting_failure
-        case execution_form, actors, transfers, resources, schedule
-        case preparation_failure, equipment_inventory, equipment_bindings, equipment_entitlements, authority_setup
-    }
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        schema_version = try c.decode(Int.self, forKey: .schema_version)
-        // Exactly the current response is decoded semantically; another number
-        // is unsupported, never read under a previous version's rules.
-        guard schema_version == PWContract.responseSchema else {
-            throw DecodingError.dataCorruptedError(forKey: .schema_version, in: c,
-                debugDescription: "unsupported response schema \(schema_version) (this reader accepts \(PWContract.responseSchema))")
-        }
-        let retired = try decoder.container(keyedBy: RetiredProfileKey.self)
-        if retired.contains(.applied_profile) {
-            throw DecodingError.dataCorruptedError(forKey: .applied_profile, in: retired,
-                debugDescription: "retired applied_profile field in current runner reply")
-        }
-        specimen_id = try c.decode(String.self, forKey: .specimen_id)
-        run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)
-        rc = try c.decode(Int.self, forKey: .rc)
-        normalized_outcome = try c.decode(String.self, forKey: .normalized_outcome)
-        error = try c.decodeIfPresent(String.self, forKey: .error)
-        pid = try c.decode(Int.self, forKey: .pid)
-        bundle_id = try c.decodeIfPresent(String.self, forKey: .bundle_id)
-        policy_format = try c.decodeIfPresent(String.self, forKey: .policy_format)
-        policy_sha256 = try c.decodeIfPresent(String.self, forKey: .policy_sha256)
-        compiled_profile = try c.decodeIfPresent(CompiledProfileCapture.self, forKey: .compiled_profile)
-        sandboxed_after_apply = try c.decodeIfPresent(Bool.self, forKey: .sandboxed_after_apply)
-        steps = try c.decode([PWRunnerStepResult].self, forKey: .steps)
-        runner_subprocess = try c.decodeIfPresent(PWRunnerSubprocess.self, forKey: .runner_subprocess)
-        admission_failure = try c.decodeIfPresent(PWRunnerAdmissionFailure.self, forKey: .admission_failure)
-        request_failure = try c.decodeIfPresent(PWRunnerRequestFailure.self, forKey: .request_failure)
-        extension_events = try c.decodeIfPresent([PWRunnerExtensionEvent].self, forKey: .extension_events)
-        phases = try c.decode([PWRunnerPhaseResult].self, forKey: .phases)
-        test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
-        reporting_failure = try c.decodeIfPresent(PWRunnerReportingFailure.self, forKey: .reporting_failure)
-        execution_form = try c.decodeIfPresent(String.self, forKey: .execution_form)
-        actors = try c.decodeIfPresent([PWRunnerActorResult].self, forKey: .actors)
-        transfers = try c.decodeIfPresent([PWRunnerTransferRecord].self, forKey: .transfers)
-        resources = try c.decodeIfPresent(PWRunnerResourceTables.self, forKey: .resources)
-        schedule = try c.decodeIfPresent(PWRunnerScheduleRecord.self, forKey: .schedule)
-        preparation_failure = try c.decodeIfPresent(PWRunnerPreparationFailure.self, forKey: .preparation_failure)
-        equipment_inventory = try c.decodeIfPresent(PWRunnerEquipmentInventory.self, forKey: .equipment_inventory)
-        equipment_bindings = try c.decodeIfPresent([PWRunnerEquipmentBinding].self, forKey: .equipment_bindings)
-        equipment_entitlements = try c.decodeIfPresent([PWRunnerEquipmentEntitlements].self, forKey: .equipment_entitlements)
-        authority_setup = try c.decodeIfPresent(PWRunnerAuthoritySetup.self, forKey: .authority_setup)
-        let keys = try decoder.container(keyedBy: RequestKey.self)
-        if keys.contains(RequestKey(stringValue: "extensions")) {
-            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "retired extensions field"))
-        }
-        if reporting_failure == nil, let problem = extensionEvidenceProblem() {
-            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: problem))
-        }
-        if reporting_failure == nil {
-            for step in steps {
-                if let problem = step.attempt.execObservationEvidenceProblem() {
-                    throw DecodingError.dataCorruptedError(forKey: .steps, in: c, debugDescription: problem)
-                }
-                if let problem = step.attempt.freshWriteEvidenceProblem() {
-                    throw DecodingError.dataCorruptedError(forKey: .steps, in: c, debugDescription: problem)
-                }
-            }
-        }
-        if reporting_failure == nil, let problem = policyReadProblem(self) {
-            throw DecodingError.dataCorruptedError(forKey: .runner_subprocess, in: c,
-                debugDescription: "policy read receipt contradicts its basis: \(problem)")
-        }
-        if reporting_failure == nil, let sub = runner_subprocess, sub.disposition == nil {
-            throw DecodingError.dataCorruptedError(forKey: .runner_subprocess, in: c,
-                debugDescription: "a worker subprocess requires the worker disposition record")
-        }
-    }
     /// Admission for reporting is independent of the selected output codec.
     /// Degraded replies retain contradictory observations but cannot retain claims.
-    func validateForReporting(codingPath: [CodingKey] = []) throws {
+    func validateForReporting() throws {
         // Only the current response is reported; these are its evidence rules.
         guard schema_version == PWContract.responseSchema else {
-            throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                debugDescription: "unsupported response schema \(schema_version) (this encoder emits \(PWContract.responseSchema))"))
+            throw PWRunnerReportingValidationError(message: "unsupported response schema \(schema_version) (this reporter emits \(PWContract.responseSchema))")
         }
         if let failure = reporting_failure {
             // The degraded reply retains observations and withholds every comparison.
@@ -323,30 +253,25 @@ struct PWRunnerRunResult: Codable {
                   steps.allSatisfy({ $0.comparison == nil }),
                   failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && phases.isEmpty &&
                     (extension_events ?? []).isEmpty) else {
-                throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                    debugDescription: "reporting failure requires a failed summary and no comparison claims"))
+                throw PWRunnerReportingValidationError(message: "reporting failure requires a failed summary and no comparison claims")
             }
         } else {
             if normalized_outcome == NormalizedOutcome.runnerReportingFailed {
-                throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                    debugDescription: "runner_reporting_failed requires reporting_failure diagnostics"))
+                throw PWRunnerReportingValidationError(message: "runner_reporting_failed requires reporting_failure diagnostics")
             }
             // The disposition record is mandatory beside a worker subprocess and
             // must agree with the raw facts it cites. The degraded reply above
             // skips this so a reported conflict is never lost.
             if let sub = runner_subprocess {
                 guard let record = sub.disposition else {
-                    throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                        debugDescription: "a worker subprocess requires the worker disposition record"))
+                    throw PWRunnerReportingValidationError(message: "a worker subprocess requires the worker disposition record")
                 }
                 let problems = dispositionIntegrityProblems(record, subprocess: sub, stepCount: phases.reduce(0) { $0 + $1.action_ids.count }, steps: steps)
                 if let first = problems.first {
-                    throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                        debugDescription: "disposition record contradicts its basis: \(first)"))
+                    throw PWRunnerReportingValidationError(message: "disposition record contradicts its basis: \(first)")
                 }
                 if let problem = policyReadProblem(self) {
-                    throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                        debugDescription: "policy read receipt contradicts its basis: \(problem)"))
+                    throw PWRunnerReportingValidationError(message: "policy read receipt contradicts its basis: \(problem)")
                 }
             }
             let phaseIDs = phases.map { $0.phase_id }
@@ -359,16 +284,14 @@ struct PWRunnerRunResult: Codable {
             for actor in actors ?? [] {
                 guard let sub = actor.subprocess else { continue }
                 guard let record = sub.disposition else {
-                    throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                        debugDescription: "actor \(actor.actor_id): a worker subprocess requires the worker disposition record"))
+                    throw PWRunnerReportingValidationError(message: "actor \(actor.actor_id): a worker subprocess requires the worker disposition record")
                 }
                 let actorPhases = phases.filter { $0.actor_id == actor.actor_id }
                 let actorSteps = steps.filter { $0.actor_id == actor.actor_id }
                 let problems = dispositionIntegrityProblems(record, subprocess: sub,
                     stepCount: actorPhases.reduce(0) { $0 + $1.action_ids.count }, steps: actorSteps)
                 if let first = problems.first {
-                    throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                        debugDescription: "actor \(actor.actor_id): disposition record contradicts its basis: \(first)"))
+                    throw PWRunnerReportingValidationError(message: "actor \(actor.actor_id): disposition record contradicts its basis: \(first)")
                 }
             }
             let phaseCap = execution_form == "actors" ? PWActorLimits.phases : PWRunnerPhase.maximumCount
@@ -378,16 +301,14 @@ struct PWRunnerRunResult: Codable {
                   actionIDs.filter({ stepIDs.contains($0) }) == stepIDs,
                   actionIDs.filter({ eventIDs.contains($0) }) == eventIDs,
                   (runner_subprocess == nil || !phases.isEmpty) else {
-                throw EncodingError.invalidValue(self, .init(codingPath: codingPath,
-                    debugDescription: "phase identities and ordered actions must partition the reply"))
+                throw PWRunnerReportingValidationError(message: "phase identities and ordered actions must partition the reply")
             }
             for (index, phase) in phases.enumerated() {
                 guard phase.collectionEvidenceConsistent else {
-                    throw EncodingError.invalidValue(phase, .init(codingPath: codingPath,
-                        debugDescription: "phase collection status contradicts validator evidence"))
+                    throw PWRunnerReportingValidationError(message: "phase collection status contradicts validator evidence")
                 }
                 if let issue = validatorOwnershipProblem(phase: phase, steps: steps) {
-                    throw EncodingError.invalidValue(phase, .init(codingPath: codingPath, debugDescription: issue))
+                    throw PWRunnerReportingValidationError(message: issue)
                 }
                 guard phase.ordinal == index + 1,
                       ["not_reached", "not_needed", "collected", "budget_exhausted", "clock_unavailable"].contains(phase.collection_status),
@@ -398,98 +319,57 @@ struct PWRunnerRunResult: Codable {
                       // actor's next visit requires its previous completion.
                       (!phase.arrival_observed || index == 0 || phases[index - 1].completion_observed
                        || (execution_form == "actors" && phases[index - 1].actor_id != phase.actor_id)) else {
-                    throw EncodingError.invalidValue(phase, .init(codingPath: codingPath,
-                        debugDescription: "invalid phase boundary account"))
+                    throw PWRunnerReportingValidationError(message: "invalid phase boundary account")
                 }
             }
             if let issue = extensionEvidenceProblem() {
-                throw EncodingError.invalidValue(self, .init(codingPath: codingPath, debugDescription: issue))
+                throw PWRunnerReportingValidationError(message: issue)
             }
             for step in steps {
                 if let issue = step.attempt.execObservationEvidenceProblem() {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath, debugDescription: issue))
+                    throw PWRunnerReportingValidationError(message: issue)
                 }
                 if let issue = step.attempt.freshReadEvidenceProblem() {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath, debugDescription: issue))
+                    throw PWRunnerReportingValidationError(message: issue)
                 }
                 if let issue = step.attempt.freshWriteEvidenceProblem() {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath, debugDescription: issue))
+                    throw PWRunnerReportingValidationError(message: issue)
                 }
                 guard let phase = phases.first(where: { $0.phase_id == step.phase_id }), phase.action_ids.contains(step.step_id) else {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath,
-                        debugDescription: "step requires unique phase association"))
+                    throw PWRunnerReportingValidationError(message: "step requires unique phase association")
                 }
                 guard let comparison = step.comparison else {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath,
-                        debugDescription: "every step of an ordinary reply carries a comparison record"))
+                    throw PWRunnerReportingValidationError(message: "every step of an ordinary reply carries a comparison record")
                 }
                 guard ["query_first", "unestablished"].contains(comparison.order) else {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath,
-                        debugDescription: "comparison.order must be query_first or unestablished"))
+                    throw PWRunnerReportingValidationError(message: "comparison.order must be query_first or unestablished")
                 }
                 if let outside = comparison.limitations.first(where: { !PWRunnerComparison.limitationVocabulary.contains($0) }) {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath,
-                        debugDescription: "limitation outside the vocabulary: \(outside)"))
+                    throw PWRunnerReportingValidationError(message: "limitation outside the vocabulary: \(outside)")
                 }
                 // The actor form's prerequisite and PID are the step's actor's own:
                 // its declared or applied setup and its launched process.
                 let actorRecord = execution_form == "actors" ? actors?.first(where: { $0.actor_id == step.actor_id }) : nil
                 if execution_form == "actors" && (actorRecord == nil || phase.actor_id != step.actor_id) {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath,
-                        debugDescription: "step requires its phase's actor"))
+                    throw PWRunnerReportingValidationError(message: "step requires its phase's actor")
                 }
                 let established = actorRecord.map { ["applied", "unapplied_declared"].contains($0.setup_status) } ?? sandboxed_after_apply
                 let workerPid = actorRecord != nil ? actorRecord!.launch?.pid : runner_subprocess?.pid
                 if comparison.order == "query_first" && !eligibleOrderedStep(stepId: step.step_id, query: step.sandbox_check,
                     records: phase.validator_subprocess?.records ?? [], ordering: phase.ordering,
                     sandboxedAfterApply: established, workerPid: workerPid) {
-                    throw EncodingError.invalidValue(step, .init(codingPath: codingPath,
-                        debugDescription: "query_first requires eligible prediction and complete ordering chain"))
+                    throw PWRunnerReportingValidationError(message: "query_first requires eligible prediction and complete ordering chain")
                 }
             }
         }
-        // Receipt context used to be checked only by nested JSON encoding.
+        // Receipt context applies to both ordinary and degraded reporting.
         // Keep it explicit, including the evidence-preserving degraded path.
-        try compiled_profile?.validateForReporting(codingPath: codingPath)
+        try compiled_profile?.validateForReporting()
         for actor in actors ?? [] {
-            try actor.compiled_profile?.validateForReporting(codingPath: codingPath)
+            try actor.compiled_profile?.validateForReporting()
         }
     }
 
-    func encode(to encoder: Encoder) throws {
-        try validateForReporting(codingPath: encoder.codingPath)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(schema_version, forKey: .schema_version)
-        try c.encode(specimen_id, forKey: .specimen_id)
-        try c.encodeIfPresent(run_kind, forKey: .run_kind)
-        try c.encode(rc, forKey: .rc)
-        try c.encode(normalized_outcome, forKey: .normalized_outcome)
-        try c.encodeIfPresent(error, forKey: .error)
-        try c.encode(pid, forKey: .pid)
-        try c.encodeIfPresent(bundle_id, forKey: .bundle_id)
-        try c.encodeIfPresent(policy_format, forKey: .policy_format)
-        try c.encodeIfPresent(policy_sha256, forKey: .policy_sha256)
-        try c.encodeIfPresent(compiled_profile, forKey: .compiled_profile)
-        try c.encodeIfPresent(sandboxed_after_apply, forKey: .sandboxed_after_apply)
-        try c.encode(steps, forKey: .steps)
-        try c.encodeIfPresent(runner_subprocess, forKey: .runner_subprocess)
-        try c.encodeIfPresent(admission_failure, forKey: .admission_failure)
-        try c.encodeIfPresent(request_failure, forKey: .request_failure)
-        try c.encode(phases, forKey: .phases)
-        try c.encodeIfPresent(extension_events, forKey: .extension_events)
-        try c.encodeIfPresent(test_overrides, forKey: .test_overrides)
-        try c.encodeIfPresent(reporting_failure, forKey: .reporting_failure)
-        try c.encodeIfPresent(execution_form, forKey: .execution_form)
-        try c.encodeIfPresent(actors, forKey: .actors)
-        try c.encodeIfPresent(transfers, forKey: .transfers)
-        try c.encodeIfPresent(resources, forKey: .resources)
-        try c.encodeIfPresent(schedule, forKey: .schedule)
-        try c.encodeIfPresent(preparation_failure, forKey: .preparation_failure)
-        try c.encodeIfPresent(equipment_inventory, forKey: .equipment_inventory)
-        try c.encodeIfPresent(equipment_bindings, forKey: .equipment_bindings)
-        try c.encodeIfPresent(equipment_entitlements, forKey: .equipment_entitlements)
-        try c.encodeIfPresent(authority_setup, forKey: .authority_setup)
-    }
 
 }
 
@@ -653,7 +533,7 @@ extension PWRunnerRunResult {
             default: return "unknown extension operation"
             }
             if let disposition = actor.subprocess?.disposition?.steps.first(where: { $0.step_id == event.step_id }) {
-                if event.result_published != (disposition.slot == "completed") || event.lifecycle?.boundary != disposition.questions["step_boundary_reached"] || event.lifecycle?.result != disposition.questions["step_result_published"] {
+                if event.result_published != (disposition.slot == "completed") || event.lifecycle?.boundary != disposition.questions.step_boundary_reached || event.lifecycle?.result != disposition.questions.step_result_published {
                     return "extension publication disagrees with disposition"
                 }
             } else if actor.subprocess != nil || event.call_boundary_observed || event.result_published || event.lifecycle != nil { return "extension event lacks disposition" }

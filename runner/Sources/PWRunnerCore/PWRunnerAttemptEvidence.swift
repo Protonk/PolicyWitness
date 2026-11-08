@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-struct PWRunnerFreshRead: Codable {
+struct PWRunnerFreshRead {
     // BEGIN GENERATED PORCELAIN PWRunnerFreshRead
     var open_rc: Int32
     var open_errno: Int32?
@@ -15,7 +15,7 @@ struct PWRunnerFreshRead: Codable {
     var content_hex: String?
     // END GENERATED PORCELAIN PWRunnerFreshRead
 }
-struct PWRunnerFileStat: Codable {
+struct PWRunnerFileStat {
     // BEGIN GENERATED PORCELAIN PWRunnerFileStat
     var rc: Int32
     var errno: Int32?
@@ -31,7 +31,7 @@ struct PWRunnerFileStat: Codable {
         return nil
     }
 }
-struct PWRunnerFreshWrite: Codable {
+struct PWRunnerFreshWrite {
     // BEGIN GENERATED PORCELAIN PWRunnerFreshWrite
     var open_rc: Int32
     var open_errno: Int32?
@@ -50,14 +50,14 @@ struct PWRunnerFreshWrite: Codable {
 
 /// Bounded observations from the completed exec slot. Collection is frozen before
 /// termination requests; final wait facts concern only the owned leader.
-struct PWExecStreamObservation: Codable {
+struct PWExecStreamObservation {
     // BEGIN GENERATED PORCELAIN PWExecStreamObservation
     var eof: Bool
     var read_errno: Int32? = nil
     var poll_revents: Int32? = nil
     // END GENERATED PORCELAIN PWExecStreamObservation
 }
-struct PWExecCollectionObservation: Codable {
+struct PWExecCollectionObservation {
     // BEGIN GENERATED PORCELAIN PWExecCollectionObservation
     var stop_reason: String
     var leader_exit_observed: Bool
@@ -69,7 +69,7 @@ struct PWExecCollectionObservation: Codable {
     var clock_fault: UInt32? = nil
     // END GENERATED PORCELAIN PWExecCollectionObservation
 }
-struct PWExecSignalRequest: Codable {
+struct PWExecSignalRequest {
     // BEGIN GENERATED PORCELAIN PWExecSignalRequest
     var target: Int32
     var signal: Int32
@@ -77,28 +77,28 @@ struct PWExecSignalRequest: Codable {
     var errno: Int32? = nil
     // END GENERATED PORCELAIN PWExecSignalRequest
 }
-struct PWExecCleanupObservation: Codable {
+struct PWExecCleanupObservation {
     // BEGIN GENERATED PORCELAIN PWExecCleanupObservation
     var state: String
     var group_request: PWExecSignalRequest? = nil
     var leader_fallback: PWExecSignalRequest? = nil
     // END GENERATED PORCELAIN PWExecCleanupObservation
 }
-struct PWExecWaitObservation: Codable {
+struct PWExecWaitObservation {
     // BEGIN GENERATED PORCELAIN PWExecWaitObservation
     var rc: Int32
     var errno: Int32? = nil
     var status: Int32? = nil
     // END GENERATED PORCELAIN PWExecWaitObservation
 }
-struct PWExecReapObservation: Codable {
+struct PWExecReapObservation {
     // BEGIN GENERATED PORCELAIN PWExecReapObservation
     var stop_reason: String
     var last_wait: PWExecWaitObservation
     var clock_fault: UInt32? = nil
     // END GENERATED PORCELAIN PWExecReapObservation
 }
-struct PWExecObservation: Codable {
+struct PWExecObservation {
     // BEGIN GENERATED PORCELAIN PWExecObservation
     var collection: PWExecCollectionObservation
     var cleanup: PWExecCleanupObservation
@@ -192,7 +192,7 @@ extension PWRunnerAttemptResult {
     }
 }
 
-struct PWRunnerAttemptResult: Codable {
+struct PWRunnerAttemptResult {
     // BEGIN GENERATED PORCELAIN PWRunnerAttemptResult
     /// Submitted intent, not proof that the named native operation ran. See
     /// the "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
@@ -269,87 +269,8 @@ struct PWRunnerAttemptResult: Codable {
         self.exec_observation = exec_observation
     }
 
-    enum CodingKeys: String, CodingKey {
-        case requested_kind, requested_action
-        case result_source, missing_reason, lifecycle
-        case rc, fresh_read, fresh_write, exec_observation
-        case errno
-        case outcome
-        case error
-        case requested_path
-        case path_diagnostics
-        case observed_path
-        case child_pid
-        case child_exit_code
-        case child_term_signal
-        case stdout
-        case stderr
-    }
 
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(requested_kind, forKey: .requested_kind)
-        try container.encodeIfPresent(requested_action, forKey: .requested_action)
-        try container.encodeIfPresent(result_source, forKey: .result_source)
-        try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
-        try container.encodeIfPresent(lifecycle, forKey: .lifecycle)
-        try container.encodeIfPresent(fresh_read, forKey: .fresh_read)
-        try container.encodeIfPresent(fresh_write, forKey: .fresh_write)
-        try container.encodeIfPresent(exec_observation, forKey: .exec_observation)
-        try container.encode(rc, forKey: .rc)
-        if let errno {
-            try container.encode(errno, forKey: .errno)
-        } else {
-            try container.encodeNil(forKey: .errno)
-        }
-        try container.encode(outcome, forKey: .outcome)
-        try container.encodeIfPresent(error, forKey: .error)
-        if let requested_path {
-            try container.encode(requested_path, forKey: .requested_path)
-        } else {
-            try container.encodeNil(forKey: .requested_path)
-        }
-        try container.encodeIfPresent(path_diagnostics, forKey: .path_diagnostics)
-        if let observed_path {
-            try container.encode(observed_path, forKey: .observed_path)
-        } else {
-            try container.encodeNil(forKey: .observed_path)
-        }
-        // Exec output fields: emit when non-nil, omit the key when nil.
-        // A completed exec slot supplies the three child fields, including
-        // child_pid == 0 / child_exit_code == -1 / child_term_signal == 0
-        // when spawn failed. stdout/stderr are included only when that
-        // stream produced bytes. Non-exec attempts omit all five fields.
-        try container.encodeIfPresent(child_pid, forKey: .child_pid)
-        try container.encodeIfPresent(child_exit_code, forKey: .child_exit_code)
-        try container.encodeIfPresent(child_term_signal, forKey: .child_term_signal)
-        try container.encodeIfPresent(stdout, forKey: .stdout)
-        try container.encodeIfPresent(stderr, forKey: .stderr)
-    }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        requested_kind = try container.decodeIfPresent(String.self, forKey: .requested_kind)
-        requested_action = try container.decodeIfPresent(String.self, forKey: .requested_action)
-        result_source = try container.decodeIfPresent(String.self, forKey: .result_source)
-        missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
-        lifecycle = try container.decodeIfPresent(PWAttemptLifecycle.self, forKey: .lifecycle)
-        fresh_read = try container.decodeIfPresent(PWRunnerFreshRead.self, forKey: .fresh_read)
-        fresh_write = try container.decodeIfPresent(PWRunnerFreshWrite.self, forKey: .fresh_write)
-        exec_observation = try container.decodeIfPresent(PWExecObservation.self, forKey: .exec_observation)
-        rc = try container.decode(Int.self, forKey: .rc)
-        errno = try container.decodeIfPresent(Int.self, forKey: .errno)
-        outcome = try container.decode(String.self, forKey: .outcome)
-        error = try container.decodeIfPresent(String.self, forKey: .error)
-        requested_path = try container.decodeIfPresent(String.self, forKey: .requested_path)
-        path_diagnostics = try container.decodeIfPresent(PWRunnerAttemptPathDiagnostics.self, forKey: .path_diagnostics)
-        observed_path = try container.decodeIfPresent(String.self, forKey: .observed_path)
-        child_pid = try container.decodeIfPresent(Int.self, forKey: .child_pid)
-        child_exit_code = try container.decodeIfPresent(Int.self, forKey: .child_exit_code)
-        child_term_signal = try container.decodeIfPresent(Int.self, forKey: .child_term_signal)
-        stdout = try container.decodeIfPresent(String.self, forKey: .stdout)
-        stderr = try container.decodeIfPresent(String.self, forKey: .stderr)
-    }
 }
 
 extension PWRunnerAttemptResult {

@@ -45,7 +45,7 @@ private func lifecycleFixture(_ mode: String, readyMs: Int = 1_000, graceMs: Int
     return out
 }
 
-private func checkLifecycleJSON(_ out: CWorkerOutput, stop: String,
+private func checkLifecycleEvidence(_ out: CWorkerOutput, stop: String,
                                 reaped: Bool, exit: Int32? = nil, signal: Int32? = nil) throws {
     let classified = classify(workerResult: .success(out), validatorResult: nil, expectedVerdictCount: 0)
     try expectEqual(classified.outcome, NormalizedOutcome.runnerFailed,
@@ -55,9 +55,9 @@ private func checkLifecycleJSON(_ out: CWorkerOutput, stop: String,
     try expectEqual(out.exitCode, exit)
     try expectEqual(out.termSignal, signal)
     try expectEqual(out.exitRequested, true)
-    // Exercise the actual production assembler followed by Codable encoding.
-    let bytes = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
-    let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: bytes)
+    // Exercise the actual production assembler followed by binary writing.
+    let decoded = buildWorkerSubprocess(out)
+    let bytes = try pwPorcelainEncode(decoded)
     try expectEqual(decoded.poll_stop_reason, stop)
     try expectEqual(decoded.reaped, reaped)
     try expectEqual(decoded.exit_code, exit.map(Int.init))
@@ -72,11 +72,10 @@ private func checkLifecycleJSON(_ out: CWorkerOutput, stop: String,
     try expectEqual(decoded.wait_errors?.map { $0.rc }, out.waitErrors?.map { $0.rc })
     try expectEqual(decoded.wait_errors?.map { $0.errno }, out.waitErrors?.map { $0.errno })
     if !reaped {
-        let raw = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-        try expectTrue(raw["exit_code"] == nil || raw["exit_code"] is NSNull)
-        try expectTrue(raw["term_signal"] == nil || raw["term_signal"] is NSNull)
+        try expectNil(decoded.exit_code)
+        try expectNil(decoded.term_signal)
     }
-    FileHandle.standardOutput.write(Data("  lifecycle JSON: ".utf8) + bytes + Data("\n".utf8))
+    try expectTrue(bytes.starts(with: Data("PWP1".utf8)))
 }
 
 private func checkCompletedReport(_ out: CWorkerOutput) throws {
@@ -190,8 +189,8 @@ func runCWorkerReapedAcknowledgementControls(_ tk: TestKit) {
             try expectEqual(steps[0].comparison?.observation, fatal ? "unavailable" : "succeeded")
             let classification = classify(workerResult: result, validatorResult: .success(validator), expectedVerdictCount: 1)
             try expectEqual(classification.outcome, (fatal || faultInjected) ? NormalizedOutcome.runnerFailed : NormalizedOutcome.finished)
-            let encoded = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
-            let subprocess = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: encoded)
+            let subprocess = buildWorkerSubprocess(out)
+    let encoded = try pwPorcelainEncode(subprocess)
             try expectEqual(subprocess.term_signal, fatal ? Int(SIGTERM) : nil)
             try expectEqual(subprocess.done_observed, !fatal)
             var status: Int32 = 0
@@ -361,7 +360,7 @@ private func runExitWaitControls(_ tk: TestKit) {
         let control = InjectedExitWaits { _ in .timedOut }
         let out = try lifecycleFixture("complete_hang", calls: control.calls)
         try checkCompletedReport(out)
-        try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGKILL)
+        try checkLifecycleEvidence(out, stop: "done", reaped: true, signal: SIGKILL)
         let grace = try unwrap(out.graceWait)
         try expectEqual(grace.stop, "exhausted"); try expectEqual(grace.elapsed_ms, UInt64(50))
         try expectEqual(control.exitWaits, Array(repeating: UInt64(10_000_000), count: 50 / 10), "allowance / poll period")
@@ -373,7 +372,7 @@ private func runExitWaitControls(_ tk: TestKit) {
         let control = InjectedExitWaits { _ in .unusable }
         let out = try lifecycleFixture("complete_hang", calls: control.calls)
         try checkCompletedReport(out)
-        try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGKILL)
+        try checkLifecycleEvidence(out, stop: "done", reaped: true, signal: SIGKILL)
         let grace = try unwrap(out.graceWait)
         try expectEqual(grace.stop, "exhausted"); try expectEqual(grace.elapsed_ms, UInt64(50))
         try expectEqual(control.exitWaits.count, 1, "the watch is abandoned after the first unusable wait")
@@ -394,7 +393,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
         tk.run("completed report followed by cleanup kill is not sentinel expiry") {
             let out = try lifecycleFixture("complete_hang")
             try checkCompletedReport(out)
-            try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGKILL)
+            try checkLifecycleEvidence(out, stop: "done", reaped: true, signal: SIGKILL)
             try expectEqual(out.terminationRequest?.signal, SIGKILL)
             try expectEqual(out.terminationRequest?.rc, 0)
             try expectNil(out.terminationRequest?.errno)
@@ -403,13 +402,13 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
         tk.run("completed report survives independent nonzero exit") {
             let out = try lifecycleFixture("complete_exit_17")
             try checkCompletedReport(out)
-            try checkLifecycleJSON(out, stop: "done", reaped: true, exit: 17)
+            try checkLifecycleEvidence(out, stop: "done", reaped: true, exit: 17)
             try expectNil(out.terminationRequest)
         }
         tk.run("completed report survives independent signal") {
             let out = try lifecycleFixture("complete_signal")
             try checkCompletedReport(out)
-            try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGTERM)
+            try checkLifecycleEvidence(out, stop: "done", reaped: true, signal: SIGTERM)
             try expectNil(out.terminationRequest)
         }
         tk.run("done and cleanup termination cannot publish a coarse apply-failure scalar") {
@@ -430,7 +429,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try expectEqual(classified.outcome,NormalizedOutcome.runnerFailed)
             try expectContains(classified.error ?? "","without an observed application")
             try expectFalse(out.slots[0].completed)
-            try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGKILL)
+            try checkLifecycleEvidence(out, stop: "done", reaped: true, signal: SIGKILL)
             try expectEqual(out.terminationRequest?.rc, 0)
         }
         tk.run("failed kill permits only nonblocking reap and no invented status") {
@@ -450,7 +449,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             let out = try lifecycleFixture("complete_hang", calls: calls)
             try expectTrue(Date().timeIntervalSince(start) < 3, "failed kill did not return promptly")
             try checkCompletedReport(out)
-            try checkLifecycleJSON(out, stop: "done", reaped: false)
+            try checkLifecycleEvidence(out, stop: "done", reaped: false)
             try expectEqual(out.terminationRequest?.rc, -1)
             try expectEqual(out.terminationRequest?.errno, EPERM)
             try expectEqual(finalOptions, [WNOHANG])
@@ -464,7 +463,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             }
             let out = try lifecycleFixture("complete_hang", calls: calls)
             try checkCompletedReport(out)
-            try checkLifecycleJSON(out, stop: "done", reaped: false)
+            try checkLifecycleEvidence(out, stop: "done", reaped: false)
             try expectEqual(out.terminationRequest?.rc, 0)
             try expectEqual(out.waitErrors?.map { $0.stage }, ["after_termination"])
             try expectEqual(out.waitErrors?.map { $0.errno }, [ECHILD])
@@ -478,7 +477,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             }
             let out = try lifecycleFixture("complete_exit_17", calls: calls)
             try checkCompletedReport(out)
-            try checkLifecycleJSON(out, stop: "done", reaped: true, exit: 17)
+            try checkLifecycleEvidence(out, stop: "done", reaped: true, exit: 17)
             try expectNil(out.terminationRequest)
             try expectEqual(out.waitErrors?.map { $0.stage }, ["exit_grace"])
             try expectEqual(out.waitErrors?.map { $0.errno }, [EINTR])
@@ -494,7 +493,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             }
             let out = try lifecycleFixture("complete_hang", calls: calls)
             try checkCompletedReport(out)
-            try checkLifecycleJSON(out, stop: "done", reaped: false)
+            try checkLifecycleEvidence(out, stop: "done", reaped: false)
             try expectEqual(waitCalls, 4, "three grace attempts, then one final attempt")
             try expectEqual(out.waitErrors?.map { $0.stage },
                             ["exit_grace", "exit_grace", "exit_grace", "after_termination"])
@@ -511,7 +510,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
                 let completed = mode == "complete_hang"
                 if completed { try checkCompletedReport(out) }
                 try expectEqual(out.done, completed)
-                try checkLifecycleJSON(out, stop: completed ? "done" : "wait_error", reaped: false)
+                try checkLifecycleEvidence(out, stop: completed ? "done" : "wait_error", reaped: false)
                 try expectNil(out.terminationRequest)
                 try expectEqual(killCalls, 0)
                 try expectEqual(out.waitErrors?.map { $0.stage }, [completed ? "exit_grace" : "poll"])
@@ -526,7 +525,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
                 return Darwin.waitpid(pid, status, options)
             }
             let out = try lifecycleFixture("no_report_hang", calls: calls)
-            try checkLifecycleJSON(out, stop: "wait_error", reaped: true, signal: SIGKILL)
+            try checkLifecycleEvidence(out, stop: "wait_error", reaped: true, signal: SIGKILL)
             try expectFalse(out.done)
             try expectEqual(out.terminationRequest?.rc, 0)
             try expectEqual(out.waitErrors?.map { $0.stage }, ["poll"])

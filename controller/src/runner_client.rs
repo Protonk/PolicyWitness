@@ -14,8 +14,6 @@ use std::process::Command;
 
 use crate::app_layout::resolve_contents_macos_tool;
 use crate::runner_select::RunnerConnectionKind;
-#[cfg(test)]
-use crate::utils::RUNNER_CAPTURE_BYTES;
 use crate::utils::{JsonOutputCapture, RequestDelivery, now_unix_ms, run_with_stdin};
 
 const REPLY_CAPTURE_BYTES: usize = 92 * 1024 * 1024;
@@ -52,9 +50,6 @@ pub enum TransportCapture {
         #[serde(serialize_with = "serialize_rejected_bytes")]
         data_base64: Vec<u8>,
     },
-    /// Historical JSON comparison controls only; never selected by production.
-    #[cfg(test)]
-    Legacy(Value),
 }
 
 fn serialize_rejected_bytes<S: serde::Serializer>(
@@ -69,16 +64,12 @@ impl TransportCapture {
         match self {
             Self::Typed(v) => v.runner_reply.as_ref().is_some_and(|r| r.truncated),
             Self::Rejected { .. } => false,
-            #[cfg(test)]
-            Self::Legacy(v) => v["runner_reply"]["truncated"] == true,
         }
     }
     fn terminal(&self) -> Option<&str> {
         match self {
             Self::Typed(v) => Some(&v.terminal),
             Self::Rejected { .. } => None,
-            #[cfg(test)]
-            Self::Legacy(v) => v["terminal"].as_str(),
         }
     }
     fn failure_message(&self) -> Option<&str> {
@@ -89,26 +80,7 @@ impl TransportCapture {
                     .and_then(|r| r.reason.as_deref())
             }),
             Self::Rejected { .. } => None,
-            #[cfg(test)]
-            Self::Legacy(v) => v["error"]["message"]
-                .as_str()
-                .or_else(|| v["submission_refusal"]["reason"].as_str()),
         }
-    }
-    #[cfg(test)]
-    fn legacy_value(&self) -> &Value {
-        match self {
-            Self::Legacy(v) => v,
-            _ => panic!("JSON comparison control requires legacy storage"),
-        }
-    }
-}
-
-#[cfg(test)]
-impl std::ops::Index<&str> for TransportCapture {
-    type Output = Value;
-    fn index(&self, key: &str) -> &Value {
-        &self.legacy_value()[key]
     }
 }
 
@@ -784,135 +756,6 @@ fn parse_runner_client_output(
     }
 }
 
-#[cfg(test)]
-fn parse_runner_client_output_json_control(
-    argv: &[OsString],
-    started: u64,
-    ended: u64,
-    out: &std::process::Output,
-    request_delivery: Option<RequestDelivery>,
-) -> (RunnerClientRun, Option<Value>) {
-    #[cfg(test)]
-    crate::json_contract::footprint_test::record(crate::json_contract::footprint_test::Summary {
-        stage: Some(crate::json_contract::footprint_test::Stage::FullClientCollection),
-        raw_stdout: Some((out.stdout.len(), out.stdout.capacity())),
-        raw_stderr: Some((out.stderr.len(), out.stderr.capacity())),
-        ..Default::default()
-    });
-    let (output, transport) =
-        crate::utils::capture_json_output(out, "runner client", crate::utils::RUNNER_CAPTURE_BYTES);
-    let mut run = RunnerClientRun {
-        argv: argv
-            .iter()
-            .map(|s| s.to_string_lossy().to_string())
-            .collect(),
-        started_at_unix_ms: started,
-        ended_at_unix_ms: ended,
-        exit_code: out.status.code().unwrap_or(1),
-        request_delivery,
-        output,
-        transport: transport.map(TransportCapture::Legacy),
-        transport_admission: "missing".into(),
-        transport_error: None,
-        submission: "unknown".into(),
-        runner_reply_error: None,
-    };
-    let mut reply = None;
-    let admission = (|| -> Result<(), (&str, String)> {
-        if let Some(error) = run.request_delivery.as_ref().and_then(|d| d.error.as_ref()) {
-            return Err(("delivery_failed", error.clone()));
-        }
-        if let Some(error) = run
-            .output
-            .stdout_capture_error
-            .as_ref()
-            .or(run.output.stdout_parse_error.as_ref())
-        {
-            return Err(("malformed", error.clone()));
-        }
-        let value = run
-            .transport
-            .as_ref()
-            .ok_or(("missing", "runner client produced no capture".into()))?
-            .legacy_value();
-        let protocol = match value.get("protocol_version") {
-            Some(Value::Number(number)) if number.is_u64() || number.is_i64() => number,
-            _ => {
-                return Err((
-                    "malformed",
-                    "client capture lacks an integer protocol_version".into(),
-                ));
-            }
-        };
-        if protocol.as_u64() != Some(u64::from(crate::json_contract::RUNNER_PROTOCOL_VERSION)) {
-            return Err((
-                "unsupported",
-                format!("client capture protocol {protocol} is unsupported"),
-            ));
-        }
-        let capture: Capture = serde_json::from_value(value.clone())
-            .map_err(|e| ("malformed", format!("malformed client capture: {e}")))?;
-        validate_capture(&capture).map_err(|e| ("malformed", e))?;
-        let bytes = capture.runner_reply.as_ref().map(|r| &r.data);
-        #[cfg(test)]
-        let footprint_decoding = crate::json_contract::footprint_test::Summary {
-            stage: Some(
-                crate::json_contract::footprint_test::Stage::TypedCaptureValidationBase64Decoding,
-            ),
-            raw_stdout: Some((out.stdout.len(), out.stdout.capacity())),
-            raw_stderr: Some((out.stderr.len(), out.stderr.capacity())),
-            generic_base64: value["runner_reply"]["data_base64"].as_str().map(str::len),
-            typed_base64: None, // The comparison reader now shares generated byte storage.
-            host_retained: capture
-                .runner_reply
-                .as_ref()
-                .and_then(|r| usize::try_from(r.bytes_retained).ok()),
-            decoded: bytes.as_ref().map(|b| (b.len(), b.capacity())),
-            ..Default::default()
-        };
-        #[cfg(test)]
-        crate::json_contract::footprint_test::record(footprint_decoding);
-        run.submission = capture.submission.state.clone();
-        if let Some(bytes) = bytes {
-            if capture.runner_reply.as_ref().unwrap().truncated {
-                run.runner_reply_error = Some(
-                    "runner reply retention was truncated; no complete host reply is available"
-                        .into(),
-                );
-            } else {
-                match serde_json::from_slice(&bytes) {
-                    Ok(value) => {
-                        #[cfg(test)]
-                        crate::json_contract::footprint_test::record(
-                            crate::json_contract::footprint_test::Summary {
-                                stage: Some(
-                                    crate::json_contract::footprint_test::Stage::HostParsing,
-                                ),
-                                parsed_host: true,
-                                ..footprint_decoding
-                            },
-                        );
-                        reply = Some(value)
-                    }
-                    Err(error) => {
-                        run.runner_reply_error =
-                            Some(format!("runner reply is not complete JSON: {error}"))
-                    }
-                }
-            }
-        }
-        Ok(())
-    })();
-    match admission {
-        Ok(()) => run.transport_admission = "accepted".into(),
-        Err((status, error)) => {
-            run.transport_admission = status.into();
-            run.transport_error = Some(error);
-        }
-    }
-    (run, reply)
-}
-
 unsafe extern "C" {
     fn mach_continuous_time() -> u64;
 }
@@ -1011,34 +854,6 @@ fn run_client_stdin_with_clock(
 }
 
 #[cfg(test)]
-fn run_client_stdin_json_control(
-    argv: &[OsString],
-    request: Vec<u8>,
-) -> Result<(RunnerClientRun, Option<Value>), String> {
-    run_client_stdin_with_clock_json_control(argv, request, now_unix_ms)
-}
-#[cfg(test)]
-fn run_client_stdin_with_clock_json_control(
-    argv: &[OsString],
-    request: Vec<u8>,
-    mut clock: impl FnMut() -> u64,
-) -> Result<(RunnerClientRun, Option<Value>), String> {
-    let started = clock();
-    let mut command = Command::new(&argv[0]);
-    command.args(&argv[1..]);
-    let (out, delivery) = run_with_stdin(command, request)
-        .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
-    let ended = clock();
-    Ok(parse_runner_client_output_json_control(
-        argv,
-        started,
-        ended,
-        &out,
-        Some(delivery),
-    ))
-}
-
-#[cfg(test)]
 fn encode_base64(bytes: &[u8]) -> String {
     let alphabet = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut result = String::new();
@@ -1107,162 +922,52 @@ pub(crate) fn test_shape_capture() -> Value {
 
 #[cfg(test)]
 pub(crate) fn test_client_run(reply: Option<&Value>) -> RunnerClientRun {
+    // Authored fixture input for controlled orchestration, never transport
+    // admission. Binary admission itself is exercised by binary_tests.
     let bytes = reply.map(|r| serde_json::to_vec(r).unwrap());
-    let frame = test_capture_bytes(bytes.as_deref());
-    let output = std::process::Output {
-        status: std::os::unix::process::ExitStatusExt::from_raw(if reply.is_some() {
-            0
-        } else {
-            256
-        }),
-        stdout: serde_json::to_vec(&frame).unwrap(),
-        stderr: b"fixed runner-client diagnostic".to_vec(),
-    };
-    parse_runner_client_output_json_control(
-        &["controlled-client".into()],
-        1000,
-        2500,
-        &output,
-        Some(RequestDelivery {
+    test_client_run_bytes(bytes.as_deref())
+}
+#[cfg(test)]
+pub(crate) fn test_client_run_bytes(reply: Option<&[u8]>) -> RunnerClientRun {
+    let capture: Capture = serde_json::from_value(test_capture_bytes(reply)).unwrap();
+    RunnerClientRun {
+        argv: vec!["controlled-client".into()],
+        started_at_unix_ms: 1000,
+        ended_at_unix_ms: 2500,
+        exit_code: if reply.is_some() { 0 } else { 1 },
+        request_delivery: Some(RequestDelivery {
             bytes_written: 2,
             error: None,
         }),
-    )
-    .0
+        output: JsonOutputCapture {
+            stdout_parse_error: None,
+            stdout_truncated: false,
+            stdout_capture_error: None,
+            stdout_bytes_received: None,
+            stdout_bytes_retained: None,
+            stderr_bytes_received: Some(30),
+            stderr_bytes_retained: Some(30),
+            capture_limit_bytes: crate::utils::RUNNER_CAPTURE_BYTES,
+            stdout_raw: None,
+            stderr: "fixed runner-client diagnostic".into(),
+            stderr_truncated: false,
+        },
+        transport: Some(TransportCapture::Typed(capture)),
+        transport_admission: "accepted".into(),
+        transport_error: None,
+        submission: "invoked".into(),
+        runner_reply_error: None,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    // These retained fixtures exercise the JSON comparison control explicitly.
-    use super::{
-        parse_runner_client_output_json_control as parse_runner_client_output,
-        run_client_stdin_json_control as run_client_stdin,
-        run_client_stdin_with_clock_json_control as run_client_stdin_with_clock,
-    };
-
-    #[test]
-    fn response_footprint_success_boundaries() {
-        use crate::json_contract::{JsonResult, footprint_test as ft, render_envelope};
-        use ft::Stage::*;
-        let host = br#"{"schema_version":26,"steps":[],"marker":"independent bytes"}"#;
-        let frame = serde_json::to_vec(&test_capture_bytes(Some(host))).unwrap();
-        let stderr = b"fixture diagnostic";
-        let _scope = ft::begin();
-        let (run, parsed) = {
-            let output = std::process::Output {
-                status: std::os::unix::process::ExitStatusExt::from_raw(0),
-                stdout: frame.clone(),
-                stderr: stderr.to_vec(),
-            };
-            parse_runner_client_output(&[], 0, 1, &output, None)
-        }; // Complete raw streams end before envelope construction.
-        assert_eq!(run.transport_admission, "accepted");
-        assert_eq!(parsed, Some(serde_json::from_slice(host).unwrap()));
-        let text = render_envelope(
-            "footprint_fixture",
-            JsonResult::new(true, 0, None, None),
-            &(run, parsed),
-        )
-        .unwrap();
-        let records = ft::take();
-        assert_eq!(
-            records.iter().map(|r| r.stage.unwrap()).collect::<Vec<_>>(),
-            vec![
-                FullClientCollection,
-                CaptureParsing,
-                TypedCaptureValidationBase64Decoding,
-                HostParsing,
-                EnvelopeConstructionSorting,
-                FinalRendering
-            ]
-        );
-        for (index, r) in records.iter().enumerate() {
-            for pair in [
-                r.raw_stdout,
-                r.raw_stderr,
-                r.retained_stdout,
-                r.retained_stderr,
-                r.decoded,
-                r.rendered,
-            ]
-            .into_iter()
-            .flatten()
-            {
-                assert!(pair.1 >= pair.0);
-            }
-            if index < 4 {
-                assert_eq!(r.raw_stdout.unwrap().0, frame.len());
-                assert_eq!(r.raw_stderr.unwrap().0, stderr.len());
-            } else {
-                assert!(r.raw_stdout.is_none() && r.raw_stderr.is_none());
-                assert!(r.typed_base64.is_none() && r.decoded.is_none());
-                assert!(r.borrowed_input && r.envelope);
-            }
-            if (1..=3).contains(&index) {
-                assert_eq!(r.generic_base64, Some(host.len().div_ceil(3) * 4));
-            }
-            if (2..=3).contains(&index) {
-                assert_eq!(
-                    r.typed_base64, None,
-                    "generated comparison storage owns decoded bytes"
-                );
-                assert_eq!(r.host_retained, Some(host.len()));
-                assert_eq!(r.decoded.unwrap().0, host.len());
-            }
-        }
-        assert_eq!(records[1].retained_stdout.unwrap().0, frame.len());
-        assert_eq!(records[1].retained_stderr.unwrap().0, stderr.len());
-        assert!(records[3].parsed_host);
-        assert_eq!(records[5].rendered.unwrap().0, text.len());
-        // Optional receipt is written only by this explicitly selected unit case.
-        if let Some(path) = std::env::var_os("PW_RESPONSE_FOOTPRINT_UNIT_RECEIPT")
-            .map(std::path::PathBuf::from)
-            .or_else(|| {
-                std::env::var_os("PW_TEST_ARTIFACTS")
-                    .map(|p| std::path::PathBuf::from(p).join("response-footprint-unit.json"))
-            })
-        {
-            let stages = [
-                "full_client_collection",
-                "capture_parsing",
-                "typed_capture_validation_base64_decoding",
-                "host_parsing",
-                "envelope_construction_sorting",
-                "final_rendering",
-            ];
-            let boundaries: Vec<_> = records
-                .iter()
-                .zip(stages)
-                .map(|(record, stage)| {
-                    let mut value = serde_json::to_value(record).unwrap();
-                    value["stage"] = stage.into();
-                    value
-                })
-                .collect();
-            let receipt = serde_json::json!({"schema_version":1,"case_id":"response_footprint_success_boundaries",
-                "input_sha256":crate::digest::sha256_hex(host),
-                "source_sha256":crate::digest::sha256_hex(include_bytes!("runner_client.rs")),
-                "sources_sha256": {"controller/src/runner_client.rs":crate::digest::sha256_hex(include_bytes!("runner_client.rs")),
-                    "controller/src/utils.rs":crate::digest::sha256_hex(include_bytes!("utils.rs")),
-                    "controller/src/json_contract.rs":crate::digest::sha256_hex(include_bytes!("json_contract.rs"))}, "host_bytes":host.len(),
-                "client_stdout_bytes":frame.len(),"client_stderr_bytes":stderr.len(),
-                "rendered_bytes":text.len(),"boundaries":boundaries});
-            std::fs::write(path.with_extension("input.json"), host).unwrap();
-            std::fs::write(path, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
-        }
-    }
-
     #[test]
     fn reply_capture_limit_matches_documented_capacity() {
         let manifest: serde_json::Value =
             serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
         let limits = manifest["limits"].as_array().unwrap();
-        let value = |id: &str| {
-            limits.iter().find(|row| row["id"] == id).unwrap()["value"]
-                .as_u64()
-                .unwrap() as usize
-        };
         let owned: std::collections::BTreeMap<&str, u64> = limits
             .iter()
             .filter(|row| {
@@ -1279,260 +984,29 @@ mod tests {
                 REPLY_CAPTURE_BYTES as u64
             )])
         );
-        assert!(REPLY_CAPTURE_BYTES >= value("runner_reply_maximum"));
     }
-    use std::process::Stdio;
-
     #[test]
-    fn path_wire_fixtures_survive_capture_serialization_and_independent_consumer() {
-        use std::io::Write;
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-        let fixture = root.join("tests/fixtures/contract/path_diagnostics.json");
-        let original: Value = serde_json::from_slice(&std::fs::read(&fixture).unwrap()).unwrap();
-        let output = Command::new("/usr/bin/python3")
-            .args([
-                "-B",
-                "-c",
-                "import sys; sys.stdout.buffer.write(open(sys.argv[1], 'rb').read())",
-            ])
-            .arg(&fixture)
-            .output()
-            .unwrap();
-        assert!(output.status.success());
-        let output = std::process::Output {
-            stdout: serde_json::to_vec(&test_capture_bytes(Some(&output.stdout))).unwrap(),
-            ..output
-        };
-        let (capture, parsed) = parse_runner_client_output(&[], 0, 1, &output, None);
-        assert!(capture.output.stdout_capture_error.is_none());
-        assert_eq!(parsed.as_ref(), Some(&original));
-        // Forward valid and malformed representations unchanged. The independent
-        // consumer owns interpretation; the controller must not normalize them.
-        let mut consumer = Command::new("/usr/bin/python3")
-            .arg("-B")
-            .arg(root.join("tests/lib/path_diagnostics_contract.py"))
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .unwrap();
-        consumer
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(&serde_json::to_vec(&parsed.unwrap()).unwrap())
-            .unwrap();
-        let answer = consumer.wait_with_output().unwrap();
-        assert!(
-            answer.status.success(),
-            "{}",
-            String::from_utf8_lossy(&answer.stderr)
-        );
-    }
-
-    // Real subprocess producers exercise full capture before prefix selection.
-    fn producer(program: &str) -> (RunnerClientRun, Option<Value>, Vec<u8>) {
-        let argv = vec![
-            OsString::from("/usr/bin/python3"),
-            OsString::from("-c"),
-            OsString::from(program),
-        ];
-        let output = Command::new(&argv[0]).args(&argv[1..]).output().unwrap();
-        assert!(output.status.success());
-        let (capture, parsed) = parse_runner_client_output(&argv, 0, 1, &output, None);
-        (capture, parsed, output.stdout)
-    }
-
-    #[test]
-    fn transport_preserves_current_replies_with_unfamiliar_values_and_other_versions() {
-        use serde_json::json;
-        let current = i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION);
-        // A current-version reply whose strings the controller does not
-        // recognize is received unchanged: the version gate and the readers
-        // decide later, never the transport.
-        let mut replies = vec![
-            json!({"schema_version": current, "normalized_outcome": "finished", "steps": [{
-            "step_id": "spawn",
-            "sandbox_check": {"outcome": "allow", "rc": 0, "native_rc": 0, "path_diagnostics": {
-                "input": "/submitted", "observer": "runner_host", "stage": "after_orchestration"}},
-            "attempt": {"outcome": "exec_failed", "rc": 37, "child_pid": 123, "child_exit_code": 37,
-                "stdout": "controlled marker", "requested_kind": "exec", "requested_action": "spawn"},
-            "comparison": {"observation": "succeeded", "observation_basis": "spawned_child",
-                "operation_relation": "matched", "target_relation": "same_submitted",
-                "order": "future_order", "limitations": ["future_evidence_limit"]}}],
-            "runner_subprocess": {"ordering": {
-                "collection_closed_before_proceed": true, "proceed_set": true,
-                "proceed_observed": true, "validator_disposition": "unconfirmed",
-                "worker_lifetime_established": true, "protocol_violations": ["future_fault"]}},
-            "validator_spawn_failure": {
-                "origin": "runner_host", "operation": "posix_spawn",
-                "executable_path": "/unknown/validator-\"\u{e9}\"", "return_code": 2147483647,
-                "diagnostic": "unfamiliar native launch diagnostic"}}),
-        ];
-        // Other and malformed versions are transported as received; nothing
-        // here coerces or rejects them.
-        for version in [current - 1, current + 1] {
-            replies.push(
-                json!({"schema_version": version, "steps": [{"step_id": "s", "drift": false}]}),
-            );
+    fn strict_base64_rejects_noncanonical_or_ignored_bytes() {
+        for (text, expected) in [("", ""), ("Zg==", "f"), ("Zm8=", "fo"), ("Zm9v", "foo")] {
+            assert_eq!(decode_base64(text).unwrap(), expected.as_bytes());
         }
-        replies.push(json!({"schema_version": current.to_string(), "steps": []}));
-        replies.push(json!({"steps": []}));
-        for original in replies {
-            let output = crate::utils::receiver_fixture(
-                &test_capture_bytes(Some(original.to_string().as_bytes())).to_string(),
-                "valid",
-                crate::utils::RUNNER_CAPTURE_BYTES,
-            );
-            let (capture, received) = parse_runner_client_output(&[], 0, 1, &output, None);
-            assert!(capture.output.stdout_capture_error.is_none());
-            assert_eq!(received, Some(original));
+        for bad in [
+            "Zg", "Zh==", "Zm9=", "Zg===", "Zg==\n", "Zg==AAAA", "_w==", "====",
+        ] {
+            assert!(decode_base64(bad).is_err(), "{bad}");
         }
     }
-
-    fn python(program: &str) -> Vec<OsString> {
-        vec![
-            OsString::from("/usr/bin/python3"),
-            OsString::from("-c"),
-            OsString::from(program),
-        ]
-    }
-
     #[test]
-    fn delivery_completes_a_request_larger_than_the_pipe_buffer() {
-        // The child reads only after a delay, so the writer must block on a
-        // full pipe and still deliver every byte before closing stdin.
-        let request = vec![b'x'; 1 << 20];
-        let argv = python(
-            "import sys, time, json; time.sleep(0.2); data = sys.stdin.buffer.read(); \
-             print(json.dumps({'bytes': len(data), 'uniform': data == b'x' * len(data)}))",
-        );
-        let (run, reply) =
-            run_client_stdin_with_clock(&argv, request.clone(), now_unix_ms).unwrap();
+    fn deadline_conversion_rounds_up_and_saturates_without_resetting_the_origin() {
+        assert_eq!(deadline_ticks(17, 1, 125, 3).unwrap(), 24_017);
+        assert_eq!(deadline_ticks(17, 1, 3, 1).unwrap(), 333_351);
         assert_eq!(
-            run.request_delivery,
-            Some(RequestDelivery {
-                bytes_written: request.len(),
-                error: None
-            })
+            deadline_ticks(u64::MAX - 1, u64::MAX, 1, u32::MAX).unwrap(),
+            u64::MAX
         );
-        assert_eq!(
-            run.transport,
-            Some(TransportCapture::Legacy(
-                serde_json::json!({"bytes": request.len(), "uniform": true})
-            ))
-        );
-        assert!(
-            reply.is_none(),
-            "the producer is not a current client capture"
-        );
-        assert_eq!(run.exit_code, 0);
-        let wire = serde_json::to_value(&run).unwrap();
-        assert_eq!(wire["request_delivery"]["bytes_written"], request.len());
-        assert!(wire["request_delivery"]["error"].is_null());
+        assert!(deadline_ticks(0, 1, 0, 1).is_err());
+        assert!(deadline_ticks(0, 1, 1, 0).is_err());
     }
-
-    #[test]
-    fn a_child_that_exits_without_reading_breaks_the_pipe_without_terminating_the_controller() {
-        let request = vec![b'x'; 1 << 20];
-        let argv = python("import sys; sys.exit(3)");
-        let (run, reply) =
-            run_client_stdin_with_clock(&argv, request.clone(), now_unix_ms).unwrap();
-        let delivery = run.request_delivery.clone().unwrap();
-        let error = delivery.error.expect("the broken pipe is recorded");
-        assert!(
-            error.contains("request delivery failed after") && error.contains("Broken pipe"),
-            "{error}"
-        );
-        assert!(delivery.bytes_written < request.len());
-        assert!(reply.is_none());
-        assert_eq!(run.exit_code, 3);
-        assert!(run.output.stdout_parse_error.is_some() || run.output.stdout_raw.is_none());
-    }
-
-    #[test]
-    fn a_delivery_error_is_recorded_beside_a_captured_failure_reply() {
-        let request = vec![b'x'; 1 << 20];
-        let argv = python(
-            "import sys, json; print(json.dumps({'schema_version': 0, 'normalized_outcome': \
-             'xpc_error', 'error': 'controlled failure reply'})); sys.exit(1)",
-        );
-        let (run, reply) = run_client_stdin_with_clock(&argv, request, now_unix_ms).unwrap();
-        let delivery = run.request_delivery.clone().unwrap();
-        assert!(
-            delivery
-                .error
-                .as_deref()
-                .unwrap_or("")
-                .contains("Broken pipe")
-        );
-        assert!(
-            reply.is_none(),
-            "failed local delivery must not admit a host reply"
-        );
-        let rejected = run
-            .transport
-            .as_ref()
-            .expect("opaque producer JSON remains available");
-        assert_eq!(rejected["normalized_outcome"], "xpc_error");
-        assert_eq!(rejected["error"], "controlled failure reply");
-        assert_eq!(run.submission, "unknown");
-        assert_eq!(run.exit_code, 1);
-    }
-
-    #[test]
-    fn unfamiliar_diagnostics_survive_runner_capture() {
-        let records = crate::utils::transport_diagnostics();
-        let original = serde_json::json!({"data": {"diagnostics": records},
-            "result": {"ok": false, "normalized_outcome": "runner_failed", "rc": 1}});
-        for mode in ["valid", "oversized"] {
-            let output = crate::utils::receiver_fixture(
-                &test_capture_bytes(Some(original.to_string().as_bytes())).to_string(),
-                mode,
-                crate::utils::RUNNER_CAPTURE_BYTES,
-            );
-            let (capture, received) = parse_runner_client_output(&[], 0, 1, &output, None);
-            if mode == "valid" {
-                assert_eq!(received, Some(original.clone()));
-                assert!(capture.output.stdout_capture_error.is_none());
-            } else {
-                assert!(serde_json::from_slice::<Value>(&output.stdout).is_ok());
-                assert!(received.is_none());
-                assert!(capture.output.stdout_capture_error.is_some());
-                assert!(capture.output.stdout_parse_error.is_none());
-            }
-        }
-    }
-
-    #[test]
-    fn recorded_span_brackets_the_child_process() {
-        // The child reports its own clock twice, around a sleep; both readings
-        // must fall inside the span the controller records for it.
-        let argv = vec![
-            OsString::from("/usr/bin/python3"),
-            OsString::from("-c"),
-            OsString::from(
-                "import json, time; a = int(time.time() * 1000); time.sleep(0.3); \
-                 b = int(time.time() * 1000); print(json.dumps({'a': a, 'b': b}))",
-            ),
-        ];
-        let (run, parsed) = run_client_stdin(&argv, Vec::new()).unwrap();
-        assert!(parsed.is_none());
-        let reply = run
-            .transport
-            .as_ref()
-            .expect("opaque child JSON is retained");
-        let (a, b) = (reply["a"].as_u64().unwrap(), reply["b"].as_u64().unwrap());
-        assert!(
-            run.started_at_unix_ms <= a,
-            "{} <= {a}",
-            run.started_at_unix_ms
-        );
-        assert!(b <= run.ended_at_unix_ms, "{b} <= {}", run.ended_at_unix_ms);
-        assert!(run.ended_at_unix_ms - run.started_at_unix_ms >= 300);
-        assert_eq!(run.exit_code, 0);
-    }
-
     #[test]
     fn backwards_clock_readings_are_retained() {
         let argv = vec![OsString::from("/usr/bin/true")];
@@ -1548,355 +1022,6 @@ mod tests {
             );
             assert_eq!(run.exit_code, 0);
         }
-    }
-
-    #[test]
-    fn valid_oversized_producer_is_receiver_loss_not_malformed_json() {
-        let (capture, parsed, full) = producer(&format!(
-            "import sys; sys.stdout.write('{{\"value\":\"' + 'x'*{} + '\"}}')",
-            RUNNER_CAPTURE_BYTES
-        ));
-        assert!(
-            serde_json::from_slice::<Value>(&full).is_ok(),
-            "producer emitted valid complete JSON"
-        );
-        assert!(parsed.is_none());
-        let wire = serde_json::to_value(&capture).unwrap();
-        assert_eq!(wire["stdout_bytes_received"], RUNNER_CAPTURE_BYTES + 12);
-        assert_eq!(wire["stdout_bytes_retained"], RUNNER_CAPTURE_BYTES);
-        assert!(
-            wire["stdout_capture_error"]
-                .as_str()
-                .unwrap()
-                .contains("controller truncated")
-        );
-        assert_eq!(
-            capture.output.stdout_bytes_received,
-            Some(RUNNER_CAPTURE_BYTES + 12)
-        );
-        assert_eq!(
-            capture.output.stdout_bytes_retained,
-            Some(RUNNER_CAPTURE_BYTES)
-        );
-        assert_eq!(capture.output.capture_limit_bytes, RUNNER_CAPTURE_BYTES);
-        assert!(capture.output.stdout_truncated);
-        assert!(capture.output.stdout_parse_error.is_none());
-        assert!(
-            capture
-                .output
-                .stdout_capture_error
-                .unwrap()
-                .contains("controller truncated")
-        );
-    }
-
-    #[test]
-    fn malformed_within_cap_is_a_parse_error() {
-        let (capture, parsed, full) = producer("import sys; sys.stdout.write('invalid-json')");
-        assert!(serde_json::from_slice::<Value>(&full).is_err());
-        assert!(parsed.is_none());
-        assert_eq!(capture.output.stdout_bytes_received, Some(12));
-        assert_eq!(capture.output.stdout_bytes_retained, Some(12));
-        assert!(!capture.output.stdout_truncated);
-        assert!(capture.output.stdout_capture_error.is_none());
-        assert!(capture.output.stdout_parse_error.is_some());
-    }
-
-    #[test]
-    fn invalid_utf8_is_not_repaired_into_accepted_json() {
-        let (capture, parsed, full) =
-            producer("import sys; sys.stdout.buffer.write(b'{\"v\":\"' + bytes([255]) + b'\"}')");
-        assert!(serde_json::from_slice::<Value>(&full).is_err());
-        assert!(parsed.is_none());
-        assert!(!capture.output.stdout_truncated);
-        assert!(capture.output.stdout_capture_error.is_none());
-        assert!(capture.output.stdout_parse_error.is_some());
-        assert_eq!(capture.output.stdout_bytes_received, Some(9));
-    }
-
-    #[test]
-    fn multibyte_cut_counts_bytes_before_lossy_conversion() {
-        // stdout: the cap falls inside a three-byte character; stderr exceeds the
-        // cap with whole three-byte characters, regardless of the cap modulo three.
-        let (capture, parsed, full) = producer(&format!(
-            "import sys; sys.stdout.buffer.write(b'{{\"v\":\"' + b'x'*({} - 7) + bytes([0xe2,0x82,0xac]) + b'\"}}'); sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*{})",
-            RUNNER_CAPTURE_BYTES,
-            RUNNER_CAPTURE_BYTES / 3 + 1
-        ));
-        assert!(serde_json::from_slice::<Value>(&full).is_ok());
-        assert!(parsed.is_none());
-        assert_eq!(
-            capture.output.stdout_bytes_received,
-            Some(RUNNER_CAPTURE_BYTES + 4)
-        );
-        assert_eq!(
-            capture.output.stdout_bytes_retained,
-            Some(RUNNER_CAPTURE_BYTES)
-        );
-        assert_eq!(
-            capture.output.stderr_bytes_received,
-            Some(3 * (RUNNER_CAPTURE_BYTES / 3 + 1))
-        );
-        assert_eq!(
-            capture.output.stderr_bytes_retained,
-            Some(RUNNER_CAPTURE_BYTES)
-        );
-        let text = capture.output.stdout_raw.unwrap();
-        assert!(text.ends_with('\u{fffd}'));
-        assert_eq!(text.len(), RUNNER_CAPTURE_BYTES + 2);
-        assert!(capture.output.stdout_capture_error.is_some());
-        assert!(capture.output.stdout_parse_error.is_none());
-    }
-
-    fn captured(frame: &Value) -> (RunnerClientRun, Option<Value>) {
-        let output = std::process::Output {
-            status: std::os::unix::process::ExitStatusExt::from_raw(0),
-            stdout: serde_json::to_vec(frame).unwrap(),
-            stderr: Vec::new(),
-        };
-        parse_runner_client_output(
-            &[],
-            0,
-            1,
-            &output,
-            Some(RequestDelivery {
-                bytes_written: 2,
-                error: None,
-            }),
-        )
-    }
-
-    #[test]
-    fn strict_base64_rejects_noncanonical_or_ignored_bytes() {
-        for (text, expected) in [("", ""), ("Zg==", "f"), ("Zm8=", "fo"), ("Zm9v", "foo")] {
-            assert_eq!(decode_base64(text).unwrap(), expected.as_bytes());
-        }
-        for bad in [
-            "Zg", "Zh==", "Zm9=", "Zg===", "Zg==\n", "Zg==AAAA", "_w==", "====",
-        ] {
-            assert!(decode_base64(bad).is_err(), "{bad}");
-        }
-    }
-
-    #[test]
-    fn rejected_capture_never_recovers_nonexecution_or_host_claims() {
-        let original = test_capture_bytes(Some(br#"{"schema_version":24,"pid":999}"#));
-        let mutations: Vec<Box<dyn Fn(&mut Value)>> = vec![
-            Box::new(|v| v["submission"]["state"] = "not_invoked".into()),
-            Box::new(|v| v["acquisition_stop"] = "overall_deadline".into()),
-            Box::new(|v| v["attempts"][0]["ordinal"] = 2.into()),
-            Box::new(|v| {
-                v["attempts"][0]["control"]["reservation_id"] = "credential must not escape".into()
-            }),
-            Box::new(|v| v["attempts"][0]["control"]["host_pid"] = 0.into()),
-            Box::new(|v| v["attempts"][0]["control"]["lease_ms"] = 5001.into()),
-            Box::new(|v| v["runner_reply"]["bytes_retained"] = 0.into()),
-            Box::new(|v| v["runner_reply"]["data_base64"] = "Zh==".into()),
-            Box::new(|v| v["clock_available"] = false.into()),
-            Box::new(|v| {
-                v.as_object_mut()
-                    .unwrap()
-                    .remove("submission")
-                    .map(|_| ())
-                    .unwrap()
-            }),
-        ];
-        for mutate in mutations {
-            let mut frame = original.clone();
-            mutate(&mut frame);
-            let (capture, host) = captured(&frame);
-            assert_eq!(capture.transport_admission, "malformed", "{frame}");
-            assert_eq!(capture.submission, "unknown");
-            assert_eq!(capture.transport, Some(TransportCapture::Legacy(frame)));
-            assert!(host.is_none() && capture.runner_reply_error.is_none());
-        }
-        for version in [
-            serde_json::json!(-1),
-            serde_json::json!(1),
-            serde_json::json!(u64::MAX),
-        ] {
-            let mut frame = original.clone();
-            frame["protocol_version"] = version;
-            frame["submission"] = serde_json::json!({"invented":"must not be inspected"});
-            let (capture, host) = captured(&frame);
-            assert_eq!(capture.transport_admission, "unsupported");
-            assert_eq!(capture.submission, "unknown");
-            assert!(host.is_none());
-        }
-    }
-
-    #[test]
-    fn grant_followed_by_deadline_does_not_invent_an_invocation() {
-        let mut frame = test_capture_bytes(None);
-        frame["submission"] = serde_json::json!({"state":"not_invoked"});
-        frame["terminal"] = "xpc_timeout".into();
-        frame["deadline_continuous_ns"] = 1004000000u64.into();
-        frame["error"] = serde_json::json!({"stage":"acquisition","reason":"overall_deadline",
-            "message":"deadline expired after grant","domain_truncated":false,"message_truncated":false});
-        let (capture, host) = captured(&frame);
-        assert_eq!(
-            capture.transport_admission, "accepted",
-            "{:?}",
-            capture.transport_error
-        );
-        assert_eq!(capture.submission, "not_invoked");
-        assert_eq!(capture.failure().unwrap().0, "xpc_timeout");
-        assert_eq!(
-            capture.transport.as_ref().unwrap()["acquisition_stop"],
-            "granted"
-        );
-        assert!(host.is_none() && !capture.fallback_eligible());
-    }
-
-    #[test]
-    fn clock_failure_preserves_known_submission_without_inventing_a_terminal_clock() {
-        for invoked in [false, true] {
-            let mut frame = test_capture_bytes(None);
-            frame["clock_available"] = false.into();
-            frame["terminal"] = "local_error".into();
-            frame.as_object_mut().unwrap().remove("ended_continuous_ns");
-            frame["error"] = serde_json::json!({"stage":"local","reason":"clock_error",
-                "message":"clock unavailable","domain_truncated":false,"message_truncated":false});
-            if !invoked {
-                frame["submission"] = serde_json::json!({"state":"not_invoked"});
-                frame["attempts"] = serde_json::json!([]);
-                frame["acquisition_stop"] = "local_error".into();
-                frame
-                    .as_object_mut()
-                    .unwrap()
-                    .remove("started_continuous_ns");
-                frame
-                    .as_object_mut()
-                    .unwrap()
-                    .remove("deadline_continuous_ns");
-            }
-            let (capture, host) = captured(&frame);
-            assert_eq!(
-                capture.transport_admission, "accepted",
-                "{:?}",
-                capture.transport_error
-            );
-            assert_eq!(
-                capture.submission,
-                if invoked { "invoked" } else { "not_invoked" }
-            );
-            assert!(host.is_none());
-        }
-    }
-
-    #[test]
-    fn host_bytes_are_not_replaced_with_client_error_shapes() {
-        for bytes in [b"".as_slice(), b"not-json", &[255]] {
-            let (capture, host) = captured(&test_capture_bytes(Some(bytes)));
-            assert_eq!(capture.transport_admission, "accepted");
-            assert_eq!(capture.submission, "invoked");
-            assert!(host.is_none() && capture.runner_reply_error.is_some());
-            assert_eq!(capture.failure().unwrap().0, "malformed_runner_response");
-        }
-        let (capture, host) = captured(&test_capture_bytes(None));
-        assert_eq!(capture.transport_admission, "accepted");
-        assert_eq!(capture.failure().unwrap().0, "xpc_error");
-        assert!(capture.fallback_eligible() && host.is_none());
-    }
-
-    #[test]
-    fn local_delivery_failure_precedes_even_a_complete_current_capture() {
-        let frame = test_capture_bytes(Some(br#"{"schema_version":24,"pid":999}"#));
-        let output = std::process::Output {
-            status: std::os::unix::process::ExitStatusExt::from_raw(0),
-            stdout: serde_json::to_vec(&frame).unwrap(),
-            stderr: Vec::new(),
-        };
-        let (capture, host) = parse_runner_client_output(
-            &[],
-            0,
-            1,
-            &output,
-            Some(RequestDelivery {
-                bytes_written: 1,
-                error: Some("controlled delivery failure".into()),
-            }),
-        );
-        assert_eq!(capture.transport_admission, "delivery_failed");
-        assert_eq!(capture.transport, Some(TransportCapture::Legacy(frame)));
-        assert_eq!(capture.submission, "unknown");
-        assert!(host.is_none() && capture.runner_reply_error.is_none());
-        assert!(!capture.fallback_eligible());
-    }
-
-    #[test]
-    fn submission_proxy_failure_keeps_the_irreversible_invocation_observation() {
-        let mut frame = test_capture_bytes(None);
-        frame["error"] = serde_json::json!({"stage":"submission","reason":"proxy_type_mismatch",
-            "message":"remote proxy type mismatch","domain_truncated":false,"message_truncated":false});
-        let (capture, host) = captured(&frame);
-        assert_eq!(
-            capture.transport_admission, "accepted",
-            "{:?}",
-            capture.transport_error
-        );
-        assert_eq!(capture.submission, "invoked");
-        assert_eq!(capture.failure().unwrap().0, "xpc_error");
-        assert!(host.is_none());
-        // The same local failure cannot claim a transport retry during acquisition.
-        frame["attempts"][0]["ordinal"] = 2.into();
-        frame["attempts"][0]["started_elapsed_ms"] = 1.into();
-        frame["attempts"][0]["ended_elapsed_ms"] = 2.into();
-        frame["attempts"].as_array_mut().unwrap().insert(0, serde_json::json!({
-            "ordinal":1,"attempt_id":"33333333-3333-4333-8333-333333333333",
-            "started_elapsed_ms":0,"ended_elapsed_ms":1,"outcome":"transport_error",
-            "error":{"stage":"acquisition","reason":"proxy_type_mismatch",
-                "message":"remote proxy type mismatch","domain_truncated":false,"message_truncated":false}}));
-        let (capture, _) = captured(&frame);
-        assert_eq!(capture.transport_admission, "malformed");
-        assert_eq!(capture.submission, "unknown");
-    }
-
-    #[test]
-    fn submission_refusal_is_separate_from_host_results_and_never_replayed() {
-        for reason in ["wrong", "expired", "absent", "consumed", "clock_error"] {
-            let mut frame = test_capture_bytes(None);
-            frame.as_object_mut().unwrap().remove("error");
-            frame["terminal"] = "submission_refused".into();
-            frame["submission_refusal"] = serde_json::json!({"bytes_received":100,"sha256":"b".repeat(64),
-                "status":"reservation_refused","host_pid":42,"host_instance":"22222222-2222-4222-8222-222222222222","reason":reason});
-            let (capture, host) = captured(&frame);
-            assert_eq!(
-                capture.transport_admission, "accepted",
-                "{:?}",
-                capture.transport_error
-            );
-            assert_eq!(capture.submission, "invoked");
-            assert_eq!(capture.failure().unwrap().0, "xpc_submission_refused");
-            assert!(host.is_none() && !capture.fallback_eligible());
-        }
-        // Invalid Bool=false control bytes retain their count/hash only.
-        let mut frame = test_capture_bytes(None);
-        frame["terminal"] = "protocol_error".into();
-        frame["error"] = serde_json::json!({"stage":"submission","reason":"invalid_control",
-            "message":"invalid control","domain_truncated":false,"message_truncated":false});
-        frame["submission_refusal"] =
-            serde_json::json!({"bytes_received":5,"sha256":"b".repeat(64)});
-        let (capture, host) = captured(&frame);
-        assert_eq!(
-            capture.transport_admission, "accepted",
-            "{:?}",
-            capture.transport_error
-        );
-        assert_eq!(capture.submission, "invoked");
-        assert!(host.is_none() && !capture.fallback_eligible());
-    }
-
-    #[test]
-    fn deadline_conversion_rounds_up_and_saturates_without_resetting_the_origin() {
-        assert_eq!(deadline_ticks(17, 1, 125, 3).unwrap(), 24_017);
-        assert_eq!(deadline_ticks(17, 1, 3, 1).unwrap(), 333_351);
-        assert_eq!(
-            deadline_ticks(u64::MAX - 1, u64::MAX, 1, u32::MAX).unwrap(),
-            u64::MAX
-        );
-        assert!(deadline_ticks(0, 1, 0, 1).is_err());
-        assert!(deadline_ticks(0, 1, 1, 0).is_err());
     }
 }
 
@@ -2166,5 +1291,176 @@ mod binary_tests {
         assert_eq!(json["transport"]["format"], "porcelain");
         assert_eq!(json["transport"]["data_base64"], "AP8A");
         assert!(json["stdout_raw"].is_null());
+    }
+    #[test]
+    fn typed_capture_semantics_reject_conflicts_without_repair() {
+        let original: Capture = crate::porcelain::decode(&capture(
+            Some(&host()),
+            protocol(),
+            123,
+            host().len() as i64,
+        ))
+        .unwrap();
+        assert!(validate_capture(&original).is_ok());
+        let mutations: Vec<Box<dyn Fn(&mut Capture)>> = vec![
+            Box::new(|v| v.submission.state = "not_invoked".into()),
+            Box::new(|v| v.acquisition_stop = "overall_deadline".into()),
+            Box::new(|v| v.attempts[0].ordinal = 2),
+            Box::new(|v| v.attempts[0].control.as_mut().unwrap().host_pid = Some(0)),
+            Box::new(|v| v.attempts[0].control.as_mut().unwrap().lease_ms = Some(5001)),
+            Box::new(|v| v.runner_reply.as_mut().unwrap().bytes_retained = 0),
+            Box::new(|v| v.clock_available = false),
+        ];
+        for mutate in mutations {
+            let mut bad = original.clone();
+            mutate(&mut bad);
+            let before = bad.clone();
+            assert!(validate_capture(&bad).is_err(), "{bad:?}");
+            assert_eq!(
+                bad, before,
+                "validation must not repair or discard observations"
+            );
+        }
+    }
+
+    fn typed_failure_run(capture: Capture) -> RunnerClientRun {
+        validate_capture(&capture).unwrap();
+        let mut run = test_client_run(None);
+        run.submission = capture.submission.state.clone();
+        run.transport = Some(TransportCapture::Typed(capture));
+        run
+    }
+
+    #[test]
+    fn grant_deadline_and_clock_failure_preserve_submission() {
+        let mut deadline: Capture =
+            crate::porcelain::decode(&capture(None, protocol(), 123, 0)).unwrap();
+        deadline.submission.state = "not_invoked".into();
+        deadline.submission.invoked_elapsed_ms = None;
+        deadline.terminal = "xpc_timeout".into();
+        deadline.deadline_continuous_ns = Some(1_004_000_000);
+        let error = deadline.error.as_mut().unwrap();
+        error.stage = "acquisition".into();
+        error.reason = "overall_deadline".into();
+        let run = typed_failure_run(deadline);
+        assert_eq!(run.submission, "not_invoked");
+        assert_eq!(run.failure().unwrap().0, "xpc_timeout");
+        assert!(!run.fallback_eligible());
+        for invoked in [false, true] {
+            let mut c: Capture =
+                crate::porcelain::decode(&capture(None, protocol(), 123, 0)).unwrap();
+            c.clock_available = false;
+            c.ended_continuous_ns = None;
+            c.terminal = "local_error".into();
+            c.error.as_mut().unwrap().stage = "local".into();
+            c.error.as_mut().unwrap().reason = "clock_error".into();
+            if !invoked {
+                c.submission.state = "not_invoked".into();
+                c.submission.invoked_elapsed_ms = None;
+                c.attempts.clear();
+                c.acquisition_stop = "local_error".into();
+                c.started_continuous_ns = None;
+                c.deadline_continuous_ns = None;
+            }
+            let run = typed_failure_run(c);
+            assert_eq!(
+                run.submission,
+                if invoked { "invoked" } else { "not_invoked" }
+            );
+            assert!(!run.fallback_eligible());
+        }
+    }
+
+    #[test]
+    fn refusal_and_proxy_failure_are_not_retried_or_host_results() {
+        for reason in ["wrong", "expired", "absent", "consumed", "clock_error"] {
+            let mut c: Capture =
+                crate::porcelain::decode(&capture(None, protocol(), 123, 0)).unwrap();
+            c.error = None;
+            c.terminal = "submission_refused".into();
+            c.submission_refusal = Some(Control {
+                bytes_received: 100,
+                sha256: "b".repeat(64),
+                status: Some("reservation_refused".into()),
+                host_pid: Some(42),
+                host_instance: Some("22222222-2222-4222-8222-222222222222".into()),
+                lease_ms: None,
+                reason: Some(reason.into()),
+            });
+            let run = typed_failure_run(c);
+            assert_eq!(run.submission, "invoked");
+            assert_eq!(run.failure().unwrap().0, "xpc_submission_refused");
+            assert!(!run.fallback_eligible());
+        }
+        let mut c: Capture = crate::porcelain::decode(&capture(None, protocol(), 123, 0)).unwrap();
+        c.error.as_mut().unwrap().reason = "proxy_type_mismatch".into();
+        let run = typed_failure_run(c);
+        assert_eq!(run.submission, "invoked");
+        assert_eq!(run.failure().unwrap().0, "xpc_error");
+    }
+
+    fn python(program: String) -> Vec<OsString> {
+        vec![
+            "/usr/bin/python3".into(),
+            "-B".into(),
+            "-c".into(),
+            program.into(),
+        ]
+    }
+    #[test]
+    fn binary_reply_after_large_stdin_and_broken_pipe_preserves_delivery_precedence() {
+        let reply = host();
+        let wire = capture(Some(&reply), protocol(), 123, reply.len() as i64);
+        let hex: String = wire.iter().map(|b| format!("{b:02x}")).collect();
+        let request = vec![b'x'; 1 << 20];
+        let program = format!(
+            "import sys; data=sys.stdin.buffer.read(); assert len(data)=={}; sys.stdout.buffer.write(bytes.fromhex('{hex}'))",
+            request.len()
+        );
+        let (run, reply) = run_client_stdin(&python(program), request.clone()).unwrap();
+        assert_eq!(run.request_delivery.unwrap().bytes_written, request.len());
+        assert!(reply.is_some());
+        assert_eq!(run.transport_admission, "accepted");
+        let program = format!(
+            "import sys; sys.stdout.buffer.write(bytes.fromhex('{hex}')); sys.stdout.flush(); sys.exit(1)"
+        );
+        let (run, reply) = run_client_stdin(&python(program), request).unwrap();
+        assert!(run.request_delivery.as_ref().unwrap().error.is_some());
+        assert_eq!(run.transport_admission, "delivery_failed");
+        assert_eq!(run.submission, "unknown");
+        assert!(reply.is_none());
+        let Some(TransportCapture::Rejected { data_base64, .. }) = run.transport else {
+            panic!("lost bytes")
+        };
+        assert_eq!(data_base64, wire);
+    }
+    #[test]
+    fn process_span_and_opaque_nonprotocol_diagnostics_survive_collection() {
+        let program = "import time,struct,sys; a=int(time.time()*1000); time.sleep(0.3); b=int(time.time()*1000); sys.stdout.buffer.write(struct.pack('<QQ',a,b)); sys.stderr.buffer.write(b'\\x00\\xffnative detail')";
+        let (run, reply) = run_client_stdin(&python(program.into()), vec![]).unwrap();
+        assert!(reply.is_none());
+        let Some(TransportCapture::Rejected { data_base64, .. }) = run.transport else {
+            panic!("lost bytes")
+        };
+        let a = u64::from_le_bytes(data_base64[..8].try_into().unwrap());
+        let b = u64::from_le_bytes(data_base64[8..].try_into().unwrap());
+        assert!(run.started_at_unix_ms <= a && b <= run.ended_at_unix_ms);
+        assert!(run.ended_at_unix_ms - run.started_at_unix_ms >= 300);
+        assert_eq!(run.output.stderr_bytes_received, Some(15));
+        assert!(run.output.stderr.contains("native detail"));
+    }
+    #[test]
+    fn retention_loss_precedes_decode_and_keeps_exact_prefix() {
+        let bytes = vec![0xfe; crate::utils::RUNNER_CAPTURE_BYTES + 1];
+        let (run, reply) = parse(bytes, None);
+        assert!(reply.is_none());
+        assert!(run.output.stdout_capture_error.is_some());
+        assert!(run.output.stdout_parse_error.is_none());
+        assert_eq!(run.submission, "unknown");
+        let Some(TransportCapture::Rejected { data_base64, .. }) = run.transport else {
+            panic!("lost prefix")
+        };
+        assert_eq!(data_base64.len(), crate::utils::RUNNER_CAPTURE_BYTES);
+        assert!(data_base64.iter().all(|b| *b == 0xfe));
     }
 }

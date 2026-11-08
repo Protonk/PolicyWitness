@@ -113,7 +113,7 @@ private func failedSetupOutput(_ input: CWorkerInput, index: Int) -> CWorkerOutp
 
 /// Constructed scheduler outputs use the real actor assembler and disposition
 /// resolver. They establish encoded coverage, not native execution outcomes.
-func actorShapeDocuments() throws -> [[String: Any]] {
+func actorShapeDocuments() throws -> [PWRunnerRunResult] {
     let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(actorRequest().utf8))
     guard case .success(let plan) = normalizeActorPlan(parsed) else { throw TestFailure(message: "shape request refused") }
     let translation = try ActorTranslation(plan: plan, parsed: parsed, workerExecutablePaths: Array(repeating: "/constructed/pw-probe-runner", count: plan.actors.count))
@@ -148,7 +148,7 @@ func actorShapeDocuments() throws -> [[String: Any]] {
     }
     let local = { (step: String) -> Int in translation.local[plan.slotOfStep[step]!]!.slot }
     func assembleUsing(_ outcome: ActorScheduleOutcome, parsed: PWRunnerRunSpec,
-                       plan: ActorPlan, translation: ActorTranslation) throws -> [String: Any] {
+                       plan: ActorPlan, translation: ActorTranslation) throws -> PWRunnerRunResult {
         // The hook runs only for visits the schedule reached, and plans queries
         // the way the live host does.
         let queryPlans = plan.phases.map { planValidatorQueries($0.actions.compactMap { $0.probe }) }
@@ -160,9 +160,10 @@ func actorShapeDocuments() throws -> [[String: Any]] {
             queryPlans: queryPlans,
             validatorResults: plan.phases.map { _ in nil }, collectionStatuses: statuses, bundleId: "shape")
         attachConstructedActorAccounts(&reply, plan: plan, outcome: outcome)
-        return try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply)) as! [String: Any]
+        try reply.validateForReporting()
+        return reply
     }
-    let assemble = { (outcome: ActorScheduleOutcome) throws -> [String: Any] in
+    let assemble = { (outcome: ActorScheduleOutcome) throws -> PWRunnerRunResult in
         try assembleUsing(outcome, parsed: parsed, plan: plan, translation: translation)
     }
 
@@ -368,8 +369,7 @@ func actorShapeDocuments() throws -> [[String: Any]] {
     // Full bounded setup operation shapes, including native return, independent
     // errno, detail/value, custody association and manual recovery ownership.
     // These are constructed accounts, not a native apparatus-success assertion.
-    var accounted = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
-        from: JSONSerialization.data(withJSONObject: gatedDocument))
+    var accounted = gatedDocument
     accounted.authority_setup!.host.run.operations = [PWRunnerAuthorityOperation(slot: 0, operation: "core_limit",
         role: "setup", state: "succeeded", native_kind: "integer", native_rc: 0, errno: nil,
         detail: "constructed core-limit observation", value: 0)]
@@ -403,15 +403,15 @@ func actorShapeDocuments() throws -> [[String: Any]] {
                 native_kind: "memory", native_rc: nil, errno: nil, detail: nil, value: 4096)]
         accounted.authority_setup!.workers[index].ownership = ["descriptor":"released", "mapping":"released", "shared_erasure":"performed"]
     }
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(accounted)) as! [String: Any])
+    try accounted.validateForReporting()
+    documents.append(accounted)
 
     var apparatusRefusal = complete
     apparatusRefusal.actors = plan.actors.map { record($0.index, status: .launchRefused, output: nil) }
     apparatusRefusal.visits = visits(Array(repeating: "actor_unavailable", count: plan.phases.count))
     apparatusRefusal.custody = []; apparatusRefusal.transfers = []
     apparatusRefusal.cancelled = "authority_setup_failed"
-    var recovery = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
-        from: JSONSerialization.data(withJSONObject: assemble(apparatusRefusal)))
+    var recovery = try assemble(apparatusRefusal)
     recovery.authority_setup!.host.run.disposition = "failed"
     recovery.authority_setup!.host.regions = [PWRunnerAuthorityScope(actor_id: "A", actor_index: 0,
         required: true, disposition: "failed", primary_operation: 1, operations: [
@@ -421,14 +421,16 @@ func actorShapeDocuments() throws -> [[String: Any]] {
                 native_kind: "integer", native_rc: -1, errno: 1, detail: "constructed unlink refusal", value: nil)],
         ownership: ["object_name":"unresolved", "descriptor":"released", "mapping":"not_acquired", "shared_erasure":"not_present"],
         cleanup_reference: PWAuthorityCleanupReference(name: "/pw-shape-owned", host_pid: 42, session_nonce: 99))]
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(recovery)) as! [String: Any])
+    try recovery.validateForReporting()
+    documents.append(recovery)
     var preparation = recovery
     preparation.preparation_failure = PWRunnerPreparationFailure(stage: "resolved_plan", code: "inconsistent_assignment",
         actor_id: "A", binding_ref: "selected", reason: "constructed assignment mismatch")
     preparation.steps = []; preparation.extension_events = []; preparation.transfers = []
     preparation.resources = PWRunnerResourceTables(tokens: [], deliveries: [], handles: [])
     preparation.authority_setup!.host = PWRunnerAuthorityHost(run: PWRunnerAuthorityScope(disposition: "not_attempted"))
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(preparation)) as! [String: Any])
+    try preparation.validateForReporting()
+    documents.append(preparation)
     // Explicit selectors and fixture overrides are authored provenance. Both
     // production rows remain visible; override rows receive no packaged credit.
     var explicit = accounted
@@ -454,7 +456,8 @@ func actorShapeDocuments() throws -> [[String: Any]] {
         let readback = explicit.equipment_entitlements!.firstIndex { $0.entitlements_id == "execution-\(index)" }!
         explicit.equipment_entitlements![readback].binding_ref = "override-" + role
     }
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(explicit)) as! [String: Any])
+    try explicit.validateForReporting()
+    documents.append(explicit)
 
     let signingError = PWRunnerEquipmentError(operation: "worker_entitlements", domain: NSOSStatusErrorDomain,
         code: -67000, message: "constructed signing readback failure")
@@ -468,7 +471,8 @@ func actorShapeDocuments() throws -> [[String: Any]] {
     bindingRefusal.equipment_entitlements![1].status = "failed"
     bindingRefusal.equipment_entitlements![1].raw_plist = nil
     bindingRefusal.equipment_entitlements![1].error = signingError
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(bindingRefusal)) as! [String: Any])
+    try bindingRefusal.validateForReporting()
+    documents.append(bindingRefusal)
     var inventoryRefusal = preparation
     inventoryRefusal.preparation_failure = PWRunnerPreparationFailure(stage: "equipment", code: "equipment_binding_refused", reason: "signature_invalid")
     inventoryRefusal.equipment_inventory = PWRunnerEquipmentInventory(path: "/constructed/Contents/Resources/worker-equipment.json",
@@ -480,14 +484,16 @@ func actorShapeDocuments() throws -> [[String: Any]] {
         inventoryRefusal.actors![index].equipment!.requirements_status = "unobserved"
         inventoryRefusal.actors![index].equipment!.missing_requirements = nil
     }
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(inventoryRefusal)) as! [String: Any])
+    try inventoryRefusal.validateForReporting()
+    documents.append(inventoryRefusal)
 
     var coreFailure = recovery
     coreFailure.authority_setup!.host.regions = []
     coreFailure.authority_setup!.host.run = PWRunnerAuthorityScope(disposition: "failed", primary_operation: 0,
         operations: [PWRunnerAuthorityOperation(slot: 0, operation: "core_limit", role: "setup", state: "failed",
             native_kind: "integer", native_rc: -1, errno: 1, detail: "constructed core-limit failure", value: nil)])
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(coreFailure)) as! [String: Any])
+    try coreFailure.validateForReporting()
+    documents.append(coreFailure)
     var custodyCleanup = accounted
     custodyCleanup.rc = 1; custodyCleanup.normalized_outcome = "runner_failed"
     custodyCleanup.authority_setup!.host.custody[0].disposition = "failed"
@@ -496,7 +502,8 @@ func actorShapeDocuments() throws -> [[String: Any]] {
         operation: "munmap", role: "cleanup", state: "failed", native_kind: "integer", native_rc: -1, errno: 22,
         detail: "constructed custody cleanup failure", value: nil))
     custodyCleanup.authority_setup!.host.custody[0].ownership["mapping"] = "unresolved"
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(custodyCleanup)) as! [String: Any])
+    try custodyCleanup.validateForReporting()
+    documents.append(custodyCleanup)
 
     var workerSetupFailure = faulted
     var terminalOutput = failedSetupOutput(translation.inputs[2], index: 2)
@@ -520,7 +527,7 @@ func actorShapeDocuments() throws -> [[String: Any]] {
     integrity.authority_setup!.host.regions[0].integrity_errors = ["constructed_integrity_failure"]
     integrity.authority_setup!.host.custody[0].integrity_errors = ["constructed_integrity_failure"]
     integrity.authority_setup!.workers[0].integrity_errors = ["constructed_integrity_failure"]
-    documents.append(try JSONSerialization.jsonObject(with: pwRunnerReplyData(integrity)) as! [String: Any])
+    documents.append(try reportedReply(integrity))
 
     // A failed native wait at the dependency boundary carries errno without
     // inventing a reap. Later cleanup cannot turn this gate into satisfied.

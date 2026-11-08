@@ -331,6 +331,32 @@ mod tests {
         out
     }
     #[test]
+    fn documented_porcelain_budgets() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
+        let expected = std::collections::BTreeMap::from([
+            ("porcelain_frame_bytes", LIMIT as u64),
+            ("porcelain_decoded_storage_bytes", LIMIT as u64),
+            ("porcelain_nesting", DEPTH as u64),
+        ]);
+        let owned: std::collections::BTreeMap<_, _> = manifest["limits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| {
+                row["checks"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|c| c["symbol"] == "documented_porcelain_budgets")
+            })
+            .map(|row| (row["id"].as_str().unwrap(), row["value"].as_u64().unwrap()))
+            .collect();
+        assert_eq!(owned, expected);
+        assert!(Cursor::new(&[], 32, &Cell::new(LIMIT)).is_ok());
+        assert!(Cursor::new(&[], 33, &Cell::new(LIMIT)).is_err());
+    }
+    #[test]
     fn list_slots_and_nested_strings_share_one_budget() {
         let mut wire = 2u32.to_le_bytes().to_vec();
         wire.extend(value(4, b"abcdefghij"));

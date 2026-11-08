@@ -357,3 +357,33 @@ No compatibility shim, production merge, performance recommendation, ARM trial,
 wait tuning or custody redesign is included. The isolated branch and the evidence
 remain dependencies of this adoption work, so the plan and record are retained.
 Main-checkout user edits remain untouched.
+
+## Adoption acceptance, before signed comparison-free verification
+
+Production adoption is authorized. Integrated source baseline `dce3fbcb` joins
+accepted main `5fed540c` with the completed prototype; the prototype's 41-case
+run is exploration evidence only and is not reused as adoption acceptance.
+
+The candidate replaces the Swift 7/3 lifecycle question dictionaries with named
+records, completes typed admission for all six semantic families, removes
+response-only Codable and generic JSON response validators, and moves independent
+controls to typed construction, actual binary receipts and public projection.
+The schema remains at 83 records. The wire fingerprint is unchanged by replacing
+Swift adapters with fields; field tags and binary representation are unchanged.
+
+Response schema advances to 29 for the direct equipment metadata text budget.
+That budget counts declared retained UTF-8 text, including nested binding error
+text and live native operation names; it does not count JSON field names or
+escaping. Request schema 6, runner protocol 4 and controller envelope 13 retain
+their respective boundaries. The old informative JSON maximum is retired; frame,
+decoded-storage and retained-stream budgets are separately documented. Dense
+fixtures establish their measured binary/public sizes, not a global maximum.
+
+Acceptance requires the full default battery and the affected opt-in controls in
+the associated plan, against a normal Developer ID signed app. Compiler
+concurrency is capped at two; builds and native execution remain serialized.
+Comparisons and quiet-window timing experiments are not part of acceptance.
+Local compile/unit iterations and the preparatory source-drift run are diagnostic
+work, not acceptance credits. The latter exposed a generated-region prefix
+collision in ownership metadata and a stale prose-baseline entry after removal
+of the JSON size estimate; both must pass replacement controls before closeout.

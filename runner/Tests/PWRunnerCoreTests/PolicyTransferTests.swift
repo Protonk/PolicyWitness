@@ -34,14 +34,13 @@ func runPolicyTransferTests(_ tk: TestKit) {
             // the account carries none. Absence establishes nothing about delivery.
             try expectNil(out.workerEvidence?.policy_read)
             try expectEqual(classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0).outcome, NormalizedOutcome.runnerTimeout)
-            let bytes = try retainTransferReply(out, result: result, name: "timeout", fixture: path)
+            let retained = try retainTransferReply(out, result: result, name: "timeout", fixture: path)
             // Construct a receipt observed before termination, with no later
             // worker publication. This is reader coverage, not a fixture receipt.
-            var partialReply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+            var partialReply = retained
             partialReply.runner_subprocess?.worker_evidence?.policy_read = PWWorkerPolicyRead(
                 bytes_expected: input.policy.utf8.count, bytes_received: out.policyTransferTimeout!.bytes_written)
-            let partialBytes = try pwRunnerEncodeJSON(partialReply)
-            _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: partialBytes)
+            _ = try admittedReplyData(partialReply)
             let later: [(String, (inout PWRunnerRunResult) -> Void)] = [
                 ("application", { $0.sandboxed_after_apply = true }),
                 ("ready byte", { $0.runner_subprocess?.ready_byte_received = true }),
@@ -158,9 +157,9 @@ func runPolicyTransferTests(_ tk: TestKit) {
             try expectContains(summary.error ?? "", "code=13")
             try expectContains(summary.error ?? "", "received=28")
             try expectContains(summary.error ?? "", "wrote 28 of 43")
-            let bytes = try retainTransferReply(out, result: result, name: "refused", fixture: fixture,
+            let retained = try retainTransferReply(out, result: result, name: "refused", fixture: fixture,
                                                 plan: [step], expectedVerdictCount: 1)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+            let decoded = retained
             try expectEqual(decoded.runner_subprocess?.worker_evidence?.policy_read,
                             PWWorkerPolicyRead(bytes_expected: 43, bytes_received: 28))
             try expectEqual(decoded.steps.count, 1)
@@ -168,11 +167,11 @@ func runPolicyTransferTests(_ tk: TestKit) {
             // Rejected variants: a fabricated kill or exit contradicts the disposition
             // record; a receipt that disagrees with the refusal's detail, the host's
             // expectation or the capacity contradicts the receipt rules. Both the
-            // encoder and the decoder refuse them.
+            // typed reporting gate refuses them.
             func rejected(_ reason: String, _ mutate: (inout PWRunnerSubprocess) -> Void) throws {
                 var variant = decoded
                 mutate(&variant.runner_subprocess!)
-                try expectThrows({ _ = try pwRunnerEncodeJSON(variant) }, { error in
+                try expectThrows({ _ = try admittedReplyData(variant) }, { error in
                     try expectContains("\(error)", reason)
                 })
             }
@@ -192,21 +191,17 @@ func runPolicyTransferTests(_ tk: TestKit) {
             // for the Rust/Python replay, which must not reject or repair its values.
             var contradictory = decoded
             contradictory.runner_subprocess?.worker_evidence?.policy_read?.bytes_received = 29
-            let degradedBytes = pwRunnerReplyData(contradictory)
-            let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: degradedBytes)
+            let degradedBytes = pwRunnerPorcelainReplyData(contradictory)
+            let degraded = try reportedReply(contradictory)
             try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
             try expectEqual(degraded.reporting_failure?.evidence_retained, true)
             try expectEqual(degraded.runner_subprocess?.worker_evidence?.policy_read?.bytes_received, 29)
             try expectTrue(degraded.steps.allSatisfy { $0.comparison == nil })
             try degradedBytes.write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent()
-                .appendingPathComponent("policy-transfer-reporting.json"))
-            var document = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-            var sub = document["runner_subprocess"] as! [String: Any]
-            var evidence = sub["worker_evidence"] as! [String: Any]
-            evidence["policy_read"] = ["bytes_expected": 43, "bytes_received": 43]
-            sub["worker_evidence"] = evidence; document["runner_subprocess"] = sub
-            let mutated = try JSONSerialization.data(withJSONObject: document)
-            try expectThrows({ _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: mutated) }, { error in
+                .appendingPathComponent("policy-transfer-reporting.pwp"))
+            var impossible = retained
+            impossible.runner_subprocess?.worker_evidence?.policy_read?.bytes_received = 43
+            try expectThrows({ try impossible.validateForReporting() }, { error in
                 try expectContains("\(error)", "policy read receipt")
             })
         }
@@ -214,18 +209,10 @@ func runPolicyTransferTests(_ tk: TestKit) {
             let complete = try replyFixture()
             var impossible = complete
             impossible.runner_subprocess?.worker_evidence?.policy_read?.bytes_received = 0
-            try expectThrows({ _ = try pwRunnerEncodeJSON(impossible) }, { error in
+            try expectThrows({ _ = try admittedReplyData(impossible) }, { error in
                 try expectContains("\(error)", "after the policy length check")
             })
-            var document = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(complete)) as! [String: Any]
-            var sub = document["runner_subprocess"] as! [String: Any]
-            var evidence = sub["worker_evidence"] as! [String: Any]
-            evidence["policy_read"] = ["bytes_expected": 1, "bytes_received": 0]
-            sub["worker_evidence"] = evidence; document["runner_subprocess"] = sub
-            let bytes = try JSONSerialization.data(withJSONObject: document)
-            try expectThrows({ _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes) }, { error in
-                try expectContains("\(error)", "after the policy length check")
-            })
+
         }
         tk.run("interruption backpressure and slow progress share one absolute deadline") {
             for mode in ["interrupted", "backpressure", "slow"] {
@@ -280,7 +267,7 @@ private func shippedWorkerPath() -> String {
 /// disposition record serves the subprocess and the step projections.
 @discardableResult
 private func retainTransferReply(_ out: CWorkerOutput, result: CWorkerRunResult, name: String, fixture: String,
-                                 plan: [PWRunnerProbeStep] = [], expectedVerdictCount: Int = 0) throws -> Data {
+                                 plan: [PWRunnerProbeStep] = [], expectedVerdictCount: Int = 0) throws -> PWRunnerRunResult {
     let summary = classify(workerResult: result, validatorResult: nil, expectedVerdictCount: expectedVerdictCount)
     let record = resolveDisposition(out, plan: plan)
     let sub = buildWorkerSubprocess(out, disposition: record)
@@ -291,9 +278,9 @@ private func retainTransferReply(_ out: CWorkerOutput, result: CWorkerRunResult,
         error: summary.error, pid: Int(getpid()), policy_format: "sbpl", sandboxed_after_apply: out.applied,
         steps: steps, runner_subprocess: sub,
         phases: [constructedPhase(out, ids: plan.map { $0.step_id }, hasQueries: !plan.isEmpty)])
-    let bytes = try pwRunnerEncodeJSON(reply)
-    let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+    let bytes = try admittedReplyData(reply)
+    let decoded = reply
     try expectEqual(decoded.runner_subprocess?.policy_transfer_timeout?.bytes_written, out.policyTransferTimeout?.bytes_written)
-    try bytes.write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent().appendingPathComponent("policy-transfer-\(name).json"))
-    return bytes
+    try bytes.write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent().appendingPathComponent("policy-transfer-\(name).pwp"))
+    return reply
 }

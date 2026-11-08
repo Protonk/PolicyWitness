@@ -90,4 +90,6 @@ Compiler products stay in case scratch; the driver, runtime app and request
 files execute from the arrangement's owned `/private/tmp` directory so caller
 authentication does not need access to code under Desktop or Documents.
 The shared arrangement and cleanup equipment lives in `retirement_controls.py`;
-its earlier protocol-specific experiment is not a current executable case.
+it contains no standalone execution path. The response-version control changes
+only the signed schema integer in an otherwise intact binary reply; exact byte
+restoration and independent receipt decoding establish the altered scope.

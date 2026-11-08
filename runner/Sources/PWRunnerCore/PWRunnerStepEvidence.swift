@@ -27,7 +27,7 @@ func eligibleOrderedStep(stepId: String, query: PWRunnerSandboxCheckResult,
 /// observation, the submitted-scope relations, the order PW established and
 /// the planner's exclusion or lifecycle limitations. It asserts nothing about
 /// agreement or disagreement between prediction and enforcement.
-struct PWRunnerComparison: Codable {
+struct PWRunnerComparison {
     // BEGIN GENERATED PORCELAIN PWRunnerComparison
     var observation: String
     var observation_basis: String
@@ -55,7 +55,7 @@ struct PWRunnerComparison: Codable {
     }
 }
 
-struct PWRunnerStepResult: Codable {
+struct PWRunnerStepResult {
     // BEGIN GENERATED PORCELAIN PWRunnerStepResult
     var phase_id: String
     var step_id: String
@@ -84,33 +84,8 @@ struct PWRunnerStepResult: Codable {
         self.actor_id = actor_id
     }
 
-    enum CodingKeys: String, CodingKey {
-        case phase_id, step_id
-        case sandbox_check
-        case attempt
-        case comparison
-        case actor_id
-    }
 
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(comparison, forKey: .comparison)
-        try container.encodeIfPresent(actor_id, forKey: .actor_id)
-        try container.encode(phase_id, forKey: .phase_id)
-        try container.encode(step_id, forKey: .step_id)
-        try container.encode(sandbox_check, forKey: .sandbox_check)
-        try container.encode(attempt, forKey: .attempt)
-    }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        phase_id = try container.decode(String.self, forKey: .phase_id)
-        step_id = try container.decode(String.self, forKey: .step_id)
-        actor_id = try container.decodeIfPresent(String.self, forKey: .actor_id)
-        sandbox_check = try container.decode(PWRunnerSandboxCheckResult.self, forKey: .sandbox_check)
-        attempt = try container.decode(PWRunnerAttemptResult.self, forKey: .attempt)
-        comparison = try container.decodeIfPresent(PWRunnerComparison.self, forKey: .comparison)
-    }
 }
 
 /// Authoritative worker process metadata, produced by the unsandboxed host.
@@ -118,7 +93,7 @@ struct PWRunnerStepResult: Codable {
 /// All live CWorkerOutput paths populate the optional observation fields below;
 /// an absent observation is unknown, not false. Policy-write failures retain
 /// partial child observations.
-struct PWRunnerOrdering: Codable {
+struct PWRunnerOrdering {
     // BEGIN GENERATED PORCELAIN PWRunnerOrdering
     var collection_closed_before_proceed: Bool
     var proceed_set: Bool

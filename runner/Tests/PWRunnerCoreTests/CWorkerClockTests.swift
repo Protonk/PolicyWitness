@@ -538,7 +538,8 @@ func runCWorkerClockTests(_ tk: TestKit) {
             // The fixture keeps the ready pipe open until it exits; the grace ends by a reap, never by exhaustion.
             try expectEqual(grace.stop, "reaped_during_grace")
             try expectEqual(clock.sleeps.filter { $0 > 2_000_000 }, [], "no 10 ms grace sleep while the exit wait is usable")
-            let encoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: pwRunnerEncodeJSON(buildWorkerSubprocess(out)))
+            let encoded = buildWorkerSubprocess(out)
+            _ = try pwPorcelainEncode(encoded)
             try expectEqual(encoded.sentinel_wait, out.sentinelWait)
             try expectEqual(encoded.ready_wait, out.readyWait)
             try expectEqual(encoded.exit_grace_wait, out.graceWait)

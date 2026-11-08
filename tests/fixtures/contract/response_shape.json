@@ -1,5 +1,5 @@
 {
-  "response_schema" : 28,
+  "response_schema" : 29,
   "shape" : {
     "reply" : {
       "actors" : "array",

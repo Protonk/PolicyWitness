@@ -61,8 +61,8 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
         }
         tk.run("unfamiliar operation code and kind retain signed result and zero errno") {
             let out = try evidenceFixture("unfamiliar")
-            let bytes = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
-            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: bytes)
+            let decoded = buildWorkerSubprocess(out)
+    let bytes = try pwPorcelainEncode(decoded)
             try expectEqual(decoded.worker_evidence?.failure?.operation, 239)
             try expectEqual(decoded.worker_evidence?.failure?.code, 4_000_000_001)
             try expectEqual(decoded.worker_evidence?.failure?.native_kind, 77)
@@ -146,8 +146,8 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
                 try expectEqual(out.workerEvidence?.failure?.code, report ? 987654 : nil)
                 try expectEqual(classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0).outcome,
                                 NormalizedOutcome.runnerFailed)
-                let encoded = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
-                let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: encoded)
+                let decoded = buildWorkerSubprocess(out)
+    let encoded = try pwPorcelainEncode(decoded)
                 try expectEqual(decoded.policy_transfer_error?.errno, EPIPE)
                 try expectEqual(decoded.worker_evidence?.failure_state, report ? "published" : "absent")
             }
@@ -287,9 +287,8 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
                 try expectNil(got.sandbox_check.native_rc)
                 try expectEqual(got.attempt.missing_reason, "slot_incomplete")
                 try expectEqual(got.comparison?.observation, "unavailable")
-                let json = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(got)) as! [String: Any]
-                try expectTrue((json["sandbox_check"] as! [String: Any])["native_rc"] is NSNull)
-                try expectNil((json["attempt"] as! [String: Any])["native_rc"])
+                _ = try pwPorcelainEncode(got)
+                try expectNil(got.sandbox_check.native_rc)
             }
         }
     }

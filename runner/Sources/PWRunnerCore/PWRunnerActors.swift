@@ -76,7 +76,7 @@ struct PWRunnerAfterTermination: Codable {
     }
 }
 
-struct PWRunnerPreparationFailure: Codable {
+struct PWRunnerPreparationFailure {
     // BEGIN GENERATED PORCELAIN PWRunnerPreparationFailure
     var stage: String
     var code: String
@@ -108,7 +108,7 @@ enum PWTransferAck {
 // MARK: - Reply records (emitted from the integrated actor contract)
 
 /// Launch context the host arranged for one actor process.
-struct PWRunnerActorLaunch: Codable, Equatable {
+struct PWRunnerActorLaunch: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerActorLaunch
     var pid: Int
     var parent_pid: Int
@@ -120,7 +120,7 @@ struct PWRunnerActorLaunch: Codable, Equatable {
 
 /// One actor's process, policy and application account. The subprocess record
 /// is the same record a single-worker reply carries, with its disposition.
-struct PWRunnerActorResult: Codable {
+struct PWRunnerActorResult {
     // BEGIN GENERATED PORCELAIN PWRunnerActorResult
     var actor_id: String
     var index: Int
@@ -144,7 +144,7 @@ struct PWRunnerActorResult: Codable {
 }
 
 /// Token, delivery and handle tables, keyed by the request's references.
-struct PWRunnerTokenRecord: Codable {
+struct PWRunnerTokenRecord {
     // BEGIN GENERATED PORCELAIN PWRunnerTokenRecord
     var token_ref: String
     var actor_id: String
@@ -155,7 +155,7 @@ struct PWRunnerTokenRecord: Codable {
     var last_use_step_id: String?
     // END GENERATED PORCELAIN PWRunnerTokenRecord
 }
-struct PWRunnerDeliveryRecord: Codable {
+struct PWRunnerDeliveryRecord {
     // BEGIN GENERATED PORCELAIN PWRunnerDeliveryRecord
     var delivery_ref: String
     var token_ref: String
@@ -168,7 +168,7 @@ struct PWRunnerDeliveryRecord: Codable {
     var last_use_step_id: String?
     // END GENERATED PORCELAIN PWRunnerDeliveryRecord
 }
-struct PWRunnerHandleRecord: Codable {
+struct PWRunnerHandleRecord {
     // BEGIN GENERATED PORCELAIN PWRunnerHandleRecord
     var handle_ref: String
     var delivery_ref: String
@@ -181,7 +181,7 @@ struct PWRunnerHandleRecord: Codable {
     var release_attempted: Bool
     // END GENERATED PORCELAIN PWRunnerHandleRecord
 }
-struct PWRunnerResourceTables: Codable {
+struct PWRunnerResourceTables {
     // BEGIN GENERATED PORCELAIN PWRunnerResourceTables
     var tokens: [PWRunnerTokenRecord]
     var deliveries: [PWRunnerDeliveryRecord]
@@ -194,7 +194,7 @@ struct PWRunnerResourceTables: Codable {
 /// Collection time is excluded from the schedule allowance; the others are
 /// charged to it. These are scheduling and publication intervals, not native
 /// call latencies.
-struct PWRunnerVisitTiming: Codable, Equatable {
+struct PWRunnerVisitTiming: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerVisitTiming
     var activation_to_arrival_ms: UInt64?
     var collection_ms: UInt64?
@@ -206,7 +206,7 @@ struct PWRunnerVisitTiming: Codable, Equatable {
 /// The actor form's schedule account: the measured setup and execution waits
 /// with their allowances, the shared lifetime budget, and whether the schedule
 /// was cancelled.
-struct PWRunnerScheduleRecord: Codable {
+struct PWRunnerScheduleRecord {
     // BEGIN GENERATED PORCELAIN PWRunnerScheduleRecord
     var setup_wait: PWHostWait?
     var execution_wait: PWHostWait?
@@ -218,7 +218,7 @@ struct PWRunnerScheduleRecord: Codable {
 
 /// One explicit transfer: an apparatus action with host and actor provenance,
 /// never a native sandbox call. No native return or errno is attached.
-struct PWRunnerTransferRecord: Codable {
+struct PWRunnerTransferRecord {
     // BEGIN GENERATED PORCELAIN PWRunnerTransferRecord
     var phase_id: String
     var step_id: String

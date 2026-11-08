@@ -7,7 +7,7 @@ import Darwin
 /// errno is captured immediately only when rc == -1; otherwise it is absent/null.
 /// An absent/null request means no request. Structurally valid values are decoded
 /// without a signal/errno allowlist. The client/controller forward this object.
-struct PWRunnerTerminationRequest: Codable {
+struct PWRunnerTerminationRequest {
     // BEGIN GENERATED PORCELAIN PWRunnerTerminationRequest
     let signal: Int32
     let rc: Int32
@@ -27,7 +27,7 @@ struct PWRunnerTerminationRequest: Codable {
 /// Only rc == -1 produces a record, with errno captured before another call.
 /// Unknown stage/errno values remain transportable. Empty array means no errors
 /// observed; absent/null array means unavailable.
-struct PWRunnerWaitError: Codable {
+struct PWRunnerWaitError {
     // BEGIN GENERATED PORCELAIN PWRunnerWaitError
     let stage: String
     let rc: Int32
@@ -44,7 +44,7 @@ struct PWRunnerWaitError: Codable {
 /// Host-observed UTF-8 policy transfer failure; counts are writes, not child reads.
 /// See tests/FAILURE-PROPAGATION-CONTRACT.md for field validity and JSON semantics.
 /// Timer observation; byte counts are writes accepted, not child reads.
-struct PWWorkerPolicyTransferTimeout: Codable {
+struct PWWorkerPolicyTransferTimeout {
     // BEGIN GENERATED PORCELAIN PWWorkerPolicyTransferTimeout
     var budget_ms: Int
     var elapsed_ms: UInt64
@@ -52,7 +52,7 @@ struct PWWorkerPolicyTransferTimeout: Codable {
     var bytes_expected: Int
     // END GENERATED PORCELAIN PWWorkerPolicyTransferTimeout
 }
-struct PWWorkerPolicyTransferError: Codable {
+struct PWWorkerPolicyTransferError {
     // BEGIN GENERATED PORCELAIN PWWorkerPolicyTransferError
     var errno: Int32
     var bytes_written: Int
@@ -60,7 +60,7 @@ struct PWWorkerPolicyTransferError: Codable {
     // END GENERATED PORCELAIN PWWorkerPolicyTransferError
 }
 /// Worker publications. Numeric codes are open, never Codable enums.
-struct PWWorkerProgress: Codable {
+struct PWWorkerProgress {
     // BEGIN GENERATED PORCELAIN PWWorkerProgress
     var raw: UInt32
     var operation: UInt32
@@ -68,7 +68,7 @@ struct PWWorkerProgress: Codable {
     var index: UInt32?
     // END GENERATED PORCELAIN PWWorkerProgress
 }
-struct PWWorkerFailure: Codable {
+struct PWWorkerFailure {
     // BEGIN GENERATED PORCELAIN PWWorkerFailure
     var operation: UInt32
     var code: UInt32
@@ -79,13 +79,13 @@ struct PWWorkerFailure: Codable {
     var detail: UInt32
     // END GENERATED PORCELAIN PWWorkerFailure
 }
-struct PWWorkerReadiness: Codable {
+struct PWWorkerReadiness {
     // BEGIN GENERATED PORCELAIN PWWorkerReadiness
     var rc: Int32
     var errno: Int32?
     // END GENERATED PORCELAIN PWWorkerReadiness
 }
-struct PWWorkerDiagnostic: Codable {
+struct PWWorkerDiagnostic {
     // BEGIN GENERATED PORCELAIN PWWorkerDiagnostic
     var state: UInt32
     var status: String
@@ -99,7 +99,7 @@ struct PWWorkerDiagnostic: Codable {
 /// a header refusal, read error or overflow publishes none. Equal counts establish
 /// length agreement with the submission, not content identity, compilation,
 /// application or kernel effect. Absence establishes nothing about delivery.
-struct PWWorkerPolicyRead: Codable, Equatable {
+struct PWWorkerPolicyRead: Equatable {
     // BEGIN GENERATED PORCELAIN PWWorkerPolicyRead
     var bytes_expected: Int
     var bytes_received: Int
@@ -110,7 +110,7 @@ struct PWWorkerPolicyRead: Codable, Equatable {
 /// this file without the layout mirror; `PolicyTransferTests` pins agreement with
 /// `PWShmLayout.policyBytes`.
 let policyReceiptCapacityBytes = 262_143
-struct PWWorkerEvidence: Codable {
+struct PWWorkerEvidence {
     // BEGIN GENERATED PORCELAIN PWWorkerEvidence
     /// Host-selected source identity, not proof that a child reached ABI validation.
     var abi_identity: String
@@ -134,7 +134,7 @@ struct PWWorkerEvidence: Codable {
 /// clock could not supply it, and `clock_fault` says the clock failed or ran
 /// backwards during the wait. A stop names when the host moved on, not when a
 /// child ended.
-struct PWHostWait: Codable, Equatable {
+struct PWHostWait: Equatable {
     // BEGIN GENERATED PORCELAIN PWHostWait
     var budget_ms: Int
     var elapsed_ms: UInt64?
@@ -145,7 +145,7 @@ struct PWHostWait: Codable, Equatable {
     // END GENERATED PORCELAIN PWHostWait
 }
 
-struct PWRunnerSubprocess: Codable {
+struct PWRunnerSubprocess {
     // BEGIN GENERATED PORCELAIN PWRunnerSubprocess
     var pid: Int
     /// JSON integers, meaningful only after waitpid returned this child's PID.

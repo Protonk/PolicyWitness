@@ -131,8 +131,9 @@ func runComparisonEvidenceTests(_ tk: TestKit) {
                 // Every produced record stays inside the vocabulary and the wire
                 // shape carries exactly the six record keys.
                 try expectTrue(Set(produced.limitations).isSubset(of: try matrixVocabulary()))
-                let wire = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(produced)) as! [String: Any]
-                try expectEqual(Set(wire.keys), ["observation", "observation_basis", "operation_relation",
+                _ = try pwPorcelainEncode(produced)
+                let keys = Set(Mirror(reflecting: produced).children.compactMap { $0.label })
+                try expectEqual(keys, ["observation", "observation_basis", "operation_relation",
                                                  "target_relation", "order", "limitations"])
             }
         }
@@ -184,9 +185,10 @@ func runComparisonEvidenceTests(_ tk: TestKit) {
         tk.run("the record carries no prediction, conclusion or scope") {
             let record = comparisonEvidence(sandboxCheck: comparisonCheck("deny"), attempt: comparisonAttempt(),
                                             order: .queryFirst).comparison
-            let wire = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(record)) as! [String: Any]
+            _ = try pwPorcelainEncode(record)
+            let keys = Set(Mirror(reflecting: record).children.compactMap { $0.label })
             for key in ["prediction", "conclusion", "scope", "obligations", "drift"] {
-                try expectNil(wire[key], key)
+                try expectFalse(keys.contains(key), key)
             }
             try expectEqual(record.observation, "succeeded")
             try expectEqual(record.order, "query_first")

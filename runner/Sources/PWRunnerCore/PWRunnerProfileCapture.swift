@@ -4,7 +4,7 @@ import Darwin
 /// Versioned optional receipt for the exact compiler result supplied to apply.
 /// `captured` requires a complete, checksum-verified worker capture and successful
 /// application/process completion. This is not a readback of kernel state.
-struct CompiledProfileCapture: Codable {
+struct CompiledProfileCapture {
     // BEGIN GENERATED PORCELAIN CompiledProfileCapture
     var schema_version: Int = 2
     var status: String
@@ -43,52 +43,9 @@ extension CompiledProfileCapture {
         }
         return nil
     }
-    enum CodingKeys: String, CodingKey {
-        case schema_version, status, reason, worker_pid, producer, capture_stage, request_nonce, profile_type, bytecode_length, bytecode_sha256, bytecode_b64, source_sha256, source_length, params_sha256, parameter_count
-    }
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        schema_version = try c.decode(Int.self, forKey: .schema_version)
-        status = try c.decode(String.self, forKey: .status)
-        reason = try c.decodeIfPresent(String.self, forKey: .reason)
-        worker_pid = try c.decode(Int.self, forKey: .worker_pid)
-        producer = try c.decodeIfPresent(String.self, forKey: .producer)
-        capture_stage = try c.decodeIfPresent(String.self, forKey: .capture_stage)
-        request_nonce = try c.decodeIfPresent(String.self, forKey: .request_nonce)
-        profile_type = try c.decodeIfPresent(Int.self, forKey: .profile_type)
-        bytecode_length = try c.decodeIfPresent(Int.self, forKey: .bytecode_length)
-        bytecode_sha256 = try c.decodeIfPresent(String.self, forKey: .bytecode_sha256)
-        bytecode_b64 = try c.decodeIfPresent(String.self, forKey: .bytecode_b64)
-        source_sha256 = try c.decodeIfPresent(String.self, forKey: .source_sha256)
-        source_length = try c.decodeIfPresent(Int.self, forKey: .source_length)
-        params_sha256 = try c.decodeIfPresent(String.self, forKey: .params_sha256)
-        parameter_count = try c.decodeIfPresent(Int.self, forKey: .parameter_count)
+    func validateForReporting() throws {
         if let problem = contextProblem {
-            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: problem))
+            throw PWRunnerReportingValidationError(message: problem)
         }
-    }
-    func validateForReporting(codingPath: [CodingKey] = []) throws {
-        if let problem = contextProblem {
-            throw EncodingError.invalidValue(self, .init(codingPath: codingPath, debugDescription: problem))
-        }
-    }
-    func encode(to encoder: Encoder) throws {
-        try validateForReporting(codingPath: encoder.codingPath)
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(schema_version, forKey: .schema_version)
-        try c.encode(status, forKey: .status)
-        try c.encodeIfPresent(reason, forKey: .reason)
-        try c.encode(worker_pid, forKey: .worker_pid)
-        try c.encodeIfPresent(producer, forKey: .producer)
-        try c.encodeIfPresent(capture_stage, forKey: .capture_stage)
-        try c.encodeIfPresent(request_nonce, forKey: .request_nonce)
-        try c.encodeIfPresent(profile_type, forKey: .profile_type)
-        try c.encodeIfPresent(bytecode_length, forKey: .bytecode_length)
-        try c.encodeIfPresent(bytecode_sha256, forKey: .bytecode_sha256)
-        try c.encodeIfPresent(bytecode_b64, forKey: .bytecode_b64)
-        try c.encodeIfPresent(source_sha256, forKey: .source_sha256)
-        try c.encodeIfPresent(source_length, forKey: .source_length)
-        try c.encodeIfPresent(params_sha256, forKey: .params_sha256)
-        try c.encodeIfPresent(parameter_count, forKey: .parameter_count)
     }
 }

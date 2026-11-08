@@ -111,10 +111,11 @@ enum F2Trace {
 
     static func encoded(_ request: F2Request, _ result: PWRunnerRunResult, _ bytes: Data) {
         // Only scalar reply metadata; no request policy, extension token, error
-        // prose, or reply body is copied into the trace.
-        let body = (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any]
+        // prose, or reply body is copied into the trace. The supplied result
+        // precedes reporting validation/degradation; only the independent
+        // receipt reader can establish the encoded outcome.
         event(request, "reply_encoded", ["result_outcome": result.normalized_outcome,
-            "encoded_outcome": body?["normalized_outcome"] as Any? ?? NSNull(),
+            "reply_format": bytes.starts(with: [0x50, 0x57, 0x50, 0x31]) ? "porcelain" : "unrecognized",
             "reply_bytes": bytes.count,
             "reply_sha256": SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()])
         gate(request, "reply")

@@ -77,7 +77,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                 try expectNil(result.runner_subprocess)
                 try expectNil(result.phases.first?.validator_subprocess)
                 try expectTrue(result.steps.isEmpty)
-                try expectTrue(pwRunnerReplyData(result).count < 4096)
+                try expectTrue(pwRunnerPorcelainReplyData(result).count < 4096)
             }
         }
 
@@ -177,9 +177,9 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             // 32 KiB strings, and 256 of them outgrow the reply cap on their own.
             try expectTrue(result.steps.isEmpty)
             // Encodes like every other admission refusal, and the reply stays small.
-            let bytes = pwRunnerReplyData(result)
+            let bytes = pwRunnerPorcelainReplyData(result)
             try expectTrue(bytes.count < 4096, "refusal reply is \(bytes.count) bytes")
-            let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+            let reply = try reportedReply(result)
             try expectEqual(reply.normalized_outcome, NormalizedOutcome.badRequest)
             try expectEqual(reply.admission_failure?.field, "sandbox_check.filter.value")
             try expectEqual(reply.admission_failure?.actual, 32_768)
@@ -216,15 +216,14 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                         try expectNil(result.runner_subprocess); try expectNil(result.phases.first?.validator_subprocess)
                         try expectTrue(result.steps.isEmpty)
                         try expectEqual(result.test_overrides?.worker_timeout_ms, 73)
-                        let data = pwRunnerReplyData(result)
+                        let data = pwRunnerPorcelainReplyData(result)
                         try expectTrue(data.count < 4096, "refusal grew with rejected values: \(data.count)")
-                        // Containment over every decoded string leaf, not equality on
-                        // named fields: prose diagnostics embed values too.
-                        let leaves = stringLeaves(try JSONSerialization.jsonObject(with: data))
-                        try expectFalse(leaves.contains { $0.contains(rejected) }, "\(fields[i].0)+\(fields[j].0)")
+                        // Binary strings retain exact UTF-8, so searching the complete
+                        // receipt covers prose diagnostics as well as named fields.
+                        try expectNil(data.range(of: Data(rejected.utf8)), "\(fields[i].0)+\(fields[j].0)")
                         let serviceResult = admissionRefusalReply(parsed: parsed,
                             refused: CWorkerOrchestrator.admissionFailure(for: parsed)!, bundleId: nil, policyHash: "fixture")
-                        try expectEqual(pwRunnerReplyData(serviceResult), data, "service and direct orchestration share refusal projection")
+                        try expectEqual(pwRunnerPorcelainReplyData(serviceResult), data, "service and direct orchestration share refusal projection")
                     }
                 }
             }
@@ -236,7 +235,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             try expectEqual(result.admission_failure?.field, "step_id")
             try expectNil(result.admission_failure?.step_id)
             try expectEqual(result.admission_failure?.step_index, 0)
-            try expectTrue(pwRunnerReplyData(result).count < 4096)
+            try expectTrue(pwRunnerPorcelainReplyData(result).count < 4096)
             try expectNil(queryAdmissionFailure([step])?.step_id)
             step.step_id = "nul\0id"
             let failure = CWorkerOrchestrator.admissionFailure(for: spec(plan: [step]))

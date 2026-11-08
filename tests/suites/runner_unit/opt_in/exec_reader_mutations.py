@@ -65,10 +65,13 @@ worker = package / 'Sources/PWRunnerCore/ActorSession.swift'
 api = package / 'Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift'
 fixed_worker, fixed_api = worker.read_text(), api.read_text()
 gate = '            if completed != 1 {\n'
-absence = '        exec_observation = try container.decodeIfPresent(PWExecObservation.self, forKey: .exec_observation)\n'
+absence = '        self.exec_observation = exec_observation\n'
 assert fixed_worker.count(gate) == 1 and fixed_api.count(absence) == 1, 'mutation anchors changed'
-invented = '''        exec_observation = try container.decodeIfPresent(PWExecObservation.self, forKey: .exec_observation)
-            ?? (requested_kind == "exec" ? PWExecObservation(collection: PWExecCollectionObservation(stop_reason: "leader_exit_and_eof",
+# The retired JSON decoder no longer supplies observations. Mutate the typed
+# constructor instead: a caller with a child PID but absent metadata must not
+# acquire a fabricated collection/cleanup/reap account.
+invented = '''        self.exec_observation = exec_observation
+            ?? (child_pid != nil ? PWExecObservation(collection: PWExecCollectionObservation(stop_reason: "leader_exit_and_eof",
                 leader_exit_observed: true, stdout: PWExecStreamObservation(eof: true), stderr: PWExecStreamObservation(eof: true)),
                 cleanup: PWExecCleanupObservation(state: "not_requested"),
                 reap: PWExecReapObservation(stop_reason: "reaped", last_wait: PWExecWaitObservation(rc: 4242, status: 0))) : nil)
@@ -82,7 +85,7 @@ try:
         api.write_text(fixed_api.replace(absence, invented, 1) if variant == 'invent_absent_metadata' else fixed_api)
         for name, source in [('ActorSession', worker), ('PWRunnerAttemptEvidence', api)]:
             shutil.copy2(source, OUT / (variant + '-' + name + '.swift'))
-        rc, log = run(variant, [*SWIFT, 'run', '--package-path', package, '--scratch-path', scratch, 'PWRunnerCoreTests'], env=environment)
+        rc, log = run(variant, [*SWIFT, 'run', '--jobs', '2', '--package-path', package, '--scratch-path', scratch, 'PWRunnerCoreTests'], env=environment)
         failures = [line.strip() for line in log.splitlines() if line.strip().startswith('FAIL ')]
         assert 'SKIP' not in log, log
         if variant == 'baseline':

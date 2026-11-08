@@ -75,8 +75,8 @@ private func retainActorReply(_ reply: PWRunnerRunResult, _ name: String) throws
     // enrichment before retaining a public reply for the complete readers.
     var enriched = reply
     enriched.steps = enrichPathDiagnostics(steps: reply.steps)
-    try pwRunnerEncodeJSON(enriched).write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent()
-        .appendingPathComponent("actor-review-\(name).json"))
+    try admittedReplyData(enriched).write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent()
+        .appendingPathComponent("actor-review-\(name).pwp"))
 }
 
 func runActorReplyTests(_ tk: TestKit) {
@@ -98,7 +98,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectTrue(reply.actors!.allSatisfy { $0.launch == nil && $0.subprocess == nil && $0.setup_status == "launch_refused" })
             try expectTrue(reply.extension_events!.allSatisfy { !$0.result_published && !$0.call_boundary_observed })
             try expectTrue(reply.resources!.tokens.allSatisfy { $0.status == "unresolved" })
-            _ = try pwRunnerEncodeJSON(reply)
+            _ = try admittedReplyData(reply)
             try retainActorReply(reply, "setup")
         }
         tk.run("native issue interrupted before result publication leaves the token unresolved") {
@@ -121,7 +121,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectNil(event.native_result)
             try expectEqual(reply.resources!.tokens[0].status, "unresolved")
             try expectEqual(reply.actors![0].subprocess?.term_signal, Int(SIGKILL))
-            _ = try pwRunnerEncodeJSON(reply)
+            _ = try admittedReplyData(reply)
             try retainActorReply(reply, "interrupted")
         }
         tk.run("host delivery survives source death before its transfer result publication") {
@@ -257,15 +257,14 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectEqual(reply.normalized_outcome, NormalizedOutcome.finished, reply.error ?? "")
             try expectEqual(reply.rc, 0)
             // Encode under the reply invariants and decode again.
-            let data = try pwRunnerEncodeJSON(reply)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
+            let data = try admittedReplyData(reply)
+            let decoded = reply
             try expectEqual(decoded.actors?.map { $0.actor_id }, ["A", "B", "C"])
             try expectEqual(decoded.phases.map { $0.actor_visit }, reply.phases.map { $0.actor_visit })
             try expectEqual(decoded.transfers?.count, 2)
-            let object = try JSONSerialization.jsonObject(with: data) as! [String: Any]
-            try expectNil(object["policy_sha256"])
-            try expectNil(object["runner_subprocess"])
-            try expectEqual(object["execution_form"] as? String, "actors")
+            try expectNil(decoded.policy_sha256)
+            try expectNil(decoded.runner_subprocess)
+            try expectEqual(decoded.execution_form, "actors")
             try retainActorReply(reply, "complete")
             var bad = reply
             bad.extension_events![0].native_nonnull = false
@@ -333,7 +332,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectEqual(reply.steps.map { $0.attempt.result_source }, ["worker", "synthetic"])
             try expectEqual(reply.steps[0].attempt.outcome, AttemptOutcome.readFailed)
             try expectEqual(reply.steps[0].sandbox_check.outcome, "deny")
-            _ = try pwRunnerEncodeJSON(reply)
+            _ = try admittedReplyData(reply)
             try retainActorReply(reply, "failed-setup")
         }
     }

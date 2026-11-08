@@ -10,10 +10,10 @@ test_begin "unit" "rust.disposition_reds"
 
 LOG_PATH="${PW_TEST_ARTIFACTS}/cargo-test-ignored.log"
 declare -a NAMES=(
-  "disposition::tests::conflicting_status_representation_is_not_silently_resolved"
-  "disposition::tests::conflicting_status_reports_the_status_rule"
-  "disposition::tests::disposition_record_projects_witnessed_host_cleanup_cause"
-  "disposition::tests::record_contradicting_its_basis_is_withheld"
+  "porcelain_admission::tests::typed_conflicting_status_preserves_the_native_pair_and_rule"
+  "porcelain_admission::tests::typed_host_cleanup_cause_requires_all_independent_observations"
+  "porcelain_admission::tests::typed_final_status_requires_its_native_witness_basis"
+  "porcelain_admission::tests::typed_lifecycle_refuses_status_claim_without_owned_reap"
 )
 
 test_step "cargo_test_ignored" "run the exact disposition tests for status conflict, projection and withholding"

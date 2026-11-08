@@ -99,69 +99,71 @@ func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWD
     let hasProgress = out.workerEvidence?.progress != nil
     func present(_ tokens: [String]) -> [String] { tokens.filter { $0 != "progress" || hasProgress } }
 
-    var questions: [String: PWDispositionClaim] = [:]
+    let finalStatus: PWDispositionClaim
     if out.reaped != true {
-        questions["final_status"] = unresolved("no_successful_reap", basis: ["reaped"])
+        finalStatus = unresolved("no_successful_reap", basis: ["reaped"])
     } else if out.exitCode != nil && out.termSignal != nil {
-        questions["final_status"] = conflict("D1", question: "final_status", stepIndex: nil,
+        finalStatus = conflict("D1", question: "final_status", stepIndex: nil,
             observations: ["exit_code", "term_signal"],
             detail: "one successful reap represented as both an exit status and a signal")
     } else if let signal = out.termSignal {
-        questions["final_status"] = supported("signal", value: .integer(Int(signal)), basis: ["reaped", "term_signal"])
+        finalStatus = supported("signal", value: .integer(Int(signal)), basis: ["reaped", "term_signal"])
     } else if let code = out.exitCode {
-        questions["final_status"] = supported("exit_code", value: .integer(Int(code)), basis: ["reaped", "exit_code"])
+        finalStatus = supported("exit_code", value: .integer(Int(code)), basis: ["reaped", "exit_code"])
     } else {
-        questions["final_status"] = unresolved("status_unusable", basis: ["reaped"])
+        finalStatus = unresolved("status_unusable", basis: ["reaped"])
     }
+    let stopReason: PWDispositionClaim
     if let stop = out.pollStopReason {
-        questions["stop_reason"] = supported(stop, basis: ["poll_stop_reason"])
+        stopReason = supported(stop, basis: ["poll_stop_reason"])
     } else {
-        questions["stop_reason"] = unresolved(PWDisposition.notRecorded)
+        stopReason = unresolved(PWDisposition.notRecorded)
     }
-    for (name, raw) in [("cleanup_trigger", out.cleanupTrigger), ("grace_end", out.graceEnd)] {
-        if out.exitRequested == false {
-            questions[name] = inapplicable("exit_not_requested")
-        } else if let raw {
-            questions[name] = supported(raw, basis: [name, "exit_requested"])
-        } else {
-            questions[name] = unresolved(PWDisposition.notRecorded)
-        }
+    func cleanupClaim(_ raw: String?, reference: String) -> PWDispositionClaim {
+        if out.exitRequested == false { return inapplicable("exit_not_requested") }
+        if let raw { return supported(raw, basis: [reference, "exit_requested"]) }
+        return unresolved(PWDisposition.notRecorded)
     }
+    let cleanupTrigger = cleanupClaim(out.cleanupTrigger, reference: "cleanup_trigger")
+    let graceEnd = cleanupClaim(out.graceEnd, reference: "grace_end")
     // A recorded request is a direct observation; only the absence of a request
     // needs the recorded cleanup stage (exit_requested) to count as observed.
+    let killRequestAndResult: PWDispositionClaim
     if out.exitRequested == false {
-        questions["kill_request_and_result"] = inapplicable("exit_not_requested")
+        killRequestAndResult = inapplicable("exit_not_requested")
     } else if let request = out.terminationRequest {
-        questions["kill_request_and_result"] = supported("requested", value: .request(request), basis: ["termination_request"])
+        killRequestAndResult = supported("requested", value: .request(request), basis: ["termination_request"])
     } else if out.exitRequested == nil {
-        questions["kill_request_and_result"] = unresolved(PWDisposition.notRecorded)
+        killRequestAndResult = unresolved(PWDisposition.notRecorded)
     } else {
-        questions["kill_request_and_result"] = supported("none", basis: ["termination_request", "exit_requested"])
+        killRequestAndResult = supported("none", basis: ["termination_request", "exit_requested"])
     }
+    let collectionBasis: PWDispositionClaim
     if let basis = out.collectionBasis {
-        questions["collection_basis"] = supported(basis, basis: ["collection_basis"])
+        collectionBasis = supported(basis, basis: ["collection_basis"])
     } else {
-        questions["collection_basis"] = unresolved(PWDisposition.notRecorded)
+        collectionBasis = unresolved(PWDisposition.notRecorded)
     }
 
     let planSteps: [(id: String, supported: Bool)] = plan?.map { ($0.step_id, mapAttemptKindOrNil($0.attempt) != nil) }
         ?? out.slots.map { ($0.stepId, true) }
     var position: ProtocolPosition? = nil
+    let progressAssociation: PWDispositionClaim
     switch associateProgress(out.workerEvidence?.progress, planCount: planSteps.count) {
     case nil:
-        questions["progress_association"] = inapplicable("no_progress_word")
+        progressAssociation = inapplicable("no_progress_word")
     case .unrecognized?:
-        questions["progress_association"] = unresolved("progress_unrecognized", basis: ["progress"])
+        progressAssociation = unresolved("progress_unrecognized", basis: ["progress"])
     case .invalid?:
-        questions["progress_association"] = supported("invalid", basis: ["progress", "plan"])
+        progressAssociation = supported("invalid", basis: ["progress", "plan"])
     case .stepIndex(let index, let at)?:
-        questions["progress_association"] = supported("step_index", value: .integer(index), basis: ["progress", "plan"])
+        progressAssociation = supported("step_index", value: .integer(index), basis: ["progress", "plan"])
         position = at
     case .parameterIndex(let index, let at)?:
-        questions["progress_association"] = supported("parameter_index", value: .integer(index), basis: ["progress"])
+        progressAssociation = supported("parameter_index", value: .integer(index), basis: ["progress"])
         position = at
     case .none(let at)?:
-        questions["progress_association"] = supported("none", basis: ["progress"])
+        progressAssociation = supported("none", basis: ["progress"])
         position = at
     }
 
@@ -175,48 +177,54 @@ func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWD
         let completed = slotState == "completed"
         let boundary = ProtocolPosition(order: attemptOrder, index: i, stage: 1)
         let afterSlot = ProtocolPosition(order: attemptOrder, index: i, stage: 2)
-        var claims: [String: PWDispositionClaim] = [:]
-        claims["step_requested_operation_applicability"] =
+        let applicability =
             supported(step.supported ? "supported" : "unsupported", basis: ["attempt_support"])
+        let boundaryClaim: PWDispositionClaim
         if let at = position, at < boundary && completed && terminal {
-            claims["step_boundary_reached"] = conflict("D5", question: "step_boundary_reached", stepIndex: i,
+            boundaryClaim = conflict("D5", question: "step_boundary_reached", stepIndex: i,
                 observations: ["progress", "slot", "collection_basis"],
                 detail: "a completed slot beside valid terminal progress that never reached it")
         } else if let at = position, at >= boundary {
-            claims["step_boundary_reached"] = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
+            boundaryClaim = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
         } else if completed && step.supported {
-            claims["step_boundary_reached"] = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
+            boundaryClaim = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
         } else if position != nil && !completed && terminal {
-            claims["step_boundary_reached"] = supported("not_reached", basis: ["progress", "slot", "collection_basis"])
+            boundaryClaim = supported("not_reached", basis: ["progress", "slot", "collection_basis"])
         } else if position != nil && !completed {
-            claims["step_boundary_reached"] = unresolved("basis_not_terminal", basis: ["progress", "slot", "collection_basis"])
+            boundaryClaim = unresolved("basis_not_terminal", basis: ["progress", "slot", "collection_basis"])
         } else {
-            claims["step_boundary_reached"] = unresolved("no_usable_progress", basis: present(["progress", "slot"]))
+            boundaryClaim = unresolved("no_usable_progress", basis: present(["progress", "slot"]))
         }
+        let resultClaim: PWDispositionClaim
         if !step.supported {
-            claims["step_result_published"] = inapplicable("unsupported_attempt")
+            resultClaim = inapplicable("unsupported_attempt")
         } else if slotState == "absent" {
-            claims["step_result_published"] = unresolved("slot_unavailable", basis: ["slot"])
+            resultClaim = unresolved("slot_unavailable", basis: ["slot"])
         } else if completed {
-            claims["step_result_published"] = supported("published", basis: ["slot", "attempt_support"])
+            resultClaim = supported("published", basis: ["slot", "attempt_support"])
         } else if !terminal {
-            claims["step_result_published"] = unresolved("basis_not_terminal", basis: ["slot", "collection_basis"])
+            resultClaim = unresolved("basis_not_terminal", basis: ["slot", "collection_basis"])
         } else if let at = position, at >= afterSlot {
-            claims["step_result_published"] = conflict("D5", question: "step_result_published", stepIndex: i,
+            resultClaim = conflict("D5", question: "step_result_published", stepIndex: i,
                 observations: ["progress", "slot", "collection_basis"],
                 detail: "valid returned progress for this step or a later position beside an incomplete slot")
         } else {
-            claims["step_result_published"] = supported("unpublished", basis: present(["slot", "collection_basis", "progress"]))
+            resultClaim = supported("unpublished", basis: present(["slot", "collection_basis", "progress"]))
         }
         steps.append(PWDispositionStep(index: i, step_id: step.id, slot: slotState,
-                                       attempt_support: step.supported ? "supported" : "unsupported", questions: claims))
+                                       attempt_support: step.supported ? "supported" : "unsupported", questions: PWDispositionStepQuestions(
+                                           step_boundary_reached: boundaryClaim, step_result_published: resultClaim,
+                                           step_requested_operation_applicability: applicability)))
     }
-    return PWDispositionRecord(questions: questions, steps: steps, issues: issues)
+    return PWDispositionRecord(questions: PWDispositionRunQuestions(
+        final_status: finalStatus, stop_reason: stopReason, cleanup_trigger: cleanupTrigger,
+        grace_end: graceEnd, kill_request_and_result: killRequestAndResult,
+        collection_basis: collectionBasis, progress_association: progressAssociation), steps: steps, issues: issues)
 }
 
 func attemptLifecycle(_ step: PWDispositionStep) -> PWAttemptLifecycle? {
-    guard let boundary = step.questions["step_boundary_reached"],
-          let result = step.questions["step_result_published"] else { return nil }
+    guard let boundary = step.questions.step_boundary_reached,
+          let result = step.questions.step_result_published else { return nil }
     return PWAttemptLifecycle(summary: lifecycleSummary(step), boundary: boundary, result: result)
 }
 
@@ -349,8 +357,8 @@ func classify(
         // the reply carries); worker, validator and setup diagnostics keep their
         // own owners and are composed with these clauses, not generated from them.
         let account = disposition ?? resolveDisposition(out, plan: nil)
-        let killRequested = account.questions["kill_request_and_result"]?.answer == "requested"
-        if account.questions["stop_reason"]?.answer == "sentinel_deadline" {
+        let killRequested = account.questions.kill_request_and_result?.answer == "requested"
+        if account.questions.stop_reason?.answer == "sentinel_deadline" {
             return ClassifiedRun(outcome: NormalizedOutcome.runnerTimeout, rc: 1,
                 error: "pw-probe-runner sentinel deadline expired; "
                     + (out.proceedSet && !out.proceedObserved ? "release not observed; " : "")
@@ -361,7 +369,7 @@ func classify(
         if !out.applied { problems.append("no published application") }
         if !out.done { problems.append("no completed report") }
         if out.done && anySlotNotCompleted(out.slots) { problems.append("incomplete slot publication") }
-        if let status = account.questions["final_status"] {
+        if let status = account.questions.final_status {
             switch (status.state, status.answer, status.value) {
             case ("unresolved", _, _):
                 problems.append(status.reason == "no_successful_reap" ? "process disposition unconfirmed"

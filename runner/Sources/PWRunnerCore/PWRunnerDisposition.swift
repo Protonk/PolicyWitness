@@ -46,24 +46,12 @@ enum PWDisposition {
 }
 
 /// A claim value: an exit code, signal or index, or the termination request.
-enum PWDispositionValue: Codable, Equatable {
+enum PWDispositionValue: Equatable {
     case integer(Int)
     case request(PWRunnerTerminationRequest)
-    init(from decoder: Decoder) throws {
-        let c = try decoder.singleValueContainer()
-        if let integer = try? c.decode(Int.self) { self = .integer(integer); return }
-        self = .request(try c.decode(PWRunnerTerminationRequest.self))
-    }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.singleValueContainer()
-        switch self {
-        case .integer(let integer): try c.encode(integer)
-        case .request(let request): try c.encode(request)
-        }
-    }
 }
 
-struct PWDispositionClaim: Codable, Equatable {
+struct PWDispositionClaim: Equatable {
     // BEGIN GENERATED PORCELAIN PWDispositionClaim
     var state: String
     var answer: String? = nil
@@ -74,7 +62,7 @@ struct PWDispositionClaim: Codable, Equatable {
     // END GENERATED PORCELAIN PWDispositionClaim
 }
 
-struct PWDispositionIssue: Codable, Equatable {
+struct PWDispositionIssue: Equatable {
     // BEGIN GENERATED PORCELAIN PWDispositionIssue
     var kind: String
     var rule: String
@@ -85,25 +73,47 @@ struct PWDispositionIssue: Codable, Equatable {
     // END GENERATED PORCELAIN PWDispositionIssue
 }
 
-struct PWDispositionStep: Codable, Equatable {
+/// Fixed optional slots preserve absence in partial or rejected evidence.
+/// The ordinary resolver supplies every run and step question explicitly.
+struct PWDispositionRunQuestions: Equatable {
+    // BEGIN GENERATED PORCELAIN PWDispositionRunQuestions
+    var final_status: PWDispositionClaim? = nil
+    var stop_reason: PWDispositionClaim? = nil
+    var cleanup_trigger: PWDispositionClaim? = nil
+    var grace_end: PWDispositionClaim? = nil
+    var kill_request_and_result: PWDispositionClaim? = nil
+    var collection_basis: PWDispositionClaim? = nil
+    var progress_association: PWDispositionClaim? = nil
+    // END GENERATED PORCELAIN PWDispositionRunQuestions
+}
+
+struct PWDispositionStepQuestions: Equatable {
+    // BEGIN GENERATED PORCELAIN PWDispositionStepQuestions
+    var step_boundary_reached: PWDispositionClaim? = nil
+    var step_result_published: PWDispositionClaim? = nil
+    var step_requested_operation_applicability: PWDispositionClaim? = nil
+    // END GENERATED PORCELAIN PWDispositionStepQuestions
+}
+
+struct PWDispositionStep: Equatable {
     // BEGIN GENERATED PORCELAIN PWDispositionStep
     var index: Int
     var step_id: String
     var slot: String
     var attempt_support: String
-    var questions: [String: PWDispositionClaim]
+    var questions: PWDispositionStepQuestions
     // END GENERATED PORCELAIN PWDispositionStep
 }
 
-struct PWDispositionRecord: Codable, Equatable {
+struct PWDispositionRecord: Equatable {
     // BEGIN GENERATED PORCELAIN PWDispositionRecord
-    var questions: [String: PWDispositionClaim]
+    var questions: PWDispositionRunQuestions
     var steps: [PWDispositionStep]
     var issues: [PWDispositionIssue]
     // END GENERATED PORCELAIN PWDispositionRecord
 }
 
-struct PWAttemptLifecycle: Codable, Equatable {
+struct PWAttemptLifecycle: Equatable {
     // BEGIN GENERATED PORCELAIN PWAttemptLifecycle
     var summary: String
     var boundary: PWDispositionClaim
@@ -180,8 +190,8 @@ func associateProgress(_ progress: PWWorkerProgress?, planCount: Int) -> Progres
 
 /// The compact per-step summary: a registered projection of the two step claims.
 func lifecycleSummary(_ step: PWDispositionStep) -> String {
-    let boundary = step.questions["step_boundary_reached"]
-    let result = step.questions["step_result_published"]
+    let boundary = step.questions.step_boundary_reached
+    let result = step.questions.step_result_published
     if step.attempt_support == "unsupported" { return "unsupported" }
     if result?.state == "supported" && result?.answer == "published" { return "completed" }
     if boundary?.state == "conflicting" || result?.state == "conflicting" { return "conflicting" }
@@ -213,6 +223,20 @@ private func dispositionBasisSufficient(_ name: String, _ claim: PWDispositionCl
     }
 }
 
+// These finite traversals pair diagnostic labels with direct stored fields; no
+// question lookup or open-ended dictionary participates in the account.
+private func runClaims(_ q: PWDispositionRunQuestions) -> [(String, PWDispositionClaim?)] {
+    [("final_status", q.final_status), ("stop_reason", q.stop_reason),
+     ("cleanup_trigger", q.cleanup_trigger), ("grace_end", q.grace_end),
+     ("kill_request_and_result", q.kill_request_and_result),
+     ("collection_basis", q.collection_basis), ("progress_association", q.progress_association)]
+}
+private func stepClaims(_ q: PWDispositionStepQuestions) -> [(String, PWDispositionClaim?)] {
+    [("step_boundary_reached", q.step_boundary_reached),
+     ("step_result_published", q.step_result_published),
+     ("step_requested_operation_applicability", q.step_requested_operation_applicability)]
+}
+
 /// Integrity of an assembled record against the raw facts it cites. The
 /// encoder rejects a record that fails this; the degraded reply retains it
 /// unchecked so the conflict being reported is never lost. A record that
@@ -240,10 +264,10 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
         default: return false
         }
     }
-    for name in PWDisposition.runQuestions where record.questions[name] == nil {
-        problems.append("disposition lacks question \(name)")
-    }
-    for (name, claim) in record.questions {
+    for (name, observation) in runClaims(record.questions) {
+        guard let claim = observation else {
+            problems.append("disposition lacks question \(name)"); continue
+        }
         guard PWDisposition.claimStates.contains(claim.state) else {
             problems.append("\(name): unknown claim state \(claim.state)"); continue
         }
@@ -266,7 +290,7 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
             problems.append("\(name): \(claim.state) claim without a reason")
         }
     }
-    if let final = record.questions["final_status"] {
+    if let final = record.questions.final_status {
         switch (final.state, final.answer) {
         case ("supported", "signal"?):
             if sub.reaped != true || sub.term_signal == nil || sub.exit_code != nil || final.value != sub.term_signal.map({ .integer($0) }) {
@@ -284,16 +308,17 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
         default: break
         }
     }
-    if let stop = record.questions["stop_reason"], stop.state == "supported", stop.answer != sub.poll_stop_reason {
+    if let stop = record.questions.stop_reason, stop.state == "supported", stop.answer != sub.poll_stop_reason {
         problems.append("stop_reason: claim contradicts poll_stop_reason")
     }
-    for (name, raw) in [("cleanup_trigger", sub.cleanup_trigger), ("grace_end", sub.grace_end),
-                        ("collection_basis", sub.collection_basis)] {
-        if let claim = record.questions[name], claim.state == "supported", claim.answer != raw {
+    for (name, observation, raw) in [("cleanup_trigger", record.questions.cleanup_trigger, sub.cleanup_trigger),
+            ("grace_end", record.questions.grace_end, sub.grace_end),
+            ("collection_basis", record.questions.collection_basis, sub.collection_basis)] {
+        if let claim = observation, claim.state == "supported", claim.answer != raw {
             problems.append("\(name): claim contradicts the recorded host fact")
         }
     }
-    if let kill = record.questions["kill_request_and_result"], kill.state == "supported" {
+    if let kill = record.questions.kill_request_and_result, kill.state == "supported" {
         if kill.answer == "requested", sub.termination_request == nil || kill.value != sub.termination_request.map({ .request($0) }) {
             problems.append("kill_request_and_result: value differs from termination_request")
         }
@@ -304,14 +329,15 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
     if sub.collection_basis == "after_confirmed_reap" && sub.reaped != true {
         problems.append("collection_basis: terminal collection without a confirmed reap")
     }
-    for name in ["cleanup_trigger", "grace_end", "kill_request_and_result"] {
-        if record.questions[name]?.state == "supported" && sub.exit_requested == false {
+    for (name, claim) in [("cleanup_trigger", record.questions.cleanup_trigger),
+            ("grace_end", record.questions.grace_end), ("kill_request_and_result", record.questions.kill_request_and_result)] {
+        if claim?.state == "supported" && sub.exit_requested == false {
             problems.append("\(name): supported cleanup claim when exit was not requested")
         }
     }
     let association = associateProgress(sub.worker_evidence?.progress, planCount: stepCount)
     let position = association?.position
-    if let claim = record.questions["progress_association"], claim.state == "supported",
+    if let claim = record.questions.progress_association, claim.state == "supported",
        ["none", "step_index", "parameter_index", "invalid"].contains(claim.answer ?? ""),
        claim.answer != association?.answer || claim.value != association?.value {
         problems.append("progress_association: claim disagrees with progress identity")
@@ -325,10 +351,10 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
         if !PWDisposition.attemptSupport.contains(step.attempt_support) {
             problems.append("step \(position): unknown attempt support")
         }
-        for name in PWDisposition.stepQuestions where step.questions[name] == nil {
-            problems.append("step \(position) lacks question \(name)")
-        }
-        for (name, claim) in step.questions {
+        for (name, observation) in stepClaims(step.questions) {
+            guard let claim = observation else {
+                problems.append("step \(position) lacks question \(name)"); continue
+            }
             if !PWDisposition.claimStates.contains(claim.state) {
                 problems.append("step \(position) \(name): unknown claim state")
             }
@@ -351,11 +377,11 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
                 }
             }
         }
-        if let applicability = step.questions["step_requested_operation_applicability"], applicability.state == "supported",
+        if let applicability = step.questions.step_requested_operation_applicability, applicability.state == "supported",
            ["supported", "unsupported"].contains(applicability.answer ?? ""), applicability.answer != step.attempt_support {
             problems.append("step \(position): applicability disagrees with attempt support")
         }
-        if let result = step.questions["step_result_published"], result.state == "supported" {
+        if let result = step.questions.step_result_published, result.state == "supported" {
             if result.answer == "published", step.slot != "completed" || step.attempt_support != "supported" {
                 problems.append("step \(position): published claim on a slot that is not completed")
             }
@@ -363,7 +389,7 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
                 problems.append("step \(position): unpublished claim needs an incomplete slot under terminal collection")
             }
         }
-        if let boundary = step.questions["step_boundary_reached"], boundary.state == "supported",
+        if let boundary = step.questions.step_boundary_reached, boundary.state == "supported",
            boundary.answer == "not_reached", sub.collection_basis != "after_confirmed_reap" || step.slot == "completed" {
             problems.append("step \(position): not_reached claim needs terminal collection and no completed slot")
         }
@@ -377,7 +403,7 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
         let returned = position.map { $0 >= ProtocolPosition(order: attemptOrder, index: i, stage: 2) } ?? false
         let boundaryConflict = terminal && position != nil && !reached && step.slot == "completed"
         let resultConflict = terminal && returned && step.slot == "incomplete" && step.attempt_support == "supported"
-        if let claim = step.questions["step_boundary_reached"], claim.state == "supported" {
+        if let claim = step.questions.step_boundary_reached, claim.state == "supported" {
             let basis = Set(claim.basis ?? [])
             let progressWitness = reached && basis.contains("progress")
             let slotWitness = step.slot == "completed" && step.attempt_support == "supported"
@@ -389,11 +415,12 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
                 problems.append("step \(i): not_reached claim lacks a terminal earlier position")
             }
         }
-        if let claim = step.questions["step_result_published"], claim.state == "supported", claim.answer == "unpublished", resultConflict {
+        if let claim = step.questions.step_result_published, claim.state == "supported", claim.answer == "unpublished", resultConflict {
             problems.append("step \(i): unpublished answer suppresses a publication conflict")
         }
-        for (name, isConflict) in [("step_boundary_reached", boundaryConflict), ("step_result_published", resultConflict)] {
-            if let claim = step.questions[name], claim.state == "conflicting" {
+        for (name, observation, isConflict) in [("step_boundary_reached", step.questions.step_boundary_reached, boundaryConflict),
+                ("step_result_published", step.questions.step_result_published, resultConflict)] {
+            if let claim = observation, claim.state == "conflicting" {
                 if !isConflict { problems.append("step \(i) \(name): conflict without incompatible observations") }
             }
         }
@@ -404,7 +431,7 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
             if reply.step_id != step.step_id || reply.attempt.result_source != (completed ? "worker" : "synthetic") || reply.attempt.missing_reason != reason {
                 problems.append("step \(i): identity or compatibility projections disagree with record")
             }
-            if reply.attempt.lifecycle?.boundary != step.questions["step_boundary_reached"] || reply.attempt.lifecycle?.result != step.questions["step_result_published"] {
+            if reply.attempt.lifecycle?.boundary != step.questions.step_boundary_reached || reply.attempt.lifecycle?.result != step.questions.step_result_published {
                 problems.append("step \(i): lifecycle copies disagree with record")
             }
             if let summary = reply.attempt.lifecycle?.summary, PWDisposition.summaries.contains(summary), summary != lifecycleSummary(step) {
@@ -415,9 +442,9 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
             if limits != expected { problems.append("step \(i): lifecycle limitations disagree with record") }
         }
     }
-    for (name, claim, index) in record.questions.map({ ($0.key, $0.value, Int?.none) })
-        + record.steps.flatMap({ step in step.questions.map { ($0.key, $0.value, Optional(step.index)) } }) {
-        guard claim.state == "conflicting", let pointer = claim.issue, record.issues.indices.contains(pointer) else { continue }
+    for (name, claim, index) in runClaims(record.questions).map({ ($0.0, $0.1, Int?.none) })
+        + record.steps.flatMap({ step in stepClaims(step.questions).map { ($0.0, $0.1, Optional(step.index)) } }) {
+        guard let claim, claim.state == "conflicting", let pointer = claim.issue, record.issues.indices.contains(pointer) else { continue }
         referencedIssues.insert(pointer)
         let issue = record.issues[pointer]
         let observations = name == "final_status" ? ["exit_code", "term_signal"] : ["progress", "slot", "collection_basis"]

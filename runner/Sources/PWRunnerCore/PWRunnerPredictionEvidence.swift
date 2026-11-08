@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-struct PWRunnerSandboxCheckResult: Codable {
+struct PWRunnerSandboxCheckResult {
     // BEGIN GENERATED PORCELAIN PWRunnerSandboxCheckResult
     /// Result provenance. See the "Worker evidence contract" in
     /// tests/FAILURE-PROPAGATION-CONTRACT.md for native returns versus PW
@@ -45,95 +45,11 @@ struct PWRunnerSandboxCheckResult: Codable {
         self.path_diagnostics = path_diagnostics
     }
 
-    enum CodingKeys: String, CodingKey {
-        case result_source, native_rc, missing_reason
-        case rc
-        case outcome
-        case pid
-        case operation
-        case filter_kind
-        case filter_value
-        case filter_type_id
-        case errno
-        case error
-        case path_diagnostics
-    }
 
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(result_source, forKey: .result_source)
-        if result_source != nil { try container.encode(native_rc, forKey: .native_rc) }
-        try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
-        try container.encode(rc, forKey: .rc)
-        try container.encode(outcome, forKey: .outcome)
-        try container.encode(pid, forKey: .pid)
-        try container.encode(operation, forKey: .operation)
-        try container.encode(filter_kind, forKey: .filter_kind)
-        if let filter_value {
-            try container.encode(filter_value, forKey: .filter_value)
-        } else {
-            try container.encodeNil(forKey: .filter_value)
-        }
-        if let filter_type_id {
-            try container.encode(filter_type_id, forKey: .filter_type_id)
-        } else {
-            try container.encodeNil(forKey: .filter_type_id)
-        }
-        if let errno {
-            try container.encode(errno, forKey: .errno)
-        } else {
-            try container.encodeNil(forKey: .errno)
-        }
-        if let error {
-            try container.encode(error, forKey: .error)
-        } else {
-            try container.encodeNil(forKey: .error)
-        }
-        // Omit the key entirely on non-path filters so the output stays minimal
-        // and consumers can branch on `path_diagnostics != nil` rather than
-        // inspecting a null payload.
-        if let path_diagnostics {
-            try container.encode(path_diagnostics, forKey: .path_diagnostics)
-        }
-    }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        result_source = try container.decodeIfPresent(String.self, forKey: .result_source)
-        native_rc = try container.decodeIfPresent(Int.self, forKey: .native_rc)
-        missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
-        rc = try container.decode(Int.self, forKey: .rc)
-        outcome = try container.decode(String.self, forKey: .outcome)
-        pid = try container.decodeIfPresent(Int.self, forKey: .pid)
-        operation = try container.decode(String.self, forKey: .operation)
-        filter_kind = try container.decode(String.self, forKey: .filter_kind)
-        filter_value = try container.decodeIfPresent(String.self, forKey: .filter_value)
-        filter_type_id = try container.decodeIfPresent(Int.self, forKey: .filter_type_id)
-        errno = try container.decodeIfPresent(Int.self, forKey: .errno)
-        error = try container.decodeIfPresent(String.self, forKey: .error)
-        path_diagnostics = try container.decodeIfPresent(PWRunnerPathDiagnostics.self, forKey: .path_diagnostics)
-    }
 }
 
-struct ValidatorVerdict: Codable {
-    enum CodingKeys: String, CodingKey {
-        case stepId = "step_id", operation, filterType = "filter_type"
-        case filterTypeId = "filter_type_id", filterValue = "filter_value"
-        case rc, errnoVal = "errno", outcome, error, rawLine = "raw_line"
-    }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(stepId, forKey: .stepId)
-        try c.encodeIfPresent(operation, forKey: .operation)
-        try c.encodeIfPresent(filterType, forKey: .filterType)
-        try c.encodeIfPresent(filterTypeId, forKey: .filterTypeId)
-        try c.encodeIfPresent(filterValue, forKey: .filterValue)
-        try c.encodeIfPresent(rc, forKey: .rc)
-        try c.encodeIfPresent(errnoVal, forKey: .errnoVal)
-        try c.encode(outcome, forKey: .outcome)
-        try c.encodeIfPresent(error, forKey: .error)
-        try c.encode(rawLine, forKey: .rawLine)
-    }
+struct ValidatorVerdict {
     // BEGIN GENERATED PORCELAIN ValidatorVerdict
     var stepId: String?
     var operation: String?
@@ -151,7 +67,7 @@ struct ValidatorVerdict: Codable {
 /// Receiver-owned rejected frame context. The prefix is bytes, not repaired
 /// JSON. Offsets/lengths are exact received byte counts; at most 256 context
 /// bytes are retained. Unknown diagnostic outcome names are not decode faults.
-struct PWValidatorDecodeFault: Codable {
+struct PWValidatorDecodeFault {
     // BEGIN GENERATED PORCELAIN PWValidatorDecodeFault
     var origin: String = "runner_host"
     var kind: String
@@ -164,7 +80,7 @@ struct PWValidatorDecodeFault: Codable {
     // END GENERATED PORCELAIN PWValidatorDecodeFault
 }
 
-struct PWValidatorAssociationIssue: Codable {
+struct PWValidatorAssociationIssue {
     // BEGIN GENERATED PORCELAIN PWValidatorAssociationIssue
     var origin: String = "runner_host"
     var kind: String
@@ -177,7 +93,7 @@ struct PWValidatorAssociationIssue: Codable {
 /// Only successful reaping supplies exit/signal. Records are accepted validator
 /// evidence, independently retained even when association/transport/cleanup fails.
 /// A null-ID record is never assigned an invented step identity.
-struct PWRunnerValidatorSubprocess: Codable {
+struct PWRunnerValidatorSubprocess {
     // BEGIN GENERATED PORCELAIN PWRunnerValidatorSubprocess
     /// The phase this collection served, stamped by the host from the
     /// collection it ran. Readers require agreement with the containing phase.

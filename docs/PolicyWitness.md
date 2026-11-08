@@ -1030,8 +1030,7 @@ actor may exec.
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 94,205,342 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
-| Runner client output (`controller_output`) | 285,212,672 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Stdout carries the versioned client capture, including base64 host bytes. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
+| Runner client output (`controller_output`) | 285,212,672 bytes | Captured bytes per stdout or stderr stream from the runner client. Stdout carries a binary capture with opaque host bytes. Excess is marked truncated; a truncated capture establishes neither submission nor host evidence. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Fixed per-stream retention allowance; no flag. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from each sbpl-check invocation, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
 | Validator reply frame (`validator_reply_frame`) | 8,192 bytes | UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain. | Fixed. |
@@ -1050,6 +1049,9 @@ actor may exec.
 | Client error domain (`client_error_domain`) | 128 UTF-8 bytes | Retained native error domain at a Unicode boundary. Excess is truncated with domain_truncated. No arbitrary userInfo dictionary is retained. | Fixed. |
 | Client host reply retention (`client_reply_retention`) | 96,468,992 bytes | Host result bytes retained before base64 encoding in the client capture. Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct. | Fixed; must cover the informative maximal reply. |
 | Authority setup encoded reserve (`authority_setup_reply`) | 524,288 bytes | Conservative JSON allowance for host run, eight regions, thirty-two custody slots and eight workers; at most 388 operation cells. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
+| Typed response frame (`porcelain_frame_bytes`) | 134,217,728 bytes | One complete binary client capture or host reply, including its frame header. Larger frames are refused before typed record interpretation. | Fixed. |
+| Typed decoded storage (`porcelain_decoded_storage_bytes`) | 134,217,728 bytes | One reader frame charges string bytes, opaque bytes and typed collection slots to a shared logical-storage budget. A charge exceeding the remaining budget refuses decoding before allocation; fixed record storage and allocator overhead are not physical peak-memory claims. | Fixed. |
+| Typed response nesting (`porcelain_nesting`) | 32 levels | Reader cursor nesting within one binary frame; the schema generator separately refuses deeper record graphs. Deeper input is refused before reading another nested value. | Fixed. |
 
 ### Evidence capture
 
@@ -1074,7 +1076,7 @@ actor may exec.
 | Equipment entitlement records (`equipment_entitlement_records`) | 12 items | Four static and eight live readbacks at the maximum actor and override population. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
 | Sealed worker equipment inventory (`equipment_inventory_bytes`) | 1,048,576 bytes | Complete service-local inventory bytes read before actor preparation. A larger input is refused without selecting equipment. An observation exceeding this bound cannot establish eligible actor equipment. | Fixed. |
 | Equipment diagnostic (`equipment_diagnostic_bytes`) | 1,024 UTF-8 bytes | Each equipment diagnostic is bounded before it enters a reply; longer observations retain a bounded diagnostic. An observation exceeding this bound cannot establish eligible actor equipment. | Fixed. |
-| Equipment metadata record (`equipment_metadata_bytes`) | 32,768 bytes | Encoded static-binding or live-execution metadata record, separate from its referenced entitlement plist. An observation exceeding this bound cannot establish eligible actor equipment. | Fixed. |
+| Equipment metadata record (`equipment_metadata_bytes`) | 32,768 bytes | Sum of UTF-8 bytes in the declared text fields of one static binding or live execution record, including binding error text or live native-operation names. Fixed scalar fields and the separately bounded entitlement plist do not count. An observation exceeding this bound cannot establish eligible actor equipment. | Fixed. |
 
 ### Diagnostic helpers
 
@@ -1174,7 +1176,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 28, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 29, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner reply's JSON projection carries the response `schema_version` and

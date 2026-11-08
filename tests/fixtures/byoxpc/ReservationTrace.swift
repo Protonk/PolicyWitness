@@ -61,40 +61,44 @@ enum ReservationTrace {
     private static func sha(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
-    /// After one real execution, alter only the top-level response-schema
-    /// marker of the encoded reply, once. The bytes are otherwise unchanged:
-    /// the altered body parses to the original object once the marker is
-    /// restored, or nothing is altered and the reason is traced.
+    /// Change only the eight-byte signed schema field in a real binary reply.
+    /// This narrow wire-fault fixture does not decode or rebuild the reply.
     static func outgoingReply(_ request: F2Request, _ data: Data) -> Data {
         guard armed, gates["reservation"]?.contains("old_response") == true, let directory else { return data }
         let fd = open(directory + "/once-old_response", O_WRONLY | O_CREAT | O_EXCL, 0o600)
         guard fd >= 0 else { return data }
         close(fd)
-        guard let original = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let marker = original["schema_version"] as? Int else {
-            F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "unreadable reply"]); return data
+        let bytes = [UInt8](data)
+        func unsigned(_ offset: Int, _ width: Int) -> UInt64? {
+            guard offset >= 0, width <= 8, offset <= bytes.count, width <= bytes.count - offset else { return nil }
+            return (0..<width).reduce(UInt64(0)) { $0 | (UInt64(bytes[offset + $1]) << (8 * $1)) }
         }
-        let needle = Data("\"schema_version\":\(marker)".utf8)
-        let replacement = Data("\"schema_version\":\(marker - 1)".utf8)
-        var search = data.startIndex..<data.endIndex
-        while let range = data.range(of: needle, in: search) {
-            var candidate = data
-            candidate.replaceSubrange(range, with: replacement)
-            if var parsed = (try? JSONSerialization.jsonObject(with: candidate)) as? [String: Any],
-               parsed["schema_version"] as? Int == marker - 1 {
-                parsed["schema_version"] = marker
-                if NSDictionary(dictionary: parsed).isEqual(to: original) {
-                    F2Trace.event(request, "outgoing_marker_altered", ["original_marker": marker,
-                        "altered_marker": marker - 1, "original_bytes": data.count, "altered_bytes": candidate.count,
-                        "original_sha256": sha(data), "altered_sha256": sha(candidate),
-                        "byte_offset": range.lowerBound, "equal_after_restoring_marker": true])
-                    return candidate
-                }
-            }
-            search = range.upperBound..<data.endIndex
+        // PWP1 + 32-byte fingerprint, record TLV, record ID, first field.
+        // Require the current producer's exact framing and schema field kind;
+        // do not search nested records or arbitrary payload bytes for a match.
+        let offset = 50
+        guard bytes.count >= offset + 8, Array(bytes.prefix(4)) == [0x50, 0x57, 0x50, 0x31],
+              Array(bytes[4..<36]) == PWPorcelainSchema.fingerprint,
+              bytes[36] == 6, unsigned(37, 4) == UInt64(bytes.count - 41),
+              unsigned(41, 2) == UInt64(PWRunnerRunResult.porcelainRecordID),
+              unsigned(43, 2) == UInt64(PWRunnerRunResult.PorcelainTag.schema_version),
+              bytes[45] == 2, unsigned(46, 4) == 8,
+              unsigned(offset, 8) == UInt64(PWContract.responseSchema), PWContract.responseSchema > 0 else {
+            F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "unexpected binary schema field"]); return data
         }
-        F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "no top-level marker occurrence"])
-        return data
+        let marker = PWContract.responseSchema
+        var candidate = data
+        for index in 0..<8 { candidate[offset + index] = UInt8(truncatingIfNeeded: UInt64(marker - 1) >> (8 * index)) }
+        var restored = candidate
+        restored.replaceSubrange(offset..<(offset + 8), with: data[offset..<(offset + 8)])
+        guard restored == data, candidate != data else {
+            F2Trace.event(request, "outgoing_marker_unaltered", ["reason": "byte restoration failed"]); return data
+        }
+        F2Trace.event(request, "outgoing_marker_altered", ["original_marker": marker,
+            "altered_marker": marker - 1, "original_bytes": data.count, "altered_bytes": candidate.count,
+            "original_sha256": sha(data), "altered_sha256": sha(candidate),
+            "byte_offset": offset, "byte_length": 8, "equal_after_restoring_marker": true])
+        return candidate
     }
     static func beforeExit() {
         let context = F2Request(invocation: "\(getpid())-\(UUID().uuidString)", specimen: "<retirement>",

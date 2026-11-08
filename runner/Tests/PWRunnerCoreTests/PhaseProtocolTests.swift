@@ -22,50 +22,161 @@ private func phaseRun(_ phases: [PWRunnerPhase], overrides: PWRunnerTestOverride
         validatorExecutablePath: validator ?? phaseEquipment("sb_api_validator"), validatorSpawn: spawn)
 }
 
+private func ordinaryPhaseFixture() -> PWRunnerRunResult {
+    let value1 = PWRunnerPathDiagnostics(input: "/private/tmp/pw-extension-control-3yubnaqs/target", realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", firmlink_resolved: "/System/Volumes/Data/private/tmp/pw-extension-control-3yubnaqs/target", observer: "runner_host", stage: "after_orchestration")
+    var value2 = PWRunnerSandboxCheckResult(rc: 1, outcome: "deny", pid: 94337, operation: "file-read-data", filter_kind: "path", filter_value: "/private/tmp/pw-extension-control-3yubnaqs/target", filter_type_id: 1, errno: 0, error: nil, path_diagnostics: value1)
+    value2.result_source = "validator"
+    value2.native_rc = 1
+    let value3 = PWRunnerAttemptPathDiagnostics(input: "/private/tmp/pw-extension-control-3yubnaqs/target", realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", parent_realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", observer: "runner_host", stage: "after_orchestration")
+    let value4 = PWDispositionClaim(state: "supported", answer: "reached", basis: ["progress", "slot", "attempt_support"])
+    let value5 = PWDispositionClaim(state: "supported", answer: "published", basis: ["slot", "attempt_support"])
+    let value6 = PWAttemptLifecycle(summary: "completed", boundary: value4, result: value5)
+    let value7 = PWRunnerFreshRead(open_rc: -1, open_errno: 1)
+    var value8 = PWRunnerAttemptResult(rc: -1, errno: 1, outcome: "read_failed", requested_path: "/private/tmp/pw-extension-control-3yubnaqs/target", path_diagnostics: value3, observed_path: nil)
+    value8.requested_kind = "file"
+    value8.requested_action = "read_fresh"
+    value8.result_source = "worker"
+    value8.lifecycle = value6
+    value8.fresh_read = value7
+    let value9 = PWRunnerComparison(observation: "permission_failure", observation_basis: "permission_errno", operation_relation: "matched", target_relation: "same_submitted", order: "query_first", limitations: [])
+    let value10 = PWRunnerStepResult(step_id: "before", phase_id: "p0", sandbox_check: value2, attempt: value8, comparison: value9)
+    let value11 = PWRunnerPathDiagnostics(input: "/private/tmp/pw-extension-control-3yubnaqs/target", realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", firmlink_resolved: "/System/Volumes/Data/private/tmp/pw-extension-control-3yubnaqs/target", observer: "runner_host", stage: "after_orchestration")
+    var value12 = PWRunnerSandboxCheckResult(rc: 1, outcome: "deny", pid: 94337, operation: "file-read-data", filter_kind: "path", filter_value: "/private/tmp/pw-extension-control-3yubnaqs/target", filter_type_id: 1, errno: 0, error: nil, path_diagnostics: value11)
+    value12.result_source = "validator"
+    value12.native_rc = 1
+    let value13 = PWRunnerAttemptPathDiagnostics(input: "/private/tmp/pw-extension-control-3yubnaqs/target", realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", parent_realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", observer: "runner_host", stage: "after_orchestration")
+    let value14 = PWDispositionClaim(state: "supported", answer: "reached", basis: ["progress", "slot", "attempt_support"])
+    let value15 = PWDispositionClaim(state: "supported", answer: "published", basis: ["slot", "attempt_support"])
+    let value16 = PWAttemptLifecycle(summary: "completed", boundary: value14, result: value15)
+    let value17 = PWRunnerFreshRead(open_rc: -1, open_errno: 1)
+    var value18 = PWRunnerAttemptResult(rc: -1, errno: 1, outcome: "read_failed", requested_path: "/private/tmp/pw-extension-control-3yubnaqs/target", path_diagnostics: value13, observed_path: nil)
+    value18.requested_kind = "file"
+    value18.requested_action = "read_fresh"
+    value18.result_source = "worker"
+    value18.lifecycle = value16
+    value18.fresh_read = value17
+    let value19 = PWRunnerComparison(observation: "permission_failure", observation_basis: "permission_errno", operation_relation: "matched", target_relation: "same_submitted", order: "query_first", limitations: [])
+    let value20 = PWRunnerStepResult(step_id: "during", phase_id: "p1", sandbox_check: value12, attempt: value18, comparison: value19)
+    let value21 = PWRunnerPathDiagnostics(input: "/private/tmp/pw-extension-control-3yubnaqs/target", realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", firmlink_resolved: "/System/Volumes/Data/private/tmp/pw-extension-control-3yubnaqs/target", observer: "runner_host", stage: "after_orchestration")
+    var value22 = PWRunnerSandboxCheckResult(rc: 1, outcome: "deny", pid: 94337, operation: "file-read-data", filter_kind: "path", filter_value: "/private/tmp/pw-extension-control-3yubnaqs/target", filter_type_id: 1, errno: 0, error: nil, path_diagnostics: value21)
+    value22.result_source = "validator"
+    value22.native_rc = 1
+    let value23 = PWRunnerAttemptPathDiagnostics(input: "/private/tmp/pw-extension-control-3yubnaqs/target", realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", parent_realpath_resolved: "/private/tmp/pw-extension-control-3yubnaqs/target", observer: "runner_host", stage: "after_orchestration")
+    let value24 = PWDispositionClaim(state: "supported", answer: "reached", basis: ["progress", "slot", "attempt_support"])
+    let value25 = PWDispositionClaim(state: "supported", answer: "published", basis: ["slot", "attempt_support"])
+    let value26 = PWAttemptLifecycle(summary: "completed", boundary: value24, result: value25)
+    let value27 = PWRunnerFreshRead(open_rc: -1, open_errno: 1)
+    var value28 = PWRunnerAttemptResult(rc: -1, errno: 1, outcome: "read_failed", requested_path: "/private/tmp/pw-extension-control-3yubnaqs/target", path_diagnostics: value23, observed_path: nil)
+    value28.requested_kind = "file"
+    value28.requested_action = "read_fresh"
+    value28.result_source = "worker"
+    value28.lifecycle = value26
+    value28.fresh_read = value27
+    let value29 = PWRunnerComparison(observation: "permission_failure", observation_basis: "permission_errno", operation_relation: "matched", target_relation: "same_submitted", order: "query_first", limitations: [])
+    let value30 = PWRunnerStepResult(step_id: "after", phase_id: "p2", sandbox_check: value22, attempt: value28, comparison: value29)
+    let value31 = PWWorkerProgress(raw: 169869312, operation: 10, stage: 2)
+    let value32 = PWWorkerReadiness(rc: 0)
+    let value33 = PWWorkerDiagnostic(state: 0, status: "absent")
+    let value34 = PWWorkerPolicyRead(bytes_expected: 110, bytes_received: 110)
+    let value35 = PWWorkerEvidence(abi_identity: "f4b1e49962cfcde77eca533542140f3679fad25d0d92e9694e9634f4b9bf4024", progress: value31, failure_publication: 0, failure_state: "absent", readiness: value32, diagnostic: value33, policy_read: value34)
+    let value36 = PWHostWait(budget_ms: 1000, elapsed_ms: 419, stop: "received", clock_fault: false)
+    let value37 = PWHostWait(budget_ms: 120000, elapsed_ms: 17, stop: "done", excluded_ms: 9, clock_fault: false)
+    let value38 = PWHostWait(budget_ms: 1000, elapsed_ms: 0, stop: "reaped_during_grace", clock_fault: false)
+    let value39 = PWDispositionClaim(state: "supported", answer: "exit_code", value: .integer(0), basis: ["reaped", "exit_code"])
+    let value40 = PWDispositionClaim(state: "supported", answer: "done", basis: ["poll_stop_reason"])
+    let value41 = PWDispositionClaim(state: "supported", answer: "completion", basis: ["cleanup_trigger", "exit_requested"])
+    let value42 = PWDispositionClaim(state: "supported", answer: "reaped_during_grace", basis: ["grace_end", "exit_requested"])
+    let value43 = PWDispositionClaim(state: "supported", answer: "none", basis: ["termination_request", "exit_requested"])
+    let value44 = PWDispositionClaim(state: "supported", answer: "after_confirmed_reap", basis: ["collection_basis"])
+    let value45 = PWDispositionClaim(state: "supported", answer: "none", basis: ["progress"])
+    let value46 = PWDispositionRunQuestions(final_status: value39, stop_reason: value40, cleanup_trigger: value41, grace_end: value42, kill_request_and_result: value43, collection_basis: value44, progress_association: value45)
+    let value47 = PWDispositionClaim(state: "supported", answer: "reached", basis: ["progress", "slot", "attempt_support"])
+    let value48 = PWDispositionClaim(state: "supported", answer: "published", basis: ["slot", "attempt_support"])
+    let value49 = PWDispositionClaim(state: "supported", answer: "supported", basis: ["attempt_support"])
+    let value50 = PWDispositionStepQuestions(step_boundary_reached: value47, step_result_published: value48, step_requested_operation_applicability: value49)
+    let value51 = PWDispositionStep(index: 0, step_id: "before", slot: "completed", attempt_support: "supported", questions: value50)
+    let value52 = PWDispositionClaim(state: "supported", answer: "reached", basis: ["progress", "slot", "attempt_support"])
+    let value53 = PWDispositionClaim(state: "supported", answer: "published", basis: ["slot", "attempt_support"])
+    let value54 = PWDispositionClaim(state: "supported", answer: "supported", basis: ["attempt_support"])
+    let value55 = PWDispositionStepQuestions(step_boundary_reached: value52, step_result_published: value53, step_requested_operation_applicability: value54)
+    let value56 = PWDispositionStep(index: 1, step_id: "during", slot: "completed", attempt_support: "supported", questions: value55)
+    let value57 = PWDispositionClaim(state: "supported", answer: "reached", basis: ["progress", "slot", "attempt_support"])
+    let value58 = PWDispositionClaim(state: "supported", answer: "published", basis: ["slot", "attempt_support"])
+    let value59 = PWDispositionClaim(state: "supported", answer: "supported", basis: ["attempt_support"])
+    let value60 = PWDispositionStepQuestions(step_boundary_reached: value57, step_result_published: value58, step_requested_operation_applicability: value59)
+    let value61 = PWDispositionStep(index: 2, step_id: "after", slot: "completed", attempt_support: "supported", questions: value60)
+    let value62 = PWDispositionRecord(questions: value46, steps: [value51, value56, value61], issues: [])
+    var value63 = PWRunnerSubprocess(pid: 94337, exit_code: 0, partial_steps: false, ready_byte_received: true, done_observed: true, poll_stop_reason: "done", exit_requested: true, reaped: true, wait_errors: [])
+    value63.worker_evidence = value35
+    value63.cleanup_trigger = "completion"
+    value63.grace_end = "reaped_during_grace"
+    value63.collection_basis = "after_confirmed_reap"
+    value63.ready_wait = value36
+    value63.sentinel_wait = value37
+    value63.exit_grace_wait = value38
+    value63.disposition = value62
+    let value64 = PWRunnerOrdering(collection_closed_before_proceed: true, proceed_set: true, proceed_observed: true, validator_disposition: "reaped", worker_lifetime_established: true, protocol_violations: [])
+    let value65 = ValidatorVerdict(stepId: "before", operation: "file-read-data", filterType: "PATH", filterTypeId: 1, filterValue: "/private/tmp/pw-extension-control-3yubnaqs/target", rc: 1, errnoVal: 0, outcome: "deny", rawLine: "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"before\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-3yubnaqs/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}")
+    let value66 = PWHostWait(budget_ms: 1000, elapsed_ms: 0, stop: "reaped", clock_fault: false)
+    var value67 = PWRunnerValidatorSubprocess(pid: 94338, exit_code: 0)
+    value67.phase_id = "p0"
+    value67.ordinal = 1
+    value67.reaped = true
+    value67.wait_errors = []
+    value67.stdout_collection_stop = "eof"
+    value67.stdout_bytes_received = 257
+    value67.probe_bytes_written = 142
+    value67.probe_bytes_expected = 142
+    value67.records = [value65]
+    value67.expected_step_ids = ["before"]
+    value67.association_issues = []
+    value67.exit_grace_wait = value66
+    let value68 = PWRunnerPhaseResult(phase_id: "p0", ordinal: 1, action_ids: ["before"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value64, validator_subprocess: value67)
+    let value69 = PWRunnerOrdering(collection_closed_before_proceed: true, proceed_set: true, proceed_observed: true, validator_disposition: "reaped", worker_lifetime_established: true, protocol_violations: [])
+    let value70 = ValidatorVerdict(stepId: "during", operation: "file-read-data", filterType: "PATH", filterTypeId: 1, filterValue: "/private/tmp/pw-extension-control-3yubnaqs/target", rc: 1, errnoVal: 0, outcome: "deny", rawLine: "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"during\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-3yubnaqs/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}")
+    let value71 = PWHostWait(budget_ms: 1000, elapsed_ms: 0, stop: "reaped", clock_fault: false)
+    var value72 = PWRunnerValidatorSubprocess(pid: 94339, exit_code: 0)
+    value72.phase_id = "p1"
+    value72.ordinal = 2
+    value72.reaped = true
+    value72.wait_errors = []
+    value72.stdout_collection_stop = "eof"
+    value72.stdout_bytes_received = 257
+    value72.probe_bytes_written = 142
+    value72.probe_bytes_expected = 142
+    value72.records = [value70]
+    value72.expected_step_ids = ["during"]
+    value72.association_issues = []
+    value72.exit_grace_wait = value71
+    let value73 = PWRunnerPhaseResult(phase_id: "p1", ordinal: 2, action_ids: ["during"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value69, validator_subprocess: value72)
+    let value74 = PWRunnerOrdering(collection_closed_before_proceed: true, proceed_set: true, proceed_observed: true, validator_disposition: "reaped", worker_lifetime_established: true, protocol_violations: [])
+    let value75 = ValidatorVerdict(stepId: "after", operation: "file-read-data", filterType: "PATH", filterTypeId: 1, filterValue: "/private/tmp/pw-extension-control-3yubnaqs/target", rc: 1, errnoVal: 0, outcome: "deny", rawLine: "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"after\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-3yubnaqs/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}")
+    let value76 = PWHostWait(budget_ms: 1000, elapsed_ms: 0, stop: "reaped", clock_fault: false)
+    var value77 = PWRunnerValidatorSubprocess(pid: 94340, exit_code: 0)
+    value77.phase_id = "p2"
+    value77.ordinal = 3
+    value77.reaped = true
+    value77.wait_errors = []
+    value77.stdout_collection_stop = "eof"
+    value77.stdout_bytes_received = 256
+    value77.probe_bytes_written = 141
+    value77.probe_bytes_expected = 141
+    value77.records = [value75]
+    value77.expected_step_ids = ["after"]
+    value77.association_issues = []
+    value77.exit_grace_wait = value76
+    let value78 = PWRunnerPhaseResult(phase_id: "p2", ordinal: 3, action_ids: ["after"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value74, validator_subprocess: value77)
+    let value79 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "M01", rc: 0, normalized_outcome: "finished", pid: 94337, bundle_id: "com.policywitness.policy-witness.PWRunner", policy_format: "sbpl", policy_sha256: "5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a", sandboxed_after_apply: true, steps: [value10, value20, value30], runner_subprocess: value63, phases: [value68, value73, value78])
+    return value79
+}
+
 func runPhaseProtocolTests(_ tk: TestKit) {
     tk.group("ordered phases: production C/Swift and independent file effects") {
-        tk.run("shared evidence type corpus is rejected or preserved by the actual decoder and encoder") {
-            let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-                .deletingLastPathComponent().deletingLastPathComponent()
-            let fixtures = root.appendingPathComponent("tests/fixtures")
-            let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent(
-                "contract/ordinary_phase_reply.json"))) as! [String: Any]
-            let baseline = envelope
-            let cases = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent(
-                "contract/evidence_types.json"))) as! [[String: Any]]
-            func replace(_ value: Any, path: ArraySlice<String>, with replacement: Any) -> Any {
-                guard let key = path.first else { return replacement }
-                if var array = value as? [Any] {
-                    let index = Int(key)!
-                    array[index] = replace(array[index], path: path.dropFirst(), with: replacement)
-                    return array
-                }
-                var object = value as! [String: Any]
-                object[key] = replace(object[key] ?? NSNull(), path: path.dropFirst(), with: replacement)
-                return object
-            }
-            for row in cases {
-                var raw: Any = baseline
-                for patch in row["patches"] as! [[String: Any]] {
-                    raw = replace(raw, path: (patch["path"] as! String).split(separator: "/").map(String.init)[...], with: patch["value"]!)
-                }
-                var accepted = false
-                do {
-                    let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
-                    _ = try pwRunnerEncodeJSON(reply)
-                    accepted = true
-                } catch {}
-                try expectEqual(accepted, row["accepted"] as! Bool, row["name"] as! String)
-            }
-        }
         tk.run("collection states reject contradictions and retain failed driver evidence") {
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
                 .deletingLastPathComponent().deletingLastPathComponent()
             let fixtures = root.appendingPathComponent("tests/fixtures")
-            let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf:
-                fixtures.appendingPathComponent("contract/ordinary_phase_reply.json"))) as! [String: Any]
-            let raw = envelope
-            let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
+            let baseline = ordinaryPhaseFixture()
             let cases = try JSONSerialization.jsonObject(with: Data(contentsOf:
                 fixtures.appendingPathComponent("contract/phase_collection.json"))) as! [[String: Any]]
             for row in cases {
@@ -91,10 +202,10 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                     executable_path: "/controlled/validator", return_code: 2, diagnostic: "controlled spawn failure") : nil
                 reply.phases.append(phase)
                 var rejected = false
-                do { _ = try pwRunnerEncodeJSON(reply) }
-                catch EncodingError.invalidValue(_, let context) {
+                do { _ = try admittedReplyData(reply) }
+                catch let failure as PWRunnerReportingValidationError {
                     rejected = true
-                    try expectTrue(context.debugDescription.contains("phase collection status contradicts validator evidence"))
+                    try expectTrue(failure.message.contains("phase collection status contradicts validator evidence"))
                 }
                 try expectEqual(rejected, !(row["accepted"] as! Bool), row["name"] as! String)
             }
@@ -102,14 +213,11 @@ func runPhaseProtocolTests(_ tk: TestKit) {
         tk.run("a validator collection must belong to the phase that holds it") {
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
                 .deletingLastPathComponent().deletingLastPathComponent()
-            let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent(
-                "tests/fixtures/contract/ordinary_phase_reply.json"))) as! [String: Any]
-            let raw = envelope
-            let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
+            let baseline = ordinaryPhaseFixture()
             try expectEqual(baseline.phases.count, 3)
             // Every phase queries the same path under a different action ID.
             try expectEqual(Set(baseline.steps.map { $0.sandbox_check.filter_value }).count, 1)
-            _ = try pwRunnerEncodeJSON(baseline)
+            _ = try admittedReplyData(baseline)
             let transplants: [(String, (inout PWRunnerRunResult) -> Void, String)] = [
                 ("whole block", { r in let a = r.phases[0].validator_subprocess; r.phases[0].validator_subprocess = r.phases[1].validator_subprocess; r.phases[1].validator_subprocess = a }, "names another phase"),
                 ("identity only", { r in let id = r.phases[0].phase_id; r.phases[1].validator_subprocess?.phase_id = id }, "names another phase"),
@@ -123,15 +231,15 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             for (name, change, reason) in transplants {
                 var reply = baseline; change(&reply)
                 var rejected: String? = nil
-                do { _ = try pwRunnerEncodeJSON(reply) }
-                catch EncodingError.invalidValue(_, let context) { rejected = context.debugDescription }
+                do { _ = try admittedReplyData(reply) }
+                catch let failure as PWRunnerReportingValidationError { rejected = failure.message }
                 try expectTrue(rejected?.contains(reason) == true, "\(name): expected rejection for \(reason), got \(rejected ?? "acceptance")")
             }
             // Sequential children may reuse a numeric PID; ownership does not read PIDs.
             var reused = baseline
             let firstPid = reused.phases[0].validator_subprocess!.pid
             reused.phases[1].validator_subprocess?.pid = firstPid
-            _ = try pwRunnerEncodeJSON(reused)
+            _ = try admittedReplyData(reused)
         }
         tk.run("each of eight held arrivals precedes its own unlink and follows earlier effects") {
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent("pw-phases-" + UUID().uuidString)
@@ -171,7 +279,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             try expectTrue(reply.phases.allSatisfy { $0.completion_observed && $0.ordering?.chainEstablished == true })
             try expectEqual(reply.phases[1].collection_status, "not_needed")
             try expectNil(reply.phases[1].validator_subprocess)
-            _ = try pwRunnerEncodeJSON(reply)
+            _ = try admittedReplyData(reply)
         }
         tk.run("resolvable phases use separate actual validators and retain phase association") {
             let phases = (0..<3).map { PWRunnerPhase(phase_id: "p\($0)", actions: [.probe(phaseProbe("s\($0)", "/etc/hosts"))]) }
@@ -187,7 +295,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             for (index, phase) in reply.phases.enumerated() {
                 try expectEqual(phase.validator_subprocess?.records?.map { $0.stepId }, ["s\(index)"])
             }
-            _ = try pwRunnerEncodeJSON(reply)
+            _ = try admittedReplyData(reply)
         }
         for ordinal: UInt32 in [1, 3] {
             tk.run("stale or future second release ordinal \(ordinal) cannot execute later actions") {
@@ -316,7 +424,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             try expectNil(reply.phases[1].validator_subprocess)
             try expectTrue(reply.steps.allSatisfy { $0.attempt.result_source == "worker" })
             try expectEqual(reply.steps[1].comparison?.order, "unestablished")
-            _ = try pwRunnerEncodeJSON(reply)
+            _ = try admittedReplyData(reply)
         }
         tk.run("M08: timeout, failed cleanup and late output cannot enter the next phase") {
             guard let fixture = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"],
@@ -379,14 +487,31 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             let matrix = try JSONSerialization.jsonObject(with: Data(contentsOf: repositoryRoot()
                 .appendingPathComponent("tests/fixtures/comparison/matrix.json"))) as! [String: Any]
             let row = (matrix["rows"] as! [[String: Any]]).first { $0["id"] as? String == "M08" }!
-            let actual = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply.steps[1].comparison!)) as! NSDictionary
-            try expectTrue(actual.isEqual(to: row["comparison"] as! [String: Any]))
-            let raw = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply.steps[1]))
+            let actual = reply.steps[1].comparison!
+            let expectedComparison = row["comparison"] as! [String: Any]
+            try expectEqual(actual.observation, expectedComparison["observation"] as? String)
+            try expectEqual(actual.observation_basis, expectedComparison["observation_basis"] as? String)
+            try expectEqual(actual.operation_relation, expectedComparison["operation_relation"] as? String)
+            try expectEqual(actual.target_relation, expectedComparison["target_relation"] as? String)
+            try expectEqual(actual.order, expectedComparison["order"] as? String)
+            try expectEqual(actual.limitations, expectedComparison["limitations"] as? [String])
+            let observed = reply.steps[1]
+            let raw: [String: Any] = [
+                "sandbox_check.outcome": observed.sandbox_check.outcome,
+                "sandbox_check.result_source": observed.sandbox_check.result_source as Any? ?? NSNull(),
+                "attempt.outcome": observed.attempt.outcome,
+                "attempt.rc": observed.attempt.rc,
+                "attempt.requested_action": observed.attempt.requested_action as Any? ?? NSNull(),
+                "attempt.result_source": observed.attempt.result_source as Any? ?? NSNull(),
+                "attempt.fresh_read.open_rc": observed.attempt.fresh_read?.open_rc as Any? ?? NSNull(),
+                "attempt.fresh_read.stat_rc": observed.attempt.fresh_read?.stat_rc as Any? ?? NSNull(),
+                "attempt.fresh_read.read_rc": observed.attempt.fresh_read?.read_rc as Any? ?? NSNull(),
+                "attempt.fresh_read.content_hex": observed.attempt.fresh_read?.content_hex as Any? ?? NSNull(),
+                "attempt.fresh_read.close_rc": observed.attempt.fresh_read?.close_rc as Any? ?? NSNull(),
+            ]
             func mismatches(_ expected: [String: Any]) -> [String] {
                 expected.keys.sorted().filter { path in
-                    let observed = path.split(separator: ".").reduce(raw as Any?) { value, key in
-                        (value as? [String: Any])?[String(key)]
-                    } ?? NSNull()
+                    let observed = raw[path] ?? NSNull()
                     if expected[path] as? String == ">0" {
                         guard let number = observed as? NSNumber,
                               CFGetTypeID(number) != CFBooleanGetTypeID() else { return true }
@@ -402,7 +527,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             wrong["attempt.fresh_read.read_rc"] = 20
             try expectEqual(mismatches(wrong), ["attempt.fresh_read.read_rc"])
             let output = URL(fileURLWithPath: artifacts)
-            try pwRunnerEncodeJSON(reply).write(to: output.appendingPathComponent("combined-phases.json"))
+            try admittedReplyData(reply).write(to: output.appendingPathComponent("combined-phases.pwp"))
             try Data(receipt.utf8).write(to: output.appendingPathComponent("combined-phases-late-write.txt"))
             // This cleanup belongs to the test, after the host's recorded
             // unconfirmed disposition. It cannot upgrade the retained reply.

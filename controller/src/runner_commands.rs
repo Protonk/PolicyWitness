@@ -557,30 +557,7 @@ fn project_verify_typed_reply(runner_result: Option<&PWRunnerRunResult>) -> (Opt
                 (None, "malformed_runner_response".into())
             }
         },
-        None => (None, "runner_output_not_json".into()),
-    }
-}
-
-#[cfg(test)]
-fn project_verify_reply(runner_result: Option<&Value>) -> (Option<i64>, String) {
-    match runner_result.map(crate::run_flow::reply_version) {
-        None => (None, "runner_output_not_json".to_string()),
-        Some(crate::run_flow::ReplyVersion::Supported) => (
-            runner_result
-                .and_then(|v| v.get("pid"))
-                .and_then(|v| v.as_i64()),
-            runner_result
-                .and_then(|v| v.get("normalized_outcome"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("runner_output_not_json")
-                .to_string(),
-        ),
-        Some(crate::run_flow::ReplyVersion::Unsupported(_)) => {
-            (None, "unsupported_runner_response".to_string())
-        }
-        Some(crate::run_flow::ReplyVersion::Malformed(_)) => {
-            (None, "malformed_runner_response".to_string())
-        }
+        None => (None, "runner_response_unavailable".into()),
     }
 }
 
@@ -1003,35 +980,22 @@ mod verify_tests {
     #[test]
     fn verification_projects_only_current_replies() {
         let current = i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION);
+        let mut reply: PWRunnerRunResult =
+            serde_json::from_value(crate::reply_fixtures::worker("finished", None)).unwrap();
+        reply.pid = 77;
         assert_eq!(
-            project_verify_reply(None),
-            (None, "runner_output_not_json".to_string())
+            project_verify_typed_reply(None),
+            (None, "runner_response_unavailable".into())
         );
         assert_eq!(
-            project_verify_reply(Some(
-                &json!({"schema_version": current, "pid": 77, "normalized_outcome": "finished"})
-            )),
-            (Some(77), "finished".to_string())
-        );
-        assert_eq!(
-            project_verify_reply(Some(&json!({"schema_version": current, "pid": 77}))),
-            (Some(77), "runner_output_not_json".to_string())
+            project_verify_typed_reply(Some(&reply)),
+            (Some(77), "finished".into())
         );
         for other in [current - 1, current + 1] {
+            reply.schema_version = other;
             assert_eq!(
-                project_verify_reply(Some(
-                    &json!({"schema_version": other, "pid": 77, "normalized_outcome": "finished"})
-                )),
-                (None, "unsupported_runner_response".to_string())
-            );
-        }
-        for malformed in [
-            json!({"pid": 77, "normalized_outcome": "finished"}),
-            json!({"schema_version": current.to_string(), "pid": 77, "normalized_outcome": "finished"}),
-        ] {
-            assert_eq!(
-                project_verify_reply(Some(&malformed)),
-                (None, "malformed_runner_response".to_string())
+                project_verify_typed_reply(Some(&reply)),
+                (None, "unsupported_runner_response".into())
             );
         }
     }

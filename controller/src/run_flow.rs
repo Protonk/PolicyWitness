@@ -11,23 +11,19 @@
 
 use serde::Serialize;
 use serde_json::Value;
-#[cfg(test)]
-use serde_json::json;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use crate::app_layout::app_root_from_current_exe;
 use crate::augments::{AugmentResolution, resolve_augments};
 use crate::cli;
-#[cfg(test)]
-use crate::disposition::{RunnerExecutionDiagnostics, execution_diagnostics};
 use crate::dossier::{
     AppProvenance, Augmentation, Binaries, HostFacts, Imports, PolicyDossier, Specimen,
 };
 use crate::evidence::{self, EvidenceManifest};
 use crate::json_contract;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
-use crate::porcelain_admission::{self, TypedRunnerExecutionDiagnostics};
+use crate::porcelain_admission::{self, RunnerExecutionDiagnostics};
 use crate::porcelain_records::{PWRunnerRequestFailure, PWRunnerRunResult};
 use crate::request_patch::{RequestError, parse_request, validate_request_version};
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
@@ -43,7 +39,7 @@ const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 /// null. Acquisition/submission observations belong to the client capture. The optional
 /// request_failure is included only when supplied.
 #[derive(Serialize)]
-struct ExecutionData<R: ReplyRecord = PWRunnerRunResult> {
+struct ExecutionData {
     pub specimen: Specimen,
     pub policy_check: Option<PolicyCheckCapture>,
     /// The actor form's fallback compilations, one per apply actor in request
@@ -52,7 +48,7 @@ struct ExecutionData<R: ReplyRecord = PWRunnerRunResult> {
     pub actor_policy_checks: Option<Vec<ActorPolicyCheck>>,
     pub timeout_ms: Option<u64>,
     pub runner_client: Option<RunnerClientRun>,
-    pub runner_result: Option<R>,
+    pub runner_result: Option<PWRunnerRunResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_failure: Option<RequestFailureProjection>,
 }
@@ -65,16 +61,16 @@ pub(crate) struct ActorPolicyCheck {
 }
 
 #[derive(Serialize)]
-struct RunData<R: ReplyRecord = PWRunnerRunResult> {
+struct RunData {
     #[serde(flatten)]
-    execution: ExecutionData<R>,
-    runner_sandbox_diagnostics: Option<R::Diagnostics>,
+    execution: ExecutionData,
+    runner_sandbox_diagnostics: Option<RunnerExecutionDiagnostics>,
 }
 
 // Execution result and diagnostics are derived only from the admitted reply.
-struct CompletedExecution<R: ReplyRecord = PWRunnerRunResult> {
-    data: ExecutionData<R>,
-    diagnostics: R::Diagnostics,
+struct CompletedExecution {
+    data: ExecutionData,
+    diagnostics: RunnerExecutionDiagnostics,
     result: json_contract::JsonResult,
     exit_code: i32,
 }
@@ -86,139 +82,30 @@ pub enum ReplyVersion {
     Malformed(String),
 }
 
-/// Check a reply's `schema_version` before interpreting any of its records.
-/// A missing or noninteger version is malformed; another integer is
-/// unsupported. Nothing reads a reply under a previous version's rules.
-#[cfg(test)]
-fn legacy_reply_version(reply: &Value) -> ReplyVersion {
-    match reply.get("schema_version") {
-        None => ReplyVersion::Malformed("runner reply carries no schema_version".to_string()),
-        Some(Value::Number(n)) if n.is_i64() || n.is_u64() => {
-            if n.as_u64() == Some(u64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION)) {
-                match compiled_profile_problem(reply) {
-                    Some(problem) => ReplyVersion::Malformed(problem.to_owned()),
-                    None => ReplyVersion::Supported,
-                }
-            } else {
-                ReplyVersion::Unsupported(n.clone())
-            }
-        }
-        Some(other) => ReplyVersion::Malformed(format!(
-            "runner reply schema_version is not an integer: {other}"
-        )),
-    }
-}
-
-/// The optional compiler receipt has its own version and context. Check it
-/// only after the outer version is admitted, without inferring application.
-#[cfg(test)]
-fn compiled_profile_problem(reply: &Value) -> Option<&'static str> {
-    if reply.get("applied_profile").is_some() {
-        return Some("retired applied_profile field in current runner reply");
-    }
-    let capture = match reply.get("compiled_profile") {
-        None | Some(Value::Null) => return None,
-        Some(value) => value,
-    };
-    if !capture.is_object() || capture["schema_version"].as_u64() != Some(2) {
-        return Some("unsupported or malformed compiled_profile schema_version");
-    }
-    match capture["status"].as_str() {
-        Some("captured") => {
-            if capture["producer"].as_str() != Some("worker")
-                || capture["capture_stage"].as_str() != Some("before_apply")
-            {
-                return Some("compiled_profile requires worker/before_apply context");
-            }
-        }
-        Some("unavailable") => {
-            if !capture["producer"].is_null() || !capture["capture_stage"].is_null() {
-                return Some("unavailable compiled_profile cannot claim capture context");
-            }
-        }
-        _ => return Some("invalid compiled_profile status"),
-    }
-    None
-}
-
-/// The runtime representation is generated typed evidence. The Value implementation
-/// below exists only to retain historical malformed-fixture comparison controls.
-pub(crate) trait ReplyRecord: Serialize {
-    type Diagnostics: Serialize;
-    fn version(&self) -> ReplyVersion;
-    fn outcome(&self) -> &str;
-    fn error(&self) -> Option<&str>;
-    fn request_failure(&self) -> Option<RequestFailureProjection>;
-    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics;
-}
 #[derive(Serialize)]
 #[serde(untagged)]
 pub(crate) enum RequestFailureProjection {
     Controller(crate::request_patch::RequestFailure),
     Runner(PWRunnerRequestFailure),
-    #[cfg(test)]
-    Comparison(Value),
 }
-impl ReplyRecord for PWRunnerRunResult {
-    type Diagnostics = TypedRunnerExecutionDiagnostics;
-    fn version(&self) -> ReplyVersion {
-        if self.schema_version != i64::from(json_contract::RESPONSE_SCHEMA_VERSION) {
-            return ReplyVersion::Unsupported(self.schema_version.into());
-        }
-        match porcelain_admission::admission_problem(self) {
-            Some(problem) => ReplyVersion::Malformed(problem),
-            None => ReplyVersion::Supported,
-        }
+
+pub(crate) fn reply_version(reply: &PWRunnerRunResult) -> ReplyVersion {
+    if reply.schema_version != i64::from(json_contract::RESPONSE_SCHEMA_VERSION) {
+        return ReplyVersion::Unsupported(reply.schema_version.into());
     }
-    fn outcome(&self) -> &str {
-        &self.normalized_outcome
+    match porcelain_admission::admission_problem(reply) {
+        Some(problem) => ReplyVersion::Malformed(problem),
+        None => ReplyVersion::Supported,
     }
-    fn error(&self) -> Option<&str> {
-        self.error.as_deref()
-    }
-    fn request_failure(&self) -> Option<RequestFailureProjection> {
-        self.request_failure
-            .clone()
-            .map(RequestFailureProjection::Runner)
-    }
-    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics {
-        porcelain_admission::execution_diagnostics(reply)
-    }
-}
-#[cfg(test)]
-impl ReplyRecord for Value {
-    type Diagnostics = RunnerExecutionDiagnostics;
-    fn version(&self) -> ReplyVersion {
-        legacy_reply_version(self)
-    }
-    fn outcome(&self) -> &str {
-        self.get("normalized_outcome")
-            .and_then(Value::as_str)
-            .unwrap_or("runner_output_not_json")
-    }
-    fn error(&self) -> Option<&str> {
-        self.get("error").and_then(Value::as_str)
-    }
-    fn request_failure(&self) -> Option<RequestFailureProjection> {
-        self.get("request_failure")
-            .cloned()
-            .map(RequestFailureProjection::Comparison)
-    }
-    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics {
-        execution_diagnostics(reply)
-    }
-}
-pub(crate) fn reply_version<R: ReplyRecord>(reply: &R) -> ReplyVersion {
-    reply.version()
 }
 
 /// The dossier and any execution records available before reply admission.
-fn execution_only<R: ReplyRecord>(
+fn execution_only(
     specimen: Specimen,
     timeout_ms: Option<u64>,
     runner_client: Option<RunnerClientRun>,
-    runner_result: Option<R>,
-) -> RunData<R> {
+    runner_result: Option<PWRunnerRunResult>,
+) -> RunData {
     RunData {
         execution: ExecutionData {
             specimen,
@@ -280,7 +167,7 @@ fn bad_request(
     timeout_ms: Option<u64>,
     error: RequestError,
 ) -> Result<RunOutput, String> {
-    let mut data = execution_only::<PWRunnerRunResult>(specimen, timeout_ms, None, None);
+    let mut data = execution_only(specimen, timeout_ms, None, None);
     data.execution.request_failure = Some(RequestFailureProjection::Controller(error.failure));
     envelope(
         json_contract::JsonResult::new(false, 1, Some("bad_request"), Some(error.message)),
@@ -306,7 +193,7 @@ pub fn print_escaped_tool_error(error: String) -> Result<(), String> {
 /// and how the client and fallback compiler are invoked. Production binds the
 /// real ones; a test binds counting or capturing closures around them and reads
 /// the rendered envelope.
-struct RunDependencies<'a, R: ReplyRecord = PWRunnerRunResult> {
+struct RunDependencies<'a> {
     pub app_root: &'a dyn Fn() -> Result<PathBuf, String>,
     pub load_manifest: &'a dyn Fn(&Path) -> Result<EvidenceManifest, String>,
     /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
@@ -317,7 +204,7 @@ struct RunDependencies<'a, R: ReplyRecord = PWRunnerRunResult> {
         &str,
         u64,
         &RunnerConnectionKind,
-    ) -> Result<(RunnerClientRun, Option<R>), String>,
+    ) -> Result<(RunnerClientRun, Option<PWRunnerRunResult>), String>,
 }
 
 impl RunDependencies<'static> {
@@ -438,9 +325,9 @@ pub(crate) enum ReplyAdmission {
     Admitted,
 }
 
-pub(crate) fn admit_reply<R: ReplyRecord>(
+pub(crate) fn admit_reply(
     client: &RunnerClientRun,
-    reply: Option<&R>,
+    reply: Option<&PWRunnerRunResult>,
 ) -> ReplyAdmission {
     if let Some(error) = client
         .request_delivery
@@ -468,10 +355,10 @@ pub(crate) fn admit_reply<R: ReplyRecord>(
     }
 }
 
-fn runner_outcome<R: ReplyRecord>(reply: Option<&R>) -> &str {
+fn runner_outcome(reply: Option<&PWRunnerRunResult>) -> &str {
     reply
-        .map(ReplyRecord::outcome)
-        .unwrap_or("runner_output_not_json")
+        .map(|reply| reply.normalized_outcome.as_str())
+        .unwrap_or("runner_response_unavailable")
 }
 
 /// The independent fallback compilation, requested only for an admitted
@@ -644,7 +531,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 /// One run through production orchestration: argument admission, one manifest
 /// load, runner selection, the dossier, the held request's delivery and the
 /// reply's admission. Every exit renders the uniform `kind: "run"` envelope.
-fn run<R: ReplyRecord>(args: &[OsString], deps: &RunDependencies<R>) -> Result<RunOutput, String> {
+fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     let host = HostFacts::collect();
     let parsed = match parse_arguments(args) {
         Arguments::Help => return Ok(RunOutput::Help),
@@ -854,14 +741,16 @@ fn run<R: ReplyRecord>(args: &[OsString], deps: &RunDependencies<R>) -> Result<R
     )
 }
 
-fn complete_execution<R: ReplyRecord>(mut data: ExecutionData<R>) -> CompletedExecution<R> {
-    let diagnostics = R::diagnostics(data.runner_result.as_ref());
+fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
+    let diagnostics = porcelain_admission::execution_diagnostics(data.runner_result.as_ref());
     let runner_outcome = runner_outcome(data.runner_result.as_ref()).to_string();
     if runner_outcome == "bad_request" {
-        data.request_failure = data
-            .runner_result
-            .as_ref()
-            .and_then(ReplyRecord::request_failure);
+        data.request_failure = data.runner_result.as_ref().and_then(|reply| {
+            reply
+                .request_failure
+                .clone()
+                .map(RequestFailureProjection::Runner)
+        });
     }
     let ok = runner_outcome == "finished";
     let exit_code = if ok { 0 } else { 1 };
@@ -869,7 +758,11 @@ fn complete_execution<R: ReplyRecord>(mut data: ExecutionData<R>) -> CompletedEx
     let client_output = data.runner_client.as_ref().map(|c| &c.output);
     let error = if ok {
         None
-    } else if let Some(v) = data.runner_result.as_ref().and_then(ReplyRecord::error) {
+    } else if let Some(v) = data
+        .runner_result
+        .as_ref()
+        .and_then(|reply| reply.error.as_deref())
+    {
         Some(v.to_string())
     } else if let Some(v) = client_output.and_then(|o| o.stdout_capture_error.as_ref()) {
         Some(v.clone())
@@ -890,9 +783,7 @@ fn complete_execution<R: ReplyRecord>(mut data: ExecutionData<R>) -> CompletedEx
     }
 }
 
-fn execution_envelope<R: ReplyRecord>(
-    execution: CompletedExecution<R>,
-) -> (json_contract::JsonResult, RunData<R>, i32) {
+fn execution_envelope(execution: CompletedExecution) -> (json_contract::JsonResult, RunData, i32) {
     let data = RunData {
         execution: execution.data,
         runner_sandbox_diagnostics: Some(execution.diagnostics),
@@ -903,11 +794,25 @@ fn execution_envelope<R: ReplyRecord>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::disposition::integrity_issue;
+    use crate::porcelain_admission::IntegrityIssue;
     use crate::reply_fixtures::*;
     use crate::utils::{JsonOutputCapture, RequestDelivery};
     #[cfg(test)]
     use serde_json::json;
+
+    fn fixture_reply(value: Value) -> PWRunnerRunResult {
+        serde_json::from_value(value).expect("authored fixture must have the typed record shape")
+    }
+    fn integrity_issue(kind: &'static str, detail: String) -> IntegrityIssue {
+        IntegrityIssue {
+            kind: kind.into(),
+            detail,
+            rule: None,
+            question: None,
+            step_index: None,
+            observations: None,
+        }
+    }
 
     #[test]
     fn typed_completion_preserves_native_failure_beside_finished_summary() {
@@ -920,7 +825,7 @@ mod tests {
         reply.steps[0].attempt.rc = -1;
         reply.steps[0].attempt.errno = Some(1);
         reply.steps[0].attempt.outcome = "open_failed".into();
-        let data = ExecutionData::<PWRunnerRunResult> {
+        let data = ExecutionData {
             specimen: specimen(),
             policy_check: None,
             actor_policy_checks: None,
@@ -973,14 +878,26 @@ mod tests {
         crate::runner_client::test_client_run(runner)
     }
 
-    fn execution_data(runner: Option<Value>) -> ExecutionData<Value> {
+    fn execution_data(runner: Option<Value>) -> ExecutionData {
         ExecutionData {
             specimen: specimen(),
             policy_check: None,
             actor_policy_checks: None,
             timeout_ms: Some(DEFAULT_TIMEOUT_MS),
             runner_client: Some(client_run(runner.as_ref())),
-            runner_result: runner,
+            runner_result: runner.map(fixture_reply),
+            request_failure: None,
+        }
+    }
+
+    fn driver_execution(reply: PWRunnerRunResult, raw: &[u8]) -> ExecutionData {
+        ExecutionData {
+            specimen: specimen(),
+            policy_check: None,
+            actor_policy_checks: None,
+            timeout_ms: Some(DEFAULT_TIMEOUT_MS),
+            runner_client: Some(crate::runner_client::test_client_run_bytes(Some(raw))),
+            runner_result: Some(reply),
             request_failure: None,
         }
     }
@@ -1027,7 +944,11 @@ mod tests {
             assert_eq!(code, if outcome == "finished" { 0 } else { 1 });
             assert_eq!(wire["result"]["ok"], outcome == "finished");
             assert_eq!(wire["result"]["normalized_outcome"], outcome);
-            assert_eq!(wire["data"]["runner_result"], reply);
+            assert_eq!(
+                serde_json::from_value::<PWRunnerRunResult>(wire["data"]["runner_result"].clone())
+                    .unwrap(),
+                fixture_reply(reply.clone())
+            );
             assert_eq!(reply["steps"][0]["attempt"]["outcome"], "ok");
             assert_eq!(reply["steps"][1]["attempt"]["outcome"], "open_failed");
             assert_eq!(reply["steps"][2]["attempt"]["errno"], 2);
@@ -1051,14 +972,13 @@ mod tests {
             let success = reply_with("finished", None, steps.clone());
             let failed = reply_with("runner_failed", Some(9), steps);
             let mut no_pid = success.clone();
-            no_pid["runner_subprocess"]
-                .as_object_mut()
-                .unwrap()
-                .remove("pid");
+            // A missing worker record is representable; a subprocess without
+            // its required native PID is rejected by structural admission.
+            no_pid["runner_subprocess"] = Value::Null;
             for (runner, code, disposition, cause) in [
                 (Some(success.clone()), 0, "clean_exit", Value::Null),
                 (Some(failed), 1, "signaled", json!("host_sentinel_deadline")),
-                (Some(no_pid), 0, "no_worker", Value::Null),
+                (Some(no_pid), 0, "withheld", json!("unknown")),
                 (
                     Some(reporting_failed(success)),
                     1,
@@ -1076,12 +996,23 @@ mod tests {
                 .unwrap();
                 assert_eq!(exit_code, code);
                 assert_eq!(wire["result"]["exit_code"], code);
-                assert_eq!(wire["data"]["runner_result"], json!(runner));
+                assert_eq!(
+                    serde_json::from_value::<Option<PWRunnerRunResult>>(
+                        wire["data"]["runner_result"].clone()
+                    )
+                    .unwrap(),
+                    runner.clone().map(fixture_reply)
+                );
                 assert_eq!(wire["data"]["runner_client"], client);
                 assert_eq!(keys(&wire["data"]), DATA_KEYS);
                 let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
                 assert_eq!(keys(diagnostics), DIAGNOSTIC_KEYS);
-                assert_eq!(diagnostics["process_disposition"], disposition);
+                assert_eq!(
+                    diagnostics["process_disposition"],
+                    disposition,
+                    "phased={phased}, code={code}, reply={:?}, diagnostics={diagnostics}",
+                    runner.as_ref().map(|r| &r["normalized_outcome"])
+                );
                 assert_eq!(diagnostics["termination_cause"], cause);
             }
         }
@@ -1093,9 +1024,9 @@ mod tests {
         baseline["phases"][0]["collection_status"] = json!("not_reached");
         baseline["phases"][0]["validator_subprocess"] = Value::Null;
         baseline["phases"][0]["ordering"]["validator_disposition"] = json!("not_invoked");
-        for path in ["/phases", "/phases/0/ordering/validator_disposition"] {
+        for path in ["/phases/0/ordering/validator_disposition"] {
             let mut malformed = baseline.clone();
-            *malformed.pointer_mut(path).unwrap() = json!(7);
+            *malformed.pointer_mut(path).unwrap() = json!("future_disposition");
             for degraded in [false, true] {
                 let reply = if degraded {
                     reporting_failed(malformed.clone())
@@ -1108,7 +1039,13 @@ mod tests {
                     &json_contract::render_envelope("run", result, &data).unwrap(),
                 )
                 .unwrap();
-                assert_eq!(wire["data"]["runner_result"], reply);
+                assert_eq!(
+                    serde_json::from_value::<PWRunnerRunResult>(
+                        wire["data"]["runner_result"].clone()
+                    )
+                    .unwrap(),
+                    fixture_reply(reply.clone())
+                );
                 assert_eq!(code, if degraded { 1 } else { 0 });
                 let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
                 if degraded {
@@ -1144,16 +1081,15 @@ mod tests {
         let directory = std::env::var("PW_POLICY_TRANSFER_REPLIES")
             .expect("runner_unit receipt directory required");
         for (name, filename) in [
-            ("timeout", "policy-transfer-timeout.json"),
-            ("unconfirmed", "policy-transfer-unconfirmed.json"),
-            ("refused", "policy-transfer-refused.json"),
-            ("reporting", "policy-transfer-reporting.json"),
-            ("combined", "combined-phases.json"),
+            ("timeout", "policy-transfer-timeout.pwp"),
+            ("unconfirmed", "policy-transfer-unconfirmed.pwp"),
+            ("refused", "policy-transfer-refused.pwp"),
+            ("reporting", "policy-transfer-reporting.pwp"),
+            ("combined", "combined-phases.pwp"),
         ] {
-            let reply: Value = serde_json::from_slice(
-                &std::fs::read(std::path::Path::new(&directory).join(filename)).unwrap(),
-            )
-            .unwrap();
+            let raw = std::fs::read(std::path::Path::new(&directory).join(filename)).unwrap();
+            let typed: PWRunnerRunResult = crate::porcelain::decode(&raw).unwrap();
+            let reply = serde_json::to_value(&typed).unwrap();
             assert_eq!(
                 reply["normalized_outcome"],
                 match name {
@@ -1166,13 +1102,17 @@ mod tests {
                 }
             );
             let (result, data, code) =
-                execution_envelope(complete_execution(execution_data(Some(reply.clone()))));
+                execution_envelope(complete_execution(driver_execution(typed, &raw)));
             assert_eq!(code, 1);
             let wire: Value = serde_json::from_str(
                 &json_contract::render_envelope("run", result, &data).unwrap(),
             )
             .unwrap();
-            assert_eq!(wire["data"]["runner_result"], reply);
+            assert_eq!(
+                serde_json::from_value::<PWRunnerRunResult>(wire["data"]["runner_result"].clone())
+                    .unwrap(),
+                fixture_reply(reply.clone())
+            );
             let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
             assert_eq!(diagnostics["disposition_integrity"], "valid");
             if name == "combined" {
@@ -1316,13 +1256,12 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
             "late-setup",
             "failed-setup",
         ] {
-            let reply: Value = serde_json::from_slice(
-                &std::fs::read(
-                    std::path::Path::new(&directory).join(format!("actor-review-{name}.json")),
-                )
-                .unwrap(),
+            let raw = std::fs::read(
+                std::path::Path::new(&directory).join(format!("actor-review-{name}.pwp")),
             )
             .unwrap();
+            let typed: PWRunnerRunResult = crate::porcelain::decode(&raw).unwrap();
+            let reply = serde_json::to_value(&typed).unwrap();
             controls.push(json!({"name": name, "reply": reply, "accepted": true}));
             let changes = match name {
                 "complete" => vec![
@@ -1385,7 +1324,9 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
             }
         }
         for control in &controls {
-            let diagnostics = crate::disposition::execution_diagnostics(Some(&control["reply"]));
+            let diagnostics = porcelain_admission::execution_diagnostics(Some(&fixture_reply(
+                control["reply"].clone(),
+            )));
             assert_eq!(
                 diagnostics.disposition_integrity != Some("invalid"),
                 control["accepted"] == true,
@@ -1492,17 +1433,23 @@ for control in json.load(sys.stdin):
             replies.push((name.to_string(), outcome));
         }
         for (name, outcome) in replies {
-            let path = std::path::Path::new(&directory).join(format!("worker-clock-{name}.json"));
-            let reply: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            let path = std::path::Path::new(&directory).join(format!("worker-clock-{name}.pwp"));
+            let raw = std::fs::read(&path).unwrap();
+            let typed: PWRunnerRunResult = crate::porcelain::decode(&raw).unwrap();
+            let reply = serde_json::to_value(&typed).unwrap();
             assert_eq!(reply["normalized_outcome"], outcome, "{name}");
             let (result, data, code) =
-                execution_envelope(complete_execution(execution_data(Some(reply.clone()))));
+                execution_envelope(complete_execution(driver_execution(typed, &raw)));
             assert_eq!(code, if outcome == "finished" { 0 } else { 1 }, "{name}");
             let wire: Value = serde_json::from_str(
                 &json_contract::render_envelope("run", result, &data).unwrap(),
             )
             .unwrap();
-            assert_eq!(wire["data"]["runner_result"], reply);
+            assert_eq!(
+                serde_json::from_value::<PWRunnerRunResult>(wire["data"]["runner_result"].clone())
+                    .unwrap(),
+                fixture_reply(reply.clone())
+            );
             let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
             assert_eq!(diagnostics["disposition_integrity"], "valid", "{name}");
             let sub = &reply["runner_subprocess"];
@@ -1659,76 +1606,47 @@ else:
         ))
         .unwrap();
         for case in cases.as_array().unwrap() {
-            let reply = json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
-                "compiled_profile": case["receipt"]});
+            let mut input = worker("finished", None);
+            input["compiled_profile"] = case["receipt"].clone();
+            let typed = serde_json::from_value::<PWRunnerRunResult>(input);
+            let accepted = typed
+                .as_ref()
+                .is_ok_and(|r| matches!(reply_version(r), ReplyVersion::Supported));
             assert_eq!(
-                matches!(reply_version(&reply), ReplyVersion::Supported),
+                accepted,
                 case["valid"].as_bool().unwrap(),
                 "{}",
                 case["name"]
             );
-            let mut old = reply.clone();
-            old["schema_version"] = json!(json_contract::RESPONSE_SCHEMA_VERSION - 1);
-            assert!(matches!(reply_version(&old), ReplyVersion::Unsupported(_)));
-        }
-        let retired = json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
-            "applied_profile": null});
-        assert!(matches!(
-            reply_version(&retired),
-            ReplyVersion::Malformed(_)
-        ));
-        for receipt in [
-            Value::Null,
-            json!({"schema_version":2,"status":"unavailable","worker_pid":4}),
-        ] {
-            assert!(matches!(
-                reply_version(
-                    &json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
-                "compiled_profile": receipt})
-                ),
-                ReplyVersion::Supported
-            ));
+            if let Ok(mut old) = typed {
+                old.schema_version -= 1;
+                assert!(matches!(reply_version(&old), ReplyVersion::Unsupported(_)));
+            }
         }
     }
 
     #[test]
     fn reply_versions_are_gated_exactly() {
         let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
-        assert!(matches!(
-            reply_version(&json!({"schema_version": current})),
-            ReplyVersion::Supported
-        ));
-        for other in [current - 1, current + 1, 1, 0, -1] {
-            match reply_version(&json!({"schema_version": other})) {
+        let mut reply = fixture_reply(worker("finished", None));
+        assert!(matches!(reply_version(&reply), ReplyVersion::Supported));
+        for other in [current - 1, current + 1, 1, 0, -1, i64::MAX] {
+            reply.schema_version = other;
+            match reply_version(&reply) {
                 ReplyVersion::Unsupported(version) => assert_eq!(version.as_i64(), Some(other)),
-                _ => panic!("{other} was not refused as unsupported"),
+                _ => panic!("{other} admitted"),
             }
         }
-        match reply_version(&json!({"schema_version": u64::MAX})) {
-            ReplyVersion::Unsupported(version) => assert_eq!(version.as_u64(), Some(u64::MAX)),
-            _ => panic!("a large integer version is unsupported, not malformed"),
-        }
-        for malformed in [
-            json!({}),
-            json!({"schema_version": null}),
-            json!({"schema_version": "13"}),
-            json!({"schema_version": 13.0}),
-            json!({"schema_version": [13]}),
-        ] {
-            match reply_version(&malformed) {
-                ReplyVersion::Malformed(error) => {
-                    assert!(error.contains("schema_version"), "{malformed}: {error}")
-                }
-                _ => panic!("{malformed} was not refused as malformed"),
-            }
-        }
+        // Missing, wrong-kind, overflow and unknown tags are rejected by binary
+        // structural admission before a typed value exists (porcelain controls).
     }
 
     #[test]
     fn delivery_failure_takes_precedence_and_retains_the_client_frame_unread() {
         let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
         let reply = worker("finished", None);
-        let unsupported = json!({"schema_version": current + 1, "normalized_outcome": "finished"});
+        let mut unsupported = fixture_reply(reply.clone());
+        unsupported.schema_version = current + 1;
         let mut broken = client_run(Some(&reply));
         broken.request_delivery = Some(RequestDelivery {
             bytes_written: 1,
@@ -1739,6 +1657,7 @@ else:
         broken.submission = "unknown".into();
         let retained_transport = broken.transport.clone();
         let intact = client_run(Some(&reply));
+        let reply = fixture_reply(reply);
         for captured in [Some(&reply), Some(&unsupported), None] {
             match admit_reply(&broken, captured) {
                 ReplyAdmission::DeliveryFailed(error) => assert!(error.contains("Broken pipe")),
@@ -1750,7 +1669,7 @@ else:
             ReplyAdmission::Admitted
         ));
         assert!(matches!(
-            admit_reply::<Value>(&intact, None),
+            admit_reply(&intact, None),
             ReplyAdmission::Admitted
         ));
         match admit_reply(&intact, Some(&unsupported)) {
@@ -1764,15 +1683,9 @@ else:
             }
             _ => panic!("unsupported version admitted"),
         }
-        match admit_reply(&intact, Some(&json!({"schema_version": "x"}))) {
-            ReplyAdmission::Refused { outcome, .. } => {
-                assert_eq!(outcome, "malformed_runner_response")
-            }
-            _ => panic!("malformed version admitted"),
-        }
         // Failed local delivery retains the outer capture opaquely, without
         // recovering a host body, policy check or diagnostics.
-        let data = execution_only::<Value>(specimen(), Some(7), Some(broken), None);
+        let data = execution_only(specimen(), Some(7), Some(broken), None);
         let text = json_contract::render_envelope(
             "run",
             json_contract::JsonResult::new(false, 2, Some("tool_error"), Some("controlled".into())),
@@ -1803,7 +1716,7 @@ else:
     #[test]
     fn fallback_compilation_is_requested_only_for_an_admitted_xpc_error() {
         let xpc_error = json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
-            "normalized_outcome": "xpc_error", "error": "NSCocoaErrorDomain:4099 refused", "steps": []});
+            "normalized_outcome": "xpc_error", "error": "NSCocoaErrorDomain:4099 refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42});
         let failed_client = client_run(None);
         let before = serde_json::to_value(&failed_client).unwrap();
         let mut invoked = 0;
@@ -1873,7 +1786,7 @@ else:
             };
             let client = client_run(None);
             let (outcome, error) = client.failure().unwrap();
-            let mut data = execution_only::<Value>(specimen(), Some(7), Some(client), None);
+            let mut data = execution_only(specimen(), Some(7), Some(client), None);
             data.execution.policy_check = Some(capture);
             let text = json_contract::render_envelope(
                 "run",
@@ -2397,7 +2310,7 @@ else:
             json!({
                 "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
                 "normalized_outcome": "finished", "rc": 0, "pid": 77,
-                "specimen_id": "controlled", "steps": [],
+                "specimen_id": "controlled", "steps": [], "phases": [],
             })
         }
 
@@ -2440,7 +2353,15 @@ else:
                     connection: *connection,
                 });
                 let reply = reply.clone();
-                Ok((client_run(reply.as_ref()), reply))
+                let mut run = client_run(reply.as_ref());
+                let typed = reply.and_then(|value| match serde_json::from_value(value) {
+                    Ok(record) => Some(record),
+                    Err(error) => {
+                        run.runner_reply_error = Some(error.to_string());
+                        None
+                    }
+                });
+                Ok((run, typed))
             };
             let app_root = app.to_path_buf();
             let deps = RunDependencies {
@@ -2651,24 +2572,24 @@ else:
                 (
                     "previous",
                     json!({"schema_version": current - 1, "normalized_outcome": "xpc_error",
-                        "error": "refused", "steps": []}),
+                        "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
                     "unsupported_runner_response",
                 ),
                 (
                     "next",
                     json!({"schema_version": current + 1, "normalized_outcome": "xpc_error",
-                        "error": "refused", "steps": []}),
+                        "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
                     "unsupported_runner_response",
                 ),
                 (
                     "string",
                     json!({"schema_version": current.to_string(), "normalized_outcome": "xpc_error",
-                        "error": "refused", "steps": []}),
+                        "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
                     "malformed_runner_response",
                 ),
                 (
                     "missing",
-                    json!({"normalized_outcome": "xpc_error", "error": "refused", "steps": []}),
+                    json!({"normalized_outcome": "xpc_error", "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
                     "malformed_runner_response",
                 ),
             ] {
@@ -2678,10 +2599,14 @@ else:
                 assert_eq!(exit_code, 1, "{label}");
                 assert_eq!(wire["result"]["normalized_outcome"], outcome, "{label}");
                 assert!(wire["data"]["policy_check"].is_null(), "{label}");
-                assert_eq!(wire["data"]["runner_result"], reply, "{label}");
+                if outcome == "malformed_runner_response" {
+                    assert!(wire["data"]["runner_result"].is_null(), "{label}");
+                } else {
+                    assert_eq!(wire["data"]["runner_result"], reply, "{label}");
+                }
             }
             let xpc_error = json!({"schema_version": current, "normalized_outcome": "xpc_error",
-                "error": "NSCocoaErrorDomain:4099 refused", "steps": []});
+                "error": "NSCocoaErrorDomain:4099 refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42});
             let observed = observe_reply(&app, None, &args, xpc_error.clone());
             let (wire, exit_code) = envelope_of(&observed.output);
             assert_eq!(exit_code, 1);
@@ -2777,7 +2702,7 @@ else:
                     "host-ok" => Some(controlled_reply()),
                     "host-xpc-error" => Some(json!({
                         "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
-                        "normalized_outcome": "xpc_error", "error": "host body", "steps": []
+                        "normalized_outcome": "xpc_error", "error": "host body", "steps": [], "phases":[], "pid":42,"rc":1,"specimen_id":"controlled"
                     })),
                     _ => None,
                 };
@@ -2791,7 +2716,7 @@ else:
                     capture.request_delivery.as_mut().unwrap().error = Some("Broken pipe".into());
                 }
                 let captured = serde_json::to_value(&capture).unwrap();
-                let pending = RefCell::new(Some((capture, reply.clone())));
+                let pending = RefCell::new(Some((capture, reply.clone().map(fixture_reply))));
                 let client_inputs = RefCell::new(Vec::new());
                 let helper_inputs = RefCell::new(Vec::new());
                 let helper_outputs = RefCell::new(Vec::new());
@@ -3257,7 +3182,7 @@ else:
             }
         }
 
-        fn field_complete_run_envelope() -> (json_contract::JsonResult, RunData<Value>) {
+        fn field_complete_run_envelope() -> (json_contract::JsonResult, RunData) {
             let target = RunnerTarget {
                 kind: RunnerKind::Byoxpc,
                 connection: RunnerConnectionKind::MachService { privileged: false },
@@ -3389,7 +3314,7 @@ else:
             };
             let reply = json!({
                 "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
-                "normalized_outcome": "finished", "rc": 0, "pid": 42, "steps": [],
+                "normalized_outcome": "finished", "rc": 0, "pid": 42, "specimen_id":"shape", "steps": [], "phases": [],
             });
             let data = RunData {
                 execution: ExecutionData {
@@ -3420,19 +3345,23 @@ else:
                             error: Some("constructed".into()),
                         }),
                         output: capture(crate::utils::RUNNER_CAPTURE_BYTES),
-                        transport: Some(crate::runner_client::TransportCapture::Legacy(
-                            crate::runner_client::test_shape_capture(),
+                        transport: Some(crate::runner_client::TransportCapture::Typed(
+                            serde_json::from_value(crate::runner_client::test_shape_capture())
+                                .unwrap(),
                         )),
                         transport_admission: "accepted".into(),
                         transport_error: Some("constructed".into()),
                         submission: "invoked".into(),
                         runner_reply_error: Some("constructed".into()),
                     }),
-                    runner_result: Some(reply),
+                    runner_result: Some(fixture_reply(reply)),
                     // Field-complete shape fixture, including an optional refusal record.
-                    request_failure: Some(RequestFailureProjection::Comparison(
-                        json!({"code": "unknown_field", "path": ["policy", "typo"],
+                    request_failure: Some(RequestFailureProjection::Runner(
+                        serde_json::from_value(
+                            json!({"code": "unknown_field", "path": ["policy", "typo"],
                         "expected_schema": json_contract::REQUEST_SCHEMA_VERSION}),
+                        )
+                        .unwrap(),
                     )),
                 },
                 runner_sandbox_diagnostics: Some(RunnerExecutionDiagnostics {
@@ -3444,17 +3373,19 @@ else:
                         "missing_record",
                         "constructed".into(),
                     )],
-                    actors: Some(vec![crate::disposition::ActorExecutionDiagnostics {
-                        actor_id: Some("B".into()),
-                        process_disposition: "clean_exit",
-                        termination_cause: Some("host_sentinel_deadline"),
-                        stop_reason: Some("done".into()),
-                        disposition_integrity: Some("valid"),
-                        disposition_issues: vec![integrity_issue(
-                            "missing_record",
-                            "constructed".into(),
-                        )],
-                    }]),
+                    actors: Some(vec![
+                        crate::porcelain_admission::ActorExecutionDiagnostics {
+                            actor_id: Some("B".into()),
+                            process_disposition: "clean_exit",
+                            termination_cause: Some("host_sentinel_deadline"),
+                            stop_reason: Some("done".into()),
+                            disposition_integrity: Some("valid"),
+                            disposition_issues: vec![integrity_issue(
+                                "missing_record",
+                                "constructed".into(),
+                            )],
+                        },
+                    ]),
                 }),
             };
             (full_result(), data)

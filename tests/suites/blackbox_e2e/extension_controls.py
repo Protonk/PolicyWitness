@@ -12,7 +12,7 @@ from pathlib import Path
 from lifecycle_oracle import check_record
 from consumer import validate_fixture as validate
 from blackbox import envelope_skeleton, recapture_host_reply
-from actor_evidence import validate_actor_evidence
+from actor_evidence import validate_actor_evidence, _metadata_fits
 
 
 def patch(document, path, value):
@@ -195,4 +195,12 @@ def run_extension_controls(run):
         assert (not errors) == case['accepted'], (case['name'], errors)
         if case.get('diagnostic'):
             assert any(case['diagnostic'] in error for error in errors), (case['name'], errors)
+    assert _metadata_fits(['é' * 16384, None])
+    assert not _metadata_fits(['é' * 16384, 'x'])
+    assert not _metadata_fits([True])
+    oversized = json.loads((fixtures / 'actor_authority_reply.json').read_text())
+    oversized['equipment_bindings'][0]['reason'] = 'é' * 16385
+    before = deepcopy(oversized)
+    assert 'equipment binding metadata bound' in validate_actor_evidence(oversized)
+    assert oversized == before
     print(f"{len(actor_cases)} independent actor setup/equipment/application/gate controls checked", flush=True)

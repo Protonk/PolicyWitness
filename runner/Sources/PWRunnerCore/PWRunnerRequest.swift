@@ -11,7 +11,7 @@ enum RequestContractError: Error {
 /// A request refusal before execution. Path components are object keys or
 /// decimal array positions. A null path withholds an overlong location; it
 /// never substitutes a shortened key that could name a different field.
-struct PWRunnerRequestFailure: Codable, Error, CustomStringConvertible {
+struct PWRunnerRequestFailure: Error, CustomStringConvertible {
     // BEGIN GENERATED PORCELAIN PWRunnerRequestFailure
     var code: String
     var path: [String]?
@@ -26,13 +26,6 @@ struct PWRunnerRequestFailure: Codable, Error, CustomStringConvertible {
         self.expected_schema = expected_schema
     }
 
-    enum CodingKeys: String, CodingKey { case code, path, expected_schema }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(code, forKey: .code)
-        try c.encode(path, forKey: .path)
-        try c.encodeIfPresent(expected_schema, forKey: .expected_schema)
-    }
 
     var description: String {
         let location = path.map { $0.isEmpty ? "<root>" : $0.joined(separator: ".") } ?? "<unreported_path>"
@@ -483,7 +476,7 @@ struct PWRunnerProbeStep: Codable {
 /// Host admission: no worker publication or child process is implied.
 /// UTF-8 lengths count payload bytes; item counts use `items`. `nul_bytes`
 /// counts embedded NULs in native C strings, whose maximum is zero.
-struct PWRunnerAdmissionFailure: Codable {
+struct PWRunnerAdmissionFailure {
     // BEGIN GENERATED PORCELAIN PWRunnerAdmissionFailure
     var origin: String = "runner_host"
     var field: String

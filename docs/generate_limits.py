@@ -87,6 +87,7 @@ VALUE_OWNERS = {
     'controller/src/run_flow.rs',
     'controller/src/request_patch.rs',
     'controller/src/runner_client.rs',
+            'controller/src/porcelain.rs',
     'controller/src/bin/sbpl-check.rs',
     'controller/src/runner_manager.rs', 'controller/src/runner_commands.rs',
 }

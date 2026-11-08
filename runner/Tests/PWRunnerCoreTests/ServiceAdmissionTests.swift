@@ -8,9 +8,8 @@ private func reserveService(_ service: PWRunnerService) -> PWRunnerControlReply 
     return result!
 }
 
-// Admission ownership controls select the retained JSON comparison writer so
-// their existing semantic assertions remain independent of the prototype codec.
-// The separate default-writer control below exercises the production choice.
+// Admission controls retain the typed reporting argument. The separate default
+// writer control exercises the emitted binary receipt.
 private final class AdmissionObservations {
     let lock = NSLock()
     var entries = 0
@@ -19,9 +18,12 @@ private final class AdmissionObservations {
     var refusals: [PWRunnerControlReply] = []
     func entry() { lock.lock(); entries += 1; lock.unlock() }
     func exit() { lock.lock(); exits += 1; lock.unlock() }
+    func report(_ value: PWRunnerRunResult) -> Data {
+        lock.lock(); replies.append(value); lock.unlock()
+        return pwRunnerPorcelainReplyData(value)
+    }
     func reply(_ isResult: Bool, _ data: Data) { lock.lock(); defer { lock.unlock() }
-        if isResult { replies.append(try! pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)) }
-        else { refusals.append(try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: data)) }
+        if !isResult { refusals.append(try! pwRunnerDecodeJSON(PWRunnerControlReply.self, from: data)) }
     }
 }
 
@@ -63,18 +65,18 @@ func runServiceAdmissionTests(_ tk: TestKit) {
         }
         tk.run("a distinctive semantic refusal is returned unchanged without orchestration") {
             let parsed = PWRunnerRunSpec(specimen_id: "refusal", policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"))
-            var executions = 0, replies: [Data] = []
+            var executions = 0, replies: [PWRunnerRunResult] = []
             let expected = PWRunnerRequestFailure(code: "wrong_owner_reference", path: ["phases", "2", "actions", "1", "extension", "token_ref"])
             let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: {}, scheduleExpiry: { _, _ in },
-                admit: { _ in .refused(expected) }, report: { pwRunnerReplyData($0) }, orchestrate: { _, _, _, _, _ in
+                admit: { _ in .refused(expected) }, report: { replies.append($0); return pwRunnerPorcelainReplyData($0) }, orchestrate: { _, _, _, _, _ in
                     executions += 1
                     return PWRunnerRunResult(specimen_id: "unexpected", rc: 1, normalized_outcome: NormalizedOutcome.runnerFailed,
                         pid: Int(getpid()), policy_format: nil, steps: [])
                 })
             let grant = reserveService(service)
-            service.runReservedSpecimen(try pwRunnerEncodeJSON(parsed), reservation: grant.reservation_id!) { _, data in replies.append(data) }
+            service.runReservedSpecimen(try pwRunnerEncodeJSON(parsed), reservation: grant.reservation_id!) { _, _ in }
             try expectEqual(executions, 0)
-            let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: replies[0])
+            let reply = replies[0]
             try expectEqual(reply.request_failure?.code, expected.code); try expectEqual(reply.request_failure?.path, expected.path)
         }
     }
@@ -84,7 +86,7 @@ func runServiceAdmissionTests(_ tk: TestKit) {
         func service(_ state: PWRunnerAdmission, _ observations: AdmissionObservations,
                      entered: DispatchSemaphore? = nil, release: DispatchSemaphore? = nil) -> PWRunnerService {
             PWRunnerService(admission: state, scheduleExit: { observations.exit() }, scheduleExpiry: { _, _ in },
-                report: { pwRunnerReplyData($0) }, orchestrate: { parsed, hash, bundle, _, validator in
+                report: observations.report, orchestrate: { parsed, hash, bundle, _, validator in
                     observations.entry(); entered?.signal()
                     if let release { _ = release.wait(timeout: .now() + 5) }
                     return CWorkerOrchestrator.run(admitted: parsed, policyHash: hash, bundleId: bundle,
@@ -197,20 +199,20 @@ func runValidatorSelectionTests(_ tk: TestKit) {
                 let parsed = PWRunnerRunSpec(specimen_id: "validator-selection",
                     policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
                     probe_plan: [], _test_overrides: override.map { PWRunnerTestOverrides(validator_executable_path: $0) })
-                var selected = [String](), replies = [Data](), exits = 0
+                var selected = [String](), replies = [PWRunnerRunResult](), exits = 0
                 let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: { exits += 1 },
-                    report: { pwRunnerReplyData($0) }, orchestrate: { request, hash, bundle, _, validator in
+                    report: { replies.append($0); return pwRunnerPorcelainReplyData($0) }, orchestrate: { request, hash, bundle, _, validator in
                         selected.append(validator)
                         return CWorkerOrchestrator.run(admitted: request, policyHash: hash, bundleId: bundle,
                             workerExecutablePath: "/nonexistent/validator-selection-worker", validatorExecutablePath: validator)
                     })
                 let grant = reserveService(service)
                 service.runReservedSpecimen(try pwRunnerEncodeJSON(parsed), reservation: grant.reservation_id!,
-                    withReply: { isResult, data in if isResult { replies.append(data) } })
+                    withReply: { _, _ in })
                 try expectEqual(selected, [override ?? expectedDefault])
                 try expectEqual(replies.count, 1)
                 try expectEqual(exits, 1)
-                let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: replies[0])
+                let reply = replies[0]
                 try expectEqual(reply.normalized_outcome, NormalizedOutcome.workerSpawnFailed)
                 try expectTrue(reply.phases.allSatisfy { $0.validator_subprocess == nil && $0.validator_spawn_failure == nil })
                 try expectEqual(reply.test_overrides?.validator_executable_path, override)

@@ -11,7 +11,7 @@ import sys
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-TEST_NAME = 'disposition::tests::conflicting_status_representation_is_not_silently_resolved'
+TEST_NAME = 'porcelain_admission::tests::typed_conflicting_status_preserves_the_native_pair_and_rule'
 
 
 def capture_controls(out):
@@ -135,10 +135,10 @@ def rust_wrapper_controls(out):
     """Both exact-selection wrappers reject incomplete or failed Cargo runs."""
     wrappers = (
         ('rust.disposition_reds', 'tests/suites/unit/disposition_reds.sh', (
-            'disposition::tests::conflicting_status_representation_is_not_silently_resolved',
-            'disposition::tests::conflicting_status_reports_the_status_rule',
-            'disposition::tests::disposition_record_projects_witnessed_host_cleanup_cause',
-            'disposition::tests::record_contradicting_its_basis_is_withheld',
+            'porcelain_admission::tests::typed_conflicting_status_preserves_the_native_pair_and_rule',
+            'porcelain_admission::tests::typed_host_cleanup_cause_requires_all_independent_observations',
+            'porcelain_admission::tests::typed_final_status_requires_its_native_witness_basis',
+            'porcelain_admission::tests::typed_lifecycle_refuses_status_claim_without_owned_reap',
         )),
         ('rust.byoxpc_reds', 'tests/suites/unit/byoxpc_reds.sh', (
             'runner_manager::tests::false_valued_key_does_not_satisfy_a_requirement',

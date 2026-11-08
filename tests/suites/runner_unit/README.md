@@ -16,13 +16,12 @@ release refusal, interrupted later collection and aggregate exhaustion.
 It also runs the phase collection fixture through the full reply encoder,
 rejecting contradictory evidence while preserving failed collection states.
 `ValidatorEvidenceTests` checks exact/over frame, record and UTF-8 scalar bounds,
-and real stream cutoff with retained complete evidence. The maximal reply
-fixture accounts for all phases and bounded validator records through the
-production encoder; it is a conservative constructed bound, not a reachable
-native transcript. A separately encoded allowance counts every exec-observation
-optional member at its maximum representation on every slot; a second full
-ordinary encode/roundtrip carries valid collection/request/reap evidence on all
-256 exec slots. The retained client output budget is unchanged.
+and real stream cutoff with retained complete evidence. Typed dense companions
+exercise ordinary, exec and fresh-write evidence on all 256 slots through
+reporting admission and the binary writer. The independent Python reader checks
+their public projection and records its size separately from conservative actor
+component allowances. Those constructed populations do not establish a maximum
+for every binary reply or a native execution footprint.
 
 ## Invariants
 
@@ -99,12 +98,14 @@ remain separate controls.
   `^\d+/\d+ tests passed$`.
 
 The porcelain reply controls retain normal, evidence-preserving and minimal
-binary receipts beside JSON comparison receipts. The wrapper independently
-decodes them with the Python reader, compares public projection, checks retained
-facts and rejects interrupted prefixes. `porcelain-replies/replay.json` records
-the result. These are constructed reporting controls; native endings and actual
-pipe interruption have separate cases. Compilation uses two jobs and SwiftPM
-intermediates remain in case scratch.
+binary receipts. The independent Python reader checks an authored normal fixture,
+retained facts, interrupted prefixes, explicit lifecycle absence and exact UTF-8
+path presentation. Typed shape companions feed the public shape golden.
+`porcelain-replies/replay.json` records the result; `porcelain-dense/sizes.json`
+separates observed 256-step binary/public sizes from conservative JSON component
+allowances. Neither is a proof of a global binary maximum. These are constructed
+reporting controls; native endings and actual pipe interruption have separate
+cases. Compilation uses two jobs and SwiftPM intermediates remain in case scratch.
 
 ## System sleep
 
@@ -398,8 +399,8 @@ The opt-in `exec_reader_mutations` case copies the Swift package and runs only
 variant bypasses the actual completed-slot gate: the self-killed ABI fixture's
 fully written exec metadata must trip the existing absence assertion. Another
 variant supplies a fabricated ordinary exec account when metadata is missing;
-the assertion uses the original wire fixture to establish absence and rejects
-the invented `not_requested` record. The copied package retains the source
+the typed constructor receives an independently authored absent observation,
+and the unchanged assertion rejects the invented `not_requested` record. The copied package retains the source
 identity solely to reach these oracles; the inspected app is unchanged.
 
 The controls retain copied sources and hashes, actual compiler/run commands,

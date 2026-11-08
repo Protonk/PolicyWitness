@@ -110,29 +110,6 @@ private func authorizedCaller(_ connection: NSXPCConnection) -> Bool {
     return true
 }
 
-/// Retained JSON comparison control. Production replies use the typed binary path.
-func pwRunnerReplyData(_ result: PWRunnerRunResult,
-                       encode: (PWRunnerRunResult) throws -> Data = { try pwRunnerEncodeJSON($0) }) -> Data {
-    pwRunnerReportData(result, encode: encode, minimal: { result, diagnostic in
-        // Independent of Codable, the rich result writer and semantic admission.
-        let minimal: [String: Any] = [
-            "schema_version": PWContract.responseSchema, "specimen_id": result.specimen_id,
-            "run_kind": result.run_kind as Any? ?? NSNull(),
-            "rc": 1, "normalized_outcome": NormalizedOutcome.runnerReportingFailed,
-            "error": diagnostic, "pid": result.pid,
-            "bundle_id": result.bundle_id as Any? ?? NSNull(),
-            "policy_format": result.policy_format as Any? ?? NSNull(),
-            "policy_sha256": result.policy_sha256 as Any? ?? NSNull(), "steps": [], "phases": [],
-            "reporting_failure": [
-                "origin": "runner_host", "diagnostic": diagnostic,
-                "original_rc": result.rc, "original_normalized_outcome": result.normalized_outcome,
-                "original_error": result.error as Any? ?? NSNull(), "evidence_retained": false
-            ]
-        ]
-        return try JSONSerialization.data(withJSONObject: minimal, options: [.sortedKeys])
-    })
-}
-
 /// The transport boundary admits typed evidence before choosing a writer.
 /// The closures are internal failure controls; requests cannot select them.
 func pwRunnerPorcelainReplyData(_ result: PWRunnerRunResult,
@@ -151,8 +128,8 @@ private func pwRunnerReportData(_ result: PWRunnerRunResult,
         return try encode(result)
     } catch {
         let diagnostic: String
-        if case EncodingError.invalidValue(_, let context) = error {
-            diagnostic = context.debugDescription
+        if let failure = error as? PWRunnerReportingValidationError {
+            diagnostic = failure.message
         } else {
             diagnostic = String(describing: error)
         }

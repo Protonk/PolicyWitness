@@ -9,378 +9,87 @@ import Foundation
 // `issues`, a failed validator spawn) come from the production-shaped documents `replyShapeDocuments()`
 // adds beside this one for the reply shape golden.
 func replyFixture() throws -> PWRunnerRunResult {
-    let json = #"""
-    {
-      "schema_version": SCHEMA,
-      "specimen_id": "reply-\"é\"",
-      "run_kind": "unit",
-      "rc": 1,
-      "normalized_outcome": "runner_failed",
-      "error": "original cleanup fault",
-      "pid": 42,
-      "bundle_id": "test.bundle",
-      "policy_format": "sbpl",
-      "policy_sha256": "hash",
-      "compiled_profile": {
-        "schema_version": 2,
-        "status": "captured",
-        "producer": "worker",
-        "capture_stage": "before_apply",
-        "reason": "constructed",
-        "worker_pid": 42,
-        "request_nonce": "ffffffffffffffffffffffffffffffff",
-        "profile_type": 0,
-        "bytecode_length": 3,
-        "bytecode_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "bytecode_b64": "AAAA",
-        "source_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "source_length": 11,
-        "params_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "parameter_count": 1
-      },
-      "sandboxed_after_apply": true,
-      "steps": [
-        {
-          "step_id": "s",
-          "sandbox_check": {
-            "rc": 0,
-            "native_rc": 0,
-            "errno": 0,
-            "outcome": "allow",
-            "pid": 42,
-            "operation": "file-read-data",
-            "filter_kind": "path",
-            "filter_value": "/owned",
-            "filter_type_id": 1,
-            "result_source": "validator",
-            "missing_reason": "constructed",
-            "error": "constructed query diagnostic",
-            "path_diagnostics": {
-              "input": "/owned",
-              "same_as_input": [],
-              "realpath_resolved": "/private/owned",
-              "firmlink_resolved": "/System/Volumes/Data/private/owned",
-              "observer": "runner_host",
-              "stage": "after_orchestration"
-            }
-          },
-          "attempt": {
-            "rc": 0,
-            "errno": 0,
-            "outcome": "ok",
-            "error": "constructed attempt diagnostic",
-            "requested_kind": "file",
-            "requested_action": "open_read",
-            "requested_path": "/owned",
-            "observed_path": "/private/owned",
-            "result_source": "worker",
-            "child_pid": 4242,
-            "child_exit_code": 0,
-            "child_term_signal": 0,
-            "stdout": "constructed out",
-            "stderr": "constructed err",
-            "path_diagnostics": {
-              "input": "/owned",
-              "same_as_input": [],
-              "realpath_resolved": "/private/owned",
-              "parent_realpath_resolved": "/private/owned-parent",
-              "observer": "runner_host",
-              "stage": "after_orchestration"
-            },
-            "lifecycle": {
-              "summary": "completed",
-              "boundary": {
-                "state": "supported",
-                "answer": "reached",
-                "basis": [
-                  "slot",
-                  "attempt_support"
-                ]
-              },
-              "result": {
-                "state": "supported",
-                "answer": "published",
-                "basis": [
-                  "slot",
-                  "attempt_support"
-                ]
-              }
-            }
-          },
-          "comparison": {
-            "observation": "succeeded",
-            "observation_basis": "completed_worker_status",
-            "operation_relation": "matched",
-            "target_relation": "same_submitted",
-            "order": "query_first",
-            "limitations": []
-          },
-          "phase_id": "main"
-        }
-      ],
-      "runner_subprocess": {
-        "pid": 42,
-        "partial_steps": false,
-        "reaped": false,
-        "ready_byte_received": true,
-        "done_observed": true,
-        "poll_stop_reason": "done",
-        "exit_requested": true,
-        "termination_request": {
-          "signal": 9,
-          "rc": -1,
-          "errno": 1
-        },
-        "wait_errors": [
-          {
-            "stage": "exit_grace",
-            "rc": -1,
-            "errno": 10
-          }
-        ],
-        "cleanup_trigger": "completion",
-        "grace_end": "exhausted",
-        "collection_basis": "execution_may_continue",
-        "ready_wait": {"budget_ms": 1000, "elapsed_ms": 3, "stop": "received", "excluded_ms": 0, "native_errno": 0, "clock_fault": false},
-        "sentinel_wait": {"budget_ms": 120000, "elapsed_ms": 250, "stop": "done", "excluded_ms": 40, "native_errno": 0, "clock_fault": false},
-        "exit_grace_wait": {"budget_ms": 1000, "elapsed_ms": 1000, "stop": "exhausted", "excluded_ms": 0, "native_errno": 4, "clock_fault": true},
-        "disposition": {
-          "questions": {
-            "final_status": {
-              "state": "unresolved",
-              "reason": "no_successful_reap",
-              "basis": [
-                "reaped"
-              ]
-            },
-            "stop_reason": {
-              "state": "supported",
-              "answer": "done",
-              "basis": [
-                "poll_stop_reason"
-              ]
-            },
-            "cleanup_trigger": {
-              "state": "supported",
-              "answer": "completion",
-              "basis": [
-                "cleanup_trigger",
-                "exit_requested"
-              ]
-            },
-            "grace_end": {
-              "state": "supported",
-              "answer": "exhausted",
-              "basis": [
-                "grace_end",
-                "exit_requested"
-              ]
-            },
-            "kill_request_and_result": {
-              "state": "supported",
-              "answer": "requested",
-              "value": {
-                "signal": 9,
-                "rc": -1,
-                "errno": 1
-              },
-              "basis": [
-                "termination_request"
-              ]
-            },
-            "collection_basis": {
-              "state": "supported",
-              "answer": "execution_may_continue",
-              "basis": [
-                "collection_basis"
-              ]
-            },
-            "progress_association": {
-              "state": "inapplicable",
-              "reason": "no_progress_word"
-            }
-          },
-          "steps": [
-            {
-              "index": 0,
-              "step_id": "s",
-              "slot": "completed",
-              "attempt_support": "supported",
-              "questions": {
-                "step_requested_operation_applicability": {
-                  "state": "supported",
-                  "answer": "supported",
-                  "basis": [
-                    "attempt_support"
-                  ]
-                },
-                "step_boundary_reached": {
-                  "state": "supported",
-                  "answer": "reached",
-                  "basis": [
-                    "slot",
-                    "attempt_support"
-                  ]
-                },
-                "step_result_published": {
-                  "state": "supported",
-                  "answer": "published",
-                  "basis": [
-                    "slot",
-                    "attempt_support"
-                  ]
-                }
-              }
-            }
-          ],
-          "issues": []
-        },
-        "worker_evidence": {
-          "abi_identity": "\#(PWShmLayout.abiIdentityHex)",
-          "failure_publication": 0,
-          "failure_state": "absent",
-          "policy_read": {
-            "bytes_expected": 1,
-            "bytes_received": 1
-          },
-          "readiness": {
-            "rc": 1,
-            "errno": 0
-          },
-          "diagnostic": {
-            "state": 2,
-            "status": "truncated",
-            "length": 4,
-            "text": "text"
-          }
-        }
-      },
-      "admission_failure": {
-        "origin": "runner_host",
-        "field": "constructed",
-        "actual": 2,
-        "maximum": 1,
-        "unit": "items",
-        "step_id": "s",
-        "step_index": 0,
-        "parameter_key": "K",
-        "index": 0
-      },
-      "request_failure": {
-        "code": "unsupported_policy_format",
-        "path": [
-          "policy",
-          "format"
-        ],
-        "expected_schema": 4
-      },
-      "test_overrides": {
-        "worker_executable_path": "/constructed/worker",
-        "worker_timeout_ms": 1000,
-        "validator_executable_path": "/constructed/validator",
-        "validator_io_timeout_ms": 50,
-        "validator_total_timeout_ms": 100,
-        "worker_post_apply_hang_ms": 0,
-        "worker_post_apply_kill_signal": 9,
-        "worker_pre_ready_hang_ms": 0,
-        "worker_kill_before_publish_slot": 1
-      },
-      "phases": [
-        {
-          "phase_id": "main",
-          "ordinal": 1,
-          "action_ids": [
-            "s"
-          ],
-          "arrival_observed": true,
-          "completion_observed": true,
-          "collection_status": "collected",
-          "ordering": {
-            "collection_closed_before_proceed": true,
-            "proceed_set": true,
-            "proceed_observed": true,
-            "validator_disposition": "reaped",
-            "worker_lifetime_established": true,
-            "protocol_violations": []
-          },
-          "validator_subprocess": {
-            "phase_id": "main",
-            "ordinal": 1,
-            "exit_grace_wait": {"budget_ms": 1000, "elapsed_ms": 2, "stop": "reaped", "excluded_ms": 0, "native_errno": 0, "clock_fault": false},
-            "pid": 43,
-            "exit_code": 0,
-            "reaped": true,
-            "stdout_collection_stop": "eof",
-            "termination_request": {
-              "signal": 9,
-              "rc": 0,
-              "errno": 1
-            },
-            "wait_errors": [
-              {
-                "stage": "exit_grace",
-                "rc": -1,
-                "errno": 10
-              }
-            ],
-            "read_error": "constructed read error",
-            "io_error": "constructed io error",
-            "stdout_bytes_received": 64,
-            "probe_bytes_written": 32,
-            "probe_bytes_expected": 32,
-            "decode_fault": {
-              "origin": "runner_host",
-              "kind": "structure",
-              "message": "constructed",
-              "byte_offset": 1,
-              "frame_bytes": 2,
-              "retained_bytes": 2,
-              "context_b64": "AA==",
-              "context_truncated": false
-            },
-            "expected_step_ids": [
-              "s"
-            ],
-            "association_issues": [
-              {
-                "origin": "runner_host",
-                "kind": "unexpected_id",
-                "step_id": "extra",
-                "count": 1
-              }
-            ],
-            "records": [
-              {
-                "step_id": "s",
-                "operation": "file-read-data",
-                "filter_type": "PATH",
-                "filter_value": "/owned",
-                "filter_type_id": 1,
-                "rc": 0,
-                "errno": 0,
-                "outcome": "allow",
-                "error": "constructed",
-                "raw_line": "native record bytes"
-              },
-              {
-                "step_id": "extra",
-                "operation": "file-read-data",
-                "filter_type": "PATH",
-                "filter_value": "/elsewhere",
-                "filter_type_id": 1,
-                "rc": 0,
-                "errno": 0,
-                "outcome": "allow",
-                "error": null,
-                "raw_line": "unexpected native record"
-              }
-            ]
-          }
-        }
-      ]
-    }
-    """#.replacingOccurrences(of: "SCHEMA", with: String(PWContract.responseSchema))
-    return try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: Data(json.utf8))
+    let value1 = PWRunnerPathDiagnostics(input: "/owned", realpath_resolved: "/private/owned", firmlink_resolved: "/System/Volumes/Data/private/owned", observer: "runner_host", stage: "after_orchestration")
+    var value2 = PWRunnerSandboxCheckResult(rc: 0, outcome: "allow", pid: 42, operation: "file-read-data", filter_kind: "path", filter_value: "/owned", filter_type_id: 1, errno: 0, error: "constructed query diagnostic", path_diagnostics: value1)
+    value2.result_source = "validator"
+    value2.native_rc = 0
+    value2.missing_reason = "constructed"
+    let value3 = PWRunnerAttemptPathDiagnostics(input: "/owned", realpath_resolved: "/private/owned", parent_realpath_resolved: "/private/owned-parent", observer: "runner_host", stage: "after_orchestration")
+    let value4 = PWDispositionClaim(state: "supported", answer: "reached", basis: ["slot", "attempt_support"])
+    let value5 = PWDispositionClaim(state: "supported", answer: "published", basis: ["slot", "attempt_support"])
+    let value6 = PWAttemptLifecycle(summary: "completed", boundary: value4, result: value5)
+    var value7 = PWRunnerAttemptResult(rc: 0, errno: 0, outcome: "ok", error: "constructed attempt diagnostic", requested_path: "/owned", path_diagnostics: value3, observed_path: "/private/owned", child_pid: 4242, child_exit_code: 0, child_term_signal: 0, stdout: "constructed out", stderr: "constructed err")
+    value7.requested_kind = "file"
+    value7.requested_action = "open_read"
+    value7.result_source = "worker"
+    value7.lifecycle = value6
+    let value8 = PWRunnerComparison(observation: "succeeded", observation_basis: "completed_worker_status", operation_relation: "matched", target_relation: "same_submitted", order: "query_first", limitations: [])
+    let value9 = PWRunnerStepResult(step_id: "s", phase_id: "main", sandbox_check: value2, attempt: value7, comparison: value8)
+    let value10 = PWRunnerTerminationRequest(signal: 9, rc: -1, errno: 1)
+    let value11 = PWRunnerWaitError(stage: "exit_grace", rc: -1, errno: 10)
+    let value12 = PWWorkerReadiness(rc: 1, errno: 0)
+    let value13 = PWWorkerDiagnostic(state: 2, status: "truncated", length: 4, text: "text")
+    let value14 = PWWorkerPolicyRead(bytes_expected: 1, bytes_received: 1)
+    let value15 = PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, failure_publication: 0, failure_state: "absent", readiness: value12, diagnostic: value13, policy_read: value14)
+    let value16 = PWHostWait(budget_ms: 1000, elapsed_ms: 3, stop: "received", excluded_ms: 0, native_errno: 0, clock_fault: false)
+    let value17 = PWHostWait(budget_ms: 120000, elapsed_ms: 250, stop: "done", excluded_ms: 40, native_errno: 0, clock_fault: false)
+    let value18 = PWHostWait(budget_ms: 1000, elapsed_ms: 1000, stop: "exhausted", excluded_ms: 0, native_errno: 4, clock_fault: true)
+    let value19 = PWDispositionClaim(state: "unresolved", reason: "no_successful_reap", basis: ["reaped"])
+    let value20 = PWDispositionClaim(state: "supported", answer: "done", basis: ["poll_stop_reason"])
+    let value21 = PWDispositionClaim(state: "supported", answer: "completion", basis: ["cleanup_trigger", "exit_requested"])
+    let value22 = PWDispositionClaim(state: "supported", answer: "exhausted", basis: ["grace_end", "exit_requested"])
+    let value23 = PWRunnerTerminationRequest(signal: 9, rc: -1, errno: 1)
+    let value24 = PWDispositionClaim(state: "supported", answer: "requested", value: .request(value23), basis: ["termination_request"])
+    let value25 = PWDispositionClaim(state: "supported", answer: "execution_may_continue", basis: ["collection_basis"])
+    let value26 = PWDispositionClaim(state: "inapplicable", reason: "no_progress_word")
+    let value27 = PWDispositionRunQuestions(final_status: value19, stop_reason: value20, cleanup_trigger: value21, grace_end: value22, kill_request_and_result: value24, collection_basis: value25, progress_association: value26)
+    let value28 = PWDispositionClaim(state: "supported", answer: "reached", basis: ["slot", "attempt_support"])
+    let value29 = PWDispositionClaim(state: "supported", answer: "published", basis: ["slot", "attempt_support"])
+    let value30 = PWDispositionClaim(state: "supported", answer: "supported", basis: ["attempt_support"])
+    let value31 = PWDispositionStepQuestions(step_boundary_reached: value28, step_result_published: value29, step_requested_operation_applicability: value30)
+    let value32 = PWDispositionStep(index: 0, step_id: "s", slot: "completed", attempt_support: "supported", questions: value31)
+    let value33 = PWDispositionRecord(questions: value27, steps: [value32], issues: [])
+    var value34 = PWRunnerSubprocess(pid: 42, partial_steps: false, ready_byte_received: true, done_observed: true, poll_stop_reason: "done", exit_requested: true, termination_request: value10, reaped: false, wait_errors: [value11])
+    value34.worker_evidence = value15
+    value34.cleanup_trigger = "completion"
+    value34.grace_end = "exhausted"
+    value34.collection_basis = "execution_may_continue"
+    value34.ready_wait = value16
+    value34.sentinel_wait = value17
+    value34.exit_grace_wait = value18
+    value34.disposition = value33
+    let value35 = PWRunnerOrdering(collection_closed_before_proceed: true, proceed_set: true, proceed_observed: true, validator_disposition: "reaped", worker_lifetime_established: true, protocol_violations: [])
+    let value36 = PWRunnerTerminationRequest(signal: 9, rc: 0, errno: 1)
+    let value37 = PWRunnerWaitError(stage: "exit_grace", rc: -1, errno: 10)
+    let value38 = PWValidatorDecodeFault(origin: "runner_host", kind: "structure", message: "constructed", byte_offset: 1, frame_bytes: 2, retained_bytes: 2, context_b64: "AA==", context_truncated: false)
+    let value39 = ValidatorVerdict(stepId: "s", operation: "file-read-data", filterType: "PATH", filterTypeId: 1, filterValue: "/owned", rc: 0, errnoVal: 0, outcome: "allow", error: "constructed", rawLine: "native record bytes")
+    let value40 = ValidatorVerdict(stepId: "extra", operation: "file-read-data", filterType: "PATH", filterTypeId: 1, filterValue: "/elsewhere", rc: 0, errnoVal: 0, outcome: "allow", error: nil, rawLine: "unexpected native record")
+    let value41 = PWValidatorAssociationIssue(origin: "runner_host", kind: "unexpected_id", step_id: "extra", count: 1)
+    let value42 = PWHostWait(budget_ms: 1000, elapsed_ms: 2, stop: "reaped", excluded_ms: 0, native_errno: 0, clock_fault: false)
+    var value43 = PWRunnerValidatorSubprocess(pid: 43, exit_code: 0)
+    value43.phase_id = "main"
+    value43.ordinal = 1
+    value43.reaped = true
+    value43.termination_request = value36
+    value43.wait_errors = [value37]
+    value43.read_error = "constructed read error"
+    value43.stdout_collection_stop = "eof"
+    value43.stdout_bytes_received = 64
+    value43.probe_bytes_written = 32
+    value43.probe_bytes_expected = 32
+    value43.io_error = "constructed io error"
+    value43.decode_fault = value38
+    value43.records = [value39, value40]
+    value43.expected_step_ids = ["s"]
+    value43.association_issues = [value41]
+    value43.exit_grace_wait = value42
+    let value44 = PWRunnerPhaseResult(phase_id: "main", ordinal: 1, action_ids: ["s"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value35, validator_subprocess: value43)
+    let value45 = PWRunnerTestOverrides(worker_executable_path: "/constructed/worker", worker_timeout_ms: 1000, validator_executable_path: "/constructed/validator", validator_io_timeout_ms: 50, validator_total_timeout_ms: 100, worker_post_apply_hang_ms: 0, worker_post_apply_kill_signal: 9, worker_pre_ready_hang_ms: 0, worker_kill_before_publish_slot: 1)
+    let value46 = CompiledProfileCapture(schema_version: 2, status: "captured", reason: "constructed", worker_pid: 42, producer: "worker", capture_stage: "before_apply", request_nonce: "ffffffffffffffffffffffffffffffff", profile_type: 0, bytecode_length: 3, bytecode_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytecode_b64: "AAAA", source_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", source_length: 11, params_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", parameter_count: 1)
+    let value47 = PWRunnerAdmissionFailure(origin: "runner_host", field: "constructed", actual: 2, maximum: 1, unit: "items", step_id: "s", step_index: 0, parameter_key: "K", index: 0)
+    let value48 = PWRunnerRequestFailure(code: "unsupported_policy_format", path: ["policy", "format"], expected_schema: 4)
+    let value49 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "reply-\"é\"", run_kind: "unit", rc: 1, normalized_outcome: "runner_failed", error: "original cleanup fault", pid: 42, bundle_id: "test.bundle", policy_format: "sbpl", policy_sha256: "hash", sandboxed_after_apply: true, steps: [value9], runner_subprocess: value34, phases: [value44], test_overrides: value45, compiled_profile: value46, admission_failure: value47, request_failure: value48)
+    return value49
 }
 
 func validatorSpawnFailureFixture() -> PWRunnerSpawnFailure {
@@ -388,8 +97,19 @@ func validatorSpawnFailureFixture() -> PWRunnerSpawnFailure {
         diagnostic: "unfamiliar native failure")
 }
 
-private func replyObject(_ data: Data) throws -> [String: Any] {
-    try JSONSerialization.jsonObject(with: data) as! [String: Any]
+// Observe the actual reporting boundary before serialization. Binary projection
+// is checked independently by the registered Python/Rust receipt readers.
+func reportedReply(_ result: PWRunnerRunResult) throws -> PWRunnerRunResult {
+    var retained: PWRunnerRunResult?
+    _ = pwRunnerPorcelainReplyData(result, encode: { retained = $0; return Data([1]) },
+        minimal: { _, _ in throw TestFailure(message: "unexpected minimal fallback") })
+    guard let retained else { throw TestFailure(message: "rich reporting did not retain a typed reply") }
+    return retained
+}
+
+func admittedReplyData(_ result: PWRunnerRunResult) throws -> Data {
+    try result.validateForReporting()
+    return try pwPorcelainEncode(result)
 }
 
 func runReplyFailureTests(_ tk: TestKit) {
@@ -402,16 +122,13 @@ func runReplyFailureTests(_ tk: TestKit) {
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             let normal = try replyFixture()
             try pwRunnerPorcelainReplyData(normal).write(to: root.appendingPathComponent("normal.pwp"))
-            try pwRunnerEncodeJSON(normal).write(to: root.appendingPathComponent("normal.comparison.json"))
             var invalid = normal
             invalid.steps[0].phase_id = "missing"
             try pwRunnerPorcelainReplyData(invalid).write(to: root.appendingPathComponent("rich-failure.pwp"))
-            try pwRunnerReplyData(invalid).write(to: root.appendingPathComponent("rich-failure.comparison.json"))
             let fail: (PWRunnerRunResult) throws -> Data = { _ in
                 throw TestFailure(message: "independent minimal receipt control")
             }
             try pwRunnerPorcelainReplyData(normal, encode: fail).write(to: root.appendingPathComponent("minimal-failure.pwp"))
-            try pwRunnerReplyData(normal, encode: fail).write(to: root.appendingPathComponent("minimal-failure.comparison.json"))
         }
         tk.run("binary production writer receives an admitted typed reply") {
             let result = try replyFixture()
@@ -427,12 +144,12 @@ func runReplyFailureTests(_ tk: TestKit) {
                 case "missing_acknowledgement": result.phases[0].ordering?.proceed_observed = false
                 default:
                     // A requested signal cannot supply an observed final status.
-                    result.runner_subprocess?.disposition?.questions["final_status"] = PWDispositionClaim(
+                    result.runner_subprocess?.disposition?.questions.final_status = PWDispositionClaim(
                         state: "supported", answer: "exit_code", value: .integer(0),
                         basis: ["reaped", "exit_code"])
                 }
                 do { try result.validateForReporting(); throw TestFailure(message: "unsupported claim admitted") }
-                catch is EncodingError { }
+                catch is PWRunnerReportingValidationError { }
                 var received: PWRunnerRunResult?
                 var writerCalls = 0
                 let marker = Data([0, 255, 0, 1])
@@ -455,19 +172,18 @@ func runReplyFailureTests(_ tk: TestKit) {
                 expected.error = degraded.error
                 expected.reporting_failure = degraded.reporting_failure
                 for index in expected.steps.indices { expected.steps[index].comparison = nil }
-                // JSON here is an independent comparison control, never admission
-                // or a conversion inside the production binary reporting path.
-                try expectEqual(try pwRunnerEncodeJSON(degraded), try pwRunnerEncodeJSON(expected))
+                // Complete typed retention comparison includes every serialized field.
+                try expectEqual(try pwPorcelainEncode(degraded), try pwPorcelainEncode(expected))
             }
         }
         tk.run("successful signal with unconfirmed reap stays unresolved") {
             var result = try replyFixture()
             let request = PWRunnerTerminationRequest(signal: 9, rc: 0, errno: 0)
             result.runner_subprocess?.termination_request = request
-            result.runner_subprocess?.disposition?.questions["kill_request_and_result"]?.value = .request(request)
+            result.runner_subprocess?.disposition?.questions.kill_request_and_result?.value = .request(request)
             try result.validateForReporting()
             try expectEqual(result.runner_subprocess?.reaped, false)
-            try expectEqual(result.runner_subprocess?.disposition?.questions["final_status"]?.state, "unresolved")
+            try expectEqual(result.runner_subprocess?.disposition?.questions.final_status?.state, "unresolved")
             try expectNil(result.runner_subprocess?.exit_code)
             try expectNil(result.runner_subprocess?.term_signal)
         }
@@ -575,18 +291,19 @@ func runReplyFailureTests(_ tk: TestKit) {
                 bytecode_b64: bytes.base64EncodedString(), source_sha256: String(repeating: "f", count: 64),
                 source_length: 262_143, params_sha256: String(repeating: "f", count: 64), parameter_count: 1024)
             let allowance = 2 * 4 * ((bytes.count + 2) / 3) + 4096
-            let encoded = try pwRunnerEncodeJSON(receipt)
+            let encoded = try pwPorcelainEncode(receipt)
             try expectTrue(encoded.count <= allowance)
-            let decoded = try pwRunnerDecodeJSON(CompiledProfileCapture.self, from: encoded)
+            try receipt.validateForReporting()
+            let decoded = receipt
             try expectEqual(Data(base64Encoded: decoded.bytecode_b64!), bytes)
             var result = try replyFixture()
-            let baseline = try pwRunnerEncodeJSON(result).count
+            let baseline = try admittedReplyData(result).count
             result.compiled_profile = receipt
-            try expectTrue(try pwRunnerEncodeJSON(result).count <= baseline + allowance)
+            try expectTrue(try admittedReplyData(result).count <= baseline + allowance)
         }
         tk.run("a valid current reply uses the normal encoder unchanged") {
             let result = try replyFixture()
-            try expectEqual(pwRunnerReplyData(result), try pwRunnerEncodeJSON(result))
+            try expectEqual(pwRunnerPorcelainReplyData(result), try admittedReplyData(result))
         }
         for defect in ["ordering", "comparison", "order", "vocabulary", "lifetime", "association", "pid", "none"] {
             tk.run("reply preserves evidence while withholding claims after \(defect) rejection") {
@@ -609,10 +326,10 @@ func runReplyFailureTests(_ tk: TestKit) {
                     // A NONE native record must omit its value, unlike the request.
                     result.phases[0].validator_subprocess?.records?[0].filterValue = "not-native"
                 }
-                do { _ = try pwRunnerEncodeJSON(result); throw TestFailure(message: "invalid ordinary reply accepted") }
-                catch is EncodingError { }
-                let bytes = pwRunnerReplyData(result)
-                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+                do { _ = try admittedReplyData(result); throw TestFailure(message: "invalid ordinary reply accepted") }
+                catch is PWRunnerReportingValidationError { }
+                let bytes = pwRunnerPorcelainReplyData(result)
+                let decoded = try reportedReply(result)
                 try expectEqual(decoded.schema_version, PWContract.responseSchema)
                 try expectEqual(decoded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
                 try expectEqual(decoded.rc, 1)
@@ -631,16 +348,14 @@ func runReplyFailureTests(_ tk: TestKit) {
                 reference.error = decoded.error
                 reference.reporting_failure = decoded.reporting_failure
                 for index in reference.steps.indices { reference.steps[index].comparison = nil }
-                let expected = try replyObject(pwRunnerEncodeJSON(reference))
-                let actual = try replyObject(bytes)
-                try expectTrue(NSDictionary(dictionary: expected).isEqual(to: actual), "raw evidence or identity changed")
-                try expectEqual(try pwRunnerEncodeJSON(decoded), bytes)
+                try expectEqual(try pwPorcelainEncode(reference), try pwPorcelainEncode(decoded), "raw evidence or identity changed")
+                try expectEqual(try admittedReplyData(decoded), bytes)
             }
         }
         tk.run("failure marker cannot excuse surviving comparison claims or successful summary") {
             var result = try replyFixture()
             result.steps[0].comparison?.limitations = ["state_stability_unestablished"]
-            let failure = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(result))
+            let failure = try reportedReply(result)
             for defect in ["comparison", "outcome", "rc", "diagnostic", "missing_marker"] {
                 var bad = failure
                 switch defect {
@@ -650,72 +365,20 @@ func runReplyFailureTests(_ tk: TestKit) {
                 case "diagnostic": bad.reporting_failure?.diagnostic = ""
                 default: bad.reporting_failure = nil
                 }
-                do { _ = try pwRunnerEncodeJSON(bad); throw TestFailure(message: "invalid failure exception accepted: \(defect)") }
-                catch is EncodingError { }
+                do { _ = try admittedReplyData(bad); throw TestFailure(message: "invalid failure exception accepted: \(defect)") }
+                catch is PWRunnerReportingValidationError { }
             }
         }
-        tk.run("repeated encoder failure is explicit, preserves identity and does not claim evidence retention") {
-            let result = try replyFixture()
-            var calls = 0
-            let bytes = pwRunnerReplyData(result) { _ in
-                calls += 1; throw TestFailure(message: "injected encoder failure")
-            }
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
-            try expectEqual(calls, 2)
-            try expectEqual(decoded.specimen_id, result.specimen_id)
-            try expectEqual(decoded.policy_sha256, result.policy_sha256)
-            try expectEqual(decoded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
-            try expectContains(decoded.error ?? "", "evidence-preserving encoding also failed")
-            try expectEqual(decoded.reporting_failure?.evidence_retained, false)
-            try expectEqual(decoded.reporting_failure?.original_error, result.error)
-            try expectTrue(decoded.steps.isEmpty)
-            try expectNil(decoded.runner_subprocess)
-            try expectNil(decoded.phases.first?.validator_subprocess)
-            try expectNil(decoded.phases.first?.validator_spawn_failure)
-            _ = try pwRunnerEncodeJSON(decoded)
-        }
-        tk.run("another response number is unsupported at decode and encode") {
-            var raw = try replyObject(pwRunnerEncodeJSON(try replyFixture()))
+        tk.run("another response number is rejected before binary writing") {
             for version in [PWContract.responseSchema - 1, PWContract.responseSchema + 1, 4] {
-                raw["schema_version"] = version
-                do {
-                    _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
-                    throw TestFailure(message: "response \(version) decoded")
-                } catch let error as DecodingError {
-                    try expectContains(String(describing: error), "unsupported response schema \(version)")
-                }
                 var result = try replyFixture(); result.schema_version = version
-                do { _ = try pwRunnerEncodeJSON(result); throw TestFailure(message: "response \(version) encoded") }
-                catch is EncodingError { }
-                // The reply boundary cannot rescue an unsupported number either: the
-                // degraded reply is re-stamped with the current response.
-                let bytes = pwRunnerReplyData(result)
-                let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+                try expectThrows { try result.validateForReporting() }
+                let degraded = try reportedReply(result)
                 try expectEqual(degraded.schema_version, PWContract.responseSchema)
                 try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
             }
-            raw["schema_version"] = "13"
-            do {
-                _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
-                throw TestFailure(message: "string schema_version decoded")
-            } catch is DecodingError { }
         }
-        tk.run("removed wire keys are absent from an encoded reply") {
-            let raw = try replyObject(pwRunnerEncodeJSON(try replyFixture()))
-            for key in ["deny_signal_total", "comparison_conditions"] { try expectNil(raw[key], key) }
-            let step = (raw["steps"] as! [[String: Any]])[0]
-            for key in ["drift", "deny_signal"] { try expectNil(step[key], key) }
-            let comparison = step["comparison"] as! [String: Any]
-            for key in ["scope", "prediction", "conclusion", "obligations"] { try expectNil(comparison[key], key) }
-            try expectEqual(Set(comparison.keys), ["observation", "observation_basis", "operation_relation",
-                                                   "target_relation", "order", "limitations"])
-            let attempt = step["attempt"] as! [String: Any]
-            for key in ["exit_code", "syscall_errno", "native_rc", "normalized_path"] { try expectNil(attempt[key], key) }
-            let query = step["sandbox_check"] as! [String: Any]
-            for key in ["scope", "effective_filter_value"] { try expectNil(query[key], key) }
-            try expectNotNil(query["native_rc"], "the query-side native return stays")
-        }
-        tk.run("every stored result field has a coding key and survives a populated round trip") {
+        tk.run("every stored result field is retained in the binary projection receipt") {
             var result = try replyFixture()
             result.extension_events = []
             result.execution_form = "single_worker"
@@ -735,13 +398,13 @@ func runReplyFailureTests(_ tk: TestKit) {
             result.authority_setup = PWRunnerAuthoritySetup(host: PWRunnerAuthorityHost(
                 run: PWRunnerAuthorityScope(disposition: "not_attempted")), workers: [])
             result.steps[0].comparison = nil
-            result = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(result))
-            let labels = Set(Mirror(reflecting: result).children.compactMap { $0.label })
-            let keys = Set(PWRunnerRunResult.CodingKeys.allCases.map { $0.rawValue })
-            try expectEqual(labels, keys, "add new fields to CodingKeys")
-            let bytes = try pwRunnerEncodeJSON(result)
-            try expectEqual(Set(try replyObject(bytes).keys), labels, "populate and encode every field")
-            try expectEqual(try pwRunnerEncodeJSON(pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)), bytes)
+            let retained = try reportedReply(result)
+            try expectEqual(retained.reporting_failure?.evidence_retained, true)
+            guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
+                throw TestFailure(message: "PW_TEST_ARTIFACTS is required")
+            }
+            try admittedReplyData(retained).write(to: URL(fileURLWithPath: artifacts)
+                .appendingPathComponent("porcelain-replies/populated.pwp"))
         }
     }
 }

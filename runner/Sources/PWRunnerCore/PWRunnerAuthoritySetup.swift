@@ -2,7 +2,7 @@ import Foundation
 import Darwin
 
 /// Bounded authority setup observations. Bearer bytes and mapping addresses never enter these records.
-struct PWRunnerAuthorityOperation: Codable, Equatable {
+struct PWRunnerAuthorityOperation: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerAuthorityOperation
     var slot: Int
     var operation: String
@@ -15,7 +15,7 @@ struct PWRunnerAuthorityOperation: Codable, Equatable {
     var value: UInt64?
     // END GENERATED PORCELAIN PWRunnerAuthorityOperation
 }
-struct PWAuthorityCleanupReference: Codable, Equatable {
+struct PWAuthorityCleanupReference: Equatable {
     // BEGIN GENERATED PORCELAIN PWAuthorityCleanupReference
     var kind: String = "posix_shm_name"
     var name: String
@@ -25,7 +25,7 @@ struct PWAuthorityCleanupReference: Codable, Equatable {
     var recovery_state: String = "unresolved_manual"
     // END GENERATED PORCELAIN PWAuthorityCleanupReference
 }
-struct PWRunnerAuthorityScope: Codable, Equatable {
+struct PWRunnerAuthorityScope: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerAuthorityScope
     var actor_id: String? = nil
     var actor_index: Int? = nil
@@ -41,14 +41,14 @@ struct PWRunnerAuthorityScope: Codable, Equatable {
     var integrity_errors: [String]? = nil
     // END GENERATED PORCELAIN PWRunnerAuthorityScope
 }
-struct PWRunnerAuthorityHost: Codable, Equatable {
+struct PWRunnerAuthorityHost: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerAuthorityHost
     var run: PWRunnerAuthorityScope
     var regions: [PWRunnerAuthorityScope] = []
     var custody: [PWRunnerAuthorityScope] = []
     // END GENERATED PORCELAIN PWRunnerAuthorityHost
 }
-struct PWRunnerAuthoritySetup: Codable, Equatable {
+struct PWRunnerAuthoritySetup: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerAuthoritySetup
     var host: PWRunnerAuthorityHost
     var workers: [PWRunnerAuthorityScope]
@@ -60,7 +60,7 @@ struct PWRunnerAuthoritySetup: Codable, Equatable {
     }
 }
 
-struct PWOwnedReapObservation: Codable, Equatable {
+struct PWOwnedReapObservation: Equatable {
     // BEGIN GENERATED PORCELAIN PWOwnedReapObservation
     var pid: Int
     var native_rc: Int32
@@ -74,25 +74,25 @@ struct PWOwnedReapObservation: Codable, Equatable {
 }
 /// Ordinals share the source child's host-observation sequence. They are not
 /// worker publications and do not count polling calls.
-struct PWRunnerActorActivation: Codable, Equatable {
+struct PWRunnerActorActivation: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerActorActivation
     var capture_ordinal: UInt64
     var observed_ns: UInt64?
     // END GENERATED PORCELAIN PWRunnerActorActivation
 }
-struct PWOwnedReapReference: Codable, Equatable {
+struct PWOwnedReapReference: Equatable {
     // BEGIN GENERATED PORCELAIN PWOwnedReapReference
     var capture_ordinal: UInt64
     // END GENERATED PORCELAIN PWOwnedReapReference
 }
 
-struct PWRunnerActorApplication: Codable, Equatable {
+struct PWRunnerActorApplication: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerActorApplication
     var state: String
     var basis: String
     // END GENERATED PORCELAIN PWRunnerActorApplication
 }
-struct PWRunnerTerminationGate: Codable {
+struct PWRunnerTerminationGate {
     // BEGIN GENERATED PORCELAIN PWRunnerTerminationGate
     var source_actor_id: String
     var source_final_phase_id: String

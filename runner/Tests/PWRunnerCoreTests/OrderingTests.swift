@@ -124,11 +124,11 @@ func runOrderingTests(_ tk: TestKit) {
                             calls.append(["path": path, "return_code": rc])
                             return rc
                         })
-                    let encoded = pwRunnerReplyData(result)
+                    let encoded = pwRunnerPorcelainReplyData(result)
                     let receipt: [String: Any] = ["case": state + ":" + label, "selected_path": selected,
-                        "spawn_calls": calls, "reply": try JSONSerialization.jsonObject(with: encoded)]
+                        "spawn_calls": calls, "reply_porcelain_base64": encoded.base64EncodedString()]
                     FileHandle.standardOutput.write(Data("validator-default-observation ".utf8) + (try JSONSerialization.data(withJSONObject: receipt, options: [.sortedKeys])) + Data("\n".utf8))
-                    return try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
+                    return try reportedReply(result)
                 }
 
                 let reached = try run(orderingStep(), workerPath: worker, label: "reached")
@@ -245,8 +245,8 @@ func runOrderingTests(_ tk: TestKit) {
                 try expectEqual(receivedPath, path)
                 try expectEqual(receivedArgv, ["sb_api_validator", "--batch", String(result.pid)])
                 try expectEqual(try String(contentsOfFile: receipt), workerFailed ? "waiting\nack\n" : "waiting\nack\nattempt\n")
-                let bytes = pwRunnerReplyData(result)
-                let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+                let bytes = pwRunnerPorcelainReplyData(result)
+                let reply = try reportedReply(result)
                 try expectEqual(reply.normalized_outcome, workerFailed ? NormalizedOutcome.runnerFailed : NormalizedOutcome.validatorSpawnFailed)
                 try expectEqual(reply.rc, 1)
                 try expectNil(reply.reporting_failure)
@@ -271,18 +271,14 @@ func runOrderingTests(_ tk: TestKit) {
                 // record, even though the summary becomes reporting_failed.
                 var invalid = result
                 invalid.steps[0].comparison = nil
-                let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(invalid))
+                let degraded = try reportedReply(invalid)
                 try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
                 try expectEqual(degraded.reporting_failure?.evidence_retained, true)
-                try expectEqual(try pwRunnerEncodeJSON(degraded.phases[0].validator_spawn_failure),
-                                try pwRunnerEncodeJSON(reply.phases[0].validator_spawn_failure))
+                try expectEqual(try pwPorcelainEncode(degraded.phases[0].validator_spawn_failure!),
+                                try pwPorcelainEncode(reply.phases[0].validator_spawn_failure!))
                 // An absent optional record stays unknown.
-                var without = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-                var phases = without["phases"] as! [[String: Any]]
-                phases[0].removeValue(forKey: "validator_spawn_failure")
-                without["phases"] = phases
-                let absent = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
-                    from: JSONSerialization.data(withJSONObject: without))
+                var absent = reply
+                absent.phases[0].validator_spawn_failure = nil
                 try expectNil(absent.phases.first?.validator_spawn_failure)
             }
         }
@@ -446,16 +442,17 @@ func runOrderingTests(_ tk: TestKit) {
                     // Keep the deliberately contradictory validator observation;
                     // normal encoding refuses it, and degradation retains it
                     // without comparison claims.
-                    do { _ = try pwRunnerEncodeJSON(envelope); throw TestFailure(message: "contradictory collection accepted") }
-                    catch is EncodingError { }
-                    let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(envelope))
+                    do { _ = try admittedReplyData(envelope); throw TestFailure(message: "contradictory collection accepted") }
+                    catch is PWRunnerReportingValidationError { }
+                    let degraded = try reportedReply(envelope)
                     try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
                     try expectNil(degraded.steps[0].comparison)
-                    try expectEqual(try pwRunnerEncodeJSON(degraded.phases[0].validator_subprocess),
-                                    try pwRunnerEncodeJSON(envelope.phases[0].validator_subprocess))
+                    try expectEqual(try pwPorcelainEncode(degraded.phases[0].validator_subprocess!),
+                                    try pwPorcelainEncode(envelope.phases[0].validator_subprocess!))
                     continue
                 }
-                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(envelope))
+                try envelope.validateForReporting()
+                let decoded = envelope
                 try expectEqual(decoded.schema_version, PWContract.responseSchema)
                 try expectEqual(decoded.steps[0].comparison?.order, missing == "none" ? "query_first" : "unestablished", missing)
                 try expectEqual(decoded.phases.first?.ordering != nil, missing != "worker")
@@ -469,7 +466,7 @@ func runOrderingTests(_ tk: TestKit) {
             var envelope = orderingEnvelope(worker, validator)
             envelope.steps = orderedSteps(worker, validator, step: step)
             try expectEqual(envelope.steps[0].comparison?.order, "query_first")
-            _ = try pwRunnerEncodeJSON(envelope)
+            _ = try admittedReplyData(envelope)
         }
         tk.run("no queries, spawn failure and failed apply have distinct terminal decisions") {
             try expectEqual(buildOrdering(worker, validatorOutput: nil, hasQueries: false).validator_disposition, "not_needed")
@@ -508,18 +505,16 @@ func runOrderingTests(_ tk: TestKit) {
                 case "limitation": envelope.steps[0].comparison?.limitations = ["future_limit"]
                 default: envelope.steps[0].comparison?.limitations = ["query_attempt_order_unestablished"]
                 }
-                do { _ = try pwRunnerEncodeJSON(envelope); throw TestFailure(message: "\(change) encoded") }
-                catch is EncodingError { }
+                do { _ = try admittedReplyData(envelope); throw TestFailure(message: "\(change) encoded") }
+                catch is PWRunnerReportingValidationError { }
             }
-            // The decoder retains unfamiliar strings as transport; it is the
-            // encoder and the consumer that refuse them.
-            var raw = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(orderingEnvelope(worker, validator))) as! [String: Any]
-            var steps = raw["steps"] as! [[String: Any]]
-            var comparison = steps[0]["comparison"] as! [String: Any]
-            comparison["limitations"] = ["future_limit"]
-            steps[0]["comparison"] = comparison; raw["steps"] = steps
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
-            try expectEqual(decoded.steps[0].comparison?.limitations, ["future_limit"])
+            // Typed storage can retain open diagnostic strings on the degraded
+            // path without allowing them to support ordinary claims.
+            var invalid = orderingEnvelope(worker, validator)
+            invalid.steps[0].comparison?.limitations = ["future_limit"]
+            let degraded = try reportedReply(invalid)
+            try expectEqual(degraded.reporting_failure?.evidence_retained, true)
+            try expectNil(degraded.steps[0].comparison)
         }
     }
     tk.group("validator deadline override at the production boundary") {
@@ -545,7 +540,7 @@ func runOrderingTests(_ tk: TestKit) {
             try expectEqual(result.steps[0].sandbox_check.outcome, "allow")
             try expectEqual(result.steps[0].attempt.result_source, "synthetic")
             try expectEqual(result.steps[0].comparison?.order, "unestablished")
-            _ = try pwRunnerEncodeJSON(result)
+            _ = try admittedReplyData(result)
             return result
         }
         tk.run("validator collection may outlast the worker budget without reviving attempts") {
@@ -585,7 +580,7 @@ func runOrderingTests(_ tk: TestKit) {
             try expectEqual(result.phases.first?.ordering?.proceed_observed, true)
             try expectEqual(result.steps[0].comparison?.order, "query_first")
             try expectEqual(result.steps[0].attempt.outcome, "ok")
-            _ = try pwRunnerEncodeJSON(result)
+            _ = try admittedReplyData(result)
         }
     }
     tk.group("collection closure independent of validator cleanup") {

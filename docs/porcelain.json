@@ -324,10 +324,9 @@
         {
           "name": "questions",
           "swift_name": "questions",
-          "swift_type": "[String: PWDispositionClaim]",
+          "swift_type": "PWDispositionRunQuestions",
           "mutable": true,
-          "tag": 1,
-          "wire_type": "PWDispositionRunQuestions"
+          "tag": 1
         },
         {
           "name": "steps",
@@ -381,10 +380,9 @@
         {
           "name": "questions",
           "swift_name": "questions",
-          "swift_type": "[String: PWDispositionClaim]",
+          "swift_type": "PWDispositionStepQuestions",
           "mutable": true,
-          "tag": 5,
-          "wire_type": "PWDispositionStepQuestions"
+          "tag": 5
         }
       ],
       "id": 7
@@ -3429,7 +3427,7 @@
           "mutable": true,
           "tag": 1,
           "doc": [
-            "// Response wire version. Semantic decoding and encoding accept exactly",
+            "// Response wire version. Reporting admission accepts exactly",
             "// PWContract.responseSchema; docs/CONTRACT.md, \"Supported versions\"."
           ]
         },
@@ -5333,96 +5331,106 @@
     {
       "name": "PWDispositionRunQuestions",
       "id": 82,
-      "adapter": "questions",
       "fields": [
         {
           "name": "final_status",
           "swift_name": "final_status",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 1,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         },
         {
           "name": "stop_reason",
           "swift_name": "stop_reason",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 2,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         },
         {
           "name": "cleanup_trigger",
           "swift_name": "cleanup_trigger",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 3,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         },
         {
           "name": "grace_end",
           "swift_name": "grace_end",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 4,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         },
         {
           "name": "kill_request_and_result",
           "swift_name": "kill_request_and_result",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 5,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         },
         {
           "name": "collection_basis",
           "swift_name": "collection_basis",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 6,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         },
         {
           "name": "progress_association",
           "swift_name": "progress_association",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 7,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         }
-      ]
+      ],
+      "source": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift"
     },
     {
       "name": "PWDispositionStepQuestions",
       "id": 83,
-      "adapter": "questions",
       "fields": [
         {
           "name": "step_boundary_reached",
           "swift_name": "step_boundary_reached",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 1,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         },
         {
           "name": "step_result_published",
           "swift_name": "step_result_published",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 2,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         },
         {
           "name": "step_requested_operation_applicability",
           "swift_name": "step_requested_operation_applicability",
           "swift_type": "PWDispositionClaim?",
-          "mutable": false,
+          "mutable": true,
           "tag": 3,
-          "json_null": false
+          "json_null": false,
+          "default": "nil"
         }
-      ]
+      ],
+      "source": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift"
     }
   ],
   "variants": {

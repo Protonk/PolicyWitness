@@ -27,7 +27,7 @@ func freshWriteReplyFixture(_ write: PWRunnerFreshWrite, creating: Bool = false,
     return reply
 }
 
-func freshWriteShapeDocuments() throws -> [[String: Any]] {
+func freshWriteShapeDocuments() throws -> [PWRunnerRunResult] {
     var replies = [freshWriteReplyFixture(freshWriteFixture()),
                    freshWriteReplyFixture(freshWriteFixture(creating: true), creating: true)]
     replies.append(freshWriteReplyFixture(PWRunnerFreshWrite(open_rc: -1, open_errno: 17,
@@ -38,7 +38,7 @@ func freshWriteShapeDocuments() throws -> [[String: Any]] {
         opened_stat: metadataFailure, written_stat: metadataFailure), creating: true, rc: -1, errno: 9))
     replies.append(freshWriteReplyFixture(PWRunnerFreshWrite(open_rc: 5, truncate_rc: -1, truncate_errno: 1,
         close_rc: -1, close_errno: 9, opened_stat: metadata(19), truncated_stat: metadataFailure), rc: -1, errno: 1))
-    return try replies.map { try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON($0)) as! [String: Any] }
+    return replies
 }
 
 func runFreshWriteEvidenceTests(_ tk: TestKit) {
@@ -96,22 +96,21 @@ func runFreshWriteEvidenceTests(_ tk: TestKit) {
             }
         }
         tk.run("valid writes, creation, open refusal and multiple syscall failures survive encoding") {
-            for document in try freshWriteShapeDocuments() {
-                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: document))
+            for decoded in try freshWriteShapeDocuments() {
                 try expectNil(decoded.steps[0].attempt.freshWriteEvidenceProblem())
-                _ = try pwRunnerEncodeJSON(decoded)
+                _ = try admittedReplyData(decoded)
             }
         }
         tk.run("pre-open metadata is diagnostic and short writes do not invent errno") {
             var created = freshWriteFixture(creating: true)
             created.preopen_stat = PWRunnerFileStat(rc: -1, errno: EACCES)
-            _ = try pwRunnerEncodeJSON(freshWriteReplyFixture(created, creating: true))
+            _ = try admittedReplyData(freshWriteReplyFixture(created, creating: true))
             var short = freshWriteFixture()
             short.write_rc = 0; short.written_stat = metadata(0)
             short.close_rc = -1; short.close_errno = 9
             let reply = freshWriteReplyFixture(short, rc: -1)
             try expectNil(reply.steps[0].attempt.freshWriteEvidenceProblem())
-            _ = try pwRunnerEncodeJSON(reply)
+            _ = try admittedReplyData(reply)
             var replaced = reply; replaced.steps[0].attempt.errno = 9
             try expectTrue(replaced.steps[0].attempt.freshWriteEvidenceProblem() != nil)
         }
@@ -124,9 +123,9 @@ func runFreshWriteEvidenceTests(_ tk: TestKit) {
             write.close_rc = -1; write.close_errno = 4
             let reply = freshWriteReplyFixture(write, rc: -1, errno: 9)
             try expectNil(reply.steps[0].attempt.freshWriteEvidenceProblem())
-            _ = try pwRunnerEncodeJSON(reply)
+            _ = try admittedReplyData(reply)
         }
-        tk.run("missing or impossible syscall records are rejected by encoding and reading") {
+        tk.run("missing or impossible syscall records are rejected before binary writing") {
             let changes: [(inout PWRunnerAttemptResult) -> Void] = [
                 { $0.fresh_write = nil },
                 { $0.fresh_write?.open_rc = -2 },
@@ -157,14 +156,10 @@ func runFreshWriteEvidenceTests(_ tk: TestKit) {
                 var reply = freshWriteReplyFixture(freshWriteFixture())
                 change(&reply.steps[0].attempt)
                 try expectTrue(reply.steps[0].attempt.freshWriteEvidenceProblem() != nil, "mutation \(index) admitted")
-                try expectThrows { _ = try pwRunnerEncodeJSON(reply) }
-                // Encoding the isolated attempt preserves the corrupt input for
-                // an independent full-reply decoder check.
-                var document = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(freshWriteReplyFixture(freshWriteFixture()))) as! [String: Any]
-                var steps = document["steps"] as! [[String: Any]]
-                steps[0]["attempt"] = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply.steps[0].attempt))
-                document["steps"] = steps
-                try expectThrows { _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: document)) }
+                try expectThrows { _ = try admittedReplyData(reply) }
+                // The independent controller reader owns binary admission;
+                // this host control exercises the named typed reporting gate.
+                try expectEqual(try reportedReply(reply).reporting_failure?.evidence_retained, true)
             }
             let createChanges: [(inout PWRunnerFreshWrite) -> Void] = [
                 { $0.preopen_stat = nil },
@@ -172,7 +167,7 @@ func runFreshWriteEvidenceTests(_ tk: TestKit) {
             ]
             for change in createChanges {
                 var value = freshWriteFixture(creating: true); change(&value)
-                try expectThrows { _ = try pwRunnerEncodeJSON(freshWriteReplyFixture(value, creating: true)) }
+                try expectThrows { _ = try admittedReplyData(freshWriteReplyFixture(value, creating: true)) }
             }
         }
         tk.run("raw ABI decoding preserves widths and omits only unattempted operations") {

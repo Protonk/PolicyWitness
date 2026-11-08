@@ -294,7 +294,7 @@ private let unavailableReasons: [UInt32: String] = [1: "token_unavailable", 2: "
 private let custodyNames: [UInt32: String] = [0: "none", 1: "accepted", 2: "rejected", 3: "timeout", 4: "not_published", 5: "clock_fault"]
 
 private func unpublishedResourceStatus(_ step: PWDispositionStep?) -> String {
-    guard let boundary = step?.questions["step_boundary_reached"],
+    guard let boundary = step?.questions.step_boundary_reached,
           boundary.state == "supported", boundary.answer == "not_reached" else { return "unresolved" }
     return "not_reached"
 }

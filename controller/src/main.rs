@@ -8,8 +8,6 @@ mod augments;
 mod bundle;
 mod cli;
 mod digest;
-#[cfg(test)]
-mod disposition;
 mod dossier;
 mod evidence;
 // Shared with the sbpl-check helper through #[path] includes.

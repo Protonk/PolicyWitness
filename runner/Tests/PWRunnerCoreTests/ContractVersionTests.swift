@@ -18,51 +18,8 @@ func repositoryRoot() -> URL {
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 }
 
-// Reply shape golden: tests/fixtures/contract/response_shape.json records, per
-// object path, every key the producer emits across the documents of
-// replyShapeDocuments() and its JSON type.
-// Any change fails until the golden is replaced. A number moves when the rules
-// for reading change: a removed key, a changed type or meaning, or a new
-// requirement on readers; an added field alone does not require a bump, and
-// an absent field means unknown, never false.
-private func jsonType(_ value: Any) -> String {
-    if value is NSNull { return "null" }
-    if let number = value as? NSNumber {
-        return CFGetTypeID(number) == CFBooleanGetTypeID() ? "boolean" : "number"
-    }
-    if value is String { return "string" }
-    if value is [Any] { return "array" }
-    if value is [String: Any] { return "object" }
-    return "unknown"
-}
-
-/// Record `object`'s keys under `path`; every object element of an array
-/// contributes to the `path[]` entry. A key seen as null in one place and
-/// typed in another records the type; two different types are a conflict.
-private func collectShape(_ object: [String: Any], path: String, into shape: inout [String: [String: String]]) throws {
-    var keys = shape[path] ?? [:]
-    for (key, value) in object {
-        let type = jsonType(value)
-        if let current = keys[key], current != "null", current != type, type != "null" {
-            throw TestFailure(message: "shape conflict at \(path).\(key): \(current) and \(type)")
-        }
-        if keys[key] == nil || keys[key] == "null" { keys[key] = type }
-        let child = path + "." + key
-        if let nested = value as? [String: Any] {
-            try collectShape(nested, path: child, into: &shape)
-        } else if let array = value as? [Any] {
-            for element in array.compactMap({ $0 as? [String: Any] }) {
-                try collectShape(element, path: child + "[]", into: &shape)
-            }
-        }
-    }
-    shape[path] = keys
-}
-
-private func shapeObject(_ data: Data) throws -> [String: Any] {
-    try JSONSerialization.jsonObject(with: data) as! [String: Any]
-}
-
+// Shape fixtures are typed producer evidence. Public object shape is checked
+// by the independent Python binary reader after this executable writes receipts.
 private func shapeSlot(_ id: String, completed: Bool) -> CWorkerSlotResult {
     CWorkerSlotResult(stepId: id, rc: 0, errnoVal: 0, observedPath: completed ? "/private/owned" : nil,
                       error: nil, completed: completed)
@@ -169,23 +126,25 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
 /// retained evidence), the fixture with a signalled validator, and the
 /// production-shaped worker accounts above. Only the encoder's output counts:
 /// a key appears in the golden because the producer emitted it.
-func replyShapeDocuments() throws -> [[String: Any]] {
-    var documents: [[String: Any]] = []
+func replyShapeDocuments() throws -> [PWRunnerRunResult] {
+    var documents: [PWRunnerRunResult] = []
     let base = try replyFixture()
-    documents.append(try shapeObject(pwRunnerEncodeJSON(base)))
+    documents.append(base)
     var defective = base
     defective.steps[0].comparison?.order = "future_order"
-    documents.append(try shapeObject(pwRunnerReplyData(defective)))
+    documents.append(try reportedReply(defective))
     var signalledValidator = base
     signalledValidator.phases[0].validator_subprocess?.term_signal = 9
     signalledValidator.phases[0].validator_subprocess?.exit_code = nil
-    documents.append(try shapeObject(pwRunnerEncodeJSON(signalledValidator)))
+    try signalledValidator.validateForReporting()
+        documents.append(signalledValidator)
     var spawnFailed = base
     spawnFailed.phases[0].validator_subprocess = nil
     spawnFailed.phases[0].validator_spawn_failure = validatorSpawnFailureFixture()
     spawnFailed.phases[0].ordering?.validator_disposition = "not_spawned"
     spawnFailed.steps[0].comparison?.order = "unestablished"
-    documents.append(try shapeObject(pwRunnerEncodeJSON(spawnFailed)))
+    try spawnFailed.validateForReporting()
+        documents.append(spawnFailed)
     for (out, plan) in shapeWorkerOutputs() {
         let record = resolveDisposition(out, plan: plan)
         let sub = buildWorkerSubprocess(out, disposition: record)
@@ -195,22 +154,14 @@ func replyShapeDocuments() throws -> [[String: Any]] {
             steps: buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan), workerOutput: out,
                                     validatorOutput: nil, ordering: ordering, disposition: record),
             runner_subprocess: sub, phases: [constructedPhase(out, ids: plan.map { $0.step_id })])
-        documents.append(try shapeObject(pwRunnerEncodeJSON(reply)))
+        try reply.validateForReporting()
+        documents.append(reply)
     }
     documents += try ordinaryReadShapeDocuments()
     documents += try freshWriteShapeDocuments()
     documents += try execObservationShapeDocuments()
     documents += try actorShapeDocuments()
     return documents
-}
-
-/// The merged shape of every document, collected the same way for each.
-func replyShape() throws -> [String: [String: String]] {
-    var merged: [String: [String: String]] = [:]
-    for document in try replyShapeDocuments() {
-        try collectShape(document, path: "reply", into: &merged)
-    }
-    return merged
 }
 
 struct ShapeVerdict: Equatable {
@@ -282,110 +233,41 @@ func runContractVersionTests(_ tk: TestKit) {
             try expectEqual(refined.status, "update"); try expectContains(refined.detail, "nullable")
             try expectEqual(classifyShapeChange(golden: golden(base, 7), current: base, manifestVersion: 8).status, "update")
         }
-        tk.run("shape documents cover the keys an ordinary fixture cannot carry at once") {
-            let shape = try replyShape()
-            for (path, key) in [("reply", "reporting_failure"), ("reply.steps[].attempt", "missing_reason"),
-                                ("reply.phases[].validator_subprocess", "term_signal"), ("reply.runner_subprocess", "exit_code"),
-                                ("reply.runner_subprocess", "term_signal"), ("reply.runner_subprocess", "policy_transfer_error"),
-                                ("reply.runner_subprocess", "policy_transfer_timeout"),
-                                ("reply.runner_subprocess.worker_evidence", "failure"),
-                                ("reply.actors[].subprocess.worker_evidence.failure", "native_result"),
-                                ("reply.actors[].subprocess.worker_evidence.failure", "errno"),
-                                ("reply.actors[].subprocess.worker_evidence.failure", "index"),
-                                ("reply.actors[].subprocess.worker_evidence.progress", "index"),
-                                ("reply.actors[].subprocess", "term_signal"),
-                                ("reply.actors[].subprocess", "policy_transfer_error"),
-                                ("reply.actors[].subprocess", "policy_transfer_timeout"),
-                                ("reply.actors[].subprocess.termination_request", "signal"),
-                                ("reply.actors[].subprocess.termination_request", "rc"),
-                                ("reply.actors[].subprocess.termination_request", "errno"),
-                                ("reply.actors[].subprocess.wait_errors[]", "stage"),
-                                ("reply.actors[].subprocess.wait_errors[]", "rc"),
-                                ("reply.actors[].subprocess.wait_errors[]", "errno"),
-                                ("reply.actors[].subprocess.ready_wait", "native_errno"),
-                                ("reply.actors[].subprocess.disposition.questions.final_status", "reason"),
-                                ("reply.actors[].subprocess.disposition.questions.progress_association", "reason"),
-                                ("reply.actors[].subprocess.disposition.questions.kill_request_and_result.value", "errno"),
-                                ("reply.actors[].subprocess.disposition.steps[].questions.step_boundary_reached", "reason"),
-                                ("reply.actors[].subprocess.disposition.steps[].questions.step_result_published", "reason"),
-                                ("reply.actors[].subprocess.disposition.steps[].questions.step_result_published", "issue"),
-                                ("reply.actors[].subprocess.disposition.issues[]", "kind"),
-                                ("reply.actors[].subprocess.disposition.issues[]", "rule"),
-                                ("reply.actors[].subprocess.disposition.issues[]", "question"),
-                                ("reply.actors[].subprocess.disposition.issues[]", "step_index"),
-                                ("reply.actors[].subprocess.disposition.issues[]", "observations"),
-                                ("reply.actors[].subprocess.disposition.issues[]", "detail"),
-                                ("reply.actors[]", "compiled_profile"),
-                                ("reply.actors[].compiled_profile", "schema_version"),
-                                ("reply.actors[].compiled_profile", "status"),
-                                ("reply.actors[].compiled_profile", "reason"),
-                                ("reply.actors[].compiled_profile", "worker_pid"),
-                                ("reply.actors[].compiled_profile", "producer"),
-                                ("reply.actors[].compiled_profile", "capture_stage"),
-                                ("reply.actors[].compiled_profile", "request_nonce"),
-                                ("reply.actors[].compiled_profile", "profile_type"),
-                                ("reply.actors[].compiled_profile", "bytecode_length"),
-                                ("reply.actors[].compiled_profile", "bytecode_sha256"),
-                                ("reply.actors[].compiled_profile", "bytecode_b64"),
-                                ("reply.actors[].compiled_profile", "source_sha256"),
-                                ("reply.actors[].compiled_profile", "source_length"),
-                                ("reply.actors[].compiled_profile", "params_sha256"),
-                                ("reply.actors[].compiled_profile", "parameter_count"),
-                                ("reply.runner_subprocess.disposition.issues[]", "rule"),
-                                ("reply.runner_subprocess.disposition.steps[].questions.step_result_published", "issue"),
-                                ("reply.runner_subprocess.disposition.steps[].questions.step_result_published", "reason"),
-                                ("reply.runner_subprocess.disposition.steps[].questions.step_boundary_reached", "reason"),
-                                ("reply.steps[].attempt.lifecycle.boundary", "reason"),
-                                ("reply.steps[].attempt.lifecycle.result", "reason"),
-                                ("reply.runner_subprocess.disposition.questions.cleanup_trigger", "reason"),
-                                ("reply.runner_subprocess.disposition.questions.grace_end", "reason"),
-                                ("reply.runner_subprocess.disposition.questions.kill_request_and_result", "reason")] {
-                try expectTrue(shape[path]?[key] != nil && shape[path]?[key] != "null", "\(path).\(key) is not typed")
+        tk.run("retain admitted typed shape companions for independent presentation checks") {
+            guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
+                throw TestFailure(message: "PW_TEST_ARTIFACTS is required for shape receipts")
+            }
+            let directory = URL(fileURLWithPath: artifacts).appendingPathComponent("porcelain-shapes", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            for (index, reply) in try replyShapeDocuments().enumerated() {
+                try reply.validateForReporting()
+                try pwPorcelainEncode(reply).write(to: directory.appendingPathComponent(String(format: "%03d.pwp", index)))
             }
         }
-        tk.run("actor capture shape companions retain per-process success and unavailable contexts") {
+        tk.run("actor capture companions retain per-process success and unavailable contexts") {
             var captured = 0, unavailable = 0
             for document in try actorShapeDocuments() {
-                try expectNil(document["compiled_profile"])
-                for actor in document["actors"] as! [[String: Any]] {
-                    guard let receipt = actor["compiled_profile"] as? [String: Any] else { continue }
-                    let subprocess = actor["subprocess"] as! [String: Any]
-                    try expectEqual(receipt["worker_pid"] as? Int, subprocess["pid"] as? Int)
-                    if receipt["status"] as? String == "captured" {
+                try expectNil(document.compiled_profile)
+                for actor in document.actors ?? [] {
+                    guard let receipt = actor.compiled_profile else { continue }
+                    try expectEqual(receipt.worker_pid, actor.subprocess?.pid)
+                    if receipt.status == "captured" {
                         captured += 1
-                        try expectEqual(receipt["producer"] as? String, "worker")
-                        try expectEqual(receipt["capture_stage"] as? String, "before_apply")
-                        try expectEqual(receipt["bytecode_b64"] as? String, "ChQe")
-                        try expectNil(receipt["reason"])
+                        try expectEqual(receipt.producer, "worker")
+                        try expectEqual(receipt.capture_stage, "before_apply")
+                        try expectEqual(receipt.bytecode_b64, "ChQe")
+                        try expectNil(receipt.reason)
                     } else {
                         unavailable += 1
-                        try expectEqual(receipt["status"] as? String, "unavailable")
-                        try expectEqual(receipt["reason"] as? String, "successful_application_unconfirmed")
-                        try expectNil(receipt["producer"])
-                        try expectNil(receipt["capture_stage"])
-                        try expectNil(receipt["bytecode_b64"])
+                        try expectEqual(receipt.status, "unavailable")
+                        try expectEqual(receipt.reason, "successful_application_unconfirmed")
+                        try expectNil(receipt.producer)
+                        try expectNil(receipt.capture_stage)
+                        try expectNil(receipt.bytecode_b64)
                     }
                 }
             }
             try expectTrue(captured >= 2 && unavailable >= 1)
-        }
-        tk.run("reply shape golden agrees with the manifest") {
-            let goldenURL = root.appendingPathComponent("tests/fixtures/contract/response_shape.json")
-            let current = try replyShape()
-            let golden = (try? JSONSerialization.jsonObject(with: Data(contentsOf: goldenURL))) as? [String: Any]
-            let verdict = classifyShapeChange(golden: golden, current: current, manifestVersion: PWContract.responseSchema)
-            if verdict.status == "ok" { return }
-            let candidate: [String: Any] = ["response_schema": PWContract.responseSchema, "shape": current]
-            let candidateData = try JSONSerialization.data(withJSONObject: candidate, options: [.prettyPrinted, .sortedKeys])
-            let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"].map { URL(fileURLWithPath: $0) }
-                ?? FileManager.default.temporaryDirectory
-            let candidateURL = artifacts.appendingPathComponent("response_shape.candidate.json")
-            try (candidateData + Data("\n".utf8)).write(to: candidateURL)
-            var advice = "review the diff, then replace tests/fixtures/contract/response_shape.json with \(candidateURL.path)"
-            if verdict.status == "needs_bump" {
-                advice = "bump response_schema in docs/contract.json, regenerate, then " + advice
-            }
-            throw TestFailure(message: "\(verdict.detail); \(advice)")
         }
     }
 }

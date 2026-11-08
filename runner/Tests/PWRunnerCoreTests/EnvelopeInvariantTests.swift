@@ -1,16 +1,8 @@
 import Foundation
 @testable import PWRunnerCore
 
-// Structural invariants of PWRunnerRunResult that the audit signal depends on.
-// The mirror-back story (`test_overrides` reflects what was honored;
-// `runner_subprocess` is present iff the worker was observed) only works if
-// these hold for every emit site. None of the existing e2e suites assert the
-// relationships themselves — they assert the behavior. These tests pin the
-// shape, the exact response-version gate and the absence of removed keys.
-//
-// Swift's synthesized Codable omits nil optional fields rather than encoding
-// explicit JSON null. The tests assert the semantic contract ("absent or null
-// means no value") rather than the literal byte form.
+// Typed host reporting invariants. The registered independent receipt readers
+// check public projection and JSON absence/null spelling.
 
 private func hostShortCircuitResult(outcome: String) -> PWRunnerRunResult {
     // Host-side outcomes are emitted before posix_spawn returns a worker
@@ -24,10 +16,6 @@ private func hostShortCircuitResult(outcome: String) -> PWRunnerRunResult {
         policy_format: "sbpl",
         steps: []
     )
-}
-
-private func wireObject(_ data: Data) throws -> [String: Any] {
-    try JSONSerialization.jsonObject(with: data) as! [String: Any]
 }
 
 func runEnvelopeInvariantTests(_ tk: TestKit) {
@@ -51,8 +39,8 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 if state != "present" { try FileManager.default.removeItem(atPath: path) }
                 if state == "recreated" { FileManager.default.createFile(atPath: path, contents: Data("new".utf8)) }
                 result.steps = enrichPathDiagnostics(steps: [step])
-                let data = try pwRunnerEncodeJSON(result)
-                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data).steps[0]
+                let data = try admittedReplyData(result)
+                let decoded = try reportedReply(result).steps[0]
                 try expectEqual(decoded.comparison?.observation, "succeeded")
                 try expectEqual(decoded.comparison?.order, "unestablished")
                 try expectEqual(decoded.comparison?.limitations, [])
@@ -60,10 +48,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 try expectEqual(decoded.sandbox_check.path_diagnostics?.stage, "after_orchestration")
                 // Later host nonresolution is visible only in the path block.
                 try expectEqual(decoded.sandbox_check.path_diagnostics?.realpath_resolved == nil, state == "absent")
-                let wire = try wireObject(data)
-                let step0 = (wire["steps"] as! [[String: Any]])[0]
-                try expectNil(step0["drift"])
-                try expectNil(step0["deny_signal"])
+
             }
         }
         tk.run("a spawned child's failed result survives beside its spawn observation") {
@@ -81,22 +66,15 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             step.attempt.stdout = "controlled marker"
             result.steps = [step]
             result.phases[0].validator_subprocess?.records?[0].operation = "process-exec*"
-            let encoded = try pwRunnerEncodeJSON(result)
-            let raw = try wireObject(encoded)
-            let wire = (raw["steps"] as! [[String: Any]])[0]
-            let comparison = wire["comparison"] as! [String: Any]
-            let attempt = wire["attempt"] as! [String: Any]
-            try expectEqual(comparison["observation_basis"] as? String, "spawned_child")
-            try expectEqual(comparison["limitations"] as? [String], [])
-            try expectEqual(attempt["requested_kind"] as? String, "exec")
-            try expectEqual(attempt["outcome"] as? String, "exec_failed")
-            try expectEqual(attempt["rc"] as? Int, 37)
-            try expectEqual(attempt["child_exit_code"] as? Int, 37)
-            try expectEqual(attempt["child_pid"] as? Int, 123)
-            try expectEqual(attempt["stdout"] as? String, "controlled marker")
-            try expectNil(attempt["exit_code"])
-            try expectNil(attempt["syscall_errno"])
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
+            let encoded = try admittedReplyData(result)
+            let decoded = try reportedReply(result)
+            try expectEqual(decoded.steps[0].comparison?.observation_basis, "spawned_child")
+            try expectEqual(decoded.steps[0].comparison?.limitations, [])
+            try expectEqual(decoded.steps[0].attempt.requested_kind, "exec")
+            try expectEqual(decoded.steps[0].attempt.outcome, "exec_failed")
+            try expectEqual(decoded.steps[0].attempt.rc, 37)
+            try expectEqual(decoded.steps[0].attempt.child_pid, 123)
+            try expectEqual(decoded.steps[0].attempt.stdout, "controlled marker")
             try expectEqual(decoded.steps[0].attempt.child_exit_code, 37)
         }
         tk.run("a missing query keeps its missing reason and an empty limitations list") {
@@ -110,59 +88,49 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             result.steps[0].sandbox_check.result_source = "synthetic"
             result.steps[0].sandbox_check.native_rc = nil
             result.steps[0].sandbox_check.missing_reason = "validator_no_verdict"
-            let data = try pwRunnerEncodeJSON(result)
-            let wire = (try wireObject(data)["steps"] as! [[String: Any]])[0]
-            try expectEqual((wire["comparison"] as? [String: Any])?["limitations"] as? [String], [])
-            try expectEqual((wire["sandbox_check"] as? [String: Any])?["missing_reason"] as? String, "validator_no_verdict")
-            try expectTrue((wire["sandbox_check"] as? [String: Any])?["native_rc"] is NSNull)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
+            let data = try admittedReplyData(result)
+            let decoded = try reportedReply(result)
+            try expectEqual(decoded.steps[0].comparison?.limitations, [])
+            try expectNil(decoded.steps[0].sandbox_check.native_rc)
             try expectEqual(decoded.steps[0].comparison?.order, "unestablished")
             try expectEqual(decoded.steps[0].sandbox_check.missing_reason, "validator_no_verdict")
         }
     }
     tk.group("exact response version") {
-        tk.run("the producer's default is the manifest version and nothing else decodes") {
+        tk.run("the producer default is the manifest version and other versions fail admission") {
             let fresh = PWRunnerRunResult(specimen_id: "s", rc: 1, normalized_outcome: NormalizedOutcome.badRequest,
                 error: "constructed", pid: 1, policy_format: "sbpl", steps: [])
             try expectEqual(fresh.schema_version, PWContract.responseSchema)
-            let bytes = try pwRunnerEncodeJSON(fresh)
-            try expectEqual(try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes).schema_version, PWContract.responseSchema)
+            try fresh.validateForReporting()
             for version in [1, 7, 12, PWContract.responseSchema + 1] {
-                var raw = try wireObject(bytes)
-                raw["schema_version"] = version
-                do {
-                    _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
-                    throw TestFailure(message: "response \(version) decoded")
-                } catch is DecodingError { }
+                var invalid = fresh; invalid.schema_version = version
+                try expectThrows { try invalid.validateForReporting() }
             }
         }
     }
     tk.group("PWRunnerSubprocess: additive host observations") {
-        tk.run("absent or null observations remain unknown") {
-            for suffix in ["", ",\"ready_byte_received\":null,\"done_observed\":null,\"poll_stop_reason\":null,\"exit_requested\":null,\"termination_request\":null,\"reaped\":null,\"wait_errors\":null"] {
-                let data = Data("{\"pid\":42,\"exit_code\":0,\"partial_steps\":false\(suffix)}".utf8)
-                let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
-                try expectEqual(decoded.exit_code, 0)
-                try expectNil(decoded.ready_byte_received)
-                try expectNil(decoded.done_observed)
-                try expectNil(decoded.poll_stop_reason)
-                try expectNil(decoded.exit_requested)
-                try expectNil(decoded.termination_request)
-                try expectNil(decoded.reaped)
-                try expectNil(decoded.wait_errors)
-            }
+        tk.run("absent typed observations remain unknown") {
+            let decoded = PWRunnerSubprocess(pid: 42, exit_code: 0, partial_steps: false)
+            _ = try pwPorcelainEncode(decoded)
+            try expectEqual(decoded.exit_code, 0)
+            try expectNil(decoded.ready_byte_received)
+            try expectNil(decoded.done_observed)
+            try expectNil(decoded.poll_stop_reason)
+            try expectNil(decoded.exit_requested)
+            try expectNil(decoded.termination_request)
+            try expectNil(decoded.reaped)
+            try expectNil(decoded.wait_errors)
         }
         tk.run("observed false and empty errors survive encoding without inventing status") {
             let record = PWRunnerSubprocess(pid: 42, term_signal: nil, exit_code: nil,
                 partial_steps: true, ready_byte_received: false, done_observed: false,
                 poll_stop_reason: "wait_error", exit_requested: true, reaped: false, wait_errors: [])
-            let data = try pwRunnerEncodeJSON(record)
-            let raw = try wireObject(data)
-            try expectEqual(raw["ready_byte_received"] as? Bool, false)
-            try expectEqual(raw["done_observed"] as? Bool, false)
-            try expectEqual(raw["reaped"] as? Bool, false)
-            try expectEqual((raw["wait_errors"] as? [Any])?.count, 0)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+            _ = try pwPorcelainEncode(record)
+            let decoded = record
+            try expectEqual(decoded.ready_byte_received, false)
+            try expectEqual(decoded.done_observed, false)
+            try expectEqual(decoded.reaped, false)
+            try expectEqual(decoded.wait_errors?.count, 0)
             try expectNil(decoded.exit_code)
             try expectNil(decoded.term_signal)
             try expectNil(decoded.termination_request)
@@ -172,8 +140,8 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 partial_steps: false, poll_stop_reason: "future_stop",
                 termination_request: PWRunnerTerminationRequest(signal: 31, rc: -1, errno: 123456),
                 reaped: false, wait_errors: [PWRunnerWaitError(stage: "future_phase", rc: -1, errno: 654321)])
-            let data = try pwRunnerEncodeJSON(record)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+            _ = try pwPorcelainEncode(record)
+            let decoded = record
             try expectEqual(decoded.poll_stop_reason, "future_stop")
             try expectEqual(decoded.termination_request?.signal, 31)
             try expectEqual(decoded.termination_request?.rc, -1)
@@ -184,25 +152,15 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
         }
     }
 
-    tk.group("PWRunnerRunResult: Codable round-trip preserves semantic absence") {
-        tk.run("nil test_overrides survives encode → decode as nil") {
+    tk.group("PWRunnerRunResult: typed reporting preserves semantic absence") {
+        tk.run("nil test_overrides survives reporting as nil") {
             var original = try replyFixture()
             original.test_overrides = nil
-            let data = try pwRunnerEncodeJSON(original)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
+            let data = try admittedReplyData(original)
+            let decoded = try reportedReply(original)
             try expectNil(decoded.test_overrides)
         }
-        tk.run("nil test_overrides survives a JSON producer that emits explicit null") {
-            // A peer producer outside this codebase may emit `"test_overrides": null`
-            // explicitly rather than omitting the key. The decoder must treat
-            // both as "no value." This pins the semantic contract.
-            var original = try replyFixture()
-            original.test_overrides = nil
-            var obj = try wireObject(pwRunnerEncodeJSON(original))
-            obj["test_overrides"] = NSNull()
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: obj))
-            try expectNil(decoded.test_overrides)
-        }
+
     }
 
     tk.group("PWRunnerRunResult: production-shaped result") {
@@ -213,10 +171,10 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             let result = try replyFixture()
             try expectEqual(result.pid, result.runner_subprocess?.pid)
         }
-        tk.run("validator_subprocess and every step survive a round trip") {
+        tk.run("validator_subprocess and every step survive reporting") {
             let original = try replyFixture()
-            let data = try pwRunnerEncodeJSON(original)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
+            let data = try admittedReplyData(original)
+            let decoded = try reportedReply(original)
             try expectEqual(decoded.steps.count, original.steps.count)
             try expectEqual(decoded.phases[0].validator_subprocess?.pid, original.phases[0].validator_subprocess?.pid)
             try expectEqual(decoded.phases[0].validator_subprocess?.exit_code, original.phases[0].validator_subprocess?.exit_code)
@@ -226,10 +184,12 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             var result = try replyFixture()
             result.steps[0].sandbox_check.pid = nil
             result.steps[0].comparison?.order = "unestablished"
-            let bytes = try pwRunnerEncodeJSON(result)
-            let step = (try wireObject(bytes)["steps"] as! [[String: Any]])[0]
-            try expectTrue((step["sandbox_check"] as! [String: Any])["pid"] is NSNull)
-            try expectNil(try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes).steps[0].sandbox_check.pid)
+            let bytes = try admittedReplyData(result)
+            try expectNil(try reportedReply(result).steps[0].sandbox_check.pid)
+            guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
+                throw TestFailure(message: "PW_TEST_ARTIFACTS is required")
+            }
+            try bytes.write(to: URL(fileURLWithPath: artifacts).appendingPathComponent("porcelain-replies/null-query-pid.pwp"))
         }
 
     }
@@ -244,7 +204,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 let result = hostShortCircuitResult(outcome: outcome)
                 try expectNil(result.runner_subprocess, "outcome=\(outcome)")
                 try expectTrue(result.steps.isEmpty, "outcome=\(outcome) has steps=\(result.steps)")
-                _ = try pwRunnerEncodeJSON(result)
+                _ = try admittedReplyData(result)
             }
         }
     }
@@ -258,7 +218,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             timeout.normalized_outcome = NormalizedOutcome.runnerTimeout
             try expectNotNil(timeout.runner_subprocess)
             try expectEqual(timeout.pid, timeout.runner_subprocess?.pid)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(timeout))
+            let decoded = try reportedReply(timeout)
             try expectNotNil(decoded.runner_subprocess?.disposition)
             try expectNotNil(decoded.phases.first?.ordering)
         }

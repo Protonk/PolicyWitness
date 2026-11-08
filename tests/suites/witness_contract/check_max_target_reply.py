@@ -5,11 +5,10 @@ limits. These cases exercise long ASCII/escaped paths, observed paths,
 maximal independent query paths, exec output and the worst admitted JSON
 escaping (control characters in every query path and child stream), and
 require 32,768-byte query values and filter/attempt labels to be refused
-before any process work. They record two sizes separately: the host reply's raw
-bytes, measured against the synthesized maximal reply recorded in
-docs/limits.json, and the client's stdout (the versioned capture carrying that
-reply as base64), measured against the receiver budget derived from the
-maximum. The corpus is evidence that real replies stay inside both bounds.
+before any process work. Host binary reply bytes and binary client capture
+bytes are measured separately against their retention and framing allowances.
+Public JSON bytes are presentation output, not the internal transport size.
+These workloads establish their observations, not a global reachable maximum.
 """
 import base64
 import errno
@@ -330,16 +329,13 @@ def run_case(pw, out, name, request, *, refused=False, measure_margin=False, **e
     client = data['runner_client']
     # Both the admitted workloads and the refusals must survive the receiver cap.
     assert client['stdout_parse_error'] is None, client['stdout_parse_error']
-    # The budget is derived from the synthesized maximal reply; both come from the
-    # manifest here, and the relation is asserted independently of either number.
-    maximum, budget = documented_limit('runner_reply_maximum'), documented_limit('controller_output')
+    budget = documented_limit('controller_output')
+    maximum = min(documented_limit('client_reply_retention'), documented_limit('porcelain_frame_bytes'))
     assert client['capture_limit_bytes'] == budget, client['capture_limit_bytes']
-    assert 3 * maximum <= budget < 3 * maximum + 4 * 1024 * 1024 and budget % (4 * 1024 * 1024) == 0, (maximum, budget)
     assert client['stdout_truncated'] is False and client['stdout_capture_error'] is None
     assert client['stdout_bytes_received'] == client['stdout_bytes_retained'] <= client['capture_limit_bytes']
-    # Two different byte counts. The host reply is what the synthesized maximum
-    # bounds; the client's stdout wraps it in the versioned capture as base64 and
-    # is what the controller allowance bounds. Decoding checks the first count.
+    # Host and client binary frames have distinct byte counts. Public JSON
+    # projects opaque host bytes as base64 only after typed capture admission.
     transport = client['transport']
     assert transport is not None and transport['terminal'] == 'runner_reply', transport
     reply = transport['runner_reply']
@@ -366,11 +362,10 @@ def run_case(pw, out, name, request, *, refused=False, measure_margin=False, **e
     else:
         assert rc == 0, result
         check_reply(data['runner_result'], request, **expectations)
-        # Every admitted host reply stays under the synthesized maximum, which is
-        # the bound the budget is derived from; the measured ratios are evidence.
+        # The observed live host bytes fit both framing and retention.
         assert host_bytes <= maximum, (host_bytes, maximum)
-        observation.update(synthesized_maximum_bytes=maximum,
-                           host_fraction_of_maximum=round(host_bytes / maximum, 4),
+        observation.update(host_retention_bound_bytes=maximum,
+                           host_fraction_of_retention=round(host_bytes / maximum, 4),
                            client_fraction_of_budget=round(client_bytes / budget, 4))
         if measure_margin:
             # Live capture must be present in the maximal-metadata workload; the
@@ -380,7 +375,7 @@ def run_case(pw, out, name, request, *, refused=False, measure_margin=False, **e
             profile_allowance = 2 * 4 * ((capture_bytes + 2) // 3) + 4096
             capture = data['runner_result']['compiled_profile']
             assert capture['status'] == 'captured' and capture['bytecode_length'] > 0, capture
-            assert host_bytes + profile_allowance <= maximum, 'host reply plus a maximal receipt exceeds the synthesized maximum'
+            assert host_bytes + profile_allowance <= maximum, 'host reply plus a conservative receipt allowance exceeds retention'
             observation.update(profile_allowance_bytes=profile_allowance,
                                budget_over_client_stdout=round(client['capture_limit_bytes'] / client_bytes, 3))
     print(f"{name}: host reply {host_bytes} bytes; client stdout {client_bytes} bytes; refused at admission={refused}", flush=True)

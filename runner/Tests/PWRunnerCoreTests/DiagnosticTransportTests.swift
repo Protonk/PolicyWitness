@@ -12,7 +12,7 @@ private func transportInputs() throws -> [String: Any] {
 
 func runDiagnosticTransportTests(_ tk: TestKit) {
     tk.group("unfamiliar diagnostic transport") {
-        tk.run("independent ABI bytes preserve both open codes and distinct payloads through Codable") {
+        tk.run("independent ABI bytes preserve both open codes and distinct payloads through typed reporting") {
             for input in try transportInputs()["worker"] as! [[String: Any]] {
                 let f = input["failure"] as! [String: Any]
                 let progress = input["progress"] as! [String: Any]
@@ -46,13 +46,16 @@ func runDiagnosticTransportTests(_ tk: TestKit) {
                 }
                 let base = raw.assumingMemoryBound(to: UInt8.self)
                 guard let evidence = decodeWorkerEvidence(base) else { throw TestFailure(message: "supported ABI rejected") }
-                let bytes = try pwRunnerEncodeJSON(evidence)
-                let decoded = try pwRunnerDecodeJSON(PWWorkerEvidence.self, from: bytes)
-                guard let wire = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(decoded)) as? [String: Any],
-                      let forwardedFailure = wire["failure"] as? [String: Any] else {
-                    throw TestFailure(message: "unfamiliar failure record missing after forwarding")
-                }
-                try expectTrue(NSDictionary(dictionary: forwardedFailure).isEqual(to: f), "unfamiliar payload changed: \(wire)")
+                let decoded = evidence
+                _ = try pwPorcelainEncode(decoded)
+                guard let failure = decoded.failure else { throw TestFailure(message: "failure missing") }
+                try expectEqual(failure.operation, (f["operation"] as! NSNumber).uint32Value)
+                try expectEqual(failure.code, (f["code"] as! NSNumber).uint32Value)
+                try expectEqual(failure.native_kind, (f["native_kind"] as! NSNumber).uint32Value)
+                try expectEqual(failure.native_result, (f["native_result"] as! NSNumber).int32Value)
+                try expectEqual(failure.errno, (f["errno"] as! NSNumber).int32Value)
+                try expectEqual(failure.detail, (f["detail"] as! NSNumber).uint32Value)
+                try expectEqual(failure.index, (f["index"] as? NSNumber)?.uint32Value)
                 try expectEqual(decoded.diagnostic.text, text)
                 try expectEqual(decoded.diagnostic.length, UInt32(text.utf8.count))
                 try expectEqual(decoded.progress?.operation, (progress["operation"] as! NSNumber).uint32Value)
@@ -87,8 +90,8 @@ func runDiagnosticTransportTests(_ tk: TestKit) {
             let out = ValidatorOutput(validatorPid: 321, verdicts: received.verdicts,
                 exitCode: 0, reaped: true, waitErrors: [], decodeFault: received.fault,
                 expectedProbes: (0..<2).map { ValidatorProbe(stepId: "s\($0)", operation: "file-read-data", filterType: "NONE") })
-            let forwarded = try pwRunnerDecodeJSON(PWRunnerValidatorSubprocess.self,
-                from: pwRunnerEncodeJSON(buildValidatorSubprocess(out, phaseId: "main", ordinal: 1)))
+            let forwarded = buildValidatorSubprocess(out, phaseId: "main", ordinal: 1)
+            _ = try pwPorcelainEncode(forwarded)
             try expectEqual(forwarded.pid, 321)
             try expectEqual(forwarded.decode_fault?.kind, "utf8")
             for (i, v) in (forwarded.records ?? []).enumerated() {

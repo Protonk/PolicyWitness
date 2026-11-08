@@ -5,9 +5,8 @@ import Darwin
 // stays unsandboxed; a short-lived worker self-applies a seatbelt profile,
 // executes the probe plan, returns a report to the host, and exits.
 //
-// This file intentionally defines a small JSON-over-Data protocol surface so the
-// runner can be driven by multiple controllers (CLI, lab tools) without NSXPC
-// object graphs.
+// The Data protocol carries JSON requests/control replies and binary specimen
+// reports. Controllers share this bounded surface without NSXPC object graphs.
 
 @objc protocol PWRunnerProtocol {
     func reserveRunner(_ request: Data, withReply reply: @escaping (Data) -> Void)
@@ -49,8 +48,8 @@ enum PWRunnerWire {
 // Canonical normalized_outcome values. Every emit site in the runner stack
 // references these constants instead of writing a literal string, so a typo
 // becomes a compile error rather than a silent new outcome that no test
-// asserts on and no doc covers. The wire type stays `String` (Codable
-// unchanged); these are just the typo-proof spellings.
+// asserts on and no doc covers. The stored and wire type remains String; these
+// constants provide checked spellings at producer call sites.
 //
 // Adding an outcome: declare it here, then teach the matching test suite
 // (tests/suites/runner_outcome_*/ or witness_contract/) to assert
@@ -156,7 +155,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 6
-    static let responseSchema: Int = 28
+    static let responseSchema: Int = 29
     static let runnerProtocol: Int = 4
 }
 // END GENERATED CONTRACT VERSIONS

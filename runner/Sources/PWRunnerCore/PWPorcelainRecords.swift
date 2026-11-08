@@ -127,7 +127,7 @@ extension PWDispositionRecord: PWPorcelainWritable {
     }
     func porcelainWrite() throws -> Data {
         var writer = PWPorcelainRecordWriter(Self.porcelainRecordID)
-        try writer.field(PorcelainTag.questions, PWDispositionRunQuestions(observations: questions))
+        try writer.field(PorcelainTag.questions, questions)
         try writer.field(PorcelainTag.steps, steps)
         try writer.field(PorcelainTag.issues, issues)
         return try writer.finish()
@@ -148,7 +148,7 @@ extension PWDispositionStep: PWPorcelainWritable {
         try writer.field(PorcelainTag.step_id, step_id)
         try writer.field(PorcelainTag.slot, slot)
         try writer.field(PorcelainTag.attempt_support, attempt_support)
-        try writer.field(PorcelainTag.questions, PWDispositionStepQuestions(observations: questions))
+        try writer.field(PorcelainTag.questions, questions)
         return try writer.finish()
     }
 }
@@ -1922,8 +1922,7 @@ extension ValidatorVerdict: PWPorcelainWritable {
         return try writer.finish()
     }
 }
-struct PWDispositionRunQuestions: PWPorcelainWritable {
-    let observations: [String: PWDispositionClaim]
+extension PWDispositionRunQuestions: PWPorcelainWritable {
     static let porcelainRecordID: UInt16 = 82
     enum PorcelainTag {
         static let final_status: UInt16 = 1
@@ -1936,21 +1935,17 @@ struct PWDispositionRunQuestions: PWPorcelainWritable {
     }
     func porcelainWrite() throws -> Data {
         var writer = PWPorcelainRecordWriter(Self.porcelainRecordID)
-        guard Set(observations.keys).isSubset(of: Set(["final_status", "stop_reason", "cleanup_trigger", "grace_end", "kill_request_and_result", "collection_basis", "progress_association"])) else {
-            throw PWPorcelainError.invalid("unknown lifecycle question")
-        }
-        try writer.field(PorcelainTag.final_status, observations["final_status"])
-        try writer.field(PorcelainTag.stop_reason, observations["stop_reason"])
-        try writer.field(PorcelainTag.cleanup_trigger, observations["cleanup_trigger"])
-        try writer.field(PorcelainTag.grace_end, observations["grace_end"])
-        try writer.field(PorcelainTag.kill_request_and_result, observations["kill_request_and_result"])
-        try writer.field(PorcelainTag.collection_basis, observations["collection_basis"])
-        try writer.field(PorcelainTag.progress_association, observations["progress_association"])
+        try writer.field(PorcelainTag.final_status, final_status)
+        try writer.field(PorcelainTag.stop_reason, stop_reason)
+        try writer.field(PorcelainTag.cleanup_trigger, cleanup_trigger)
+        try writer.field(PorcelainTag.grace_end, grace_end)
+        try writer.field(PorcelainTag.kill_request_and_result, kill_request_and_result)
+        try writer.field(PorcelainTag.collection_basis, collection_basis)
+        try writer.field(PorcelainTag.progress_association, progress_association)
         return try writer.finish()
     }
 }
-struct PWDispositionStepQuestions: PWPorcelainWritable {
-    let observations: [String: PWDispositionClaim]
+extension PWDispositionStepQuestions: PWPorcelainWritable {
     static let porcelainRecordID: UInt16 = 83
     enum PorcelainTag {
         static let step_boundary_reached: UInt16 = 1
@@ -1959,12 +1954,9 @@ struct PWDispositionStepQuestions: PWPorcelainWritable {
     }
     func porcelainWrite() throws -> Data {
         var writer = PWPorcelainRecordWriter(Self.porcelainRecordID)
-        guard Set(observations.keys).isSubset(of: Set(["step_boundary_reached", "step_result_published", "step_requested_operation_applicability"])) else {
-            throw PWPorcelainError.invalid("unknown lifecycle question")
-        }
-        try writer.field(PorcelainTag.step_boundary_reached, observations["step_boundary_reached"])
-        try writer.field(PorcelainTag.step_result_published, observations["step_result_published"])
-        try writer.field(PorcelainTag.step_requested_operation_applicability, observations["step_requested_operation_applicability"])
+        try writer.field(PorcelainTag.step_boundary_reached, step_boundary_reached)
+        try writer.field(PorcelainTag.step_result_published, step_result_published)
+        try writer.field(PorcelainTag.step_requested_operation_applicability, step_requested_operation_applicability)
         return try writer.finish()
     }
 }

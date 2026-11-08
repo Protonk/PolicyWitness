@@ -10,6 +10,7 @@ No controlled XPC loss attributes any historical failure or proves production
 reliability. Original F2 session/process/cleanup equipment is reused unchanged.
 """
 import base64
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -555,11 +556,24 @@ class ReservationArrangement(Arrangement):
         assert altered['equal_after_restoring_marker'] is True
         assert altered['original_marker'] == contract.RESPONSE_SCHEMA and altered['altered_marker'] == preserved['schema_version']
         encoded = self.event(name, 'reply_encoded')
-        assert encoded['reply_sha256'] == altered['original_sha256'] and encoded['encoded_outcome'] == 'finished', (encoded, altered)
+        assert encoded['reply_sha256'] == altered['original_sha256'] and encoded['reply_format'] == 'porcelain' and encoded['result_outcome'] == 'finished', (encoded, altered)
         # The opaque reply is the real execution's reply: restoring the marker
         # yields a valid current reply with the one effect.
-        restored = dict(preserved, schema_version=altered['original_marker'])
+        received = base64.b64decode(client['transport']['runner_reply']['data_base64'], validate=True)
+        assert len(received) == altered['altered_bytes']
+        assert sha256(received).hexdigest() == altered['altered_sha256']
+        offset, length = altered['byte_offset'], altered['byte_length']
+        assert offset == 50 and length == 8
+        assert int.from_bytes(received[offset:offset + length], 'little', signed=True) == preserved['schema_version']
+        restored_bytes = (received[:offset] + altered['original_marker'].to_bytes(length, 'little', signed=True)
+                          + received[offset + length:])
+        assert len(restored_bytes) == altered['original_bytes']
+        assert sha256(restored_bytes).hexdigest() == encoded['reply_sha256']
+        restored = decode_porcelain(restored_bytes, 'reply')
+        assert restored == dict(preserved, schema_version=altered['original_marker'])
         assert not validate(restored), validate(restored)
+        (self.out / 'old-response-received.pwp').write_bytes(received)
+        (self.out / 'old-response-restored.pwp').write_bytes(restored_bytes)
         assert restored['normalized_outcome'] == 'finished' and restored['steps'][0]['attempt']['outcome'] == 'ok', restored['steps']
         self.one_execution(name)
         assert len(self.events(name, 'request_received')) == 1, 'execution was replayed'

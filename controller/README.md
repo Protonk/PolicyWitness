@@ -18,7 +18,7 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 | --- | --- |
 | CLI and orchestration | [main.rs](src/main.rs), [cli.rs](src/cli.rs), [run_flow.rs](src/run_flow.rs): dispatch, run preparation and envelope assembly. |
 | Requests | [request_patch.rs](src/request_patch.rs): parsing, version admission and structured refusals; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
-| Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): one Swift-client invocation and separate client/host capture admission; [disposition.rs](src/disposition.rs): worker disposition validation/projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
+| Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): one Swift-client invocation and separate client/host capture admission; [porcelain_admission.rs](src/porcelain_admission.rs): typed worker/actor admission and projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
 | Provenance | [dossier.rs](src/dossier.rs), [evidence.rs](src/evidence.rs), [digest.rs](src/digest.rs), [host_facts.rs](src/host_facts.rs): specimen records, manifest lookup, hashes and host facts. |
 | Policy inspection | [policy_check.rs](src/policy_check.rs): independent compile-check capture; [sbpl_imports.rs](src/sbpl_imports.rs) and [sbpl_lex.rs](src/sbpl_lex.rs): bounded import scan and lexer, shared with `sbpl-check`. |
 | External runners | [runner_commands.rs](src/runner_commands.rs), [runner_manager.rs](src/runner_manager.rs): commands, registry and launchd; [bundle.rs](src/bundle.rs) and [plist.rs](src/plist.rs): install-time bundle metadata. |
@@ -120,7 +120,7 @@ evidence. The built-in selection control uses an app root without an Info.plist.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 28, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 29, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
@@ -141,14 +141,14 @@ truncated, malformed or unsupported capture leaves submission unknown.
 `runner_result` contains only a received typed host reply; client failures do
 not manufacture one. `runner verify` uses this same path and admission order.
 
-The experimental response transport uses the schema in
+The response transport uses the schema in
 [porcelain.json](../docs/porcelain.json). Generated records hold owned strings,
 bytes and collections; binary reception and semantic admission are separate.
 The public JSON projection borrows those records. Original host bytes remain in
 the capture and become base64 only at this output boundary. A rejected client
 frame retains its exact bounded bytes in a `format: "porcelain"` capture;
-it supplies no submission claim. Authored JSON response decoders are test-only
-comparison controls.
+it supplies no submission claim. Authored JSON fixtures enter generated records only in tests; production reads
+the binary schema.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
 received/retained byte counts. Each stream retains at
@@ -177,12 +177,12 @@ validates the carried worker disposition against supporting facts before project
 `process_disposition`, `termination_cause`, `stop_reason`,
 `disposition_integrity` and `disposition_issues`.
 
-This prototype admits the ordinary order and lifecycle slice. Explicit
-`unconverted_scope` issues withhold aggregate claims for actor setup/equipment,
-authority settlement and fresh-I/O/exec families whose full semantic checks
-have not migrated. Scope-only withholding has integrity `unestablished`;
-contradictory evidence has integrity `invalid`. Raw observations remain present.
-The generic disposition and actor readers survive as test comparison controls.
+Native fresh-I/O and exec observations are checked by
+[porcelain_native.rs](src/porcelain_native.rs). Actor setup, equipment,
+application, scheduling, owned reap and extension custody are checked by
+[porcelain_actor.rs](src/porcelain_actor.rs). Each uses named typed fields;
+contradictory evidence withholds dependent claims while preserving raw records.
+Per-actor endings remain separately supported or withheld.
 
 Worker identity comes only from `runner_subprocess.pid`; a host or client PID
 is never a fallback. The client's start/end timestamps remain raw execution

@@ -30,7 +30,7 @@ private func clockStep() -> PWRunnerProbeStep {
         attempt: PWRunnerAttempt(kind: "sysctl", action: "read", target: "kern.ostype"))
 }
 
-/// Encode the reply the host would assemble, round-trip it, and leave it beside
+/// Retain the binary reply the host would assemble beside
 /// the fixture for the Rust assembly and independent-consumer replay.
 private func retainClockReply(_ out: CWorkerOutput, result: CWorkerRunResult, name: String,
                               plan: [PWRunnerProbeStep]) throws -> PWRunnerRunResult {
@@ -43,10 +43,10 @@ private func retainClockReply(_ out: CWorkerOutput, result: CWorkerRunResult, na
             disposition: record),
         runner_subprocess: buildWorkerSubprocess(out, disposition: record),
         phases: [constructedPhase(out, ids: plan.map { $0.step_id }, hasQueries: false)])
-    let bytes = try pwRunnerEncodeJSON(reply)
+    let bytes = try admittedReplyData(reply)
     let directory = URL(fileURLWithPath: try clockCompanion("")).deletingLastPathComponent()
-    try bytes.write(to: directory.appendingPathComponent("worker-clock-\(name).json"))
-    return try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+    try bytes.write(to: directory.appendingPathComponent("worker-clock-\(name).pwp"))
+    return reply
 }
 
 private func expectSameFailure(_ a: PWWorkerFailure?, _ b: PWWorkerFailure?) throws {
@@ -163,10 +163,10 @@ private func clockPhases(_ suffix: String, first: PWRunnerProbeStep, gateDelayMs
     if gate != nil { try expectEqual(launches, 2, "phase-2 collection was not reached") }
     // The service adds host path diagnostics after orchestration.
     reply.steps = enrichPathDiagnostics(steps: reply.steps)
-    let bytes = try pwRunnerEncodeJSON(reply)
+    let bytes = try admittedReplyData(reply)
     let directory = URL(fileURLWithPath: try clockCompanion("")).deletingLastPathComponent()
-    try bytes.write(to: directory.appendingPathComponent("worker-clock-\(name).json"))
-    return try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+    try bytes.write(to: directory.appendingPathComponent("worker-clock-\(name).pwp"))
+    return reply
 }
 
 /// The second phase never acknowledged: retain any native query observation,
@@ -271,8 +271,8 @@ func runWorkerClockTests(_ tk: TestKit) {
                     if code == 14 { try expectContains(summary.error ?? "", "no policy byte read") }
                     if blocked { try expectContains(summary.error ?? "", "host write(policy_pipe)") }
                     let record = resolveDisposition(out, plan: [clockStep()])
-                    try expectEqual(record.questions["progress_association"]?.answer, "none")
-                    try expectEqual(record.steps[0].questions["step_result_published"]?.answer, "unpublished")
+                    try expectEqual(record.questions.progress_association?.answer, "none")
+                    try expectEqual(record.steps[0].questions.step_result_published?.answer, "unpublished")
                     let decoded = try retainClockReply(out, result: result,
                         name: "setup-\(name)-\(blocked ? "blocked" : "buffered")", plan: [clockStep()])
                     let sub = decoded.runner_subprocess

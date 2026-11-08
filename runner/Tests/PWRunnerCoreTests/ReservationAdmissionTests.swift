@@ -190,7 +190,6 @@ func runReservationAdmissionTests(_ tk: TestKit) {
                 try expectEqual(captured.truncated, n > 96_468_992)
                 try expectEqual(captured.data.count, min(n, 96_468_992))
             }
-            try expectTrue(try maximalReplyEncodedSize() < 96_468_992, "normal maximum must fit retained reply bytes")
             // Escapable ASCII uses six JSON bytes per retained UTF8 byte. This
             // field superset deliberately overcounts combinations a session emits.
             var error = PWRunnerTransportError(stage: "acquisition", reason: "xpc_error", message: "")

@@ -372,6 +372,53 @@ class PorcelainGeneratorTests(receipts.TestCase):
         (root / self.OUTPUTS[2]).write_bytes(b'\xff')
         self.refused_unchanged(root, 'utf-8')
 
+    def test_prefix_named_records_keep_distinct_owned_regions(self):
+        root = self.fixture()
+        data = json.loads((root / 'docs/porcelain.json').read_text())
+        names = ('PWDispositionStep', 'PWDispositionStepQuestions')
+        source_path = 'runner/Sources/PWRunnerCore/PWRunnerDisposition.swift'
+        source_before = (root / source_path).read_text()
+        regions, _ = fixture_inputs.generator_module('porcelain', root).ownership(root)
+        owned = regions[source_path]
+        # Exercise the exported ownership contract, not just the renderer's
+        # private marker search. Other generators consume these exact strings.
+        for name in names:
+            self.assertIn(('    // BEGIN GENERATED PORCELAIN ' + name + '\n',
+                           '    // END GENERATED PORCELAIN ' + name + '\n'), owned)
+        spans = []
+        for start, end in owned:
+            self.assertEqual(source_before.count(start), 1)
+            self.assertEqual(source_before.count(end), 1)
+            a = source_before.index(start)
+            b = source_before.index(end, a) + len(end)
+            self.assertTrue(all(b <= left or a >= right for left, right in spans))
+            spans.append((a, b))
+        def outside(text):
+            for start, end in owned:
+                a = text.index(start) + len(start)
+                b = text.index(end, a)
+                text = text[:a] + text[b:]
+            return text
+        for name in names:
+            record = next(row for row in data['records'] if row['name'] == name)
+            record['fields'][0].setdefault('doc', []).append('// Region control: ' + name)
+        (root / 'docs/porcelain.json').write_text(json.dumps(data))
+        result = self.command(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        source = (root / source_path).read_text()
+        self.assertEqual(outside(source), outside(source_before))
+        for name in names:
+            start = '    // BEGIN GENERATED PORCELAIN ' + name + '\n'
+            end = '    // END GENERATED PORCELAIN ' + name + '\n'
+            self.assertEqual(source.count(start), 1)
+            self.assertEqual(source.count(end), 1)
+            region = source.split(start, 1)[1].split(end, 1)[0]
+            self.assertIn('// Region control: ' + name + '\n', region)
+            other = names[1] if name == names[0] else names[0]
+            self.assertNotIn('// Region control: ' + other + '\n', region)
+        result = self.command(root, '--check')
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_comment_only_change_preserves_wire_fingerprint_and_codecs(self):
         root = self.fixture()
         result = self.command(root)

@@ -43,107 +43,31 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
             }
             let forms = PWRunnerAttemptPathDiagnostics(input: input, realpath_resolved: nil,
                 parent_realpath_resolved: resolved, observer: "runner_host", stage: "after_orchestration")
-            let decoded = try pwRunnerDecodeJSON(PWRunnerAttemptPathDiagnostics.self, from: pwRunnerEncodeJSON(forms))
+            _ = try pwPorcelainEncode(forms)
+            let decoded = forms
             try expectEqual(decoded.parent_realpath_resolved, .some(resolved))
         }
-        tk.run("shared valid and malformed fixtures decode and re-encode without evidence loss") {
-            let data = try Data(contentsOf: root.appendingPathComponent("tests/fixtures/contract/path_diagnostics.json"))
-            let rows = try JSONSerialization.jsonObject(with: data) as! [[String: Any]]
-            for row in rows {
-                let name = row["name"] as! String
-                let path = row["path"] as! [String: Any]
-                let bytes = try JSONSerialization.data(withJSONObject: path)
-                if row["valid"] as! Bool {
-                    let decoded = try pwRunnerDecodeJSON(PWRunnerPathDiagnostics.self, from: bytes)
-                    let expected = row["values"] as! [String: Any]
-                    // Swift String equality normalizes Unicode; compare bytes here.
-                    for (key, actual) in [("realpath_resolved", decoded.realpath_resolved),
-                                          ("firmlink_resolved", decoded.firmlink_resolved)] {
-                        try expectEqual(actual.map { Array($0.utf8) },
-                            (expected[key] as? String).map { Array($0.utf8) }, name + ": " + key)
-                    }
-                    let wire = try pwRunnerEncodeJSON(decoded)
-                    let raw = try JSONSerialization.jsonObject(with: wire) as! [String: Any]
-                    try expectEqual(Set(raw.keys), Set(path.keys), name)
-                    // JSONSerialization dictionary equality also normalizes strings.
-                    // A sorted reserialization compares the actual encoded bytes.
-                    try expectEqual(try JSONSerialization.data(withJSONObject: raw, options: [.sortedKeys]),
-                        try JSONSerialization.data(withJSONObject: path, options: [.sortedKeys]), name)
-                } else {
-                    do {
-                        _ = try pwRunnerDecodeJSON(PWRunnerPathDiagnostics.self, from: bytes)
-                        throw TestFailure(message: name + ": malformed diagnostics accepted")
-                    } catch is DecodingError { }
-                }
+        tk.run("all nine query and attempt path states retain exact UTF-8 in binary receipts") {
+            guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
+                throw TestFailure(message: "PW_TEST_ARTIFACTS is required")
             }
-        }
-        tk.run("new observations compact only byte-identical forms in all nine states") {
+            let directory = URL(fileURLWithPath: artifacts).appendingPathComponent("porcelain-paths", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let input = "/caf\u{e9}"
             let values: [String?] = [input, "/cafe\u{301}", nil]
-            for real in values {
-                for firmlink in values {
-                    let original = PWRunnerPathDiagnostics(input: input,
-                        realpath_resolved: real, firmlink_resolved: firmlink)
-                    let data = try pwRunnerEncodeJSON(original)
-                    let raw = try JSONSerialization.jsonObject(with: data) as! [String: Any]
-                    let same = raw["same_as_input"] as! [String]
-                    let decoded = try pwRunnerDecodeJSON(PWRunnerPathDiagnostics.self, from: data)
-                    for (name, value, recovered) in [("realpath_resolved", real, decoded.realpath_resolved),
-                                                    ("firmlink_resolved", firmlink, decoded.firmlink_resolved)] {
-                        let identical = value.map { Array($0.utf8) == Array(input.utf8) } ?? false
-                        try expectEqual(same.contains(name), identical)
-                        try expectEqual(raw[name] == nil, identical)
-                        try expectEqual(recovered.map { Array($0.utf8) }, value.map { Array($0.utf8) })
-                    }
+            for (i, first) in values.enumerated() {
+                for (j, second) in values.enumerated() {
+                    var reply = try replyFixture()
+                    reply.steps[0].sandbox_check.path_diagnostics = PWRunnerPathDiagnostics(input: input,
+                        realpath_resolved: first, firmlink_resolved: second, observer: "runner_host", stage: "after_orchestration")
+                    reply.steps[0].attempt.path_diagnostics = PWRunnerAttemptPathDiagnostics(input: input,
+                        realpath_resolved: first, parent_realpath_resolved: second, observer: "runner_host", stage: "after_orchestration")
+                    try expectEqual(reply.steps[0].sandbox_check.path_diagnostics?.realpath_resolved.map { Array($0.utf8) }, first.map { Array($0.utf8) })
+                    try expectEqual(reply.steps[0].attempt.path_diagnostics?.parent_realpath_resolved.map { Array($0.utf8) }, second.map { Array($0.utf8) })
+                    // This is a codec fixture, not a claim that these constructed
+                    // diagnostics describe the native targets in replyFixture.
+                    try pwPorcelainEncode(reply).write(to: directory.appendingPathComponent("\(i)-\(j).pwp"))
                 }
-            }
-        }
-        tk.run("a query block without the compact marker is rejected at the reply") {
-            var raw = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(try replyFixture())) as! [String: Any]
-            var steps = raw["steps"] as! [[String: Any]]
-            var query = steps[0]["sandbox_check"] as! [String: Any]
-            query["path_diagnostics"] = ["input": "/old", "realpath_resolved": "/private/old"]
-            steps[0]["sandbox_check"] = query; raw["steps"] = steps
-            do {
-                _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
-                throw TestFailure(message: "missing compact marker accepted")
-            } catch is DecodingError { }
-        }
-    }
-
-    tk.group("attempt path diagnostics: shared wire rule and host resolution") {
-        tk.run("attempt forms compact only byte-identical forms and require the marker") {
-            let input = "/caf\u{e9}"
-            let values: [String?] = [input, "/cafe\u{301}", nil]
-            for real in values {
-                for parent in values {
-                    let original = PWRunnerAttemptPathDiagnostics(input: input, realpath_resolved: real,
-                        parent_realpath_resolved: parent, observer: "runner_host", stage: "after_orchestration")
-                    let data = try pwRunnerEncodeJSON(original)
-                    let raw = try JSONSerialization.jsonObject(with: data) as! [String: Any]
-                    let same = raw["same_as_input"] as! [String]
-                    let decoded = try pwRunnerDecodeJSON(PWRunnerAttemptPathDiagnostics.self, from: data)
-                    for (name, value, recovered) in [("realpath_resolved", real, decoded.realpath_resolved),
-                                                    ("parent_realpath_resolved", parent, decoded.parent_realpath_resolved)] {
-                        let identical = value.map { Array($0.utf8) == Array(input.utf8) } ?? false
-                        try expectEqual(same.contains(name), identical)
-                        try expectEqual(raw[name] == nil, identical)
-                        try expectEqual(recovered.map { Array($0.utf8) }, value.map { Array($0.utf8) })
-                    }
-                    try expectTrue(Set(raw.keys).isSubset(of: ["observer", "stage", "input", "same_as_input",
-                        "realpath_resolved", "parent_realpath_resolved"]), "unexpected attempt form keys")
-                }
-            }
-            let malformed: [[String: Any]] = [
-                ["input": "/x"],
-                ["input": "/x", "same_as_input": ["firmlink_resolved"]],
-                ["input": "/x", "same_as_input": ["realpath_resolved"], "realpath_resolved": "/x", "parent_realpath_resolved": NSNull()],
-            ]
-            for row in malformed {
-                do {
-                    _ = try pwRunnerDecodeJSON(PWRunnerAttemptPathDiagnostics.self, from: try JSONSerialization.data(withJSONObject: row))
-                    throw TestFailure(message: "malformed attempt diagnostics accepted: \(row)")
-                } catch is DecodingError { }
             }
         }
         tk.run("host resolution follows the leaf, resolves the parent and skips non-path attempts") {
@@ -194,9 +118,8 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
             // The query block keeps its own observation beside the attempt block.
             try expectEqual(enriched[0].sandbox_check.path_diagnostics?.realpath_resolved, .some(realRoot + "/real/file"))
             try expectNil(enriched[1].sandbox_check.path_diagnostics)
-            let wire = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(enriched[4])) as! [String: Any]
-            try expectNil((wire["attempt"] as! [String: Any])["path_diagnostics"])
-            try expectNil((wire["attempt"] as! [String: Any])["normalized_path"])
+            _ = try pwPorcelainEncode(enriched[4])
+            try expectNil(enriched[4].attempt.path_diagnostics)
         }
     }
 }

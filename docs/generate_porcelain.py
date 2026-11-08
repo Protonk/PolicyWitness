@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the prototype's fixed evidence records; no runtime source inference."""
+"""Generate fixed evidence records; no runtime source inference."""
 import argparse
 import hashlib
 import json
@@ -39,7 +39,9 @@ def ownership(root):
     regions = {}
     for record in schema['records']:
         if 'source' in record:
-            regions.setdefault(record['source'], []).append(markers(record))
+            # Ownership consumers search literal markers, so the newline is
+            # part of the identity (Step must not match StepQuestions).
+            regions.setdefault(record['source'], []).append(tuple(marker + '\n' for marker in markers(record)))
     return regions, set(OUTPUTS)
 
 
@@ -63,7 +65,7 @@ def rust_type(value):
 
 
 def field_shape(field):
-    return shape(field.get('wire_type', field['swift_type']))
+    return shape(field['swift_type'])
 
 
 def rust_name(field):
@@ -142,27 +144,16 @@ def swift(schema, fingerprint):
              'enum PWPorcelainSchema {', '    static let fingerprint: [UInt8] = [' + ', '.join(str(n) for n in bytes.fromhex(fingerprint)) + ']', '}']
     for record in schema['records']:
         name = record['name']
-        if record.get('adapter') == 'questions':
-            lines += [f'struct {name}: PWPorcelainWritable {{', '    let observations: [String: PWDispositionClaim]']
-        else:
-            lines += [f'extension {name}: PWPorcelainWritable {{']
+        lines += [f'extension {name}: PWPorcelainWritable {{']
         lines += [f'    static let porcelainRecordID: UInt16 = {record["id"]}', '    enum PorcelainTag {']
         for field in record['fields']:
             if not field.get('local_only'):
                 lines += [f'        static let {field["name"]}: UInt16 = {field["tag"]}']
         lines += ['    }', '    func porcelainWrite() throws -> Data {', '        var writer = PWPorcelainRecordWriter(Self.porcelainRecordID)']
-        if record.get('adapter') == 'questions':
-            allowed = ', '.join('"' + f['name'] + '"' for f in record['fields'])
-            lines += [f'        guard Set(observations.keys).isSubset(of: Set([{allowed}])) else {{',
-                      '            throw PWPorcelainError.invalid("unknown lifecycle question")', '        }']
         for field in record['fields']:
             if field.get('local_only'):
                 continue
             expr = field['swift_name']
-            if record.get('adapter') == 'questions':
-                expr = 'observations["' + field['name'] + '"]'
-            elif 'wire_type' in field:
-                expr = field['wire_type'] + '(observations: ' + expr + ')'
             lines += [f'        try writer.field(PorcelainTag.{field["name"]}, {expr})']
         lines += ['        return try writer.finish()', '    }', '}']
     return '\n'.join(lines) + '\n'
@@ -304,7 +295,7 @@ def outputs(root, schema):
             if 'default' in field:decl+=' = '+field['default']
             lines.append(decl)
         lines.append(end)
-        a=text.index(start);b=text.index(end,a)+len(end)
+        a=text.index(start+'\n');b=text.index(end+'\n',a)+len(end)
         changes[path]=text[:a]+'\n'.join(lines)+text[b:]
     return changes
 

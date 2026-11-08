@@ -414,8 +414,8 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectEqual(out.reaped, true)
             try expectNil(out.terminationRequest)
             try expectEqual(out.waitErrors?.count, 0)
-            let data = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
-            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+            let decoded = buildWorkerSubprocess(out)
+    let data = try pwPorcelainEncode(decoded)
             try expectEqual(classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0).outcome,
                             NormalizedOutcome.runnerTimeout)
             try expectEqual(decoded.poll_stop_reason, "sentinel_deadline")
@@ -458,8 +458,8 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectEqual(out.reaped, true)
             try expectNil(out.terminationRequest)
             try expectEqual(out.waitErrors?.count, 0)
-            let data = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
-            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+            let decoded = buildWorkerSubprocess(out)
+    let data = try pwPorcelainEncode(decoded)
             try expectEqual(decoded.poll_stop_reason, "child_reaped")
             try expectEqual(decoded.term_signal, Int(SIGKILL))
             try expectEqual(decoded.reaped, true)
@@ -782,7 +782,8 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectEqual(classify(workerResult: .success(out), validatorResult: nil, expectedVerdictCount: 0).outcome, NormalizedOutcome.finished)
             let steps = buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan),
                 workerOutput: out, validatorOutput: nil)
-            let wire = try pwRunnerDecodeJSON([PWRunnerStepResult].self, from: pwRunnerEncodeJSON(steps))
+            let wire = steps
+            for step in wire { _ = try pwPorcelainEncode(step) }
             try expectEqual(wire.first?.attempt.outcome, AttemptOutcome.ok)
             try expectEqual(wire.last?.attempt.outcome, AttemptOutcome.ok)
             try expectTrue(PWContract.responseSchema >= 11)
@@ -799,7 +800,8 @@ func runCWorkerTests(_ tk: TestKit) {
                 altered.slots[1].error = "unfamiliar cleanup diagnostic"
                 let projected = buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan),
                     workerOutput: altered, validatorOutput: nil)
-                let decoded = try pwRunnerDecodeJSON([PWRunnerStepResult].self, from: pwRunnerEncodeJSON(projected))[1]
+                let decoded = projected[1]
+                _ = try pwPorcelainEncode(decoded)
                 try expectEqual(decoded.attempt.outcome, AttemptOutcome.execFailed)
                 try expectEqual(decoded.attempt.child_exit_code, Int(childExit))
                 try expectEqual(decoded.attempt.child_term_signal, 0)

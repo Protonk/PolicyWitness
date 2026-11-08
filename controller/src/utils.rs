@@ -4,11 +4,8 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-// Per-receiver retention budgets, not peak-memory limits: Command::output
-// has already collected both streams for runner and policy helper capture. The runner budget is derived, not tuned:
-// three times the synthesized maximal reply (docs/limits.json
-// runner_reply_maximum, computed by runner_unit from the field-complete reply
-// fixture with every string at its limit), rounded up to a whole 4 MiB.
+// Per-stream retention budgets, not peak-memory limits: Command::output
+// has already collected both streams before prefix retention is applied.
 pub const RUNNER_CAPTURE_BYTES: usize = 272 * 1024 * 1024;
 pub const HELPER_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
 

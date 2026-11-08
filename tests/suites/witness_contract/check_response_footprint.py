@@ -17,9 +17,27 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from footprint_observer import FootprintObserver, GenerationExitObserver, generation, require_sample, sha256
 from run_capture import RunCapture
 import check_max_target_reply as maximum
+import porcelain
 
-STAGES = ['full_client_collection', 'capture_parsing', 'typed_capture_validation_base64_decoding',
-          'host_parsing', 'envelope_construction_sorting', 'final_rendering']
+# Source ownership is a declaration, not an instrumented decoder-stage receipt.
+REPRESENTATIONS = [
+    dict(name='client_capture_frame', representation='binary bytes', owner='controller stdout collector', source='controller/src/runner_client.rs'),
+    dict(name='client_capture', representation='typed fixed record with raw host bytes', owner='controller transport account', source='controller/src/porcelain_records.rs'),
+    dict(name='host_reply', representation='typed fixed record', owner='controller admitted evidence', source='controller/src/porcelain_admission.rs'),
+    dict(name='public_output', representation='JSON presentation text', owner='controller stdout writer', source='controller/src/json_contract.rs'),
+]
+OWNERSHIP_BOUNDS = dict(frame_bytes=128 * 1024 * 1024, decoded_storage_bytes=128 * 1024 * 1024,
+                        nesting=32, host_retention_bytes=92 * 1024 * 1024)
+
+
+def source_ownership(repo):
+    paths = {row['source'] for row in REPRESENTATIONS} | {'controller/src/porcelain.rs',
+        'runner/Sources/PWRunnerCore/PWPorcelain.swift', 'docs/porcelain.json'}
+    return dict(schema_version=2, case_id='response_source_ownership',
+        scope='source ownership and explicit bounds; no observed decoder stages',
+        representations=copy.deepcopy(REPRESENTATIONS), bounds=dict(OWNERSHIP_BOUNDS),
+        stage_timing_observed=False, allocation_overlap_observed=False, peak_memory_bound=False,
+        sources_sha256={path: sha256(repo / path) for path in sorted(paths)})
 
 
 def strict_decode(text):
@@ -29,33 +47,18 @@ def strict_decode(text):
 
 
 def check_internal(receipt):
-    assert receipt['schema_version'] == 1
-    assert receipt['case_id'] == 'response_footprint_success_boundaries'
-    assert len(receipt['input_sha256']) == 64 and all(c in '0123456789abcdef' for c in receipt['input_sha256'])
-    rows = receipt['boundaries']
-    assert [r['stage'] for r in rows] == STAGES
-    for index, row in enumerate(rows):
-        for field in ['raw_stdout', 'raw_stderr', 'retained_stdout', 'retained_stderr', 'decoded', 'rendered']:
-            pair = row[field]
-            if pair is not None:
-                assert len(pair) == 2 and all(type(x) is int and x >= 0 for x in pair)
-                assert pair[1] >= pair[0], field
-        if index < 4:
-            assert row['raw_stdout'][0] == receipt['client_stdout_bytes']
-            assert row['raw_stderr'][0] == receipt['client_stderr_bytes']
-        else:
-            assert row['raw_stdout'] is None and row['raw_stderr'] is None
-            assert row['typed_base64'] is None and row['decoded'] is None and row['host_retained'] is None
-            assert row['borrowed_input'] and row['envelope']
-        if 1 <= index <= 3:
-            assert row['generic_base64'] == 4 * ((receipt['host_bytes'] + 2) // 3)
-        if 2 <= index <= 3:
-            assert row['typed_base64'] == row['generic_base64']
-            assert row['host_retained'] == receipt['host_bytes'] == row['decoded'][0]
-    assert rows[1]['retained_stdout'][0] == receipt['client_stdout_bytes']
-    assert rows[1]['retained_stderr'][0] == receipt['client_stderr_bytes']
-    assert rows[3]['parsed_host'] is True
-    assert rows[5]['rendered'][0] == receipt['rendered_bytes']
+    assert receipt['schema_version'] == 2 and receipt['case_id'] == 'response_source_ownership'
+    assert receipt['scope'] == 'source ownership and explicit bounds; no observed decoder stages'
+    assert receipt['representations'] == REPRESENTATIONS
+    assert receipt['bounds'] == OWNERSHIP_BOUNDS
+    assert receipt['stage_timing_observed'] is False
+    assert receipt['allocation_overlap_observed'] is False
+    assert receipt['peak_memory_bound'] is False
+    expected = {row['source'] for row in REPRESENTATIONS} | {'controller/src/porcelain.rs',
+        'runner/Sources/PWRunnerCore/PWPorcelain.swift', 'docs/porcelain.json'}
+    assert set(receipt['sources_sha256']) == expected
+    for digest in receipt['sources_sha256'].values():
+        assert len(digest) == 64 and all(c in '0123456789abcdef' for c in digest)
 
 
 def check_sizes(sizes, reply, client, host_artifact, envelope_artifact):
@@ -65,7 +68,11 @@ def check_sizes(sizes, reply, client, host_artifact, envelope_artifact):
     assert sizes['hash_scope'] == 'computed transport artifact; no producer hash supplied'
     assert reply['truncated'] is False
     assert sizes['host_received_bytes'] == reply['bytes_received'] == reply['bytes_retained'] == sizes['host_retained_bytes'] == len(decoded)
-    assert sizes['host_received_bytes'] <= sizes['synthesized_host_bound_bytes']
+    assert sizes['host_received_bytes'] <= sizes['host_retention_bytes'] == 92 * 1024 * 1024
+    assert sizes['host_received_bytes'] <= sizes['binary_frame_limit_bytes'] == 128 * 1024 * 1024
+    assert sizes['host_format'] == 'PWP1 typed binary'
+    assert sizes['base64_scope'] == 'public JSON projection of retained raw host bytes'
+    porcelain.decode(host_artifact, 'reply')
     assert sizes['base64_characters'] == len(reply['data_base64'])
     assert client['stdout_truncated'] is False and client['stderr_truncated'] is False
     assert client['stdout_parse_error'] is None and client['stdout_capture_error'] is None
@@ -344,14 +351,17 @@ def collect(pw, observer, out, name, request, internal, **expectations):
             assert runner['compiled_profile']['status']=='captured'
         reply = client['transport']['runner_reply']
         decoded = strict_decode(reply['data_base64'])
-        artifact = directory / 'host-reply.json'
+        artifact = directory / 'host-reply.pwp'
         artifact.write_bytes(decoded)
-        assert json.loads(decoded) == runner, 'transported host bytes must be exact admitted reply'
+        assert porcelain.decode(decoded, 'reply') == runner, 'independent binary projection differs from admitted reply'
         sizes = dict(host_received_bytes=reply['bytes_received'], host_retained_bytes=reply['bytes_retained'],
                      base64_characters=len(reply['data_base64']),
                      computed_transport_artifact_sha256=hashlib.sha256(decoded).hexdigest(),
                      hash_scope='computed transport artifact; no producer hash supplied',
-                     synthesized_host_bound_bytes=maximum.documented_limit('runner_reply_maximum'),
+                     host_retention_bytes=maximum.documented_limit('client_reply_retention'),
+                     binary_frame_limit_bytes=maximum.documented_limit('porcelain_frame_bytes'),
+                     host_format='PWP1 typed binary',
+                     base64_scope='public JSON projection of retained raw host bytes',
                      client_allowance_bytes=client['capture_limit_bytes'],
                      final_envelope_bytes=run.stdout_path.stat().st_size,
                      authority_bytes_in_reply_payload=False, compiled_profiles=profiles(runner))
@@ -366,13 +376,13 @@ def collect(pw, observer, out, name, request, internal, **expectations):
                           verified_live_interval_ns=[samples[0]['begin_ns'],last_alive], exit_inspection=observer.inspect(pid),
                           memory_unit='bytes', stage_attribution='unknown', terminal_resolution=terminal_resolution, exit_events=exit_events, exit_registration=registration)
         check_observation(controller, samples)
-        receipt = dict(schema_version=1, case_id='witness_contract/response_footprint', workload=name,
+        receipt = dict(schema_version=2, case_id='witness_contract/response_footprint', workload=name,
                        run_id=sha256(run.request_path)[:16]+'-'+str(pid), workload_id=name, repetition=0, repetition_count=1,
                        request_sha256=sha256(run.request_path),
                        app_evidence={name:sha256(Path(pw).parents[1]/'Resources/Evidence'/name) for name in ['manifest.json','provenance.json']},
                        source_identity={str(path.relative_to(Path(__file__).resolve().parents[3])):sha256(path) for path in [Path(__file__),Path(maximum.__file__),Path(__file__).resolve().parents[2]/'lib/run_capture.py',Path(__file__).resolve().parents[2]/'lib/footprint_observer.py']},
                        sizes=sizes, controller=controller, samples=samples, rejected_evidence_controls=rejected_evidence,
-                       internal_assertions=internal,
+                       source_ownership=internal,
                        conditions=dict(os=platform.platform(),hardware=platform.machine(),
                                        python_driver=dict(cpu_source='getrusage RUSAGE_SELF seconds converted to ns',generation=generation(python_before),executable=sys.executable,executable_sha256=sha256(sys.executable),
                                            before=python_before,after=python_after,
@@ -405,16 +415,16 @@ def collect(pw, observer, out, name, request, internal, **expectations):
 
 
 def main():
-    pw, out, binary, unit_receipt = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve(), Path(sys.argv[3]).resolve(), Path(sys.argv[4]).resolve()
+    pw, out, binary = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve(), Path(sys.argv[3]).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    internal = json.loads(unit_receipt.read_text()); check_internal(internal)
-    input_artifact = unit_receipt.with_suffix('.input.json')
-    assert sha256(input_artifact) == internal['input_sha256']
-    assert len(input_artifact.read_bytes()) == internal['host_bytes']
     repo = Path(__file__).resolve().parents[3]
-    for name, digest in internal['sources_sha256'].items(): assert sha256(repo/name) == digest
-    (out/'internal-input.json').write_bytes(input_artifact.read_bytes())
-    (out/'internal-assertions.json').write_text(json.dumps(internal,indent=2)+'\n')
+    internal = source_ownership(repo)
+    check_internal(internal)
+    for name, digest in internal['sources_sha256'].items(): assert sha256(repo / name) == digest
+    for key, ident in [('frame_bytes', 'porcelain_frame_bytes'), ('decoded_storage_bytes', 'porcelain_decoded_storage_bytes'),
+                       ('nesting', 'porcelain_nesting'), ('host_retention_bytes', 'client_reply_retention')]:
+        assert internal['bounds'][key] == maximum.documented_limit(ident)
+    (out/'source-ownership.json').write_text(json.dumps(internal, indent=2) + '\n')
     with tempfile.TemporaryDirectory(prefix='pw-response-', dir='/private/tmp') as temporary, FootprintObserver(binary, out/'observer') as observer:
         root = Path(temporary)
         plain = maximum.targets_under(root/'plain'); escaped = maximum.targets_under(root/'escaped', escaped=True)
@@ -441,6 +451,6 @@ def main():
         large['policy'].update(capture_compiled_profile=True,capture_nonce='f'*32)
         for i,step in enumerate(large['probe_plan']): step['step_id']='\x01'*59+f'{i:04d}'
         receipts.append(collect(pw,observer,out,'control_character_exec',large,internal,exec_args=args,exec_output=('\x01'*1023,'\x01'*1023)))
-        (out/'response-footprint.json').write_text(json.dumps(dict(schema_version=1,case_id='witness_contract/response_footprint',workloads=receipts),indent=2)+'\n')
+        (out/'response-footprint.json').write_text(json.dumps(dict(schema_version=2,case_id='witness_contract/response_footprint',workloads=receipts),indent=2)+'\n')
 
 if __name__ == '__main__': main()

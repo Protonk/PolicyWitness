@@ -16,6 +16,9 @@ deterministic, and checked into the repo so tests are hermetic.
   against. A failing comparison writes a candidate into the case artifacts;
   replace the golden after review, and bump the number in `docs/contract.json`
   first when the failure says so. See `docs/CONTRACT.md`.
+  `normal_reply.json` is the authored expected observation subset for the independent
+  binary reply projection control; schema version and source identity follow their
+  manifests. Shape checks separately own explicit null versus omitted fields.
   `compiled_profile.json` supplies independent valid and invalid nested receipt
   contexts to Swift decoding, Rust reply admission and Python consumer controls.
   `phase_collection.json` supplies hand-reviewed compatible and contradictory

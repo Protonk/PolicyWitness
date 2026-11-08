@@ -2,12 +2,6 @@
   "schema_version": 1,
   "entries": [
     {
-      "document": "docs/LIMITS.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "  rounded up to a whole 4 MiB. The maximum is synthesized by"
-    },
-    {
       "document": "docs/PolicyWitness.md",
       "invariant": "G9",
       "kind": "literal",

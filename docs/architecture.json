@@ -1852,7 +1852,7 @@
               "form": "test"
             },
             {
-              "path": "controller/src/disposition.rs",
+              "path": "controller/src/porcelain_admission.rs",
               "symbol": "phase_collection_states_gate_disposition_without_requiring_success",
               "form": "test"
             },
@@ -2168,8 +2168,8 @@
               "symbol": "actorExtensionEvidenceProblem"
             },
             {
-              "path": "controller/src/disposition.rs",
-              "symbol": "actor_extension_issues"
+              "path": "controller/src/porcelain_actor.rs",
+              "symbol": "custody"
             },
             {
               "path": "tests/lib/extension_evidence.py",
@@ -2330,7 +2330,7 @@
               "form": "test"
             }
           ],
-          "note": "Converted coherence checks govern certification; unconverted scopes retain observations and withhold aggregate certification."
+          "note": "Typed coherence checks govern claims; rejected or conflicting records retain native observations and withhold dependent claims."
         }
       ]
     },

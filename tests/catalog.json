@@ -2012,12 +2012,10 @@
           ],
           "requires": [
             "app",
-            "clang",
-            "cargo"
+            "clang"
           ],
           "default": false,
           "depends_on": [
-            "unit/rust.unit",
             "runner_abi_layout/c_swift_layout_agreement",
             "witness_contract/footprint_observer_controls",
             "witness_contract/response_footprint_controls"

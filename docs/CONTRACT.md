@@ -7,14 +7,14 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 28, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 29, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
 | request schema (`request_schema`) | 6 | [`requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 28 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 29 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | controller envelope (`controller_envelope`) | 13 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 | runner protocol (`runner_protocol`) | 4 | [`runnerProtocol`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RUNNER_PROTOCOL_VERSION`](../controller/src/json_contract.rs); [`RUNNER_PROTOCOL`](../tests/lib/contract.py); [`PWRunnerProtocolVersion`](../runner/Services/PWRunner/Info.plist) |
 <!-- END GENERATED CONTRACT TABLE -->
@@ -53,13 +53,14 @@ Current wire contracts: request schema 6, response schema 28, controller envelop
 
 ## Supported versions
 
-### Experimental typed response transport
+### Typed response transport
 
 [porcelain.json](porcelain.json) owns response and client-capture record
 structure. `generate_porcelain.py` emits the Swift writers and stored fields,
 Rust owned records/readers/JSON projection, and independent Python structural
 tables. Request and reservation JSON and validator NDJSON retain their own
-boundaries. JSON response ingestion exists only in explicit comparison controls.
+boundaries. JSON reply fixtures are test inputs; production reply ingestion is
+binary and public JSON is projected from typed records.
 
 A frame is `PWP1`, the SHA-256 of the schema's wire identity, and one
 root value. Values have a one-byte kind, four-byte little-endian payload length,
@@ -81,9 +82,10 @@ existing retention cap. There is no new receiver deadline or streaming claim.
 
 The public envelope projects typed records; retained raw bytes remain separate
 and become base64 only at presentation. Unsupported or malformed input cannot
-become a semantic claim. The prototype withholds aggregate interpretation for
-declared `unconverted_scope` families; structural decoding alone does not admit
-their meanings. Full semantic migration is required before production adoption.
+become a semantic claim. Structural admission establishes the declared shape;
+named validators separately check native operations, lifecycle, phase order,
+actor setup/equipment, owned endings and extension custody before projecting
+claims. Conflicting observations remain publishable with dependent claims withheld.
 
 ### Version admission
 

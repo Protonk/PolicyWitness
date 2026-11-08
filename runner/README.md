@@ -37,16 +37,17 @@ executable; it does not build the shipped service bundle.
 | Request and path helpers | [ProbeRunner.swift](Sources/PWRunnerCore/ProbeRunner.swift): request meaning and prediction-exclusion definitions; [SandboxApply.swift](Sources/PWRunnerCore/SandboxApply.swift): policy hashing; [PathUtils.swift](Sources/PWRunnerCore/PathUtils.swift): planning and later host path observations. |
 | Client and tests | [Clients/PWRunnerClient/main.swift](Clients/PWRunnerClient/main.swift): JSON request and binary reply XPC client; [Tests/PWRunnerCoreTests/](Tests/PWRunnerCoreTests/): explicitly registered TestKit groups. |
 
-The experimental reply representation is owned by
+The reply representation is owned by
 [docs/porcelain.json](../docs/porcelain.json). Its generator writes stored-field
 regions, direct Swift binary writers, owned Rust records/readers and independent
 Python structural tables. `PWPorcelain.swift` implements the closed primitive
 format. `validateForReporting` runs the semantic gates before normal writing;
 rich degradation retains observations while withholding comparisons, and an
 independent minimal writer reports lost evidence. The client relays opaque host
-bytes in a binary capture. JSON request/control decoding and the JSON comparison
-encoders remain separate; equipment metadata's existing JSON-size checks have
-not migrated.
+bytes in a binary capture. Lifecycle questions have fixed named fields; missing
+answers remain representable in incomplete evidence. Equipment metadata counts
+retained UTF-8 text directly. JSON request/control decoding, validator NDJSON
+and the equipment inventory file retain their own boundary adapters.
 
 The native [C worker](../controller/tools/pw_probe_runner/pw_probe_runner.c) and
 [batch validator](../controller/tools/sb_api_validator/sb_api_validator.c) live outside this directory. The build embeds the worker twice and the validator as `pw-probe-runner`,
@@ -172,7 +173,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 28, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 29, controller envelope 13, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL
@@ -238,7 +239,7 @@ comparison precedence remain separate from this evidence. The
 [exec field account](../docs/PolicyWitness.md#structured-exec-observations) defines
 all conditional fields and residual descendant lifetime limits.
 
-Readers and encoders require the current response version. If ordinary reply
+Readers and reporting validation require the current response version. If ordinary reply
 encoding fails, the service returns `runner_reporting_failed`, preserving
 available observations and withholding comparisons. If that also fails,
 `evidence_retained: false` marks the minimal reply. Full wire fields and reading

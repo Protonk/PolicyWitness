@@ -25,7 +25,7 @@ func ordinaryReadReplyFixture(published: Bool = true) -> PWRunnerRunResult {
         runner_subprocess: buildWorkerSubprocess(out, disposition: disposition), phases: [phase])
 }
 
-func ordinaryReadShapeDocuments() throws -> [[String: Any]] {
+func ordinaryReadShapeDocuments() throws -> [PWRunnerRunResult] {
     var replies = [ordinaryReadReplyFixture(), ordinaryReadReplyFixture(published: false)]
     var failure = ordinaryReadReplyFixture()
     failure.steps[0].attempt.fresh_read = PWRunnerFreshRead(open_rc: 5, read_rc: -1, read_errno: 5,
@@ -43,7 +43,7 @@ func ordinaryReadShapeDocuments() throws -> [[String: Any]] {
     openFailure.steps[0].comparison?.observation_basis = "completed_worker_status"
     try expectNil(openFailure.steps[0].attempt.freshReadEvidenceProblem())
     replies.append(openFailure)
-    return try replies.map { try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON($0)) as! [String: Any] }
+    return replies
 }
 
 func runExtensionEvidenceTests(_ tk: TestKit) {
@@ -63,7 +63,7 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
             for change in changes {
                 var reply = ordinaryReadReplyFixture(); change(&reply.steps[0].attempt)
                 var refused = false
-                do { _ = try pwRunnerEncodeJSON(reply) } catch { refused = true }
+                do { _ = try admittedReplyData(reply) } catch { refused = true }
                 try expectTrue(refused, "encoder accepted unsupported fresh-read observations")
             }
         }

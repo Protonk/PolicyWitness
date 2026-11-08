@@ -174,7 +174,7 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
         let q = &s["sandbox_check"];
         json!({"step_id": s["step_id"], "operation": q["operation"], "filter_type": "PATH",
             "filter_type_id": 1, "filter_value": q["filter_value"], "outcome": q["outcome"],
-            "rc": q["rc"], "errno": q["errno"]})
+            "rc": q["rc"], "errno": q["errno"], "raw_line":"authored validator record"})
     };
     // One owned phase per distinct step phase_id, in order of first appearance;
     // steps without a phase belong to "main".
@@ -198,7 +198,8 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
                 .collect();
             let ids: Vec<Value> = own.iter().map(|s| s["step_id"].clone()).collect();
             json!({"phase_id": id, "ordinal": index + 1, "action_ids": ids,
-                "arrival_observed": true, "completion_observed": !partial && signal.is_none(),
+                "arrival_observed": true, "completion_observed": own.iter().all(|s| s["attempt"]["result_source"] == "worker")
+                    && (signal.is_none() || index + 1 < phase_ids.len()),
                 "collection_status": "collected",
                 "ordering": {"collection_closed_before_proceed": true, "proceed_set": true,
                     "proceed_observed": true, "validator_disposition": "reaped",

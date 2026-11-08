@@ -43,6 +43,42 @@ private func equipmentFixture(_ body: (URL, ActorEquipmentCalls) throws -> Void)
 }
 
 func runActorEquipmentTests(_ tk: TestKit) {
+    tk.group("equipment retained metadata text budget") {
+        tk.run("binding text uses UTF-8 bytes without JSON escape overhead") {
+            // Isolate the aggregate resource bound. Other semantic diagnostics
+            // are expected for these deliberately non-identity records.
+            for unit in ["x", "\"", "\\", "\n", "é"] {
+                let text = String(repeating: unit, count: 32_768 / unit.utf8.count)
+                var binding = PWRunnerEquipmentBinding(binding_id: "", role: "", source: "",
+                    implementation_identity: text, path: "", status: "")
+                func bounded(_ value: PWRunnerEquipmentBinding) -> Bool {
+                    !pwRunnerEquipmentProblems(inventory: nil, bindings: [value], entitlements: [],
+                        actors: [], actorIDs: [], actorPIDs: []).contains("equipment binding metadata bound")
+                }
+                try expectTrue(bounded(binding))
+                binding.error = PWRunnerEquipmentError(operation: "x")
+                try expectFalse(bounded(binding), "nested error text participates")
+            }
+        }
+        tk.run("execution includes observation operation text and keeps a separate count bound") {
+            var execution = PWRunnerEquipmentExecution(status: "", identifier: String(repeating: "é", count: 16_383),
+                native_observations: [PWRunnerEquipmentNativeObservation(operation: "é", attempted: false)], reason: nil)
+            func problems(_ value: PWRunnerEquipmentExecution) -> [String] {
+                let actor = PWRunnerActorEquipment(requested: nil, resolved: "selected", binding_ref: "selected",
+                    required_entitlements: [], execution: value)
+                return pwRunnerEquipmentProblems(inventory: nil, bindings: [], entitlements: [],
+                    actors: [actor], actorIDs: ["A"], actorPIDs: [nil])
+            }
+            try expectFalse(problems(execution).contains("equipment execution metadata bound"))
+            execution.reason = "x"
+            try expectTrue(problems(execution).contains("equipment execution metadata bound"))
+            execution.identifier = nil; execution.reason = nil
+            execution.native_observations = Array(repeating: PWRunnerEquipmentNativeObservation(operation: "", attempted: false), count: 5)
+            try expectFalse(problems(execution).contains("equipment execution metadata bound"))
+            try expectTrue(problems(execution).contains("equipment live observation capacity"))
+        }
+    }
+
     tk.group("actor equipment: binding, requirements and observed execution") {
         tk.run("unused packaged role is required and no alternate worker is substituted") {
             try equipmentFixture { root, calls in

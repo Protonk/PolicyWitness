@@ -1,6 +1,10 @@
 //! Typed evidence admission for the porcelain experiment. Raw records remain
 //! publishable when a claim fails; diagnostics never replace their native facts.
 use crate::porcelain_records::*;
+#[path = "porcelain_actor.rs"]
+mod actor;
+#[path = "porcelain_native.rs"]
+mod native;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -28,17 +32,17 @@ fn issue(out: &mut Vec<IntegrityIssue>, kind: &str, detail: impl Into<String>) {
     });
 }
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct TypedRunnerExecutionDiagnostics {
+pub(crate) struct RunnerExecutionDiagnostics {
     pub process_disposition: &'static str,
     pub termination_cause: Option<&'static str>,
     pub stop_reason: Option<String>,
     pub disposition_integrity: Option<&'static str>,
     pub disposition_issues: Vec<IntegrityIssue>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub actors: Option<Vec<TypedActorExecutionDiagnostics>>,
+    pub actors: Option<Vec<ActorExecutionDiagnostics>>,
 }
 #[derive(Clone, Debug, Serialize)]
-pub(crate) struct TypedActorExecutionDiagnostics {
+pub(crate) struct ActorExecutionDiagnostics {
     pub actor_id: Option<String>,
     pub process_disposition: &'static str,
     pub termination_cause: Option<&'static str>,
@@ -209,14 +213,16 @@ fn check_claim(
                     format!("{label}: supported claim lacks answer or sufficient basis"),
                 );
             }
-            for token in c.basis.iter().flatten() {
-                if !reference_resolves(token, sub, step.map(|(_, s)| s)) {
-                    issue(
-                        out,
-                        "unresolved_reference",
-                        format!("{label}: {token} does not resolve"),
-                    );
-                }
+            if c.basis
+                .iter()
+                .flatten()
+                .any(|token| !reference_resolves(token, sub, step.map(|(_, s)| s)))
+            {
+                issue(
+                    out,
+                    "unresolved_reference",
+                    format!("{label}: basis contains an unresolved reference"),
+                );
             }
         }
         "conflicting" => {
@@ -379,6 +385,14 @@ fn validate_lifecycle(
     reporting_failed: bool,
 ) -> Vec<IntegrityIssue> {
     let mut out = Vec::new();
+    if actions.len() > 256 || lifecycle_geometry(sub).is_some() {
+        issue(
+            &mut out,
+            "reply_capacity",
+            "worker disposition exceeds native semantic capacity",
+        );
+        return out;
+    }
     if sub.pid <= 0 || sub.pid > i64::from(i32::MAX) {
         issue(
             &mut out,
@@ -485,7 +499,10 @@ fn validate_lifecycle(
             Some("none" | "invalid" | "step_index" | "parameter_index")
         )
         && (answer(q.progress_association.as_ref()) != association
-            || integer(q.progress_association.as_ref()) != index)
+            || q.progress_association
+                .as_ref()
+                .and_then(|c| c.value.as_ref())
+                != index.map(PWDispositionValue::Integer).as_ref())
     {
         issue(
             &mut out,
@@ -548,7 +565,10 @@ fn validate_lifecycle(
         let b = s.questions.step_boundary_reached.as_ref();
         let r = s.questions.step_result_published.as_ref();
         let a = s.questions.step_requested_operation_applicability.as_ref();
-        if supported(a) && answer(a) != Some(s.attempt_support.as_str()) {
+        if supported(a)
+            && matches!(answer(a), Some("supported" | "unsupported"))
+            && answer(a) != Some(s.attempt_support.as_str())
+        {
             issue(
                 &mut out,
                 "invalid_claim",
@@ -627,15 +647,13 @@ fn validate_lifecycle(
                     "not_reached" => Some("attempt:not_reached"),
                     _ => Some("attempt:started_without_result"),
                 };
-                let actual: Vec<&str> = step
+                let mut actual = step
                     .comparison
                     .iter()
                     .flat_map(|c| &c.limitations)
                     .map(String::as_str)
-                    .filter(|l| l.starts_with("attempt:"))
-                    .collect();
-                if !(reporting_failed && step.comparison.is_none())
-                    && actual != expected.into_iter().collect::<Vec<_>>()
+                    .filter(|l| l.starts_with("attempt:"));
+                if !(reporting_failed && step.comparison.is_none()) && !actual.by_ref().eq(expected)
                 {
                     issue(
                         &mut out,
@@ -692,7 +710,18 @@ fn validate_lifecycle(
             }
         }
         if let Some(l) = action.lifecycle() {
-            if Some(&l.boundary) != b || Some(&l.result) != r || l.summary != lifecycle_summary(s) {
+            if Some(&l.boundary) != b
+                || Some(&l.result) != r
+                || (matches!(
+                    l.summary.as_str(),
+                    "completed"
+                        | "started_without_result"
+                        | "not_reached"
+                        | "unsupported"
+                        | "unresolved"
+                        | "conflicting"
+                ) && l.summary != lifecycle_summary(s))
+            {
                 issue(
                     &mut out,
                     "invalid_claim",
@@ -753,6 +782,20 @@ fn query_matches(record: &ValidatorVerdict, step: &PWRunnerStepResult) -> bool {
             }
 }
 fn phase_issues(reply: &PWRunnerRunResult, out: &mut Vec<IntegrityIssue>) {
+    let actor_form = reply.execution_form.as_deref() == Some("actors");
+    let launched = reply.runner_subprocess.is_some()
+        || reply
+            .actors
+            .iter()
+            .flatten()
+            .any(|a| a.subprocess.is_some());
+    if launched && reply.phases.is_empty() {
+        issue(
+            out,
+            "phase_collection",
+            "worker subprocess requires phase evidence",
+        );
+    }
     let mut phase_ids = BTreeSet::new();
     let mut action_ids = BTreeSet::new();
     let events = reply.extension_events.as_deref().unwrap_or(&[]);
@@ -785,6 +828,101 @@ fn phase_issues(reply: &PWRunnerRunResult, out: &mut Vec<IntegrityIssue>) {
                 "phase_collection",
                 "phase ordinal/partition identity conflict",
             );
+        }
+        let worker = if actor_form {
+            reply
+                .actors
+                .iter()
+                .flatten()
+                .find(|a| Some(a.actor_id.as_str()) == p.actor_id.as_deref())
+                .and_then(|a| a.subprocess.as_ref())
+        } else {
+            reply.runner_subprocess.as_ref()
+        };
+        if worker.is_some() && p.ordering.is_none() {
+            issue(
+                out,
+                "phase_collection",
+                "phase ordering is required beside a worker subprocess",
+            );
+        }
+        if let Some(spawn) = &p.validator_spawn_failure {
+            if spawn.origin != "runner_host"
+                || spawn.operation != "posix_spawn"
+                || spawn.executable_path.is_empty()
+                || spawn.return_code == 0
+                || p.validator_subprocess.is_some()
+            {
+                issue(
+                    out,
+                    "phase_collection",
+                    "invalid validator spawn failure record",
+                );
+            }
+        }
+        if let Some(o) = &p.ordering {
+            if o.collection_closed_before_proceed && !p.arrival_observed {
+                issue(out, "ordering", "collection closure lacks phase arrival");
+            }
+            if worker.is_some() {
+                if o.collection_closed_before_proceed != (o.validator_disposition != "not_invoked")
+                {
+                    issue(
+                        out,
+                        "ordering",
+                        "collection decision disagrees with validator disposition",
+                    );
+                }
+                let established = if actor_form {
+                    reply
+                        .actors
+                        .iter()
+                        .flatten()
+                        .find(|a| a.actor_id.as_str() == p.actor_id.as_deref().unwrap_or(""))
+                        .is_some_and(|a| {
+                            matches!(a.setup_status.as_str(), "applied" | "unapplied_declared")
+                        })
+                } else {
+                    reply.sandboxed_after_apply == Some(true)
+                };
+                let after_proceed_failure = worker
+                    .and_then(|s| s.worker_evidence.as_ref())
+                    .and_then(|e| e.failure.as_ref())
+                    .is_some_and(|f| {
+                        f.operation == 11 && f.index.map(i64::from) == Some(p.ordinal - 1)
+                    })
+                    && (o.proceed_observed
+                        || reply.steps.iter().any(|s| {
+                            s.phase_id == p.phase_id
+                                && s.attempt.result_source.as_deref() == Some("worker")
+                        }));
+                for (present, name) in [
+                    (
+                        o.proceed_set && !o.collection_closed_before_proceed,
+                        "release_without_collection_closure",
+                    ),
+                    (
+                        o.proceed_observed && !o.proceed_set,
+                        "acknowledgement_without_release",
+                    ),
+                    (
+                        (o.proceed_set || o.proceed_observed) && !established,
+                        "release_without_successful_application",
+                    ),
+                    (
+                        after_proceed_failure,
+                        "attempt_or_acknowledgement_after_proceed_failure",
+                    ),
+                ] {
+                    if present && !o.protocol_violations.iter().any(|s| s == name) {
+                        issue(
+                            out,
+                            "ordering",
+                            format!("unmarked ordering protocol violation: {name}"),
+                        );
+                    }
+                }
+            }
         }
         let disposition = p
             .ordering
@@ -1155,7 +1293,16 @@ pub(crate) fn admission_problem(reply: &PWRunnerRunResult) -> Option<String> {
             reply.schema_version
         ));
     }
-    if let Some(c) = &reply.compiled_profile {
+    if let Some(problem) = reply_geometry(reply) {
+        return Some(problem.into());
+    }
+    for c in reply.compiled_profile.iter().chain(
+        reply
+            .actors
+            .iter()
+            .flatten()
+            .filter_map(|a| a.compiled_profile.as_ref()),
+    ) {
         if c.schema_version != 2 || !matches!(c.status.as_str(), "captured" | "unavailable") {
             return Some("unsupported or malformed compiled_profile".into());
         }
@@ -1169,8 +1316,8 @@ pub(crate) fn admission_problem(reply: &PWRunnerRunResult) -> Option<String> {
     }
     None
 }
-fn no_worker() -> TypedActorExecutionDiagnostics {
-    TypedActorExecutionDiagnostics {
+fn no_worker() -> ActorExecutionDiagnostics {
+    ActorExecutionDiagnostics {
         actor_id: None,
         process_disposition: "no_worker",
         termination_cause: None,
@@ -1183,7 +1330,7 @@ fn project(
     sub: &PWRunnerSubprocess,
     actions: &[ActionRef<'_>],
     degraded: bool,
-) -> TypedActorExecutionDiagnostics {
+) -> ActorExecutionDiagnostics {
     let mut out = no_worker();
     out.disposition_issues = validate_lifecycle(sub, actions, degraded);
     if !out.disposition_issues.is_empty() {
@@ -1271,10 +1418,14 @@ fn project(
     out
 }
 
-/// The selected slice's checks. Remaining validators are named explicitly and
-/// withhold aggregate certification; their observations are still exported.
+/// Validate semantic relationships without changing or dropping native records.
 pub(crate) fn admit_reply(reply: &PWRunnerRunResult) -> Result<(), Vec<IntegrityIssue>> {
     let mut out = Vec::new();
+    if let Some(problem) = reply_geometry(reply) {
+        issue(&mut out, "reply_capacity", problem);
+        return Err(out);
+    }
+
     if let Some(problem) = admission_problem(reply) {
         issue(&mut out, "reply_admission", problem);
     }
@@ -1289,7 +1440,11 @@ pub(crate) fn admit_reply(reply: &PWRunnerRunResult) -> Result<(), Vec<Integrity
             || (!f.evidence_retained
                 && (!reply.steps.is_empty()
                     || reply.runner_subprocess.is_some()
-                    || !reply.phases.is_empty()))
+                    || !reply.phases.is_empty()
+                    || reply
+                        .extension_events
+                        .as_ref()
+                        .is_some_and(|events| !events.is_empty())))
         {
             issue(
                 &mut out,
@@ -1326,68 +1481,12 @@ pub(crate) fn admit_reply(reply: &PWRunnerRunResult) -> Result<(), Vec<Integrity
                 );
             }
         }
-        // These records are typed and retained, but their independent native
-        // consistency rules have not been migrated by the selected experiment.
-        for s in &reply.steps {
-            let native_family = s.attempt.result_source.as_deref() == Some("worker")
-                && matches!(
-                    (
-                        s.attempt.requested_kind.as_deref(),
-                        s.attempt.requested_action.as_deref()
-                    ),
-                    (Some("file"), Some("read_fresh" | "write_fresh"))
-                        | (Some("exec"), Some("spawn"))
-                );
-            if native_family
-                || s.attempt.exec_observation.is_some()
-                || s.attempt.fresh_read.is_some()
-                || s.attempt.fresh_write.is_some()
-            {
-                issue(
-                    &mut out,
-                    "unconverted_scope",
-                    "exec/fresh-I/O semantic validation remains outside the typed slice",
-                );
-            }
-        }
+        native::validate(reply, &mut out);
         let actor_form = reply.execution_form.as_deref() == Some("actors");
-        let has_events = reply
-            .extension_events
-            .as_ref()
-            .is_some_and(|events| !events.is_empty());
-        if !actor_form
-            && (has_events
-                || reply.authority_setup.is_some()
-                || reply.equipment_inventory.is_some())
-        {
-            issue(
-                &mut out,
-                "actor_evidence",
-                "ordinary reply carries actor authority evidence",
-            );
-        }
         if actor_form {
             actor_associations(reply, &mut out);
         }
-        // An absent form marker cannot hide an unconverted family's records.
-        let actor_family = actor_form
-            || has_events
-            || reply.actors.is_some()
-            || reply.transfers.is_some()
-            || reply.resources.is_some()
-            || reply.schedule.is_some()
-            || reply.preparation_failure.is_some()
-            || reply.authority_setup.is_some()
-            || reply.equipment_inventory.is_some()
-            || reply.equipment_bindings.is_some()
-            || reply.equipment_entitlements.is_some();
-        if actor_family {
-            issue(
-                &mut out,
-                "unconverted_scope",
-                "actor setup/equipment/plist/application, activation/owned-reap/termination gates and full authority resource settlement validators remain unconverted",
-            );
-        }
+        actor::validate(reply, &mut out);
     }
     if out.is_empty() { Ok(()) } else { Err(out) }
 }
@@ -1462,8 +1561,8 @@ fn actor_associations(reply: &PWRunnerRunResult, out: &mut Vec<IntegrityIssue>) 
 
 pub(crate) fn execution_diagnostics(
     reply: Option<&PWRunnerRunResult>,
-) -> TypedRunnerExecutionDiagnostics {
-    let mut result = TypedRunnerExecutionDiagnostics {
+) -> RunnerExecutionDiagnostics {
+    let mut result = RunnerExecutionDiagnostics {
         process_disposition: "no_worker",
         termination_cause: None,
         stop_reason: None,
@@ -1472,6 +1571,13 @@ pub(crate) fn execution_diagnostics(
         actors: None,
     };
     let Some(reply) = reply else { return result };
+    if let Some(problem) = reply_geometry(reply) {
+        result.process_disposition = "withheld";
+        result.termination_cause = Some("unknown");
+        result.disposition_integrity = Some("invalid");
+        issue(&mut result.disposition_issues, "reply_capacity", problem);
+        return result;
+    }
     let degraded = reply.reporting_failure.is_some();
     if reply.execution_form.as_deref() == Some("actors") {
         let mut actors = Vec::new();
@@ -1529,18 +1635,169 @@ pub(crate) fn execution_diagnostics(
         result.disposition_issues = d.disposition_issues;
     }
     if let Err(mut issues) = admit_reply(reply) {
-        let actual_violation = result.disposition_integrity == Some("invalid")
-            || issues.iter().any(|issue| issue.kind != "unconverted_scope");
         result.process_disposition = "withheld";
         result.termination_cause = Some("unknown");
-        result.disposition_integrity = Some(if actual_violation {
-            "invalid"
-        } else {
-            "unestablished"
-        });
+        result.disposition_integrity = Some("invalid");
         result.disposition_issues.append(&mut issues);
     }
     result
+}
+
+// Bounds come from native owners, before joins or per-actor projections. A
+// refusal changes only certification; the caller still owns the original reply.
+fn claim_geometry(c: Option<&PWDispositionClaim>, references: usize) -> bool {
+    c.and_then(|c| c.basis.as_ref())
+        .is_none_or(|v| v.len() <= references)
+}
+fn lifecycle_geometry(sub: &PWRunnerSubprocess) -> Option<&'static str> {
+    let d = sub.disposition.as_ref()?;
+    if d.steps.len() > 256 || d.issues.len() > 1 + 2 * 256 {
+        return Some("worker disposition exceeds native semantic capacity");
+    }
+    // Fourteen run references plus the two step-local references. Repeated
+    // aliases cannot extend the native observation vocabulary or its capacity.
+    if RUN_QUESTIONS
+        .iter()
+        .any(|q| !claim_geometry(q.run(&d.questions), 14))
+        || d.steps.iter().any(|s| {
+            STEP_QUESTIONS
+                .iter()
+                .any(|q| !claim_geometry(q.step(&s.questions), 16))
+        })
+        || d.issues
+            .iter()
+            .any(|i| i.observations.len() > if i.step_index.is_some() { 16 } else { 14 })
+    {
+        return Some("disposition reference lists exceed native semantic capacity");
+    }
+    None
+}
+
+fn scope_geometry(s: &PWRunnerAuthorityScope, operations: usize) -> bool {
+    s.operations.len() <= operations
+        && s.ownership.0.len() <= 5
+        && s.integrity_errors.as_ref().is_none_or(|v| v.len() <= 16)
+}
+fn reply_geometry(reply: &PWRunnerRunResult) -> Option<&'static str> {
+    let actor_form = reply.execution_form.as_deref() == Some("actors");
+    let phase_cap = if actor_form { 16 } else { 8 };
+    if reply.phases.len() > phase_cap
+        || reply.steps.len() > 256
+        || reply
+            .extension_events
+            .as_ref()
+            .is_some_and(|v| v.len() > 256)
+        || reply.extension_events.as_ref().map_or(0, Vec::len) > 256 - reply.steps.len()
+        || reply.actors.as_ref().is_some_and(|v| v.len() > 8)
+        || reply.transfers.as_ref().is_some_and(|v| v.len() > 64)
+    {
+        return Some("reply actor/phase/action/transfer tables exceed native semantic capacity");
+    }
+    if let Some(r) = &reply.resources {
+        if r.tokens.len() > 32
+            || r.deliveries.len() > 64
+            || r.handles.len() > 64
+            || r.handles.iter().any(|h| h.raw_equal_handles.len() > 63)
+        {
+            return Some("authority resource tables exceed native semantic capacity");
+        }
+    }
+    let mut actions = 0usize;
+    for p in &reply.phases {
+        if p.action_ids.len() > 256 - actions {
+            return Some("phase action plan exceeds native semantic capacity");
+        }
+        actions += p.action_ids.len();
+        if let Some(v) = &p.validator_subprocess {
+            // ValidatorClient retains at most two records per admitted probe;
+            // one native worker has at most 256 probes. Association can add one
+            // issue for each expected ID, record ID, and unassociated group.
+            let probes = reply
+                .steps
+                .iter()
+                .filter(|s| {
+                    s.phase_id == p.phase_id
+                        && s.sandbox_check.missing_reason.as_deref() != Some("query_not_requested")
+                })
+                .count();
+            let records = v.records.as_ref().map_or(0, Vec::len);
+            if v.expected_step_ids.as_ref().is_some_and(|v| v.len() > 256)
+                || records > probes.max(1) * 2
+                || v.association_issues
+                    .as_ref()
+                    .is_some_and(|v| v.len() > probes + records + 1)
+            {
+                return Some("validator tables exceed native semantic capacity");
+            }
+        }
+    }
+    if reply
+        .equipment_bindings
+        .as_ref()
+        .is_some_and(|v| v.len() > 4)
+        || reply
+            .equipment_entitlements
+            .as_ref()
+            .is_some_and(|v| v.len() > 12)
+    {
+        return Some("equipment tables exceed native semantic capacity");
+    }
+    if let Some(s) = &reply.authority_setup {
+        if s.workers.len() > 8
+            || s.host.regions.len() > 8
+            || s.host.custody.len() > 32
+            || !scope_geometry(&s.host.run, 4)
+            || s.workers.iter().any(|s| !scope_geometry(s, 16))
+            || s.host.regions.iter().any(|s| !scope_geometry(s, 16))
+            || s.host.custody.iter().any(|s| !scope_geometry(s, 4))
+        {
+            return Some("authority setup tables exceed native semantic capacity");
+        }
+    }
+    for lifecycle in reply
+        .steps
+        .iter()
+        .filter_map(|s| s.attempt.lifecycle.as_ref())
+        .chain(
+            reply
+                .extension_events
+                .iter()
+                .flatten()
+                .filter_map(|e| e.lifecycle.as_ref()),
+        )
+    {
+        if !claim_geometry(Some(&lifecycle.boundary), 16)
+            || !claim_geometry(Some(&lifecycle.result), 16)
+        {
+            return Some("lifecycle copy reference lists exceed native semantic capacity");
+        }
+    }
+    if let Some(s) = &reply.runner_subprocess {
+        if let Some(p) = lifecycle_geometry(s) {
+            return Some(p);
+        }
+    }
+    for a in reply.actors.iter().flatten() {
+        if a.visits.len() > 16 {
+            return Some("actor visits exceed native semantic capacity");
+        }
+        if let Some(s) = &a.subprocess {
+            if let Some(p) = lifecycle_geometry(s) {
+                return Some(p);
+            }
+        }
+        if let Some(e) = &a.equipment {
+            if e.required_entitlements.len() > 64
+                || e.missing_requirements
+                    .as_ref()
+                    .is_some_and(|v| v.len() > 64)
+                || e.execution.native_observations.len() > 4
+            {
+                return Some("actor equipment tables exceed native semantic capacity");
+            }
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -1549,7 +1806,7 @@ mod tests {
 
     // Authored public fixtures enter Deserialize only in these controls. Runtime
     // admission receives generated binary-decoded records, never this adapter.
-    fn ordinary() -> PWRunnerRunResult {
+    pub(super) fn ordinary() -> PWRunnerRunResult {
         let mut reply: PWRunnerRunResult = serde_json::from_str(include_str!(
             "../../tests/fixtures/contract/ordinary_phase_reply.json"
         ))
@@ -1557,7 +1814,7 @@ mod tests {
         reply.schema_version = i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION);
         reply
     }
-    fn actors() -> PWRunnerRunResult {
+    pub(super) fn actors() -> PWRunnerRunResult {
         // A complete typed construction of the association slice. The older
         // actor_authority JSON fixture intentionally omits launch observations;
         // it is not a full wire record and must not drive decoder defaults.
@@ -2156,12 +2413,12 @@ mod tests {
         assert!(
             d.disposition_issues
                 .iter()
-                .any(|i| i.kind == "unconverted_scope")
+                .any(|i| i.kind == "actor_evidence")
         );
     }
 
     #[test]
-    fn typed_unconverted_scope_withholds_aggregate_keeps_actor_endings() {
+    fn typed_invalid_actor_account_keeps_independent_actor_endings() {
         let mut reply = ordinary();
         let mut actor = actors().actors.unwrap().remove(0);
         actor.actor_id = "constructed-fixture-actor".into();
@@ -2183,9 +2440,9 @@ mod tests {
         assert!(
             d.disposition_issues
                 .iter()
-                .any(|i| i.kind == "unconverted_scope")
+                .any(|i| i.kind == "actor_evidence")
         );
-        assert_eq!(d.disposition_integrity, Some("unestablished"));
+        assert_eq!(d.disposition_integrity, Some("invalid"));
         let actors = d.actors.as_ref().unwrap();
         assert_eq!(actors.len(), reply.actors.as_ref().unwrap().len());
         assert!(
@@ -2209,35 +2466,38 @@ mod tests {
     }
 
     #[test]
-    fn typed_missing_native_family_payload_cannot_escape_unconverted_scope() {
-        for (kind, action) in [
-            ("file", "read_fresh"),
-            ("file", "write_fresh"),
-            ("exec", "spawn"),
-        ] {
+    fn typed_missing_fresh_payload_is_invalid_and_exec_absence_remains_unknown() {
+        for action in ["read_fresh", "write_fresh", "create_fresh"] {
             let mut reply = ordinary();
             let attempt = &mut reply.steps[0].attempt;
-            attempt.requested_kind = Some(kind.into());
+            attempt.requested_kind = Some("file".into());
             attempt.requested_action = Some(action.into());
             attempt.result_source = Some("worker".into());
             attempt.fresh_read = None;
             attempt.fresh_write = None;
-            attempt.exec_observation = None;
             let native_rc = attempt.rc;
             let issues = admit_reply(&reply)
-                .expect_err("unconverted family requires a scope marker even without payload");
+                .expect_err("published fresh attempt requires its native record");
             assert!(
-                issues.iter().any(|i| i.kind == "unconverted_scope"),
+                issues
+                    .iter()
+                    .any(|i| i.kind == "fresh_read" || i.kind == "fresh_write"),
                 "{action}: {issues:?}"
             );
-            let d = execution_diagnostics(Some(&reply));
             assert_eq!(
-                d.disposition_integrity,
-                Some("unestablished"),
-                "{action}: {d:?}"
+                execution_diagnostics(Some(&reply)).disposition_integrity,
+                Some("invalid")
             );
             assert_eq!(reply.steps[0].attempt.rc, native_rc);
         }
+        let mut attempt = ordinary().steps.remove(0).attempt;
+        attempt.requested_kind = Some("exec".into());
+        attempt.requested_action = Some("spawn".into());
+        attempt.exec_observation = None;
+        assert!(
+            native::exec_problem(&attempt).is_none(),
+            "absence is unknown, including a spawn before child creation"
+        );
     }
 
     #[test]
@@ -2245,13 +2505,13 @@ mod tests {
         let actor_fixture = actors();
         let mut reply = ordinary();
         reply.actors = actor_fixture.actors.clone();
-        let scope_only = execution_diagnostics(Some(&reply));
-        assert_eq!(scope_only.disposition_integrity, Some("unestablished"));
+        let invalid = execution_diagnostics(Some(&reply));
+        assert_eq!(invalid.disposition_integrity, Some("invalid"));
         assert!(
-            scope_only
+            invalid
                 .disposition_issues
                 .iter()
-                .any(|i| i.kind == "unconverted_scope")
+                .any(|i| i.kind == "actor_evidence")
         );
         let event = actor_fixture.extension_events.unwrap().remove(0);
         reply.phases[0].action_ids.push(event.step_id.clone());
@@ -2300,5 +2560,736 @@ mod tests {
         }
         assert!(admit_reply(&reply).is_ok());
         assert_eq!(reply.steps[0].attempt, original_attempt);
+    }
+    #[test]
+    fn typed_shared_evidence_type_corpus() {
+        let baseline: serde_json::Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/ordinary_phase_reply.json"
+        ))
+        .unwrap();
+        let rows: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/evidence_types.json"
+        ))
+        .unwrap();
+        for row in rows {
+            let mut v = baseline.clone();
+            for patch in row["patches"].as_array().unwrap() {
+                let (parent, key) = patch["path"].as_str().unwrap().rsplit_once('/').unwrap();
+                let target = v.pointer_mut(parent).unwrap();
+                if let Some(a) = target.as_array_mut() {
+                    a[key.parse::<usize>().unwrap()] = patch["value"].clone();
+                } else {
+                    target[key] = patch["value"].clone();
+                }
+            }
+            match serde_json::from_value::<PWRunnerRunResult>(v) {
+                Ok(reply) => {
+                    let before = reply.clone();
+                    let d = execution_diagnostics(Some(&reply));
+                    assert_eq!(
+                        d.disposition_integrity == Some("valid"),
+                        row["accepted"] == true,
+                        "{}: {:?}",
+                        row["name"],
+                        d.disposition_issues
+                    );
+                    assert_eq!(reply, before);
+                }
+                Err(error) => assert_eq!(row["accepted"], false, "{}: {error}", row["name"]),
+            }
+        }
+    }
+    #[test]
+    fn phase_collection_states_gate_disposition_without_requiring_success() {
+        let ordinary = ordinary();
+        for (status, disposition, valid) in [
+            ("not_reached", "not_invoked", true),
+            ("not_needed", "not_needed", true),
+            ("collected", "not_spawned", true),
+            ("collected", "reaped", true),
+            ("collected", "unconfirmed", true),
+            ("budget_exhausted", "not_spawned", true),
+            ("clock_unavailable", "not_needed", true),
+            ("clock_unavailable", "not_spawned", true),
+            ("not_reached", "reaped", false),
+            ("not_needed", "not_spawned", false),
+            ("budget_exhausted", "reaped", false),
+            ("clock_unavailable", "reaped", false),
+            ("collected", "not_needed", false),
+        ] {
+            let mut reply = ordinary.clone();
+            reply.phases.truncate(1);
+            reply.steps.truncate(1);
+            reply.steps[0].comparison.as_mut().unwrap().order = "unestablished".into();
+            let phase = &mut reply.phases[0];
+            phase.arrival_observed = true;
+            phase.completion_observed = false;
+            phase.collection_status = status.into();
+            let order = phase.ordering.as_mut().unwrap();
+            order.validator_disposition = disposition.into();
+            order.collection_closed_before_proceed = disposition != "not_invoked";
+            order.proceed_set = false;
+            order.proceed_observed = false;
+            if matches!(disposition, "reaped" | "unconfirmed") {
+                phase.validator_subprocess.as_mut().unwrap().reaped = Some(disposition == "reaped");
+            } else {
+                phase.validator_subprocess = None;
+            }
+            let before = reply.clone();
+            let mut issues = Vec::new();
+            phase_issues(&reply, &mut issues);
+            assert_eq!(
+                issues.is_empty(),
+                valid,
+                "{status}/{disposition}: {issues:?}"
+            );
+            assert_eq!(reply, before);
+        }
+    }
+    #[test]
+    fn typed_host_cleanup_cause_requires_all_independent_observations() {
+        let reply = ordinary();
+        let actions: Vec<_> = reply.steps.iter().map(ActionRef::Step).collect();
+        for (trigger, stop, cause) in [
+            ("completion", "done", "host_exit_grace_exhausted"),
+            (
+                "deadline_expiry",
+                "sentinel_deadline",
+                "host_sentinel_deadline",
+            ),
+            (
+                "poll_wait_error",
+                "wait_error",
+                "host_cleanup_after_wait_error",
+            ),
+            ("future_trigger", "future_stop", "unknown"),
+        ] {
+            let mut sub = reply.runner_subprocess.as_ref().unwrap().clone();
+            sub.exit_code = None;
+            sub.term_signal = Some(9);
+            sub.reaped = Some(true);
+            sub.exit_requested = Some(true);
+            sub.grace_end = Some("exhausted".into());
+            sub.cleanup_trigger = Some(trigger.into());
+            sub.poll_stop_reason = Some(stop.into());
+            let request = PWRunnerTerminationRequest {
+                signal: 9,
+                rc: 0,
+                errno: None,
+            };
+            sub.termination_request = Some(request.clone());
+            let q = &mut sub.disposition.as_mut().unwrap().questions;
+            let claim = |answer: &str, basis: &[&str], value: Option<PWDispositionValue>| {
+                PWDispositionClaim {
+                    state: "supported".into(),
+                    answer: Some(answer.into()),
+                    basis: Some(basis.iter().map(|s| (*s).into()).collect()),
+                    value,
+                    reason: None,
+                    issue: None,
+                }
+            };
+            q.final_status = Some(claim(
+                "signal",
+                &["reaped", "term_signal"],
+                Some(PWDispositionValue::Integer(9)),
+            ));
+            q.stop_reason = Some(claim(stop, &["poll_stop_reason"], None));
+            q.cleanup_trigger = Some(claim(trigger, &["cleanup_trigger", "exit_requested"], None));
+            q.grace_end = Some(claim("exhausted", &["grace_end", "exit_requested"], None));
+            q.kill_request_and_result = Some(claim(
+                "requested",
+                &["termination_request"],
+                Some(PWDispositionValue::Request(request)),
+            ));
+            let d = project(&sub, &actions, false);
+            assert_eq!(
+                d.process_disposition, "signaled",
+                "{:?}",
+                d.disposition_issues
+            );
+            assert_eq!(d.termination_cause, Some(cause));
+            let before = sub.clone();
+            sub.reaped = Some(false);
+            let d = project(&sub, &actions, false);
+            assert_eq!(d.process_disposition, "withheld");
+            assert_eq!(d.termination_cause, Some("unknown"));
+            assert_eq!(sub.termination_request, before.termination_request);
+            assert_eq!(sub.term_signal, before.term_signal);
+        }
+    }
+    #[test]
+    fn typed_profile_context_gate_includes_actor_captures_and_degradation() {
+        let capture = CompiledProfileCapture {
+            schema_version: 2,
+            status: "captured".into(),
+            reason: None,
+            worker_pid: 7001,
+            producer: Some("worker".into()),
+            capture_stage: Some("before_apply".into()),
+            request_nonce: None,
+            profile_type: None,
+            bytecode_length: None,
+            bytecode_sha256: None,
+            bytecode_b64: None,
+            source_sha256: None,
+            source_length: None,
+            params_sha256: None,
+            parameter_count: None,
+        };
+        for degraded in [false, true] {
+            let mut reply = actors();
+            reply.actors.as_mut().unwrap()[0].compiled_profile = Some(capture.clone());
+            if degraded {
+                reply.reporting_failure = Some(PWRunnerReportingFailure {
+                    origin: "runner_host".into(),
+                    diagnostic: "controlled conflict".into(),
+                    original_rc: 0,
+                    original_normalized_outcome: "finished".into(),
+                    original_error: None,
+                    evidence_retained: true,
+                });
+            }
+            assert!(admission_problem(&reply).is_none());
+            for mutation in ["stage", "version", "unavailable_context"] {
+                let mut changed = reply.clone();
+                let c = changed.actors.as_mut().unwrap()[0]
+                    .compiled_profile
+                    .as_mut()
+                    .unwrap();
+                match mutation {
+                    "stage" => c.capture_stage = None,
+                    "version" => c.schema_version = 1,
+                    "unavailable_context" => c.status = "unavailable".into(),
+                    _ => unreachable!(),
+                }
+                let raw = changed.clone();
+                assert!(
+                    admission_problem(&changed).is_some(),
+                    "{degraded}/{mutation}"
+                );
+                assert_eq!(changed, raw);
+            }
+        }
+    }
+    #[test]
+    fn typed_minimal_reporting_failure_cannot_retain_authority_events() {
+        let mut reply = ordinary();
+        reply.steps.clear();
+        reply.phases.clear();
+        reply.runner_subprocess = None;
+        reply.normalized_outcome = "runner_reporting_failed".into();
+        reply.rc = 1;
+        reply.error = Some("controlled reporting failure".into());
+        reply.reporting_failure = Some(PWRunnerReportingFailure {
+            origin: "runner_host".into(),
+            diagnostic: "controlled minimal fallback".into(),
+            original_rc: 0,
+            original_normalized_outcome: "finished".into(),
+            original_error: None,
+            evidence_retained: false,
+        });
+        assert!(admit_reply(&reply).is_ok());
+        let event = actors().extension_events.unwrap().remove(0);
+        reply.extension_events = Some(vec![event.clone()]);
+        assert!(
+            admit_reply(&reply)
+                .unwrap_err()
+                .iter()
+                .any(|i| i.kind == "reporting_failure")
+        );
+        assert_eq!(reply.extension_events.as_ref().unwrap()[0], event);
+        reply.reporting_failure.as_mut().unwrap().evidence_retained = true;
+        assert!(
+            admit_reply(&reply).is_ok(),
+            "evidence-preserving degradation retains conflicting/raw authority events"
+        );
+    }
+    #[test]
+    fn typed_worker_requires_phase_presence_and_ordering_even_before_arrival() {
+        let mut reply = ordinary();
+        let worker = reply.runner_subprocess.as_ref().unwrap().clone();
+        reply.steps.clear();
+        reply.phases.clear();
+        let sub = reply.runner_subprocess.as_mut().unwrap();
+        sub.partial_steps = false;
+        sub.disposition.as_mut().unwrap().steps.clear();
+        let d = execution_diagnostics(Some(&reply));
+        assert_eq!(d.process_disposition, "withheld");
+        assert_eq!(d.disposition_integrity, Some("invalid"));
+        assert!(
+            d.disposition_issues
+                .iter()
+                .any(|i| i.detail == "worker subprocess requires phase evidence")
+        );
+        assert_eq!(reply.runner_subprocess.as_ref().unwrap().pid, worker.pid);
+        let mut reply = ordinary();
+        reply.phases[0].ordering = None;
+        reply.phases[0].collection_status = "not_reached".into();
+        reply.phases[0].validator_subprocess = None;
+        reply.phases[0].arrival_observed = false;
+        reply.phases[0].completion_observed = false;
+        let before = reply.clone();
+        let d = execution_diagnostics(Some(&reply));
+        assert_eq!(d.process_disposition, "withheld");
+        assert_eq!(d.disposition_integrity, Some("invalid"));
+        assert!(
+            d.disposition_issues
+                .iter()
+                .any(|i| i.detail == "phase ordering is required beside a worker subprocess")
+        );
+        assert_eq!(reply, before);
+    }
+    #[test]
+    fn typed_validator_spawn_failure_requires_its_native_call_identity() {
+        let mut reply = ordinary();
+        let p = &mut reply.phases[0];
+        p.validator_subprocess = None;
+        p.ordering.as_mut().unwrap().validator_disposition = "not_spawned".into();
+        p.validator_spawn_failure = Some(PWRunnerSpawnFailure {
+            origin: "runner_host".into(),
+            operation: "posix_spawn".into(),
+            executable_path: "/constructed/validator".into(),
+            return_code: libc::EAGAIN,
+            diagnostic: "constructed native spawn failure".into(),
+        });
+        reply.steps[0].comparison.as_mut().unwrap().order = "unestablished".into();
+        let mut out = Vec::new();
+        phase_issues(&reply, &mut out);
+        assert!(out.is_empty(), "{out:?}");
+        for mutation in ["origin", "operation", "path", "rc"] {
+            let mut r = reply.clone();
+            let f = r.phases[0].validator_spawn_failure.as_mut().unwrap();
+            match mutation {
+                "origin" => f.origin = "worker".into(),
+                "operation" => f.operation = "waitpid".into(),
+                "path" => f.executable_path.clear(),
+                "rc" => f.return_code = 0,
+                _ => unreachable!(),
+            };
+            let before = r.clone();
+            let mut out = Vec::new();
+            phase_issues(&r, &mut out);
+            assert!(
+                out.iter()
+                    .any(|i| i.detail == "invalid validator spawn failure record"),
+                "{mutation}: {out:?}"
+            );
+            assert_eq!(r, before);
+        }
+    }
+    #[test]
+    fn typed_ordering_contradictions_need_explicit_native_fault_markers() {
+        let mut reply = ordinary();
+        let p = &mut reply.phases[0];
+        p.validator_subprocess = None;
+        p.collection_status = "not_reached".into();
+        let order = p.ordering.as_mut().unwrap();
+        order.validator_disposition = "not_invoked".into();
+        order.collection_closed_before_proceed = false;
+        reply.steps[0].comparison.as_mut().unwrap().order = "unestablished".into();
+        let mut out = Vec::new();
+        phase_issues(&reply, &mut out);
+        assert!(out.iter().any(|i| i.detail
+            == "unmarked ordering protocol violation: release_without_collection_closure"));
+        reply.phases[0]
+            .ordering
+            .as_mut()
+            .unwrap()
+            .protocol_violations
+            .push("release_without_collection_closure".into());
+        let before = reply.clone();
+        let mut out = Vec::new();
+        phase_issues(&reply, &mut out);
+        assert!(out.is_empty(), "{out:?}");
+        assert_eq!(
+            reply, before,
+            "marking a conflict must preserve its raw ordering observations"
+        );
+        let mut reply = ordinary();
+        reply.phases[0]
+            .ordering
+            .as_mut()
+            .unwrap()
+            .collection_closed_before_proceed = false;
+        let mut out = Vec::new();
+        phase_issues(&reply, &mut out);
+        assert!(
+            out.iter()
+                .any(|i| i.detail == "collection decision disagrees with validator disposition")
+        );
+    }
+    #[test]
+    fn typed_no_index_progress_cannot_hide_a_request_variant_as_absence() {
+        let reply = ordinary();
+        let actions: Vec<_> = reply.steps.iter().map(ActionRef::Step).collect();
+        let mut sub = reply.runner_subprocess.unwrap();
+        let c = sub
+            .disposition
+            .as_ref()
+            .unwrap()
+            .questions
+            .progress_association
+            .as_ref()
+            .unwrap();
+        assert_eq!(c.answer.as_deref(), Some("none"));
+        assert_eq!(c.value, None);
+        assert_eq!(
+            project(&sub, &actions, false).process_disposition,
+            "clean_exit"
+        );
+        let facts = sub.worker_evidence.clone();
+        sub.disposition
+            .as_mut()
+            .unwrap()
+            .questions
+            .progress_association
+            .as_mut()
+            .unwrap()
+            .value = Some(PWDispositionValue::Request(PWRunnerTerminationRequest {
+            signal: 9,
+            rc: 0,
+            errno: None,
+        }));
+        let d = project(&sub, &actions, false);
+        assert_eq!(d.process_disposition, "withheld");
+        assert_eq!(d.disposition_integrity, Some("invalid"));
+        assert!(
+            d.disposition_issues
+                .iter()
+                .any(|i| i.detail == "progress claim contradicts encoded progress")
+        );
+        assert_eq!(sub.worker_evidence, facts);
+    }
+    #[test]
+    fn typed_conflicting_status_preserves_the_native_pair_and_rule() {
+        let reply = ordinary();
+        let actions: Vec<_> = reply.steps.iter().map(ActionRef::Step).collect();
+        let mut sub = reply.runner_subprocess.unwrap();
+        sub.term_signal = Some(9);
+        let d = project(&sub, &actions, false);
+        assert_eq!(d.process_disposition, "withheld");
+        let record = sub.disposition.as_mut().unwrap();
+        record.questions.final_status = Some(PWDispositionClaim {
+            state: "conflicting".into(),
+            answer: None,
+            value: None,
+            reason: None,
+            issue: Some(0),
+            basis: None,
+        });
+        record.issues = vec![PWDispositionIssue {
+            kind: "conflict".into(),
+            rule: "D1".into(),
+            question: "final_status".into(),
+            step_index: None,
+            observations: vec!["exit_code".into(), "term_signal".into()],
+            detail: "constructed successful reap carries both exit and signal".into(),
+        }];
+        let before = sub.clone();
+        let d = project(&sub, &actions, false);
+        assert_eq!(
+            d.process_disposition, "conflicting",
+            "{:?}",
+            d.disposition_issues
+        );
+        assert_eq!(d.disposition_integrity, Some("valid"));
+        assert_eq!(d.termination_cause, Some("unknown"));
+        assert!(
+            d.disposition_issues
+                .iter()
+                .any(|i| i.rule.as_deref() == Some("D1"))
+        );
+        assert_eq!(sub, before);
+    }
+    #[test]
+    fn typed_indexed_activation_wait_preserves_completed_prefix_and_clock_setup_order() {
+        let mut sub = ordinary().runner_subprocess.unwrap();
+        let mut set = |operation: u32, stage: u32, index: Option<u32>| {
+            sub.worker_evidence.as_mut().unwrap().progress = Some(PWWorkerProgress {
+                raw: (operation << 24) | (stage << 20) | index.map_or(0, |i| i + 1),
+                operation,
+                stage,
+                index,
+            });
+            sub.clone()
+        };
+        for stage in [1, 2] {
+            for first in [0, 1, 2] {
+                let (answer, value, position) = progress(&set(13, stage, Some(first)), 2);
+                assert_eq!((answer, value), (Some("none"), None));
+                let position = position.unwrap();
+                assert_eq!(position, (attempt_position(), u64::from(first), 0));
+                if first > 0 {
+                    assert!(position > (attempt_position(), u64::from(first - 1), 2));
+                }
+                assert!(position < (attempt_position(), u64::from(first), 1));
+            }
+        }
+        assert_eq!(
+            progress(&set(13, 2, Some(0)), 0),
+            (Some("none"), None, Some((attempt_position(), 0, 0)))
+        );
+        assert_eq!(
+            progress(&set(13, 1, Some(3)), 2),
+            (Some("invalid"), None, None)
+        );
+        let mut mismatched = set(13, 1, Some(0));
+        mismatched
+            .worker_evidence
+            .as_mut()
+            .unwrap()
+            .progress
+            .as_mut()
+            .unwrap()
+            .raw = (13 << 24) | (1 << 20) | 2;
+        assert_eq!(progress(&mismatched, 2), (Some("invalid"), None, None));
+        let header = progress(&set(1, 2, None), 1).2.unwrap();
+        let setup = progress(&set(12, 2, None), 1).2.unwrap();
+        let read = progress(&set(2, 1, None), 1).2.unwrap();
+        assert!(header < setup && setup < read);
+        let apply = progress(&set(8, 2, None), 1).2.unwrap();
+        let activation = progress(&set(13, 1, None), 1).2.unwrap();
+        let proceed = progress(&set(11, 1, None), 1).2.unwrap();
+        assert!(apply < activation && activation < proceed);
+        assert_eq!(
+            progress(&set(14, 1, None), 1),
+            (None, None, None),
+            "unknown native operation magnitude is not time order"
+        );
+    }
+    #[test]
+    fn typed_future_applicability_and_summary_remain_open_without_rewriting() {
+        let reply = ordinary();
+        let actions: Vec<_> = reply.steps.iter().map(ActionRef::Step).collect();
+        let mut sub = reply.runner_subprocess.clone().unwrap();
+        sub.disposition.as_mut().unwrap().steps[0]
+            .questions
+            .step_requested_operation_applicability
+            .as_mut()
+            .unwrap()
+            .answer = Some("future_applicability".into());
+        let before = sub.clone();
+        assert!(validate_lifecycle(&sub, &actions, false).is_empty());
+        assert_eq!(sub, before);
+        let mut changed = reply.clone();
+        changed.steps[0].attempt.lifecycle.as_mut().unwrap().summary = "future_summary".into();
+        let actions: Vec<_> = changed.steps.iter().map(ActionRef::Step).collect();
+        let d = project(changed.runner_subprocess.as_ref().unwrap(), &actions, false);
+        assert_eq!(
+            d.process_disposition, "clean_exit",
+            "native final status remains independently supported: {:?}",
+            d.disposition_issues
+        );
+        assert_eq!(
+            changed.steps[0].attempt.lifecycle.as_ref().unwrap().summary,
+            "future_summary"
+        );
+        let known = changed.steps[0].attempt.lifecycle.as_mut().unwrap();
+        known.summary = "not_reached".into();
+        let actions: Vec<_> = changed.steps.iter().map(ActionRef::Step).collect();
+        assert!(
+            !validate_lifecycle(changed.runner_subprocess.as_ref().unwrap(), &actions, false)
+                .is_empty(),
+            "known contradictory summary must still reject"
+        );
+    }
+    #[test]
+    fn typed_geometry_refuses_before_projection_and_retains_every_raw_record() {
+        let baseline = ordinary();
+        let sample_issue = PWDispositionIssue {
+            kind: "conflict".into(),
+            rule: "D1".into(),
+            question: "final_status".into(),
+            step_index: None,
+            observations: vec![],
+            detail: "constructed capacity cell".into(),
+        };
+        for mutation in [
+            "steps",
+            "disposition_steps",
+            "issues",
+            "actors",
+            "phases",
+            "validator_records",
+            "validator_plan",
+            "validator_issues",
+        ] {
+            let mut r = baseline.clone();
+            match mutation {
+                "steps" => r.steps = vec![r.steps[0].clone(); 257],
+                "disposition_steps" => {
+                    let d = r
+                        .runner_subprocess
+                        .as_mut()
+                        .unwrap()
+                        .disposition
+                        .as_mut()
+                        .unwrap();
+                    d.steps = vec![d.steps[0].clone(); 257];
+                }
+                "issues" => {
+                    r.runner_subprocess
+                        .as_mut()
+                        .unwrap()
+                        .disposition
+                        .as_mut()
+                        .unwrap()
+                        .issues = vec![sample_issue.clone(); 514]
+                }
+                "actors" => {
+                    r.execution_form = Some("actors".into());
+                    r.actors = Some(vec![actors().actors.unwrap().remove(0); 9]);
+                }
+                "phases" => r.phases = vec![r.phases[0].clone(); 9],
+                "validator_records" => {
+                    let v = r.phases[0].validator_subprocess.as_mut().unwrap();
+                    v.records = Some(vec![v.records.as_ref().unwrap()[0].clone(); 513]);
+                }
+                "validator_plan" => {
+                    r.phases[0]
+                        .validator_subprocess
+                        .as_mut()
+                        .unwrap()
+                        .expected_step_ids = Some(vec!["constructed".into(); 257])
+                }
+                "validator_issues" => {
+                    r.phases[0]
+                        .validator_subprocess
+                        .as_mut()
+                        .unwrap()
+                        .association_issues = Some(vec![
+                        PWValidatorAssociationIssue {
+                            kind: "missing_id".into(),
+                            step_id: None,
+                            count: 0,
+                            origin: "runner_host".into()
+                        };
+                        770
+                    ])
+                }
+                _ => unreachable!(),
+            }
+            let before = r.clone();
+            let d = execution_diagnostics(Some(&r));
+            assert_eq!(d.process_disposition, "withheld", "{mutation}");
+            assert_eq!(d.disposition_integrity, Some("invalid"));
+            assert!(
+                d.actors.is_none(),
+                "overcount cannot produce per-actor claims: {mutation}"
+            );
+            assert_eq!(
+                d.disposition_issues.len(),
+                1,
+                "{mutation}: {:?}",
+                d.disposition_issues
+            );
+            assert_eq!(d.disposition_issues[0].kind, "reply_capacity");
+            assert_eq!(r, before, "lost raw {mutation}");
+            assert_eq!(admit_reply(&r).unwrap_err().len(), 1);
+        }
+        let mut boundary = baseline.clone();
+        boundary.steps = vec![boundary.steps[0].clone(); 256];
+        boundary.phases.clear();
+        boundary
+            .runner_subprocess
+            .as_mut()
+            .unwrap()
+            .disposition
+            .as_mut()
+            .unwrap()
+            .issues = vec![sample_issue; 513];
+        assert!(
+            reply_geometry(&boundary).is_none(),
+            "capacity guard must not impose a smaller native geometry"
+        );
+        let mut sub = baseline.runner_subprocess.unwrap();
+        let actions: Vec<_> = baseline.steps.iter().map(ActionRef::Step).collect();
+        sub.disposition
+            .as_mut()
+            .unwrap()
+            .questions
+            .final_status
+            .as_mut()
+            .unwrap()
+            .basis = Some(vec!["unknown_reference".into(); 1024]);
+        let issues = validate_lifecycle(&sub, &actions, false);
+        assert!(
+            issues.len() <= 3,
+            "one bad reference list must not multiply diagnostics: {issues:?}"
+        );
+    }
+    #[test]
+    fn typed_reference_geometry_is_checked_before_claims_and_admission_contexts() {
+        for mutation in [
+            "run_basis",
+            "step_basis",
+            "issue_observations",
+            "lifecycle_copy",
+        ] {
+            let mut r = ordinary();
+            match mutation {
+                "run_basis" => {
+                    r.runner_subprocess
+                        .as_mut()
+                        .unwrap()
+                        .disposition
+                        .as_mut()
+                        .unwrap()
+                        .questions
+                        .final_status
+                        .as_mut()
+                        .unwrap()
+                        .basis = Some(vec!["reaped".into(); 15])
+                }
+                "step_basis" => {
+                    r.runner_subprocess
+                        .as_mut()
+                        .unwrap()
+                        .disposition
+                        .as_mut()
+                        .unwrap()
+                        .steps[0]
+                        .questions
+                        .step_boundary_reached
+                        .as_mut()
+                        .unwrap()
+                        .basis = Some(vec!["slot".into(); 17])
+                }
+                "issue_observations" => r
+                    .runner_subprocess
+                    .as_mut()
+                    .unwrap()
+                    .disposition
+                    .as_mut()
+                    .unwrap()
+                    .issues
+                    .push(PWDispositionIssue {
+                        kind: "conflict".into(),
+                        rule: "D1".into(),
+                        question: "final_status".into(),
+                        step_index: None,
+                        observations: vec!["exit_code".into(); 15],
+                        detail: "constructed reference overcount".into(),
+                    }),
+                "lifecycle_copy" => {
+                    r.steps[0]
+                        .attempt
+                        .lifecycle
+                        .as_mut()
+                        .unwrap()
+                        .boundary
+                        .basis = Some(vec!["slot".into(); 17])
+                }
+                _ => unreachable!(),
+            }
+            let before = r.clone();
+            assert!(admission_problem(&r).is_some());
+            let d = execution_diagnostics(Some(&r));
+            assert_eq!(d.process_disposition, "withheld");
+            assert_eq!(d.disposition_issues.len(), 1);
+            assert_eq!(d.disposition_issues[0].kind, "reply_capacity");
+            assert_eq!(r, before);
+        }
     }
 }

@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import sys
-from check_response_footprint import STAGES, check_internal, check_sizes, check_observation, actor_geometry, check_geometry, check_terminal_resolution
+from check_response_footprint import REPRESENTATIONS, OWNERSHIP_BOUNDS, source_ownership, check_internal, check_sizes, check_observation, actor_geometry, check_geometry, check_terminal_resolution
 
 
 def rejected(check, value):
@@ -16,25 +16,27 @@ def rejected(check, value):
 
 
 def fixture():
-    # Independent bytes and counts, rather than values read back from a hook.
-    host = b'{"marker":"independent controls"}'
-    defaults = dict(raw_stdout=None, raw_stderr=None, retained_stdout=None, retained_stderr=None,
-                    generic_base64=None, typed_base64=None, host_retained=None, decoded=None,
-                    parsed_host=False, borrowed_input=False, envelope=False, rendered=None)
-    rows = []
-    for index, stage in enumerate(STAGES):
-        row = dict(defaults, stage=stage)
-        if index < 4: row.update(raw_stdout=[200,256],raw_stderr=[5,8])
-        if 1 <= index <= 3: row['generic_base64'] = 4*((len(host)+2)//3)
-        if index == 1: row.update(retained_stdout=[200,256],retained_stderr=[5,8])
-        if 2 <= index <= 3: row.update(typed_base64=row['generic_base64'],host_retained=len(host),decoded=[len(host),64])
-        if index == 3: row['parsed_host']=True
-        if index >= 4: row.update(borrowed_input=True,envelope=True)
-        if index == 5: row['rendered']=[300,512]
-        rows.append(row)
-    return dict(schema_version=1,case_id='response_footprint_success_boundaries',input_sha256=hashlib.sha256(host).hexdigest(),
-                client_stdout_bytes=200,client_stderr_bytes=5,host_bytes=len(host),rendered_bytes=300,boundaries=rows)
+    # Declaration-only ownership controls. Hash spelling and identity are checked;
+    # these copied source declarations make no live allocation/timing claim.
+    return source_ownership(Path(__file__).resolve().parents[3])
 
+
+def host_fixture():
+    # Independently authored minimal reply TLVs; no production writer supplies
+    # the bytes against which corruption/count controls are checked.
+    import struct
+    from porcelain_schema import SCHEMA_FINGERPRINT
+    def value(kind, payload): return bytes([kind]) + struct.pack('<I', len(payload)) + payload
+    def field(tag, kind, payload): return struct.pack('<H', tag) + value(kind, payload)
+    payload = struct.pack('<H', 55)
+    payload += field(1, 2, struct.pack('<q', 999))
+    payload += field(2, 4, b'independent footprint control')
+    payload += field(4, 2, struct.pack('<q', 0))
+    payload += field(5, 4, b'constructed')
+    payload += field(7, 2, struct.pack('<q', 42))
+    payload += field(13, 7, struct.pack('<I', 0))
+    payload += field(17, 7, struct.pack('<I', 0))
+    return b'PWP1' + bytes.fromhex(SCHEMA_FINGERPRINT) + value(6, payload)
 
 
 def observation_fixture():
@@ -171,37 +173,51 @@ def main():
     geometry_rejections=geometry_controls()
     receipt=fixture(); check_internal(receipt)
     mutations=[]
-    for index in range(6):
-        value=copy.deepcopy(receipt); value['boundaries'].pop(index); mutations.append(value)
-    value=copy.deepcopy(receipt); value['boundaries'][1:3]=reversed(value['boundaries'][1:3]); mutations.append(value)
-    for field in ['client_stdout_bytes','client_stderr_bytes','host_bytes','rendered_bytes']:
-        value=copy.deepcopy(receipt); value[field]+=1; mutations.append(value)
-    value=copy.deepcopy(receipt); value['boundaries'][2]['decoded'][1]=0; mutations.append(value)
-    for field in ['raw_stdout','raw_stderr','typed_base64','decoded','host_retained']:
-        value=copy.deepcopy(receipt); value['boundaries'][5][field]=copy.deepcopy(receipt['boundaries'][2][field]); mutations.append(value)
+    for index in range(len(REPRESENTATIONS)):
+        value=copy.deepcopy(receipt); value['representations'].pop(index); mutations.append(value)
+    value=copy.deepcopy(receipt); value['representations'][1:3]=reversed(value['representations'][1:3]); mutations.append(value)
+    for field in OWNERSHIP_BOUNDS:
+        value=copy.deepcopy(receipt); value['bounds'][field]+=1; mutations.append(value)
+    for field in ['stage_timing_observed', 'allocation_overlap_observed', 'peak_memory_bound']:
+        value=copy.deepcopy(receipt); value[field]=True; mutations.append(value)
+    value=copy.deepcopy(receipt); value['scope']='measured decoder overlap'; mutations.append(value)
+    value=copy.deepcopy(receipt); value['sources_sha256'].pop(next(iter(value['sources_sha256']))); mutations.append(value)
+    value=copy.deepcopy(receipt); value['sources_sha256'][next(iter(value['sources_sha256']))]='not-a-hash'; mutations.append(value)
     for value in mutations: rejected(check_internal,value)
     import base64
-    host=b'{}'; envelope=b'{"outer":true}\n'; encoded=base64.b64encode(host).decode()
-    reply=dict(data_base64=encoded,bytes_received=2,bytes_retained=2,truncated=False)
+    host=host_fixture(); envelope=b'{"outer":true}\n'; encoded=base64.b64encode(host).decode()
+    reply=dict(data_base64=encoded,bytes_received=len(host),bytes_retained=len(host),truncated=False)
     client=dict(stdout_truncated=False,stderr_truncated=False,stdout_parse_error=None,stdout_capture_error=None,
                 stdout_bytes_received=200,stdout_bytes_retained=200,stderr_bytes_received=5,stderr_bytes_retained=5,capture_limit_bytes=300)
-    sizes=dict(host_received_bytes=2,host_retained_bytes=2,computed_transport_artifact_sha256=hashlib.sha256(host).hexdigest(),
-               hash_scope='computed transport artifact; no producer hash supplied',synthesized_host_bound_bytes=100,
+    sizes=dict(host_received_bytes=len(host),host_retained_bytes=len(host),computed_transport_artifact_sha256=hashlib.sha256(host).hexdigest(),
+               hash_scope='computed transport artifact; no producer hash supplied',
+               host_retention_bytes=92 * 1024 * 1024, binary_frame_limit_bytes=128 * 1024 * 1024,
+               host_format='PWP1 typed binary', base64_scope='public JSON projection of retained raw host bytes',
                base64_characters=len(encoded),client_stdout_received_bytes=200,client_stdout_retained_bytes=200,
                client_stderr_received_bytes=5,client_stderr_retained_bytes=5,client_allowance_bytes=300,
                final_envelope_bytes=len(envelope),authority_bytes_in_reply_payload=False)
     check=lambda value:check_sizes(value[0],value[1],client,host,envelope)
     check((sizes,reply))
     for field in ['host_received_bytes','host_retained_bytes','base64_characters','client_stdout_received_bytes',
-                  'client_stderr_retained_bytes','final_envelope_bytes']:
+                  'client_stderr_retained_bytes','final_envelope_bytes','host_retention_bytes','binary_frame_limit_bytes']:
         changed=copy.deepcopy(sizes); changed[field]+=1; rejected(check,(changed,reply))
-    for field,wrong in [('computed_transport_artifact_sha256','0'*64),('authority_bytes_in_reply_payload',True),('host_received_bytes',200)]:
+    for field,wrong in [('computed_transport_artifact_sha256','0'*64),('authority_bytes_in_reply_payload',True),('host_received_bytes',200),('host_format','JSON'),('base64_scope','internal capture')]:
         changed=copy.deepcopy(sizes); changed[field]=wrong; rejected(check,(changed,reply))
     for field,wrong in [('data_base64','e31='),('bytes_retained',1),('truncated',True)]:
         changed=copy.deepcopy(reply); changed[field]=wrong; rejected(check,(sizes,changed))
+    # Keep transport counts/hash consistent while corrupting the binary frame;
+    # the independent reader must still refuse it.
+    for broken in [b'BAD1' + host[4:], host[:-1]]:
+        bad_sizes=copy.deepcopy(sizes)
+        bad_sizes.update(host_received_bytes=len(broken), host_retained_bytes=len(broken),
+                         computed_transport_artifact_sha256=hashlib.sha256(broken).hexdigest(),
+                         base64_characters=4*((len(broken)+2)//3))
+        bad_reply=dict(data_base64=base64.b64encode(broken).decode(), bytes_received=len(broken),
+                       bytes_retained=len(broken), truncated=False)
+        rejected(lambda value:check_sizes(value[0],value[1],client,broken,envelope), (bad_sizes,bad_reply))
     if len(sys.argv)>1:
         Path(sys.argv[1]).write_text(json.dumps(dict(schema_version=1,case_id='response_footprint_controls',constructed=True,
-            accepted_valid=True,rejected_terminal=terminal_rejections,rejected_observation=observation_rejections,rejected_geometry=geometry_rejections,rejected_internal=len(mutations),rejected_transport=12),indent=2)+'\n')
-    print('response footprint: valid independent receipts accepted; boundary and transport mutations rejected')
+            accepted_valid=True,rejected_terminal=terminal_rejections,rejected_observation=observation_rejections,rejected_geometry=geometry_rejections,rejected_source_ownership=len(mutations),rejected_transport=18),indent=2)+'\n')
+    print('response footprint: valid independent receipts accepted; source-ownership and binary transport mutations rejected')
 
 if __name__=='__main__': main()

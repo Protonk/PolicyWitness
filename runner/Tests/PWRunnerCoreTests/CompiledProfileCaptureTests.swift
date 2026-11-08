@@ -34,30 +34,25 @@ func runCompiledProfileCaptureTests(_ tk: TestKit) {
                     done: done, exitCode: exit, termSignal: signal, source: source, params: params, nonce: nonce)
             }
         }
-        tk.run("context contract is checked independently on decoding and encoding") {
-            let url = repositoryRoot().appendingPathComponent("tests/fixtures/contract/compiled_profile.json")
-            let rows = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [[String: Any]]
-            for row in rows {
-                let bytes = try JSONSerialization.data(withJSONObject: row["receipt"]!)
-                if row["valid"] as! Bool {
-                    let decoded = try pwRunnerDecodeJSON(CompiledProfileCapture.self, from: bytes)
-                    _ = try pwRunnerEncodeJSON(decoded)
-                } else {
-                    try expectThrows { _ = try pwRunnerDecodeJSON(CompiledProfileCapture.self, from: bytes) }
-                }
-            }
+        tk.run("context contract is checked before binary reporting") {
+            try read(fixture()).validateForReporting()
+            try read(fixture(), done: false).validateForReporting()
+            var future = read(fixture()); future.schema_version = 7
+            try expectThrows { try future.validateForReporting() }
+            future = read(fixture()); future.status = "future"
+            try expectThrows { try future.validateForReporting() }
             var captured = read(fixture())
             try expectEqual(captured.schema_version, 2)
             try expectEqual(captured.producer, "worker")
             try expectEqual(captured.capture_stage, "before_apply")
             captured.capture_stage = "after_apply"
-            try expectThrows { _ = try pwRunnerEncodeJSON(captured) }
+            try expectThrows { try captured.validateForReporting() }
             captured = read(fixture()); captured.producer = nil
-            try expectThrows { _ = try pwRunnerEncodeJSON(captured) }
+            try expectThrows { try captured.validateForReporting() }
             var unavailable = read(fixture(), done: false)
             try expectNil(unavailable.producer); try expectNil(unavailable.capture_stage)
             unavailable.capture_stage = "before_apply"
-            try expectThrows { _ = try pwRunnerEncodeJSON(unavailable) }
+            try expectThrows { try unavailable.validateForReporting() }
         }
         tk.run("capture preserves selected bytes; padding and unselected bytes are ignored") {
             var b = fixture()
@@ -109,7 +104,9 @@ func runCompiledProfileCaptureTests(_ tk: TestKit) {
                 capture_compiled_profile: true, capture_nonce: nonce)
             let decoded = try JSONDecoder().decode(PWRunnerPolicySpec.self, from: JSONEncoder().encode(requested))
             try expectEqual(decoded.capture_nonce, nonce)
-            let receipt = try JSONDecoder().decode(CompiledProfileCapture.self, from: JSONEncoder().encode(read(fixture())))
+            let receipt = read(fixture())
+            try receipt.validateForReporting()
+            _ = try pwPorcelainEncode(receipt)
             try expectEqual(receipt.bytecode_b64, Data([10,20,30]).base64EncodedString())
             try expectEqual(receipt.request_nonce, nonce)
         }

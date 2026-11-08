@@ -195,6 +195,13 @@ def _application(actor, setup):
     return errors
 
 
+def _metadata_fits(values):
+    # Independent literal boundary: metadata counts retained text, not JSON
+    # escaping, field names, fixed scalars, or the referenced entitlement plist.
+    return all(value is None or isinstance(value, str) for value in values) and sum(
+        len(value.encode('utf-8')) for value in values if value is not None) <= 32768
+
+
 def _equipment(runner, actors):
     errors = []
     inventory = obj(runner.get('equipment_inventory'))
@@ -212,6 +219,12 @@ def _equipment(runner, actors):
         if identity not in ('selected', 'unentitled', 'override-selected', 'override-unentitled') or identity in by_binding:
             errors.append('duplicate or invalid equipment binding'); continue
         by_binding[identity] = row
+        fields = ('binding_id', 'role', 'source', 'implementation_identity', 'relative_path',
+                  'path', 'status', 'reason', 'expected_sha256', 'expected_cdhash', 'sha256',
+                  'cdhash', 'identifier', 'team_id', 'entitlements_ref')
+        error = obj(row.get('error'))
+        if not _metadata_fits([row.get(k) for k in fields] + [error.get(k) for k in ('operation', 'domain', 'message')]):
+            errors.append('equipment binding metadata bound')
     for raw in reads:
         row = obj(raw)
         identity, role = row.get('entitlements_id'), row.get('binding_ref')
@@ -283,6 +296,9 @@ def _equipment(runner, actors):
         elif equipment.get('requirements_status') != 'unobserved' or equipment.get('missing_requirements') is not None:
             errors.append('unobserved actor requirements invent result')
         execution = obj(equipment.get('execution'))
+        fields = ('status', 'path', 'cdhash', 'identifier', 'team_id', 'entitlements_ref', 'reason')
+        if not _metadata_fits([execution.get(k) for k in fields] + [obj(call).get('operation') for call in array(execution.get('native_observations'))]):
+            errors.append('equipment execution metadata bound')
         status = execution.get('status')
         if status not in ('matched', 'mismatched', 'inspection_failed', 'unobserved'):
             errors.append('invalid execution equipment status')

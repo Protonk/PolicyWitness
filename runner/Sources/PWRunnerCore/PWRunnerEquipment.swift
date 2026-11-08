@@ -15,7 +15,7 @@ enum PWEquipmentLimits {
 
 // Equipment observations are shared wire types. The host implementation lives
 // in ActorEquipment.swift; clients need no Security APIs or worker driver.
-struct PWRunnerEquipmentError: Codable, Equatable {
+struct PWRunnerEquipmentError: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerEquipmentError
     var operation: String
     var domain: String?
@@ -24,7 +24,7 @@ struct PWRunnerEquipmentError: Codable, Equatable {
     // END GENERATED PORCELAIN PWRunnerEquipmentError
 }
 
-struct PWRunnerEquipmentInventory: Codable, Equatable {
+struct PWRunnerEquipmentInventory: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerEquipmentInventory
     var path: String
     var status: String = "unobserved"
@@ -38,7 +38,7 @@ struct PWRunnerEquipmentInventory: Codable, Equatable {
     // END GENERATED PORCELAIN PWRunnerEquipmentInventory
 }
 
-struct PWRunnerEquipmentBinding: Codable, Equatable {
+struct PWRunnerEquipmentBinding: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerEquipmentBinding
     var binding_id: String
     var role: String
@@ -60,28 +60,9 @@ struct PWRunnerEquipmentBinding: Codable, Equatable {
     var error: PWRunnerEquipmentError?
     // END GENERATED PORCELAIN PWRunnerEquipmentBinding
 
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case binding_id, role, source, implementation_identity, relative_path, path, status, reason
-        case expected_sha256, expected_cdhash, sha256, cdhash, identifier, team_id
-        case entitlements_ref, signature_osstatus, entitlements_match, error
-    }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(binding_id, forKey: .binding_id); try c.encode(role, forKey: .role)
-        try c.encode(source, forKey: .source); try c.encode(implementation_identity, forKey: .implementation_identity)
-        try c.encodeIfPresent(relative_path, forKey: .relative_path); try c.encode(path, forKey: .path)
-        try c.encode(status, forKey: .status); try c.encodeIfPresent(reason, forKey: .reason)
-        try c.encodeIfPresent(expected_sha256, forKey: .expected_sha256); try c.encodeIfPresent(expected_cdhash, forKey: .expected_cdhash)
-        try c.encodeIfPresent(sha256, forKey: .sha256); try c.encodeIfPresent(cdhash, forKey: .cdhash)
-        try c.encodeIfPresent(identifier, forKey: .identifier)
-        if identifier != nil { try c.encode(team_id, forKey: .team_id) }
-        try c.encodeIfPresent(entitlements_ref, forKey: .entitlements_ref)
-        try c.encodeIfPresent(signature_osstatus, forKey: .signature_osstatus)
-        try c.encodeIfPresent(entitlements_match, forKey: .entitlements_match); try c.encodeIfPresent(error, forKey: .error)
-    }
 }
 
-struct PWRunnerEquipmentEntitlements: Codable, Equatable {
+struct PWRunnerEquipmentEntitlements: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerEquipmentEntitlements
     var entitlements_id: String
     var source: String
@@ -93,7 +74,7 @@ struct PWRunnerEquipmentEntitlements: Codable, Equatable {
     // END GENERATED PORCELAIN PWRunnerEquipmentEntitlements
 }
 
-struct PWRunnerEquipmentNativeObservation: Codable, Equatable {
+struct PWRunnerEquipmentNativeObservation: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerEquipmentNativeObservation
     var operation: String
     var attempted: Bool
@@ -101,7 +82,7 @@ struct PWRunnerEquipmentNativeObservation: Codable, Equatable {
     // END GENERATED PORCELAIN PWRunnerEquipmentNativeObservation
 }
 
-struct PWRunnerEquipmentExecution: Codable, Equatable {
+struct PWRunnerEquipmentExecution: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerEquipmentExecution
     var status: String = "unobserved"
     var pid: Int?
@@ -117,25 +98,9 @@ struct PWRunnerEquipmentExecution: Codable, Equatable {
     var eligible: Bool = false
     // END GENERATED PORCELAIN PWRunnerEquipmentExecution
 
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case status, pid, parent_pid, observed_at_monotonic_ns, path, cdhash, identifier, team_id
-        case entitlements_ref, native_observations, reason, eligible
-    }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(status, forKey: .status); try c.encodeIfPresent(pid, forKey: .pid)
-        try c.encodeIfPresent(parent_pid, forKey: .parent_pid)
-        try c.encodeIfPresent(observed_at_monotonic_ns, forKey: .observed_at_monotonic_ns)
-        try c.encodeIfPresent(path, forKey: .path); try c.encodeIfPresent(cdhash, forKey: .cdhash)
-        try c.encodeIfPresent(identifier, forKey: .identifier)
-        if identifier != nil { try c.encode(team_id, forKey: .team_id) }
-        try c.encodeIfPresent(entitlements_ref, forKey: .entitlements_ref)
-        try c.encode(native_observations, forKey: .native_observations)
-        try c.encodeIfPresent(reason, forKey: .reason); try c.encode(eligible, forKey: .eligible)
-    }
 }
 
-struct PWRunnerActorEquipment: Codable, Equatable {
+struct PWRunnerActorEquipment: Equatable {
     // BEGIN GENERATED PORCELAIN PWRunnerActorEquipment
     var requested: String?
     var resolved: String
@@ -146,16 +111,20 @@ struct PWRunnerActorEquipment: Codable, Equatable {
     var execution: PWRunnerEquipmentExecution = PWRunnerEquipmentExecution()
     // END GENERATED PORCELAIN PWRunnerActorEquipment
 
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case requested, resolved, binding_ref, required_entitlements, requirements_status, missing_requirements, execution
+}
+
+// Bound retained text directly, independent of a later JSON spelling or escaping
+// policy. Numeric/Boolean fields have fixed width; table and observation counts
+// are admitted separately below. Subtracting avoids an aggregate-size overflow.
+private func equipmentMetadataFits(_ fields: [String?]) -> Bool {
+    var remaining = PWEquipmentLimits.metadataBytes
+    for field in fields {
+        guard let field else { continue }
+        let count = field.utf8.count
+        guard count <= remaining else { return false }
+        remaining -= count
     }
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(requested, forKey: .requested); try c.encode(resolved, forKey: .resolved)
-        try c.encode(binding_ref, forKey: .binding_ref); try c.encode(required_entitlements, forKey: .required_entitlements)
-        try c.encode(requirements_status, forKey: .requirements_status)
-        try c.encodeIfPresent(missing_requirements, forKey: .missing_requirements); try c.encode(execution, forKey: .execution)
-    }
+    return true
 }
 
 /// Pure reply checks, independent of the host's inspection/selection code.
@@ -226,7 +195,10 @@ func pwRunnerEquipmentProblems(inventory: PWRunnerEquipmentInventory?,
     } else { problems.append("equipment inventory absent") }
     for row in bindings {
         checkError(row.error)
-        require((try? pwRunnerEncodeJSON(row).count).map { $0 <= PWEquipmentLimits.metadataBytes } == true, "equipment binding metadata bound")
+        require(equipmentMetadataFits([row.binding_id, row.role, row.source, row.implementation_identity,
+            row.relative_path, row.path, row.status, row.reason, row.expected_sha256, row.expected_cdhash,
+            row.sha256, row.cdhash, row.identifier, row.team_id, row.entitlements_ref,
+            row.error?.operation, row.error?.domain, row.error?.message]), "equipment binding metadata bound")
         require(bindingIDs.contains(row.binding_id) && roles.contains(row.role), "equipment binding identity")
         require(["bound", "refused"].contains(row.status), "equipment binding status")
         require(row.path.hasPrefix("/") && row.path.utf8.count <= 1023 && !row.path.contains("\0"), "equipment binding path")
@@ -277,7 +249,9 @@ func pwRunnerEquipmentProblems(inventory: PWRunnerEquipmentInventory?,
                     && actor.missing_requirements == absent, "equipment requirement decision")
         } else { problems.append("equipment requirements without read-back") }
         let execution = actor.execution
-        require((try? pwRunnerEncodeJSON(execution).count).map { $0 <= PWEquipmentLimits.metadataBytes } == true, "equipment execution metadata bound")
+        require(equipmentMetadataFits([execution.status, execution.path, execution.cdhash, execution.identifier,
+            execution.team_id, execution.entitlements_ref, execution.reason]
+            + execution.native_observations.map { Optional($0.operation) }), "equipment execution metadata bound")
         require(execution.path.map { $0.hasPrefix("/") && $0.utf8.count <= 1023 && !$0.contains("\0") } ?? true, "equipment execution path")
         require(execution.cdhash.map { hex($0, 40) } ?? true, "equipment execution CDHash")
         require(execution.identifier.map { !$0.isEmpty && $0.utf8.count <= 255 && !$0.contains("\0") } ?? true, "equipment execution identifier bound")

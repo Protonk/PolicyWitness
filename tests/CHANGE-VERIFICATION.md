@@ -41,8 +41,7 @@ they do not exhaust the verification relevant to a change.
 
 - **Cases:** `witness_contract/held_phase_footprint`,
   `witness_contract/response_footprint` and `run_effects/aftermath_footprint`.
-  All are opt-in. The response dependency supplies the scalar unit receipt;
-  applicable ABI agreement is declared in the catalog. Default cases separately
+  All are opt-in. Applicable ABI agreement is declared in the catalog. Default cases separately
   cover checker validity and native observer sensitivity.
 - **Question:** Observe held-worker CPU demand, response representation overlap
   and fresh-controller memory, and state remaining after completion or an
@@ -59,8 +58,8 @@ they do not exhaust the verification relevant to a change.
   intervals and release observations. Response retains all named workloads,
   full reply/effect assertions, exact decoded host artifacts and their computed
   hashes, host/client counts and separate resident/physical-footprint samples.
-  Its unit-process boundary receipt is independently identified, rather than
-  aligned to native samples. Aftermath repeats completion and holds an invoked
+  Its source-ownership declaration is separate from native samples and makes
+  no decoder-stage or allocation-overlap measurement. Aftermath repeats completion and holds an invoked
   timeout, inventories every object at each boundary, independently observes
   required worker endings, and records interventions after the primary snapshot.
 - **Controls:** Default `held_phase_footprint_controls`,
@@ -74,7 +73,7 @@ they do not exhaust the verification relevant to a change.
   replies and executable/source identity, native clocks, conditions and process
   generation/exit receipts. Held cases add calibration, declared measurements,
   per-hold `measurement.json` and `summary.json`; response adds exact
-  `host-reply.json`, `response-footprint.json` and unit input/assertion copies;
+  `host-reply.pwp`, `response-footprint.json` and a source-ownership declaration;
   aftermath adds `aftermath.json`, `repetitions.json`, snapshots, interventions
   and recovery ownership. Each workload retains its `RunCapture` output.
 - **Interpretation:** CPU deltas are measurements during verified holds, not an

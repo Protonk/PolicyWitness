@@ -69,21 +69,21 @@ samples stay separate and have unknown decoder-stage attribution. Required
 same-generation samples and independent exit observations cannot be replaced by
 an inspection error or a synthesized reply bound.
 
-`unit/rust.unit` supplies the separate test-process scalar receipt for collection,
-capture parsing, typed validation/decoding, host parsing, envelope construction
-and rendering. The seam retains scalars only and is absent from production
-builds. Its input/source hashes and ordered overlap assertions do not timestamp
-production decoder stages. The default `response_footprint_controls` and
-`held_phase_footprint_controls` accept constructed valid receipts before rejecting
-missing boundaries, incorrect counts, invalid units, capacities or ownership
-claims. The default `footprint_observer_controls` builds the native observer and
+The source-ownership receipt names binary capture bytes, fixed typed transport
+and host records, and the public JSON text, with source hashes and explicit
+framing, decoded-storage, depth and retention bounds. It makes no allocation,
+overlap or decoder-stage timing observation. Base64 is counted only in the
+public projection of retained raw bytes. The default `response_footprint_controls`
+and `held_phase_footprint_controls` accept constructed valid receipts before
+rejecting missing ownership rows, incorrect counts, invalid units, capacities or
+measurement claims. The default `footprint_observer_controls` builds the native observer and
 checks acknowledged allocation and CPU sensitivity, generation/metric/error
 validation and exited-generation inspection; it needs Clang but no app.
 
 Artifacts include observer source/binary identity and raw samples, conditions,
 calibration and declared hold repetitions, per-hold `measurement.json`, response
-`response-footprint.json`, exact `host-reply.json`, `RunCapture` files, the copied
-unit receipt/input artifact and independent exit receipts. These cases require
+`response-footprint.json`, exact `host-reply.pwp`, `RunCapture` files, the
+source-ownership declaration and independent exit receipts. These cases require
 native inspection and XPC access; the actor hold also needs a matching Developer
 ID identity and disposable-host signing. See the
 [execution and interpretation account](../../CHANGE-VERIFICATION.md#footprint-observations)
@@ -735,21 +735,19 @@ same action capacity. They compare returned prefixes and descriptor identities
 with independent file observations and require actual native lifecycle results.
 These require complete replies and exact targets, outcomes and applicable
 output; the control-character workload also requires every prediction to
-round-trip through the real validator. Every admitted host reply must stay under
-the synthesized maximal reply recorded in `docs/limits.json`
-(`runner_reply_maximum`, computed by `runner_unit` from the field-complete reply
-fixture with every string at its limit), and the receiver budget must equal three
-times that bound rounded up to 4 MiB. The maximal-metadata workload also adds a
-conservative receipt allowance (`2 * 4 * ceil(capture / 3) + 4096`, capture from
-the manifest) to its host reply, which must still fit under the bound; Swift
-independently tests that allowance with maximal slash-heavy bytes. The corpus is evidence that real
-replies stay inside a bound that follows the schema, not the source of the bound.
+round-trip through the real validator. Every observed host binary reply must fit
+its retention and frame limits; the separate client frame must fit the controller
+retention allowance. The maximal-metadata workload adds a conservative profile
+receipt allowance to the observed host size and checks the remaining retention
+margin. Dense typed fixtures and independent public projection accounting cover
+additional constructed populations. These observations are not a proof of a
+global reachable binary maximum.
 Four refusal workloads submit 32,768-byte query values or filter/attempt labels.
 Each requires a host-owned `admission_failure` naming the field, no steps and no
 worker or validator subprocess. The label controls place a valid write before
 the invalid label and independently require every target to remain unchanged.
 Every workload records the host reply's raw bytes and the client's stdout bytes
-(the versioned capture carrying the base64 reply, bounded by the receiver budget)
+(the binary capture carrying opaque host bytes, bounded by the receiver budget)
 separately and requires an untruncated receiver; refusal replies must be smaller
 than 4 KiB. Every echoed request string is
 admission-bounded, so these measurements are the evidence for the cap's margin

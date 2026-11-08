@@ -57,10 +57,9 @@ func runActorAccountTests(_ tk: TestKit) {
     tk.group("complete actor reply account controls") {
         tk.run("gate references must agree with the source child and final activation") {
             let documents = try actorShapeDocuments()
-            guard let document = documents.first(where: { doc in
-                (doc["phases"] as? [[String: Any]])?.contains { $0["termination_gate"] != nil } == true
+            guard let baseline = documents.first(where: { doc in
+                doc.phases.contains { $0.termination_gate != nil }
             }) else { throw TestFailure(message: "constructed gate companion missing") }
-            let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: document))
             let gateIndex = baseline.phases.firstIndex { $0.termination_gate != nil }!
             let sourceID = baseline.phases[gateIndex].termination_gate!.source_actor_id
             let sourceIndex = baseline.actors!.firstIndex { $0.actor_id == sourceID }!
@@ -71,8 +70,8 @@ func runActorAccountTests(_ tk: TestKit) {
             unclockedDependent.phases[gateIndex].activation_observation = PWRunnerActorActivation(
                 capture_ordinal: 1, observed_ns: nil)
             try expectNil(unclockedDependent.actorExtensionEvidenceProblem())
-            let encoded = try pwRunnerEncodeJSON(unclockedDependent)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
+            let encoded = try admittedReplyData(unclockedDependent)
+            let decoded = unclockedDependent
             try expectEqual(decoded.phases[gateIndex].activation_observation?.capture_ordinal, 1)
             try expectNil(decoded.phases[gateIndex].activation_observation?.observed_ns)
             let mutations: [(inout PWRunnerRunResult) -> Void] = [
@@ -89,22 +88,21 @@ func runActorAccountTests(_ tk: TestKit) {
             for mutate in mutations {
                 var invalid = baseline; mutate(&invalid)
                 try expectTrue(invalid.actorExtensionEvidenceProblem() != nil)
-                try expectThrows { _ = try pwRunnerEncodeJSON(invalid) }
+                try expectThrows { _ = try admittedReplyData(invalid) }
             }
         }
         tk.run("equipment failure cannot coexist with scheduled collections and a preparation refusal cannot follow launch") {
-            let document = try actorShapeDocuments()[0]
-            let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: document))
+            let baseline = try actorShapeDocuments()[0]
             var bad = baseline
             bad.actors![0].equipment!.execution.status = "inspection_failed"
             bad.actors![0].equipment!.execution.reason = "inspection_deadline"
             bad.actors![0].equipment!.execution.eligible = false
             try expectTrue(bad.actorExtensionEvidenceProblem() != nil)
-            try expectThrows { _ = try pwRunnerEncodeJSON(bad) }
+            try expectThrows { _ = try admittedReplyData(bad) }
             bad = baseline
             bad.preparation_failure = PWRunnerPreparationFailure(stage: "equipment", code: "equipment_binding_refused")
             try expectTrue(bad.actorExtensionEvidenceProblem() != nil)
-            try expectThrows { _ = try pwRunnerEncodeJSON(bad) }
+            try expectThrows { _ = try admittedReplyData(bad) }
         }
     }
 }

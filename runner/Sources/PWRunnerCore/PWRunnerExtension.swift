@@ -97,7 +97,7 @@ struct PWRunnerExtensionAction: Codable {
 
 /// The native handle is signed 64-bit; -1 does not provide a handle.
 /// Missing publication withholds every native result, regardless of progress.
-struct PWRunnerExtensionEvent: Codable {
+struct PWRunnerExtensionEvent {
     // BEGIN GENERATED PORCELAIN PWRunnerExtensionEvent
     var phase_id: String
     var step_id: String

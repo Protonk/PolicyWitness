@@ -92,7 +92,7 @@ func pwTransportBoundedString(_ text: String, bytes: Int) -> (String, Bool) {
     return (String(bytes: value, encoding: .utf8)!, true)
 }
 
-struct PWRunnerTransportError: Codable {
+struct PWRunnerTransportError {
     // BEGIN GENERATED PORCELAIN PWRunnerTransportError
     var stage: String
     var reason: String
@@ -116,7 +116,7 @@ struct PWRunnerTransportError: Codable {
     }
 }
 
-struct PWRunnerControlObservation: Codable {
+struct PWRunnerControlObservation {
     // BEGIN GENERATED PORCELAIN PWRunnerControlObservation
     var bytes_received: Int
     var sha256: String
@@ -134,7 +134,7 @@ struct PWRunnerControlObservation: Codable {
     }
 }
 
-struct PWRunnerAcquisitionAttempt: Codable {
+struct PWRunnerAcquisitionAttempt {
     // BEGIN GENERATED PORCELAIN PWRunnerAcquisitionAttempt
     var ordinal: Int
     var attempt_id: String
@@ -146,18 +146,14 @@ struct PWRunnerAcquisitionAttempt: Codable {
     // END GENERATED PORCELAIN PWRunnerAcquisitionAttempt
 }
 
-struct PWRunnerSubmission: Codable {
+struct PWRunnerSubmission {
     // BEGIN GENERATED PORCELAIN PWRunnerSubmission
     var state: String = "not_invoked"
     var invoked_elapsed_ms: UInt64?
     // END GENERATED PORCELAIN PWRunnerSubmission
 }
 
-struct PWRunnerReplyCapture: Codable {
-    enum CodingKeys: String, CodingKey {
-        case bytes_received, bytes_retained, truncated
-        case data = "data_base64"
-    }
+struct PWRunnerReplyCapture {
     // BEGIN GENERATED PORCELAIN PWRunnerReplyCapture
     var bytes_received: Int
     var bytes_retained: Int
@@ -173,7 +169,7 @@ struct PWRunnerReplyCapture: Codable {
 }
 
 /// Optional fields are omitted when absent; absence never implies an event.
-struct PWRunnerClientCapture: Codable {
+struct PWRunnerClientCapture {
     // BEGIN GENERATED PORCELAIN PWRunnerClientCapture
     var kind: String = "runner_client_capture"
     var protocol_version: Int = PWContract.runnerProtocol
