@@ -251,7 +251,7 @@ it does not convert final-wait latency savings into a worker CPU claim.
 Accepted on the structural and finite-observation evidence above. The retained
 controls cover fallbacks absent from the successful live comparison. No new
 resource, sandbox exception, worker communication or public evidence field was
-introduced. Retention is finalized with the remaining host round.
+introduced. Retention is finalized below with the completed host round.
 
 | Integrated artifact / equipment | SHA-256 |
 | --- | --- |
@@ -264,3 +264,18 @@ Pacing prose correction: the frozen driver schedules use a rapid eligible gap
 of [0, 100 ms], not the 250 ms initially transcribed here. The hashed schedules
 and retained trial conditions already carry 100 ms; every credited trial met
 that stricter range. No selection, exclusion or result was changed.
+
+## Retention
+
+Current default/targeted verification is pinned as `host06-main-default-01`
+and `host06-main-targeted-01`. The latter's `host-followon/archives/` contains
+complete identified copies of `host04-comparison-01` and `host04-observer-01`.
+Selected `host04-main-default-01-equipment` and
+`host04-main-targeted-01-equipment` archives preserve run metadata, app-integrity
+evidence and the failed/repaired native-policy control; other raw cases from
+those superseded verification runs are not retained. Original run outcomes are
+unchanged. The outer `archive-index.json` records source paths, run IDs, every
+copied file's hash and archive hashes. Both timestamp datasets replay identically
+with the archived v11 reader after path normalization. Wrapper sources and the
+superseded worktree draft are separately identified copies. These gitignored,
+local copies supply no new case credit or relocated cleanup ownership.

@@ -10,18 +10,18 @@
       "release": "v0.3.4"
     },
     {
-      "path": "runs/main-scan-default-01",
-      "run_id": "20261108T161704Z_e29fe638",
-      "reason": "Current accepted production default battery: 222 passing cases, no skips or unrun cases. Host readiness, resampling, exit notification and inbound cursor are integrated. Production source and signed app remain unchanged by the reader repair; worker-wait-review-final-01 supersedes its pilot-reader and documentation results.",
+      "path": "runs/host06-main-default-01",
+      "run_id": "20261108T212111Z_e990d462",
+      "reason": "Current accepted production default battery: all 222 cases pass with no skips, unrun cases, harness errors or recorded sleep. Includes HOST-04 final notification and HOST-06 bounded initial resampling, 597 runner assertions and actor qualification. Native identity aaa8056c79c242fde5740449049246e3ed88facdc2c8efd143f6344c856da8e5; signed app built at f6877809. Later documentation precision is verified by host06-main-targeted-01.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
     },
     {
-      "path": "runs/worker-wait-review-final-01",
-      "run_id": "20261108T170353Z_36ac19c5",
-      "reason": "Worker wait acceptance repair: 10 reader/source-drift cases pass without sleep overlap. Separate worker-wait-review/ attachments preserve and reanalyse the pilot required by ARM, all four candidate comparisons and the null noise control; preserve final SCAN unit/mutation and named verification; and carry the previous footprint/pause evidence. Nine historical archives retain original run IDs, source/equipment evidence and file hashes; all six timestamp datasets replay identically from their archived bytes. Historical copies are separate from these ten cases and do not relocate cleanup ownership.",
+      "path": "runs/host06-main-targeted-01",
+      "run_id": "20261108T213828Z_47b268bc",
+      "reason": "Complementary acceptance: six cases pass, including ordering mutations, ABI, updated LIMITS, observer/reader controls and 24 held-footprint measurements. No recorded sleep; app unchanged. Separate host-followon attachments preserve twelve identified historical archives, the earlier pilot/review needed by deferred ARM/hint plans, all host-round comparisons and observer diagnostics, the HOST-04 equipment failure/retry and selected rejected HOST-05 correctness evidence. All files verified; seven new timestamp datasets replay identically using their frozen readers. Historical copies add no passing cases and relocate no cleanup ownership.",
       "source": null,
-      "app_inventory": null
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

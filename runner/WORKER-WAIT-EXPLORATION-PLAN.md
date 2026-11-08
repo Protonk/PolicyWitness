@@ -22,19 +22,21 @@ reopening conditions. These observations nominate work, not fresh baselines.
 HOST-04 is accepted; its [record](../records/WORKER-WAIT-HOST-04-ACCEPTANCE.md)
 preserves the structural decision, comparison and integrated verification.
 HOST-05 is closed without adoption; its [record](../records/WORKER-WAIT-HOST-05-ACCEPTANCE.md)
-retains the local decoder improvement and failed held-time gate. Complete
-conditional HOST-06 in the [host follow-on round](#host-follow-on-round). Dispose of each before opening the next
-production candidate. Further host candidates require a separate scope decision.
-ARM research/native trials and all hint-batch tuning are explicitly deferred
-during this round. Deferral is a priority decision, not failed qualification or
-evidence of no benefit; deferring ARM does not itself open hint tuning.
+retains the local decoder improvement and failed held-time gate. HOST-06 is
+accepted; its [record](../records/WORKER-WAIT-HOST-06-ACCEPTANCE.md) preserves the
+first-arrival comparison, added resampling cost and integrated verification.
+The [host follow-on round](#host-follow-on-round) is complete. Further host
+candidates require a separate scope decision. ARM research/native trials and
+all hint-batch tuning remain explicitly deferred. Deferral is a priority
+decision, not failed qualification or evidence of no benefit; completing this
+round does not itself resume ARM or open hint tuning.
 
 Freeze each comparison against identified accepted source, including preceding
 accepted changes and excluding other candidates. Keep the two plans' builds,
 output directories and acceptance records separate. Any accepted change affecting
 a frozen comparison requires a new baseline and comparison on that source
-foundation; do not combine observations across it. Dispose of the host round
-before freezing ARM's production comparison baseline. Retain reusable measurement
+foundation; do not combine observations across it. ARM's next production baseline
+must include accepted HOST-04 and HOST-06, with HOST-05 excluded. Retain reusable measurement
 preparation and controls, with their identities, even when a production candidate
 is rejected.
 
@@ -85,7 +87,7 @@ comparison trials ended that wait on notification; no new resource was added.
 The acceptance record retains the contrary whole-request pair, observer costs,
 fallback controls and the repaired compiler-discovery failure. This establishes
 neither a universal request-speed improvement nor CPU, energy or coalescing gains.
-Use this accepted source as the foundation for the remaining host candidates.
+HOST-05 and HOST-06 were compared on this accepted foundation.
 
 **HOST-05 — decoder work: closed without adoption.** Host-only inspection/`-O`
 diagnostics established remaining decoder cost. Reusing validated native integers
@@ -94,17 +96,17 @@ failed the frozen every-pair gate. Production decoding and inspection policy
 remain unchanged. Preserve the flavour apparatus, controls, candidate source
 and negative evidence; do not reopen this candidate in this round.
 
-**HOST-06 — first arrival.** The [acceptance record](../records/WORKER-WAIT-HOST-06-ACCEPTANCE.md)
-freezes the sole candidate and comparison. After the first two dispositions, measure readiness
-observation, application publication and first arrival separately on accepted
-source. Open at most one bounded initial-resampling candidate only if those
-distributions support worthwhile savings; otherwise close. Do not shorten every
-poll or add a worker notification channel. Freeze the window and clock-fault/
-sample-cap behavior before comparison. Preserve failure-before-application,
-failed application, ready-byte failure and allowances. Require shorter first-arrival
-detection and held time in named workloads; count added host busy time against
-waiting time saved. Include no-eligible-query and delayed-application controls.
-Faster observation alone is not a total CPU benefit.
+**HOST-06 — first arrival: accepted.** After a received readiness byte, the
+ordinary host has one initial resampling opportunity using the existing bounded
+helper. Normal application, phase and ownership checks still authorize collection;
+missing readiness gets no new resampling. In all ten selected O0/O1 idle pairs,
+arrival observation shortened by 2.930–3.010 ms and held time by 2.827–3.034 ms,
+beyond uncertainty. Added measured resampling spans were 1.833–8.625 µs and
+passed the frozen elapsed-cost tradeoff in every selected pair. That span is
+not process CPU. The record retains all sixty pairs, the contrary whole-request
+observation, observer costs, failure/clock controls and full signed verification.
+No new resource or worker channel was added; CPU, energy and coalescing benefits
+remain unmeasured.
 
 ## Deferred polling work
 
@@ -206,8 +208,8 @@ them; label concurrent busy controls and finish calibration before an idle gap.
 ### Records and workloads
 
 Commit `records/WORKER-WAIT-<candidate>-ACCEPTANCE.md` as each candidate opens,
-before comparisons: HOST-04, HOST-05, conditional HOST-06, HINT-RELEASE,
-HINT-ACTIVATION and conditional HINT-EXCHANGE. Use a separate record for a mask
+before comparisons. HOST-04, HOST-05 and HOST-06 records are complete; deferred
+candidates are HINT-RELEASE, HINT-ACTIVATION and conditional HINT-EXCHANGE. Use a separate record for a mask
 candidate if justified. Freeze source/build/reader identities, workloads,
 durations/counts, uncertainty, bounded state and claimed benefit. Preserve frozen
 definitions and superseded observations in explicit revisions. Use five matched
@@ -288,6 +290,14 @@ rebuilding/repeating affected observations and revising changed baselines; summa
 cannot replace it. At acceptance choose necessary runs or identified copies,
 decide any exception to the normal pin maximum, then prune through existing
 helpers. No pin rotation is prescribed.
+
+The completed host round retains `host06-main-default-01` and
+`host06-main-targeted-01`. The latter's `host-followon/archive-index.json`
+locates the host comparisons and the complete historical acceptance-review
+archive, including the shared pilot still needed by ARM. Its `replay.json`
+records seven new timestamp datasets reproduced with their frozen readers.
+The HOST-06 record identifies hashes and selected verification copies; all raw
+evidence is gitignored and local to the checkout.
 
 ## Closeout
 

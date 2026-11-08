@@ -226,3 +226,19 @@ apparatus remain reusable. Reopening this source idea would require an explicit
 new scope/acceptance decision (for example a claim based on less decoder work),
 not treating this run as proof of uniform shorter holds. No total CPU, memory,
 energy or scheduling benefit is established. HOST-06 starts from HOST-04.
+
+## Retention
+
+The pinned `host06-main-targeted-01/host-followon/archives/` contains complete
+identified copies of both flavour diagnostics and `host05-comparison-01`.
+All three timestamp datasets replay identically with the archived v11 reader
+after path normalization. `host05-correctness-01-selected` retains root run
+metadata, app-integrity evidence, runner-unit/validator-failure/failure-boundary/
+ABI/source-drift cases and the native-pause failure and controls. Other raw
+native cases from that incomplete verification selection are superseded or
+outside this rejected candidate's necessary evidence; its recorded outcomes
+remain unchanged. The outer `archive-index.json` names exact selections,
+original paths/run IDs, file hashes and archive hashes. Candidate commit
+`b433da29` remains reachable on `wait/host-05`; the temporary checkout is
+disposable. These gitignored, local copies supply no new passing case or
+relocated cleanup ownership.

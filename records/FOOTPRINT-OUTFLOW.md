@@ -202,10 +202,11 @@ The initial native runs are `worker-wait-native-02`
 source copies, disassembly, app evidence, power, native positive controls,
 log status, exit/reap observations and original run identities are preserved
 with a hash index in `worker-wait-evidence/` in the identified copy of
-`footprint-opt-targeted-final-02`, now archived under
-`tests/out/runs/worker-wait-review-final-01/worker-wait-review/archives/`.
-The [acceptance review](WORKER-WAIT-REVIEW.md) identifies the archive and its
-file hashes. This evidence is gitignored
+`footprint-opt-targeted-final-02`. Its archive remains inside the preserved
+`worker-wait-review-final-01/worker-wait-review/archives/` tree, now in
+`tests/out/runs/host06-main-targeted-01/host-followon/archives/worker-wait-review-final-01.tar.gz`.
+`WORKER-WAIT-REVIEW.md` and the outer `host-followon/archive-index.json`
+identify these nested copies and file hashes. This evidence is gitignored
 and available only in the local checkout. The early `worker-wait-native-01`
 hardware-query refusal is preserved separately; its unsandboxed retry passed.
 The unchanged app's sandboxed signature-check failure likewise passed the
@@ -293,7 +294,7 @@ Counts, not CPU: no CPU or energy claim is made.
 
 Branch 3's hint tails (`HINT-RELEASE`, `HINT-ACTIVATION`) and the
 [ARM option plan](../runner/ARM-WAIT-OPTION-PLAN.md) are explicitly deferred
-while the host follow-on round below proceeds. This is a priority decision,
+after completion of the host follow-on round below. This is a priority decision,
 not a negative qualification or benefit result. The pilot and three comparisons
 measured a pass period of 0.26 to 0.28 µs with one thousand `cpu_relax` hints;
 these observations inform a later comparison but do not freeze its baseline.
@@ -347,8 +348,27 @@ was not integrated. `WORKER-WAIT-HOST-05-ACCEPTANCE.md` retains exact identities
 contrary observations and incomplete-verification limits. A later less-work
 proposal needs a new scope decision; this result is not uniform hold improvement.
 
-The remaining [host follow-on round](../runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
-is conditional first-arrival resampling (HOST-06), starting from accepted HOST-04.
+HOST-06 is accepted (`7f67e5cd`): after a received readiness byte, the ordinary
+host permits one initial resampling opportunity using its existing bounded
+helper. Application, phase and ownership checks remain authoritative; missing
+readiness gets no new opportunity. On the accepted HOST-04 foundation, every
+selected O0/O1 idle pair shortened arrival observation by 2.930–3.010 ms and
+held time by 2.827–3.034 ms, beyond uncertainty. The added measured resampling
+span was 1.833–8.625 µs and passed the frozen elapsed-cost tradeoff in every
+selected pair. This span includes possible descheduling; it is not process CPU.
+All response bounds were credited across sixty pairs. One O0 idle whole request
+was 1.982 ms slower despite its shorter hold; no whole-request group worsened
+beyond spread in every pair. Observer costs remain separately recorded without
+a fixed correction. No resource, worker IPC or public evidence field was added.
+FOOTPRINT `fw16` describes the mechanism; `WORKER-WAIT-HOST-06-ACCEPTANCE.md`
+retains exact identities and claim limits. CPU, energy and coalescing gains
+remain unmeasured.
+
+The [host follow-on round](../runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
+is complete. The integrated signed app passed all 222 default cases, all 597
+runner assertions and the six-case targeted selection, including ordering
+mutations and 24 held-footprint measurements. ARM and hint tails remain deferred;
+completion of this round does not resume them or retire their common plan.
 The roughly 25 percent overshoot of requested host sleeps on this equipment
 remains a measured condition, not a separate tuning candidate.
 

@@ -16,11 +16,13 @@ profile, or hide pre-application resources to make this alternative pass.
 
 ## Status and shared rules
 
-**Deferred**, alongside hint tuning, while the worker plan's
+**Deferred**, alongside hint tuning. The worker plan's
 [host follow-on round](WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
-proceeds. This is a priority decision, not an ARM qualification result. Record
-explicit resumption and dispose of that round before freezing an ARM production
-baseline containing its accepted changes.
+is complete: HOST-04 and HOST-06 are accepted; HOST-05 is closed without
+adoption. Deferral remains a priority decision, not an ARM qualification result.
+Record explicit resumption before proceeding, then freeze a fresh production
+baseline containing HOST-04 and HOST-06 and excluding HOST-05. Historical host
+measurements do not substitute for that baseline.
 
 The worker plan owns [resumption, baseline and tail ownership](WORKER-WAIT-EXPLORATION-PLAN.md#resuming-deferred-work),
 [measurement resolution](WORKER-WAIT-EXPLORATION-PLAN.md#instruments-and-response-resolution),

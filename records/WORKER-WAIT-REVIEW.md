@@ -33,8 +33,9 @@ delayed. Production host and worker source and the signed app are unchanged.
 ## Reanalysis and disposition
 
 The original run receipts, instrument identities and summaries remain intact.
-Version-10 outputs and their source hashes are separate attachments under
-`tests/out/runs/worker-wait-review-final-01/worker-wait-review/`.
+Version-10 outputs and their source hashes are separate attachments under the
+original `worker-wait-review-final-01/worker-wait-review/` path, now preserved
+inside the identified archive described below.
 The reanalysis uses both sides' original stamps with the same reader and
 checks calibration from its retained raw observations. It replaces the earlier
 response-bound credits; it does not change their frozen 2 ms acceptance rule.
@@ -71,11 +72,12 @@ credits are withheld because qualification requires five pairs.
 and the source-drift selection, 10 of 10 cases passing in
 `20261108T170353Z_36ac19c5`, with no skips, unrun cases, harness errors or system
 sleep. The controls reject 76 constructed faults after 65 accepted receipts.
-The reanalysis is attached separately from case results. The retained default
-battery is `main-scan-default-01`, run
-`20261108T161704Z_e29fe638`, with 222 passing cases. Its production checks remain
-applicable: the accepted production source and app are unchanged. Its earlier
-pilot-reader and documentation results are superseded by the repair run.
+The reanalysis is attached separately from case results. The default battery
+at this review was `main-scan-default-01`, run
+`20261108T161704Z_e29fe638`, with 222 passing cases. The review changed neither
+production source nor app; the repair run superseded its pilot-reader and
+documentation results. HOST-04 and HOST-06 subsequently changed production
+source; their integrated verification replaces that default battery.
 
 The repair run's `worker-wait-review/archives/` contains identified copies of
 the pilot, four candidate comparisons, the HOST-01 null comparison, final SCAN
@@ -94,10 +96,20 @@ SHA-256 is `dcc7fa9a7d673e4bd34e3689994dbdb7ad4dec25892949a9fe504abeb91e5e6f`;
 `reanalysis.json` SHA-256 is
 `5af9bca6263d4d74219a183f91d2077c61ba3099eb10f19ba4bddeb7ba5d0e6f`.
 
-Only the current default battery and this complementary run have non-release
-pins. After archive verification and replay, the ordinary pruner removed 63
+At this review, only that default battery and this complementary run had
+non-release pins. After archive verification and replay, the ordinary pruner removed 63
 completed unretained runs with no deletion failures. Release-managed evidence,
 the release-rotation directory and other unmanaged output retain their existing
 protection. The preview and apply receipts are attached under
 `worker-wait-review/pruning/`. Older iteration paths named in acceptance records
 are historical identities; the archive index identifies the copies still retained.
+
+Current retention is `host06-main-default-01` and `host06-main-targeted-01`.
+The latter's `host-followon/archives/worker-wait-review-final-01.tar.gz`
+preserves this entire repair run, including its nine archives, source copies,
+reanalysis and original indexes. The outer `host-followon/archive-index.json`
+identifies original run `20261108T170353Z_36ac19c5` and verifies every archived
+file against its original. The inner hashes and six-dataset replay above are
+unchanged. This is an identified historical copy, not a new execution or a
+relocation of resource ownership. Evidence is gitignored and available only
+in the local checkout.

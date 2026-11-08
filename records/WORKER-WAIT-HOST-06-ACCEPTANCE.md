@@ -1,8 +1,9 @@
 # HOST-06: first-arrival observation
 
 This record belongs to the [worker wait exploration plan](../runner/WORKER-WAIT-EXPLORATION-PLAN.md).
-HOST-04 is accepted and HOST-05 closed without adoption. Production source
-remains `1451c488`, native identity
+HOST-06 is accepted and the host follow-on round is complete. Its frozen
+baseline includes accepted HOST-04 and excludes rejected HOST-05: production
+source `1451c488`, native identity
 `6e8e46469c1ebf0677b799ad63adac5af20be68b20902e18450c5b6e70a8a9ba`.
 ARM and hint tuning remain deferred.
 
@@ -39,7 +40,8 @@ reader identity. Every new comparison uses v12 on both sides.
 
 After a received readiness byte, before the first ordinary phase has collected,
 allow one initial resampling opportunity. Use the existing 100,000 ns budget,
-remaining-allowance cap, 16,384 unsuccessful-loop-check cap (plus the final answer check) and sticky clock-fault behavior. End
+remaining-allowance cap, a cap of 16,384 unsuccessful loop checks plus one final
+answer check, and sticky clock-fault behavior. End
 resampling on first arrival or done, then return through the ordinary checks;
 resampling itself never collects, releases or attributes application. If the
 window finds neither, sleep through the existing bounded fallback. Do not change
@@ -214,5 +216,55 @@ Documentation precision correction after the default run: the existing helper
 bounds unsuccessful loop checks at 16,384 and then performs one final answer
 check. The source, tests and measured candidate are unchanged. LIMITS now names
 both operations; its affected documentation check is rerun in the final targeted
-selection. No acceptance threshold or workload changes. Final held-footprint
-and targeted verification remain pending.
+selection. No acceptance threshold or workload changes.
+
+## Final acceptance
+
+`host06-main-targeted-01` (`20261108T213828Z_47b268bc`) passed all six cases
+in 161.154 seconds within its six-minute window: LIMITS documentation,
+ordering mutations, C/Swift ABI agreement, footprint observer controls,
+held-footprint reader controls and 24/24 live held-footprint measurements.
+There were no skips, unrun cases, harness errors or recorded system sleep.
+The signed app was valid before execution and unchanged afterward. The held
+case retains its busy-worker interpretation; extended-hold CPU observations
+do not supply a short production-hold CPU estimate.
+
+Accept HOST-06 under its frozen first-arrival/held-time and added-resampling
+rules. Integration is `7f67e5cd`, with corrected fixture controls through
+`952f30cf`; the normal signed app was built at `f6877809`, native identity
+`aaa8056c79c242fde5740449049246e3ed88facdc2c8efd143f6344c856da8e5`.
+The subsequent `f32810d2` changes documentation precision only, verified by the
+targeted documentation case; production and control source are unchanged.
+Current-behavior documentation names the new bounded observation and preserves
+its limits. No universal request-speed, CPU, energy or coalescing improvement
+is established. ARM and hint-tail work remain deferred and the shared plan
+stays active for those dispositions.
+
+## Retention and host-round closeout
+
+The two non-release pins are the passing `host06-main-default-01` and
+`host06-main-targeted-01`; release retention is unchanged. The latter carries
+`host-followon/archives/` with twelve identified historical copies:
+
+- Seven complete timestamp runs: HOST-04 comparison and observer, HOST-05
+  inspection/optimized diagnostics and comparison, HOST-06 comparison and observer.
+- `host06-reader-controls-03`, including the separate v12 nomination.
+- The entire `worker-wait-review-final-01` repair run, preserving its nine
+  archives and pilot/reanalysis evidence still required by the deferred plans.
+- Selected HOST-04 default/targeted equipment evidence and selected rejected
+  HOST-05 correctness evidence, with exact included paths in the index.
+
+Every archived file was verified against its original. All seven new timestamp
+datasets were replayed from archived regular files using their exact frozen
+reader and calibration helper. Decomposition and summary match entirely after
+normalizing only the relocated run prefix and reader path. Source copies,
+compiler wrappers and the old HOST-04 worktree draft are separately identified.
+These attachments do not add passes to the six-case targeted run or relocate
+process/resource ownership. Evidence is gitignored and local to this checkout.
+
+`host-followon/archive-index.json` SHA-256:
+`75b8889a58d09d02d7dfe0c3c616c01dce52ee251f6444ad113de69e1b5dc81d`.
+`host-followon/replay.json` SHA-256:
+`2de0a4a5d917aff77d3950f96d830774903be2fd10cccc01026917497515c9eb`.
+Superseded runs are now eligible for the ordinary pruner; its receipts are
+attached separately after cleanup.
