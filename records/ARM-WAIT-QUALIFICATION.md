@@ -92,3 +92,13 @@ watchdog plus three-second cleanup reserve fit within a prepared, announced
 180-second window for twelve children. The setup can wait at the identity gate
 for five minutes; no native child executes before release. These bounds screen
 applicability and do not replace the integrated 2 ms response criterion.
+
+Preparation controls `arm-preparation-controls-01`
+(`20261108T221623Z_a4537b39`) passed all three cases: the ARM screen oracle,
+neutral held-CPU oracle and unchanged historical held-footprint controls.
+`arm-wfe-screen-01` failed at compilation before any native trial: the installed
+assembler rejects `.arch_extension wfxt`. The isolated WFET helper now uses
+fixed-register X17 with encoding `d5031011`, independently specified by
+[LLVM's instruction encoding test](https://github.com/llvm/llvm-project/blob/main/llvm/test/MC/AArch64/armv8.7a-wfxt.s).
+The screen retains disassembly for an actual-byte review. This compilation
+repair is not an instruction applicability observation or a broader ISA change.

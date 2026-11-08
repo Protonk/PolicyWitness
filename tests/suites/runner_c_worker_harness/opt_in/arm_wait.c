@@ -37,7 +37,11 @@ __attribute__((noinline)) static void arm_wfe(void) {
     __asm__ volatile("wfe" ::: "memory");
 }
 __attribute__((noinline)) static void arm_wfet(uint64_t deadline) {
-    __asm__ volatile(".arch_extension wfxt\n\twfet %x0" :: "r"(deadline) : "memory");
+    /* WFET X17: LLVM's armv8.7a-wfxt.s independently fixes d5031011.
+     * Apple's assembler rejects .arch_extension wfxt; keep the rest of the
+     * executable at the baseline ISA and inspect these actual output bytes. */
+    register uint64_t until __asm__("x17") = deadline;
+    __asm__ volatile(".inst 0xd5031011" :: "r"(until) : "memory");
 }
 static const char *profile(const char *name) {
     if (!strcmp(name, "allow_default")) return "(version 2)(allow default)";
