@@ -211,7 +211,90 @@ Main checkout (readers):
 
 ## Results
 
-Pending the comparison window.
+Run `20261108T160221Z_850ecafb` in `tests/out/runs/worker-wait-scan-compare-01`
+(gitignored, local checkout only). Announced quiet window of 240 s, of which
+89.4 s were used; the machine reported AC power at 83 percent and charging
+throughout (the owner had expected battery), low power mode off, load average
+2.2 to 4.6 at trial starts, no system sleep, no observer overlap, no clock
+inversion, no excluded or refused trial. 140 trials accepted, 70 matched
+pairs, none unpaired; five pairs in each of the fourteen cell and regime
+groups. Actual gaps: `rapid` 13.7 to 17.0 ms, `idle` 1005.2 to 1005.7 ms.
+Calibration credited the instrument at a 458 ns endpoint term and 125 ns
+alignment bound. The staged instrumented builds, not production bytes, were
+host `347498da…` and worker `16f755bf…` for the baseline and host `8ca1c799…`
+and worker `440f0686…` for the candidate; no host patch was skipped on either
+side; trees clean at `2775c97d` (readers as frozen at `04669583`; the later
+commits touched only this record) and `b93cb5c4`.
+
+### Behavioral refusals (first in precedence)
+
+None. Every trial delivered every transfer, and no pair was refused for an
+acknowledgement mismatch or an inbound-count mismatch; the scan series carry
+no problems in any group.
+
+### Less repeated work in the inbound scan (the work claim)
+
+`lower_in_every_pair` is true for the subject's visits and loads per pass in
+the parked-activation scan in every A2 and A2D group of both regimes: all
+twenty pairs lower, no condition unmet. Candidate zero-visit passes in every
+pair, none on the baseline.
+
+| Cell, regime | Visits per pass, baseline then candidate | Loads per pass, baseline then candidate | Load reduction per pair (percent) | Candidate zero-visit passes |
+| --- | --- | --- | --- | --- |
+| A2 idle | 2.00; 1.75, 1.75, 1.99, 1.76, 1.76 | 2.24; 1.75, 1.75, 1.99, 1.76, 1.76 | 23.0, 19.1, 33.3, 19.9, 22.5 | 44, 42, 40, 40, 41 |
+| A2 rapid | 2.00; 1.75, 1.75, 1.99, 1.75, 1.99 | 2.24; 1.75, 1.75, 1.99, 1.75, 1.99 | 25.0, 22.8, 33.1, 19.1, 4.2 | 44, 41, 41, 44, 39 |
+| A2D idle | 63.99; 41.13, 41.21, 41.74, 41.69, 41.45 | 83.9 to 84.6; 41.13, 41.21, 41.74, 41.69, 41.45 | 47.0, 45.2, 44.3, 44.1, 44.8 | 65, 71, 67, 65, 69 |
+| A2D rapid | 63.99; 41.80, 41.79, 41.59, 41.39, 41.76 | 83.3 to 84.0; 41.80, 41.79, 41.59, 41.39, 41.76 | 41.4, 43.2, 46.3, 42.4, 43.1 | 66, 109, 123, 69, 75 |
+
+In A2 the baseline's subject made 19,637 to 21,086 passes per request and
+visited both slots on every pass but one (2.00 visits and 2.24 loads per
+pass); the candidate's 1.75 to 1.99 visits and loads per pass reflect slot 0
+skipped after its acknowledgement and slot 1 after its own, with about three
+quarters of the passes preceding slot 0's commit, where nothing can be
+skipped. In the fifth rapid pair the candidate made 8 percent more passes
+(its parked wait was longer) so its total visits exceeded the baseline's;
+its per-pass count was still below the full-scan floor, which is what the
+rule asks. In A2D the baseline's subject made 371,000 to 390,000 passes and
+visited all 64 slots on each (84 loads per pass, two for every committed
+slot); the candidate visited 41 to 42 slots per pass on average, the prefix
+advancing as the 64 deliveries committed in index order, and its loads fell
+by 41 to 47 percent, 13.3 to 15.3 million per request. The exchange-wait
+series were `no_passes` on both sides (the subject never waits in that role)
+and the issuer's series showed zero visits and loads on both sides, as the
+record said they would.
+
+### Response, regression and the rest
+
+- Response: 172 bounds, all credited. `release_to_ack` 0.13 to 0.33 µs (26
+  bounds), `activation_response` 0.04 to 7.0 µs (14 bounds, the largest in
+  A2D rapid phase 1), `inbound_response` −0.04 to 2.96 µs (132 bounds, 64 per
+  A2D group and 2 per A2 group), against the 2 ms limit.
+- `worsens_beyond_spread_in_every_pair` holds for exactly two series, the
+  subject's `p1.activation_wait` pass count in A2D idle (389,174 to 420,976
+  against 377,433 to 437,119) and rapid (374,755 to 438,191 against 371,255 to
+  436,550): the exempt by-construction rise, 7 to 17 percent more passes in
+  the same parked time. The other six exempt series moved both ways within
+  spread. No other quantity worsened beyond spread in every pair, and no
+  every-pair verdict was withheld. The any-pair spread verdict fired in
+  isolated pairs as the null control predicts, including zero-spread count
+  series.
+- Held intervals and whole request: unchanged within spread in every group;
+  A2 and A2D detection totals differ by a few microseconds except the
+  bimodal 1.2 ms detections that fall on different sides in single pairs;
+  whole request directions are 3 to 4 of 5 either way in every cell.
+- State and bookkeeping: 68 bytes per worker, one local load per pass, one
+  byte store and one advance loop per acknowledgement, as described. No CPU,
+  memory or energy claim is made from the counts.
+
+### Decision
+
+Accepted. In the order the revised rule sets: no behavioral refusal; the
+work claim's verdicts true in every A2 and A2D group of both regimes with
+candidate zero-visit passes in every pair; the behavioral controls, the four
+cursor mutations and the live actor cases passed in the verification runs;
+every response bound credited; the only every-pair worsening is the exempt
+parked pass count. The candidate is integrated into `main`; the integration
+verification is recorded under Outcome.
 
 ## Revisions
 
