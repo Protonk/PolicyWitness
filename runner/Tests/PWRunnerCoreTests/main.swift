@@ -82,6 +82,8 @@ runActorReplyTests(tk)
 // lifecycle observations only. The fixture never applies a sandbox, so no
 // policy cause can be claimed here.
 runCWorkerLifecycleTests(tk)
+// Final sentinel notification, publication and owned reap remain distinct.
+runCWorkerFinalWaitTests(tk)
 // Host waits are elapsed monotonic allowances under a controlled clock, sleep
 // and readability wait, including the bounded re-sampling before a first sleep.
 runCWorkerClockTests(tk)

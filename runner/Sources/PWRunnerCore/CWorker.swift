@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "564477bc0b94cbaf0d99ae4f3cd82f2cd2ec20298c60218e4542c551b68298ee"
-    static let abiIdentity: [UInt8] = [0x56, 0x44, 0x77, 0xbc, 0x0b, 0x94, 0xcb, 0xaf, 0x0d, 0x99, 0xae, 0x4f, 0x3c, 0xd8, 0x2f, 0x2c, 0xd2, 0xec, 0x20, 0x29, 0x8c, 0x60, 0x21, 0x8e, 0x45, 0x42, 0xc5, 0x51, 0xb6, 0x82, 0x98, 0xee]
+    static let abiIdentityHex = "6e8e46469c1ebf0677b799ad63adac5af20be68b20902e18450c5b6e70a8a9ba"
+    static let abiIdentity: [UInt8] = [0x6e, 0x8e, 0x46, 0x46, 0x9c, 0x1e, 0xbf, 0x06, 0x77, 0xb7, 0x99, 0xad, 0x63, 0xad, 0xac, 0x5a, 0xf2, 0x0b, 0xe6, 0x8b, 0x20, 0x90, 0x2e, 0x18, 0x45, 0x0c, 0x5b, 0x6e, 0x70, 0xa8, 0xa9, 0xba]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -867,7 +867,7 @@ struct ChildProcessCalls {
     var clock: () -> UInt64? = MonotonicDeadline.now
     var sleep: (UInt64) -> Void = sleepNs
     var waitReadable: (Int32, UInt64) -> Void = waitReadableNs
-    /// The bounded exit wait host grace uses; tests may drive it.
+    /// The bounded exit wait final sentinel polling and grace use; tests may drive it.
     var waitExit: (ExitWatch, UInt64) -> ExitWatchOutcome = waitExitNs
 }
 
@@ -1144,9 +1144,14 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         var clock = HostWaitClock(milliseconds: input.sentinelTimeoutMs, pollNs: 2_000_000, calls: processCalls)
         // Probe for a dead worker only every ~50 ms of elapsed time (every
         // 25 passes once the clock is unusable): a waitpid in the hot loop
-        // costs more than the detection latency saves.
+        // costs more than the detection latency saves. After a final-wait
+        // notification, sample on every bounded pass until publication/reap.
         var nextExitCheckNs: UInt64 = 0
         var passes = 0
+        // Once collection is finished, the already-retained ready pipe can
+        // interrupt the sentinel wait when the worker exits. Keep the same
+        // periodic publication checks: done can precede a delayed exit.
+        var finalExitWatch = ExitWatch(fd: session.readyReadFD)
         // Set by a release store and cleared by the next wait, which re-samples
         // the next phase's arrival before its first sleep.
         var resampleArrival = false
@@ -1216,7 +1221,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             // this wait. Retain this actual stop reason; final reconciliation
             // recovers immutable publications without inventing timely done.
             let elapsed = clock.elapsedNs()
-            if elapsed.map({ $0 >= nextExitCheckNs }) ?? (passes % 25 == 1) {
+            if finalExitWatch.notified || (elapsed.map({ $0 >= nextExitCheckNs }) ?? (passes % 25 == 1)) {
                 nextExitCheckNs = (elapsed ?? 0) + 50_000_000
                 switch session.waitChild(stage: "poll") {
                 case .reaped:
@@ -1237,7 +1242,19 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                 continue
             }
             resampleArrival = false
-            if clock.expiredAfterSleeping() { break }
+            if nextPhase == input.phases.count && finalExitWatch.usable && !finalExitWatch.notified {
+                let (expired, outcome) = clock.expiredAfterWaiting(exit: finalExitWatch)
+                if expired { break }
+                switch outcome {
+                case .notified:
+                    // Recheck done before the owned waitpid sample. Notification
+                    // establishes neither publication nor reap, and is consumed
+                    // once so an early hangup cannot create a busy loop.
+                    finalExitWatch.notified = true
+                case .unusable: finalExitWatch.usable = false
+                case .timedOut, .none: break
+                }
+            } else if clock.expiredAfterSleeping() { break }
         }
         session.sentinelWait = clock.record(stop: session.pollStopReason, excluded: true)
     }

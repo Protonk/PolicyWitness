@@ -52,6 +52,12 @@ ordinary encode/roundtrip carries valid collection/request/reap evidence on all
 - Exec-child environment and descriptor isolation are covered by
   `runner_exec_inheritance`, with explicit child observations and controlled
   worker launch resources.
+- `CWorkerFinalWaitTests` separates final publication, pipe notification and
+  owned reap with gated ABI children. It covers one and two phases, publication
+  before delayed exit, early hangup, absent/unusable pipes, late ready-write
+  EPIPE, an interrupted wait, deadline and clock failure. These are decision
+  and ownership controls; native performance and restrictive-profile operation
+  require the signed-app checks.
 - `DispositionResolverTests` drives the disposition resolver against fixture
   publications (`started_attempt` with two slots, `skip_publication`'s real D5
   conflict) and constructed outputs (B2 to B6, C3, C4, D1), checks encoder
