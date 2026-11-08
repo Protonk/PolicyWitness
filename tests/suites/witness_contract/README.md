@@ -103,9 +103,11 @@ reaping sample, and the worker exit grace between its begin and finished stamps
 are program-point components (`w<actor>.terminal_to_exit_request`,
 `exit_request_to_reap`, `grace_wait`); the worker's exit itself has no stamp.
 Each trial counts how its worker grace waits between samples ended
-(`grace_timeouts`, `grace_notified`, `grace_unusable`): a wait followed by its
-outcome event by that outcome, and a plain sleep under the grace key, or a wait
-past the 64 recorded pairs, as a timeout. Groups sum the counts. An outcome code
+(`grace_timeouts`, `grace_notified`, `grace_unusable`, `grace_settle_sleeps`): a
+wait followed by its outcome event by that outcome, a plain sleep under the
+grace key requested at most 100 µs as a settle sleep after a notification, and
+a longer plain sleep or a wait past the 64 recorded pairs as a timeout. Groups
+sum the counts. An outcome code
 other than 0, 1 or 2, an outcome that does not follow its sleep pair, or a grace
 that finishes before it begins refuses the trial. Each trial also
 carries `detection_total`, the sum of the host's post-publication detection
@@ -222,7 +224,8 @@ receipts, and they must fail when the reader's spread term is replaced by
 zero. Candidate-shaped ordinary receipts carry the grace program points and one
 exit wait followed by each outcome, or by none; the controls check the counts,
 the per-actor intervals and the group sums, count waits past 64 recorded pairs
-and settle sleeps as timeouts, and reject an outcome code of 3, an outcome that
+and 10 ms plain sleeps as timeouts and 100 µs plain sleeps as settle sleeps, and
+reject an outcome code of 3, an outcome that
 does not follow its pair (moved, another key or another raw) and a grace
 finished before it begins. A candidate-shaped A2 receipt gives each actor its
 own exit request, reaping sample, grace program points and stop code, with one

@@ -420,9 +420,9 @@ def check_actor_exits(row, plain):
     # The expected values differ between the actors, so a reader that took one actor's events for both fails here.
     assert got[0]['grace_stop_code'] != got[1]['grace_stop_code']
     assert all(got[0][name]['ns'] != got[1][name]['ns'] for name in ('terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait'))
-    assert tuple(row[name] for name in reader.GRACE_COUNTS) == (1, 1, 0), [row[n] for n in reader.GRACE_COUNTS]
+    assert tuple(row[name] for name in reader.GRACE_COUNTS) == (1, 1, 0, 0), [row[n] for n in reader.GRACE_COUNTS]
     assert row['grace_wait_record'] == dict(waits=2, recorded_pairs=2, outcome_events=dict(timed_out=1, notified=1, unusable=0),
-                                            plain_sleeps=0, plain_sleeps_by_requested_ns={}, unrecorded=0), row['grace_wait_record']
+                                            plain_sleeps=0, plain_sleeps_by_requested_ns={}, settle_sleeps=0, unrecorded=0), row['grace_wait_record']
     assert row['host_sleep_events'] == dict(state='complete', truncated_keys=[], pairs={'3': 4, '5': 2, '6': 2}), row['host_sleep_events']
     assert row['host_sleeps']['worker_grace']['event_durations_ns'] == [200_000, 10_050_000], row['host_sleeps']['worker_grace']
     exit_names = {f'w{a}.{n}' for a in ACTOR_EXITS for n in ('terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait')}
@@ -469,22 +469,23 @@ def actor_blind_rejected(plain):
 
 
 def check_grace(row, grace):
-    """One key-5 wait counted by its outcome event; a key-5 sleep without one is a timeout."""
+    """One key-5 wait counted by its outcome event; a 10 ms key-5 sleep without one is a timeout."""
     assert row['status'] == 'accepted' and not row['problems'] and not row['exclusions'], (grace, row['problems'])
-    expected = dict(timed_out=(1, 0, 0), notified=(0, 1, 0), unusable=(0, 0, 1), plain=(1, 0, 0))[grace]
+    expected = dict(timed_out=(1, 0, 0, 0), notified=(0, 1, 0, 0), unusable=(0, 0, 1, 0), plain=(1, 0, 0, 0))[grace]
     assert tuple(row[name] for name in reader.GRACE_COUNTS) == expected, (grace, [row[n] for n in reader.GRACE_COUNTS])
     outcome = GRACE_OUTCOMES[grace]
     events = {name: int(code == outcome) for code, name in enumerate(('timed_out', 'notified', 'unusable'))}
     assert row['grace_wait_record'] == dict(waits=1, recorded_pairs=1, outcome_events=events, plain_sleeps=int(outcome is None),
                                             plain_sleeps_by_requested_ns={str(GRACE_POLL_NS): 1} if outcome is None else {},
-                                            unrecorded=0), row['grace_wait_record']
+                                            settle_sleeps=0, unrecorded=0), row['grace_wait_record']
     assert row['host_sleep_events'] == dict(state='complete', truncated_keys=[], pairs={'1': 2, '5': 1}), row['host_sleep_events']
     assert row['host_sleeps']['worker_grace']['event_durations_ns'] == [50_000]
     check_actor_intervals(row, grace)
 
 
 def grace_rule_controls():
-    """Grace counts on minimal host exports: waits past the 64 recorded pairs and plain sleeps are timeouts."""
+    """Grace counts on minimal host exports: waits past the 64 recorded pairs and 10 ms plain sleeps are timeouts;
+    plain sleeps requested at most 100 us are settle sleeps."""
     def export(waits, count):
         events, raw = [], 0
         for requested, outcome in waits:
@@ -494,10 +495,14 @@ def grace_rule_controls():
     truncated = reader.grace_counts(export([(GRACE_POLL_NS, 1)] * 64, 70))
     assert (truncated['grace_timeouts'], truncated['grace_notified'], truncated['grace_unusable']) == (6, 64, 0), truncated
     assert (truncated['grace_wait_record']['recorded_pairs'], truncated['grace_wait_record']['unrecorded']) == (64, 6), truncated
-    # A notified wait, two 100 us settle sleeps and one 10 ms sleep: every plain sleep counts as a timeout.
+    # A notified wait, two 100 us settle sleeps and one 10 ms sleep: the settle sleeps are counted apart and only
+    # the 10 ms plain sleep is a timeout; a plain sleep just over the settle bound is a timeout.
     settled = reader.grace_counts(export([(GRACE_POLL_NS, 1), (100_000, None), (100_000, None), (GRACE_POLL_NS, None)], 4))
-    assert (settled['grace_timeouts'], settled['grace_notified']) == (3, 1), settled
+    assert (settled['grace_timeouts'], settled['grace_notified'], settled['grace_settle_sleeps']) == (1, 1, 2), settled
     assert settled['grace_wait_record']['plain_sleeps_by_requested_ns'] == {'100000': 2, '10000000': 1}, settled
+    assert settled['grace_wait_record']['settle_sleeps'] == 2, settled
+    over = reader.grace_counts(export([(100_001, None)], 1))
+    assert (over['grace_timeouts'], over['grace_settle_sleeps']) == (1, 0), over
     assert reader.grace_counts(export([], 0))['grace_timeouts'] == 0
     assert reader.wait_outcome_problems([[180, 5, 1, 0], [181, 5, 1, 10], [182, 5, 2, 10]]) == set()
     assert reader.wait_outcome_problems([[180, 5, 1, 0], [181, 5, 1, 10], [182, 5, 3, 10]]) == {'host_wait_outcome_invalid'}
@@ -1361,14 +1366,14 @@ def main(out):
     ordinary, actor, neighbor = ordinary_bundle(), actor_bundle(), neighbor_bundle()
     check_ordinary(reader.evaluate_bundle(copy.deepcopy(ordinary), CALIBRATION))
     check_actor_intervals(reader.evaluate_bundle(copy.deepcopy(ordinary), CALIBRATION))
-    assert tuple(reader.evaluate_bundle(copy.deepcopy(ordinary), CALIBRATION)[n] for n in reader.GRACE_COUNTS) == (0, 0, 0)
+    assert tuple(reader.evaluate_bundle(copy.deepcopy(ordinary), CALIBRATION)[n] for n in reader.GRACE_COUNTS) == (0, 0, 0, 0)
     graced = {grace: reader.evaluate_bundle(ordinary_bundle(grace=grace), CALIBRATION) for grace in GRACE_OUTCOMES}
     for grace, row in graced.items():
         check_grace(row, grace)
     # Group sums over the accepted trials of one group.
     (group,) = reader.summarize([graced['notified'], graced['plain'], graced['unusable']])
     assert {name: (value['sum'], value['n'], value['max']) for name, value in group['grace_counts'].items()} == dict(
-        grace_timeouts=(1, 3, 1), grace_notified=(1, 3, 1), grace_unusable=(1, 3, 1)), group['grace_counts']
+        grace_timeouts=(1, 3, 1), grace_notified=(1, 3, 1), grace_unusable=(1, 3, 1), grace_settle_sleeps=(0, 3, 0)), group['grace_counts']
     assert group['components']['w0.grace_wait']['n'] == 3 and group['components']['w0.exit_request_to_reap']['median'] == 90_000
     actor_row = reader.evaluate_bundle(copy.deepcopy(actor), CALIBRATION)
     assert [(a['actor'], a['terminal_to_exit_request']['unobserved'], a['exit_request_to_reap']['unobserved']) for a in actor_row['actors']] == [
@@ -1441,7 +1446,7 @@ def main(out):
     decomposition, summary = reader.read_artifacts(root)
     assert summary['calibration_status'] == 'established' and summary['counts']['accepted'] == 4 and summary['counts']['excluded'] == 1, (
         summary['calibration_status'], summary['counts'])
-    assert decomposition['version'] == summary['version'] == 6
+    assert decomposition['version'] == summary['version'] == 7
     calibration = decomposition['calibration']
     term = resolution['readers']['busy']['endpoint_term_ns']
     assert calibration['stamp_ns'] == -(-resolution['stamp_ns'] // 1) and calibration['alignment_ns'] == resolution['alignment']['bound_ns']

@@ -70,10 +70,11 @@ Interpretation rules, repeated in summary.json:
 - Per trial, grace_timeouts, grace_notified and grace_unusable count how the worker
   grace waits between samples (sleep key 5) ended: a key-5 pair followed by
   WAIT_OUTCOME (182, phase = key, raw = the pair's end) is counted by its aux (0 timed
-  out, 1 notified, 2 unusable); a key-5 pair without one is a plain sleep and counts
-  as a timeout, and so does every key-5 wait past the 64 recorded pairs.
-  grace_wait_record keeps that breakdown, with the plain sleeps by requested
-  ns. A 182 whose aux is not 0, 1 or 2, or that does not immediately follow a
+  out, 1 notified, 2 unusable); a key-5 pair without one is a plain sleep: requested
+  at most 100 µs it is a settle sleep after a notification (grace_settle_sleeps),
+  longer it is the timer poll and counts as a timeout, and so does every key-5
+  wait past the 64 recorded pairs. grace_wait_record keeps that breakdown, with
+  the plain sleeps by requested ns. A 182 whose aux is not 0, 1 or 2, or that does not immediately follow a
   181 of the same key and raw, refuses the trial.
 - A trial whose driver exit-watch registration overlapped a held interval is
   excluded (observer_overlap) and kept as a diagnostic.
@@ -113,7 +114,7 @@ import statistics
 import struct
 import sys
 
-READER_VERSION = 6
+READER_VERSION = 7
 HERE = Path(__file__).resolve().parent
 
 # Worker stamp page; mirrors tests/fixtures/worker_wait/pww_stamp_page.h.
@@ -170,7 +171,9 @@ SLEEP_BEGIN, SLEEP_END, SLEEP_EVENTS_PER_KEY = 180, 181, 64
 WAIT_OUTCOME = 182
 WAIT_OUTCOMES = {0: 'timed_out', 1: 'notified', 2: 'unusable'}
 GRACE_KEY = '5'
-GRACE_COUNTS = ('grace_timeouts', 'grace_notified', 'grace_unusable')
+GRACE_COUNTS = ('grace_timeouts', 'grace_notified', 'grace_unusable', 'grace_settle_sleeps')
+# A plain key-5 sleep requested at most this long is the settle sleep that follows a notification.
+GRACE_SETTLE_NS = 100_000
 SAMPLED_PERIOD = '(accepting pass sample - first pass sample) / (passes - 1)'
 UPPER_PERIOD = 'upper bound: preceding stamp to answer / passes'
 RECIPIENT_NOTE = 'host interval, not a detection; bimodal by recipient state; see the split sibling rows'
@@ -490,7 +493,8 @@ def sleep_event_state(doc, record):
 
 def grace_counts(doc):
     """How the trial's worker grace waits (sleep key 5) ended: each recorded pair by the 182 that follows it, a
-    pair without one as a plain sleep (a timeout), and every wait past the recorded pairs as a timeout."""
+    pair without one as a plain sleep (a settle sleep when requested at most GRACE_SETTLE_NS, else a timeout), and
+    every wait past the recorded pairs as a timeout."""
     register = (doc['sleeps'] or {}).get(GRACE_KEY) or dict(count=0)
     if not isinstance(register, dict) or not _int(register.get('count')):
         return None
@@ -505,11 +509,13 @@ def grace_counts(doc):
         else:
             plain[str(e[2])] = plain.get(str(e[2]), 0) + 1
     unrecorded = max(0, register['count'] - recorded)
-    return dict(grace_timeouts=outcomes[0] + sum(plain.values()) + unrecorded, grace_notified=outcomes[1], grace_unusable=outcomes[2],
+    settle = sum(n for requested, n in plain.items() if int(requested) <= GRACE_SETTLE_NS)
+    return dict(grace_timeouts=outcomes[0] + sum(plain.values()) - settle + unrecorded, grace_notified=outcomes[1],
+                grace_unusable=outcomes[2], grace_settle_sleeps=settle,
                 grace_wait_record=dict(waits=register['count'], recorded_pairs=recorded,
                                        outcome_events={WAIT_OUTCOMES[code]: n for code, n in outcomes.items()},
                                        plain_sleeps=sum(plain.values()), plain_sleeps_by_requested_ns=dict(sorted(plain.items())),
-                                       unrecorded=unrecorded))
+                                       settle_sleeps=settle, unrecorded=unrecorded))
 
 
 def actor_intervals(doc, pages, interval):
