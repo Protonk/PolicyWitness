@@ -156,3 +156,39 @@ ABI and affected validator/failure controls, and freeze exact staged identities.
 Full default and remaining qualification checks are required before adoption;
 if the measurement rejects it, production source remains HOST-04 and its
 integrated verification remains applicable.
+
+## Prepared source comparison
+
+Candidate source is `b433da29` in `/private/tmp/pw-wait-host05`, native identity
+`bab33b220f1ea50b50412a0d83b700b4a997e097c69d9ad974f3c5676da6af44`.
+The signed candidate app was built from that committed source. Its separate
+`host05-correctness-01` run (`20261108T204033Z_e650f582`) completed 91 of 92
+selected cases: 90 passed, native-pause applicability failed as expected, and
+`exec_control_states` was unrun because that checkout lacked its pinned pytest
+installation. This is not a fully passing run. All 11 runner-unit cases (589
+assertions), four validator-failure cases, seven failure-boundary cases, ABI
+and nine source-drift cases passed; the signed app was valid and unchanged.
+The broad suite selection brought in the two unrelated cases above. Their
+outcomes remain explicit, and complete integrated verification remains required
+before any adoption.
+
+Comparison machinery, pacing and workloads reuse the completed HOST-04
+comparison rehearsal and HOST-05 flavour rehearsal. The candidate changes no
+stamp anchor, driver, worker behavior or staging recipe. Reader v11 and all
+three apparatus hashes frozen above are unchanged. Both staged hosts use
+inspection settings. The comparison is still at its gate while these exact
+identities are committed.
+
+| Receipt / input | SHA-256 |
+| --- | --- |
+| `tests/out/runs/host05-comparison-01/suites/witness_contract/worker_wait_pilot/artifacts/staged-identity-before.json` | `8688222087ce883e6cc448c9a752ff8f586fb9044912157d22c99fc855f80cc9` |
+| `tests/out/runs/host05-comparison-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `9a1daf62bded23ad9aa64342f75f5582bdae832b9d0ee0504ab2bdf89f4ff52c` |
+| `tests/out/runs/host05-comparison-01/suites/witness_contract/worker_wait_pilot/artifacts/host-baseline/host-build.json` | `89c0d3eafe2003391b423e7e8eddbedd92c5cff8fc9b5d597216798fd5b84707` |
+| `tests/out/runs/host05-comparison-01/suites/witness_contract/worker_wait_pilot/artifacts/host-candidate/host-build.json` | `4734fc44706ee3a5d8d14d8e5feddd8e03454a3be906b736726d41b3f0b10248` |
+
+Diagnostic observer limits: instrumented-minus-neighbor whole-request median
+differences ranged from −0.647 to +11.307 ms in the inspection block and
+−5.235 to +12.401 ms in the optimized block. Host export spans were
+199.166–2410.041 µs and 160.291–572.208 µs respectively. No fixed observer
+correction is applied. These differences do not isolate recorder overhead;
+whole-request comparisons also include the independently staged executables.
