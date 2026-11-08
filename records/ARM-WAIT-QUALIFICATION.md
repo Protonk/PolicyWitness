@@ -102,3 +102,23 @@ fixed-register X17 with encoding `d5031011`, independently specified by
 [LLVM's instruction encoding test](https://github.com/llvm/llvm-project/blob/main/llvm/test/MC/AArch64/armv8.7a-wfxt.s).
 The screen retains disassembly for an actual-byte review. This compilation
 repair is not an instruction applicability observation or a broader ISA change.
+
+## Prepared WFE screen
+
+`arm-wfe-screen-02` is staged from `cc5eeeaf`, with native trials still held
+at its gate while this identity is committed. Disassembly shows the WFE helper
+executing `wfe; ret`, and the separate WFET helper moving its argument to X17
+and executing `wfet x17; ret`; call sites select exactly one helper per pass.
+
+| Input | SHA-256 |
+| --- | --- |
+| Staged `arm-wait` executable | `c344a7294ca92d6f11b898eaba05b43ab8cdcadb24bcf2bc39525f410793aea8` |
+| `opt_in/arm_wait.c` | `09f8e174b5ad0424888fccf324c874e4deaeb8bd5550c864bf21d0b8d774b5d3` |
+| `check_arm_wait.py` | `11f9551c246ea04ca001fe7bce957c5cb01729e42c69e836a25fe6239e4b4c97` |
+| `arm_wait_driver.py` | `6194808dc9136087ab82b17c1f3c900991c365a12ac3b1667c7954c1479095af` |
+
+Paths are under `tests/suites/runner_c_worker_harness/`, with staged artifacts
+under `tests/out/runs/arm-wfe-screen-02/suites/runner_c_worker_harness/arm_wait/artifacts/`.
+Power is AC, battery full; an observed Xcode process briefly used about 0.4 of
+one core during staging. This is an applicability screen, not a matched resource
+comparison. The three-minute maximum window contains one measured child at a time.
