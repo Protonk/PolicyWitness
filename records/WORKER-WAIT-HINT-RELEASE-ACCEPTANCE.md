@@ -41,3 +41,12 @@ Raw evidence is dispatcher-owned, gitignored and local. Announce a five-minute
 maximum window; the measurement watchdog is 60 seconds with 60 seconds reserved
 for owned cleanup. Release has at most two busy processes; activation at most
 three, including the sensitivity control. Builds are serial and capped.
+
+## Frozen comparison
+
+Run `hint-cost-release-01`, prepared from `7910b9af`.
+Prepared identity SHA-256: `ca66854d3236c7b7a4cb410f8f5533b9b689c3f98bc151a76105b1fe02c3499f`.
+Cost reader: `273c64dc93a7e6e78886441378f87a5613b806abc55454c664669684432aa6a9`.
+Neutral reader: `8120a459ae28b52df102ed2d9ffafef2ca487a970677f1c44ce849e20717e094`.
+Only the release batch literal changes. Both readers are byte-identical to
+the ARM comparisons. Power is AC, low-power mode 0.
