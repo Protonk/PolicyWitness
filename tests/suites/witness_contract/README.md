@@ -89,7 +89,8 @@ beyond those bounds. Controls
 credit a constructed gain, refuse no-op/contrary-pair credit and reject missing,
 excluded or power-mismatched pairs. A positive CPU screen does not qualify
 response, whole-request cost, energy, capacity, restrictive parked operation,
-migration or sleep/resume.
+migration or sleep/resume. The 60-second measurement watchdog unwinds through
+owned cleanup; a default control exercises that path with a real alarm.
 
 ## Worker wait pilot
 

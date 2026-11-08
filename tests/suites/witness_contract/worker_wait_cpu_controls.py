@@ -3,6 +3,9 @@ import copy
 import json
 from pathlib import Path
 import sys
+import signal
+import time
+import check_held_phase_footprint as held
 from check_held_phase_footprint import check_wait_measurement, check_measurement
 from held_phase_footprint_controls import baseline
 from worker_wait_cost import compare, source_variant
@@ -14,7 +17,7 @@ def main(out):
     quiet['after']['samples'][0].update(user_ticks=0,user_ns=0)
     quiet['deltas_ns'][0]=0
     check_wait_measurement(quiet)
-    fifth=copy.deepcopy(quiet); fifth['repetition']=4; check_wait_measurement(fifth)
+    fifth=copy.deepcopy(busy); fifth['repetition']=4; check_wait_measurement(fifth)
     try: check_measurement(fifth)
     except AssertionError: pass
     else: raise AssertionError('historical repetition contract was weakened')
@@ -82,6 +85,25 @@ def main(out):
         timed=source_variant(source,role,'wfet')
         assert timed.count('        cost_wait(timing, now,')==1 and timed.count('i < 1000u')==2
         assert timed.count('    cost_setup();')==1
+    # A real alarm must unwind the measurement through its cleanup path.
+    # No native process or app is created by this control.
+    finished=[]
+    class WaitingFixture:
+        def __init__(self,*args,**kwargs): pass
+        def start(self): time.sleep(.2)
+        def finish(self): finished.append(True)
+    original=held.HeldWorkload
+    handler=signal.getsignal(signal.SIGALRM)
+    try:
+        held.HeldWorkload=WaitingFixture
+        try:
+            held.measure(None,Path(out)/'watchdog-control',None,None,None,None,
+                         'ordinary',10_000_000,0,1,{},watchdog_seconds=.02)
+        except TimeoutError as exc: assert 'watchdog' in str(exc)
+        else: raise AssertionError('measurement watchdog did not fire')
+    finally: held.HeldWorkload=original
+    assert finished==[True] and signal.getitimer(signal.ITIMER_REAL)==(0.0,0.0)
+    assert signal.getsignal(signal.SIGALRM)==handler
     Path(out,'controls.json').write_text(json.dumps(dict(accepted=['busy','quiet','five_pair_gain','noop_not_credited','contrary_pair_not_concealed'],rejected=rejected,
         scope='constructed evidence validity only; no live CPU benefit or production timing claim'),indent=2)+'\n')
     print(f'busy and quiet workers accepted; {len(rejected)} corrupt neutral CPU receipts refused; historical oracle preserved')
