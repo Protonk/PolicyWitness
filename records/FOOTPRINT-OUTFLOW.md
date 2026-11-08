@@ -576,3 +576,10 @@ Every reduction must preserve the [core ideas](../AGENTS.md#core-ideas): fresh
 sandboxed processes, host/worker separation, observations supporting effects,
 predictions before attempts, honest attribution and simple runner ownership.
 Keep token erasure, native release, unmapping, process exit and reap distinct.
+
+The release WFET prototype completed ten matched CPU pairs in
+`arm-cost-wfet-release-01` and missed the frozen 10% CPU criterion in every
+pair: both versions remained near one CPU-second per second. The release
+option is closed without adoption; full protocol/deployment/resume qualification
+was not completed. This is neither instruction inapplicability nor evidence
+that energy cannot improve. Release hint tuning is now open.

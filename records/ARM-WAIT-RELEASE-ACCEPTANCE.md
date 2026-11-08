@@ -55,3 +55,14 @@ Neutral reader: `8120a459ae28b52df102ed2d9ffafef2ca487a970677f1c44ce849e20717e09
 The retained disassembly contains `wfet x17`; the alternative changes only
 the release tail. Actual staged worker hashes and device/inode identities
 are in the frozen preparation receipt. Power is AC, low-power mode 0.
+
+## Disposition
+
+Closed without adoption on the selected CPU criterion. Run `20261108T223724Z_7b24685c`
+completed all twenty measured holds and both excluded first requests in
+44.057 seconds; every pair was eligible and none met the 10% threshold.
+Observed baseline rates were 0.9932–1.0017 CPU-seconds/second; candidate rates
+were 0.9927–1.0033. Queries, ordering, effects and owned endings passed.
+This does not qualify the role, establish energy equivalence, or prove native
+inapplicability. The remaining adoption-only protocol/response/deployment and
+actual sleep/resume obligations were not attempted. Release hint tuning is open.
