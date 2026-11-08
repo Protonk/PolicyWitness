@@ -139,7 +139,9 @@ accepted trials in one group, and the calibration receipt is accepted; fewer
 accepted trials is an incomplete pilot.
 `PW_WORKER_WAIT_PILOT_ARGS` passes driver options such as `--dry-run`,
 `--cells`, `--repetitions`, `--regimes`, `--window-seconds` and
-`--clock-pair-trials`; `--window-gate` lets the coordinator freeze staged identities
+`--clock-pair-trials`; `--host-flavour inspection|optimized` changes only the
+disposable hosts, retaining their actual settings in build and trial receipts.
+Different flavours remain separate reader groups. `--window-gate` lets the coordinator freeze staged identities
 and announce the window before releasing prepared trials. `--no-clock-pair` is accepted only in a dry run. A dry
 run establishes mechanics only and removes its staged apps.
 

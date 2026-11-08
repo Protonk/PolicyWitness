@@ -188,7 +188,7 @@ stamp-cost words. The record path neither allocates nor faults a fresh page. At
 request start the recorder makes 16 consecutive records through the call sites'
 own `HostStamps.shared.record` expression, copies their raws to
 `stamp_cost.raws` in `stamps.json` and withdraws them from the timeline;
-adjacent differences give the per-record cost in this `-Onone` build, in situ.
+adjacent differences give the per-record cost in the selected host flavour, in situ.
 The release, activation and inbound commit stores each have a record immediately
 before them (139, 149 and 158) as well as after (141, 150 and 159). Host export
 version 2 requires the inbound pair, keyed by phase and delivery. The reader
@@ -258,8 +258,14 @@ bounded worker exit wait described above, so a tree without either wait builds
 unchanged; the grace program points apply to every tree. `build_host` copies a
 source tree's `runner/` (this repository's by default), applies the patches and
 compiles that tree's Meson PWRunner source list with
-`swiftc -j 2 -Onone -g -target arm64-apple-macosx<minimum>`; the shim is built
-with `clang -c -arch arm64 -mmacosx-version-min=<minimum>`. Its `host-build.json`
+`swiftc -j 2` with either `-Onone -g` (inspection, the default) or `-O`
+(optimized), and `-target arm64-apple-macosx<minimum>`; the shim is built
+with `clang -c -arch arm64 -mmacosx-version-min=<minimum>`. The builder's
+`--flavour` and pilot driver's `--host-flavour` select only these host flags;
+workers, validator and controller retain their own recipes. A pilot run uses
+the same flavour for both sides. Different-flavour diagnostics stay separate
+from implementation comparisons and do not authorize a shipped-policy change.
+Its `host-build.json`
 records the source tree, the exact argv, flavour, the tree and compiled sha256
 of every source with its patched flag, the full patch texts with whether each
 applied, the generated recorder source, the toolchain versions and the output

@@ -48,6 +48,7 @@ UNENTITLED = SERVICE / 'Contents/MacOS/pw-probe-runner-unentitled'
 EQUIPMENT = SERVICE / 'Contents/Resources/worker-equipment.json'
 HOST = SERVICE / 'Contents/MacOS/PWRunner'
 SWIFT_FLAGS = ('-Onone', '-g')
+SWIFT_FLAVOURS = {'inspection': SWIFT_FLAGS, 'optimized': ('-O',)}
 SWIFT_JOBS = '2'
 STAMP_DIR_PATTERN = re.compile(r'/[A-Za-z0-9/._-]+')
 VOLATILE_ROOTS = (Path('/private/tmp'), Path('/private/var/folders'))
@@ -382,13 +383,15 @@ def apply_patches(package, patches, out):
     return touched, skipped
 
 
-def build_host(package, work, out, patches, stamp_dir, runner=ROOT / 'runner'):
+def build_host(package, work, out, patches, stamp_dir, runner=ROOT / 'runner', *, swift_flags=SWIFT_FLAGS):
     """Copy `runner` (a source tree's runner/) to `package`, patch it and compile PWRunner into `work`.
 
     `out` receives the command logs, patched-file copies and host-build.json;
     the same receipt is written beside the binary for stage(). No patches build
     the neighbor: same flags, Meson source list only, `stamp_dir` unused."""
     package, work, out = Path(package), Path(work), Path(out)
+    swift_flags = tuple(swift_flags)
+    assert swift_flags in SWIFT_FLAVOURS.values(), f'unsupported host flags: {swift_flags}'
     runner = Path(runner).resolve(); tree = runner.parent
     assert runner.name == 'runner' and (tree / 'meson.build').is_file(), f'not a source tree runner/ directory: {runner}'
     assert not package.exists(), package
@@ -409,8 +412,8 @@ def build_host(package, work, out, patches, stamp_dir, runner=ROOT / 'runner'):
         generated = package / 'WorkerWait/HostStamps.swift'
         generated.parent.mkdir()
         generated.write_text(f'let PWW_STAMP_DIR = {json.dumps(stamp_dir)}\n'
-                             f'let PWW_STAMP_SWIFT_FLAGS = {json.dumps(" ".join(SWIFT_FLAGS))}\n'
-                             f'let PWW_STAMP_INSPECTION = {"true" if SWIFT_FLAGS == ("-Onone", "-g") else "false"}\n'
+                             f'let PWW_STAMP_SWIFT_FLAGS = {json.dumps(" ".join(swift_flags))}\n'
+                             f'let PWW_STAMP_INSPECTION = {"true" if swift_flags == SWIFT_FLAGS else "false"}\n'
                              + STAMP_SOURCE.read_text())
         shutil.copy2(generated, out / 'HostStamps.generated.swift')
         stamp = dict(fixture_path=str(STAMP_SOURCE.relative_to(ROOT)), fixture_sha256=digest(STAMP_SOURCE),
@@ -421,7 +424,7 @@ def build_host(package, work, out, patches, stamp_dir, runner=ROOT / 'runner'):
                  package / 'Sources/PWCWorkerShim/PWCWorkerShim.c', '-o', shim]
     command(out / 'compile-shim', shim_argv, timeout=120)
     host = work / 'PWRunner'
-    host_argv = ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-j', SWIFT_JOBS, *SWIFT_FLAGS,
+    host_argv = ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-j', SWIFT_JOBS, *swift_flags,
                  '-target', f'arm64-apple-macosx{minimum}', '-module-cache-path', work / 'module-cache', '-o', host,
                  *[package / p for p in compiled], *([Path(stamp['generated_path'])] if stamp else []), shim]
     command(out / 'compile-host', host_argv, timeout=600)
@@ -433,7 +436,7 @@ def build_host(package, work, out, patches, stamp_dir, runner=ROOT / 'runner'):
         toolchain[name] = (out / ('toolchain-' + name) / 'stdout').read_text().strip()
     receipt = dict(
         schema_version=1, kind='instrumented' if instrumented else 'neighbor',
-        flavour=dict(swift=' '.join(SWIFT_FLAGS), inspection=SWIFT_FLAGS == ('-Onone', '-g'),
+        flavour=dict(swift=' '.join(swift_flags), inspection=swift_flags == SWIFT_FLAGS,
                      target=f'arm64-apple-macosx{minimum}', swift_jobs=int(SWIFT_JOBS)),
         commands=dict(shim=list(map(str, shim_argv)), host=list(map(str, host_argv))),
         stamp_dir=stamp_dir if instrumented else None, stamp_source=stamp,
@@ -615,12 +618,14 @@ def main():
     parser.add_argument('work', type=Path, help='new scratch directory for the copy, objects and binary')
     parser.add_argument('out', type=Path, help='receipt directory')
     parser.add_argument('--runner', type=Path, default=ROOT / 'runner', help="a source tree's runner/ (default: this checkout's)")
+    parser.add_argument('--flavour', choices=SWIFT_FLAVOURS, default='inspection')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--stamp-dir', type=Path)
     group.add_argument('--neighbor', action='store_true')
     args = parser.parse_args()
     work = args.work.resolve()
-    host = build_host(work / 'runner', work, args.out.resolve(), [] if args.neighbor else PATCHES, args.stamp_dir, args.runner)
+    host = build_host(work / 'runner', work, args.out.resolve(), [] if args.neighbor else PATCHES, args.stamp_dir, args.runner,
+                      swift_flags=SWIFT_FLAVOURS[args.flavour])
     print(json.dumps(dict(host=str(host), sha256=digest(host)), indent=2))
 
 
