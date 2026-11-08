@@ -72,9 +72,10 @@ negative findings remain available for HOST-06 and deferred work.
 
 ## Status
 
-Compiler-flavour apparatus is prepared. The diagnostic identities, observations
-and source-candidate decision remain pending. Raw evidence stays in dispatcher-owned
-local output; retention is finalized with the host round.
+HOST-05 is closed without adoption. The sole source candidate failed the frozen
+every-pair held-time requirement; production decoding and build policy remain
+unchanged. Raw evidence stays in dispatcher-owned local output; retention is
+finalized with the host round.
 
 ## Prepared inspection diagnostic
 
@@ -192,3 +193,36 @@ differences ranged from −0.647 to +11.307 ms in the inspection block and
 199.166–2410.041 µs and 160.291–572.208 µs respectively. No fixed observer
 correction is applied. These differences do not isolate recorder overhead;
 whole-request comparisons also include the independently staged executables.
+
+## Disposition: rejected under the frozen held-time rule
+
+`host05-comparison-01` accepted all 80 trials and formed all 40 pairs, with no
+excluded, skipped, incomplete or unpaired trials. Calibration was credited,
+all release response bounds passed (largest 4.954 µs), and cleanup settled.
+Decode improved beyond uncertainty in every O64/O256 pair in both regimes:
+135.208–919.041 µs saved. This establishes the local decoder improvement on
+these fixture builds. It does not establish the required uniform shorter hold.
+
+| Selected workload | Decode improves in every pair | Held total improves in every pair |
+| --- | --- | --- |
+| O64 rapid | yes | yes |
+| O64 idle | yes | no: repetition 1 is 21.000 µs longer |
+| O256 rapid | yes | no: repetition 3 is 1255.416 µs longer |
+| O256 idle | yes | yes |
+
+The O64 contrary pair decoded 135.208 µs faster, while planning and validator
+spawn-to-EOF intervals grew by 41.375 and 103.124 µs. The O256 contrary pair
+decoded 785.750 µs faster, while planning grew by 1449.625 µs and validator
+spawn-to-EOF grew by 464.417 µs. These are observed locations of the added time,
+not an established cause. No component or whole-request group worsened beyond
+its spread in every pair; all individual flags remain in the reader output.
+The no-query and small controls remain part of the retained comparison.
+
+Do not relax the predeclared gate or collect more pairs. Candidate `b433da29`
+is not integrated. Its correctness run is not a full acceptance battery, and
+neither its incomplete exec-control case nor its known native-pause failure is
+converted into a pass. The independent integer/offset controls and flavour
+apparatus remain reusable. Reopening this source idea would require an explicit
+new scope/acceptance decision (for example a claim based on less decoder work),
+not treating this run as proof of uniform shorter holds. No total CPU, memory,
+energy or scheduling benefit is established. HOST-06 starts from HOST-04.

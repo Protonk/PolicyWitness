@@ -334,13 +334,23 @@ default cases: one compiler-discovery equipment failure was retained and then
 passed with an SDK-aware wrapper against unchanged app bytes. The six-case
 targeted run also passed ordering mutations and all 24 held measurements.
 
+HOST-05 is closed without adoption. The host-only inspection/Swift `-O`
+diagnostic still found about 0.8–0.9 ms of decode for 64 verdicts and
+3.0–3.1 ms for 256 under `-O`; shipped inspection settings were unchanged.
+Candidate `b433da29` reused each validated native integer within a frame.
+Its 40-pair comparison improved decode in all 20 query-dense pairs, saving
+135–919 µs, but two held totals grew (21 µs and 1.255 ms), failing the frozen
+requirement that every selected pair shorten both decode and hold. Planning
+and validator intervals account for the contrary elapsed differences; their
+cause is unestablished. No further sampling was added and the source change
+was not integrated. `WORKER-WAIT-HOST-05-ACCEPTANCE.md` retains exact identities,
+contrary observations and incomplete-verification limits. A later less-work
+proposal needs a new scope decision; this result is not uniform hold improvement.
+
 The remaining [host follow-on round](../runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
-is decoder work with an explicit inspection/optimized build-flavour control
-(HOST-05), then a conditional first-arrival resampling candidate (HOST-06).
-Each needs a new comparison on accepted source; the retained timings
-nominate the work rather than establish its benefit. The roughly 25 percent
-overshoot of requested host sleeps on this equipment remains a measured
-condition, not a separate tuning candidate.
+is conditional first-arrival resampling (HOST-06), starting from accepted HOST-04.
+The roughly 25 percent overshoot of requested host sleeps on this equipment
+remains a measured condition, not a separate tuning candidate.
 
 ### Remaining questions
 

@@ -21,8 +21,9 @@ reopening conditions. These observations nominate work, not fresh baselines.
 
 HOST-04 is accepted; its [record](../records/WORKER-WAIT-HOST-04-ACCEPTANCE.md)
 preserves the structural decision, comparison and integrated verification.
-Complete the remaining [host follow-on round](#host-follow-on-round) in order:
-HOST-05, then conditional HOST-06. Dispose of each before opening the next
+HOST-05 is closed without adoption; its [record](../records/WORKER-WAIT-HOST-05-ACCEPTANCE.md)
+retains the local decoder improvement and failed held-time gate. Complete
+conditional HOST-06 in the [host follow-on round](#host-follow-on-round). Dispose of each before opening the next
 production candidate. Further host candidates require a separate scope decision.
 ARM research/native trials and all hint-batch tuning are explicitly deferred
 during this round. Deferral is a priority decision, not failed qualification or
@@ -86,25 +87,12 @@ fallback controls and the repaired compiler-discovery failure. This establishes
 neither a universal request-speed improvement nor CPU, energy or coalescing gains.
 Use this accepted source as the foundation for the remaining host candidates.
 
-**HOST-05 — decoder work at the collection boundary.** Profile
-`decodeValidatorFrames` in [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift).
-First compare inspection flavour with supported Swift `-O`. The
-[timestamp host builder](../tests/fixtures/worker_wait/host_stamps.py) hardcodes
-`-Onone -g`: make it honor and record flavour, account for observer cost and
-isolate host flags from changes to other executables. Keep this diagnostic
-separate from same-flavour implementation comparisons. Changing shipped inspection
-policy requires a separate decision.
-
-Select at most one small decoder candidate from that evidence, or reject further
-source work. Keep decoding and its charge at the existing boundary; do not reopen
-preparation caching or deferred accounting. Preserve framing, strict UTF-8,
-integer/Boolean distinctions, size/count bounds, first-fault classification and
-offset, step association, unknown fields, diagnostic outcomes, partial results and
-raw lines. Pair identical compiler settings and name the adoption flavour.
-Require shorter decoding and held intervals beyond uncertainty in every pair of
-selected query-dense workloads, with small/no-eligible-query controls and
-malformed/partial validator and framing checks. Whole-request cost and unchanged
-witness coverage remain part of acceptance.
+**HOST-05 — decoder work: closed without adoption.** Host-only inspection/`-O`
+diagnostics established remaining decoder cost. Reusing validated native integers
+then improved decode in every query-dense pair, but two total holds grew and
+failed the frozen every-pair gate. Production decoding and inspection policy
+remain unchanged. Preserve the flavour apparatus, controls, candidate source
+and negative evidence; do not reopen this candidate in this round.
 
 **HOST-06 — first arrival.** After the first two dispositions, measure readiness
 observation, application publication and first arrival separately on accepted
