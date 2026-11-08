@@ -22,6 +22,13 @@
       "reason": "Worker wait acceptance repair: 10 reader/source-drift cases pass without sleep overlap. Separate worker-wait-review/ attachments preserve and reanalyse the pilot required by ARM, all four candidate comparisons and the null noise control; preserve final SCAN unit/mutation and named verification; and carry the previous footprint/pause evidence. Nine historical archives retain original run IDs, source/equipment evidence and file hashes; all six timestamp datasets replay identically from their archived bytes. Historical copies are separate from these ten cases and do not relocate cleanup ownership.",
       "source": null,
       "app_inventory": null
+    },
+    {
+      "path": "runs/porcelain-acceptance-a",
+      "run_id": "20261108T200617Z_d5eb9abd",
+      "reason": "Typed porcelain adoption dependency: 41 passing coordinated experimental cases, native order mutations, independent binary/degradation/output controls and identified copies of contrary earlier observations. Additional prototype pin is required until the bounded adoption decision is implemented; inherited production pins remain separate.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

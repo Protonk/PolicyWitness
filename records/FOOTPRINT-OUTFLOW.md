@@ -109,6 +109,24 @@ The three receiver controls above, `valid_oversized_producer_is_receiver_loss_no
 `response_footprint_success_boundaries`, the failure-boundary and blackbox
 consumer controls, and the response footprint case.
 
+### Representation experiment disposition
+
+The [JSON-as-porcelain exploration](../JSON-AS-PORCELAIN-PLAN.md) supports a
+broader adoption follow-on on `experiment/json-porcelain`: one 83-record schema
+owns converted stored fields, binary transport and typed readers, while public
+JSON is projected at the controller. The demonstrated gain is maintenance and
+explicit ownership; no speed, energy or physical-memory improvement is claimed.
+Raw host bytes and owned interpretation deliberately coexist. A closed codec
+stays within the exploration's maintenance budget without adding an internal
+stringify/parse adapter.
+
+This does not accept a production migration. Full semantic families, Swift
+lifecycle dictionary removal, equipment's JSON-size gate and retirement of old
+comparison coders remain bounded adoption work. The smaller capture-copy option
+has not received an independent performance disposition; it is unnecessary as a
+prerequisite to this structural direction. Existing FOOTPRINT JSON measurements
+cannot be credited to the typed prototype.
+
 ## Direction 3: pace the sandboxed worker's waits
 
 Rows: fw1–fw2. The active actor's acknowledgement wait, `wait_exchange`,

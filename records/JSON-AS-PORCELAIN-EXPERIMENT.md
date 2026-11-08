@@ -114,6 +114,23 @@ from the apparatus. No speed or energy improvement claim is planned; any later
 quantitative claim needs a separately frozen matched schedule and arranged quiet
 conditions. Unknown measurements remain unknown.
 
+## Codec disposition
+
+Keep Option A for adoption work: the measured maintenance inventory remains below
+both review triggers, and the generator expresses this closed record vocabulary
+without a general value tree. Option B was reviewed, not built or benchmarked;
+its dependency and generation setup would still leave per-family semantic
+admission and public projection to this repository. This is a scope and ownership
+decision, not a comparative performance result.
+
+The plan's initial claim that both Protobuf runtimes preserve unknown fields was
+too broad. SwiftProtobuf's [decoding options](https://github.com/apple/swift-protobuf/blob/main/Sources/SwiftProtobuf/BinaryDecodingOptions.swift)
+retain unknown fields by default; prost's [generated message reader](https://github.com/tokio-rs/prost/blob/master/prost-derive/src/lib.rs)
+skips unrecognized tags. These primary sources were inspected on 2026-11-08.
+Either choice still needs an explicit unknown/default admission policy here.
+A primitive/generator budget overrun or ordinary fields requiring general parsing
+would reopen Option B; neither occurred in the demonstrated slice.
+
 ## Implemented representation and ownership
 
 The prototype chooses the repository-owned codec. The schema closes over 83
@@ -180,9 +197,22 @@ remain necessary.
 
 ## Maintenance exercises and cost scope
 
-The authoritative field inventory, primitive sizes and evidence selections are
-reported below after final verification. Line counts are inventory, not a proof
-of maintainability; review triggers count normal formatting, not compressed code.
+The inventory at implementation commit `72c7356f` is 342 generator lines,
+126 Swift primitive lines and 323 Rust primitive/projection lines before unit
+tests (including test-only fixture ingestion helpers). Generated outputs contain
+1,970 Swift writer lines, 5,081 Rust record/reader/projection lines, and 55,839
+bytes of Python tables. Typed Rust admission occupies 1,545 authored lines before
+tests; its manual semantic work is the largest new maintenance cost. Line counts
+are inventory, not proof of maintainability. The normal Rust formatter is used;
+the frozen 400/900 review triggers are not whitespace targets.
+
+There are still 249 direct String/optional-String fields plus string collections.
+Open native codes and evidence text stay representable; closed claim states,
+answers and witness-reference vocabularies still use named string matches.
+They do not pass through new text parsers, but fixed enums are a useful bounded
+adoption refinement. Swift lifecycle dictionaries are the more concrete remaining
+structural debt: their generated adapters reject unknown keys, while construction
+and validation still use those keys.
 
 | Change exercise | Observed edit path |
 | --- | --- |
@@ -202,8 +232,128 @@ unestablished. No performance superiority claim or matched statistical compariso
 is made. Flat or modestly worse performance remains acceptable under the user's
 maintenance criterion, subject to bounded costs and preserved evidence.
 
+### Descriptive execution receipts
+
+These are individual executions from the final signed run, with no matched
+baseline, quiet-window arrangement, first-execution exclusion or statistical
+performance inference. Bytes are observed byte counts, not memory residency;
+wall duration is through CLI exit. The actor row retains the explicit semantic
+scope withholding described above.
+
+| Workload | Host binary bytes | Client capture bytes | Public JSON bytes | Whole CLI wall ms |
+| --- | ---: | ---: | ---: | ---: |
+| Ordinary, three phases/actions | 7,652 | 8,278 | 34,647 | 47.817 |
+| Query dense, eight phases/256 actions | 404,902 | 405,528 | 1,579,767 | 139.490 |
+| Actor composition, ten visits/actions | 62,728 | 63,354 | 255,771 | 83.092 |
+| Partial validator EOF | 8,214 | 8,840 | 35,346 | 259.897 |
+| Worker death before result publication | 7,237 | 7,863 | 32,780 | 84.212 |
+
+The raw `run.json` and `capture.json` pairs are in the final run's
+`witness_contract/phases/artifacts/ordinary`,
+`witness_contract/porcelain_output_controls/artifacts/complete`,
+`witness_contract/actor_compositions/artifacts/original`,
+`runner_validator_failure/validator_unavailable_reports_degraded/artifacts`,
+and `witness_contract/worker_killed_before_slot_publication/artifacts/killed_before_publication`
+under `suites/`. The dense case also retains the exact host frame and a size
+receipt. It is not a comparison between equally encoded artifacts.
+
+The large-byte control is constructed, not live execution coverage:
+ReservationAdmissionTests exercises retained host payloads one byte below, at
+and above 92 MiB, and encodes a field-superset binary capture carrying the full
+retained payload. It passes the writer/frame/output bounds. It does not measure
+peak allocation or prove full semantic admission of that deliberately inconsistent
+superset. Full maximal typed-reply semantic coverage belongs to adoption.
+
 ## Verification and dispositions
 
-Final verification and claim dispositions are being assembled from retained runs.
-The implementation is isolated on `experiment/json-porcelain`; it is not merged
-into the main checkout. Main-checkout user edits remain untouched.
+Implementation commit: `72c7356f`. Signed build command:
+`env CARGO_BUILD_JOBS=2 make build IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)'`.
+Worker identity: `242eaaf85726e7437de516e895dec198cdfddaeb669fd1ed31f7f31a7855ef84`.
+Wire fingerprint: `d9075e30119a1effc04f3813f9e748d1aceb62037aceede04b3a00ab37a33f6f`.
+The build uses inspection Swift flags with explicit one-job Swift drivers and
+at most two Meson/Cargo jobs. Native executions remain serialized. The build
+is signed and staged locally, not notarized or published.
+
+Final coordinated verification **passes all 41 selected cases**, with zero
+failures, skips, unrun cases, harness errors or observed system-sleep overlap.
+The inspected signed app is valid and unchanged across the run. Rust checks
+include 237 controller unit tests and 57 helper tests; the three receipt-dependent
+ignored controller cases run explicitly in the Swift wrapper. All 590 Swift
+controls and its independent receipt replays pass.
+
+Final coordinated verification is recorded in `tests/out/runs/porcelain-acceptance-a`
+(run ID `20261108T200617Z_d5eb9abd`).
+Its `plan.json` records the complete selection and requirements; raw artifacts
+and `run.json` own outcomes. Source is the implementation commit with the new
+output-control wrapper's executable bit corrected before dispatch. Later record,
+plan and retention edits do not change the tested implementation. Earlier failed
+runs remain failures; their replacement and applicability are accounted below.
+
+The registered selection comprises `source_drift`, `unit`, `failure_boundaries`,
+`runner_validator_failure`, `runner_abi_layout`; preflight signing/build-entry;
+Swift core/client controls; five C-worker publication/release/activation cases;
+and ordinary phases, actor compositions, deadline/partial-publication, native
+order mutations and actual output interruption. Exact IDs, commands, equipment
+and configuration remain in the retained `plan.json` and `run.json`.
+
+The native order mutation case accepts its baseline and rejects both worker and
+host bypasses through independent effects. Normal/rich/minimal binary reporting
+receipts match independent Python projection; 30 truncated prefixes refuse.
+Actual public-pipe closes at 128 and 4096 bytes return exit 101 with incomplete
+JSON and no harness timeout/cleanup kill; no complete artifact or worker claim
+is inferred from those prefixes.
+
+Corrections are preserved rather than credited retroactively: the first signed
+partial-publication trial found a real Rust progress-order indexing error, now
+fixed with a typed regression and the passing signed rerun. Initial Rust/Swift
+fixtures needed version/required-field updates; an old JSON comparison replay
+needed explicit fixture admission. Source checks caught an overbroad source-list
+mutation and invalid documentation links/literal duplication. The independent
+reader was extended to validate exact rejected-frame carriers and unsupported
+fingerprints without recovering submission claims. No semantics were weakened
+to make those failures pass.
+
+`exploration-prior/index.json` inside the final run identifies 254 copied files
+with original paths, run IDs and SHA-256 values, including contrary raw replies,
+failed logs, original run accounting and build logs. Early uncommitted source
+snapshots are not assigned a commit. These copies do not relocate cleanup
+ownership. Superseded originals were removed only through the ordinary pruner
+after preservation. The final run is pinned for adoption; its raw evidence is
+gitignored and available only in this local worktree.
+
+| Frozen claim | Disposition and limit |
+| --- | --- |
+| Schema owns converted structure | Established for the 83-record closure by generated stored fields/readers/tables, single-side mutation controls and stale-copy refusals. Custom semantic rules are not generated. |
+| Converted Rust coherence uses typed access | Established in the selected slice. Production response records have no JSON Deserialize path, generic Value adapter or string conversion intermediary. Declared unconverted families are withheld. |
+| Supported order has a validation owner | Established for the ordinary/actor query slice through typed rejection controls and native ordering checks. These do not create a new generation or arrival-time observation. |
+| Ending observations remain separate | Established for worker completion, partial publication and constructed kill/reap conflicts. Full exec and actor settlement admission remains outside the slice. |
+| Degradation preserves evidence honestly | Established for normal, rich, minimal and total emission-failure controls, with independent binary receipts. Allocation failure cannot guarantee self-reporting. |
+| Raw capture and typed storage have clear owners | Established as source/API ownership and exact-byte retention. Physical Foundation/XPC sharing and peak allocations remain unestablished. |
+| JSON is presentation | Established on the converted response coherence path. Equipment size validation and old comparison coders remain explicit exceptions; universal JSON-free internals are unestablished. |
+
+**Disposition: pursue adoption**, as a bounded follow-on. The gain is a single
+structural owner and direct typed interpretation; it does not depend on faster
+execution. The closed codec has not needed general parsing machinery, and no
+new stringify/nudge/parse operation was introduced. Passing old generic controls
+is not credited as proof of the new typed runtime.
+
+Adoption still requires these concrete decisions/work:
+
+1. Replace Swift lifecycle question dictionaries with fixed records; use enums
+   for truly closed states/answer/reference vocabularies without closing open
+   native codes. Preserve received conflicts independently of admitted claims.
+2. Migrate one semantic family at a time, beginning with ordinary fresh-read
+   admission, then fresh-write/exec and the actor setup/equipment/gates/settlement
+   checks. Remove each scope marker only with independent accepted/rejected and
+   signed controls. The existing record closure should suffice; expansion beyond
+   the budget reopens the design.
+3. Retire response Codable comparison paths and the generic test-only run bridge
+   after replacing their coverage; resolve equipment's JSON-size admission and
+   declare production codec limits in the owning limits account. Keep request,
+   reservation and validator boundary formats explicit. Refresh resource
+   observations on the completed path and run full-family/default acceptance.
+
+No compatibility shim, production merge, performance recommendation, ARM trial,
+wait tuning or custody redesign is included. The isolated branch and the evidence
+remain dependencies of this adoption work, so the plan and record are retained.
+Main-checkout user edits remain untouched.

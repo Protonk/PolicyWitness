@@ -1,5 +1,12 @@
 # JSON as porcelain: schema-owned evidence records and a JSON projection
 
+Exploration complete on `experiment/json-porcelain`; the
+[experiment disposition](records/JSON-AS-PORCELAIN-EXPERIMENT.md#verification-and-dispositions)
+recommends adoption in bounded semantic families. The prototype, 41-case evidence
+and remaining migration work are retained there. Production adoption remains a
+separate follow-on; this plan stays as its specification until those dependencies
+are discharged.
+
 ## Question and intended result
 
 Can PolicyWitness describe its reply evidence as one owned schema of fixed
@@ -151,8 +158,8 @@ derived from the schema.
 | Requirement | Option A | Option B |
 | --- | --- | --- |
 | Distinct bytes and text, exact 64-bit signed and unsigned integers, explicit presence | Designed in | Supported; presence needs proto3 `optional` on scalars |
-| Unknown fields and defaults | Rule owned here; absent means absent | Library rule: unknown fields preserved, scalar defaults implicit; admission must reject what the library accepts |
-| Bounded lengths and nesting at the reader | Written into the reader | Message size limit configurable; nesting limit library-defined |
+| Unknown fields and defaults | Rule owned here; absent means absent | Runtime-specific unknown-field policy; scalar defaults implicit; admission must own acceptance |
+| Bounded lengths and nesting at the reader | Written into the reader | Caller bounds framing; runtime nesting policies differ |
 | Build dependencies | None | Vendored Swift runtime, one Rust crate, `protoc` and plugins at generation time |
 | Provenance and worker identity | Regenerate once for the protocol change | Same, plus the vendored runtime's identity |
 | Independent inspection of wire bytes | A short format note suffices | Public format; third-party tools available |
