@@ -147,3 +147,18 @@ are the substituted instrumented executables.
 | `tests/suites/witness_contract/check_worker_wait_pilot.py` | `5b60a0d6cd723c713b35467045bfa29d08f590c8899ac8df3ac2489622e0c899` |
 | `tests/fixtures/worker_wait/host_stamps.py` | `5888f04806ba21f4ec10dd42388f08de721ee6a694855d4bfa746aa375076f5f` |
 | `tests/fixtures/worker_wait/HostStamps.swift` | `dc46c088d2aa8bc2f742d3af1c1961c91e0517d7fb3d1e110fd0a6e8c580e4a0` |
+
+## Frozen observer comparison
+
+`tests/out/runs/host04-observer-01` uses the same accepted production source,
+reader and inspection flags. Instrumented and unstamped neighbors each run all
+six cells in both regimes, five repetitions, with the same warm-up, pacing,
+100 calibration trials and 240-second native window. It is a separate observer
+cost diagnostic, with no performance-adoption claim or pooled candidate pairs.
+
+| Prepared receipt | SHA-256 |
+| --- | --- |
+| `tests/out/runs/host04-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/staged-identity-before.json` | `aef1699819ed7b892989369605e0c2b7905d0131d7277281fa256b8d1e34d233` |
+| `tests/out/runs/host04-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `ca8b2af83a5217fdef42c1c06ee111ac3beb6f694e513f8c542cd7d02f79a13a` |
+| `tests/out/runs/host04-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/host-instrumented/host-build.json` | `8a2c7e72c5d4e19b5d4a22273123e9c5e3989eafad977c3cdc6831ac8d51265d` |
+| `tests/out/runs/host04-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/host-neighbor/host-build.json` | `2bd7b2d91cf483456e95c582f912460237bbf2abd8d7c915a74d833ffb5d9b4a` |
