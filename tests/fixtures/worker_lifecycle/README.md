@@ -230,3 +230,12 @@ The exec evidence family is invoked through
 items retain this fixture and the independent 58-attempt golden unchanged; each
 native invocation remains a complete observation. Copied include closures and
 native stdout/stderr live in the family's per-variant artifacts.
+
+`initial_wait_*|<gate>` separates readiness from application/first arrival with
+an independently acknowledged file gate. It publishes a ready marker before the
+ready byte, then waits for the gate or cancellation. The arrival mode publishes
+application and phase arrival, waits for release and publishes completion;
+failure publishes a failed apply and done; exit returns 17 without application;
+missing omits the byte. Controlled host clocks or fallback sleeps open the gate.
+A five-second alarm and independent parent cleanup bound the child. These cases
+apply no sandbox and establish host decisions, never timing or policy causes.
