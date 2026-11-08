@@ -10,7 +10,9 @@ loaded-record pairs, pass-count records and inbound pass samples appended after
 later reads. Host exports carry each sleep as a 180/181 event pair beside its
 register and a done register for the ordinary worker. A candidate-shaped
 ordinary receipt adds the worker grace program points and one bounded exit wait
-whose pair is followed by its outcome event. Expected values are written from
+whose pair is followed by its outcome event; a candidate-shaped A2 receipt gives
+each actor its own exit request, reap, grace program points, bounded exit wait
+and grace stop. Expected values are written from
 the constructed microsecond times, not computed with the reader's functions.
 """
 import base64
@@ -204,10 +206,19 @@ def phase_times(g):
     return t, t + (3100 if A2_LAYOUT['phases'][g]['eligible'] else 1160)
 
 
-def actor_bundle(keep=True, worker_edit=None, host_edit=None, sleep_events=True):
+# Candidate-shaped A2 cleanup, microseconds after the schedule's end: per actor its exit request (146), grace
+# begin (148), one bounded exit wait (key 5) with its outcome (182), the reaping sample (147) and the grace
+# finish (157) with its stop. Actor 0's wait is notified and the next sample reaps it; actor 1's wait times out,
+# its constructed allowance is spent and the reap follows termination.
+ACTOR_EXITS = {0: dict(exit=1100, begin=1110, wait=(1120, 1320), outcome=1, reap=1330, finished=1340, stop=1),
+               1: dict(exit=1400, begin=1410, wait=(1420, 11470), outcome=0, finished=11480, reap=11600, stop=0)}
+
+
+def actor_bundle(keep=True, worker_edit=None, host_edit=None, sleep_events=True, exits=False):
     """A2 lifecycle in program order. Phase g activates at 20 ms + 10 ms * g (microseconds from a 100 s base).
     An execution sleep (1048 us) lies between each bracketed arrival's negative and positive samples, and a
-    recipient sleep (980 us) inside each transfer wait."""
+    recipient sleep (980 us) inside each transfer wait. exits=True replaces the two reaping samples with the
+    per-actor cleanup of ACTOR_EXITS."""
     b = 100_000_000
     host = [(100, NONE, 0, 0), (101, 0, 5000, 1000), (101, 1, 5001, 1100), (160, NONE, 0, 15000)]
     registers = {}
@@ -276,14 +287,28 @@ def actor_bundle(keep=True, worker_edit=None, host_edit=None, sleep_events=True)
     packed = {a: pack_page([(e, p, x, tk(b + t)) for e, p, x, t in events], stages=stages[a].items(), scan=scan[a], pid=5000 + a,
                            origin=tk(b + origins[a])) for a, events in workers.items()}
     end = phase_times(4)[1] + 2000
-    host += [(161, NONE, 0, end + 1000), (147, 0, 0, end + 1100), (147, 1, 0, end + 1110),
-             (170, 0, len(workers[0]), end + 1200), (170, 1, len(workers[1]), end + 1201), (171, NONE, 0, end + 50000)]
+    host += [(161, NONE, 0, end + 1000)]
+    grace_sleep = {}
+    if exits:
+        for actor, x in ACTOR_EXITS.items():
+            cleanup = [(146, actor, 0, x['exit']), (148, actor, 0, x['begin']), (180, 5, GRACE_POLL_NS, x['wait'][0]),
+                       (181, 5, GRACE_POLL_NS, x['wait'][1]), (182, 5, x['outcome'], x['wait'][1]),
+                       (147, actor, 0, x['reap']), (157, actor, x['stop'], x['finished'])]
+            host += [(e, p, a, end + t) for e, p, a, t in sorted(cleanup, key=lambda e: e[3])]
+        durations = [(x['wait'][1] - x['wait'][0]) * 1000 for x in ACTOR_EXITS.values()]
+        grace_sleep = {'5': (2, GRACE_POLL_NS, sum(durations), max(durations), min(durations),
+                             tk(b + end + ACTOR_EXITS[1]['wait'][0]), tk(b + end + ACTOR_EXITS[1]['wait'][1]))}
+        copied = ACTOR_EXITS[1]['reap'] + 100
+    else:
+        host += [(147, 0, 0, end + 1100), (147, 1, 0, end + 1110)]
+        copied = 1200
+    host += [(170, 0, len(workers[0]), end + copied), (170, 1, len(workers[1]), end + copied + 1), (171, NONE, 0, end + 50000)]
     host = current(host, keep, sleep_events)
     if host_edit: host = host_edit(host)
     sid = 'A2-rapid-0-constructed'
     stamps = stamps_doc(sid, 5555, b, host, registers,
                         sleeps(**{'3': (4, ACTOR_POLL_NS, 4_192_000, 1_048_000, 1_048_000, tk(b + t4 + 51), tk(b + t4 + 1099)),
-                                  '6': (2, ACTOR_POLL_NS, 1_960_000, 980_000, 980_000, tk(b + tc3 + 166), tk(b + tc3 + 1146))}),
+                                  '6': (2, ACTOR_POLL_NS, 1_960_000, 980_000, 980_000, tk(b + tc3 + 166), tk(b + tc3 + 1146))}, **grace_sleep),
                         [(0, 5000, len(workers[0]), packed[0]), (1, 5001, len(workers[1]), packed[1])], cost=keep)
     return dict(dir='constructed/A2', trial=trial('instrumented', 'A2', 'rapid', sid, A2_LAYOUT),
                 conditions=conditions('rapid', 40_000_000, [0, 250_000_000]), started=dict(host_pid=5555, specimen_id=sid, raw=tk(b)),
@@ -373,6 +398,74 @@ def check_actor_intervals(row, grace=None):
                                                     endpoint('host', 'worker_grace_finished', None, 0)]
     names = {name for name, _ in reader.component_values(row)}
     assert {'w0.terminal_to_exit_request', 'w0.exit_request_to_reap', 'w0.grace_wait'} <= names, names
+
+
+def check_actor_exits(row, plain):
+    """Each actor's cleanup from its own events (ACTOR_EXITS, after the schedule's end at 63.16 ms): issuer
+    TERMINAL_PUBLISHED at 52.46 ms, subject at 61.36 ms. Every other interval keeps the plain A2 value."""
+    assert row['status'] == 'accepted' and not row['problems'] and not row['exclusions'], row['problems']
+    end = phase_times(4)[1] + 2000
+    terminal = {0: phase_times(3)[1] + 1300, 1: phase_times(4)[1] + 200}
+    values = lambda a, name: (a[name]['ns'], a[name]['uncertainty_ns'], a[name]['cross_process'])
+    got = {a['actor']: a for a in row['actors']}
+    assert sorted(got) == [0, 1], row['actors']
+    for actor, x in ACTOR_EXITS.items():
+        a = got[actor]
+        assert values(a, 'terminal_to_exit_request') == ((end + x['exit'] - terminal[actor]) * 1000, WORKER_FLOOR + HOST_FLOOR + ALIGN, True), a
+        assert a['terminal_to_exit_request']['endpoints'] == [endpoint(f'worker{actor}', 'terminal_published', None, 0),
+                                                              endpoint('host', 'exit_requested', None, 0)], a
+        assert values(a, 'exit_request_to_reap') == ((x['reap'] - x['exit']) * 1000, 2 * HOST_FLOOR, False), a
+        assert values(a, 'grace_wait') == ((x['finished'] - x['begin']) * 1000, 2 * HOST_FLOOR, False), a
+        assert a['grace_stop_code'] == x['stop'], a
+    # The expected values differ between the actors, so a reader that took one actor's events for both fails here.
+    assert got[0]['grace_stop_code'] != got[1]['grace_stop_code']
+    assert all(got[0][name]['ns'] != got[1][name]['ns'] for name in ('terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait'))
+    assert tuple(row[name] for name in reader.GRACE_COUNTS) == (1, 1, 0), [row[n] for n in reader.GRACE_COUNTS]
+    assert row['grace_wait_record'] == dict(waits=2, recorded_pairs=2, outcome_events=dict(timed_out=1, notified=1, unusable=0),
+                                            plain_sleeps=0, plain_sleeps_by_requested_ns={}, unrecorded=0), row['grace_wait_record']
+    assert row['host_sleep_events'] == dict(state='complete', truncated_keys=[], pairs={'3': 4, '5': 2, '6': 2}), row['host_sleep_events']
+    assert row['host_sleeps']['worker_grace']['event_durations_ns'] == [200_000, 10_050_000], row['host_sleeps']['worker_grace']
+    exit_names = {f'w{a}.{n}' for a in ACTOR_EXITS for n in ('terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait')}
+    others = lambda r: {name: record['ns'] for name, record in reader.component_values(r) if name not in exit_names}
+    assert exit_names <= {name for name, _ in reader.component_values(row)}
+    assert others(row) == others(plain), {k: (v, others(plain).get(k)) for k, v in others(row).items() if v != others(plain).get(k)}
+
+
+def actor_blind_intervals(stop_only):
+    """The reader's per-actor intervals with the host lookups not matched by actor: every actor gets the first
+    146, 147, 148 and 157, or (stop_only) only the stop code ignores the actor."""
+    def intervals(doc, pages, interval):
+        events, rows = doc['events'], []
+        for actor in sorted(pages):
+            terminal = reader.first(reader.records(pages[actor]), reader.W['terminal_published'])
+            match = {} if not stop_only else dict(phase=actor)
+            at = lambda name: (lambda e: reader.point(e and e[3], 'host', name))(reader.first(events, reader.H[name], **match))
+            finished = reader.first(events, reader.H['worker_grace_finished'])
+            rows.append(dict(actor=actor,
+                             terminal_to_exit_request=interval(reader.point(terminal and terminal[3], f'worker{actor}', 'terminal_published'),
+                                                               at('exit_requested'), missing='terminal_or_exit_request_unobserved'),
+                             exit_request_to_reap=interval(at('exit_requested'), at('worker_reaped'), missing='exit_request_or_reap_unobserved'),
+                             grace_wait=interval(at('worker_grace_begin'), at('worker_grace_finished'), missing='grace_not_stamped'),
+                             grace_stop_code=finished and finished[2]))
+        return rows
+    return intervals
+
+
+def actor_blind_rejected(plain):
+    """check_actor_exits fails when the reader's per-actor lookups ignore the actor, wholly or for the stop code."""
+    kept = reader.actor_intervals
+    try:
+        for stop_only in (False, True):
+            reader.actor_intervals = actor_blind_intervals(stop_only)
+            try:
+                check_actor_exits(reader.evaluate_bundle(actor_bundle(exits=True), CALIBRATION), plain)
+            except AssertionError:
+                continue
+            raise AssertionError(f'check_actor_exits accepted actor-blind intervals (stop_only={stop_only})')
+    finally:
+        reader.actor_intervals = kept
+    return [dict(control=f'actor_blind_{which}', status='rejected', codes=['expected per-actor interval mismatch'])
+            for which in ('intervals', 'stop_code')]
 
 
 def check_grace(row, grace):
@@ -1283,6 +1376,7 @@ def main(out):
         (1, 'terminal_or_exit_request_unobserved', 'exit_request_or_reap_unobserved')], actor_row['actors']
     grace_controls = grace_rule_controls()
     check_actor(reader.evaluate_bundle(copy.deepcopy(actor), CALIBRATION))
+    check_actor_exits(reader.evaluate_bundle(actor_bundle(exits=True), CALIBRATION), actor_row)
     assert reader.evaluate_bundle(copy.deepcopy(neighbor), CALIBRATION)['status'] == 'accepted'
     check_ordinary_without_new_records(reader.evaluate_bundle(ordinary_bundle(keep=False), CALIBRATION))
     check_actor_without_new_records(reader.evaluate_bundle(actor_bundle(keep=False), CALIBRATION))
@@ -1323,7 +1417,8 @@ def main(out):
                 'O1 done first check positive inside a sleep event pair', 'O1 done register absent: unobserved label',
                 'A2 with a done register for the subject', 'O1 20 us release inversion widening alignment',
                 'uncalibrated O1', 'unbounded alignment O1', 'O1 without an endpoint term', 'scan role unknown A2',
-                'O1 per-actor exit intervals without grace stamps', 'A2 without exit requests: per-actor intervals unobserved'] + [
+                'O1 per-actor exit intervals without grace stamps', 'A2 without exit requests: per-actor intervals unobserved',
+                'A2 candidate-shaped cleanup: each actor its own exit intervals, grace stop and one bounded wait'] + [
                 f'O1 candidate-shaped grace wait: {grace}' for grace in GRACE_OUTCOMES] + [
                 'grace counts summed per group'] + sleep_controls + grace_controls
 
@@ -1331,6 +1426,7 @@ def main(out):
     formula_rejected(old_uncertainty, [(ordinary_bundle, check_ordinary), (actor_bundle, check_actor),
                                        (lambda: edited(ordinary_bundle, late_release_stamp), check_inversion)])
     rejected = [dict(control='old_uncertainty_formula', status='rejected', codes=['expected uncertainty mismatch'])]
+    rejected += actor_blind_rejected(actor_row)
 
     # Disk round trip through the loader, the clock pair's checker and the writers.
     root = out / 'constructed'

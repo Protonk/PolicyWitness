@@ -224,7 +224,11 @@ exit wait followed by each outcome, or by none; the controls check the counts,
 the per-actor intervals and the group sums, count waits past 64 recorded pairs
 and settle sleeps as timeouts, and reject an outcome code of 3, an outcome that
 does not follow its pair (moved, another key or another raw) and a grace
-finished before it begins. Constructed whole-request values check the
+finished before it begins. A candidate-shaped A2 receipt gives each actor its
+own exit request, reaping sample, grace program points and stop code, with one
+notified and one timed-out exit wait; each actor's three intervals and stop
+code must come from its own events, and copies of the reader that match those
+events without the actor, or only the stop without it, must fail. Constructed whole-request values check the
 direction counts, and constructed counts the paired grace differences. A comparison's receipts go through the loader and writers with
 separate app groups. The stager, given a constructed candidate app and source
 tree and stopped before any copy is signed, refuses an equipment identity or a
