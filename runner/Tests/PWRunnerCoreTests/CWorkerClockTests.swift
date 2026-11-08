@@ -11,8 +11,10 @@ import Foundation
  * overrun or cost nothing, a wait may return early, the clock may jump, fail
  * or run backwards, and a phase hook may consume time the sentinel wait must
  * not charge. Every assertion reads the wait records the host publishes
- * beside the disposition it already recorded. Direct controls also drive the
- * clock's bounded re-sampling of an answer before its first sleep. These are
+ * beside the disposition it already recorded. Direct controls drive
+ * waitExitNs on real descriptors (closed, readable, empty, hung up and
+ * interrupted) and the clock's bounded re-sampling of an answer before its
+ * first sleep. These are
  * host observations under controlled time, never policy evidence.
  */
 
@@ -279,6 +281,58 @@ func runCWorkerClockTests(_ tk: TestKit) {
             clock.now += 750_000
             while !wait.expiredAfterSleeping(atMost: HostWaitClock.exitSettleNs) {}
             try expectEqual(clock.sleeps, [UInt64(100_000), UInt64(100_000), UInt64(50_000)])
+        }
+        tk.run("waitExitNs maps a closed descriptor number to unusable") {
+            var ends: [Int32] = [-1, -1]
+            try expectEqual(pipe(&ends), 0)
+            close(ends[1]); close(ends[0])
+            // The number is closed when poll runs (POLLNVAL), unless another
+            // thread reused it in between, which F_GETFD would show.
+            try expectTrue(fcntl(ends[0], F_GETFD) == -1 && errno == EBADF, "descriptor \(ends[0]) was reused")
+            try expectEqual(waitExitNs(ExitWatch(fd: ends[0]), 50_000_000), .unusable)
+        }
+        tk.run("waitExitNs reports an unread byte from a live writer as a notification, an empty live pipe as timed out, and a hangup as a notification") {
+            var ends: [Int32] = [-1, -1]
+            try expectEqual(pipe(&ends), 0)
+            defer { close(ends[0]); if ends[1] >= 0 { close(ends[1]) } }
+            try expectEqual(waitExitNs(ExitWatch(fd: ends[0]), 5_000_000), .timedOut)
+            var byte: UInt8 = 0x52
+            try expectEqual(Darwin.write(ends[1], &byte, 1), 1)
+            var entry = pollfd(fd: ends[0], events: Int16(POLLIN), revents: 0)
+            try expectEqual(poll(&entry, 1, 0), 1)
+            try expectEqual(entry.revents & Int16(POLLHUP), 0, "the writer is live: readable without hangup")
+            try expectEqual(waitExitNs(ExitWatch(fd: ends[0]), 5_000_000), .notified)
+            _ = Darwin.read(ends[0], &byte, 1)
+            close(ends[1]); ends[1] = -1
+            try expectEqual(waitExitNs(ExitWatch(fd: ends[0]), 5_000_000), .notified)
+        }
+        tk.run("waitExitNs reports a poll interrupted by a signal as timed out, before its bound") {
+            var ends: [Int32] = [-1, -1]
+            try expectEqual(pipe(&ends), 0)
+            defer { close(ends[0]); close(ends[1]) }
+            var handler = sigaction()
+            handler.__sigaction_u.__sa_handler = { _ in }
+            handler.sa_flags = 0
+            sigemptyset(&handler.sa_mask)
+            var previous = sigaction()
+            try expectEqual(sigaction(SIGUSR2, &handler, &previous), 0)
+            defer { _ = sigaction(SIGUSR2, &previous, nil) }
+            let target = pthread_self()
+            // The signal goes to this thread, repeatedly until the wait returns,
+            // so one that lands before poll starts still interrupts it.
+            let lock = NSLock()
+            var done = false
+            let signaller = Thread {
+                usleep(50_000)
+                while lock.withLock({ !done }) { pthread_kill(target, SIGUSR2); usleep(50_000) }
+            }
+            signaller.start()
+            let start = clock_gettime_nsec_np(CLOCK_MONOTONIC)
+            let outcome = waitExitNs(ExitWatch(fd: ends[0]), 5_000_000_000)
+            let elapsed = clock_gettime_nsec_np(CLOCK_MONOTONIC) - start
+            lock.withLock { done = true }
+            try expectEqual(outcome, .timedOut)
+            try expectTrue(elapsed < 2_000_000_000, "the interruption, not the 5 s bound, ended the wait: \(elapsed) ns")
         }
         tk.run("an answer visible when re-sampling starts continues the wait without a sleep") {
             let clock = ControlledClock(); clock.realSleepNs = 0

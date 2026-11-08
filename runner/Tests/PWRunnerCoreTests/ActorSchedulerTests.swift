@@ -405,23 +405,44 @@ func runActorSchedulerTests(_ tk: TestKit) {
             try expectTrue(independentlyReaped, "fixture must independently reap the child hidden by ECHILD")
             try expectEqual(result.actors[0].quiescence, "unresolved", "later fixture cleanup cannot upgrade the retained result")
         }
-        tk.run("an earlier actor's ready pipe hangs up while a later actor lives, and both exit graces end by reap") {
+        tk.run("an earlier actor's ready pipe hangs up while a later actor lives, and each exit grace waits on its own pipe's hangup and ends by reap") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let input = ActorScheduleInput(actors: [actorInput(policy: allowAll, visits: [(0, [read("a", hosts)])]),
                                                     actorInput(policy: allowAll, visits: [(1, [read("b", hosts)])])],
                                            applies: [true, true], schedule: schedule([[0], [1]]))
+            // Each actor exits on its own after its terminal publication, so the
+            // grace's first sample could already reap it. Holding that one sample
+            // pending (the first WNOHANG wait after the exit request) puts the
+            // grace where HOST-02 reaches it, ahead of the exit: the next wait
+            // runs on the actor's real pipe, and later samples are real waitpids.
+            var schedulerRef: ActorScheduler? = nil
+            var heldPending: Set<pid_t> = []
+            var outcomes: [Int: [ExitWatchOutcome]] = [:]
             var calls = ChildProcessCalls()
-            var outcomes: [ExitWatchOutcome] = []
-            calls.waitExit = { watch, ns in let outcome = waitExitNs(watch, ns); outcomes.append(outcome); return outcome }
+            calls.wait = { pid, status, options in
+                if options & WNOHANG != 0, !heldPending.contains(pid),
+                   let session = schedulerRef?.sessions.first(where: { $0?.pid == pid }) ?? nil,
+                   session.exitRequested {
+                    heldPending.insert(pid)
+                    return 0
+                }
+                return Darwin.waitpid(pid, status, options)
+            }
+            calls.waitExit = { watch, ns in
+                let outcome = waitExitNs(watch, ns)
+                let actor = schedulerRef?.sessions.firstIndex(where: { $0?.readyReadFD == watch.fd && watch.fd >= 0 }) ?? -1
+                outcomes[actor, default: []].append(outcome)
+                return outcome
+            }
             let scheduler = ActorScheduler(input, processCalls: calls)
-            var validatorRuns = 0, hangupBeforeLaterExit = false, laterAlive = false, eof = false
+            schedulerRef = scheduler
+            var hangupBeforeLaterExit = false, laterAlive = false, eof = false
             let outcome = scheduler.run { phase, _, pid in
-                // A real validator runs against each live actor before the check.
-                if !verdicts(pid: pid).isEmpty { validatorRuns += 1 }
+                _ = verdicts(pid: pid)
                 guard phase == 1, let first = scheduler.sessions[0], let later = scheduler.sessions[1] else { return }
-                // Actor 0 finished its only visit and exits on its own. Its write end
-                // has no other holder (actor 1 and the validators were spawned after
-                // the host closed its copy), so the hangup arrives while actor 1 lives.
+                // Actor 0 finished its only visit and exits on its own. Actor 1 was
+                // spawned after the host closed its copy of actor 0's write end, and
+                // its hangup arriving while actor 1 lives shows actor 1 holds none.
                 var entry = pollfd(fd: first.readyReadFD, events: Int16(POLLIN), revents: 0)
                 let rc = poll(&entry, 1, 1_000)
                 hangupBeforeLaterExit = rc == 1 && entry.revents & Int16(POLLHUP | POLLIN) != 0
@@ -431,14 +452,18 @@ func runActorSchedulerTests(_ tk: TestKit) {
             }
             try expectNil(outcome.cancelled)
             try expectEqual(outcome.visits.map { $0.endReason }, ["completed", "completed"])
-            try expectEqual(validatorRuns, 2)
             try expectTrue(hangupBeforeLaterExit && eof, "actor 0's ready pipe must reach EOF while actor 1 is alive")
             try expectTrue(laterAlive, "actor 1 was alive and unreaped at the check")
-            try expectFalse(outcomes.contains(.unusable), "exit waits: \(outcomes)")
+            try expectEqual(heldPending.count, 2, "one held grace sample per actor")
+            try expectNil(outcomes[-1], "every exit wait used an actor's own read end: \(outcomes)")
             for record in outcome.actors {
+                let waits = outcomes[record.index] ?? []
+                try expectTrue(waits.contains(.notified), "actor \(record.index) exit waits: \(waits)")
+                try expectFalse(waits.contains(.unusable), "actor \(record.index) exit waits: \(waits)")
                 guard let out = record.output, let grace = out.graceWait else {
                     throw TestFailure(message: "missing grace record for actor \(record.index)")
                 }
+                try expectTrue(out.readyByteReceived, "actor \(record.index)")
                 try expectEqual(record.quiescence, "reaped")
                 try expectEqual(out.graceEnd, "reaped_during_grace", "actor \(record.index)")
                 try expectEqual(grace.stop, "reaped_during_grace", "actor \(record.index)")

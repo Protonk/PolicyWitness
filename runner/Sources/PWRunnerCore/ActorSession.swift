@@ -17,8 +17,9 @@ import Foundation
  *   4. Create ready + policy pipes; parent ends FD_CLOEXEC.
  *   5. posix_spawn the worker with FDs dup'd to 0/3/4 (and 5 for a token channel).
  *   6. Deliver the policy under its deadline; read the pre-apply ready byte.
- *      The ready pipe's read end stays open until tearDown: the exit grace
- *      waits on its hangup, which follows the worker's exit.
+ *      After a received byte the ready pipe's read end stays open until
+ *      tearDown: the exit grace waits on its hangup, which follows the
+ *      worker's exit. Any other readiness outcome closes it here.
  * A refusal before spawn leaves `spawned` false with `failure` set; a transfer
  * failure after spawn leaves the child running for the caller's cleanup.
  */
@@ -34,8 +35,8 @@ final class ActorSession {
     private var shmFD: Int32 = -1
     private var ownsShmFD = false
     private var tokenFD: Int32 = -1
-    /// The host's read end of the readiness pipe, owned from spawn until
-    /// tearDown; -1 before spawn and after close.
+    /// The host's read end of the readiness pipe, kept after a received ready
+    /// byte until tearDown; -1 when setup closed it and after close.
     private(set) var readyReadFD: Int32 = -1
     private var fileActions: posix_spawn_file_actions_t? = nil
     private var actionsInitialized = false
@@ -375,7 +376,6 @@ final class ActorSession {
         pid = child
         closeAuthorityDuplicate()
         spawned = true
-        readyReadFD = readyPipe[0]
         // The transfer calls (clock, write, poll) are one injection point: the
         // deadline and the writer share the supplied clock, and production keeps
         // the Darwin defaults.
@@ -439,6 +439,14 @@ final class ActorSession {
                 }
                 readyWait = clock.record(stop: stop, nativeErrno: readErrno)
             }
+        }
+        // Only a received byte keeps the read end for the exit grace. Every
+        // other outcome closes it here, so a late ready byte meets EPIPE and
+        // the grace uses the sleeping poll.
+        if readyByteReceived {
+            readyReadFD = readyPipe[0]
+        } else {
+            close(readyPipe[0])
         }
     }
 
@@ -558,7 +566,8 @@ final class ActorSession {
     /// Between waitpid samples the host waits for the ready pipe's hangup
     /// for at most 10 ms; a hangup is followed by the next sample, at most
     /// ten 100 µs settle sleeps if the child is not yet reapable, then the
-    /// 10 ms sleeping poll. An unusable pipe falls back to that poll at once.
+    /// 10 ms sleeping poll. An unusable pipe, or none because no ready byte
+    /// arrived, falls back to that poll at once.
     /// A hangup never ends the grace by itself; only a sample's reap or wait
     /// failure does.
     func finishCleanup() {
