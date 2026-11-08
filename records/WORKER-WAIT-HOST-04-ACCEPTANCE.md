@@ -162,3 +162,54 @@ cost diagnostic, with no performance-adoption claim or pooled candidate pairs.
 | `tests/out/runs/host04-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `ca8b2af83a5217fdef42c1c06ee111ac3beb6f694e513f8c542cd7d02f79a13a` |
 | `tests/out/runs/host04-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/host-instrumented/host-build.json` | `8a2c7e72c5d4e19b5d4a22273123e9c5e3989eafad977c3cdc6831ac8d51265d` |
 | `tests/out/runs/host04-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/host-neighbor/host-build.json` | `2bd7b2d91cf483456e95c582f912460237bbf2abd8d7c915a74d833ffb5d9b4a` |
+
+## Comparison and coordinator disposition
+
+`host04-comparison-01` completed its native window in 74.187 seconds, with
+120/120 accepted trials, 60 matched pairs, no exclusions or missing responses,
+and verified settled cleanup. AC power was stable. Spotlight was using roughly
+one core at the pre-window check; per-trial load and power observations remain
+in the receipts. Neither side's complete ordinary final-wait trace was truncated.
+All 50 baseline ordinary trials used one plain final sleep. All 50 candidate
+ordinary trials used one notification-ended final wait, with no timeout,
+unusable return or fallback sleep. Actor trials made no final-wait claim.
+
+Across all 50 ordinary pairs, terminal detection, terminal-to-reap and
+terminal-to-teardown improved beyond their paired uncertainty. Detection savings
+ranged from 119.58 to 2,785.29 microseconds; this is a fixture-build observation.
+Every applicable response bound was credited: the largest bound was 4.290
+microseconds, with maximum combined uncertainty 3.998 microseconds. Whole-session
+residence did not improve in every pair, and whole-request improvement is not
+claimed. CPU, memory, energy and scheduler/coalescing effects remain unmeasured.
+
+The whole-request spread rule flagged O2P idle repetition 4: candidate
+78.932 ms versus baseline 76.962 ms, a 1.970 ms worsening against the baseline
+spread of 1.140 ms. That pair's spawn-to-teardown interval was 2.282 ms shorter;
+the extra end-to-end time therefore lies outside that measured interval.
+This does not establish its cause or erase the regression flag. The other four
+O2P idle pairs were faster. Several component flags also occurred on unchanged
+collection/actor paths; all remain in `summary.json`, without an overall-speed
+claim or selective trial removal.
+
+`host04-observer-01` completed in 79.496 seconds: 120/120 accepted receipts,
+calibration established, no exclusions, settled cleanup. Instrumented minus
+unstamped whole-request median differences varied from -3.297 to +26.304 ms
+across cells/regimes. Export spans were 224.041–2,553.875 microseconds; in-situ
+host stamp-cost medians were 0–41 ns, subject to the calibrated endpoint floor.
+There is no universal overhead correction and no claim that these fixture
+latencies equal production latency. Both candidate comparison sides used the
+same recorder and reader. The source apps' controller bytes differ between
+builds despite matching inspection settings; their identities are retained,
+another reason not to attribute whole-request differences solely to the wait.
+
+**Written tradeoff decision:** retain the observed end-to-end regression and
+accept the structural candidate subject to the integrated verification below.
+The user-directed benefit is freedom from an unconditional timer at this final
+wait, using the existing descriptor and allowance. Independent controls and all
+ordinary live trials establish that mechanism; no response gate failed and no
+resource was added. This narrower benefit warrants adoption without a universal
+latency win. This decision does not credit lower total CPU, lower energy or
+system coalescing, and does not amend the frozen measurement rule. A future
+claim of improved whole-request performance needs its own controlled comparison.
+
+Integrated verification and the final source/build identities remain pending.
