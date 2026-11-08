@@ -99,11 +99,13 @@ Interpretation rules, repeated in summary.json:
   worsens_beyond_spread_in_any_pair (candidate minus baseline beyond the
   baseline's spread plus the instrument uncertainty) are true once any pair
   is worse and false only when all required pairs are established and none
-  is; otherwise a verdict is withheld. For release_to_ack and activation_response the
-  response bound is the candidate's largest accepted value minus the
-  baseline's smallest, against 2 ms; it is credited only with their combined
-  uncertainty at most 0.5 ms and the instrument gate credited. The two apps
-  are never pooled.
+  is; otherwise a verdict is withheld. For release_to_ack, activation_response
+  and the custody rows' inbound_response (the host's transfer wait start,
+  right after it commits the delivery, to the recipient's acknowledgement
+  publication) the response bound is the candidate's largest accepted value
+  minus the baseline's smallest, against 2 ms; it is credited only with their
+  combined uncertainty at most 0.5 ms and the instrument gate credited. The
+  two apps are never pooled.
 - Per actor, scan carries the worker's inbound scan counters (passes, visits
   and loads per caller role, and zero_visit_passes, histogram bucket 0, over
   both roles) beside inbound_count, the deliveries the trial layout addresses
@@ -144,7 +146,7 @@ import statistics
 import struct
 import sys
 
-READER_VERSION = 8
+READER_VERSION = 9
 HERE = Path(__file__).resolve().parent
 
 # Worker stamp page; mirrors tests/fixtures/worker_wait/pww_stamp_page.h.
@@ -224,7 +226,7 @@ OBSERVATION_FORMS = {'arrival_detection': 'arrival_to_observation', 'arrival_fir
                      'inbound_ack_to_host_observed': 'inbound_ack_to_observation',
                      'inbound_ack_first_check_positive': 'inbound_ack_to_observation'}
 PAIRED_WAITS = ('release_wait', 'activation_wait')
-RESPONSE_COMPONENTS = ('release_to_ack', 'activation_response')
+RESPONSE_COMPONENTS = ('release_to_ack', 'activation_response', 'inbound_response')
 RESPONSE_LIMIT_NS, RESPONSE_UNCERTAINTY_GATE_NS = 2_000_000, 500_000
 # Inbound scan counters per actor; the paired ratios are count / passes of one caller role.
 SCAN_ROLES, SCAN_MEASURES = ('activation', 'exchange'), ('visits', 'loads')
@@ -1022,6 +1024,9 @@ def custody(doc, pages, layout, interval, lo, hi, pairs, g):
         acked = published(ev, index_of(ev, W['inbound_acknowledged'], phase=target['slot']), process, WORKER_EVENTS, tb)
         row['wait_start_to_inbound_pass_sample'] = interval(waiting, sample)
         row['inbound_pass_sample_to_ack'] = interval(sample, acked)
+        # The inbound-delivery response: the host's wait start follows its commit store; the worker's
+        # acknowledgement publication ends it. Bounded like release_to_ack and activation_response.
+        row['inbound_response'] = interval(waiting, acked)
         observed = polled(row, doc, interval, H['transfer_wait_end'], delivery, acked,
                           ('inbound_ack_to_host_observed', 'inbound_ack_first_check_positive'))
         inversion(pairs, f'g{g}:d{delivery}:inbound_ack', raw_of(acked), observed)

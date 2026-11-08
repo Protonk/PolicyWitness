@@ -700,6 +700,9 @@ def check_actor(row):
                     10_000, 5_000, 15_000, 980_000, 90_000, 1_000_000), t
         assert t[observed]['uncertainty_ns'] == 15_000 + HOST_FLOOR + ALIGN
         assert t['inbound_pass_sample_to_ack']['below_instrument_floor'] is True
+        # The inbound-delivery response spans the wait start to the acknowledgement: the two parts above.
+        assert t['inbound_response']['ns'] == 5_000 + 15_000, t['inbound_response']
+        assert t['inbound_response']['endpoints'][0]['stamp'] == 'transfer_wait_start' and t['inbound_response']['endpoints'][1]['stamp'] == 'inbound_acknowledged', t['inbound_response']
     assert transfers[0]['inbound_ack_to_host_observed']['detection_bracket_ns'] == 985_000 and 'inbound_ack_first_check_positive' not in transfers[0]
     observed = transfers[1]['inbound_ack_first_check_positive']
     assert (observed['during_sleep_key'], observed['during_sleep_scope'], observed['during_sleep_span']) == (
@@ -1650,7 +1653,7 @@ def main(out):
     decomposition, summary = reader.read_artifacts(root)
     assert summary['calibration_status'] == 'established' and summary['counts']['accepted'] == 4 and summary['counts']['excluded'] == 1, (
         summary['calibration_status'], summary['counts'])
-    assert decomposition['version'] == summary['version'] == 8
+    assert decomposition['version'] == summary['version'] == 9
     calibration = decomposition['calibration']
     term = resolution['readers']['busy']['endpoint_term_ns']
     assert calibration['stamp_ns'] == -(-resolution['stamp_ns'] // 1) and calibration['alignment_ns'] == resolution['alignment']['bound_ns']

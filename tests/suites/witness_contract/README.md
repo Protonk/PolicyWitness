@@ -202,9 +202,10 @@ Groups carry each scan counter's sum and median per actor. An improvement verdic
 refuted by any established pair that falls short and is given only when all
 five declared pairs pass; a worsening verdict is given by any worse pair and
 refuted only when all five are established and none is worse; otherwise the
-verdict is withheld. For `release_to_ack` and
-`activation_response` it compares the candidate's largest accepted value with
-the baseline's smallest against 2 ms, credited only with combined uncertainty
+verdict is withheld. For `release_to_ack`, `activation_response` and the
+custody rows' `inbound_response` (the host's transfer wait start, right after
+its commit, to the recipient's acknowledgement) it compares the candidate's
+largest accepted value with the baseline's smallest against 2 ms, credited only with combined uncertainty
 at most 0.5 ms and the instrument gate credited. Host sleep and bounded-wait
 counts and durations are reported per pair. The matched pairs appear in
 `summary.json` under `pairs` and in a Matched pairs section of `summary.md`;
