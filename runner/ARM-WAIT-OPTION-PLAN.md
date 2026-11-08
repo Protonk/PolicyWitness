@@ -16,6 +16,12 @@ profile, or hide pre-application resources to make this alternative pass.
 
 ## Coordination with worker wait exploration
 
+The [acceptance review](../records/WORKER-WAIT-REVIEW.md) identifies timestamp
+reader version 10, its corrected response bounds and the retained pilot and
+comparisons. Use its complete-coverage and publication-bracket controls when
+freezing this plan's timestamp equipment; earlier nominal extrema do not
+establish the response bound.
+
 The worker exploration's ready builds and native trials have scheduling
 priority. Its order is quantitative pilot, branch 2 (host delay), branch 1
 (preparation), then branch 3 (scan work and separately selected hint tails).

@@ -305,6 +305,10 @@ PATCHES = [
     _swap(ACT, _PLAN, '            HostStamps.shared.planningStart(index)\n' + _PLAN
           + '            HostStamps.shared.phaseEvent(121, UInt64(probes.count))\n'),
     # AuthorityCustody: the nested recipient-acknowledgement wait.
+    _before(CUS, '        storeRelease(inbound, offset: PWAuthorityLayout.slotCommittedOffset, 1)\n',
+            '        HostStamps.shared.record(158, UInt32(phaseIndex), UInt64(delivery.index))\n'),
+    _after(CUS, '        storeRelease(inbound, offset: PWAuthorityLayout.slotCommittedOffset, 1)\n',
+           '        HostStamps.shared.record(159, UInt32(phaseIndex), UInt64(delivery.index))\n'),
     _swap(CUS, '        var clock = HostWaitClock(milliseconds: min(PWAuthorityLayout.exchangeWaitMs, waitAllowanceMs), pollNs: 1_000_000, calls: calls)\n',
           '        HostStamps.shared.record(155, UInt32(phaseIndex), UInt64(delivery.index))\n'
           '        var clock = HostWaitClock(milliseconds: min(PWAuthorityLayout.exchangeWaitMs, waitAllowanceMs), pollNs: 1_000_000, calls: calls, label: 6)\n'),

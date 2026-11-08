@@ -155,9 +155,12 @@ longer there) against the baseline's one sleep of 12.5 ms (10.0 to 12.5 ms).
   rapid four pairs improved by 17 to 22 ms and one pair was 65 ms slower on
   the candidate, a single-trial excursion outside both spreads that does not
   resolve in every pair.
-- Response: release-to-acknowledgement and activation response, candidate
-  upper bound minus baseline lower bound, 0.04 to 1.4 µs across every cell and
-  phase, against the 2 ms bound; all credited.
+- Response, superseding the original reader's nominal extrema: the
+  [version-10 reanalysis](WORKER-WAIT-REVIEW.md) expands both sides by their
+  uncertainty and checks complete coverage. Release bounds are 1.540 to
+  5.832 µs and activation bounds 1.622 to 3.165 µs; four additional inbound
+  bounds are 12.833 to 185.541 µs using conservative legacy commit brackets.
+  All 36 bounds are credited against 2 ms; the disposition remains accepted.
 - Ordinary whole request: improved in most pairs by 1 to 9 ms; O256 idle had
   two pairs 13 to 14 ms slower on the candidate against spreads of 12 and
   24 ms; no cell worsened in every pair.

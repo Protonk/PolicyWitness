@@ -1,5 +1,10 @@
 # Worker wait pilot
 
+The [acceptance review](WORKER-WAIT-REVIEW.md) re-reads this pilot with timestamp
+reader version 10 and identifies its retained archive. All 144 trials remain
+accepted. Original measurements, source identities and summaries are preserved;
+the corrected response interpretation is recorded separately.
+
 Shared quantitative pilot for the [worker wait exploration plan](../runner/WORKER-WAIT-EXPLORATION-PLAN.md)
 and the [ARM wait option plan](../runner/ARM-WAIT-OPTION-PLAN.md). It decomposes
 the interval during which a sandboxed worker waits for the host, on the

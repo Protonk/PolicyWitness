@@ -389,7 +389,7 @@ final class HostStamps {
     private func export(_ id: String, flushPair: (UInt64, UInt64?, UInt64)) -> String {
         var s = String()
         s.reserveCapacity(1 << 20)
-        s += "{\"version\":1,\"host_pid\":\(getpid()),\"specimen_id\":\(HostStamps.jsonString(id))"
+        s += "{\"version\":2,\"host_pid\":\(getpid()),\"specimen_id\":\(HostStamps.jsonString(id))"
         s += ",\"file_stem\":\(HostStamps.jsonString(HostStamps.fileStem(id)))"
         s += ",\"stamp_dir\":\(HostStamps.jsonString(PWW_STAMP_DIR))"
         s += ",\"timebase\":{\"numer\":\(numer),\"denom\":\(denom)}"

@@ -273,7 +273,12 @@ slower) and O64 idle, and none in every pair.
   publication to reap, fell in every pair (above), as did the whole request.
   No other quantity worsened beyond spread in every pair; the any-pair spread
   verdict fired in isolated pairs as the null control predicts.
-- Response: 32 bounds, 0.08 to 0.33 µs against the 2 ms limit, all credited.
+- Response, superseding the original reader's nominal extrema: the
+  [version-10 reanalysis](WORKER-WAIT-REVIEW.md) expands both sides by their
+  uncertainty and checks complete coverage. Release bounds are 1.413 to
+  1.874 µs and activation bounds 1.455 to 1.623 µs; four additional inbound
+  bounds are 6.164 to 104.955 µs using conservative legacy commit brackets.
+  All 36 bounds are credited against 2 ms; the combined acceptance stands.
 - O2P phase 1, carried from HOST-02 and not gated: arrival to observation
   and held total improved beyond uncertainty and beyond spread in every pair
   of both regimes in this run (idle 2021 to 2440 µs, rapid 2440 to 2445 µs).
@@ -292,8 +297,9 @@ the worker's actual exit instead of finding it already done after a longer
 detection sleep. The frozen rule sends that case to the owner, so neither
 candidate is integrated by this record. The coordinator's recommendation is to
 accept HOST-02 and HOST-03 together: the plan's tradeoff clause names total
-CPU, whole-request latency, sampled memory and peer interference, none of
-which worsened; the whole request improved in every A2 pair of both regimes;
+CPU, whole-request latency, sampled memory and peer interference. CPU and
+sampled memory were unobserved, and this comparison did not establish peer
+interference. The whole request improved in every A2 pair of both regimes;
 and the two flagged intervals lie inside an interval that shrank in every
 pair.
 

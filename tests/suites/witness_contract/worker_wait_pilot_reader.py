@@ -100,12 +100,16 @@ Interpretation rules, repeated in summary.json:
   baseline's spread plus the instrument uncertainty) are true once any pair
   is worse and false only when all required pairs are established and none
   is; otherwise a verdict is withheld. For release_to_ack, activation_response
-  and the custody rows' inbound_response (the host's transfer wait start,
-  right after it commits the delivery, to the recipient's acknowledgement
-  publication) the response bound is the candidate's largest accepted value
-  minus the baseline's smallest, against 2 ms; it is credited only with their
-  combined uncertainty at most 0.5 ms and the instrument gate credited. The
-  two apps are never pooled.
+  and the custody rows' inbound_response (commit publication to recipient
+  acknowledgement), the response bound is max(candidate value + uncertainty)
+  minus min(baseline value - uncertainty), against 2 ms. Every accepted trial
+  must supply each applicable response, with the declared matched-pair count,
+  each side's largest uncertainty summed at most 0.5 ms and the instrument gate
+  credited. Absent responses remain uncredited entries. Completed pilot trials
+  missing declared phases or deliveries are refused. Host export version 2
+  requires commit-begin/post-store stamps; version 1 uses the enclosing custody
+  service start to wait-start interval as a conservative publication bracket.
+  The two apps are never pooled.
 - Per actor, scan carries the worker's inbound scan counters (passes, visits
   and loads per caller role, and zero_visit_passes, histogram bucket 0, over
   both roles) beside inbound_count, the deliveries the trial layout addresses
@@ -146,7 +150,7 @@ import statistics
 import struct
 import sys
 
-READER_VERSION = 9
+READER_VERSION = 10
 HERE = Path(__file__).resolve().parent
 
 # Worker stamp page; mirrors tests/fixtures/worker_wait/pww_stamp_page.h.
@@ -190,7 +194,8 @@ HOST_EVENTS = {100: 'request_start', 101: 'worker_spawned', 102: 'ready_observed
                146: 'exit_requested', 147: 'worker_reaped', 148: 'worker_grace_begin', 149: 'activation_store_begin',
                150: 'activation_stored', 151: 'collection_start', 152: 'collection_end', 153: 'custody_service_start',
                154: 'custody_service_end', 155: 'transfer_wait_start', 156: 'transfer_wait_end',
-               157: 'worker_grace_finished', 160: 'setup_done', 161: 'schedule_done',
+               157: 'worker_grace_finished', 158: 'inbound_commit_begin', 159: 'inbound_committed',
+               160: 'setup_done', 161: 'schedule_done',
                170: 'stamp_page_copied', 171: 'flush_begin', 180: 'host_sleep_begin', 181: 'host_sleep_end',
                182: 'wait_outcome'}
 H = {name: code for code, name in HOST_EVENTS.items()}
@@ -210,7 +215,7 @@ SAMPLED_PERIOD = '(accepting pass sample - first pass sample) / (passes - 1)'
 UPPER_PERIOD = 'upper bound: preceding stamp to answer / passes'
 RECIPIENT_NOTE = 'host interval, not a detection; bimodal by recipient state; see the split sibling rows'
 # A record read immediately before a host store, paired with the record after it.
-STORE_BEGIN = {139: 141, 149: 150}
+STORE_BEGIN = {139: 141, 149: 150, 158: 159}
 DROPPED_KINDS = ('events', 'register_samples', 'sleeps', 'custody_passes', 'worker_pages')
 SLEEP_KEYS = {'0': 'ready_byte_wait', '1': 'ordinary_sentinel', '2': 'actor_setup', '3': 'actor_execution',
               '4': 'validator_grace', '5': 'worker_grace', '6': 'custody_recipient', '7': 'termination_gate'}
@@ -379,7 +384,7 @@ def check_stamps(doc, trial):
     keys = {'version', 'host_pid', 'specimen_id', 'timebase', 'flavour', 'events', 'registers', 'sleeps', 'worker_pages', 'dropped'}
     if not isinstance(doc, dict) or not keys <= set(doc):
         return ['stamps_malformed']
-    if doc['version'] != 1: problems.append('stamps_wrong_version')
+    if doc['version'] not in (1, 2): problems.append('stamps_wrong_version')
     if doc['specimen_id'] != trial['specimen_id']: problems.append('stamps_specimen_mismatch')
     tb = doc['timebase']
     if not (isinstance(tb, dict) and _int(tb.get('numer')) and _int(tb.get('denom')) and tb['numer'] and tb['denom']):
@@ -1024,9 +1029,23 @@ def custody(doc, pages, layout, interval, lo, hi, pairs, g):
         acked = published(ev, index_of(ev, W['inbound_acknowledged'], phase=target['slot']), process, WORKER_EVENTS, tb)
         row['wait_start_to_inbound_pass_sample'] = interval(waiting, sample)
         row['inbound_pass_sample_to_ack'] = interval(sample, acked)
-        # The inbound-delivery response: the host's wait start follows its commit store; the worker's
-        # acknowledgement publication ends it. Bounded like release_to_ack and activation_response.
-        row['inbound_response'] = interval(waiting, acked)
+        # Publication is between the store-begin and post-store stamps. Older exports have neither:
+        # the enclosing custody service began before the commit and the wait start follows it.
+        # Keep that wider bracket, including any scheduling delay before the wait-start stamp.
+        commits = [e for e in events if e[0] in (H['inbound_commit_begin'], H['inbound_committed'])
+                   and e[1] == g and e[2] == delivery]
+        if not commits and doc['version'] == 1:
+            low = max((e[3] for e in service), default=None)
+            high, source = start[3], 'custody_service_start_to_wait_start'
+        elif (len(commits) == 2 and [e[0] for e in commits] == [H['inbound_commit_begin'], H['inbound_committed']]
+              and commits[0][3] <= commits[1][3] <= start[3]):
+            low, high, source = commits[0][3], commits[1][3], 'commit_store'
+        else:
+            low, high, source = None, None, 'invalid_commit_bracket'
+        commit = (dict(raw=high, lower_raw=low, process='host', stamp='inbound_committed',
+                       bracket_ns=ns(high, tb) - ns(low, tb), bracket_from=source)
+                  if low is not None and high is not None else None)
+        row['inbound_response'] = interval(commit, acked, missing='inbound_commit_bracket_unobserved', commit_bracket_source=source)
         observed = polled(row, doc, interval, H['transfer_wait_end'], delivery, acked,
                           ('inbound_ack_to_host_observed', 'inbound_ack_first_check_positive'))
         inversion(pairs, f'g{g}:d{delivery}:inbound_ack', raw_of(acked), observed)
@@ -1290,6 +1309,20 @@ def evaluate_stamps(bundle, row, calibration):
     if inverted:
         # Counted inversions widen the alignment term of every cross-process interval.
         row['phases'], row['done'], row['actors'] = build(Interval(tb, calibration, cost, max(inverted), sleeps=sleeps), [])
+    # These pilot cells validate completed requests. Require their declared phases and deliveries,
+    # rather than treating whatever stamps survived as the complete set of response obligations.
+    expected = [f'p{p}.{name}' for p in range(len(trial['layout']['phases']))
+                for name in (('release_to_ack', 'activation_response') if trial['form'] == 'actor' else ('release_to_ack',))]
+    delivered = []
+    for p in row['phases']:
+        for c, transfer in enumerate(p.get('custody') or []):
+            delivered.append(transfer['delivery'])
+            expected.append(f"p{p['phase']}.custody{c}.inbound_response")
+    if sorted(delivered) != sorted(d['delivery'] for d in trial['layout'].get('deliveries', [])):
+        problems.append('response_delivery_coverage')
+    row['expected_responses'] = expected
+    observed = pair_components(row)
+    problems.extend('response_endpoint_missing:' + name for name in expected if name not in observed)
     for p in row['phases']:
         if p.get('eligible_planned') is not None and p['eligible_planned'] != p['expected_eligible']:
             problems.append('eligible_count_mismatch')
@@ -1636,22 +1669,29 @@ def pair_series(pairs, values, required, accepted, instrument=True):
     return out
 
 
-def response_bounds(accepted, gate_credited):
-    """Candidate upper bound minus baseline lower bound per response component, over each side's accepted trials."""
+def response_bounds(accepted, gate_credited, required, paired_count):
+    """Uncertainty-expanded extrema, with complete response coverage and the declared matched-pair count."""
     sides = {app: [pair_components(r) for r in accepted.get(app, [])] for app in PAIR_APPS}
     present = lambda app: {n for values in sides[app] for n in values if n.rpartition('.')[2] in RESPONSE_COMPONENTS}
     out = {}
-    for name in sorted(present('candidate') & present('baseline')):
-        upper = max((v[name] for v in sides['candidate'] if name in v), key=lambda item: item[0])
-        lower = min((v[name] for v in sides['baseline'] if name in v), key=lambda item: item[0])
-        bound = upper[0] - lower[0]
-        combined = None if upper[1] is None or lower[1] is None else upper[1] + lower[1]
+    expected = {name for rows in accepted.values() for row in rows for name in row.get('expected_responses', [])}
+    for name in sorted(expected | present('candidate') | present('baseline')):
+        values = {app: [v[name] for v in sides[app] if name in v] for app in PAIR_APPS}
+        counts = {app: len(values[app]) for app in PAIR_APPS}
+        complete = paired_count >= required and all(counts[app] == len(sides[app]) >= required for app in PAIR_APPS)
+        known = all(values[app] and all(v[1] is not None for v in values[app]) for app in PAIR_APPS)
+        upper = max((v[0] + v[1] for v in values['candidate']), default=None) if known else None
+        lower = min((v[0] - v[1] for v in values['baseline']), default=None) if known else None
+        bound = upper - lower if known else None
+        # All observations must resolve the bound, including ones that are not the nominal extrema.
+        combined = sum(max(v[1] for v in values[app]) for app in PAIR_APPS) if known else None
         resolved = combined is not None and combined <= RESPONSE_UNCERTAINTY_GATE_NS
-        out[name] = dict(candidate_upper_ns=upper[0], baseline_lower_ns=lower[0], bound_ns=bound, limit_ns=RESPONSE_LIMIT_NS,
-                         within_limit=bound <= RESPONSE_LIMIT_NS, combined_uncertainty_ns=combined,
+        within = bound is not None and bound <= RESPONSE_LIMIT_NS
+        out[name] = dict(candidate_upper_ns=upper, baseline_lower_ns=lower, bound_ns=bound, limit_ns=RESPONSE_LIMIT_NS,
+                         within_limit=within, combined_uncertainty_ns=combined,
                          uncertainty_at_most_0_5_ms=resolved, instrument_gate_credited=gate_credited,
-                         credited=bound <= RESPONSE_LIMIT_NS and resolved and gate_credited,
-                         trials={app: sum(name in v for v in sides[app]) for app in PAIR_APPS})
+                         credited=within and resolved and gate_credited and complete,
+                         coverage_complete=complete, pairs_required=required, paired_trials=paired_count, trials=counts)
     return out
 
 
@@ -1815,7 +1855,7 @@ def matched_pairs(rows, comparison, gate_credited):
                             components=pair_series(pairs, pair_components, required, members),
                             waits=pair_series(pairs, pair_waits, required, members),
                             whole_request=whole, grace=grace_pairs(pairs), scan=scan_pairs(pairs, required),
-                            response=response_bounds(members, gate_credited), host_sleeps=host_sleep_pairs(pairs)))
+                            response=response_bounds(members, gate_credited, required, len(pairs)), host_sleeps=host_sleep_pairs(pairs)))
     return dict(rule=comparison.get('pairing_rule'), pairs_required=required, difference='baseline minus candidate',
                 entries=entries, unpaired=unpaired)
 
@@ -1954,9 +1994,9 @@ def pairs_markdown(pairs):
              'resolved regression rather than one noisy pair; otherwise '
              'it is withheld. *_to_observation rows run from publication to the host\'s first positive sample in either form, '
              'shown per pair as baseline/candidate (first check or detected). Worker passes are exact counts. Whole request has '
-             'no instrument uncertainty (n/a) and only spread verdicts. A response bound is the candidate\'s largest value minus the '
-             'baseline\'s smallest, credited only within 2 ms with combined uncertainty at most 0.5 ms and the instrument gate '
-             'credited. The apps are never pooled.', '']
+             'no instrument uncertainty (n/a) and only spread verdicts. A response bound is max(candidate value + uncertainty) minus '
+             'min(baseline value - uncertainty), credited only within 2 ms with complete endpoint coverage, the required matched pairs, '
+             'each side\'s maximum uncertainty summed at most 0.5 ms and the instrument gate credited. The apps are never pooled.', '']
     for entry in pairs['entries']:
         unpaired = [u for u in pairs['unpaired'] if (u['cell'], u['regime']) == (entry['cell'], entry['regime'])]
         lines += [f"### {entry['cell']} {entry['regime']} ({entry['power_source']}, lowpowermode {entry['lowpowermode']})", '',
@@ -2010,12 +2050,12 @@ def pairs_markdown(pairs):
                     f"{r['inbound_count']['candidate']}; acknowledged slots {len(r['acknowledged_slots']['baseline'])} / "
                     f"{len(r['acknowledged_slots']['candidate'])})" for r in scan['refusals']) + '.', '']
         if entry['response']:
-            lines += ['| Response | candidate upper | baseline lower | bound | within 2 ms | combined uncertainty | credited |',
-                      '| --- | --- | --- | --- | --- | --- | --- |']
+            lines += ['| Response | candidate upper | baseline lower | bound | within 2 ms | combined uncertainty | credited | complete coverage |',
+                      '| --- | --- | --- | --- | --- | --- | --- | --- |']
             for name, value in entry['response'].items():
                 lines.append(f"| {name} | {us(value['candidate_upper_ns'])} | {us(value['baseline_lower_ns'])} | {us(value['bound_ns'])} "
                              f"| {'yes' if value['within_limit'] else 'no'} | {us(value['combined_uncertainty_ns'])} "
-                             f"| {'yes' if value['credited'] else 'no'} |")
+                             f"| {'yes' if value['credited'] else 'no'} | {'yes' if value['coverage_complete'] else 'no'} |")
             lines.append('')
         if entry['host_sleeps']:
             lines += ['| Host sleep or bounded wait | per pair: baseline count, total -> candidate count, total |', '| --- | --- |']

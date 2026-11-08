@@ -181,8 +181,12 @@ request start the recorder makes 16 consecutive records through the call sites'
 own `HostStamps.shared.record` expression, copies their raws to
 `stamp_cost.raws` in `stamps.json` and withdraws them from the timeline;
 adjacent differences give the per-record cost in this `-Onone` build, in situ.
-The release and activation stores each have a record immediately before them
-(139 and 149) as well as after (141 and 150). The first 64 sleeps of each wait
+The release, activation and inbound commit stores each have a record immediately
+before them (139, 149 and 158) as well as after (141, 150 and 159). Host export
+version 2 requires the inbound pair, keyed by phase and delivery. The reader
+also accepts version 1 exports with a wider conservative commit bracket from
+custody-service start to transfer-wait start; the latter alone cannot bound
+publication time. The first 64 sleeps of each wait
 key are also appended as stamped begin and end events (180 and 181, phase = key,
 aux = requested nanoseconds), so a worker publication can be placed in the exact
 host sleep that contained it; later sleeps update only the registers. A

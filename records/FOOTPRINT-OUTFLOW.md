@@ -201,8 +201,11 @@ The initial native runs are `worker-wait-native-02`
 `worker-wait-mach-final` (`20261107T151818Z_a72ee735`). Their raw results,
 source copies, disassembly, app evidence, power, native positive controls,
 log status, exit/reap observations and original run identities are preserved
-with a hash index in `worker-wait-evidence/` under the retained
-`tests/out/runs/footprint-opt-targeted-final-02` run. This evidence is gitignored
+with a hash index in `worker-wait-evidence/` in the identified copy of
+`footprint-opt-targeted-final-02`, now archived under
+`tests/out/runs/worker-wait-review-final-01/worker-wait-review/archives/`.
+The [acceptance review](WORKER-WAIT-REVIEW.md) identifies the archive and its
+file hashes. This evidence is gitignored
 and available only in the local checkout. The early `worker-wait-native-01`
 hardware-query refusal is preserved separately; its unsandboxed retry passed.
 The unchanged app's sandboxed signature-check failure likewise passed the
@@ -215,6 +218,13 @@ of a preceding problematic wait remains unresolved and is not equated with the
 separately evidenced CLOCK_MONOTONIC failure.
 
 ### Dispositions from the worker wait exploration
+
+The [acceptance review](WORKER-WAIT-REVIEW.md) reaffirms the dispositions below
+with timestamp reader version 10: uncertainty-expanded response extrema,
+complete response coverage, and conservative publication brackets for legacy
+inbound commits. All corrected response bounds pass; the largest is 185.541 µs
+against 2 ms. It also identifies the retained raw observations and replacement
+reader controls. The original summaries remain preserved separately.
 
 The [worker wait pilot](WORKER-WAIT-PILOT.md) decomposed held phases on the
 production path with continuous-clock stamps in disposable instrumented hosts

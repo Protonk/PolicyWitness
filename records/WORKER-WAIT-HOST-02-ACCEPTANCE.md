@@ -182,9 +182,13 @@ property of the specimen rather than of the host.
   unchanged: differences of about 0 or ±2.5 ms in every ordinary cell, the
   baseline's first-sample-or-one-sleep detection on both sides. Single-phase
   cells re-sample nothing, since their only release is the last.
-- Response: release-to-acknowledgement and activation response, candidate
-  upper bound minus baseline lower bound, 0.1 to 5.1 µs across every cell and
-  phase against the 2 ms bound; all 32 bounds credited.
+- Response, superseding the original reader's nominal extrema: the
+  [version-10 reanalysis](WORKER-WAIT-REVIEW.md) expands both sides by their
+  uncertainty and checks complete coverage. Release bounds are 6.289 to
+  11.290 µs and activation bounds 6.290 to 8.331 µs; four additional inbound
+  bounds are 12.707 to 123.123 µs using conservative legacy commit brackets.
+  All 36 bounds are credited against 2 ms. The whole-request regression and
+  disposition requiring HOST-03 are unchanged.
 
 ### Added host busy time
 

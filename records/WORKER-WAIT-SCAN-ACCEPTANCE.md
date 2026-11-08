@@ -84,7 +84,7 @@ calibration, warm runs and the end reserve; HOST-03's 120 trials used 74 s).
 | --- | --- |
 | Less repeated work in the inbound scan | A scan that starts at index 0 makes at least n·P − n(n−1)/2 visits, and as many loads, over P passes with n inbound slots (the full-scan floor), so visits per pass alone follow the pass count. In every matched pair of A2 and A2D in both regimes, the subject actor's visits and loads in the parked-activation scan (`w1.scan_visits_per_pass_activation`, `w1.scan_loads_per_pass_activation`) must be `lower_in_every_pair` as the reader defines it: the baseline's count at or above its own floor, the candidate's below its own floor, and the candidate's ratio strictly lower by exact arithmetic; and in every pair the candidate trial must record passes with zero visits (`w1.scan_zero_visit_passes`, the activation role since the subject makes no exchange pass; above 0 on the candidate side and 0 on the baseline side, read per pair). The exchange-wait series are reported and withheld where either side made no exchange pass. The ordinary cells have no scan; the issuer actor, with no inbound slots, is a no-benefit control whose series show zero visits and zero loads on both sides (`not_lower` with equal zero counts) and whose zero-visit passes are all of its passes on both sides. |
 | Unchanged behavior | Decided by the verification runs below: the extended `authority_binding` scenarios (empty, single and maximum slot sets committed at once and one at a time, accepted and rejected prefix, early hole with late commit, later eligible slots, a foreign acknowledgement that must not advance the prefix, re-preparation) pass against the candidate with exact pass, visit, load, first-visit, acknowledgement and prefix counts; the four registered cursor mutations (scan from zero, advance past a hole, prefix from shared words, missing reset) fail their designated observations in `runner_unit/actor_handoff_mutations`; and `extension_boundaries`, `actor_compositions`, `order_barrier_mutations` and `actor_timing_qualification` pass. Decided by the comparison: every trial delivers every transfer (the driver refuses a trial otherwise, so an accepted run establishes it), and both sides' acknowledged slots equal the layout in every pair (the reader's `scan_inbound_acknowledgement_mismatch` refusal, which withholds the series, does not fire). |
-| Response | The two wait roles the scan runs in are the parked activation wait and the exchange wait, so the bounds are `activation_response` (the host's activation store to the worker's activation publication) and, new in reader version 9 for this record, the custody rows' `inbound_response` (the host's transfer wait start, right after its commit, to the recipient's acknowledgement publication), each the candidate's upper bound against the baseline's lower bound within 2 ms and credited, as is `release_to_ack`. In every cell the subject acknowledges while parked, so `inbound_response` is observed in the parked-activation role; no comparison cell exercises the exchange call site with inbound slots (it calls the same function, which the scenarios exercise directly). |
+| Response | The two wait roles the scan runs in are the parked activation wait and the exchange wait, so the bounds are `activation_response` (the host's activation store to the worker's activation publication) and, the custody rows' `inbound_response` (commit publication to the recipient's acknowledgement), each the candidate's uncertainty-expanded upper bound against the baseline's uncertainty-expanded lower bound within 2 ms and credited, as is `release_to_ack`. The [acceptance review](WORKER-WAIT-REVIEW.md) corrects version 9's post-commit wait-start endpoint with a conservative commit bracket and requires complete response coverage. In every cell the subject acknowledges while parked, so `inbound_response` is observed in the parked-activation role; no comparison cell exercises the exchange call site with inbound slots (it calls the same function, which the scenarios exercise directly). |
 | No resolved regression | No quantity, in any cell, worsens beyond spread in every pair, apart from one named in advance as changed by construction: the subject's parked-activation pass counts (`pN.activation_wait` passes for the subject's visits in A2 and A2D) rise because passes that skip the prefix are shorter while the parked time is set by the other actor's phases (the dry run showed 11 to 14 percent more passes in A2D); they are reported, not gated. Held intervals, whole request, response and every other quantity stay under the clause. A resolved increase in whole request needs a written tradeoff decision before acceptance; total CPU and sampled memory are unobserved. |
 | State and bookkeeping | Reported, not gated: the cursor's bytes per worker, one local load per pass and one advance loop per acknowledgement. No CPU or energy claim is made from the counts. |
 
@@ -265,10 +265,13 @@ record said they would.
 
 ### Response, regression and the rest
 
-- Response: 172 bounds, all credited. `release_to_ack` 0.13 to 0.33 µs (26
-  bounds), `activation_response` 0.04 to 7.0 µs (14 bounds, the largest in
-  A2D rapid phase 1), `inbound_response` −0.04 to 2.96 µs (132 bounds, 64 per
-  A2D group and 2 per A2 group), against the 2 ms limit.
+- Response, superseding the original reader's nominal extrema and wait-start
+  endpoint: the [version-10 reanalysis](WORKER-WAIT-REVIEW.md) expands bounds
+  by uncertainty, checks complete coverage, and brackets legacy commits from
+  custody-service start to wait start. All 172 bounds remain credited:
+  `release_to_ack` 2.207 to 2.457 µs (26 bounds), `activation_response` 2.124
+  to 9.082 µs (14), `inbound_response` 8.874 to 108.791 µs (132), against
+  the 2 ms limit. The accepted scan-work claim is unchanged.
 - `worsens_beyond_spread_in_every_pair` holds for exactly two series, the
   subject's `p1.activation_wait` pass count in A2D idle (389,174 to 420,976
   against 377,433 to 437,119) and rapid (374,755 to 438,191 against 371,255 to
@@ -320,7 +323,11 @@ these clarifications bind the comparison:
 
 - Response bounds: `release_to_ack`, `activation_response` and
   `inbound_response` are all gated; "every response bound is credited" means
-  every bound the reader emits for the run.
+  every applicable bound across all declared trials and matched pairs. The
+  [acceptance review](WORKER-WAIT-REVIEW.md) replaces the earlier "every bound
+  emitted" interpretation: absent endpoints must withhold credit, and inbound
+  publication must be bracketed at the commit, including the conservative
+  legacy bracket used for this run.
 - Precedence of the decision bullets: a trial refused for undelivered
   transfers, or a pair refused as `scan_inbound_acknowledgement_mismatch`, is
   a behavioral failure first: the run does not decide and the refusal is

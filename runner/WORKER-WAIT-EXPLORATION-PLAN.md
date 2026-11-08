@@ -10,6 +10,10 @@ The separate [ARM option plan](ARM-WAIT-OPTION-PLAN.md) investigates a new waiti
 mechanism. Neither plan depends on the other succeeding. Keep their candidate
 builds and comparisons separate until each accepted change has its own evidence.
 
+The [acceptance review](../records/WORKER-WAIT-REVIEW.md) reaffirms the completed
+branches with timestamp reader version 10 and identifies retained evidence.
+Its corrected response bounds supersede earlier nominal-extrema credits.
+
 ## Order of work
 
 This plan's ready builds and native trials take priority over the ARM plan's;
@@ -414,7 +418,11 @@ is insufficient.
 
 For every changed wait role, additional worst-observed release, activation,
 cancellation, cutoff and inbound-delivery response, as applicable, must be at
-most 2 ms: compare candidate upper bounds with baseline lower bounds. This is
+most 2 ms: compare `max(candidate value + uncertainty)` with
+`min(baseline value - uncertainty)`. Require each applicable response on every
+accepted trial and the declared matched-pair count; absent endpoints cannot
+remove an obligation. Inbound response begins at the bracketed commit store.
+This is
 a finite-observation acceptance bound, not a real-time promise. Existing timing
 allowances and correctness checks remain mandatory. Exceeding the derived
 cache bound rejects the implementation; a corrected bound needs renewed review

@@ -702,7 +702,8 @@ def check_actor(row):
         assert t['inbound_pass_sample_to_ack']['below_instrument_floor'] is True
         # The inbound-delivery response spans the wait start to the acknowledgement: the two parts above.
         assert t['inbound_response']['ns'] == 5_000 + 15_000, t['inbound_response']
-        assert t['inbound_response']['endpoints'][0]['stamp'] == 'transfer_wait_start' and t['inbound_response']['endpoints'][1]['stamp'] == 'inbound_acknowledged', t['inbound_response']
+        assert t['inbound_response']['endpoints'][0] == endpoint('host', 'inbound_committed', 'custody_service_start_to_wait_start', 10_000), t['inbound_response']
+        assert t['inbound_response']['endpoints'][1]['stamp'] == 'inbound_acknowledged', t['inbound_response']
     assert transfers[0]['inbound_ack_to_host_observed']['detection_bracket_ns'] == 985_000 and 'inbound_ack_first_check_positive' not in transfers[0]
     observed = transfers[1]['inbound_ack_first_check_positive']
     assert (observed['during_sleep_key'], observed['during_sleep_scope'], observed['during_sleep_span']) == (
@@ -1089,6 +1090,93 @@ def pairs_of(rows, required=3, gate=True):
     return pairs
 
 
+def response_repair_controls(base):
+    """Independent boundary arithmetic, required coverage, and publication brackets."""
+    def response(rows, required=3):
+        return pairs_of(rows, required=required)['entries'][0]['response']['p0.release_to_ack']
+
+    rows = [pair_row(base, app, i, {'release_to_ack': (100_000 if app == 'baseline' else 2_000_000, 200_000)})
+            for i in range(3) for app in ('baseline', 'candidate')]
+    value = response(rows)
+    assert (value['candidate_upper_ns'], value['baseline_lower_ns'], value['bound_ns']) == (2_200_000, -100_000, 2_300_000)
+    assert value['uncertainty_at_most_0_5_ms'] and not value['credited'], value
+    for delta, credited in ((-300_001, True), (-300_000, True), (-299_999, False)):
+        boundary = copy.deepcopy(rows)
+        for row in boundary:
+            if row['app'] == 'candidate': row['phases'][0]['release_to_ack']['ns'] += delta
+        value = response(boundary)
+        assert (value['bound_ns'], value['credited']) == (2_300_000 + delta, credited), value
+
+    rows = [pair_row(base, app, i, {'release_to_ack': ((0, 10_000) if app == 'baseline' else (2_000_000, 10_000))})
+            for i in range(3) for app in ('baseline', 'candidate')]
+    rows[3]['phases'][0]['release_to_ack'].update(ns=1_900_000, uncertainty_ns=200_000)
+    value = response(rows)
+    assert (value['candidate_upper_ns'], value['bound_ns']) == (2_100_000, 2_110_000), value
+    # The larger uncertainty may belong to neither nominal extreme. Unknown uncertainty cannot be dropped.
+    rows[3]['phases'][0]['release_to_ack'].update(ns=1, uncertainty_ns=600_000)
+    assert not response(rows)['uncertainty_at_most_0_5_ms']
+    rows[3]['phases'][0]['release_to_ack']['uncertainty_ns'] = None
+    assert response(rows)['bound_ns'] is None and not response(rows)['credited']
+
+    rows = improving_rows(base)
+    assert not response(rows, required=5)['credited']
+    missing = copy.deepcopy(rows)
+    missing[1]['phases'][0].pop('release_to_ack')
+    assert not response(missing)['coverage_complete'] and not response(missing)['credited']
+    for row in rows: row['phases'][0].pop('release_to_ack')
+    assert response(rows)['bound_ns'] is None and not response(rows)['credited']
+
+    # Missing all transfer starts used to silently remove every inbound response obligation.
+    missing = actor_bundle()
+    missing['stamps']['events'] = [e for e in missing['stamps']['events'] if e[0] != 155]
+    value = reader.evaluate_bundle(missing, CALIBRATION)
+    assert value['status'] == 'refused' and 'response_delivery_coverage' in value['problems'], value['problems']
+
+    # A version-2 recorder brackets the commit separately from the later wait-start stamp.
+    bracketed = actor_bundle()
+    bracketed['stamps']['version'] = 2
+    events = []
+    for e in bracketed['stamps']['events']:
+        if e[0] == 155:
+            events += [[158, e[1], e[2], e[3] - tk(6)], [159, e[1], e[2], e[3] - tk(4)]]
+        events.append(e)
+    bracketed['stamps']['events'] = events
+    value = reader.evaluate_bundle(bracketed, CALIBRATION)
+    assert value['status'] == 'accepted', value['problems']
+    for p in value['phases']:
+        for c in p['custody']:
+            response_value = c['inbound_response']
+            assert response_value['ns'] == 24_000 and response_value['uncertainty_ns'] == 17_100, response_value
+            assert response_value['commit_bracket_source'] == 'commit_store'
+    missing = copy.deepcopy(bracketed)
+    missing['stamps']['events'] = [e for e in missing['stamps']['events'] if e[0] not in (158, 159)]
+    value = reader.evaluate_bundle(missing, CALIBRATION)
+    assert value['status'] == 'refused' and any(p.startswith('response_endpoint_missing:') for p in value['problems']), value
+    # Old exports retain the whole pre-commit service to post-commit wait bracket, never a zero-width start.
+    value = reader.evaluate_bundle(actor_bundle(), CALIBRATION)
+    for p in value['phases']:
+        for c in p['custody']:
+            assert c['inbound_response']['uncertainty_ns'] == 25_100, c['inbound_response']
+    delayed = actor_bundle()
+    for e in delayed['stamps']['events']:
+        if e[0] == 155: e[3] += tk(10)
+    value = reader.evaluate_bundle(delayed, CALIBRATION)
+    assert value['status'] == 'accepted', value['problems']
+    for p in value['phases']:
+        for c in p['custody']:
+            v = c['inbound_response']
+            assert (v['ns'], v['uncertainty_ns'], v['ns'] + v['uncertainty_ns']) == (10_000, 35_100, 45_100), v
+    missing = actor_bundle()
+    missing['stamps']['events'] = [e for e in missing['stamps']['events'] if e[0] != 153]
+    value = reader.evaluate_bundle(missing, CALIBRATION)
+    assert value['status'] == 'refused' and any(p.startswith('response_endpoint_missing:') for p in value['problems']), value
+    return ['uncertainty-expanded response extrema and exact 2 ms boundary',
+            'response uncertainty on every trial, including non-extremal and unknown terms',
+            'missing response endpoints and insufficient matched pairs withhold credit',
+            'missing all inbound wait starts refuses the trial',
+            'version-2 commit brackets required; legacy service bracket remains conservative even with a later wait stamp']
+
+
 def outcomes(series):
     return [(r['index'], r['difference'], r['combined_uncertainty'], r['outcome']) for r in series['pairs']]
 
@@ -1125,8 +1213,9 @@ def comparison_controls(base):
     assert outcomes(whole) == [(i, 6_000_000, 0, 'not_applicable') for i in range(3)], whole
     assert whole['direction'] == dict(faster=3, slower=0, equal=0, rule=DIRECTION_RULE), whole['direction']
     assert entry['response'] == {'p0.release_to_ack': dict(
-        candidate_upper_ns=6000, baseline_lower_ns=6000, bound_ns=0, limit_ns=2_000_000, within_limit=True, combined_uncertainty_ns=6200,
-        uncertainty_at_most_0_5_ms=True, instrument_gate_credited=True, credited=True, trials=dict(baseline=3, candidate=3))}, entry['response']
+        candidate_upper_ns=9100, baseline_lower_ns=2900, bound_ns=6200, limit_ns=2_000_000, within_limit=True, combined_uncertainty_ns=6200,
+        uncertainty_at_most_0_5_ms=True, instrument_gate_credited=True, credited=True, coverage_complete=True,
+        pairs_required=3, paired_trials=3, trials=dict(baseline=3, candidate=3))}, entry['response']
     assert entry['host_sleeps']['ready_byte_wait'] == [dict(index=i, baseline=dict(count=1, sum_ns=12_500_000),
                                                             candidate=dict(count=2, sum_ns=3_000_000)) for i in range(3)]
     assert entry['host_sleeps']['ordinary_sentinel'][0]['candidate'] == dict(count=2, sum_ns=4_350_000)
@@ -1201,12 +1290,12 @@ def comparison_controls(base):
     slow = {0: {'release_to_ack': (2_506_000, 3100)}}
     (entry,) = pairs_of(improving_rows(base, candidate_edits=slow))['entries']
     response = entry['response']['p0.release_to_ack']
-    assert (response['bound_ns'], response['within_limit'], response['credited']) == (2_500_000, False, False), response
+    assert (response['bound_ns'], response['within_limit'], response['credited']) == (2_506_200, False, False), response
     wide = {0: {'release_to_ack': (1_006_000, 600_000)}}
     (entry,) = pairs_of(improving_rows(base, candidate_edits=wide))['entries']
     response = entry['response']['p0.release_to_ack']
     assert (response['bound_ns'], response['within_limit'], response['combined_uncertainty_ns'], response['uncertainty_at_most_0_5_ms'],
-            response['credited']) == (1_000_000, True, 603_100, False, False), response
+            response['credited']) == (1_603_100, True, 603_100, False, False), response
     (entry,) = pairs_of(improving_rows(base), gate=False)['entries']
     response = entry['response']['p0.release_to_ack']
     assert (response['within_limit'], response['instrument_gate_credited'], response['credited']) == (True, False, False), response
@@ -1230,7 +1319,8 @@ def comparison_controls(base):
     assert battery['response']['p0.release_to_ack']['trials'] == dict(baseline=5, candidate=3)
     assert battery['whole_request']['spread_ns'] == dict(baseline=dict(ns=2_000_000, trials=5), candidate=dict(ns=2_000_000, trials=3))
     mains = next(e for e in found['entries'] if e['power_source'] == 'AC Power')
-    assert mains['pairs'] == [] and mains['components'] == {} and mains['response'] == {}, mains
+    assert mains['pairs'] == [] and mains['components'] == {}, mains
+    assert mains['response']['p0.release_to_ack']['bound_ns'] is None and not mains['response']['p0.release_to_ack']['credited'], mains
     names.append('unpaired trials (one side excluded, conditions differ) listed and never paired')
 
     # Identical receipts on both sides: every difference is zero, so no improvement and no worsening.
@@ -1275,21 +1365,29 @@ def drop_subject_ack(slot):
     return lambda actor, events: [e for e in events if not (actor == 1 and e[0] == 10 and e[1] == slot)]
 
 
-def scan_row(app, index, subject, inbound=2, worker_edit=None):
-    """An evaluated A2 row with the given subject scan counters; inbound changes the subject's layout deliveries."""
+def scan_row(app, index, subject, worker_edit=None):
+    """An evaluated A2 row; a removed acknowledgement now refuses the complete trial."""
     bundle = actor_bundle(scan={0: ISSUER_SCAN, 1: subject}, worker_edit=worker_edit)
     bundle['trial'].update(app=app, index=index)
-    bundle['trial']['layout']['deliveries'] = [dict(delivery=d, source=0, recipient=1, slot=d) for d in range(inbound)]
     row = reader.evaluate_bundle(bundle, CALIBRATION)
-    assert row['status'] == 'accepted', row['problems']
+    if worker_edit:
+        assert row['status'] == 'refused' and any(p.startswith('response_endpoint_missing:') for p in row['problems']), row['problems']
+    else:
+        assert row['status'] == 'accepted', row['problems']
     return dict(row, dir=f'constructed/{app}/A2/rapid/{index}')
 
 
 def scan_rows(candidates, baseline=BASELINE_SCAN, inbound=None, edits=None):
-    """Baseline and candidate rows per index; candidates lists each index's candidate subject counters, inbound and
-    edits an index's candidate layout deliveries and worker edit."""
-    return [row for i, scan in enumerate(candidates)
-            for row in (scan_row('baseline', i, baseline), scan_row('candidate', i, scan, (inbound or {}).get(i, 2), (edits or {}).get(i)))]
+    """Constructed inputs to the scan comparison, including faults already refused by full-trial coverage checks.
+    Mutate the decoded scan records here to independently exercise the comparison's own refusals."""
+    rows = []
+    for i, scan in enumerate(candidates):
+        candidate = scan_row('candidate', i, scan)
+        if i in (inbound or {}):
+            candidate['scan']['1'].update(inbound_count=inbound[i], inbound_observed=False)
+        candidate['scan']['1'].update((edits or {}).get(i, {}))
+        rows += [scan_row('baseline', i, baseline), candidate]
+    return rows
 
 
 def scan_side(count, passes, floor):
@@ -1402,7 +1500,7 @@ def scan_controls():
             '(inbound_count 2 / 3; acknowledged slots 2 / 2).') in text and 'r2 799/400 -> 140/400 (refused)' in text, text
     names.append('a scan pair whose subject inbound_count differs between the sides: refused with the acknowledgement mismatch it implies')
 
-    (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN] * 3, edits={1: drop_subject_ack(1)}))['entries']
+    (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN] * 3, edits={1: dict(acknowledged_slots=[0], inbound_observed=False)}))['entries']
     scan = entry['scan']
     assert scan['refusals'] == [dict(index=1, actor=1, problems=[reader.SCAN_ACK_REFUSAL], inbound_count=dict(baseline=2, candidate=2),
                                      acknowledged_slots=dict(baseline=[0, 1], candidate=[0]))], scan['refusals']
@@ -1490,7 +1588,7 @@ def comparison_round_trip(out):
                    "candidate r2 excluded (not accepted on both sides) ['observer_overlap']",
                    f'| p0.arrival_to_observation | no / no | no / no / no | 0.0 / 0.0 | r0 0.0 ± {combined[0] / 1000:.1f} (detected/detected); '
                    f'r1 0.0 ± {combined[1] / 1000:.1f} (detected/detected) |',
-                   '| p0.release_wait | no / no | no / no / no | 0 / 0 | r0 0 ± 0; r1 0 ± 0 |', 'Whole request (spread baseline / candidate 0.00 ms / 0.00 ms): improves n/a / no; worsens n/a / no / no; r0 0.00 ms; r1 0.00 ms.', '| p0.release_to_ack | 6.0 | 6.0 | 0.0 | yes |',
+                   '| p0.release_wait | no / no | no / no / no | 0 / 0 | r0 0 ± 0; r1 0 ± 0 |', 'Whole request (spread baseline / candidate 0.00 ms / 0.00 ms): improves n/a / no; worsens n/a / no / no; r0 0.00 ms; r1 0.00 ms.', '| p0.release_to_ack | 9.4 | 2.6 | 6.8 | yes |',
                    'Candidate faster in 0, slower in 0, equal in 2 pairs.', '| grace_timeouts | 0 / 0 | r0 0 -> 0; r1 0 -> 0 |',
                    'Grace waits (key 5), sum over accepted trials: grace_timeouts 0 (max per trial 0)',
                    '| w0.terminal_to_exit_request | no / no | no / no / no |',
@@ -1653,7 +1751,7 @@ def main(out):
     decomposition, summary = reader.read_artifacts(root)
     assert summary['calibration_status'] == 'established' and summary['counts']['accepted'] == 4 and summary['counts']['excluded'] == 1, (
         summary['calibration_status'], summary['counts'])
-    assert decomposition['version'] == summary['version'] == 9
+    assert decomposition['version'] == summary['version'] == 10
     calibration = decomposition['calibration']
     term = resolution['readers']['busy']['endpoint_term_ns']
     assert calibration['stamp_ns'] == -(-resolution['stamp_ns'] // 1) and calibration['alignment_ns'] == resolution['alignment']['bound_ns']
@@ -1839,6 +1937,7 @@ def main(out):
     split = reader.summarize([base_row, dict(copy.deepcopy(base_row), lowpowermode='1')])
     assert [(g['lowpowermode'], g['counts']['accepted']) for g in split] == [('0', 1), ('1', 1)], split
     accepted += comparison_controls(reader.evaluate_bundle(ordinary_bundle(), CALIBRATION))
+    accepted += response_repair_controls(reader.evaluate_bundle(ordinary_bundle(), CALIBRATION))
     rejected.append(spread_ignored_rejected(reader.evaluate_bundle(ordinary_bundle(), CALIBRATION)))
     accepted += scan_controls()
     rejected.append(scan_float_rejected())

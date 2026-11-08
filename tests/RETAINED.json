@@ -10,18 +10,18 @@
       "release": "v0.3.4"
     },
     {
-      "path": "runs/footprint-opt-targeted-final-02",
-      "run_id": "20261107T035203Z_446642a9",
-      "reason": "Owned-entry envelope sorting: final signed candidate response measurements and declared dependencies plus formatting, 6 passing cases with no sleep overlap. Historical held-phase and aftermath observations supporting FOOTPRINT are preserved byte-for-byte with their original hash index in optimization-evidence/. Worker-wait investigation evidence in worker-wait-evidence/ preserves both failed native qualifications, diagnostic repetitions, source/documentation checks, and original run identities/hashes; these attachments are separate from the original six passing cases. The negative evidence supports the still-unaccepted wait-pacing question.",
+      "path": "runs/main-scan-default-01",
+      "run_id": "20261108T161704Z_e29fe638",
+      "reason": "Current accepted production default battery: 222 passing cases, no skips or unrun cases. Host readiness, resampling, exit notification and inbound cursor are integrated. Production source and signed app remain unchanged by the reader repair; worker-wait-review-final-01 supersedes its pilot-reader and documentation results.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
     },
     {
-      "path": "runs/worker-wait-default-final",
-      "run_id": "20261107T152246Z_f6d80816",
-      "reason": "Worker-wait investigation closeout: 221 default cases pass with no skips, unrun cases, harness errors or sleep overlap against the unchanged signed app. New default controls reject missing direct pause evidence even when logs are unavailable. Source snapshots and negative native observations are attached to the retained complementary run.",
+      "path": "runs/worker-wait-review-final-01",
+      "run_id": "20261108T170353Z_36ac19c5",
+      "reason": "Worker wait acceptance repair: 10 reader/source-drift cases pass without sleep overlap. Separate worker-wait-review/ attachments preserve and reanalyse the pilot required by ARM, all four candidate comparisons and the null noise control; preserve final SCAN unit/mutation and named verification; and carry the previous footprint/pause evidence. Nine historical archives retain original run IDs, source/equipment evidence and file hashes; all six timestamp datasets replay identically from their archived bytes. Historical copies are separate from these ten cases and do not relocate cleanup ownership.",
       "source": null,
-      "app_inventory": "artifact-integrity/before.json"
+      "app_inventory": null
     }
   ]
 }

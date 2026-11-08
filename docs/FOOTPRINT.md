@@ -28,9 +28,16 @@ it, under `optimization-evidence/` in the retained response run above. The
 archive preserves the original run identity and binary hashes; those rows do
 not describe the later response run's binaries.
 
-[tests/RETAINED.json](../tests/RETAINED.json) lists the retained run. Test output
-is gitignored, so these receipts and the archive exist only in a checkout that
-retained them.
+[tests/RETAINED.json](../tests/RETAINED.json) lists the run holding the identified
+copy below. Test output is gitignored, so these receipts and the archive exist
+only in a checkout that retained them.
+
+The response run and its two historical evidence directories are preserved
+byte-for-byte in `footprint-opt-targeted-final-02.tar.gz` under
+`tests/out/runs/worker-wait-review-final-01/worker-wait-review/archives/`.
+`worker-wait-review/archive-index.json` records the original run identity and file
+hashes. This identified copy replaces the original output directory; it does
+not change the provenance or quantities of these measurements.
 
 The generator and the footprint drift case verify the manifest's structure,
 its citations and the freshness of the rendered copy. Nothing verifies that a

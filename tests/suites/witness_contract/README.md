@@ -203,10 +203,15 @@ refuted by any established pair that falls short and is given only when all
 five declared pairs pass; a worsening verdict is given by any worse pair and
 refuted only when all five are established and none is worse; otherwise the
 verdict is withheld. For `release_to_ack`, `activation_response` and the
-custody rows' `inbound_response` (the host's transfer wait start, right after
-its commit, to the recipient's acknowledgement) it compares the candidate's
-largest accepted value with the baseline's smallest against 2 ms, credited only with combined uncertainty
-at most 0.5 ms and the instrument gate credited. Host sleep and bounded-wait
+custody rows' `inbound_response` (commit publication to recipient acknowledgement),
+it compares `max(candidate value + uncertainty) - min(baseline value - uncertainty)`
+against 2 ms. Credit requires every applicable response in every accepted trial,
+the declared matched-pair count, each side's maximum uncertainty summed at most
+0.5 ms, and the instrument gate. Missing responses are uncredited; missing
+declared phases or deliveries refuse a completed pilot trial. Host export
+version 2 requires commit-begin and post-store stamps. For version 1, the
+enclosing custody-service start and wait-start stamps bracket the commit
+conservatively. Host sleep and bounded-wait
 counts and durations are reported per pair. The matched pairs appear in
 `summary.json` under `pairs` and in a Matched pairs section of `summary.md`;
 the two apps are never pooled. The comparison measures fixture builds of both
