@@ -22,7 +22,7 @@ def cpu(sample): return sample['user_ns']+sample['system_ns']
 def check_wait_measurement(row):
     """Mechanism-neutral evidence; worker idleness is neither required nor refused."""
     assert set(row)=={'version','name','repetition','multiplier','quantum_ns','hold_min_ns','requested_ns','ready','effects','before','after','clock_before','clock_after','roles','snapshot','release','actual_min_ns','deltas_ns','observer','conditions','held_generations'}
-    assert row['version']==1 and row['repetition'] in range(3) and row['multiplier'] in (1,3)
+    assert row['version']==1 and type(row['repetition']) is int and row['repetition']>=0 and row['multiplier'] in (1,3)
     q=row['quantum_ns']; minimum=max(1_000_000_000,100*q)
     assert q>=10_000_000 and row['hold_min_ns']==minimum
     assert row['requested_ns']>=minimum*row['multiplier']
@@ -77,6 +77,7 @@ def check_wait_measurement(row):
 def check_measurement(row):
     """Historical busy-worker oracle; keep its original meaning and callers."""
     check_wait_measurement(row)
+    assert row['repetition'] in range(3)
     assert all(delta>row['deltas_ns'][-2] for delta in row['deltas_ns'][:-5]), 'worker CPU must exceed sleeping control'
     return row
 
@@ -99,7 +100,7 @@ def calibrate(observer,out):
     save(out/'calibration.json',receipt); return quantum
 
 
-def measure(pw,out,bridge,helper,observer,host,name,quantum,repetition,multiplier,conditions):
+def measure(pw,out,bridge,helper,observer,host,name,quantum,repetition,multiplier,conditions,*,checker=check_measurement):
     out.mkdir(parents=True)
     actor_count=int(name.split('_')[-1]) if name in ('actor_1','actor_3') else None
     work=HeldWorkload(pw,out,bridge,helper,observer,actor_host=host if name!='ordinary' else None,actor_count=actor_count,lifecycle=name=='actor_lifecycle')
@@ -128,7 +129,7 @@ def measure(pw,out,bridge,helper,observer,host,name,quantum,repetition,multiplie
                 conditions=dict(conditions,cadence_ns=50_000_000,sleep_difference_ns=difference,sleep_tolerance_ns=tolerance))
             save(out/'measurement.json',row)
             work.release(); row['release']=work.interventions[0]; save(out/'measurement.json',row)
-            work.complete(); check_measurement(row)
+            work.complete(); checker(row)
             expected={s['pid'] for s in [*work.workers,work.host]}
             deadline=time.monotonic()+5
             while time.monotonic()<deadline:

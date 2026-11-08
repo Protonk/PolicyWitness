@@ -308,3 +308,9 @@ withhold comparisons. The opt-in `runner_unit/exec_reader_mutations` executes
 source defects that bypass publication or invent metadata, requiring failures
 at the original independent assertions. Signed `CWorkerTests` and
 `runner_exec_lifecycle` separately exercise actual producer/transport paths.
+
+Opt-in `witness_contract/worker_wait_cost` compares actual held-worker CPU with
+five alternating pairs per regime and one selected tail. Independent default
+CPU controls withhold no-op/contrary-pair credit and reject missing, excluded
+or mismatched pairs. Its live query/effect observations remain independent of
+CPU benefit; it supplies no deployment, response or energy qualification.

@@ -154,3 +154,51 @@ to the WFE screen executable; only the selected argument differs. All WFE
 children read `CNTFRQ_EL0=24000000`. This observed frequency, not a model-based
 expectation of 1 GHz, supplies the timed conversion. Its configuration cause
 has not been established.
+
+
+## WFET screen and staged benefit investigation
+
+`arm-wfet-screen-01` (`20261108T221905Z_2f571792`) passed both registered
+cases and all twelve first-use children in 7.206 seconds. Cleanup settled
+without rescue. All children used 24 MHz; approximately 375,000 passes ran in
+500 ms. First brackets were 83.333–208.333 ns; the maximum repeated bracket
+was 26.333 microseconds. Early events are permitted. CPU remained near elapsed
+time; these diagnostic endpoints are not a matched benefit decision.
+
+The installed macOS SDK's public `arm/cpu_capabilities_public.h` defines
+`hw.optional.arm.caps` and stable ABI bit 26 for FEAT_WFxT. This is a stronger
+feature-selection lead than the private WFE event flag, but does not establish
+all EL0 clock, migration or resume assumptions. No deployment credit is claimed.
+
+Before spending native time on full protocol qualification, use the existing
+live held-worker workload to screen worthwhile CPU benefit. This is the plan's
+permitted prototype measurement with unresolved deployment. It may close a
+candidate without adoption; a positive result still requires every remaining
+qualification and response gate. No energy or peer-progress measurement is
+selected, and missing energy cannot be described as absence of savings.
+
+First observe the accepted baseline in ordinary release and actor lifecycle
+holds, rapid and one-second-idle regimes, with one excluded first request per
+exact staged app. The lifecycle issuer is parked and unapplied; its subject
+holds an applied phase with live queries and extension custody. The pilot's
+0.2–0.3 microsecond polling periods nominate reduced polling work, not a latency
+benefit. Extended holds measure CPU demand, not production held time. Freeze
+separate role acceptance records after this baseline and before comparisons.
+The planned minimum is a 10% reduction in held worker CPU rate beyond two
+endpoint quanta and elapsed brackets, to be justified against that fresh
+baseline. Five alternating pairs per regime; no unreported replacements.
+
+The reusable screen keeps source copies, disassembly, signed substitutions,
+actual binary identities, same-generation observations, query/attempt ordering,
+effect guards, CPU sensitivity controls and owned ending observations. It is
+not a production change. The initial ordinary window has at most two busy
+processes; the separately announced actor window has at most three of ten
+cores' worth of busy processes. Each window is bounded to five minutes.
+
+The ordinary baseline is staged at `arm-cost-baseline-release-01`; its frozen
+`prepared.json` SHA-256 is `74f2584464b685f01c84063295e12536e02f61b4b0c0d71e1d6a861d87fcf023`.
+The screen and neutral readers are respectively
+`b6f39d311c6838b7932df76f5479ceeaf24706697e8c71792120f96993c592e5` and
+`65cf178013915d5f803cea94b95ee6c830bc7da53dde238f25a1ca84bc560b18`.
+The constructed controls passed in `arm-cost-controls-01`; production source
+and the distributed signed app are unchanged.

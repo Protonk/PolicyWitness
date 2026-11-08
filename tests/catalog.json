@@ -2088,6 +2088,23 @@
             "witness_contract/footprint_observer_controls",
             "witness_contract/worker_wait_pilot_controls"
           ]
+        },
+        {
+          "id": "worker_wait_cost",
+          "default": false,
+          "description": "Gated actual-worker CPU screen for one release or parked tail; fixed matched pairs, neutral effects/generation checks and no adoption credit",
+          "requires": [
+            "app",
+            "clang",
+            "swift"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/worker_wait_cost.sh"
+          ],
+          "depends_on": [
+            "witness_contract/worker_wait_cpu_controls"
+          ]
         }
       ],
       "include": [
@@ -2376,7 +2393,8 @@
         "witness_contract/held_phase_footprint",
         "witness_contract/response_footprint",
         "run_effects/aftermath_footprint",
-        "witness_contract/worker_wait_pilot"
+        "witness_contract/worker_wait_pilot",
+        "witness_contract/worker_wait_cost"
       ]
     },
     "failure_boundaries": {

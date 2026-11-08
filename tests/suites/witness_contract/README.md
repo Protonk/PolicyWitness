@@ -63,6 +63,33 @@ ID identity and disposable-host signing. See the
 [execution and interpretation account](../../CHANGE-VERIFICATION.md#footprint-observations)
 and the [footprint account](../../../docs/FOOTPRINT.md).
 
+
+The opt-in `worker_wait_cost` case uses the held workloads and neutral reader
+for a bounded CPU screen. Set a fresh `PW_WAIT_COST_GATE`, role
+`PW_WAIT_COST_ROLE=release|activation`, and
+`PW_WAIT_COST_CANDIDATE=baseline|wfet|hint10000`. Baseline mode takes one
+observation per pacing regime; comparison takes five alternating matched pairs
+per regime. Each exact staged app first gets one excluded request. After
+signing disposable workers, `prepared.json` identifies the bytes; the case
+waits up to ten minutes for `begin` in the gate file. Its five-minute window
+includes calibration and excludes builds. The ordinary cell has one worker
+and a busy control; the actor lifecycle cell has two workers and that control.
+Activation CPU belongs to the parked, unapplied issuer; the queried subject
+is held in release. Extended holds are not production hold durations.
+
+The WFET prototype changes one unsuccessful tail, reads CNTFRQ before
+application and checks a local CNTVCT deadline, capped at 100 microseconds and
+the last sampled remaining allowances. Its machine feature prerequisite is
+not a production deployment gate. The hint prototype changes one batch to
+10,000 hints. Both retain the baseline ABI identity as labelled substitutions;
+source and executable hashes identify their actual bytes. Comparison allows
+one calibrated quantum per CPU endpoint and brackets elapsed time. Every pair
+must save the declared fraction (10% by default) beyond those bounds. Controls
+credit a constructed gain, refuse no-op/contrary-pair credit and reject missing,
+excluded or power-mismatched pairs. A positive CPU screen does not qualify
+response, whole-request cost, energy, capacity, restrictive parked operation,
+migration or sleep/resume.
+
 ## Worker wait pilot
 
 The opt-in `worker_wait_pilot` case decomposes ordinary and actor held phases
