@@ -151,6 +151,37 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
                 try expectEqual(result.verdicts.count, 0)
             }
         }
+        tk.run("distinct native integers retain their fields and exact raw line") {
+            let line = validValidatorLine.replacingOccurrences(of: "\"rc\":0,\"errno\":0",
+                with: "\"rc\":-1,\"errno\":13,\"filter_type_id\":7")
+            let result = decodeValidatorFrames(Data(line.utf8))
+            try expectNil(result.fault)
+            try expectEqual(result.verdicts.first?.rc, -1)
+            try expectEqual(result.verdicts.first?.errnoVal, 13)
+            try expectEqual(result.verdicts.first?.filterTypeId, 7)
+            try expectEqual(result.verdicts.first?.rawLine, line)
+        }
+        tk.run("each native integer rejects nonintegers and overflow without changing first fault") {
+            for key in ["rc", "errno", "filter_type_id"] {
+                for literal in ["true", "0.5", "\"0\"", "9223372036854775808"] {
+                    let line = validValidatorLine.replacingOccurrences(of: "\"rc\":0,\"errno\":0",
+                        with: "\"rc\":0,\"errno\":0,\"filter_type_id\":0")
+                        .replacingOccurrences(of: "\"\(key)\":0", with: "\"\(key)\":\(literal)")
+                    let result = decodeValidatorFrames(Data((validValidatorLine + "\n" + line).utf8))
+                    try expectEqual(result.verdicts.count, 1)
+                    try expectEqual(result.fault?.kind, "structure")
+                    try expectEqual(result.fault?.message, "invalid integer field \(key)")
+                    try expectEqual(result.fault?.byte_offset, validValidatorLine.utf8.count + 1)
+                }
+            }
+            let malformed = validValidatorLine.replacingOccurrences(of: "\"rc\":0,\"errno\":0",
+                with: "\"rc\":true,\"errno\":false,\"filter_type_id\":0.5")
+            try expectEqual(decodeValidatorFrames(Data(malformed.utf8)).fault?.message, "invalid integer field rc")
+            let badKind = malformed.replacingOccurrences(of: "sb_api_validator_verdict", with: "wrong")
+            try expectEqual(decodeValidatorFrames(Data(badKind.utf8)).fault?.message, "missing or invalid kind")
+            let badString = malformed.replacingOccurrences(of: "\"step_id\":\"s\"", with: "\"step_id\":false")
+            try expectEqual(decodeValidatorFrames(Data(badString.utf8)).fault?.message, "invalid string field step_id")
+        }
         tk.run("legitimate no-native and unfamiliar diagnostics retain structure and codes") {
             for outcome in ["parse_error", "bad_filter", "future_937", "unsupported_operation", "error"] {
                 let obj: [String: Any] = ["kind": "sb_api_validator_verdict", "schema_version": 1,

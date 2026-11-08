@@ -980,3 +980,11 @@ The pre-apply case also attempts a real spawn of a nonexistent worker and
 requires unchanged files, no worker or validator subprocess, and no ordering
 object. Once a worker exists but has not published application, ordering is
 all-false with `not_invoked`; no prediction is `query_first`.
+
+The worker-wait pilot reader's version 12 also reports startup program-point
+intervals and measured ordinary initial-resampling spans. Resampling pairs end
+before fallback sleep and carry a capture marker; missing pairs, dropped events
+or an absent marker withhold the measurement. Elapsed resampling includes
+possible descheduling and is not a CPU measurement. The independent controls
+check separation from sleep, missing versus zero, malformed pairs and the
+startup arithmetic. Older frozen reports retain their original reader identity.

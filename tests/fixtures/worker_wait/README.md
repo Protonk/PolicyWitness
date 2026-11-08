@@ -352,3 +352,14 @@ values written independently from the C layout, pack pages in program order,
 and require the reader to accept them. The reader treats host events 101 and 153
 as carrying earlier caller-read raws; a new `record(..., raw:)` call site in
 `HostStamps` must be added to the reader's `HOST_PRESAMPLED`.
+
+### Startup and resampling observations
+
+The host exports whether its resampling helper was instrumented. Events 183/184
+bracket each call's work before the fallback sleep, using the clock's wait key.
+The reader reports ordinary resampling before first arrival separately from
+sleep, and leaves older/uninstrumented captures unknown. This elapsed span can
+include descheduling; it is not process CPU. Missing, malformed or dropped pairs
+cannot establish zero work. Startup intervals distinguish spawn, readiness
+observation, the worker's post-application stamp and first-arrival stamp. A
+post-store stamp does not identify the instant of application or publication.

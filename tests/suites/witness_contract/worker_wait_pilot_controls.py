@@ -390,7 +390,12 @@ def check_actor_intervals(row, grace=None):
     (actor,) = row['actors']
     assert actor['actor'] == 0 and set(actor) == {'actor', 'terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait',
                                                   'grace_stop_code', 'terminal_to_reap', 'terminal_to_teardown',
-                                                  'spawn_to_teardown'}, actor
+                                                  'spawn_to_teardown', 'spawn_to_ready_observed',
+                                                  'ready_observed_to_applied_stamp',
+                                                  'applied_stamp_to_first_arrival_stamp'}, actor
+    assert actor['spawn_to_ready_observed']['ns'] == 2_000_000
+    assert actor['ready_observed_to_applied_stamp']['ns'] == 800_000
+    assert actor['applied_stamp_to_first_arrival_stamp']['ns'] == 1_200_000
     values = lambda name: (actor[name]['ns'], actor[name]['uncertainty_ns'], actor[name]['cross_process'])
     assert values('terminal_to_exit_request') == (2_010_000, WORKER_FLOOR + HOST_FLOOR + ALIGN, True), actor
     assert actor['terminal_to_exit_request']['endpoints'] == [endpoint('worker0', 'terminal_published', None, 0),
@@ -520,6 +525,40 @@ def grace_rule_controls():
     assert reader.wait_outcome_problems([[157, 1, 1, 10], [148, 1, 0, 10]]) == {'host_grace_interval_reversed'}
     return ['grace waits past 64 recorded pairs counted as timeouts', 'settle and poll sleeps without an outcome counted as timeouts by requested ns',
             'outcome and grace order rules on minimal exports']
+
+
+def initial_resampling_controls():
+    interval = reader.Interval((1, 1), CALIBRATION, 0)
+    doc = dict(resampling_measured=True, dropped=dict(events=0), events=[
+        [183, 1, 0, 1000], [184, 1, 0, 3000],
+        [180, 1, 2000, 3001], [181, 1, 2000, 6000],
+        [183, 1, 0, 9000], [184, 1, 0, 9500]])
+    result = reader.initial_resampling(doc, 7000, interval)
+    assert result['count'] == 1 and result['ns'] == 2000 and result['uncertainty_ns'] == 600
+    empty = dict(resampling_measured=True, events=[], dropped=dict(events=0))
+    assert reader.initial_resampling(empty, 7000, interval)['ns'] == 0
+    assert reader.initial_resampling(dict(events=[]), 7000, interval)['ns'] is None
+    assert reader.initial_resampling(doc, None, interval)['ns'] is None
+    assert reader.initial_resampling(doc, 2000, interval)['ns'] is None
+    for events in ([[183, 1, 0, 1000]], [[184, 1, 0, 3000]],
+                   [[183, 1, 0, 3000], [184, 1, 0, 1000]],
+                   [[183, 1, 0, 1000], [184, 2, 0, 3000]],
+                   [[183, 1, 0, 1000], [183, 1, 0, 1100], [184, 1, 0, 3000]],
+                   [[183, 1, 1, 1000], [184, 1, 0, 3000]]):
+        bad = dict(doc, events=events)
+        assert reader.resampling_pairs(bad)[1]
+        assert reader.initial_resampling(bad, 7000, interval)['ns'] is None
+    assert reader.resampling_pairs(dict(doc, resampling_measured=False))[1] == ['resampling_without_capture']
+    assert reader.initial_resampling(dict(doc, dropped=dict(events=1)), 7000, interval)['ns'] is None
+    # Startup fields name post-store program points, not an application instant.
+    startup = reader.actor_intervals(dict(events=[[101, 0, 0, 1000], [102, 0, 0, 2000]]),
+        {0: dict(timebase=(1, 1), events=[dict(event=2, phase=NONE, aux=0, raw=2500),
+                                       dict(event=3, phase=0, aux=0, raw=2600)])}, interval)[0]
+    assert startup['spawn_to_ready_observed']['ns'] == 1000
+    assert startup['ready_observed_to_applied_stamp']['ns'] == 500
+    assert startup['applied_stamp_to_first_arrival_stamp']['ns'] == 100
+    return ['initial_resampling_elapsed_not_sleep_or_cpu', 'initial_resampling_missing_not_zero',
+            'initial_resampling_malformed_pairs_rejected', 'startup_program_points_distinct']
 
 
 def final_wait_controls():
@@ -1728,7 +1767,7 @@ def main(out):
     assert [(a['actor'], a['terminal_to_exit_request']['unobserved'], a['exit_request_to_reap']['unobserved']) for a in actor_row['actors']] == [
         (0, 'terminal_or_exit_request_unobserved', 'exit_request_or_reap_unobserved'),
         (1, 'terminal_or_exit_request_unobserved', 'exit_request_or_reap_unobserved')], actor_row['actors']
-    grace_controls = grace_rule_controls() + final_wait_controls()
+    grace_controls = grace_rule_controls() + final_wait_controls() + initial_resampling_controls()
     check_actor(reader.evaluate_bundle(copy.deepcopy(actor), CALIBRATION))
     check_actor_exits(reader.evaluate_bundle(actor_bundle(exits=True), CALIBRATION), actor_row)
     assert reader.evaluate_bundle(copy.deepcopy(neighbor), CALIBRATION)['status'] == 'accepted'
@@ -1795,7 +1834,7 @@ def main(out):
     decomposition, summary = reader.read_artifacts(root)
     assert summary['calibration_status'] == 'established' and summary['counts']['accepted'] == 4 and summary['counts']['excluded'] == 1, (
         summary['calibration_status'], summary['counts'])
-    assert decomposition['version'] == summary['version'] == 11
+    assert decomposition['version'] == summary['version'] == 12
     calibration = decomposition['calibration']
     term = resolution['readers']['busy']['endpoint_term_ns']
     assert calibration['stamp_ns'] == -(-resolution['stamp_ns'] // 1) and calibration['alignment_ns'] == resolution['alignment']['bound_ns']

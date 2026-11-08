@@ -393,6 +393,7 @@ final class HostStamps {
         s += ",\"file_stem\":\(HostStamps.jsonString(HostStamps.fileStem(id)))"
         s += ",\"stamp_dir\":\(HostStamps.jsonString(PWW_STAMP_DIR))"
         s += ",\"timebase\":{\"numer\":\(numer),\"denom\":\(denom)}"
+        s += ",\"resampling_measured\":\(PWW_STAMP_RESAMPLING)"
         s += ",\"flavour\":{\"swift\":\(HostStamps.jsonString(PWW_STAMP_SWIFT_FLAGS)),\"inspection\":\(PWW_STAMP_INSPECTION)}"
         s += ",\"capacity\":{\"events\":\(HostStamps.eventCapacity),\"register_phases\":\(HostStamps.registerPhases)"
         s += ",\"custody_phases\":\(HostStamps.custodyPhases),\"page_actors\":\(HostStamps.pageActors)}"

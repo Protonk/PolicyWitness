@@ -158,7 +158,7 @@ import statistics
 import struct
 import sys
 
-READER_VERSION = 11
+READER_VERSION = 12
 HERE = Path(__file__).resolve().parent
 
 # Worker stamp page; mirrors tests/fixtures/worker_wait/pww_stamp_page.h.
@@ -206,7 +206,7 @@ HOST_EVENTS = {100: 'request_start', 101: 'worker_spawned', 102: 'ready_observed
                160: 'setup_done', 161: 'schedule_done',
                170: 'stamp_page_copied', 171: 'flush_begin', 172: 'teardown_finished',
                180: 'host_sleep_begin', 181: 'host_sleep_end',
-               182: 'wait_outcome'}
+               182: 'wait_outcome', 183: 'resample_begin', 184: 'resample_end'}
 H = {name: code for code, name in HOST_EVENTS.items()}
 # Host events appended with a raw the caller read earlier (spawn return, custody pass start, sleep pre read).
 HOST_PRESAMPLED = {101, 153, 180}
@@ -417,6 +417,7 @@ def check_stamps(doc, trial):
                 e[0] == stored and (not index or events[index - 1][0] != begin) for index, e in enumerate(events)):
             problems.append('host_store_begin_incomplete')
     problems.extend(wait_outcome_problems(events))
+    problems.extend(resampling_pairs(doc)[1])
     if 'stamp_cost' in doc:
         raws = doc['stamp_cost'].get('raws') if isinstance(doc['stamp_cost'], dict) else None
         if not isinstance(raws, list) or not all(map(_int, raws)) or any(b < a for a, b in zip(raws, raws[1:])):
@@ -617,9 +618,50 @@ def final_wait_record(doc, layout):
     return dict(state='complete', waits=sum(counts.values()), **counts)
 
 
+def resampling_pairs(doc):
+    """One non-nested pair per measured resampling call, ending before fallback sleep."""
+    pairs, problems, pending = [], [], None
+    for event in doc['events']:
+        if event[0] not in (183, 184):
+            continue
+        if doc.get('resampling_measured') is not True:
+            problems.append('resampling_without_capture')
+        if str(event[1]) not in SLEEP_KEYS or event[2] != 0:
+            problems.append('resampling_event_malformed')
+        if event[0] == 183:
+            if pending is not None:
+                problems.append('resampling_unpaired')
+            pending = event
+        elif pending is None or pending[1] != event[1] or pending[3] > event[3]:
+            problems.append('resampling_unpaired')
+        else:
+            pairs.append((pending, event)); pending = None
+    if pending is not None:
+        problems.append('resampling_unpaired')
+    return pairs, sorted(set(problems))
+
+
+def initial_resampling(doc, observed, interval):
+    """Ordinary resampling before first arrival observation; elapsed work span, not process CPU."""
+    pairs, problems = resampling_pairs(doc)
+    if (doc.get('resampling_measured') is not True or observed is None or problems
+            or (doc.get('dropped') or {}).get('events', 0)):
+        return dict(ns=None, uncertainty_ns=None, count=None, unobserved='initial resampling capture incomplete')
+    selected = [(a, b) for a, b in pairs if a[1] == 1 and a[3] < observed]
+    if any(b[3] > observed for a, b in selected):
+        return dict(ns=None, uncertainty_ns=None, count=None, unobserved='resampling crosses arrival observation')
+    spans = [interval(point(a[3], 'host', 'resample_begin'), point(b[3], 'host', 'resample_end')) for a, b in selected]
+    uncertainties = [s.get('uncertainty_ns') for s in spans]
+    return dict(ns=sum(s['ns'] for s in spans), count=len(spans),
+                uncertainty_ns=sum(uncertainties) if all(v is not None for v in uncertainties) else None,
+                meaning='elapsed span outside fallback sleep; includes possible descheduling, not CPU time')
+
+
 def actor_intervals(doc, pages, interval):
-    """Per actor: the worker's terminal publication to the host's exit request, that request to the host's reaping
-    sample, and the grace wait between its program points (148, 157), all program-point intervals."""
+    """Startup program points, teardown points and explicitly bracketed terminal-publication intervals.
+
+    The applied post-store stamp is a program point, not the instant of application or publication.
+    """
     events, rows = doc['events'], []
     for actor in sorted(pages):
         terminal = first(records(pages[actor]), W['terminal_published'])
@@ -628,7 +670,11 @@ def actor_intervals(doc, pages, interval):
         ev = records(pages[actor])
         publication = published(ev, index_of(ev, W['terminal_published']), f'worker{actor}',
                                 WORKER_EVENTS, tuple(pages[actor]['timebase']))
+        worker_at = lambda name: (lambda e: point(e and e[3], f'worker{actor}', name))(first(ev, W[name]))
         rows.append(dict(actor=actor,
+                         spawn_to_ready_observed=interval(at('worker_spawned'), at('ready_observed')),
+                         ready_observed_to_applied_stamp=interval(at('ready_observed'), worker_at('applied')),
+                         applied_stamp_to_first_arrival_stamp=interval(worker_at('applied'), worker_at('proceed_arrived')),
                          terminal_to_exit_request=interval(point(terminal and terminal[3], f'worker{actor}', 'terminal_published'),
                                                            at('exit_requested'), missing='terminal_or_exit_request_unobserved'),
                          exit_request_to_reap=interval(at('exit_requested'), at('worker_reaped'), missing='exit_request_or_reap_unobserved'),
@@ -948,6 +994,8 @@ def ordinary_phases(doc, page, trial, interval, pairs):
         row.update(collection_components(events, interval, lo, hi, planning_end, 'hook_end'))
         observed = polled(row, doc, interval, H['arrival_observed'], p, w['arrived'],
                           ('arrival_detection', 'arrival_first_check_positive'))
+        if p == 0:
+            row['initial_resampling'] = initial_resampling(doc, observed, interval)
         row['arrival_bookkeeping'] = interval(point(observed, 'host', 'arrival_observed'), point(mark and mark[3], 'host', 'hook_mark'))
         row['collection'] = interval(point(mark and mark[3], 'host', 'hook_mark'), point(hi, 'host', 'hook_end'))
         row['closure_to_release'] = interval(point(hi, 'host', 'hook_end'), release)
@@ -1952,7 +2000,7 @@ def fixture_identity(artifacts):
     else:
         absent.append('host-<app>/host-build.json for a stamped host')
     return dict(executables=out, receipts_absent=absent,
-                note='Fixture builds and staged copies, not production bytes: the hosts are disposable -Onone builds and the workers are recipe builds.')
+                note='Fixture builds and staged copies, not production bytes: host compiler flags are recorded per build and trial, and workers are recipe builds.')
 
 
 def overlap_rows(rows):

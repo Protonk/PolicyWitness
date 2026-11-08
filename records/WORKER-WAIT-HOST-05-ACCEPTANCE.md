@@ -200,20 +200,20 @@ whole-request comparisons also include the independently staged executables.
 excluded, skipped, incomplete or unpaired trials. Calibration was credited,
 all release response bounds passed (largest 4.954 µs), and cleanup settled.
 Decode improved beyond uncertainty in every O64/O256 pair in both regimes:
-135.208–919.041 µs saved. This establishes the local decoder improvement on
+135.208–919.042 µs saved. This establishes the local decoder improvement on
 these fixture builds. It does not establish the required uniform shorter hold.
 
 | Selected workload | Decode improves in every pair | Held total improves in every pair |
 | --- | --- | --- |
 | O64 rapid | yes | yes |
-| O64 idle | yes | no: repetition 1 is 21.000 µs longer |
-| O256 rapid | yes | no: repetition 3 is 1255.416 µs longer |
+| O64 idle | yes | no: repetition 1 is 21.001 µs longer |
+| O256 rapid | yes | no: repetition 3 is 1255.417 µs longer |
 | O256 idle | yes | yes |
 
 The O64 contrary pair decoded 135.208 µs faster, while planning and validator
-spawn-to-EOF intervals grew by 41.375 and 103.124 µs. The O256 contrary pair
-decoded 785.750 µs faster, while planning grew by 1449.625 µs and validator
-spawn-to-EOF grew by 464.417 µs. These are observed locations of the added time,
+spawn-to-EOF intervals grew by 41.4 and 103.1 µs. The O256 contrary pair
+decoded 785.750 µs faster, while planning grew by 1449.6 µs and validator
+spawn-to-EOF grew by 464.4 µs. These are observed locations of the added time,
 not an established cause. No component or whole-request group worsened beyond
 its spread in every pair; all individual flags remain in the reader output.
 The no-query and small controls remain part of the retained comparison.

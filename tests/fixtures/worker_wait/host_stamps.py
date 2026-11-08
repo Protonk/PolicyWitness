@@ -65,6 +65,7 @@ HOST_EVENTS = {
     148: 'WORKER_GRACE_BEGIN', 149: 'ACTIVATION_STORE_BEGIN', 150: 'ACTIVATION_STORED', 151: 'COLLECTION_START', 152: 'COLLECTION_END',
     153: 'CUSTODY_SERVICE_START', 154: 'CUSTODY_SERVICE_END', 155: 'TRANSFER_WAIT_START',
     156: 'TRANSFER_WAIT_END', 157: 'WORKER_GRACE_FINISHED', 160: 'SETUP_DONE', 161: 'SCHEDULE_DONE',
+    183: 'RESAMPLE_BEGIN', 184: 'RESAMPLE_END',
     170: 'STAMP_PAGE_COPIED', 171: 'FLUSH_BEGIN', 172: 'TEARDOWN_FINISHED',
     180: 'HOST_SLEEP_BEGIN', 181: 'HOST_SLEEP_END', 182: 'WAIT_OUTCOME',
 }
@@ -137,7 +138,11 @@ _GRACE_END = '(graceEnd == "reaped_during_grace" ? 1 : (graceEnd == "wait_error"
 
 # Ordered (runner-relative file, old, new[, 'optional']). Each old text must occur
 # exactly once in its file when its turn comes; an optional one may also be absent.
+_RESAMPLE = '    mutating func expiredAfterResampling(_ answered: () -> Bool, budgetNs: UInt64) -> Bool {\n        if let start = elapsedNs(), fallbackRemainingNs > 0 {\n            let window = min(budgetNs, fallbackRemainingNs)\n            var samples = 0\n            while !answered() {\n                samples += 1\n                guard samples < HostWaitClock.resampleSampleCap, let now = elapsedNs(), now - start < window else { break }\n            }\n            if answered() { return false }\n        }\n        return expiredAfterSleeping()\n    }\n'
+_RESAMPLE_STAMPED = '    mutating func expiredAfterResampling(_ answered: () -> Bool, budgetNs: UInt64) -> Bool {\n        HostStamps.shared.record(183, stampLabel)\n        if let start = elapsedNs(), fallbackRemainingNs > 0 {\n            let window = min(budgetNs, fallbackRemainingNs)\n            var samples = 0\n            while !answered() {\n                samples += 1\n                guard samples < HostWaitClock.resampleSampleCap, let now = elapsedNs(), now - start < window else { break }\n            }\n            if answered() { HostStamps.shared.record(184, stampLabel); return false }\n        }\n        HostStamps.shared.record(184, stampLabel)\n        return expiredAfterSleeping()\n    }\n'
+
 PATCHES = [
+    _optional(_swap(CW, _RESAMPLE, _RESAMPLE_STAMPED)),
     # HostWaitClock: a caller key per wait, and the actual length of every sleep.
     _after(CW, '    let calls: ChildProcessCalls\n    let started: UInt64?\n', '    let stampLabel: UInt32\n'),
     _swap(CW, '    init(milliseconds: Int, pollNs: UInt64, calls: ChildProcessCalls) {\n',
@@ -411,9 +416,11 @@ def build_host(package, work, out, patches, stamp_dir, runner=ROOT / 'runner', *
     if instrumented:
         generated = package / 'WorkerWait/HostStamps.swift'
         generated.parent.mkdir()
+        resampling_measured = 'HostStamps.shared.record(183, stampLabel)' in (package / CW).read_text()
         generated.write_text(f'let PWW_STAMP_DIR = {json.dumps(stamp_dir)}\n'
                              f'let PWW_STAMP_SWIFT_FLAGS = {json.dumps(" ".join(swift_flags))}\n'
                              f'let PWW_STAMP_INSPECTION = {"true" if swift_flags == SWIFT_FLAGS else "false"}\n'
+                             f'let PWW_STAMP_RESAMPLING = {str(resampling_measured).lower()}\n'
                              + STAMP_SOURCE.read_text())
         shutil.copy2(generated, out / 'HostStamps.generated.swift')
         stamp = dict(fixture_path=str(STAMP_SOURCE.relative_to(ROOT)), fixture_sha256=digest(STAMP_SOURCE),
