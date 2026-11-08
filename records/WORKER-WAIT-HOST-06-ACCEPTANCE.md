@@ -115,3 +115,22 @@ bypasses are detected. These controls are unsandboxed and establish decisions,
 not native timing. The ABI case in `-02` remains applicable: its C header,
 Swift layout, generated identity, implementation inputs and independent layout
 fixtures are unchanged by the subsequent lifecycle fixture and Swift test edits.
+
+## Prepared comparison
+
+`host06-mechanics-01` accepted all 24 rehearsal trials, established calibration
+and settled cleanup. Every ordinary trial had an observed initial-resampling
+count: zero on the baseline and zero or one on the candidate. It supplies no
+quantitative credit. The full comparison uses the same v12 apparatus, committed
+at `273fabf9`, with candidate control source at `101bdf70`. It remains at its
+gate while the following identities are committed.
+
+| Receipt / input | SHA-256 |
+| --- | --- |
+| `tests/out/runs/host06-comparison-01/suites/witness_contract/worker_wait_pilot/artifacts/staged-identity-before.json` | `997d234b035e566f4b7f17e8ac5ac873502beec6cc612ad33621c615072bc7f0` |
+| `tests/out/runs/host06-comparison-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `75e526659ffa8e944940c975362393e2ec3af9d853396f109250c605f6424243` |
+| `tests/out/runs/host06-comparison-01/suites/witness_contract/worker_wait_pilot/artifacts/host-baseline/host-build.json` | `5687610cbeaab36915443a00b122aa8f7762828ccd5ddf01a4821d03c9bca14e` |
+| `tests/out/runs/host06-comparison-01/suites/witness_contract/worker_wait_pilot/artifacts/host-candidate/host-build.json` | `bacfe3d827d9578b6852086a4aa38aacf1643be6d772c66af43456ae21b7e699` |
+| `tests/suites/witness_contract/worker_wait_pilot_reader.py` | `7b4ca3fd7da794d5861cd5b877c2d400c6e64dbc552db3711d66f088d3b78635` |
+| `tests/fixtures/worker_wait/host_stamps.py` | `62ddfad1902c2d7c63f48bacccdcde5e9e1bf9f436c5364b2e09f87c7efc5fe0` |
+| `tests/fixtures/worker_wait/HostStamps.swift` | `243e1c92794ebef36db11f8131a1e10765d223e3a8f891d48bf5287ac3f35775` |
