@@ -39,7 +39,7 @@ reader identity. Every new comparison uses v12 on both sides.
 
 After a received readiness byte, before the first ordinary phase has collected,
 allow one initial resampling opportunity. Use the existing 100,000 ns budget,
-remaining-allowance cap, 16,384-sample cap and sticky clock-fault behavior. End
+remaining-allowance cap, 16,384 unsuccessful-loop-check cap (plus the final answer check) and sticky clock-fault behavior. End
 resampling on first arrival or done, then return through the ordinary checks;
 resampling itself never collects, releases or attributes application. If the
 window finds neither, sleep through the existing bounded fallback. Do not change
@@ -186,3 +186,33 @@ hashes above remain unchanged.
 | `tests/out/runs/host06-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `41ab425094fd21a24235427afa787f3bccca0221505157b4de4e646d507752e9` |
 | `tests/out/runs/host06-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/host-instrumented/host-build.json` | `58d22dfc349ec180bd3fa3ca05049f672867d2b5e65af2f146b2cb9bf3d077d5` |
 | `tests/out/runs/host06-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/host-neighbor/host-build.json` | `38508fcb3a59761218d514cd9397b3b86f5fdbbba79d865cbf66c08640427ba0` |
+
+## Integrated default and observer results
+
+`host06-main-default-01` (`20261108T212111Z_e990d462`) passed all **222 cases**:
+222 completed, no skips/unrun cases/harness errors, and zero recorded sleep
+in every case. Legacy-report counts alone show 221 because the pytest family
+is accounted separately; `case_outcome_counts` and individual case results
+establish all 222 passes. Duration was 914.336 seconds, within the announced
+20-minute window. Artifact inspection passed before execution and the signed
+app remained unchanged. Runner assertions: 597/597. Actor qualification's
+largest total was 100 ms, setup 59 ms, collection 19 ms and charged execution
+14 ms; all required quarter-allowance margins passed. System indexing briefly
+used several cores during earlier light controls, then settled before the
+larger actor phase; per-case equipment records remain authoritative.
+
+`host06-observer-01` accepted all 120 trials with credited calibration and
+settled cleanup; its native window lasted 80.134 seconds. In-situ host stamp
+cost medians were 41 ns; export spans were 213.333–593.833 µs. Instrumented
+minus unstamped whole-request group medians ranged from −2.447166 to
++12.967708 ms. No constant correction or isolated recorder-overhead claim is
+supported by those whole-request differences. Both sides of the implementation
+comparison used identical instrumentation; claims remain scoped to fixture
+builds and their observed conditions.
+
+Documentation precision correction after the default run: the existing helper
+bounds unsuccessful loop checks at 16,384 and then performs one final answer
+check. The source, tests and measured candidate are unchanged. LIMITS now names
+both operations; its affected documentation check is rerun in the final targeted
+selection. No acceptance threshold or workload changes. Final held-footprint
+and targeted verification remain pending.
