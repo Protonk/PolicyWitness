@@ -10,6 +10,16 @@ each row; no row establishes a universal memory ceiling. Add quantities only
 when their units, backing and overlapping lifetimes support the sum; native
 memory metrics are never added to logical capacity or encoded bytes.
 
+## Examination
+
+Examine PW's footprint through three questions:
+
+1. What work, resource retention or timing obligations does PW impose unnecessarily?
+2. Can we remove them or express the condition we actually need, while preserving
+   witnessing and bounded progress?
+3. What freedom does that give the system to schedule PW, and what costs or
+   response changes do we observe?
+
 ## Provenance of measured rows
 
 Response rows fr9–fr13 were transcribed from run id

@@ -83,9 +83,16 @@ stop reason. Hangup is neither terminal publication nor reap. No new descriptor,
 thread, registration or post-apply worker write is in scope.
 
 Measure terminal publication to observation and to reap, whole-request latency
-and host resource residence. Require reduced final detection beyond uncertainty
-in every matched pair of the declared ordinary workloads. This interval follows
-the held phase and establishes no held-worker CPU reduction. Controls include
+and host resource residence. Following [Examination](../docs/FOOTPRINT.md#examination),
+acceptance may rest on removing the unconditional timed wait after completion:
+independent controls and live traces must show that exit notification can end
+the final wait, with no new resources and preserved bounded publication checks.
+This does not require faster detection in every pair. A quantitative speed claim
+still requires improvement beyond uncertainty in every named matched pair;
+response bounds and resolved resource/latency regressions retain the common
+acceptance rules. Report timeout wakes and fallback work separately; a wait API
+substitution alone establishes no scheduling, coalescing or energy gain. This
+interval follows the held phase and establishes no held-worker CPU reduction. Controls include
 already-exited children, publication before delayed exit, early hangup,
 missing/unusable pipes, readiness failure with late write, EINTR, clock failure
 and deadline cleanup. Actors and non-final ordinary phases are unchanged-path
