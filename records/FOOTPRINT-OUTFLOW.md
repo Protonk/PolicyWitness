@@ -374,8 +374,9 @@ HOST-04/HOST-06 and excluding HOST-05. The signed app is unchanged.
 
 WFE and WFET each passed twelve first-use children: three each under unapplied,
 version-2 allow-default, bare deny-default and deny-default with file-read-data.
-Each child executed the first explicit wait after application, published entry
-and return, and reached its own 500 ms continuous-clock cutoff. Supervisors
+Applied children executed their first explicit wait only after successful
+application; unapplied children were a separate control. Every child published
+entry and return and reached its own 500 ms continuous-clock cutoff. Supervisors
 observed live generations around a silent interval and reaped every child;
 no rescue supplied progress. This establishes native first-use applicability
 on this configuration, not integrated protocol or deployment qualification.
@@ -465,7 +466,9 @@ replay SHA-256 is
 The preserved public SDK header has SHA-256
 `4fc509ff0ba41255900b7fe3efa679590b7f05b7ddfafc113404c440f73d9a5a`.
 `tests/RETAINED.json` pins only the production baseline and complementary
-closeout run, alongside the unchanged release-managed entry.
+closeout run, alongside the unchanged release-managed entry. The supported
+pruner removed exactly the thirteen verified archived originals with no failures;
+its preview and apply receipts are attached to the closeout run.
 
 Reopening ARM needs a newly justified benefit observable (for example reliable
 energy evidence) or changed-equipment evidence, plus a defensible deployment
