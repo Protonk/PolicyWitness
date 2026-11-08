@@ -173,3 +173,16 @@ adds observer-cost evidence, not more implementation pairs or another attempt
 at the acceptance gate. Preserve signed app/source identity and inspect actual
 capture markers, in-situ stamp costs, export spans, neighbor whole-request
 observations and cleanup. Apply no fixed overhead subtraction.
+
+## Prepared observer comparison
+
+The integrated signed build completed successfully. The observer run remains
+at its gate while these identities are committed; reader v12 and the apparatus
+hashes above remain unchanged.
+
+| Receipt / input | SHA-256 |
+| --- | --- |
+| `tests/out/runs/host06-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/staged-identity-before.json` | `c9535d454de496a2fcfba1460537ade01d8d51755163543785a27e1baa81515e` |
+| `tests/out/runs/host06-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `41ab425094fd21a24235427afa787f3bccca0221505157b4de4e646d507752e9` |
+| `tests/out/runs/host06-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/host-instrumented/host-build.json` | `58d22dfc349ec180bd3fa3ca05049f672867d2b5e65af2f146b2cb9bf3d077d5` |
+| `tests/out/runs/host06-observer-01/suites/witness_contract/worker_wait_pilot/artifacts/host-neighbor/host-build.json` | `38508fcb3a59761218d514cd9397b3b86f5fdbbba79d865cbf66c08640427ba0` |
