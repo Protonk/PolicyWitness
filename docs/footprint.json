@@ -132,6 +132,49 @@
       ]
     },
     {
+      "id": "fw15",
+      "case": "waiting",
+      "title": "Ordinary final-completion observation",
+      "subject": {
+        "kind": "activity",
+        "owner": "host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "After the last collection, the retained readiness pipe can end a bounded wait on hangup. Periodic publication checks remain; notification neither establishes done nor replaces owned reap. No descriptor, thread or worker write is added; scheduling and energy effects are unmeasured."
+      },
+      "conditions": "Ordinary final wait with a retained ready pipe; unusable or consumed notification falls back to bounded sleeps.",
+      "interval": {
+        "starts": "last collection released",
+        "ends": "done observed, owned child status ends polling, or allowance expires",
+        "ending_event": "terminal observation or sentinel allowance"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "waitExitNs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerFinalWaitTests.swift",
+          "symbol": "runCWorkerFinalWaitTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Controlled final-only notification, publication before delayed exit, owned reap, fallback and remaining allowance; not CPU, energy or coalescing measurements."
+        }
+      ]
+    },
+    {
       "id": "fw4",
       "case": "waiting",
       "title": "Evidence backing / host view",

@@ -98,6 +98,10 @@ creates no validator spawn failure.
    The host retains cancellation, grace, termination and reaping. After a confirmed
    reap it reconciles acknowledgements published between samples, including before
    an abnormal exit, only while ownership through acknowledgement is established.
+   After the last ordinary collection, it can wait on the retained readiness pipe
+   for exit notification while keeping bounded checks of `done`. Notification
+   prompts observation; it establishes neither publication nor reap. An early
+   hangup is consumed once, with bounded sleeping checks thereafter.
 6. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
 

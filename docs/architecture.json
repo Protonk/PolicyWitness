@@ -7093,7 +7093,7 @@
             "When": "Before compilation",
             "Held across": "Readiness wait; after a received ready byte, also polling and exit grace, until session teardown",
             "Release / teardown action": "H at session teardown after a received ready byte; otherwise after the readiness wait (deadline, EOF, read error, setup failure) or a transfer failure that skips it, or on setup/spawn failure",
-            "Authority": "Observe ready byte; after it, observe hangup at worker exit during exit grace",
+            "Authority": "Observe ready byte; after it, observe hangup during the ordinary final-completion wait and worker exit grace",
             "Reaches exec children": "No: close-on-exec",
             "Role": "P"
           },
@@ -7117,6 +7117,12 @@
               "symbol": "runCWorkerLifecycleTests",
               "form": "test",
               "scope": "Fixture workers that keep fd 4 open until exit are reaped by the sample after the hangup; a hangup before exit is followed by settle sleeps and the sleeping poll; injected timed-out and unusable waits keep the allowance and its fallback."
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerFinalWaitTests.swift",
+              "symbol": "runCWorkerFinalWaitTests",
+              "form": "test",
+              "scope": "Ordinary final waiting uses notification only after the last collection; independent controls retain done-before-delayed-exit, owned reap without done, bounded early-hangup fallback, unusable or missing pipes, late-ready EPIPE, interrupted return, deadline and clock-fault behavior."
             },
             {
               "path": "tests/suites/runner_ready_byte_resilience/run.sh",
@@ -7366,7 +7372,7 @@
             "When": "Before compilation",
             "Held across": "Later attempts and phases, until exit",
             "Release / teardown action": "No W close; exit",
-            "Authority": "Write readiness pipe; its close at worker exit is the hangup the host's exit grace waits for",
+            "Authority": "Write readiness pipe; its close at worker exit supplies hangup to the ordinary final-completion wait and worker exit grace",
             "Reaches exec children": "No: child CLOEXEC_DEFAULT",
             "Role": "P"
           },
