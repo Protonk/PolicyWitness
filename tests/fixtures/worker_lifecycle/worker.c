@@ -126,7 +126,12 @@ int main(void) {
         pw_shm_phase_t *phase = &hdr->phases[0];
         if (!early_exit) {
             hdr->apply_rc = failure ? -1 : 0;
-            if (failure) atomic_store_explicit(&hdr->done, 1, memory_order_release);
+            if (failure) {
+                hdr->apply_errno = EPERM;
+                pw_failure(pw_evidence(base), PW_OP_APPLY, PW_FAILURE_NATIVE,
+                           PW_NATIVE_INTEGER, -1, 1, EPERM, UINT32_MAX, 0);
+                atomic_store_explicit(&hdr->done, 1, memory_order_release);
+            }
             else {
                 atomic_store_explicit(&hdr->applied, 1, memory_order_release);
                 atomic_store_explicit(&phase->arrived, 1, memory_order_release);

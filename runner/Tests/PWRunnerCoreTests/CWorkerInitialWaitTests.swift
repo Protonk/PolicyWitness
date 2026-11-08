@@ -12,6 +12,7 @@ private final class InitialWaitControl {
     var readsAtSleep: [Int] = []
     var collections = 0
     var pid: pid_t = 0
+    var pollReached = false
     var gateOpened = false
     var gateFailed = false
     init(_ scenario: String) { self.scenario = scenario }
@@ -45,7 +46,7 @@ private final class InitialWaitControl {
         }
         var calls = ChildProcessCalls()
         calls.clock = { [unowned self] in
-            if FileManager.default.fileExists(atPath: self.gate + ".ready") {
+            if self.pollReached {
                 self.readyReads += 1
                 if ["arrival", "failure", "exit"].contains(self.scenario) && self.readyReads == 4 { self.openGate() }
                 if self.scenario == "clock_failure" && self.readyReads >= 3 { return nil }
@@ -60,6 +61,7 @@ private final class InitialWaitControl {
         }
         calls.wait = { [unowned self] pid, status, options in
             self.pid = pid
+            self.pollReached = true
             return Darwin.waitpid(pid, status, options)
         }
         calls.sleep = { [unowned self] ns in
