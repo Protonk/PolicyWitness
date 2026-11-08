@@ -655,6 +655,8 @@ def parse(argv):
     parser.add_argument('--repetitions', type=int); parser.add_argument('--window-seconds', type=float, default=240.0)
     parser.add_argument('--trial-watchdog-seconds', type=float, default=15.0)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--window-gate', type=Path,
+                        help='fresh coordinator-owned file; after preparation write its token to begin the window (five-minute limit)')
     parser.add_argument('--compare-app', help="the candidate's signed app"); parser.add_argument('--compare-tree', help='the candidate checkout root')
     parser.add_argument('--compare-worker-build', help="build.sh output over the compare tree (the wrapper builds it)")
     args = parser.parse_args(argv)
@@ -688,6 +690,8 @@ def announce(message):
 
 def main(argv=None):
     args = parse(sys.argv[1:] if argv is None else argv)
+    if args.window_gate:
+        assert not args.window_gate.exists(), 'window gate must be fresh'
     source_app, artifacts = Path(args.app).resolve(), Path(args.artifacts).resolve()
     assert os.environ.get('PW_TEST_SCRATCH'), 'PW_TEST_SCRATCH is required for build intermediates'
     scratch = Path(os.environ['PW_TEST_SCRATCH']); scratch.mkdir(parents=True, exist_ok=True)
@@ -753,6 +757,16 @@ def main(argv=None):
              host_flavour=flavours[kinds[0]], worker_build=str(worker_build),
              warm_cells=warm, apps={k: str(v) for k, v in apps.items()},
              order=f'rapid block, then idle block; per repetition and cell both apps, {kinds[0]} first in even repetitions'))
+        if args.window_gate:
+            token = secrets.token_hex(16)
+            save(artifacts / 'prepared.json', dict(token=token, gate=str(args.window_gate),
+                                                  staged_identity=staged_before, timeout_seconds=300))
+            announce('prepared; waiting for coordinator window gate (300 s maximum)')
+            expires = time.monotonic() + 300
+            while not args.window_gate.exists():
+                assert time.monotonic() < expires, 'coordinator window gate timed out'
+                time.sleep(0.1)
+            assert args.window_gate.read_text().strip() == token, 'window gate token mismatch'
         with FootprintObserver(args.observer) as observer:
             save(artifacts / 'observer-provenance.json', observer.provenance)
             pilot = Pilot(args, observer, apps, stamp_dir, stamp_dir_fd, module.stamp_paths, module.exported_path,

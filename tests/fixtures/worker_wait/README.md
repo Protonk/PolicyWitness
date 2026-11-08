@@ -169,6 +169,14 @@ Any refusal still writes the receipt, then fails the build.
 
 ## Instrumented host
 
+The pilot driver's optional `--window-gate PATH` separates staging from native
+trials. The path must be absent at startup. After preparing both apps, the driver
+writes `prepared.json` with their identities and a fresh token, then waits up to
+five minutes for the coordinator to write that token to the gate. No worker trial
+runs before release; timeout or a wrong token follows normal owned cleanup.
+This lets the coordinator record exact staged identities and announce a quiet
+window after compilation and signing finish.
+
 `HostStamps.swift` is a test-only timeline recorder compiled only into the
 disposable PWRunner hosts that `host_stamps.py` builds; the builder prepends the
 literal `PWW_STAMP_DIR`, `PWW_STAMP_SWIFT_FLAGS` and `PWW_STAMP_INSPECTION`
