@@ -40,13 +40,19 @@ stays with the 2 ms sentinel poll and is recorded as a further delay.
   sleep and was rerun without sleep in `20261107T231019Z_79b8e96c`
   (`main-host01-provenance-rerun-01`, pass); `order_barrier_mutations` pass in
   `20261107T230830Z_c4725a38`.
-- Candidate source: branch `wait/host-02` in the worktree
-  `PolicyWitness-wait-host02`; commit, identity and build receipt are recorded
-  under Revisions when frozen.
-- Readers and fixtures: the comparison mode's reader and fixtures at the main
-  checkout's committed versions, used for both sides; hashes recorded at freeze.
-  No CPU reader: the candidate changes no held-worker mechanism and claims no
-  CPU benefit. It does add bounded host busy time, stated under claims.
+- Candidate source: commit `628a1ccc` on branch `wait/host-02` in the
+  worktree `PolicyWitness-wait-host02`, clean; worker identity
+  `69a3977788506b4f1dc818d5b1afcd8fad44994593737a6106871b1db1a719fb`. Candidate
+  app: its distribution build (provenance commit `628a1ccc`, dirty false);
+  host `2018ec11…`, worker `d8cb8f0b…`. The re-sampling window is bounded by
+  the smaller of 100 µs and the remaining allowance, and by a sample cap of
+  16,384 so a clock that stops advancing cannot hold the loop.
+- Readers and fixtures, main checkout at `3c193f5e`, used for both sides:
+  pilot reader version 5 with the detection total `e2cc5e07…`, driver
+  `9027e742…`, host patch set `9645cdcd…`, worker build `aab37da3…`, stamp worker
+  `5bc7937e…`; other fixture hashes as in the HOST-01 record. No CPU reader: the
+  candidate changes no held-worker mechanism and claims no CPU benefit. It
+  does add bounded host busy time, stated under claims.
 
 ## Workloads and trials
 
@@ -76,9 +82,30 @@ clock and scheduler controls, `runner_abi_layout`, `source_drift`,
 (default) and the default battery. Regenerated worker identity and limits
 account are part of the candidate.
 
+## Verification results
+
+Candidate worktree, against its signed build, before the comparison:
+
+- `runner_unit` (11 cases, including the four opt-in mutation cases, with the
+  new re-sampling clock controls and the live actor assertions),
+  `runner_abi_layout/c_swift_layout_agreement` and `source_drift`: 21 of 21
+  pass, run `20261107T234659Z_dc2cebb0` (`host02-unit-02`).
+- `witness_contract/order_barrier_mutations`, `phases`,
+  `attempt_effects_wait_for_collection`, `actor_compositions`,
+  `extension_boundaries`, `actor_timing_qualification`, the
+  `failure_boundaries` suite and the `runner_c_worker_harness` suite: 72 pass
+  in run `20261107T235258Z_959443dc` (`host02-named-02`); `native_pause`
+  failed as the intentionally failing applicability gate on this equipment.
+- Default battery: 222 of 222 pass with no skips, harness errors or sleep
+  overlap, run `20261107T235640Z_cc37a4a7` (`host02-default-02`).
+- An earlier chain against the same production source (runs `host02-unit-01`,
+  `host02-named-01`, `host02-default-01`) failed one new clock control whose
+  expected sample count was off by one; the control was corrected, the
+  candidate rebuilt clean, and every case rerun above.
+
 ## Results
 
-Pending.
+Pending the comparison window.
 
 ## Revisions
 
