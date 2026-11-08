@@ -183,16 +183,27 @@ The release and activation stores each have a record immediately before them
 (139 and 149) as well as after (141 and 150). The first 64 sleeps of each wait
 key are also appended as stamped begin and end events (180 and 181, phase = key,
 aux = requested nanoseconds), so a worker publication can be placed in the exact
-host sleep that contained it; later sleeps update only the registers. Polled
+host sleep that contained it; later sleeps update only the registers. A
+bounded wait for the worker's exit records its pair the same way and then event
+182 (`WAIT_OUTCOME`: phase = key, aux 0 timed out, 1 notified, 2 unusable, raw =
+the pair's end), while that key's pairs are still appended. The worker exit
+grace is bracketed by program points 148 (`WORKER_GRACE_BEGIN`, right after the
+host presets the stop to exhausted) and 157 (`WORKER_GRACE_FINISHED`, right
+after it records the grace wait), phase = actor index, aux 0 exhausted,
+1 reaped, 2 wait_error. Polled
 publications keep
 `last_negative`, `first_positive` and a negative-sample count. Host sleeps keep
 count, last pre/post, requested and actual sums, and min/max, keyed 1 to 7 by
-caller; key 0 is the ready-byte wait. Sleep registers and events record
-bounded waits, whether sleeping or readiness-driven: in a tree whose ready-byte
-wait is readiness-driven (`HostWaitClock.expiredAfterWaiting`), an optional
-patch brackets each bounded wait with the same hook, so it appears under key 0
-exactly as a sleep does, and a wait that returns early records an actual
-duration below the requested one. Custody passes in the actor completion
+caller; key 0 is the ready-byte wait and key 5 the worker exit grace. Sleep
+registers and events record bounded waits, whether sleeping or
+readiness-driven: in a tree whose ready-byte wait is readiness-driven
+(`HostWaitClock.expiredAfterWaiting(readable:)`), an optional patch brackets
+each bounded wait with the same hook, so it appears under key 0 exactly as a
+sleep does, and a wait that returns early records an actual duration below the
+requested one. In a tree whose worker grace waits for the exit notification
+(`HostWaitClock.expiredAfterWaiting(exit:)`), a second optional patch records
+each such wait under key 5 with `HostStamps.wait`, which adds its outcome
+event. Custody passes in the actor completion
 loop are registers; events 153/154 are appended only for passes that changed
 the custody or transfer record count.
 
@@ -219,8 +230,9 @@ copies of nine runner files. Each anchor must occur exactly once or the build
 fails before compiling. A patch marked optional applies when its anchor occurs
 once, is skipped when the anchor is absent, and fails when it occurs more than
 once; skipped patches are listed under `patches_skipped` in `host-build.json`.
-The one optional patch brackets the readiness-driven ready-byte wait described
-above, so a tree without that wait builds unchanged. `build_host` copies a
+The two optional patches bracket the readiness-driven ready-byte wait and the
+bounded worker exit wait described above, so a tree without either wait builds
+unchanged; the grace program points apply to every tree. `build_host` copies a
 source tree's `runner/` (this repository's by default), applies the patches and
 compiles that tree's Meson PWRunner source list with
 `swiftc -j 2 -Onone -g -target arm64-apple-macosx<minimum>`; the shim is built

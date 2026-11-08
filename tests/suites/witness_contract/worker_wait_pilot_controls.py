@@ -8,9 +8,10 @@ and source tree up to, never including, signing. Worker pages are
 packed with offsets written from the C layout, in program order, including
 loaded-record pairs, pass-count records and inbound pass samples appended after
 later reads. Host exports carry each sleep as a 180/181 event pair beside its
-register and a done register for the ordinary worker. Expected values are
-written from the constructed microsecond times, not computed with the reader's
-functions.
+register and a done register for the ordinary worker. A candidate-shaped
+ordinary receipt adds the worker grace program points and one bounded exit wait
+whose pair is followed by its outcome event. Expected values are written from
+the constructed microsecond times, not computed with the reader's functions.
 """
 import base64
 import copy
@@ -45,6 +46,9 @@ CURRENT_ONLY = {13, 14, 15, 139, 149, 180, 181}
 # Host sleep event pairs, which the dry-run-05 receipts also lack.
 SLEEP_EVENTS = {180, 181}
 SENTINEL_NS, ACTOR_POLL_NS = 2_000_000, 1_000_000
+GRACE_POLL_NS = 10_000_000
+# The WAIT_OUTCOME aux of each constructed grace wait; 'plain' is a key-5 sleep without one.
+GRACE_OUTCOMES = dict(timed_out=0, notified=1, unusable=2, plain=None)
 
 
 def tk(us):
@@ -132,13 +136,15 @@ def host_exit(pid, begin_ns):
                 cleanup_observed_how='host_exit_event', cleanup_ns=begin_ns + 70_000_100, host_pid=pid)
 
 
-def ordinary_bundle(keep=True, worker_edit=None, index=0, sleep_events=True):
+def ordinary_bundle(keep=True, worker_edit=None, index=0, sleep_events=True, grace=None):
     """O1: one phase, one eligible query. Times are microseconds from a 10 s base.
     Sentinel pass 1 (4000-4300) observes application and samples arrival and done negative; sleep 1
     (4310-6460) contains the worker's arrival; pass 2 observes arrival and runs the hook; pass 3 after
     release samples acknowledgement and done negative; sleep 2 (9270-11470) contains TERMINAL_PUBLISHED;
     pass 4 observes both. keep=False drops the records the dry-run-04 receipts lack;
-    sleep_events=False drops the 180/181 pairs the dry-run-05 receipts lack."""
+    sleep_events=False drops the 180/181 pairs the dry-run-05 receipts lack. grace names how one worker grace
+    wait ends (GRACE_OUTCOMES): the grace begins at 11.52 ms after the exit request (11.51 ms), the wait runs
+    11.53-11.58 ms, the reap follows at 11.6 ms and the grace finishes at 11.61 ms."""
     b = 10_000_000
     host = [(100, NONE, 0, 0), (101, 0, 4242, 1000), (102, 0, 0, 3000), (103, 0, 2, 4000),
             (180, 1, SENTINEL_NS, 4310), (181, 1, SENTINEL_NS, 6460), (110, 0, 1, 6500), (111, 0, 0, 6510),
@@ -148,6 +154,14 @@ def ordinary_bundle(keep=True, worker_edit=None, index=0, sleep_events=True):
             (139, 0, 1, 9248), (141, 0, 1, 9250), (180, 1, SENTINEL_NS, 9270), (181, 1, SENTINEL_NS, 11470),
             (142, 0, 1, 11500), (144, 0, 3, 11500), (146, 0, 0, 11510), (147, 0, 0, 11600),
             (170, 0, 0, 11700), (171, NONE, 0, 60000)]
+    grace_sleep = {}
+    if grace is not None:
+        at = next(i for i, e in enumerate(host) if e[0] == 146) + 1
+        outcome = GRACE_OUTCOMES[grace]
+        host[at:at] = [(148, 0, 0, 11520), (180, 5, GRACE_POLL_NS, 11530), (181, 5, GRACE_POLL_NS, 11580)] + (
+            [] if outcome is None else [(182, 5, outcome, 11580)])
+        host.insert(next(i for i, e in enumerate(host) if e[0] == 147) + 1, (157, 0, 1, 11610))
+        grace_sleep = {'5': (1, GRACE_POLL_NS, 50_000, 50_000, 50_000, tk(b + 11530), tk(b + 11580))}
     worker = [(1, NONE, 0, 1500), (2, NONE, 0, 3800), (3, 0, 0, 5000), (4, 0, 0, 5002), (4, 0, 0, 9249), (4, 0, 1, 9255),
               (5, 0, 1, 9256), (13, 0, 3000, 9256), (11, 0, 0, 9400), (12, NONE, 0, 9500)]
     host, worker = current(host, keep, sleep_events), current(worker, keep)
@@ -161,7 +175,7 @@ def ordinary_bundle(keep=True, worker_edit=None, index=0, sleep_events=True):
                  '142:0': dict(last_negative=tk(b + 9260), first_positive=tk(b + 11500), negatives=1),
                  '144:0': dict(last_negative=tk(b + 9261), first_positive=tk(b + 11500), negatives=3)}
     stamps = stamps_doc(sid, 4141, b, host, registers,
-                        sleeps(**{'1': (2, SENTINEL_NS, 4_350_000, 2_200_000, 2_150_000, tk(b + 9270), tk(b + 11470))}),
+                        sleeps(**{'1': (2, SENTINEL_NS, 4_350_000, 2_200_000, 2_150_000, tk(b + 9270), tk(b + 11470))}, **grace_sleep),
                         [(0, 4242, len(worker), page)], cost=keep)
     return dict(dir=f'constructed/O1/{index}', trial=trial('instrumented', 'O1', 'rapid', sid, dict(form='ordinary', phases=[dict(eligible=1)]), index),
                 conditions=conditions('rapid', 30_000_000, [0, 250_000_000]), started=dict(host_pid=4141, specimen_id=sid, raw=tk(b)),
@@ -338,6 +352,95 @@ def check_ordinary(row):
     assert row['observer_overlap']['overlaps_held'] is False
     assert row['request']['applied_observed_offset_ns'] == 4_000_000 and row['request']['stamp_pages_copied'] == [10]
     assert row['host_ms_cross_checks']['sentinel_excluded']['stamped_ns'] == 2_680_000
+
+
+def check_actor_intervals(row, grace=None):
+    """w0: TERMINAL_PUBLISHED (9.5 ms) to EXIT_REQUESTED (11.51 ms), that to WORKER_REAPED (11.6 ms), and the grace
+    from 11.52 to 11.61 ms when stamped. Program points: worker floor 300, host max(300, 2 x 500), alignment 100."""
+    (actor,) = row['actors']
+    assert actor['actor'] == 0 and set(actor) == {'actor', 'terminal_to_exit_request', 'exit_request_to_reap', 'grace_wait',
+                                                  'grace_stop_code'}, actor
+    values = lambda name: (actor[name]['ns'], actor[name]['uncertainty_ns'], actor[name]['cross_process'])
+    assert values('terminal_to_exit_request') == (2_010_000, WORKER_FLOOR + HOST_FLOOR + ALIGN, True), actor
+    assert actor['terminal_to_exit_request']['endpoints'] == [endpoint('worker0', 'terminal_published', None, 0),
+                                                              endpoint('host', 'exit_requested', None, 0)]
+    assert values('exit_request_to_reap') == (90_000, 2 * HOST_FLOOR, False), actor
+    if grace is None:
+        assert actor['grace_wait'] == dict(ns=None, unobserved='grace_not_stamped') and actor['grace_stop_code'] is None, actor
+    else:
+        assert values('grace_wait') == (90_000, 2 * HOST_FLOOR, False) and actor['grace_stop_code'] == 1, actor
+        assert actor['grace_wait']['endpoints'] == [endpoint('host', 'worker_grace_begin', None, 0),
+                                                    endpoint('host', 'worker_grace_finished', None, 0)]
+    names = {name for name, _ in reader.component_values(row)}
+    assert {'w0.terminal_to_exit_request', 'w0.exit_request_to_reap', 'w0.grace_wait'} <= names, names
+
+
+def check_grace(row, grace):
+    """One key-5 wait counted by its outcome event; a key-5 sleep without one is a timeout."""
+    assert row['status'] == 'accepted' and not row['problems'] and not row['exclusions'], (grace, row['problems'])
+    expected = dict(timed_out=(1, 0, 0), notified=(0, 1, 0), unusable=(0, 0, 1), plain=(1, 0, 0))[grace]
+    assert tuple(row[name] for name in reader.GRACE_COUNTS) == expected, (grace, [row[n] for n in reader.GRACE_COUNTS])
+    outcome = GRACE_OUTCOMES[grace]
+    events = {name: int(code == outcome) for code, name in enumerate(('timed_out', 'notified', 'unusable'))}
+    assert row['grace_wait_record'] == dict(waits=1, recorded_pairs=1, outcome_events=events, plain_sleeps=int(outcome is None),
+                                            plain_sleeps_by_requested_ns={str(GRACE_POLL_NS): 1} if outcome is None else {},
+                                            unrecorded=0), row['grace_wait_record']
+    assert row['host_sleep_events'] == dict(state='complete', truncated_keys=[], pairs={'1': 2, '5': 1}), row['host_sleep_events']
+    assert row['host_sleeps']['worker_grace']['event_durations_ns'] == [50_000]
+    check_actor_intervals(row, grace)
+
+
+def grace_rule_controls():
+    """Grace counts on minimal host exports: waits past the 64 recorded pairs and plain sleeps are timeouts."""
+    def export(waits, count):
+        events, raw = [], 0
+        for requested, outcome in waits:
+            events += [[180, 5, requested, raw], [181, 5, requested, raw + 10]] + ([] if outcome is None else [[182, 5, outcome, raw + 10]])
+            raw += 100
+        return dict(events=events, sleeps={'5': dict(count=count)})
+    truncated = reader.grace_counts(export([(GRACE_POLL_NS, 1)] * 64, 70))
+    assert (truncated['grace_timeouts'], truncated['grace_notified'], truncated['grace_unusable']) == (6, 64, 0), truncated
+    assert (truncated['grace_wait_record']['recorded_pairs'], truncated['grace_wait_record']['unrecorded']) == (64, 6), truncated
+    # A notified wait, two 100 us settle sleeps and one 10 ms sleep: every plain sleep counts as a timeout.
+    settled = reader.grace_counts(export([(GRACE_POLL_NS, 1), (100_000, None), (100_000, None), (GRACE_POLL_NS, None)], 4))
+    assert (settled['grace_timeouts'], settled['grace_notified']) == (3, 1), settled
+    assert settled['grace_wait_record']['plain_sleeps_by_requested_ns'] == {'100000': 2, '10000000': 1}, settled
+    assert reader.grace_counts(export([], 0))['grace_timeouts'] == 0
+    assert reader.wait_outcome_problems([[180, 5, 1, 0], [181, 5, 1, 10], [182, 5, 2, 10]]) == set()
+    assert reader.wait_outcome_problems([[180, 5, 1, 0], [181, 5, 1, 10], [182, 5, 3, 10]]) == {'host_wait_outcome_invalid'}
+    assert reader.wait_outcome_problems([[182, 5, 1, 10]]) == {'host_wait_outcome_unpaired'}
+    assert reader.wait_outcome_problems([[148, 1, 0, 10], [157, 1, 1, 10]]) == set()
+    assert reader.wait_outcome_problems([[157, 1, 1, 10], [148, 1, 0, 10]]) == {'host_grace_interval_reversed'}
+    return ['grace waits past 64 recorded pairs counted as timeouts', 'settle and poll sleeps without an outcome counted as timeouts by requested ns',
+            'outcome and grace order rules on minimal exports']
+
+
+def move_grace_finished(raw_us):
+    """WORKER_GRACE_FINISHED moved before WORKER_GRACE_BEGIN, at raw_us."""
+    def edit(bundle):
+        events = bundle['stamps']['events']
+        finished = next(e for e in events if e[0] == 157)
+        events.remove(finished)
+        finished[3] = tk(10_000_000 + raw_us)
+        events.insert(next(i for i, e in enumerate(events) if e[0] == 148), finished)
+    return edit
+
+
+def move_wait_outcome(bundle):
+    """The WAIT_OUTCOME moved from after its pair to just after WORKER_GRACE_BEGIN."""
+    events = bundle['stamps']['events']
+    outcome = next(e for e in events if e[0] == 182)
+    events.remove(outcome)
+    outcome[3] = tk(10_000_000 + 11525)
+    events.insert(next(i for i, e in enumerate(events) if e[0] == 148) + 1, outcome)
+
+
+def edit_wait_outcome(**fields):
+    def edit(bundle):
+        outcome = next(e for e in bundle['stamps']['events'] if e[0] == 182)
+        for index, value in fields.items():
+            outcome[dict(phase=1, aux=2, raw=3)[index]] = value(outcome)
+    return edit
 
 
 def check_ordinary_without_new_records(row):
@@ -839,6 +942,7 @@ def check_every_pair_worsening(pairs, required):
     assert checked > 0, 'no paired series were checked'
     return checked
 BASELINE_ARRIVAL, BASELINE_HELD, CANDIDATE_ARRIVAL, CANDIDATE_HELD = 7_100_000, 8_900_000, 900_000, 2_700_000
+DIRECTION_RULE = 'sign of baseline minus candidate per pair'
 
 
 def pair_row(base, app, index, values=(), *, form=None, passes=3000, whole_ms=50, ready=(1, 12_500_000), status='accepted', **fields):
@@ -913,6 +1017,7 @@ def comparison_controls(base):
     assert whole['spread_ns'] == dict(baseline=dict(ns=2_000_000, trials=3), candidate=dict(ns=2_000_000, trials=3)), whole
     assert verdicts(whole) == (None, True, None, False) and 'instrument_verdicts' in whole and 'withheld' not in whole, whole
     assert outcomes(whole) == [(i, 6_000_000, 0, 'not_applicable') for i in range(3)], whole
+    assert whole['direction'] == dict(faster=3, slower=0, equal=0, rule=DIRECTION_RULE), whole['direction']
     assert entry['response'] == {'p0.release_to_ack': dict(
         candidate_upper_ns=6000, baseline_lower_ns=6000, bound_ns=0, limit_ns=2_000_000, within_limit=True, combined_uncertainty_ns=6200,
         uncertainty_at_most_0_5_ms=True, instrument_gate_credited=True, credited=True, trials=dict(baseline=3, candidate=3))}, entry['response']
@@ -921,6 +1026,28 @@ def comparison_controls(base):
     assert entry['host_sleeps']['ordinary_sentinel'][0]['candidate'] == dict(count=2, sum_ns=4_350_000)
     assert [p['index'] for p in entry['pairs']] == [0, 1, 2] and pairs_of(improving_rows(base))['unpaired'] == []
     names.append('candidate arrival and held total shorter beyond uncertainty and beyond its spread in every pair: improvement')
+
+    # Whole request 50, 51, 52 ms against 44, 51, 60 ms: one pair each faster, equal and slower.
+    mixed = [pair_row(base, app, i, whole_ms=ms) for i, pair in enumerate(((50, 44), (51, 51), (52, 60)))
+             for app, ms in zip(reader.PAIR_APPS, pair)]
+    (entry,) = pairs_of(mixed)['entries']
+    assert entry['whole_request']['direction'] == dict(faster=1, slower=1, equal=1, rule=DIRECTION_RULE), entry['whole_request']
+    assert [r['difference'] for r in entry['whole_request']['pairs']] == [6_000_000, 0, -8_000_000]
+    names.append('whole-request direction counts faster, equal and slower pairs by the sign of the difference')
+
+    # Grace counts: one timeout per baseline trial, one notification per candidate trial, one candidate count absent.
+    rows = [pair_row(base, app, i, **(dict(grace_timeouts=1) if app == 'baseline' else dict(grace_notified=1)))
+            for i in range(3) for app in reader.PAIR_APPS]
+    rows[5]['grace_unusable'] = None
+    (entry,) = pairs_of(rows)['entries']
+    grace = entry['grace']
+    assert set(grace) == set(reader.GRACE_COUNTS)
+    assert [(r['baseline'], r['candidate'], r['difference']) for r in grace['grace_timeouts']['pairs']] == [(1, 0, 1)] * 3, grace
+    assert grace['grace_timeouts']['sums'] == dict(baseline=3, candidate=0) and grace['grace_notified']['sums'] == dict(baseline=0, candidate=3)
+    assert [r['difference'] for r in grace['grace_notified']['pairs']] == [-1] * 3
+    assert grace['grace_unusable']['pairs'][2] == dict(index=2, absent_on=['candidate']) and grace['grace_unusable']['sums'] == dict(baseline=0, candidate=0)
+    assert all('improves_beyond_uncertainty_in_every_pair' not in value for value in grace.values())
+    names.append('grace counts paired as exact differences with per-side sums, an absent count kept as absent')
 
     within = {1: {'arrival_detection': (BASELINE_ARRIVAL + 100_000 - 2000, 1300)}}
     (entry,) = pairs_of(improving_rows(base, candidate_edits=within))['entries']
@@ -1007,6 +1134,7 @@ def comparison_controls(base):
     assert series and all(verdicts(v) == (False, False, False, False) for v in series), [
         (v, verdicts(v)) for v in series if verdicts(v) != (False, False, False, False)]
     assert verdicts(entry['whole_request']) == (None, False, None, False)
+    assert entry['whole_request']['direction'] == dict(faster=0, slower=0, equal=2, rule=DIRECTION_RULE)
     uncalibrated = reader.evaluate_bundle(ordinary_bundle(), None)
     (entry,) = pairs_of([pair_row(uncalibrated, app, i) for i in range(2) for app in reader.PAIR_APPS], required=2)['entries']
     arrival = entry['components']['p0.arrival_to_observation']
@@ -1062,6 +1190,9 @@ def comparison_round_trip(out):
                    f'| p0.arrival_to_observation | no / no | no / no / no | 0.0 / 0.0 | r0 0.0 ± {combined[0] / 1000:.1f} (detected/detected); '
                    f'r1 0.0 ± {combined[1] / 1000:.1f} (detected/detected) |',
                    '| p0.release_wait | no / no | no / no / no | 0 / 0 | r0 0 ± 0; r1 0 ± 0 |', 'Whole request (spread baseline / candidate 0.00 ms / 0.00 ms): improves n/a / no; worsens n/a / no / no; r0 0.00 ms; r1 0.00 ms.', '| p0.release_to_ack | 6.0 | 6.0 | 0.0 | yes |',
+                   'Candidate faster in 0, slower in 0, equal in 2 pairs.', '| grace_timeouts | 0 / 0 | r0 0 -> 0; r1 0 -> 0 |',
+                   'Grace waits (key 5), sum over accepted trials: grace_timeouts 0 (max per trial 0)',
+                   '| w0.terminal_to_exit_request | no / no | no / no / no |',
                    '| ordinary_sentinel | r0 2, 4.35 ms -> 2, 4.35 ms; r1 2, 4.35 ms -> 2, 4.35 ms |', '## baseline O1 rapid', '## candidate O1 rapid'):
         assert needle in text, needle
     shutil.rmtree(root)
@@ -1136,6 +1267,21 @@ def main(out):
     rule_controls = order_rule_controls()
     ordinary, actor, neighbor = ordinary_bundle(), actor_bundle(), neighbor_bundle()
     check_ordinary(reader.evaluate_bundle(copy.deepcopy(ordinary), CALIBRATION))
+    check_actor_intervals(reader.evaluate_bundle(copy.deepcopy(ordinary), CALIBRATION))
+    assert tuple(reader.evaluate_bundle(copy.deepcopy(ordinary), CALIBRATION)[n] for n in reader.GRACE_COUNTS) == (0, 0, 0)
+    graced = {grace: reader.evaluate_bundle(ordinary_bundle(grace=grace), CALIBRATION) for grace in GRACE_OUTCOMES}
+    for grace, row in graced.items():
+        check_grace(row, grace)
+    # Group sums over the accepted trials of one group.
+    (group,) = reader.summarize([graced['notified'], graced['plain'], graced['unusable']])
+    assert {name: (value['sum'], value['n'], value['max']) for name, value in group['grace_counts'].items()} == dict(
+        grace_timeouts=(1, 3, 1), grace_notified=(1, 3, 1), grace_unusable=(1, 3, 1)), group['grace_counts']
+    assert group['components']['w0.grace_wait']['n'] == 3 and group['components']['w0.exit_request_to_reap']['median'] == 90_000
+    actor_row = reader.evaluate_bundle(copy.deepcopy(actor), CALIBRATION)
+    assert [(a['actor'], a['terminal_to_exit_request']['unobserved'], a['exit_request_to_reap']['unobserved']) for a in actor_row['actors']] == [
+        (0, 'terminal_or_exit_request_unobserved', 'exit_request_or_reap_unobserved'),
+        (1, 'terminal_or_exit_request_unobserved', 'exit_request_or_reap_unobserved')], actor_row['actors']
+    grace_controls = grace_rule_controls()
     check_actor(reader.evaluate_bundle(copy.deepcopy(actor), CALIBRATION))
     assert reader.evaluate_bundle(copy.deepcopy(neighbor), CALIBRATION)['status'] == 'accepted'
     check_ordinary_without_new_records(reader.evaluate_bundle(ordinary_bundle(keep=False), CALIBRATION))
@@ -1176,7 +1322,10 @@ def main(out):
                 'O1 arrival first check positive inside a sleep event pair', 'O1 arrival first check positive before any sleep: unattributed',
                 'O1 done first check positive inside a sleep event pair', 'O1 done register absent: unobserved label',
                 'A2 with a done register for the subject', 'O1 20 us release inversion widening alignment',
-                'uncalibrated O1', 'unbounded alignment O1', 'O1 without an endpoint term', 'scan role unknown A2'] + sleep_controls
+                'uncalibrated O1', 'unbounded alignment O1', 'O1 without an endpoint term', 'scan role unknown A2',
+                'O1 per-actor exit intervals without grace stamps', 'A2 without exit requests: per-actor intervals unobserved'] + [
+                f'O1 candidate-shaped grace wait: {grace}' for grace in GRACE_OUTCOMES] + [
+                'grace counts summed per group'] + sleep_controls + grace_controls
 
     # The pre-referee uncertainty arithmetic fails the expected values.
     formula_rejected(old_uncertainty, [(ordinary_bundle, check_ordinary), (actor_bundle, check_actor),
@@ -1196,7 +1345,7 @@ def main(out):
     decomposition, summary = reader.read_artifacts(root)
     assert summary['calibration_status'] == 'established' and summary['counts']['accepted'] == 4 and summary['counts']['excluded'] == 1, (
         summary['calibration_status'], summary['counts'])
-    assert decomposition['version'] == summary['version'] == 5
+    assert decomposition['version'] == summary['version'] == 6
     calibration = decomposition['calibration']
     term = resolution['readers']['busy']['endpoint_term_ns']
     assert calibration['stamp_ns'] == -(-resolution['stamp_ns'] // 1) and calibration['alignment_ns'] == resolution['alignment']['bound_ns']
@@ -1336,6 +1485,13 @@ def main(out):
     fault('sleep_duration_mismatch', {'host_sleep_event_duration_mismatch'}, sleep_end_later)
     fault('actor_sleep_pair_missing', {'host_sleep_event_count_mismatch'},
           lambda r: (lambda events, begin: events.__delitem__(slice(begin, begin + 2)))(*sleep_pair(r, 4)), actor)
+    graced = lambda: ordinary_bundle(grace='notified')
+    fault('wait_outcome_aux_3', {'host_wait_outcome_invalid'}, edit_wait_outcome(aux=lambda e: 3), graced())
+    fault('wait_outcome_without_pair', {'host_wait_outcome_unpaired'}, move_wait_outcome, graced())
+    fault('wait_outcome_other_key', {'host_wait_outcome_unpaired'}, edit_wait_outcome(phase=lambda e: 4), graced())
+    fault('wait_outcome_other_raw', {'host_wait_outcome_unpaired'}, edit_wait_outcome(raw=lambda e: e[3] + tk(1)), graced())
+    fault('grace_finished_before_begin', {'host_grace_interval_reversed'}, move_grace_finished(11515), graced())
+    fault('grace_finished_listed_before_begin', {'host_grace_interval_reversed'}, move_grace_finished(11520), graced())
     fault('combined_magic_and_pacing', {'worker_page_bad_magic', 'pacing_out_of_range'},
           lambda r: (page_fault(header('magic', 0))(r), r['conditions']['pacing'].update(actual_gap_ns=None)))
     fault('combined_alignment_and_sleep', {'clock_alignment_violation', 'sleep_overlapped'},

@@ -60,6 +60,21 @@ Interpretation rules, repeated in summary.json:
 - Components are chained or nested, not disjoint (spawn_to_* share the spawn
   end, eof_to_reap overlaps eof_to_decode and decode, held_total contains the
   release and acknowledgement components); never add them.
+- Per actor, w<actor>.terminal_to_exit_request runs from the worker's
+  TERMINAL_PUBLISHED to the host's EXIT_REQUESTED (146), w<actor>.exit_request_to_reap
+  from 146 to the host's reaping sample WORKER_REAPED (147), and w<actor>.grace_wait
+  from WORKER_GRACE_BEGIN (148) to WORKER_GRACE_FINISHED (157), with grace_stop_code
+  157's aux (0 exhausted, 1 reaped, 2 wait_error). All are program-point intervals:
+  each endpoint term is its floor, plus the alignment bound across processes. The
+  worker's exit itself has no stamp. A trial whose 157 precedes its 148 is refused.
+- Per trial, grace_timeouts, grace_notified and grace_unusable count how the worker
+  grace waits between samples (sleep key 5) ended: a key-5 pair followed by
+  WAIT_OUTCOME (182, phase = key, raw = the pair's end) is counted by its aux (0 timed
+  out, 1 notified, 2 unusable); a key-5 pair without one is a plain sleep and counts
+  as a timeout, and so does every key-5 wait past the 64 recorded pairs.
+  grace_wait_record keeps that breakdown, with the plain sleeps by requested
+  ns. A 182 whose aux is not 0, 1 or 2, or that does not immediately follow a
+  181 of the same key and raw, refuses the trial.
 - A trial whose driver exit-watch registration overlapped a held interval is
   excluded (observer_overlap) and kept as a diagnostic.
 - A comparison run (schedule.json comparison) pairs a baseline and a candidate
@@ -70,7 +85,10 @@ Interpretation rules, repeated in summary.json:
   sides'. A split observation is compared under one *_to_observation name,
   publication to the host's first positive sample, with each side's form kept.
   Worker release and activation passes are exact counts; whole request has no
-  instrument uncertainty and only spread verdicts. A side's spread of a
+  instrument uncertainty and only spread verdicts, and its direction counts the
+  pairs where the candidate was faster (positive difference), slower or equal.
+  The grace counts are paired as exact per-pair differences with each side's
+  sum over the pairs, without verdicts. A side's spread of a
   quantity is max - min over its accepted trials in the group.
   improves_beyond_uncertainty_in_every_pair compares each difference with the
   instrument uncertainty; improves_beyond_spread_in_every_pair requires it to
@@ -95,7 +113,7 @@ import statistics
 import struct
 import sys
 
-READER_VERSION = 5
+READER_VERSION = 6
 HERE = Path(__file__).resolve().parent
 
 # Worker stamp page; mirrors tests/fixtures/worker_wait/pww_stamp_page.h.
@@ -136,16 +154,23 @@ HOST_EVENTS = {100: 'request_start', 101: 'worker_spawned', 102: 'ready_observed
                132: 'decode_end', 133: 'grace_start', 134: 'validator_reaped', 135: 'grace_end',
                136: 'validator_terminate', 139: 'release_store_begin', 140: 'hook_end', 141: 'release_stored',
                142: 'ack_observed', 143: 'completion_observed', 144: 'done_observed', 145: 'death_check',
-               146: 'exit_requested', 147: 'worker_reaped', 149: 'activation_store_begin', 150: 'activation_stored',
-               151: 'collection_start', 152: 'collection_end', 153: 'custody_service_start', 154: 'custody_service_end',
-               155: 'transfer_wait_start', 156: 'transfer_wait_end', 160: 'setup_done', 161: 'schedule_done',
-               170: 'stamp_page_copied', 171: 'flush_begin', 180: 'host_sleep_begin', 181: 'host_sleep_end'}
+               146: 'exit_requested', 147: 'worker_reaped', 148: 'worker_grace_begin', 149: 'activation_store_begin',
+               150: 'activation_stored', 151: 'collection_start', 152: 'collection_end', 153: 'custody_service_start',
+               154: 'custody_service_end', 155: 'transfer_wait_start', 156: 'transfer_wait_end',
+               157: 'worker_grace_finished', 160: 'setup_done', 161: 'schedule_done',
+               170: 'stamp_page_copied', 171: 'flush_begin', 180: 'host_sleep_begin', 181: 'host_sleep_end',
+               182: 'wait_outcome'}
 H = {name: code for code, name in HOST_EVENTS.items()}
 # Host events appended with a raw the caller read earlier (spawn return, custody pass start, sleep pre read).
 HOST_PRESAMPLED = {101, 153, 180}
 # Each host sleep appends 180 (raw = pre read) and 181 (raw = post read), phase = key, aux = requested ns,
 # for the first 64 sleeps of its key; later sleeps update only the registers.
 SLEEP_BEGIN, SLEEP_END, SLEEP_EVENTS_PER_KEY = 180, 181, 64
+# A bounded exit wait's pair is followed by 182 (phase = key, aux = outcome, raw = the pair's end raw).
+WAIT_OUTCOME = 182
+WAIT_OUTCOMES = {0: 'timed_out', 1: 'notified', 2: 'unusable'}
+GRACE_KEY = '5'
+GRACE_COUNTS = ('grace_timeouts', 'grace_notified', 'grace_unusable')
 SAMPLED_PERIOD = '(accepting pass sample - first pass sample) / (passes - 1)'
 UPPER_PERIOD = 'upper bound: preceding stamp to answer / passes'
 RECIPIENT_NOTE = 'host interval, not a detection; bimodal by recipient state; see the split sibling rows'
@@ -185,6 +210,7 @@ UNOBSERVED = {
     'inbound_commit_instant': 'The host has no commit stamp; custody pass and transfer-wait stamps bracket it.',
     'inbound_observation_instant': 'INBOUND_OBSERVED carries the pass sample that precedes the observation, not a read at it.',
     'kernel_exit_times': 'Exit watches report kqueue collection brackets, not kernel exit times.',
+    'worker_exit_instant': 'The worker\'s exit has no stamp: exit_request_to_reap ends at the host\'s reaping sample (147), which follows the exit by up to the wait between grace samples.',
     'neighbor_internal_intervals': 'The uninstrumented neighbor has no stamps; only whole-request latency and envelope millisecond fields exist.',
 }
 
@@ -331,6 +357,7 @@ def check_stamps(doc, trial):
         if any(e[0] == begin for e in events) and any(
                 e[0] == stored and (not index or events[index - 1][0] != begin) for index, e in enumerate(events)):
             problems.append('host_store_begin_incomplete')
+    problems.extend(wait_outcome_problems(events))
     if 'stamp_cost' in doc:
         raws = doc['stamp_cost'].get('raws') if isinstance(doc['stamp_cost'], dict) else None
         if not isinstance(raws, list) or not all(map(_int, raws)) or any(b < a for a, b in zip(raws, raws[1:])):
@@ -362,6 +389,26 @@ def check_stamps(doc, trial):
         if entry.get('reaped') is not True: problems.append('worker_page_copied_before_reap')
         if entry.get('capture_requested') is not False: problems.append('worker_page_capture_requested')
     return sorted(set(problems))
+
+
+def wait_outcome_problems(events):
+    """A WAIT_OUTCOME carries 0, 1 or 2 and immediately follows its key's 181 with the same raw; a grace's 157
+    follows its 148."""
+    problems = set()
+    for index, e in enumerate(events):
+        if e[0] != WAIT_OUTCOME:
+            continue
+        if e[2] not in WAIT_OUTCOMES:
+            problems.add('host_wait_outcome_invalid')
+        end = events[index - 1] if index else None
+        if end is None or end[0] != SLEEP_END or end[1] != e[1] or end[3] != e[3]:
+            problems.add('host_wait_outcome_unpaired')
+    for phase in sorted({e[1] for e in events if e[0] in (H['worker_grace_begin'], H['worker_grace_finished'])}):
+        begin = index_of(events, H['worker_grace_begin'], phase=phase)
+        finished = index_of(events, H['worker_grace_finished'], phase=phase)
+        if begin is not None and finished is not None and (finished < begin or events[finished][3] < events[begin][3]):
+            problems.add('host_grace_interval_reversed')
+    return problems
 
 
 def index_of(events, code, *, phase=None, aux=None, after=None, before=None):
@@ -439,6 +486,47 @@ def sleep_event_state(doc, record):
                        if isinstance(value, dict) and _int(value.get('count')) and value['count'] > SLEEP_EVENTS_PER_KEY)
     return dict(state='truncated' if truncated else 'complete', truncated_keys=truncated,
                 pairs={key: len(value) for key, value in sorted(record['pairs'].items())})
+
+
+def grace_counts(doc):
+    """How the trial's worker grace waits (sleep key 5) ended: each recorded pair by the 182 that follows it, a
+    pair without one as a plain sleep (a timeout), and every wait past the recorded pairs as a timeout."""
+    register = (doc['sleeps'] or {}).get(GRACE_KEY) or dict(count=0)
+    if not isinstance(register, dict) or not _int(register.get('count')):
+        return None
+    events, outcomes, plain, recorded = doc['events'], {code: 0 for code in WAIT_OUTCOMES}, {}, 0
+    for index, e in enumerate(events):
+        if e[0] != SLEEP_END or str(e[1]) != GRACE_KEY:
+            continue
+        recorded += 1
+        follower = events[index + 1] if index + 1 < len(events) else None
+        if follower is not None and follower[0] == WAIT_OUTCOME and follower[1] == e[1] and follower[2] in WAIT_OUTCOMES:
+            outcomes[follower[2]] += 1
+        else:
+            plain[str(e[2])] = plain.get(str(e[2]), 0) + 1
+    unrecorded = max(0, register['count'] - recorded)
+    return dict(grace_timeouts=outcomes[0] + sum(plain.values()) + unrecorded, grace_notified=outcomes[1], grace_unusable=outcomes[2],
+                grace_wait_record=dict(waits=register['count'], recorded_pairs=recorded,
+                                       outcome_events={WAIT_OUTCOMES[code]: n for code, n in outcomes.items()},
+                                       plain_sleeps=sum(plain.values()), plain_sleeps_by_requested_ns=dict(sorted(plain.items())),
+                                       unrecorded=unrecorded))
+
+
+def actor_intervals(doc, pages, interval):
+    """Per actor: the worker's terminal publication to the host's exit request, that request to the host's reaping
+    sample, and the grace wait between its program points (148, 157), all program-point intervals."""
+    events, rows = doc['events'], []
+    for actor in sorted(pages):
+        terminal = first(records(pages[actor]), W['terminal_published'])
+        at = lambda name: (lambda e: point(e and e[3], 'host', name))(first(events, H[name], phase=actor))
+        finished = first(events, H['worker_grace_finished'], phase=actor)
+        rows.append(dict(actor=actor,
+                         terminal_to_exit_request=interval(point(terminal and terminal[3], f'worker{actor}', 'terminal_published'),
+                                                           at('exit_requested'), missing='terminal_or_exit_request_unobserved'),
+                         exit_request_to_reap=interval(at('exit_requested'), at('worker_reaped'), missing='exit_request_or_reap_unobserved'),
+                         grace_wait=interval(at('worker_grace_begin'), at('worker_grace_finished'), missing='grace_not_stamped'),
+                         grace_stop_code=finished and finished[2]))
+    return rows
 
 
 def host_stamp_cost(doc, tb):
@@ -1122,6 +1210,10 @@ def evaluate_stamps(bundle, row, calibration):
     row['host_stamp_cost'] = (host_stamp_cost(doc, tb) if 'host_stamp_cost_malformed' not in problems
                               else dict(median_ns=None, unobserved='stamp_cost malformed'))
     row['custody_passes'] = doc.get('custody_passes')
+    counts = grace_counts(doc) if 'host_sleep_register_malformed' not in problems else None
+    row.update(counts or {name: None for name in GRACE_COUNTS})
+    if counts is None:
+        row['grace_wait_record'] = dict(unobserved='worker grace sleep register malformed')
     row['worker_waits'] = {str(actor): worker_wait_registers(page) for actor, page in pages.items()}
     row['host_flavour'] = doc['flavour']
     if len(pages) != len(doc['worker_pages']) or not pages:
@@ -1132,10 +1224,10 @@ def evaluate_stamps(bundle, row, calibration):
     def build(interval, pairs):
         phases = (ordinary_phases(doc, pages[0], trial, interval, pairs) if trial['form'] == 'ordinary'
                   else actor_phases(doc, pages, trial, interval, pairs))
-        return phases, done_rows(doc, pages, interval, pairs, watched)
+        return phases, done_rows(doc, pages, interval, pairs, watched), actor_intervals(doc, pages, interval)
     cost = row['host_stamp_cost']['median_ns']
     pairs = []
-    row['phases'], row['done'] = build(Interval(tb, calibration, cost, sleeps=sleeps), pairs)
+    row['phases'], row['done'], row['actors'] = build(Interval(tb, calibration, cost, sleeps=sleeps), pairs)
     for pair in pairs:
         pair['inverted_ns'] = ns(pair['publication_raw'], tb) - ns(pair['observation_raw'], tb) if pair['inverted_ticks'] else 0
     inverted = [p['inverted_ns'] for p in pairs if p['inverted_ns'] > 0]
@@ -1145,7 +1237,7 @@ def evaluate_stamps(bundle, row, calibration):
         problems.append('clock_alignment_violation')
     if inverted:
         # Counted inversions widen the alignment term of every cross-process interval.
-        row['phases'], row['done'] = build(Interval(tb, calibration, cost, max(inverted), sleeps=sleeps), [])
+        row['phases'], row['done'], row['actors'] = build(Interval(tb, calibration, cost, max(inverted), sleeps=sleeps), [])
     for p in row['phases']:
         if p.get('eligible_planned') is not None and p['eligible_planned'] != p['expected_eligible']:
             problems.append('eligible_count_mismatch')
@@ -1237,6 +1329,10 @@ def component_values(row):
         for name, value in done.items():
             if isinstance(value, dict) and 'ns' in value:
                 yield f"w{done['actor']}.{name}", value
+    for actor in row.get('actors') or []:
+        for name, value in actor.items():
+            if isinstance(value, dict) and 'ns' in value:
+                yield f"w{actor['actor']}.{name}", value
 
 
 def wait_values(row):
@@ -1310,6 +1406,10 @@ def aggregate(rows):
             if value['count']:
                 sleeps.setdefault(name, []).append(value['mean_overshoot_ns'])
     order = [r['clock_order'] for r in rows if r.get('clock_order')]
+    grace = {}
+    for name in GRACE_COUNTS:
+        values = [r[name] for r in rows if r.get(name) is not None]
+        grace[name] = dict(stats(values), sum=sum(values), unavailable=len(rows) - len(values))
     exports = [r['export']['duration_ns'] for r in rows if (r.get('export') or {}).get('duration_ns') is not None]
     envelope = {}
     for row in rows:
@@ -1321,7 +1421,7 @@ def aggregate(rows):
                 waits={k: dict(passes=stats(v['passes']), mean_pass_period_ns=stats(v['periods']), unavailable=v['unavailable'],
                                period_definition=sorted(v['definitions']))
                        for k, v in sorted(waits.items())},
-                host_sleep_mean_overshoot_ns={k: stats(v) for k, v in sleeps.items()},
+                host_sleep_mean_overshoot_ns={k: stats(v) for k, v in sleeps.items()}, grace_counts=grace,
                 clock_order=dict(trials=len(order), inversions=sum(a['inversions'] for a in order),
                                  max_inversion_ns=max((a['max_inversion_ns'] for a in order), default=0)))
 
@@ -1484,6 +1584,28 @@ def host_sleep_pairs(pairs):
     return out
 
 
+def grace_pairs(pairs):
+    """Per grace count: each pair's exact baseline minus candidate difference and each side's sum over the pairs."""
+    out = {}
+    for name in GRACE_COUNTS:
+        rows = []
+        for index, b, c in pairs:
+            if b.get(name) is None or c.get(name) is None:
+                rows.append(dict(index=index, absent_on=[app for app, r in zip(PAIR_APPS, (b, c)) if r.get(name) is None]))
+                continue
+            rows.append(dict(index=index, baseline=b[name], candidate=c[name], difference=b[name] - c[name]))
+        out[name] = dict(pairs=rows, sums={app: sum(r[app] for r in rows if app in r) for app in PAIR_APPS},
+                         note='exact counts; baseline minus candidate; no verdicts')
+    return out
+
+
+def direction(series):
+    """Pairs where the candidate was faster (baseline minus candidate positive), slower or equal."""
+    differences = [r['difference'] for r in series.get('pairs', []) if 'difference' in r]
+    return dict(faster=sum(d > 0 for d in differences), slower=sum(d < 0 for d in differences),
+                equal=sum(d == 0 for d in differences), rule='sign of baseline minus candidate per pair')
+
+
 def whole_request(row):
     """Whole-request latency, which carries no instrument uncertainty: only its spread verdicts apply."""
     elapsed = (row.get('whole_request') or {}).get('elapsed_ns')
@@ -1518,11 +1640,13 @@ def matched_pairs(rows, comparison, gate_credited):
     for key in sorted(set(groups) | set(accepted), key=lambda k: tuple(map(str, k))):
         cell, regime, power, lowpower, flavour = key
         pairs, members = groups.get(key, []), accepted.get(key, {})
+        whole = pair_series(pairs, whole_request, required, members, instrument=False).get('whole_request') or dict(pairs=[])
+        whole['direction'] = direction(whole)
         entries.append(dict(cell=cell, regime=regime, power_source=power, lowpowermode=lowpower, flavour=json.loads(flavour),
                             pairs_required=required, pairs=[dict(index=i, baseline=b['dir'], candidate=c['dir']) for i, b, c in pairs],
                             components=pair_series(pairs, pair_components, required, members),
                             waits=pair_series(pairs, pair_waits, required, members),
-                            whole_request=pair_series(pairs, whole_request, required, members, instrument=False).get('whole_request') or dict(pairs=[]),
+                            whole_request=whole, grace=grace_pairs(pairs),
                             response=response_bounds(members, gate_credited), host_sleeps=host_sleep_pairs(pairs)))
     return dict(rule=comparison.get('pairing_rule'), pairs_required=required, difference='baseline minus candidate',
                 entries=entries, unpaired=unpaired)
@@ -1682,8 +1806,17 @@ def pairs_markdown(pairs):
             lines.append('')
         whole = entry['whole_request']
         if whole.get('pairs'):
+            way = whole['direction']
             lines += [f"Whole request (spread baseline / candidate {spreads(whole, ms)}): improves {verdicts(whole, True)}; "
-                      f"worsens {verdicts(whole, False)}; {per_pair(whole, ms)}.", '']
+                      f"worsens {verdicts(whole, False)}; {per_pair(whole, ms)}. Candidate faster in {way['faster']}, "
+                      f"slower in {way['slower']}, equal in {way['equal']} pairs.", '']
+        if entry.get('pairs'):
+            lines += ['| Grace waits (key 5) | sum baseline / candidate | per pair: baseline -> candidate |', '| --- | --- | --- |']
+            for name, value in entry['grace'].items():
+                lines.append(f"| {name} | {value['sums']['baseline']} / {value['sums']['candidate']} | " + '; '.join(
+                    f"r{r['index']} absent on {'/'.join(r['absent_on'])}" if 'absent_on' in r else f"r{r['index']} {r['baseline']} -> {r['candidate']}"
+                    for r in value['pairs']) + ' |')
+            lines.append('')
         if entry['response']:
             lines += ['| Response | candidate upper | baseline lower | bound | within 2 ms | combined uncertainty | credited |',
                       '| --- | --- | --- | --- | --- | --- | --- |']
@@ -1728,6 +1861,10 @@ def markdown(summary):
              '"unattributed (no containing sleep)" when none contains it, and "none" only when the host recorded no sleep between '
              'the publication and its observation.',
              'w<actor>.done_detection runs from the worker\'s TERMINAL_PUBLISHED to the host\'s first positive done sample (register 144).',
+             'w<actor>.terminal_to_exit_request (TERMINAL_PUBLISHED to EXIT_REQUESTED), w<actor>.exit_request_to_reap (to the host\'s '
+             'reaping sample) and w<actor>.grace_wait (WORKER_GRACE_BEGIN to WORKER_GRACE_FINISHED) are program-point intervals. '
+             'Grace waits count how the worker grace waits between samples (key 5) ended: timeouts include plain sleeps and '
+             'waits past the 64 recorded pairs.',
              f'A release or activation wait\'s mean pass period is {SAMPLED_PERIOD}. Exchange wait rows (pN.exchange_wait.slotS) '
              f'have no first-pass stamp: their period is an {UPPER_PERIOD}.',
              f'custody recipient_wait rows show min and max only: {RECIPIENT_NOTE}.', '',
@@ -1743,6 +1880,11 @@ def markdown(summary):
                   + ('; dry run, not creditable' if group['dry_run'] else ''), '',
                   f"Whole request (RunCapture): {format_stats(group['whole_request_ns'])}; "
                   f"host export span: {format_stats(group.get('export_duration_ns') or dict(n=0))}", '']
+        if group.get('grace_counts'):
+            lines += ['Grace waits (key 5), sum over accepted trials: ' + ', '.join(
+                f"{name} {value['sum']} (max per trial {value.get('max', '-')}"
+                + (f", unavailable {value['unavailable']}" if value['unavailable'] else '') + ')'
+                for name, value in group['grace_counts'].items()) + '.', '']
         if group.get('envelope_ms'):
             lines += ['| Envelope field (integer ms, host clock) | n | median | min | max |', '| --- | --- | --- | --- | --- |']
             for path, value in group['envelope_ms'].items():

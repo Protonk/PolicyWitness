@@ -97,7 +97,17 @@ publication: the exact sleep when the host recorded it as a stamped event pair
 (its first 64 sleeps per wait key), otherwise a register pair, otherwise
 marked unattributed. The ordinary host's detection of the worker's terminal
 publication is a component of its own, and exchange waits appear in the wait
-table with their pass counts and an upper-bound period. Each trial also
+table with their pass counts and an upper-bound period. Per actor, the worker's
+terminal publication to the host's exit request, that request to the host's
+reaping sample, and the worker exit grace between its begin and finished stamps
+are program-point components (`w<actor>.terminal_to_exit_request`,
+`exit_request_to_reap`, `grace_wait`); the worker's exit itself has no stamp.
+Each trial counts how its worker grace waits between samples ended
+(`grace_timeouts`, `grace_notified`, `grace_unusable`): a wait followed by its
+outcome event by that outcome, and a plain sleep under the grace key, or a wait
+past the 64 recorded pairs, as a timeout. Groups sum the counts. An outcome code
+other than 0, 1 or 2, an outcome that does not follow its sleep pair, or a grace
+that finishes before it begins refuses the trial. Each trial also
 carries `detection_total`, the sum of the host's post-publication detection
 latencies (arrival after an activation or release, completion after a
 release, recipient acknowledgement after an inbound commit), which a
@@ -155,7 +165,10 @@ trials by far more than the instrument uncertainty, so identical apps can meet
 the instrument worsening verdict and, with few trials, the any-pair spread
 verdict; the every-pair spread verdict is the one an acceptance record treats
 as a resolved increase.
-Whole request has only the spread verdicts. An improvement verdict is
+Whole request has only the spread verdicts, beside the counts of pairs in
+which the candidate was faster, slower or equal (`direction`). The grace counts
+are paired as exact per-pair differences with each side's sum over the pairs,
+without verdicts. An improvement verdict is
 refuted by any established pair that falls short and is given only when all
 five declared pairs pass; a worsening verdict is given by any worse pair and
 refuted only when all five are established and none is worse; otherwise the
@@ -206,7 +219,13 @@ improvement with fewer pairs than required, an uncredited response bound
 beyond 2 ms or without the resolution or the gate, unpaired trials for an
 excluded side or differing conditions, and neither verdict for identical
 receipts, and they must fail when the reader's spread term is replaced by
-zero. A comparison's receipts go through the loader and writers with
+zero. Candidate-shaped ordinary receipts carry the grace program points and one
+exit wait followed by each outcome, or by none; the controls check the counts,
+the per-actor intervals and the group sums, count waits past 64 recorded pairs
+and settle sleeps as timeouts, and reject an outcome code of 3, an outcome that
+does not follow its pair (moved, another key or another raw) and a grace
+finished before it begins. Constructed whole-request values check the
+direction counts, and constructed counts the paired grace differences. A comparison's receipts go through the loader and writers with
 separate app groups. The stager, given a constructed candidate app and source
 tree and stopped before any copy is signed, refuses an equipment identity or a
 stamp worker identity that differs from the tree's declared one.

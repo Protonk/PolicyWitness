@@ -712,8 +712,10 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   stamp worker, host patch set and clock-pair control in `tests/fixtures/worker_wait/`.
 - **Purpose:** Decompose ordinary and actor held phases on the production
   planning and validator path into worker publication, host detection,
-  planning, validator, closure, release and acknowledgement intervals, from
-  continuous-clock stamps in a disposable stamped host and seam-built worker.
+  planning, validator, closure, release and acknowledgement intervals, and
+  each worker's exit request, reap and exit grace with how its grace waits
+  ended, from continuous-clock stamps in a disposable stamped host and
+  seam-built worker.
   An unpatched neighbor built with the same recipe exposes observer effects on
   whole-request latency. Rapid and idle pacing, power, Low Power Mode, sleep and
   load are recorded per trial and never pooled. Comparison mode
@@ -765,7 +767,9 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   incomplete pilot. A dry run establishes mechanics only. In a comparison an
   improvement verdict needs all five declared pairs, and a dry run's fewer
   pairs withhold it. Each verdict is given against the instrument uncertainty
-  and, separately, against the trial spread of the side it is judged from. The matched-pair verdicts are evidence for an acceptance
+  and, separately, against the trial spread of the side it is judged from;
+  whole request also counts the pairs in which the candidate was faster,
+  slower or equal, and grace counts are paired as exact differences. The matched-pair verdicts are evidence for an acceptance
   record, not a pass condition of the case. The default controls establish the
   reader's interpretation and the stager's identity refusals on constructed
   inputs, not live sensitivity or resolution.

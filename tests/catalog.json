@@ -2027,7 +2027,7 @@
         },
         {
           "id": "worker_wait_pilot_controls",
-          "description": "Worker-wait pilot reader accepts constructed host and worker stamp receipts, then rejects page, clock-order, missing-file, sleep, pacing, power and pooling faults; checks matched-pair verdicts and the stager's identity refusals",
+          "description": "Worker-wait pilot reader accepts constructed host and worker stamp receipts, then rejects page, clock-order, missing-file, sleep, grace-wait, pacing, power and pooling faults; checks grace counts, matched-pair verdicts and direction, and the stager's identity refusals",
           "command": [
             "bash",
             "tests/suites/witness_contract/worker_wait_pilot_controls.sh"

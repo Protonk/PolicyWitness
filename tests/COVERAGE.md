@@ -84,9 +84,11 @@ tree, and reports matched-pair differences and verdicts. Default
 `witness_contract/worker_wait_pilot_controls` accepts constructed stamp
 receipts before rejecting corrupted pages, clock-order violations, missing
 files, condition exclusions, pooled aggregates, unpaired or inconsistent host
-sleep events and pass-count records, and a reader using the superseded
-uncertainty formula, and checks matched-pair verdicts, response bounds and the
-stager's identity refusals on constructed inputs. See the
+sleep events and pass-count records, invalid or unpaired grace-wait outcome
+events, a grace finished before it begins, and a reader using the superseded
+uncertainty formula, and checks grace counts, matched-pair verdicts,
+whole-request direction, response bounds and the stager's identity refusals on
+constructed inputs. See the
 [pilot verification account](CHANGE-VERIFICATION.md#worker-wait-pilot).
 
 The opt-in `runner_exec_inheritance/launch_inventory` case records external

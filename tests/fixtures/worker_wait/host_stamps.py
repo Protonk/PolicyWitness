@@ -4,7 +4,9 @@ Only copies change. build_host copies a source tree's runner/ (this
 checkout's by default), applies PATCHES with an assert-once replacement,
 prepends the literal stamp directory to HostStamps.swift and compiles that
 tree's Meson source list with fixed flags. An optional patch applies when its
-anchor occurs once and is skipped, and recorded, when it is absent. With no
+anchor occurs once and is skipped, and recorded, when it is absent: the
+readiness-driven ready-byte wait and the bounded worker exit wait each exist
+only in a tree that has them. With no
 patches it builds the uninstrumented neighbor by the same recipe, without
 HostStamps.swift. stage substitutes the host and one worker in both roles into
 a copy of a signed app, the way the order-barrier control's signed_copy does.
@@ -59,18 +61,22 @@ HOST_EVENTS = {
     134: 'VALIDATOR_REAPED', 135: 'GRACE_END', 136: 'VALIDATOR_TERMINATE',
     139: 'RELEASE_STORE_BEGIN', 140: 'HOOK_END', 141: 'RELEASE_STORED', 142: 'ACK_OBSERVED', 143: 'COMPLETION_OBSERVED',
     144: 'DONE_OBSERVED', 145: 'DEATH_CHECK', 146: 'EXIT_REQUESTED', 147: 'WORKER_REAPED',
-    149: 'ACTIVATION_STORE_BEGIN', 150: 'ACTIVATION_STORED', 151: 'COLLECTION_START', 152: 'COLLECTION_END',
+    148: 'WORKER_GRACE_BEGIN', 149: 'ACTIVATION_STORE_BEGIN', 150: 'ACTIVATION_STORED', 151: 'COLLECTION_START', 152: 'COLLECTION_END',
     153: 'CUSTODY_SERVICE_START', 154: 'CUSTODY_SERVICE_END', 155: 'TRANSFER_WAIT_START',
-    156: 'TRANSFER_WAIT_END', 160: 'SETUP_DONE', 161: 'SCHEDULE_DONE',
+    156: 'TRANSFER_WAIT_END', 157: 'WORKER_GRACE_FINISHED', 160: 'SETUP_DONE', 161: 'SCHEDULE_DONE',
     170: 'STAMP_PAGE_COPIED', 171: 'FLUSH_BEGIN',
-    180: 'HOST_SLEEP_BEGIN', 181: 'HOST_SLEEP_END',
+    180: 'HOST_SLEEP_BEGIN', 181: 'HOST_SLEEP_END', 182: 'WAIT_OUTCOME',
 }
 SLEEP_KEYS = {
     0: 'ready-byte wait (10 ms sleep on the baseline, bounded readability wait on HOST-01)', 1: 'ordinary sentinel 2 ms', 2: 'actor setup 1 ms',
-    3: 'actor execution 1 ms', 4: 'validator grace 10 ms', 5: 'worker grace 10 ms',
+    3: 'actor execution 1 ms', 4: 'validator grace 10 ms',
+    5: 'worker grace 10 ms (sleeps, and bounded exit waits in a tree that has them)',
     6: 'custody recipient 1 ms', 7: 'termination gate 1 ms',
 }
+# Validator grace end (135) and the worker grace program points (148, 157).
 GRACE_STOP_CODES = {0: 'exhausted', 1: 'reaped', 2: 'wait_error'}
+# WAIT_OUTCOME (182) aux: how one bounded exit wait ended.
+WAIT_OUTCOME_CODES = {0: 'timed_out', 1: 'notified', 2: 'unusable'}
 DEATH_CHECK_CODES = {0: 'pending', 1: 'reaped', 2: 'failed'}
 
 
@@ -126,6 +132,7 @@ _PLAN = ('            queryPlans[index] = planValidatorQueries(phases[index].act
          '            let probes = queryPlans[index].compactMap { $0.probe }\n')
 _GLOBAL = 'UInt32(truncatingIfNeeded: (input.phases[index].globalPhase ?? (index + 1)) - 1)'
 _CUSTODY_WORK = '(custody?.custody.count ?? 0) + (custody?.transfers.count ?? 0)'
+_GRACE_END = '(graceEnd == "reaped_during_grace" ? 1 : (graceEnd == "wait_error" ? 2 : 0))'
 
 # Ordered (runner-relative file, old, new[, 'optional']). Each old text must occur
 # exactly once in its file when its turn comes; an optional one may also be absent.
@@ -143,6 +150,13 @@ PATCHES = [
     _optional(_swap(CW, '        fallbackRemainingNs -= wait\n        calls.waitReadable(fd, wait)\n',
                     '        fallbackRemainingNs -= wait\n        let stampPre = mach_continuous_time()\n        calls.waitReadable(fd, wait)\n'
                     '        HostStamps.shared.sleep(stampLabel, pre: stampPre, requestedNs: wait)\n')),
+    # A bounded wait for the worker's exit (HostWaitClock.expiredAfterWaiting(exit:) in a tree that has it)
+    # records its pair under the clock's key like a sleep, then WAIT_OUTCOME (182) with how it ended.
+    _optional(_swap(CW, '        fallbackRemainingNs -= wait\n        let outcome = calls.waitExit(watch, wait)\n',
+                    '        fallbackRemainingNs -= wait\n        let stampPre = mach_continuous_time()\n'
+                    '        let outcome = calls.waitExit(watch, wait)\n'
+                    '        HostStamps.shared.wait(stampLabel, pre: stampPre, requestedNs: wait,'
+                    ' outcome: outcome == .notified ? 1 : (outcome == .unusable ? 2 : 0))\n')),
     # Owned reaps: the stamp precedes the observed_ns read of the same reap.
     _after(CW, '    private var captureOrdinal: UInt64 = 0\n',
            '    var stampEvent: UInt32 = 0\n    var stampPhase: UInt32 = UInt32.max\n'),
@@ -202,6 +216,10 @@ PATCHES = [
            '        HostStamps.shared.record(146, input.actorIndex)\n'),
     _swap(AS, '            var clock = HostWaitClock(milliseconds: input.exitGraceMs, pollNs: 10_000_000, calls: calls)\n',
           '            var clock = HostWaitClock(milliseconds: input.exitGraceMs, pollNs: 10_000_000, calls: calls, label: 5)\n'),
+    # The worker exit grace as program points: begin once the stop is preset, finished once it is recorded.
+    _after(AS, '            graceEnd = "exhausted"\n', f'            HostStamps.shared.record(148, input.actorIndex, {_GRACE_END})\n'),
+    _after(AS, '            graceWait = clock.record(stop: graceEnd)\n',
+           f'            HostStamps.shared.record(157, input.actorIndex, {_GRACE_END})\n'),
     # ActorScheduler: setup, schedule walk, activation/arrival/collection/completion, custody passes.
     _swap(SCH, '        var clock = HostWaitClock(milliseconds: input.setupAllowanceMs, pollNs: 1_000_000, calls: calls)\n',
           '        var clock = HostWaitClock(milliseconds: input.setupAllowanceMs, pollNs: 1_000_000, calls: calls, label: 2)\n'),

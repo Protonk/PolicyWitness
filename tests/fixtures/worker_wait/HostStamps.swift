@@ -15,10 +15,17 @@ import Foundation
 // the export's span: from event 171's raw to a read after that rename.
 //
 // Phase field by event: request-scoped events (100, 160, 161, 171) carry
-// UInt32.max; session-scoped events (101-103, 144-147, 170) carry the actor
-// index (0 in the ordinary form); validator events (122-136) carry the phase
-// of the latest PLANNING_START; the rest carry the global phase index.
-// Register keys use the same phase, except 156, which is keyed by delivery index.
+// UInt32.max; session-scoped events (101-103, 144-148, 157, 170) carry the
+// actor index (0 in the ordinary form); validator events (122-136) carry the
+// phase of the latest PLANNING_START; sleep and wait events (180-182) carry the
+// wait key; the rest carry the global phase index. Register keys use the same
+// phase, except 156, which is keyed by delivery index.
+//
+// The worker exit grace is bracketed by program points 148 (WORKER_GRACE_BEGIN)
+// and 157 (WORKER_GRACE_FINISHED), aux 0 exhausted, 1 reaped, 2 wait_error.
+// A bounded exit wait records its pair like a sleep and then 182
+// (WAIT_OUTCOME): phase = key, aux 0 timed out, 1 notified, 2 unusable, raw =
+// the pair's post read.
 
 struct HostStamp {
     var event: UInt32
@@ -186,6 +193,17 @@ final class HostStamps {
         if ticks > s[5] { s[5] = ticks }
         if s[0] == 1 || ticks < s[6] { s[6] = ticks }
         s[7] &+= requestedNs
+    }
+
+    /// Called after a bounded exit wait returns: records the pair exactly as
+    /// sleep(...) does, then, while that key's pairs are still appended, event
+    /// 182 with the outcome (0 timed out, 1 notified, 2 unusable) and the
+    /// pair's post read. Past 64 waits of a key only the registers change.
+    func wait(_ key: UInt32, pre: UInt64, requestedNs: UInt64, outcome: UInt64) {
+        sleep(key, pre: pre, requestedNs: requestedNs)
+        guard key < UInt32(HostStamps.sleepKeys) else { return }
+        let s = sleeps + Int(key) * HostStamps.sleepWords
+        if s[0] <= HostStamps.sleepEventsPerKey { append(182, key, outcome, s[2]) }
     }
 
     /// One custody service pass in the actor completion loop. Passes are kept
