@@ -75,3 +75,21 @@ negative findings remain available for HOST-06 and deferred work.
 Compiler-flavour apparatus is prepared. The diagnostic identities, observations
 and source-candidate decision remain pending. Raw evidence stays in dispatcher-owned
 local output; retention is finalized with the host round.
+
+## Prepared inspection diagnostic
+
+Apparatus commit `723a7d54` and reader version 11 are used on both sides.
+`host05-optimized-mechanics-01` passed all 16 dry-run trials and verified actual
+`-O` commands and matching optimized trial exports for both hosts; it supplies
+no performance credit. The inspection diagnostic below remains at its gate
+while these identities are committed.
+
+| Receipt / input | SHA-256 |
+| --- | --- |
+| `tests/out/runs/host05-inspection-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/staged-identity-before.json` | `139ba64fc98871de4a2f0330253e9586776dcde2e0ca1a298d9d09355947c8f1` |
+| `tests/out/runs/host05-inspection-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/schedule.json` | `05bb6c0c139be31696b23af5232aa0136d422984e76bfea3d67dd81f10cc8c14` |
+| `tests/out/runs/host05-inspection-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/host-instrumented/host-build.json` | `73fcfde93edae8195b8eed3ec3226fa54be1a5a3a76c4a305485a4b233782b6a` |
+| `tests/out/runs/host05-inspection-diagnostic-01/suites/witness_contract/worker_wait_pilot/artifacts/host-neighbor/host-build.json` | `a2469a2423dd4a538e2acc5cd537b4b3b8734f3222df45b7e27dd5f16b21cd50` |
+| `tests/suites/witness_contract/worker_wait_pilot_reader.py` | `3615d6e6679d1b08d0f027c5afd7cd415dd87359ca939f695f776efe58de904c` |
+| `tests/suites/witness_contract/check_worker_wait_pilot.py` | `1d52d5f6f729ea4f9e38f1799ec60d719d43eafcd7f60b0bc3f8c0c9a1d4d1e5` |
+| `tests/fixtures/worker_wait/host_stamps.py` | `0cf559a72d2dde5c961c9ec9858250aa0331d02c061c7af62f1f46d250ac733e` |
