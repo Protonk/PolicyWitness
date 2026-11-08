@@ -146,6 +146,9 @@ candidate on that evidence without building it: no comparison could resolve
 the reduction it promises. Record the measured interval and the uncertainty as
 the rejection's limit, so a later instrument with better resolution can reopen
 it deliberately.
+Disposition, 2026-11-07: rejected without building under the cost clause above,
+on the pilot's measurement; the figures and the reopening condition are in the
+outflow.
 
 ## 2. Remove demonstrated host detection or cleanup delay
 
@@ -191,6 +194,8 @@ Compare `HOST-02` and `HOST-03` together against the HOST-01 baseline under
 the pilot's protocol and decide both on that evidence. If `HOST-03` fails,
 the alternatives for `HOST-02` are acceptance with the latency tradeoff
 written or rejection with both delays carried to the outflow.
+Outcome: compared on 2026-11-07 and both accepted by the owner; branch 2 is
+complete with HOST-01, HOST-02 and HOST-03 integrated.
 A bounded host exit notification may be worth investigating if EOF-to-reap
 delay is material.
 Registration must cover a child that already exited; a notification prompts an

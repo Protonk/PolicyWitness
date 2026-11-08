@@ -233,7 +233,7 @@ per pair with medians of 2.9 to 5.3 ms; no resolved actor-form or
 whole-request regression; every response bound credited. The remaining first
 arrival delay is the 2 ms sentinel poll during the worker's application.
 
-HOST-02 (blocked, `628a1ccc` on `wait/host-02`, not integrated; see its
+HOST-02 (accepted with HOST-03 on 2026-11-07, `c7648e8e` and `5d1c888d`; see its
 [acceptance record](WORKER-WAIT-HOST-02-ACCEPTANCE.md)): the host re-samples a
 just-published answer for at most 100 µs before its first sleep after an
 activation, release or inbound commit. In every actor-form pair of both regimes
@@ -245,16 +245,36 @@ pairs, the other two arriving after the budget. The request as a whole became
 slower in the actor form in nine of ten pairs, by 0.1 to 13.9 ms: the host now
 reaches the worker exit grace wait before the worker exits and sleeps its 10 ms
 poll once per request (12.5 ms slept), where the baseline's final detection
-sleep had covered the worker's exit. The tradeoff decision is the owner's and
-is open.
+sleep had covered the worker's exit. The owner admitted one further candidate
+for that poll rather than accepting the tradeoff.
 
-Exposed by HOST-02, not nominated under the two-candidate cap: the worker exit
-grace wait's 10 ms poll in `ActorSession.finishCleanup`, which any prompt
-detection of the last completion reaches before the worker exits. The worker
-keeps the readiness pipe's write end open until exit while the host closes its
-read end after the byte, so a hangup wait on that pipe under the same grace
-allowance is one mechanism to examine; attempt children must not inherit the
-descriptor.
+HOST-03 (accepted with HOST-02 on 2026-11-07, `46e2b578` and `66430db5`; see its
+[acceptance record](WORKER-WAIT-HOST-03-ACCEPTANCE.md)): between exit grace
+samples the host waits on the readiness pipe's hangup, which the worker's exit
+produces, instead of sleeping 10 ms; a hangup that precedes reapability is
+followed by at most ten 100 µs settle sleeps, and a pipe that cannot inform
+the wait falls back to the former poll. In sixty matched pairs against the
+HOST-01 baseline every grace wait ended at the exit with no timeout, the actor
+form's detection total fell beyond spread in every pair of both regimes, and
+its whole request was faster in all ten pairs (1.5 to 10.2 ms on 58 to 97 ms),
+where HOST-02 alone had been slower in nine. The first actor's exit request to
+reap grew from 2 to 7 µs to 169 to 362 µs by construction, the host now waiting
+for the exit itself rather than finding it done after a longer detection
+sleep; terminal publication to reap fell from 1.3 to 2.6 ms to 0.2 to 0.4 ms.
+On this machine a pipe hangup and a kqueue `NOTE_EXIT` wake with the same
+latency, and the production worker's hangup precedes its reapability more
+often than a trivial child's, hence the settle sleep.
+
+Branch 1, PREPARATION (rejected 2026-11-07 without building, on the plan's cost
+clause): the pilot measured the whole frame-serialization interval at 142 to
+163 µs for one query, 323 to 364 µs for 64 and 788 to 848 µs for 256, far above
+the instrument's uncertainty, so the pre-build rejection rule did not apply;
+but the interval is 1.8 to 4.6 percent of the held total, against a derived
+cache bound of 1,099,776 encoded bytes retained for the worker's life and a
+deferred encoding charge whose precedence against the collection allowance
+would need new controlled-clock controls. Reopening it needs a workload where
+serialization is a larger share of the held interval or a cheaper accounting
+than the plan's.
 
 Not nominated, carried here: the 2 ms detection of the worker's terminal
 publication (outside the held interval); decoding cost at `-Onone`, 17 µs per

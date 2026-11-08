@@ -295,7 +295,22 @@ accept HOST-02 and HOST-03 together: the plan's tradeoff clause names total
 CPU, whole-request latency, sampled memory and peer interference, none of
 which worsened; the whole request improved in every A2 pair of both regimes;
 and the two flagged intervals lie inside an interval that shrank in every
-pair. Pending the owner's decision.
+pair.
+
+Outcome: the owner accepted HOST-02 and HOST-03 together on 2026-11-07.
+Integrated into `main` as `c7648e8e`, `5d1c888d` (HOST-02) and `46e2b578`,
+`66430db5` (HOST-03), the candidate's four commits cherry-picked with the
+session's trailer; main's production source then equals `50cd7695` and its
+worker identity is `57dbfd28…`. Verification on `main` against its rebuilt
+signed app (provenance `66430db5`, dirty false): `runner_unit` with its opt-in
+cases, `runner_abi_layout`, `source_drift` and `runner_exec_inheritance`, 26 of
+26 in `20261108T033943Z_a6801bde` (`main-host0203-unit-01`); the named
+selection with `order_barrier_mutations`, 73 pass plus the `native_pause` gate
+in `20261108T034637Z_3810f328` (`main-host0203-named-01`); default battery 222
+of 222 in `20261108T035021Z_10cf830e` (`main-host0203-default-01`); no case
+overlapped system sleep. The HOST-01 baseline app is replaced by this build;
+its hashes stay recorded above. The candidate worktrees and their runs are
+retained until the plan's closeout decides raw-evidence retention.
 
 ## Revisions
 

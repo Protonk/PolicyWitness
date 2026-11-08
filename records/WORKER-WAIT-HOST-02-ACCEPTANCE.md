@@ -248,6 +248,15 @@ course of action and summarized here:
 3. Reject `HOST-02` and carry both the re-sample and the grace poll to the
    outflow for later work.
 
+Outcome: the owner adopted option 1 on 2026-11-07. HOST-03 was built, compared
+together with this candidate against the HOST-01 baseline, and both were
+accepted by the owner on 2026-11-07 on the evidence in the
+[HOST-03 record](WORKER-WAIT-HOST-03-ACCEPTANCE.md): with the grace wait
+ending at the worker's exit, the actor form's whole request was faster than
+the baseline in all ten pairs while the held-interval claim above held again
+in every pair. This candidate is integrated into `main` as `c7648e8e` and
+`5d1c888d`; the HOST-03 record carries the integration verification.
+
 ## Revisions
 
 ### Revision 1, before the comparison measurement
