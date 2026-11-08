@@ -45,6 +45,20 @@ def actor_specimen(target, marker, count=None):
     return dict(schema_version=6,specimen_id=secrets.token_hex(8),actors=[actor('issuer','unapplied'),actor('subject','apply')],phases=[dict(phase_id=n,actor_id=a,actions=x) for n,a,x in phases]),2
 
 
+def actor_inbound_dense_specimen(target, tokens=32, copies=2):
+    """The A2 actors with every subject inbound slot used: the issuer issues `tokens` file tokens for target and
+    transfers each `copies` times in rounds (D01 is token 0's first transfer, the last delivery token tokens-1's
+    last); the subject then reads target and consumes and releases the first and the last delivery only."""
+    actor = lambda name, mode: dict(actor_id=name,equipment='unentitled' if mode=='unapplied' else 'selected',sandbox=dict(mode=mode, **({} if mode=='unapplied' else dict(policy=dict(format='sbpl',sbpl_source='(version 1)(allow default)')))))
+    issues=[extension(f'issueT{i:02d}','issue',family='file',authority='read',target=str(target),token_ref=f'T{i:02d}') for i in range(tokens)]
+    sends=[extension(f'sendD{n:02d}','transfer',token_ref=f'T{(n-1)%tokens:02d}',recipient='subject',delivery_ref=f'D{n:02d}') for n in range(1,tokens*copies+1)]
+    last=f'D{tokens*copies:02d}'
+    hold=[probe('knownread',target),extension('consumeH1','consume',delivery_ref='D01',handle_ref='H1'),extension('consumeH2','consume',delivery_ref=last,handle_ref='H2'),
+          extension('releaseH1','release',handle_ref='H1'),extension('releaseH2','release',handle_ref='H2')]
+    return dict(schema_version=6,specimen_id=secrets.token_hex(8),actors=[actor('issuer','unapplied'),actor('subject','apply')],
+                phases=[dict(phase_id='issue',actor_id='issuer',actions=issues+sends),dict(phase_id='hold',actor_id='subject',actions=hold)])
+
+
 SNAPSHOT_KEYS={'version','scope','host_pid','phase_index','active_actor','begin_ticks','end_ticks','timebase_numer','timebase_denom','actors','regions','tokens','deliveries'}
 ACTOR_KEYS={'actor_index','pid','setup','authority_status','activation','activation_observed','proceed','evidence_progress','visits','slots'}
 

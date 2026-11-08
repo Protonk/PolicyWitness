@@ -722,7 +722,10 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   (`--compare-app`, `--compare-tree`) replaces the two apps with a baseline
   and a candidate, each staged with the stamped host and stamp worker built
   from its own source tree under one patch set and recorder, and analyzes them
-  as matched pairs by cell, regime and repetition index.
+  as matched pairs by cell, regime and repetition index. Each actor's inbound
+  scan counters (passes, visits, loads and zero-visit passes) are paired as
+  exact counts, with the inbound-dense `A2D` cell filling the subject's 64
+  inbound slots.
 - **Execution considerations:** Builds and signs two disposable hosts, stages
   two app copies once and reuses them through fresh processes after one
   excluded first execution each. A comparison also builds the stamp worker
@@ -769,7 +772,10 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   pairs withhold it. Each verdict is given against the instrument uncertainty
   and, separately, against the trial spread of the side it is judged from;
   whole request also counts the pairs in which the candidate was faster,
-  slower or equal, and grace counts are paired as exact differences. The matched-pair verdicts are evidence for an acceptance
+  slower or equal, and grace counts are paired as exact differences. Scan
+  visits and loads per pass carry `lower_in_every_pair`, given only when all
+  five declared pairs are strictly lower, and a pair whose `inbound_count`
+  differs between the sides is refused. The matched-pair verdicts are evidence for an acceptance
   record, not a pass condition of the case. The default controls establish the
   reader's interpretation and the stager's identity refusals on constructed
   inputs, not live sensitivity or resolution.

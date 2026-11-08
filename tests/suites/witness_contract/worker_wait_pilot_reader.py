@@ -104,6 +104,21 @@ Interpretation rules, repeated in summary.json:
   baseline's smallest, against 2 ms; it is credited only with their combined
   uncertainty at most 0.5 ms and the instrument gate credited. The two apps
   are never pooled.
+- Per actor, scan carries the worker's inbound scan counters (passes, visits
+  and loads per caller role, and zero_visit_passes, histogram bucket 0, over
+  both roles) beside inbound_count, the deliveries the trial layout addresses
+  to that actor, one inbound slot each. A comparison pairs them as exact
+  counts: w<actor>.scan_visits_per_pass_<role> and
+  w<actor>.scan_loads_per_pass_<role> (role activation or exchange) compare
+  count / passes by integer cross-multiplication, with no uncertainty. A pair
+  is lower when the candidate's ratio is strictly below the baseline's,
+  no_passes when either side made no pass in that role, and refused
+  (scan_inbound_count_mismatch) when the actor's inbound_count differs between
+  the sides. lower_in_every_pair is false once any established pair is not
+  lower and true only when all of at least pairs_required pairs are
+  established and lower; otherwise it is withheld. w<actor>.scan_zero_visit_passes
+  is reported per side with each side's sum over the pairs, without a verdict.
+  Groups carry each counter's sum and median per actor.
 """
 import base64
 import hashlib
@@ -114,7 +129,7 @@ import statistics
 import struct
 import sys
 
-READER_VERSION = 7
+READER_VERSION = 8
 HERE = Path(__file__).resolve().parent
 
 # Worker stamp page; mirrors tests/fixtures/worker_wait/pww_stamp_page.h.
@@ -196,6 +211,12 @@ OBSERVATION_FORMS = {'arrival_detection': 'arrival_to_observation', 'arrival_fir
 PAIRED_WAITS = ('release_wait', 'activation_wait')
 RESPONSE_COMPONENTS = ('release_to_ack', 'activation_response')
 RESPONSE_LIMIT_NS, RESPONSE_UNCERTAINTY_GATE_NS = 2_000_000, 500_000
+# Inbound scan counters per actor; the paired ratios are count / passes of one caller role.
+SCAN_ROLES, SCAN_MEASURES = ('activation', 'exchange'), ('visits', 'loads')
+SCAN_COUNTERS = tuple(f'{kind}_{role}' for role in SCAN_ROLES for kind in ('passes',) + SCAN_MEASURES) + ('zero_visit_passes',)
+SCAN_LOWER = 'lower_in_every_pair'
+SCAN_REFUSAL = 'scan_inbound_count_mismatch'
+SCAN_INBOUND_SOURCE = 'trial layout: deliveries addressed to the actor, one inbound slot each'
 STATUS_ORDER = ('failed', 'skipped', 'incomplete', 'refused', 'excluded', 'accepted')
 EXCLUSIONS = {'sleep_overlapped', 'pacing_out_of_range', 'power_transition', 'power_unobserved', 'observer_overlap'}
 INCOMPLETE = {'stamps_missing', 'started_missing', 'validation_missing', 'conditions_missing',
@@ -1221,6 +1242,7 @@ def evaluate_stamps(bundle, row, calibration):
     if counts is None:
         row['grace_wait_record'] = dict(unobserved='worker grace sleep register malformed')
     row['worker_waits'] = {str(actor): worker_wait_registers(page) for actor, page in pages.items()}
+    row['scan'] = scan_record(trial['layout'], pages)
     row['host_flavour'] = doc['flavour']
     if len(pages) != len(doc['worker_pages']) or not pages:
         return
@@ -1254,6 +1276,25 @@ def evaluate_stamps(bundle, row, calibration):
     row['observer_overlap'] = observer_overlap(bundle['host_exit'], row['phases'])
     if row['observer_overlap'].get('overlaps_held'):
         row['exclusions'].append('observer_overlap')
+
+
+def inbound_counts(layout):
+    """Inbound slots per actor index: the deliveries the layout addresses to it (none in the ordinary form)."""
+    counts = {}
+    for delivery in layout.get('deliveries') or []:
+        counts[delivery['recipient']] = counts.get(delivery['recipient'], 0) + 1
+    return counts
+
+
+def scan_record(layout, pages):
+    """Per actor: the page's scan counters with the actor's inbound_count."""
+    counts, out = inbound_counts(layout), {}
+    for actor, page in sorted(pages.items()):
+        scan = page['scan']
+        out[str(actor)] = dict({name: scan[name] for name in SCAN_COUNTERS[:-1]}, zero_visit_passes=scan['visits_histogram'].get('0', 0),
+                               inbound_count=counts.get(actor, 0), inbound_count_source=SCAN_INBOUND_SOURCE,
+                               role_unknown_passes_uncounted=scan['role_unknown_passes_uncounted'])
+    return out
 
 
 def export_duration(exported, stamps):
@@ -1422,7 +1463,17 @@ def aggregate(rows):
         for path, value in (row.get('envelope_ms_fields') or {}).items():
             if isinstance(value, (int, float)) and not isinstance(value, bool):
                 envelope.setdefault(path, []).append(value)
-    return dict(components=out, whole_request_ns=stats(whole), export_duration_ns=stats(exports),
+    scan = {}
+    for row in rows:
+        for actor, record in (row.get('scan') or {}).items():
+            entry = scan.setdefault(actor, dict(inbound_count=set(), **{name: [] for name in SCAN_COUNTERS}))
+            entry['inbound_count'].add(record['inbound_count'])
+            for name in SCAN_COUNTERS:
+                entry[name].append(record[name])
+    scan = {actor: dict(inbound_count=sorted(entry.pop('inbound_count')),
+                        **{name: dict(stats(values), sum=sum(values)) for name, values in entry.items()})
+            for actor, entry in sorted(scan.items(), key=lambda item: int(item[0]))}
+    return dict(components=out, whole_request_ns=stats(whole), export_duration_ns=stats(exports), scan=scan,
                 envelope_ms={k: stats(v) for k, v in sorted(envelope.items())},
                 waits={k: dict(passes=stats(v['passes']), mean_pass_period_ns=stats(v['periods']), unavailable=v['unavailable'],
                                period_definition=sorted(v['definitions']))
@@ -1605,6 +1656,66 @@ def grace_pairs(pairs):
     return out
 
 
+def scan_lower(baseline_count, baseline_passes, candidate_count, candidate_passes):
+    """Whether candidate_count / candidate_passes < baseline_count / baseline_passes, exactly (both passes positive)."""
+    return candidate_count * baseline_passes < baseline_count * candidate_passes
+
+
+def scan_side(record, measure, role):
+    count, passes = record[f'{measure}_{role}'], record[f'passes_{role}']
+    return dict(count=count, passes=passes, per_pass=count / passes if passes else None)
+
+
+def scan_pairs(pairs, required):
+    """Per actor and caller role, visits and loads per scan pass as exact counts with lower_in_every_pair, and the
+    zero-visit passes per side. A pair whose inbound_count differs between the sides is refused."""
+    series, zero, refusals = {}, {}, []
+    actors = sorted({a for _, b, c in pairs for r in (b, c) for a in (r.get('scan') or {})}, key=int)
+    for actor in actors:
+        named = {f'w{actor}.scan_{measure}_per_pass_{role}': (measure, role) for role in SCAN_ROLES for measure in SCAN_MEASURES}
+        rows = {name: [] for name in named}
+        zero_rows = []
+        for index, b, c in pairs:
+            sides = [(r.get('scan') or {}).get(actor) for r in (b, c)]
+            if None in sides:
+                absent = [app for app, side in zip(PAIR_APPS, sides) if side is None]
+                for name in named:
+                    rows[name].append(dict(index=index, outcome='absent', absent_on=absent))
+                zero_rows.append(dict(index=index, absent_on=absent))
+                continue
+            sb, sc = sides
+            inbound = dict(baseline=sb['inbound_count'], candidate=sc['inbound_count'])
+            refused = sb['inbound_count'] != sc['inbound_count']
+            if refused:
+                refusals.append(dict(index=index, actor=int(actor), problem=SCAN_REFUSAL, inbound_count=inbound))
+            zero_rows.append(dict(index=index, baseline=sb['zero_visit_passes'], candidate=sc['zero_visit_passes'],
+                                  difference=sb['zero_visit_passes'] - sc['zero_visit_passes'], **({'problem': SCAN_REFUSAL} if refused else {})))
+            for name, (measure, role) in named.items():
+                vb, vc = scan_side(sb, measure, role), scan_side(sc, measure, role)
+                row = dict(index=index, baseline=vb, candidate=vc, inbound_count=inbound)
+                if refused:
+                    row.update(outcome='refused', problem=SCAN_REFUSAL)
+                elif not vb['passes'] or not vc['passes']:
+                    row.update(outcome='no_passes', no_passes_on=[app for app, v in zip(PAIR_APPS, (vb, vc)) if not v['passes']])
+                else:
+                    row['outcome'] = 'lower' if scan_lower(vb['count'], vb['passes'], vc['count'], vc['passes']) else 'not_lower'
+                rows[name].append(row)
+        for name, found in rows.items():
+            outcomes = [r['outcome'] for r in found]
+            established = [o for o in outcomes if o in ('lower', 'not_lower')]
+            complete = len(established) == len(outcomes) >= required
+            entry = {'pairs': found, SCAN_LOWER: False if 'not_lower' in established else True if complete else None}
+            if entry[SCAN_LOWER] is None:
+                entry['withheld'] = (f'{len(established)} established of {required} required pairs'
+                                     + (f'; absent, without passes or refused in {len(found) - len(established)}' if len(established) < len(found) else ''))
+            series[name] = entry
+        zero[f'w{actor}.scan_zero_visit_passes'] = dict(pairs=zero_rows, sums={app: sum(r[app] for r in zero_rows if app in r) for app in PAIR_APPS})
+    return dict(series=series, zero_visit_passes=zero, refusals=refusals, problems=sorted({r['problem'] for r in refusals}),
+                rule='per pair count / passes, candidate strictly below baseline by integer cross-multiplication; exact counts, no uncertainty; '
+                     'a pair whose inbound_count differs between the sides is refused',
+                zero_visit_rule='histogram bucket 0 (passes that visited no slot, both roles) per side; no verdict')
+
+
 def direction(series):
     """Pairs where the candidate was faster (baseline minus candidate positive), slower or equal."""
     differences = [r['difference'] for r in series.get('pairs', []) if 'difference' in r]
@@ -1652,7 +1763,7 @@ def matched_pairs(rows, comparison, gate_credited):
                             pairs_required=required, pairs=[dict(index=i, baseline=b['dir'], candidate=c['dir']) for i, b, c in pairs],
                             components=pair_series(pairs, pair_components, required, members),
                             waits=pair_series(pairs, pair_waits, required, members),
-                            whole_request=whole, grace=grace_pairs(pairs),
+                            whole_request=whole, grace=grace_pairs(pairs), scan=scan_pairs(pairs, required),
                             response=response_bounds(members, gate_credited), host_sleeps=host_sleep_pairs(pairs)))
     return dict(rule=comparison.get('pairing_rule'), pairs_required=required, difference='baseline minus candidate',
                 entries=entries, unpaired=unpaired)
@@ -1823,6 +1934,25 @@ def pairs_markdown(pairs):
                     f"r{r['index']} absent on {'/'.join(r['absent_on'])}" if 'absent_on' in r else f"r{r['index']} {r['baseline']} -> {r['candidate']}"
                     for r in value['pairs']) + ' |')
             lines.append('')
+        scan = entry.get('scan') or {}
+        if scan.get('series'):
+            ratio = lambda side: f"{side['count']}/{side['passes']}"
+            lines += ['Inbound scan rows are exact counts per actor and caller role, count/passes per pair: lower when the candidate\'s '
+                      'ratio is strictly below the baseline\'s; a pair whose inbound_count differs between the sides is refused.', '',
+                      '| Inbound scan (exact counts) | lower in every pair | per pair: baseline -> candidate (count/passes) |', '| --- | --- | --- |']
+            for name, value in scan['series'].items():
+                lines.append(f"| {name} | {verdict(value[SCAN_LOWER])} | " + '; '.join(
+                    f"r{r['index']} absent on {'/'.join(r['absent_on'])}" if r['outcome'] == 'absent'
+                    else f"r{r['index']} {ratio(r['baseline'])} -> {ratio(r['candidate'])}" + ('' if r['outcome'] in ('lower', 'not_lower') else f" ({r['outcome']})")
+                    for r in value['pairs']) + (f" [withheld: {value['withheld']}]" if value.get('withheld') else '') + ' |')
+            for name, value in scan['zero_visit_passes'].items():
+                lines.append(f"| {name} (sum baseline / candidate {value['sums']['baseline']} / {value['sums']['candidate']}) | no verdict | " + '; '.join(
+                    f"r{r['index']} absent on {'/'.join(r['absent_on'])}" if 'absent_on' in r else f"r{r['index']} {r['baseline']} -> {r['candidate']}"
+                    for r in value['pairs']) + ' |')
+            lines.append('')
+            if scan['refusals']:
+                lines += ['Refused scan pairs: ' + '; '.join(f"r{r['index']} w{r['actor']} {r['problem']} (inbound_count {r['inbound_count']['baseline']} / "
+                                                              f"{r['inbound_count']['candidate']})" for r in scan['refusals']) + '.', '']
         if entry['response']:
             lines += ['| Response | candidate upper | baseline lower | bound | within 2 ms | combined uncertainty | credited |',
                       '| --- | --- | --- | --- | --- | --- | --- |']
@@ -1891,6 +2021,11 @@ def markdown(summary):
                 f"{name} {value['sum']} (max per trial {value.get('max', '-')}"
                 + (f", unavailable {value['unavailable']}" if value['unavailable'] else '') + ')'
                 for name, value in group['grace_counts'].items()) + '.', '']
+        if group.get('scan'):
+            lines += ['Inbound scan per actor, sum (median) over accepted trials: ' + '; '.join(
+                f"w{actor} inbound_count {'/'.join(map(str, value['inbound_count']))}: " + ', '.join(
+                    f"{name} {value[name]['sum']} ({value[name]['median']})" for name in SCAN_COUNTERS)
+                for actor, value in group['scan'].items()) + '.', '']
         if group.get('envelope_ms'):
             lines += ['| Envelope field (integer ms, host clock) | n | median | min | max |', '| --- | --- | --- | --- | --- |']
             for path, value in group['envelope_ms'].items():

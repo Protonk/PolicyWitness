@@ -12,7 +12,10 @@ register and a done register for the ordinary worker. A candidate-shaped
 ordinary receipt adds the worker grace program points and one bounded exit wait
 whose pair is followed by its outcome event; a candidate-shaped A2 receipt gives
 each actor its own exit request, reap, grace program points, bounded exit wait
-and grace stop. Expected values are written from
+and grace stop. A2 receipts with constructed inbound scan counters check the
+per-actor scan pairs: lower in every pair, a pair not lower, a ratio that only
+exact arithmetic separates, and a pair refused for differing inbound counts.
+Expected values are written from
 the constructed microsecond times, not computed with the reader's functions.
 """
 import base64
@@ -214,11 +217,11 @@ ACTOR_EXITS = {0: dict(exit=1100, begin=1110, wait=(1120, 1320), outcome=1, reap
                1: dict(exit=1400, begin=1410, wait=(1420, 11470), outcome=0, finished=11480, reap=11600, stop=0)}
 
 
-def actor_bundle(keep=True, worker_edit=None, host_edit=None, sleep_events=True, exits=False):
+def actor_bundle(keep=True, worker_edit=None, host_edit=None, sleep_events=True, exits=False, scan=None):
     """A2 lifecycle in program order. Phase g activates at 20 ms + 10 ms * g (microseconds from a 100 s base).
     An execution sleep (1048 us) lies between each bracketed arrival's negative and positive samples, and a
     recipient sleep (980 us) inside each transfer wait. exits=True replaces the two reaping samples with the
-    per-actor cleanup of ACTOR_EXITS."""
+    per-actor cleanup of ACTOR_EXITS. scan replaces an actor's page scan counters."""
     b = 100_000_000
     host = [(100, NONE, 0, 0), (101, 0, 5000, 1000), (101, 1, 5001, 1100), (160, NONE, 0, 15000)]
     registers = {}
@@ -279,7 +282,7 @@ def actor_bundle(keep=True, worker_edit=None, host_edit=None, sleep_events=True,
                   'exchange_start': (3, tk(b + tc0 + 100), tk(b + tc3 + 1200)), 'exchange_observe': (30, tk(b + tc0 + 101), tk(b + tc3 + 1239))},
               1: {'proceed_start': (3, tk(b + t1 + 3), tk(b + t4 + 3)), 'proceed_observe': (300, tk(b + t1 + 4), tk(b + tc4 + 52)),
                   'activate_start': (3, tk(b + 3999), tk(b + tc2 + 100)), 'activate_observe': (400, tk(b + 4000), tk(b + t4 + 1))}}
-    scan = {0: {}, 1: dict(passes_activation=400, visits_activation=500, loads_activation=520, histogram={0: 300, 1: 80, 2: 20})}
+    scan = {0: {}, 1: dict(passes_activation=400, visits_activation=500, loads_activation=520, histogram={0: 300, 1: 80, 2: 20}), **(scan or {})}
     origins = {0: 1500, 1: 1600}
     workers = {0: current(issuer, keep), 1: current(subject, keep)}
     if worker_edit:
@@ -1244,6 +1247,131 @@ def comparison_controls(base):
     return names
 
 
+# Subject (two inbound slots) scan counters: the baseline visits both slots on every pass; the candidate's
+# passes visit two, one or no slots. The issuer has no inbound slot and makes 30 zero-visit passes on both sides.
+ISSUER_SCAN = dict(passes_activation=30, histogram={0: 30})
+BASELINE_SCAN = dict(passes_activation=400, visits_activation=800, loads_activation=840, histogram={2: 400})
+CANDIDATE_SCAN = dict(passes_activation=400, visits_activation=140, loads_activation=160, histogram={0: 300, 1: 60, 2: 40})
+# 1/3 against 10**17 / (3 * 10**17 + 1): equal as floats, lower exactly.
+THIRD_SCAN = dict(passes_activation=3, visits_activation=1, loads_activation=1, histogram={0: 2, 1: 1})
+NEAR_THIRD_SCAN = dict(passes_activation=3 * 10**17 + 1, visits_activation=10**17, loads_activation=10**17,
+                       histogram={0: 2 * 10**17 + 1, 1: 10**17})
+SCAN_NAMES = [f'w{a}.scan_{m}_per_pass_{r}' for a in (0, 1) for r in ('activation', 'exchange') for m in ('visits', 'loads')]
+
+
+def scan_row(app, index, subject, inbound=2):
+    """An evaluated A2 row with the given subject scan counters; inbound changes the subject's layout deliveries."""
+    bundle = actor_bundle(scan={0: ISSUER_SCAN, 1: subject})
+    bundle['trial'].update(app=app, index=index)
+    bundle['trial']['layout']['deliveries'] = [dict(delivery=d, source=0, recipient=1, slot=d) for d in range(inbound)]
+    row = reader.evaluate_bundle(bundle, CALIBRATION)
+    assert row['status'] == 'accepted', row['problems']
+    return dict(row, dir=f'constructed/{app}/A2/rapid/{index}')
+
+
+def scan_rows(candidates, baseline=BASELINE_SCAN, inbound=None):
+    """Baseline and candidate rows per index; candidates lists each index's candidate subject counters."""
+    return [row for i, scan in enumerate(candidates)
+            for row in (scan_row('baseline', i, baseline), scan_row('candidate', i, scan, (inbound or {}).get(i, 2)))]
+
+
+def scan_outcomes(entry, name):
+    return [r['outcome'] for r in entry['scan']['series'][name]['pairs']]
+
+
+def scan_controls():
+    """Per-actor scan pairs on constructed A2 receipts: exact counts, lower_in_every_pair and the inbound refusal."""
+    names = []
+    row = scan_row('baseline', 0, BASELINE_SCAN)
+    assert row['scan'] == {
+        '0': dict(passes_activation=30, visits_activation=0, loads_activation=0, passes_exchange=0, visits_exchange=0, loads_exchange=0,
+                  zero_visit_passes=30, inbound_count=0, inbound_count_source=reader.SCAN_INBOUND_SOURCE, role_unknown_passes_uncounted=False),
+        '1': dict(passes_activation=400, visits_activation=800, loads_activation=840, passes_exchange=0, visits_exchange=0, loads_exchange=0,
+                  zero_visit_passes=0, inbound_count=2, inbound_count_source=reader.SCAN_INBOUND_SOURCE, role_unknown_passes_uncounted=False)}, row['scan']
+    assert row['worker_waits']['1']['scan']['visits_per_pass_activation'] == 2.0
+
+    (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN] * 3))['entries']
+    scan = entry['scan']
+    assert sorted(scan['series']) == sorted(SCAN_NAMES) and scan['refusals'] == [] and scan['problems'] == [], scan
+    visits = scan['series']['w1.scan_visits_per_pass_activation']
+    assert visits[reader.SCAN_LOWER] is True and 'withheld' not in visits, visits
+    assert visits['pairs'] == [dict(index=i, baseline=dict(count=800, passes=400, per_pass=2.0), candidate=dict(count=140, passes=400, per_pass=0.35),
+                                    inbound_count=dict(baseline=2, candidate=2), outcome='lower') for i in range(3)], visits['pairs']
+    loads = scan['series']['w1.scan_loads_per_pass_activation']
+    assert loads[reader.SCAN_LOWER] is True and [(r['baseline']['count'], r['candidate']['count']) for r in loads['pairs']] == [(840, 160)] * 3
+    for name in ('w1.scan_visits_per_pass_exchange', 'w1.scan_loads_per_pass_exchange'):
+        value = scan['series'][name]
+        assert value[reader.SCAN_LOWER] is None and scan_outcomes(entry, name) == ['no_passes'] * 3, value
+        assert value['withheld'] == '0 established of 3 required pairs; absent, without passes or refused in 3', value
+        assert value['pairs'][0]['no_passes_on'] == ['baseline', 'candidate']
+    issuer = scan['series']['w0.scan_visits_per_pass_activation']
+    assert issuer[reader.SCAN_LOWER] is False and scan_outcomes(entry, 'w0.scan_visits_per_pass_activation') == ['not_lower'] * 3, issuer
+    zero = scan['zero_visit_passes']
+    assert zero['w1.scan_zero_visit_passes'] == dict(pairs=[dict(index=i, baseline=0, candidate=300, difference=-300) for i in range(3)],
+                                                     sums=dict(baseline=0, candidate=900)), zero
+    assert zero['w0.scan_zero_visit_passes']['sums'] == dict(baseline=90, candidate=90)
+    assert all(reader.SCAN_LOWER not in value for value in zero.values())
+    text = '\n'.join(reader.pairs_markdown(pairs_of(scan_rows([CANDIDATE_SCAN] * 3))))
+    for needle in ('| w1.scan_visits_per_pass_activation | yes | r0 800/400 -> 140/400; r1 800/400 -> 140/400; r2 800/400 -> 140/400 |',
+                   '| w0.scan_visits_per_pass_activation | no | r0 0/30 -> 0/30;',
+                   '| w1.scan_zero_visit_passes (sum baseline / candidate 0 / 900) | no verdict | r0 0 -> 300; r1 0 -> 300; r2 0 -> 300 |'):
+        assert needle in text, needle
+    names.append('candidate subject visits and loads per scan pass lower in every pair: lower_in_every_pair; zero-visit passes per side')
+
+    (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN] * 3), required=5)['entries']
+    visits = entry['scan']['series']['w1.scan_visits_per_pass_activation']
+    assert visits[reader.SCAN_LOWER] is None and visits['withheld'] == '3 established of 5 required pairs', visits
+    names.append('scan pairs lower in all three of five required pairs: withheld')
+
+    (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN, BASELINE_SCAN, CANDIDATE_SCAN]))['entries']
+    assert scan_outcomes(entry, 'w1.scan_visits_per_pass_activation') == ['lower', 'not_lower', 'lower']
+    assert entry['scan']['series']['w1.scan_visits_per_pass_activation'][reader.SCAN_LOWER] is False
+    names.append('one scan pair equal to its baseline: not lower in every pair')
+
+    (entry,) = pairs_of(scan_rows([NEAR_THIRD_SCAN] * 3, baseline=THIRD_SCAN))['entries']
+    visits = entry['scan']['series']['w1.scan_visits_per_pass_activation']
+    assert visits['pairs'][0]['baseline']['per_pass'] == visits['pairs'][0]['candidate']['per_pass'], visits['pairs'][0]
+    assert visits[reader.SCAN_LOWER] is True and scan_outcomes(entry, 'w1.scan_visits_per_pass_activation') == ['lower'] * 3, visits
+    names.append('a candidate ratio below the baseline that floats round to equal: lower by exact arithmetic')
+
+    (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN] * 3, inbound={2: 3}))['entries']
+    scan = entry['scan']
+    assert scan['refusals'] == [dict(index=2, actor=1, problem=reader.SCAN_REFUSAL, inbound_count=dict(baseline=2, candidate=3))], scan['refusals']
+    assert scan['problems'] == [reader.SCAN_REFUSAL]
+    for name in SCAN_NAMES[4:]:
+        assert scan_outcomes(entry, name)[2] == 'refused' and scan['series'][name]['pairs'][2]['problem'] == reader.SCAN_REFUSAL, name
+    visits = scan['series']['w1.scan_visits_per_pass_activation']
+    assert visits[reader.SCAN_LOWER] is None and visits['withheld'] == '2 established of 3 required pairs; absent, without passes or refused in 1', visits
+    assert scan['zero_visit_passes']['w1.scan_zero_visit_passes']['pairs'][2]['problem'] == reader.SCAN_REFUSAL
+    assert scan_outcomes(entry, 'w0.scan_visits_per_pass_activation') == ['not_lower'] * 3
+    (entry,) = pairs_of(scan_rows([CANDIDATE_SCAN, BASELINE_SCAN, CANDIDATE_SCAN], inbound={2: 3}))['entries']
+    assert entry['scan']['series']['w1.scan_visits_per_pass_activation'][reader.SCAN_LOWER] is False
+    text = '\n'.join(reader.pairs_markdown(pairs_of(scan_rows([CANDIDATE_SCAN] * 3, inbound={2: 3}))))
+    assert 'Refused scan pairs: r2 w1 scan_inbound_count_mismatch (inbound_count 2 / 3).' in text and 'r2 800/400 -> 140/400 (refused)' in text, text
+    names.append('a scan pair whose subject inbound_count differs between the sides: refused, verdict withheld or refuted by the rest')
+
+    (group,) = reader.summarize([scan_row('candidate', i, CANDIDATE_SCAN) for i in range(3)])
+    stat = lambda value, n=3: dict(n=n, median=value, min=value, max=value, sum=n * value)
+    assert group['scan']['1'] == dict(inbound_count=[2], passes_activation=stat(400), visits_activation=stat(140), loads_activation=stat(160),
+                                      passes_exchange=stat(0), visits_exchange=stat(0), loads_exchange=stat(0), zero_visit_passes=stat(300)), group['scan']
+    assert group['scan']['0']['zero_visit_passes'] == stat(30) and group['scan']['0']['inbound_count'] == [0]
+    names.append('scan counters summed with medians per actor in a group')
+    return names
+
+
+def scan_float_rejected():
+    """The exact-arithmetic scan control fails when the reader compares per-pass ratios as floats."""
+    kept = reader.scan_lower
+    reader.scan_lower = lambda bc, bp, cc, cp: cc / cp < bc / bp
+    try:
+        scan_controls()
+    except AssertionError:
+        return dict(control='scan_ratio_float_comparison', status='rejected', codes=['scan outcome mismatch'])
+    finally:
+        reader.scan_lower = kept
+    raise AssertionError('the scan controls accepted a reader that compares per-pass ratios as floats')
+
+
 def spread_ignored_rejected(base):
     """The matched-pair controls fail when the reader's spread term is replaced by zero."""
     kept = reader.side_spread
@@ -1291,6 +1419,10 @@ def comparison_round_trip(out):
                    'Candidate faster in 0, slower in 0, equal in 2 pairs.', '| grace_timeouts | 0 / 0 | r0 0 -> 0; r1 0 -> 0 |',
                    'Grace waits (key 5), sum over accepted trials: grace_timeouts 0 (max per trial 0)',
                    '| w0.terminal_to_exit_request | no / no | no / no / no |',
+                   '| w0.scan_visits_per_pass_activation | withheld | r0 0/0 -> 0/0 (no_passes); r1 0/0 -> 0/0 (no_passes) '
+                   '[withheld: 0 established of 2 required pairs; absent, without passes or refused in 2] |',
+                   '| w0.scan_zero_visit_passes (sum baseline / candidate 0 / 0) | no verdict | r0 0 -> 0; r1 0 -> 0 |',
+                   'w0 inbound_count 0: passes_activation 0 (0)',
                    '| ordinary_sentinel | r0 2, 4.35 ms -> 2, 4.35 ms; r1 2, 4.35 ms -> 2, 4.35 ms |', '## baseline O1 rapid', '## candidate O1 rapid'):
         assert needle in text, needle
     shutil.rmtree(root)
@@ -1446,7 +1578,7 @@ def main(out):
     decomposition, summary = reader.read_artifacts(root)
     assert summary['calibration_status'] == 'established' and summary['counts']['accepted'] == 4 and summary['counts']['excluded'] == 1, (
         summary['calibration_status'], summary['counts'])
-    assert decomposition['version'] == summary['version'] == 7
+    assert decomposition['version'] == summary['version'] == 8
     calibration = decomposition['calibration']
     term = resolution['readers']['busy']['endpoint_term_ns']
     assert calibration['stamp_ns'] == -(-resolution['stamp_ns'] // 1) and calibration['alignment_ns'] == resolution['alignment']['bound_ns']
@@ -1633,6 +1765,8 @@ def main(out):
     assert [(g['lowpowermode'], g['counts']['accepted']) for g in split] == [('0', 1), ('1', 1)], split
     accepted += comparison_controls(reader.evaluate_bundle(ordinary_bundle(), CALIBRATION))
     rejected.append(spread_ignored_rejected(reader.evaluate_bundle(ordinary_bundle(), CALIBRATION)))
+    accepted += scan_controls()
+    rejected.append(scan_float_rejected())
     accepted += comparison_round_trip(out)
     accepted += stager_identity_controls(out)
     (out / 'controls.json').write_text(json.dumps(dict(scope='constructed reader sensitivity; no live stamps or timings credited',

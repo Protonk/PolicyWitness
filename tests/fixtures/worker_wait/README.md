@@ -149,7 +149,9 @@ Any refusal still writes the receipt, then fails the build.
   footprint.
 - **Counts and timing in one build.** The scan counts are exact counts of the
   visits and acquire loads this binary executed. Its timings include those
-  counting stores. A scan comparison must use this same wrapper on both sides.
+  counting stores. A scan comparison must use this same wrapper on both sides;
+  the pilot's comparison mode builds it from each tree and its reader pairs the
+  counts per actor.
   A timing claim that must exclude counting overhead needs a separate build,
   which this fixture does not provide.
 - **Resolution and meaning of a stamp.** Raw values are absolute

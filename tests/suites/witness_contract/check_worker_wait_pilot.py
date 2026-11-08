@@ -57,7 +57,7 @@ from artifact import EXECUTABLES, SERVICE, digest, inventory
 import consumer
 from check_ordering import specimen, step
 from footprint_observer import FootprintObserver, GenerationExitObserver, generation, sha256
-from footprint_workloads import actor_specimen
+from footprint_workloads import actor_inbound_dense_specimen, actor_specimen
 from lifecycle_oracle import check_record
 from run_capture import RunCapture
 import worker_wait_pilot_reader as reader
@@ -119,7 +119,9 @@ UNSTAMPED = 'neighbor'
 COMPARE_REPETITIONS = PAIRS_REQUIRED = reader.PAIRS_REQUIRED
 PAIRING_RULE = ('a baseline trial and a candidate trial with the same cell, regime and repetition index, both accepted and '
                 'with the same power source, low power mode and host flavour; any other trial is listed as unpaired')
-CELLS = ('O1', 'O64', 'O256', 'O0', 'O2P', 'A2')
+CELLS = ('O1', 'O64', 'O256', 'O0', 'O2P', 'A2', 'A2D')
+# Actor cells; the first selected one is the warm actor cell.
+ACTOR_CELLS = ('A2', 'A2D')
 REGIMES = ('rapid', 'idle')
 REQUESTED_GAP_NS = {'rapid': 0, 'idle': 1_000_000_000}
 # Declared before trials; out-of-range gaps are retained and excluded, never replaced.
@@ -258,6 +260,12 @@ def cell_request(cell, targets):
         request, _ = actor_specimen(targets['actor_target'], targets['actor_marker'])
         assert '_test_overrides' not in request
         return request, actor_layout(request)
+    if cell == 'A2D':
+        # Inbound-dense: 32 issues (actor_issues) each transferred twice, 64 deliveries (actor_deliveries) into the
+        # subject's 64 inbound slots; two consumes and two releases.
+        request = actor_inbound_dense_specimen(targets['actor_target'])
+        assert '_test_overrides' not in request
+        return request, actor_layout(request)
     raise ValueError(cell)
 
 
@@ -275,7 +283,8 @@ def build_schedule(cells, regimes, repetitions, kinds=APPS):
 
 
 def warm_cells(cells):
-    return [c for c in ('O1', 'A2') if c in cells or c == 'O1']
+    """O1, and the first selected actor cell: the excluded first executions run each staged app's workers once."""
+    return ['O1'] + [c for c in ACTOR_CELLS if c in cells][:1]
 
 
 def window_estimate(entries, warm_runs, clock_pair, watchdog_s):

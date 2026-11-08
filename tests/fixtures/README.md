@@ -68,7 +68,8 @@ deterministic, and checked into the repo so tests are hermetic.
   source tree and records stamps in capture pages of its region, an uninstrumented twin built with the same
   flags, a patch set, builder and stager for a disposable stamped host and its
   unpatched neighbor, and a two-process clock-pair calibration control. Used by
-  `witness_contract/worker_wait_pilot`; see its [README](worker_wait/README.md).
+  `witness_contract/worker_wait_pilot`, whose reader pairs the worker's inbound
+  scan counts per actor in a comparison; see its [README](worker_wait/README.md).
 - `exec/`: shared C helper for controlled output, exit status, and process
   trees, plus OS identity/lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.

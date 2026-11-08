@@ -72,8 +72,13 @@ then one excluded first execution of each staged app, with an eligible query
 and the actor cell when selected, precedes counted trials. Every trial reuses the
 same staged executables in fresh processes. The declared schedule covers one,
 64 and 256 eligible queries, a matched zero-eligible layout using the static
-prediction-unavailable pair, two phases, and the two-actor lifecycle with
-deliveries. A rapid block launches after each observed cleanup; an idle block
+prediction-unavailable pair, two phases, the two-actor lifecycle with
+deliveries (`A2`) and its inbound-dense form (`A2D`): the same two actors,
+with the issuer issuing 32 file tokens (the `actor_issues` capacity) and
+transferring each twice, 64 deliveries (`actor_deliveries`) that fill the
+subject's 64 inbound slots, before the subject reads its target and consumes
+and releases only the first and the last delivery. The excluded first
+execution uses the first selected actor cell. A rapid block launches after each observed cleanup; an idle block
 requests at least one second after it and alternates with the neighbor. A
 trial starts only when its watchdog and cleanup reserve fit the remaining
 declared window; otherwise it is recorded as skipped. Observed cleanup is the
@@ -170,7 +175,19 @@ as a resolved increase.
 Whole request has only the spread verdicts, beside the counts of pairs in
 which the candidate was faster, slower or equal (`direction`). The grace counts
 are paired as exact per-pair differences with each side's sum over the pairs,
-without verdicts. An improvement verdict is
+without verdicts. Per actor, the worker's inbound scan counters are paired
+as exact counts: `w<actor>.scan_visits_per_pass_<role>` and
+`w<actor>.scan_loads_per_pass_<role>`, for the parked-activation and exchange
+roles, compare each side's count divided by its passes by integer
+cross-multiplication with the verdict `lower_in_every_pair`, which is false once an
+established pair is not strictly lower and true only when all five declared
+pairs are lower; a pair in which either side made no pass in that role is not
+established. `w<actor>.scan_zero_visit_passes`, the histogram's zero-visit
+bucket, is reported per side with each side's sum. Each actor's
+`inbound_count` is the number of deliveries the trial layout addresses to it,
+and a pair whose `inbound_count` differs between the sides is refused
+(`scan_inbound_count_mismatch`). Groups carry each scan counter's sum and
+median per actor. An improvement verdict is
 refuted by any established pair that falls short and is given only when all
 five declared pairs pass; a worsening verdict is given by any worse pair and
 refuted only when all five are established and none is worse; otherwise the
@@ -232,7 +249,14 @@ own exit request, reaping sample, grace program points and stop code, with one
 notified and one timed-out exit wait; each actor's three intervals and stop
 code must come from its own events, and copies of the reader that match those
 events without the actor, or only the stop without it, must fail. Constructed whole-request values check the
-direction counts, and constructed counts the paired grace differences. A comparison's receipts go through the loader and writers with
+direction counts, and constructed counts the paired grace differences.
+Constructed A2 receipts with inbound scan counters must give
+`lower_in_every_pair` when the candidate's subject visits and loads per pass
+are lower in every pair, withhold it with fewer pairs than required, refute it
+for a pair equal to its baseline, separate a ratio that rounds to the
+baseline's as a float, refuse a pair whose subject `inbound_count` differs,
+and sum and take medians of the counters per actor in a group; a copy of the
+reader that compares the ratios as floats must fail. A comparison's receipts go through the loader and writers with
 separate app groups. The stager, given a constructed candidate app and source
 tree and stopped before any copy is signed, refuses an equipment identity or a
 stamp worker identity that differs from the tree's declared one.
