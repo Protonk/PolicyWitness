@@ -587,6 +587,23 @@ and establish association checks, not native sandbox authority.
 The authority binding control also maps a maximum-inbound POSIX shared-memory
 object with its actual page-rounded length and verifies recipient preparation.
 
+The same control predefines the inbound scan seams to count each production
+pass, slot visit and acquire load, then runs single passes over fresh
+file-backed regions and asserts the exact counts, the first visited slot, the
+acknowledged slot and the worker's completed prefix after every pass. The
+scenarios cover an empty slot set (no visit or load), a single slot (one load
+per pass before commit, two on the acknowledging pass, none after), 64 slots
+committed before the first pass (one visit and two loads per acknowledging
+pass) and committed one at a time (visits per idle pass falling from 64 to 1,
+then none), accepted and owner-rejected slots both advancing the prefix, an
+early hole visited with one load on every pass while higher slots are
+acknowledged in index order, later commits above a completed prefix, a shared
+acknowledgement word this worker did not store (skipped but never advancing
+the prefix), and re-preparation resetting the prefix and its local record.
+Each scenario then checks acknowledgement words, `reject_detail`, consume
+refusal before settlement, consumption of each accepted slot's own bytes and
+erasure of settled bytes.
+
 ## Native pause applicability
 
 `native_pause` is an opt-in qualification gate for a requested 1 ms pause,

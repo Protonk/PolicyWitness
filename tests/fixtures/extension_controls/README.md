@@ -92,6 +92,13 @@ frames must never reach the consume boundary; the matched control must reach it.
 
 The authority binding control also maps a maximum-inbound POSIX shared-memory
 object with its actual page-rounded length and verifies recipient preparation.
+Its inbound scan scenarios define `PW_INBOUND_SCAN_PASS`, `PW_INBOUND_SCAN_VISIT`,
+`PW_INBOUND_SCAN_LOAD` and `PW_INBOUND_ACKNOWLEDGED` as counters before including
+the production source, so each pass asserts the exact visits and acquire loads
+the production scan performs, its acknowledged slot and the worker's completed
+prefix. The
+[harness README](../../suites/runner_c_worker_harness/README.md)
+lists the scenarios.
 
 `operation_control.c` retains direct production issue, consume, release and
 fresh-read body controls, then submits distinct slots through `run_attempt` for

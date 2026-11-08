@@ -557,6 +557,11 @@ static pw_issue_fn extension_issue;
 static pw_authority_region_t *authority;
 static size_t authority_bytes;
 static struct { uint32_t writer, operation, resource; } inbound_assignment[PW_AUTHORITY_MAX_INBOUND];
+/* The inbound scan's completed prefix: the number of leading inbound slots
+ * this worker has itself acknowledged, remembered from its own stores and
+ * never derived from the shared slot words. */
+static uint32_t inbound_acknowledged_prefix;
+static uint8_t inbound_acknowledged_local[PW_AUTHORITY_MAX_INBOUND];
 static struct { uint32_t writer, operation, resource; } outbound_assignment[PW_AUTHORITY_MAX_OUTBOUND];
 static uint32_t transfer_assignment[PW_AUTHORITY_MAX_TRANSFERS];
 static uint8_t outbound_attempted[PW_AUTHORITY_MAX_OUTBOUND];
@@ -732,6 +737,8 @@ static void prepare_authority(pw_shm_header_t *hdr, int fd) {
         outbound_assignment[i].resource=slot->resource_index;
     }
     for (uint32_t i=0;i<PW_AUTHORITY_MAX_TRANSFERS;i++) transfer_assignment[i]=region->transfers[i].operation_plus_one;
+    inbound_acknowledged_prefix=0;
+    memset(inbound_acknowledged_local,0,sizeof(inbound_acknowledged_local));
     for (uint32_t i=0;i<region->inbound_count;i++) {
         pw_authority_slot_t *slot=pw_authority_inbound(region,i);
         inbound_assignment[i].writer=slot->writer_actor;
@@ -760,12 +767,15 @@ decision:
 }
 
 /* Validate and acknowledge at most one committed, unacknowledged inbound
- * delivery. Acceptance is framing only: nothing is consumed and no byte
- * leaves the slot. Parked and waiting actors call this between polls. */
+ * delivery, the lowest-indexed one visited. Acceptance is framing only:
+ * nothing is consumed and no byte leaves the slot. Parked and waiting actors
+ * call this between polls. The scan starts after the leading slots this
+ * worker has already acknowledged; an uncommitted slot stops that prefix
+ * without hiding the slots above it. */
 static void service_inbound_once(void) {
     PW_INBOUND_SCAN_PASS();
     if (!authority) return;
-    for (uint32_t i = 0; i < authority->inbound_count; i++) {
+    for (uint32_t i = inbound_acknowledged_prefix; i < authority->inbound_count; i++) {
         pw_authority_slot_t *slot = pw_authority_inbound(authority, i);
         PW_INBOUND_SCAN_VISIT(i);
         if (PW_INBOUND_SCAN_LOAD(&slot->committed) != 1u) continue;
@@ -777,6 +787,9 @@ static void service_inbound_once(void) {
         atomic_store_explicit(&slot->acknowledged,
                               problem ? PW_AUTHORITY_ACK_REJECTED : PW_AUTHORITY_ACK_ACCEPTED, memory_order_release);
         PW_INBOUND_ACKNOWLEDGED(i, problem);
+        if (i < PW_AUTHORITY_MAX_INBOUND) inbound_acknowledged_local[i] = 1;
+        while (inbound_acknowledged_prefix < authority->inbound_count && inbound_acknowledged_prefix < PW_AUTHORITY_MAX_INBOUND
+               && inbound_acknowledged_local[inbound_acknowledged_prefix]) inbound_acknowledged_prefix++;
         return;
     }
 }

@@ -9163,7 +9163,7 @@
               "path": "tests/suites/runner_c_worker_harness/authority_binding.sh",
               "symbol": "authority_binding",
               "form": "test",
-              "scope": "Assigned owner/action/delivery mismatches are rejected and consume waits for accepted host settlement; worker cleanup preserves unsettled inbound bytes and clears settled bytes."
+              "scope": "Assigned owner/action/delivery mismatches are rejected and consume waits for accepted host settlement; worker cleanup preserves unsettled inbound bytes and clears settled bytes. Counted scan seams assert exact visits and loads per pass: the scan starts at the prefix of slots this worker acknowledged, accepted or rejected, an uncommitted lower slot is visited every pass without blocking higher slots, and re-preparation resets the prefix."
             },
             {
               "path": "tests/suites/runner_c_worker_harness/check_terminal_erasure.py",
