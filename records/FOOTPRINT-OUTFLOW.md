@@ -291,11 +291,17 @@ credited, and the only every-pair worsening was the subject's parked pass
 count, which rises because shorter passes fit more into the same parked time.
 Counts, not CPU: no CPU or energy claim is made.
 
-Branch 3's hint tails (`HINT-RELEASE`, `HINT-ACTIVATION`) remain pending on the
-[ARM option plan](../runner/ARM-WAIT-OPTION-PLAN.md), which has not started;
-the baseline for either tail is the pass period of 0.26 to 0.28 µs per pass
-with one thousand `cpu_relax` hints, measured in the pilot and the three
-comparisons, and a host that now answers publications within microseconds.
+Branch 3's hint tails (`HINT-RELEASE`, `HINT-ACTIVATION`) and the
+[ARM option plan](../runner/ARM-WAIT-OPTION-PLAN.md) are explicitly deferred
+while the host follow-on round below proceeds. This is a priority decision,
+not a negative qualification or benefit result. The pilot and three comparisons
+measured a pass period of 0.26 to 0.28 µs with one thousand `cpu_relax` hints;
+these observations inform a later comparison but do not freeze its baseline.
+Hint tuning could reduce repeated work and warrants separate CPU/peer-progress
+observations; ARM qualification would establish applicability and progress,
+with deployment and resource benefit evaluated separately. The scan mask
+alternative remains unopened, conditional on measured savings from skipping
+acknowledged slots behind holes.
 
 Branch 1, PREPARATION (rejected 2026-11-07 without building, on the plan's cost
 clause): the pilot measured the whole frame-serialization interval at 142 to
@@ -308,10 +314,14 @@ would need new controlled-clock controls. Reopening it needs a workload where
 serialization is a larger share of the held interval or a cheaper accounting
 than the plan's.
 
-Not nominated, carried here: the 2 ms detection of the worker's terminal
-publication (outside the held interval); decoding cost at `-Onone`, 17 µs per
-verdict frame; the roughly 25 percent overshoot of every requested host sleep
-on this equipment (a measured condition, not a tunable).
+The approved [host follow-on round](../runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
+nominates ordinary terminal-publication detection outside the held interval
+(HOST-04), then decoder work with an explicit inspection/optimized build-flavour
+control (HOST-05), then a conditional first-arrival resampling candidate
+(HOST-06). Each needs a new comparison on accepted source; the retained timings
+nominate the work rather than establish its benefit. The roughly 25 percent
+overshoot of requested host sleeps on this equipment remains a measured
+condition, not a separate tuning candidate.
 
 ### Remaining questions
 

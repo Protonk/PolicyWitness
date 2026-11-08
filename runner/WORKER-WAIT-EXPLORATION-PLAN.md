@@ -16,59 +16,62 @@ Its corrected response bounds supersede earlier nominal-extrema credits.
 
 ## Order of work
 
-This plan's ready builds and native trials take priority over the ARM plan's;
-this is scheduling priority, not a requirement to finish this plan before ARM
-trials begin. Open with the baseline pilot described under measurement, then
-dispose of branch 2 while its fixture and decomposition are current, then
-branch 1, then branch 3. Accepting or rejecting a branch remains independent of
-the others; the order fixes sequence, not outcome.
+The initial pilot and host round are complete: HOST-01, HOST-02 and HOST-03
+are accepted, preparation is rejected on cost grounds, and SCAN is accepted.
+Use their retained observations as inputs to the next round; do not repeat
+the initial sequence as unfinished work.
 
-Within branch 3, the scan cursor may proceed as soon as branch 1 is disposed.
-Hint-batch tuning for the release and parked-activation tails waits for the
-ARM plan's result for that wait. Successful native qualification reserves the
-tail for ARM deployment and benefit evaluation; it does not establish adoption.
-An accepted ARM change supersedes hint tuning at that tail. ARM closure without
-adoption, including failed qualification or insufficient benefit, leaves hint
-tuning as the remaining tail candidate. Pending observations are not failures;
-the deferral rule below permits hint tuning to proceed earlier when recorded
-by the coordinator.
+The approved next sequence is the bounded [host follow-on round](#host-follow-on-round):
 
-Read-only ARM contract research, checker design and pinned-source review can
-run in parallel. Its disposable-child applicability trials use native trial
-time this plan is not using; their builds and executions remain serialized
-with this plan's. They never share a build, output directory or acceptance
-record with this plan's candidates. Dispose of branches 1 and 2 before the ARM
-plan freezes its production comparison baseline, subject to the blocked-branch
-exclusion below. Include every accepted host-side and preparation change and
-record each disposition or exclusion in the outflow.
+1. `HOST-04`: ordinary final-completion detection using the existing exit
+   notification, with bounded shared-memory checks and owned reap preserved.
+2. `HOST-05`: decoder cost investigation, beginning with an explicit build-flavour
+   control, then at most one measured decoder change at the existing boundary.
+3. `HOST-06`: first-arrival timing investigation; open at most one bounded
+   initial-resampling candidate only if the measured distribution supports it.
+
+Dispose of each before opening the next production candidate. Each comparison
+starts from accepted source including any preceding accepted change. The
+observations below nominate work; they are not new acceptance baselines.
+Further host candidates require a separate scope decision.
+
+ARM exploration and all hint-batch tuning are explicitly deferred while this
+host round is pursued. This is a priority decision, not failed qualification
+or evidence of no benefit, and deferring ARM does not itself open hint tuning.
+No ARM research or native trials are part of this round. The mask alternative
+remains conditional on evidence that holes defeat the prefix's useful savings.
+
+On resumption, ARM and hint changes still compete for the same release and
+parked-activation tails. Successful native qualification reserves that tail
+for ARM deployment and benefit evaluation; accepted adoption supersedes hint
+tuning there. Closing ARM without adoption leaves hint tuning available.
+Record the resumption and each disposition in the outflow. Dispose of this
+host round before freezing ARM's production comparison baseline. Its builds,
+output directories and acceptance records remain separate from this plan's.
 
 Freeze comparisons against identified accepted source, excluding other candidate
 changes. Any later accepted scan, hint or host change that affects a frozen
 comparison requires a new baseline and candidate comparison on the same source
 foundation; do not combine results from before and after that change.
 
-### Deferred work and baseline exclusions
+### Resuming deferred work
 
-- When ARM qualification is pending on an external observation or user
-  availability, the coordinator may explicitly defer that wait's ARM work and
-  open hint tuning. Record the deferral, its reason and the outstanding
-  observation in the outflow and affected acceptance records. Preserve ARM's
-  pending status; elapsed time is not qualification failure. If ARM resumes
-  after an accepted hint change, freeze a new baseline incorporating that
-  change and repeat the affected comparisons.
-- When branch 1 is blocked solely on a tradeoff decision, the coordinator may
-  freeze ARM's baseline on accepted production source with that candidate
-  excluded. Record the exclusion in the outflow and ARM acceptance record,
-  leaving branch 1 blocked. If it later lands, freeze a new baseline and repeat
-  the affected comparisons. This exception does not bypass branch 2's
-  disposition or a correctness or ownership blocker in accepted source or the
-  measurement apparatus, and does not close branch 1 for plan retirement.
+After an explicit resumption, if ARM qualification awaits an external
+observation or user availability, the coordinator may defer that wait's ARM
+work and open hint tuning. Record the deferral, its reason and the outstanding
+observation in the outflow and affected acceptance records. Preserve ARM's
+pending status; elapsed time is not qualification failure. If ARM resumes
+after an accepted hint change, freeze a new baseline incorporating that
+change and repeat the affected comparisons. This future scheduling option
+does not override the current deferral of both ARM and hint work, or bypass
+a correctness or ownership blocker in accepted source or the apparatus.
 
 ## Starting point and boundaries
 
 The first-use qualification recorded in the outflow found `nanosleep` returning
 `-1/EINVAL` and direct `mach_wait_until` returning `KERN_DENIED` under both tested
-deny-default profiles. Production waits remain unchanged. Those results rule
+deny-default profiles. Neither candidate replaced the worker's hint-based
+waits. The host and scan changes above are integrated. Those results rule
 out those candidates on that equipment; they neither assign cause from return
 values alone nor establish that all ways of reducing wait cost are unavailable.
 
@@ -154,7 +157,7 @@ Disposition, 2026-11-07: rejected without building under the cost clause above,
 on the pilot's measurement; the figures and the reopening condition are in the
 outflow.
 
-## 2. Remove demonstrated host detection or cleanup delay
+## 2. Reduce demonstrated host delay and work
 
 Build the pilot's production-shaped timestamp fixture before choosing a change.
 Distinguish worker arrival publication to host observation; static preparation;
@@ -176,35 +179,18 @@ milliseconds do not prove the interval is free. Do not shorten every poll on
 the assumption that a constant is a measured bottleneck. More frequent host
 wakes can oppose coalescing even when worker response improves.
 
-The pilot may nominate at most two material delays, each as a separate host
-candidate. A delay is material when its measured host-side component exceeds
-the pilot's combined timing uncertainty in every repetition of a named cell;
-report sub-threshold components as observed but not nominated. Evaluate
-`HOST-01`, then `HOST-02` if nominated, before branch 1 while the fixture is
-current. Each gets its own acceptance record and baseline on accepted source;
-a second candidate includes the first only if accepted.
-Further delays go to the outflow for later work, not an open-ended tuning loop.
-Course of action, recommended by the coordinator and adopted by the owner on
-2026-11-07: `HOST-02` is blocked, not accepted or rejected, because its prompt
-detection of the last completion reaches the worker exit grace wait's 10 ms
-poll before the worker exits, which made the actor form's whole request slower
-while its held intervals shortened. The cap is extended by one further host
-candidate, `HOST-03`, for that grace wait alone: wait for the
-worker's exit under the unchanged 1 s grace allowance without a new thread,
-descriptor or registration where an existing one serves (the readiness pipe's
-hangup is one mechanism to examine), preserve the reap, termination and
-ownership paths, and prevent attempt children from inheriting the descriptor.
-Compare `HOST-02` and `HOST-03` together against the HOST-01 baseline under
-the pilot's protocol and decide both on that evidence. If `HOST-03` fails,
-the alternatives for `HOST-02` are acceptance with the latency tradeoff
-written or rejection with both delays carried to the outflow.
-Outcome: compared on 2026-11-07 and both accepted by the owner; branch 2 is
-complete with HOST-01, HOST-02 and HOST-03 integrated.
-A bounded host exit notification may be worth investigating if EOF-to-reap
-delay is material.
-Registration must cover a child that already exited; a notification prompts an
-owned `waitpid` observation and never substitutes for reap. Preserve EINTR,
-ownership-loss, failed-clock, timeout and final-cleanup paths. Charge any new
+The initial round is complete with HOST-01, HOST-02 and HOST-03 integrated.
+Their [acceptance records and review](../records/WORKER-WAIT-REVIEW.md) retain
+the original two-candidate cap, the additional grace-wait candidate and the
+combined acceptance after HOST-02 alone made whole requests slower. The
+follow-on round below is a separate bounded selection from the remaining costs.
+
+A nominated delay must exceed the instrument's combined uncertainty in every
+repetition of its named workload. Report smaller components without crediting
+a resolved improvement. Notification handling must cover a child that already
+exited; a notification prompts an owned `waitpid` observation and never
+substitutes for reap. Preserve EINTR, ownership-loss, failed-clock, timeout
+and final-cleanup paths. Charge any new
 descriptor, registration, thread or wake activity to the candidate, and prevent
 unintended worker inheritance. Do not defer cleanup past release as part of
 this change: overlapping validator lifetime changes ownership and accounting.
@@ -212,17 +198,94 @@ this change: overlapping validator lifetime changes ownership and accounting.
 For polling changes, preserve elapsed allowances, remaining-time bounds and
 mandatory ownership checks around collection. Include slow/malformed/partial
 validator output, delayed exit, timeout and cleanup failure. If profiling finds
-no material avoidable delay, close this branch without changing production.
+no material avoidable delay, close that candidate without changing production.
+
+### Host follow-on round
+
+The candidate side of the retained SCAN comparison already includes HOST-01
+through HOST-03. Its rapid/idle medians nominate these follow-ups: ordinary
+terminal detection about 0.8–2.5 ms; decoding about 1.1–1.4 ms for 64 verdicts
+and 4.1–4.5 ms for 256; first arrival often first detected after the initial
+host sleep. These are instrumented observations on the recorded machine and
+build flavour, not universal costs. The [review record](../records/WORKER-WAIT-REVIEW.md)
+locates the version-10 outputs and original evidence. Keep regimes separate.
+
+**HOST-04 — ordinary final-completion detection.** The ordinary sentinel can
+sleep after the final release while the worker publishes its terminal result
+and exits; HOST-03's exit grace is reached only after that detection. Investigate
+using the already-retained readiness pipe's hangup during this final wait.
+Restrict the change to the point where no further collection remains. Retain
+bounded shared-memory checks so terminal publication can still end the wait
+when exit is delayed. Keep the existing allowance, cancellation, clock-fault,
+ownership and final-cleanup behavior, and preserve the actual observation order
+and stop reason. A pipe notification is not a terminal publication or a reap.
+No new descriptor, thread, registration or post-apply worker write is in scope.
+
+Measure terminal publication to host observation, terminal publication to reap,
+whole-request latency and host resource residence. The primary claim is reduced
+final detection delay beyond uncertainty in every matched pair of the declared
+ordinary workloads; record whole-request and resource observations separately.
+This interval follows the held phase and establishes no reduction in held-worker
+CPU. Include already-exited children, publication before a delayed exit, early
+hangup, missing/unusable readiness pipes, readiness failure with a late write,
+EINTR, clock failure and deadline cleanup. Actor execution and non-final ordinary
+phases are unchanged-path controls.
+
+**HOST-05 — decoder work at the existing collection boundary.** Profile
+`decodeValidatorFrames` in [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift).
+Begin with a controlled comparison of the current inspection flavour and the
+supported optimized Swift mode (`-O`): the
+[timestamp host builder](../tests/fixtures/worker_wait/host_stamps.py) currently
+hardcodes `-Onone -g`. Make the measurement equipment honor and record the selected
+flavour, account for its observer cost, and isolate host compiler flags from
+Rust/controller or other executable changes. Treat build flavour as the
+declared variable in this diagnostic; do not pool these trials with a
+same-flavour implementation comparison. Changing the shipped inspection policy
+is a separate decision, not an implicit outcome of this control.
+
+Use the profile and build-flavour observations to select at most one small
+decoder candidate, such as avoiding repeated validation and conversion of the
+same fields. Reject further source work if no worthwhile avoidable cost is
+established. Keep decoding and its charge at the current boundary; the rejected
+preparation cache and deferred accounting are not reopened. Preserve byte
+framing, strict UTF-8 and integer/Boolean distinctions, size/count bounds,
+first-fault classification and offset, step association, unknown fields and
+diagnostic outcomes, partial results and raw-line evidence. Pair identical
+compiler settings on the baseline and candidate, and name the adoption flavour.
+Require shorter decoding and held intervals beyond uncertainty in every pair
+of the selected query-dense workloads, with small and no-eligible-query controls
+and the existing malformed/partial validator and framing checks. Whole-request
+cost and unchanged witness coverage remain part of acceptance.
+
+**HOST-06 — first-arrival investigation.** After the first two dispositions,
+measure readiness observation, application publication and first arrival
+separately on accepted source. Select at most one bounded initial-resampling
+window only if those distributions support a worthwhile reduction; otherwise
+close without a candidate. Do not shorten every poll or add another worker
+notification channel. Freeze the window and its clock-fault/sample-cap behavior
+before comparison. Preserve failure-before-application, failed application,
+ready-byte failure and allowance semantics. Require shorter first-arrival
+detection and held time in the named workloads, and count additional host busy
+time against the waiting time saved. Use no-eligible-query and delayed-application
+controls; a faster host observation alone is not a total CPU benefit.
+
+Each follow-on gets its own acceptance record and frozen workload/decision rule
+before candidate measurements, using the common uncertainty, response, resource
+and quiet-window rules below. A negative result closes that candidate; further
+alternatives require the separate scope decision above. Retain preparations
+and measurement controls needed by later candidates, with their identities, independently of
+whether a production change is accepted.
 
 ## 3. Reduce repeated work inside polling
 
 `service_inbound_once` in [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-rescans inbound slots from zero on parked-activation and authority-exchange
-polls, including already acknowledged slots. The
+now begins at a worker-local completed-prefix cursor on parked-activation and
+authority-exchange polls. The
 [authority layout](../controller/tools/pw_probe_runner/pw_authority_region.h)
-defines one-shot slots. First measure repeated slot visits with test-only
-instrumentation, then try a worker-local completed-prefix cursor. A fixed local
-mask is a second candidate only if holes defeat the prefix's useful savings.
+defines one-shot slots. SCAN's instrumentation established reduced visits and
+loads per pass. A fixed local mask remains a second candidate only if measured
+holes defeat the prefix's useful savings; correctness controls for holes alone
+do not establish that performance need. The mask has not been tried.
 This opportunity applies to actor workers with inbound slots: no authority
 region means an immediate return, and the admitted slot count is bounded.
 Include sparse and inbound-dense actor workloads with repeated completed scans;
@@ -244,13 +307,15 @@ establish less repeated work; neither establishes descheduling, lower CPU
 accounting, lower energy or better timer coalescing.
 Disposition, 2026-11-08: the scan cursor is accepted and integrated (see the
 [SCAN record](../records/WORKER-WAIT-SCAN-ACCEPTANCE.md)). The hint tails
-remain pending on the ARM plan, which has not started. Coordinator's
-recommendation, awaiting the owner's decision: leave the tails pending rather
-than open hint tuning by deferral, because a hint-batch change can be credited
-only on pass counts, which the cursor already reduced where loads mattered,
-while the benefit the tails exist for (less CPU while held) is what ARM's
-qualification would establish; if the ARM plan will not be run, close the
-tails with that negative disposition and retire this plan.
+and ARM exploration are explicitly deferred in favor of the host follow-on
+round. The cursor reduced loads per pass; some pass counts increased. Hint
+tuning can investigate repeated clock/atomic work and, with suitable equipment,
+CPU demand, peer progress or energy. Reduced work alone does not establish
+lower CPU occupancy. ARM qualification establishes applicability and progress;
+deployment and measured resource benefit are separate decisions. Neither
+deferral is a negative experimental result. Record a disposition for each
+untouched tail before retiring this plan; the exchange option also remains
+unopened and requires its separate live fixture below.
 
 Preserve each loop's distinct decision order rather than factoring a common
 wait algorithm:
@@ -357,7 +422,8 @@ checks that rationale against its later frozen production baseline.
 Use a separate acceptance record for each independently evaluated candidate,
 committed as that candidate opens and before its comparison measurements:
 `records/WORKER-WAIT-<candidate>-ACCEPTANCE.md`. Use candidate names `HOST-01`,
-`HOST-02` if nominated, `PREPARATION`, `SCAN`, `HINT-RELEASE`,
+`HOST-02`, `HOST-03`, `HOST-04`, `HOST-05`, conditional `HOST-06`,
+`PREPARATION`, `SCAN`, `HINT-RELEASE`,
 `HINT-ACTIVATION`, and, if reached,
 `HINT-EXCHANGE`. This lets hint workloads be fixed after the relevant ARM result
 without rewriting another branch's frozen protocol. Record the current source,
@@ -493,8 +559,10 @@ preserve compact negative evidence in the outflow where it informs remaining
 directions. Update FOOTPRINT only for established mechanism/resource changes,
 and LIMITS for counting semantics. Remove completed plan-specific acceptance
 records and retire this plan once all three branches are accepted or rejected,
-including hint tails superseded by accepted ARM changes. Preserve necessary raw
-evidence through the retention helpers. Keep the shared pilot record while
+including the host follow-on round and explicit dispositions for the deferred
+hint tails (or their supersession by accepted ARM changes). Deferral alone does
+not close a branch. Preserve necessary raw evidence through the retention
+helpers. Keep the shared pilot record while
 either plan needs it; once both plans retire, delete the pilot record after
 carrying forward any lasting conclusions and evidence references into the
 outflow or current-behavior documentation as appropriate. Do not create a

@@ -22,36 +22,35 @@ comparisons. Use its complete-coverage and publication-bracket controls when
 freezing this plan's timestamp equipment; earlier nominal extrema do not
 establish the response bound.
 
-The worker exploration's ready builds and native trials have scheduling
-priority. Its order is quantitative pilot, branch 2 (host delay), branch 1
-(preparation), then branch 3 (scan work and separately selected hint tails).
-Read-only ARM contract research, checker design and pinned-source review can
-proceed in parallel. ARM disposable-child applicability builds and trials use
-time the worker exploration is not using, under the same serialized checkout
-execution rule and with separate builds, output directories and acceptance
-records. Do not interpret priority as waiting for the other plan to retire.
+This plan and hint-batch tuning are explicitly deferred while the worker
+exploration pursues its [host follow-on round](WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round):
+HOST-04 final-completion detection, HOST-05 decoder investigation, then
+conditional HOST-06 first-arrival resampling. The initial pilot, HOST-01
+through HOST-03, preparation and SCAN already have dispositions. This priority
+decision establishes neither failed ARM qualification nor absence of benefit;
+no ARM research or native trials are part of the current host round.
 
-Branches 1 and 2 must be accepted or rejected, with dispositions recorded in
-the outflow, before this plan freezes a production comparison baseline, with
-one exception: if branch 1 is blocked solely on a tradeoff decision, the
-coordinator may freeze on accepted production source with that candidate
-excluded. Record the exclusion in the outflow and ARM acceptance record and
-leave branch 1 blocked. Include all accepted changes; if branch 1 later lands,
-freeze a new baseline and repeat affected comparisons. The worker plan's
-[deferral and exclusion rules](WORKER-WAIT-EXPLORATION-PLAN.md#deferred-work-and-baseline-exclusions)
-preserve branch 2's disposition requirement and correctness/ownership gates.
+Record an explicit resumption before starting this plan. Dispose of the host
+follow-on round before freezing the ARM production comparison baseline and
+include all accepted changes, with dispositions in the outflow. This does not
+require the worker plan's retirement: its hint tails can remain open. Builds
+and native trials remain serialized under the checkout rule, with separate
+builds, output directories and acceptance records. A correctness or ownership
+blocker in accepted source or the apparatus blocks the affected comparison.
 
 Successful native qualification reserves the corresponding release or activation
 tail for this plan's deployment and benefit evaluation. Accepted ARM adoption
 supersedes hint tuning there; closing that ARM path without adoption returns
 the tail to the worker exploration. Pending qualification does neither by
-itself. When qualification awaits an external observation or user availability,
-the coordinator may record an explicit deferral for that wait and open hint
+itself. After resumption, when qualification awaits an external observation or
+user availability, the coordinator may record an explicit deferral for that wait and open hint
 tuning. Retain ARM's pending status and outstanding observation in the outflow
 and affected acceptance records. Resuming after an accepted hint change needs
 a new baseline incorporating it and repeated affected comparisons. Track the
 two wait roles separately; release success cannot resolve the question for
-parked activation.
+parked activation. This future scheduling option does not override the current
+deferral of both ARM and hint work; see the worker plan's
+[resumption rule](WORKER-WAIT-EXPLORATION-PLAN.md#resuming-deferred-work).
 
 Use the shared [pilot record](../records/WORKER-WAIT-PILOT.md) decomposition to
 choose the benefit metric and minimum worthwhile improvement. This pilot is measured in an arranged
