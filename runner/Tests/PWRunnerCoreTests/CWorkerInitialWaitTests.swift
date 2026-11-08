@@ -90,7 +90,7 @@ private final class InitialWaitControl {
             out = partial
         }
         try expectFalse(gateFailed, "independent fixture gate must settle")
-        try expectTrue(out.reaped, "driver must establish owned reap")
+        try expectEqual(out.reaped, true, "driver must establish owned reap")
         return out
     }
 }
