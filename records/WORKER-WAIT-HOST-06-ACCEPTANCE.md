@@ -134,3 +134,42 @@ gate while the following identities are committed.
 | `tests/suites/witness_contract/worker_wait_pilot_reader.py` | `7b4ca3fd7da794d5861cd5b877c2d400c6e64dbc552db3711d66f088d3b78635` |
 | `tests/fixtures/worker_wait/host_stamps.py` | `62ddfad1902c2d7c63f48bacccdcde5e9e1bf9f436c5364b2e09f87c7efc5fe0` |
 | `tests/fixtures/worker_wait/HostStamps.swift` | `243e1c92794ebef36db11f8131a1e10765d223e3a8f891d48bf5287ac3f35775` |
+
+## Comparison result; integrated verification pending
+
+`host06-comparison-01` accepted all 120 trials, formed all 60 pairs and credited
+calibration, without exclusions, skipped/incomplete trials or unpaired members.
+Cleanup settled with no staged process surviving. All 50 ordinary candidate
+trials recorded exactly one initial-resampling call. All response obligations
+were credited: largest finite-observation bound 2.954 µs, largest combined
+uncertainty 2.662 µs.
+
+In the ten selected O0/O1 idle pairs, first-arrival observation shortened by
+2929.543–3009.666 µs and held time by 2827.042–3033.500 µs. Every pair exceeded
+combined uncertainty. Added initial-resampling spans were 1.833–8.625 µs;
+even their upper uncertainty bound was smaller than the corresponding saving's
+lower bound in every pair. These are elapsed observations in fixture builds,
+not process CPU or an energy measurement. The expected increase in initial
+resampling is the predeclared tradeoff. It adds no mapping, descriptor, thread,
+worker write or cross-process notification.
+
+No other component or whole-request group worsened beyond spread in every pair.
+No whole-request pair crossed its spread regression flag. Nevertheless O0 idle
+repetition 4 was 1.9815 ms slower as a whole request despite a shorter held
+interval; other contrary control pairs remain in the complete reader output.
+Do not infer universal request speed or a cause for these differences.
+
+Production source is integrated at `7f67e5cd`, with final fixture controls at
+`952f30cf` and current-behavior documentation at `f6877809`. Acceptance remains
+pending complete signed verification and the observer comparison. The signed
+app's inventory and native identity, not a pristine whole-tree claim, identify
+its source: the user's unrelated planning document remains modified.
+
+Run an observer comparison of this integrated source with its unstamped
+neighbor, using the same six cells, two regimes and five repetitions per side
+(120 trials), inspection host flags, 100 calibration trials and an announced
+240-second native window. Freeze its exact staged identities at the gate. This
+adds observer-cost evidence, not more implementation pairs or another attempt
+at the acceptance gate. Preserve signed app/source identity and inspect actual
+capture markers, in-situ stamp costs, export spans, neighbor whole-request
+observations and cleanup. Apply no fixed overhead subtraction.
