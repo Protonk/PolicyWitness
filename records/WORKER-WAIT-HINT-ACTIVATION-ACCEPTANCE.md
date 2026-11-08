@@ -50,3 +50,12 @@ Cost reader: `273c64dc93a7e6e78886441378f87a5613b806abc55454c664669684432aa6a9`.
 Neutral reader: `8120a459ae28b52df102ed2d9ffafef2ca487a970677f1c44ce849e20717e094`.
 Only the parked batch literal changes, with the same custody-snapshot host
 on both sides. Power is AC, low-power mode 0.
+
+## Disposition
+
+Closed without adoption. Run `20261108T224550Z_95423544` completed twenty
+measured holds and two excluded first requests in 45.658 seconds; every pair
+was eligible and none saved 1% beyond allowance. Baseline rates were
+0.9929–1.0019 and candidate rates 0.9952–1.0063 CPU-seconds/second.
+Generation, queries, custody, effects and cleanup passed. No production change
+or response/energy qualification follows. Both hint tails keep 1,000 hints.

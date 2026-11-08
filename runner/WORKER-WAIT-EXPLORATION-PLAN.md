@@ -30,7 +30,8 @@ candidates require a separate scope decision. ARM research and native trials
 are resumed under coordinator acceptance authority. Both WFET CPU screens closed without adoption. The
 [release hint record](../records/WORKER-WAIT-HINT-RELEASE-ACCEPTANCE.md) and
 [activation hint record](../records/WORKER-WAIT-HINT-ACTIVATION-ACCEPTANCE.md)
-freeze one 10,000-hint candidate per tail. Hint tuning follows each
+close the sole 10,000-hint candidate per tail without adoption: neither
+met its frozen CPU criterion in any pair. Hint tuning follows each
 wait's ARM disposition under the rule below; it is not opened merely by elapsed
 time or incomplete qualification.
 
@@ -320,3 +321,22 @@ plan, remove reciprocal links and preserve common rules still needed by the othe
 Stop for genuine correctness, attribution or resource-ownership blockers and keep
 the plan active unless the user closes that scope; ordinary negative results
 need no review pause before the next candidate.
+
+
+## Final polling dispositions
+
+Release and parked activation retain their existing tails. WFE has no established
+supported independent wake gate; both WFET roles and both hint candidates
+closed without adoption on their selected CPU criteria, not as native failures
+or energy equivalence. The native first-use screens remain positive but are
+not full protocol/deployment qualification. Adoption-only response, migration
+and actual sleep/resume work was not opened after the negative benefit screens.
+
+HINT-EXCHANGE is closed as outside this round: no isolated generation-qualified
+exchange hold was nominated, and its acknowledgement-before-clock precedence
+precludes borrowing either completed role's measurements. A future exchange
+change needs a separate proposal. The scan mask is likewise not opened: no
+measurement shows holes defeating the accepted cursor's savings. Neither is a
+pending acceptance or an unrecorded deferral. Preserve these reopening conditions
+in the outflow, consolidate necessary evidence, then retire both plans and their
+completed records. The shared pilot can now retire with them.

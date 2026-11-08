@@ -2096,7 +2096,9 @@
           "requires": [
             "app",
             "clang",
-            "swift"
+            "swift",
+            "meson",
+            "identity"
           ],
           "command": [
             "bash",
