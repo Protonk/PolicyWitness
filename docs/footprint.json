@@ -132,6 +132,49 @@
       ]
     },
     {
+      "id": "fw15",
+      "case": "waiting",
+      "title": "Ordinary final-completion observation",
+      "subject": {
+        "kind": "activity",
+        "owner": "host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "After the last collection, the retained readiness pipe can end a bounded wait on hangup. Periodic publication checks remain; notification neither establishes done nor replaces owned reap. No descriptor, thread or worker write is added; scheduling and energy effects are unmeasured."
+      },
+      "conditions": "Ordinary final wait with a retained ready pipe; unusable or consumed notification falls back to bounded sleeps.",
+      "interval": {
+        "starts": "last collection released",
+        "ends": "done observed, owned child status ends polling, or allowance expires",
+        "ending_event": "terminal observation or sentinel allowance"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "waitExitNs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerFinalWaitTests.swift",
+          "symbol": "runCWorkerFinalWaitTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Controlled final-only notification, publication before delayed exit, owned reap, fallback and remaining allowance; not CPU, energy or coalescing measurements."
+        }
+      ]
+    },
+    {
       "id": "fw4",
       "case": "waiting",
       "title": "Evidence backing / host view",
@@ -1544,6 +1587,49 @@
           "kind": "receipt",
           "form": "test",
           "pins": "Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold."
+        }
+      ]
+    },
+    {
+      "id": "fw16",
+      "case": "waiting",
+      "title": "Ordinary first-arrival observation",
+      "subject": {
+        "kind": "activity",
+        "owner": "host",
+        "backing": null
+      },
+      "quantity": {
+        "evidence": "source",
+        "value": null,
+        "unit": null,
+        "limit": null,
+        "behavior": "After a received ready byte, the host has one bounded resampling opportunity for first arrival or done before its first ordinary sleep. This adds local host work and can avoid a whole poll-period wait; no mapping, descriptor, thread or worker communication is added. CPU, energy and coalescing effects are unmeasured."
+      },
+      "conditions": "Ordinary execution before first collection; no initial resampling without a received ready byte. Clock, sample and remaining-allowance bounds retain the normal sleep fallback.",
+      "interval": {
+        "starts": "initial ordinary polling after readiness",
+        "ends": "arrival or done observed, or resampling bound reached",
+        "ending_event": "first observation or bounded fallback"
+      },
+      "aftermath": null,
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "runCWorker"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "expiredAfterResampling"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerInitialWaitTests.swift",
+          "symbol": "runCWorkerInitialWaitTests",
+          "kind": "assertion",
+          "form": "test",
+          "pins": "Controlled first-arrival, delayed application, published failure, pre-application exit, missing readiness and bounded fallback decisions; not CPU, energy or coalescing measurements."
         }
       ]
     }

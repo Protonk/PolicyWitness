@@ -47,6 +47,16 @@ disposable signed host fixture. Busy and sleeping controls calibrate observable
 CPU increments. The case requires complete repeated observations; it establishes
 neither idle waiting nor a universal CPU threshold.
 
+`check_wait_measurement` is the mechanism-neutral counterpart: it retains the
+same held-generation, effects, sampling, sleep and busy/sleep sensitivity checks
+without requiring worker CPU to exceed the sleeping control. The default
+`worker_wait_cpu_controls` accepts a constructed quiet worker and refuses bad
+generation, missing effects, native errors, early release and invalid intervals.
+The existing `check_measurement` and live `held_phase_footprint` case retain
+their busy-worker requirement and historical meaning. Neither reader by itself
+establishes a matched improvement or converts artificial holds into production
+hold durations.
+
 The opt-in `response_footprint` case samples fresh shipped controllers handling a
 small known-byte read, the fixed-action independent-query and phased pair, the
 control-character exec workload and the existing actor maximum read workload.
@@ -78,6 +88,35 @@ native inspection and XPC access; the actor hold also needs a matching Developer
 ID identity and disposable-host signing. See the
 [execution and interpretation account](../../CHANGE-VERIFICATION.md#footprint-observations)
 and the [footprint account](../../../docs/FOOTPRINT.md).
+
+
+The opt-in `worker_wait_cost` case uses the held workloads and neutral reader
+for a bounded CPU screen. Set a fresh `PW_WAIT_COST_GATE`, role
+`PW_WAIT_COST_ROLE=release|activation`, and
+`PW_WAIT_COST_CANDIDATE=baseline|wfet|hint10000`. Baseline mode takes one
+observation per pacing regime; comparison takes five alternating matched pairs
+per regime. Each exact staged app first gets one excluded request. After
+signing disposable workers, `prepared.json` identifies the bytes; the case
+waits up to ten minutes for `begin` in the gate file. Its five-minute window
+includes calibration and excludes builds. The ordinary cell has one worker
+and a busy control; the actor lifecycle cell has two workers and that control.
+Activation CPU belongs to the parked, unapplied issuer; the queried subject
+is held in release. Extended holds are not production hold durations.
+
+The WFET prototype changes one unsuccessful tail, reads CNTFRQ before
+application and checks a local CNTVCT deadline, capped at 100 microseconds and
+the last sampled remaining allowances. Its machine feature prerequisite is
+not a production deployment gate. The hint prototype changes one batch to
+10,000 hints. Both retain the baseline ABI identity as labelled substitutions;
+source and executable hashes identify their actual bytes. Comparison allows
+one calibrated quantum per CPU endpoint and brackets elapsed time. Every pair
+must save the declared fraction (`PW_WAIT_COST_MINIMUM`, 10% by default)
+beyond those bounds. Controls
+credit a constructed gain, refuse no-op/contrary-pair credit and reject missing,
+excluded or power-mismatched pairs. A positive CPU screen does not qualify
+response, whole-request cost, energy, capacity, restrictive parked operation,
+migration or sleep/resume. The 60-second measurement watchdog unwinds through
+owned cleanup; a default control exercises that path with a real alarm.
 
 ## Worker wait pilot
 
@@ -133,6 +172,13 @@ terminal publication to the host's exit request, that request to the host's
 reaping sample, and the worker exit grace between its begin and finished stamps
 are program-point components (`w<actor>.terminal_to_exit_request`,
 `exit_request_to_reap`, `grace_wait`); the worker's exit itself has no stamp.
+Direct `terminal_to_reap` and `terminal_to_teardown` intervals retain the terminal
+publication bracket. `spawn_to_teardown` ends at the session's cleanup program
+point; it does not establish successful native deallocation. The ordinary
+`final_wait` record separates plain sleeps and notification/timeout/unusable
+outcomes after the last release and before the exit request. A complete zero
+means no wait was entered; missing boundaries or truncated sleep events leave
+the counts unobserved.
 Each trial counts how its worker grace waits between samples ended
 (`grace_timeouts`, `grace_notified`, `grace_unusable`, `grace_settle_sleeps`): a
 wait followed by its outcome event by that outcome, a plain sleep under the
@@ -158,7 +204,10 @@ accepted trials in one group, and the calibration receipt is accepted; fewer
 accepted trials is an incomplete pilot.
 `PW_WORKER_WAIT_PILOT_ARGS` passes driver options such as `--dry-run`,
 `--cells`, `--repetitions`, `--regimes`, `--window-seconds` and
-`--clock-pair-trials`; `--no-clock-pair` is accepted only in a dry run. A dry
+`--clock-pair-trials`; `--host-flavour inspection|optimized` changes only the
+disposable hosts, retaining their actual settings in build and trial receipts.
+Different flavours remain separate reader groups. `--window-gate` lets the coordinator freeze staged identities
+and announce the window before releasing prepared trials. `--no-clock-pair` is accepted only in a dry run. A dry
 run establishes mechanics only and removes its staged apps.
 
 Comparison mode measures a baseline and a candidate as matched pairs.
@@ -996,3 +1045,11 @@ The pre-apply case also attempts a real spawn of a nonexistent worker and
 requires unchanged files, no worker or validator subprocess, and no ordering
 object. Once a worker exists but has not published application, ordering is
 all-false with `not_invoked`; no prediction is `query_first`.
+
+The worker-wait pilot reader's version 12 also reports startup program-point
+intervals and measured ordinary initial-resampling spans. Resampling pairs end
+before fallback sleep and carry a capture marker; missing pairs, dropped events
+or an absent marker withhold the measurement. Elapsed resampling includes
+possible descheduling and is not a CPU measurement. The independent controls
+check separation from sleep, missing versus zero, malformed pairs and the
+startup arithmetic. Older frozen reports retain their original reader identity.

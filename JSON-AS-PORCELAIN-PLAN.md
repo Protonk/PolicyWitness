@@ -3,9 +3,12 @@
 Exploration complete on `experiment/json-porcelain`; the
 [experiment disposition](records/JSON-AS-PORCELAIN-EXPERIMENT.md#verification-and-dispositions)
 recommends adoption in bounded semantic families. The prototype, 41-case evidence
-and remaining migration work are retained there. Production adoption remains a
-separate follow-on; this plan stays as its specification until those dependencies
-are discharged.
+and remaining migration work are retained there. Production adoption is authorized: replace the Swift lifecycle question maps,
+complete typed admission for fresh I/O, exec, actor setup/equipment, actor
+scheduling/endings and extension custody, then remove response-only coders as
+replacement coverage passes. The implementation keeps native facts and rejected
+bytes separate from admitted claims. The current accepted main baseline is
+`5fed540c`; adoption reruns the default battery and affected native controls.
 
 ## Question and intended result
 
@@ -84,11 +87,9 @@ validator queries, release and resource ownership stay at their existing process
 boundaries. Specimen JSON, reservation JSON, validator NDJSON and the eleven
 inbound request record types remain boundary adapters outside the schema.
 
-Host-wait/ARM work, evidence geometry and custody disposal remain separate.
-The approved [host follow-on round](runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
-changes host wait and validator decoding sources; sequence this experiment
-against it explicitly, identify the accepted source baseline, and refresh
-affected observations if that baseline changes. The [wire](docs/CONTRACT.md)
+Evidence geometry and custody disposal remain separate. Identify the accepted
+source baseline and refresh affected observations if that baseline changes.
+The [wire](docs/CONTRACT.md)
 and [failure evidence](tests/FAILURE-PROPAGATION-CONTRACT.md) contracts own the
 existing meanings; this experiment explores their representation.
 
@@ -295,8 +296,7 @@ justify bounded costs, including slower execution. Explain resolved regressions
 and tradeoffs; lost evidence, unbounded parsing, unresolved ownership or a
 blown maintenance budget remains disqualifying. Quantitative improvement claims
 require a frozen matched schedule, uncertainty and decision rule with retained
-contrary trials; do not import the host-wait plan's performance gate as
-architectural acceptance.
+contrary trials.
 
 ## Disposition, integration and retirement
 

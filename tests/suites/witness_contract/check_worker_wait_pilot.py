@@ -80,11 +80,12 @@ def load_module(name, path):
     return module
 
 
-def build_host(module, kind, artifacts, scratch, stamp_dir, tree):
+def build_host(module, kind, artifacts, scratch, stamp_dir, tree, flavour):
     """One host binary from tree's runner/; stamped kinds bake stamp_dir, the neighbor applies no patch."""
     work = scratch / f'host-{kind}'
     return Path(module.build_host(work / 'runner', work, artifacts / f'host-{kind}',
-                                  [] if kind == UNSTAMPED else module.PATCHES, stamp_dir, tree / 'runner'))
+                                  [] if kind == UNSTAMPED else module.PATCHES, stamp_dir, tree / 'runner',
+                                  swift_flags=module.SWIFT_FLAVOURS[flavour]))
 
 
 def host_flavour(artifacts, kind):
@@ -655,6 +656,10 @@ def parse(argv):
     parser.add_argument('--repetitions', type=int); parser.add_argument('--window-seconds', type=float, default=240.0)
     parser.add_argument('--trial-watchdog-seconds', type=float, default=15.0)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--host-flavour', choices=('inspection', 'optimized'), default='inspection',
+                        help='host-only Swift settings; workers, validator and controller keep their own recipes')
+    parser.add_argument('--window-gate', type=Path,
+                        help='fresh coordinator-owned file; after preparation write its token to begin the window (five-minute limit)')
     parser.add_argument('--compare-app', help="the candidate's signed app"); parser.add_argument('--compare-tree', help='the candidate checkout root')
     parser.add_argument('--compare-worker-build', help="build.sh output over the compare tree (the wrapper builds it)")
     args = parser.parse_args(argv)
@@ -688,6 +693,8 @@ def announce(message):
 
 def main(argv=None):
     args = parse(sys.argv[1:] if argv is None else argv)
+    if args.window_gate:
+        assert not args.window_gate.exists(), 'window gate must be fresh'
     source_app, artifacts = Path(args.app).resolve(), Path(args.artifacts).resolve()
     assert os.environ.get('PW_TEST_SCRATCH'), 'PW_TEST_SCRATCH is required for build intermediates'
     scratch = Path(os.environ['PW_TEST_SCRATCH']); scratch.mkdir(parents=True, exist_ok=True)
@@ -714,7 +721,8 @@ def main(argv=None):
     failures, apps, staging, stamp_dir_fd, cleanup = [], {}, artifacts / 'staging', None, None
     target_root = Path(tempfile.mkdtemp(prefix='pw-wait-', dir='/private/tmp'))
     try:
-        hosts = {kind: build_host(module, kind, artifacts, scratch, stamp_dir, value['tree']) for kind, value in sides.items()}
+        hosts = {kind: build_host(module, kind, artifacts, scratch, stamp_dir, value['tree'], args.host_flavour)
+                 for kind, value in sides.items()}
         flavours = {kind: host_flavour(artifacts, kind) for kind in kinds}
         assert all(value == flavours[kinds[0]] for value in flavours.values()), flavours
         skipped = {kind: json.loads((artifacts / f'host-{kind}' / 'host-build.json').read_text())['patches_skipped'] for kind in kinds}
@@ -753,6 +761,16 @@ def main(argv=None):
              host_flavour=flavours[kinds[0]], worker_build=str(worker_build),
              warm_cells=warm, apps={k: str(v) for k, v in apps.items()},
              order=f'rapid block, then idle block; per repetition and cell both apps, {kinds[0]} first in even repetitions'))
+        if args.window_gate:
+            token = secrets.token_hex(16)
+            save(artifacts / 'prepared.json', dict(token=token, gate=str(args.window_gate),
+                                                  staged_identity=staged_before, timeout_seconds=300))
+            announce('prepared; waiting for coordinator window gate (300 s maximum)')
+            expires = time.monotonic() + 300
+            while not args.window_gate.exists():
+                assert time.monotonic() < expires, 'coordinator window gate timed out'
+                time.sleep(0.1)
+            assert args.window_gate.read_text().strip() == token, 'window gate token mismatch'
         with FootprintObserver(args.observer) as observer:
             save(artifacts / 'observer-provenance.json', observer.provenance)
             pilot = Pilot(args, observer, apps, stamp_dir, stamp_dir_fd, module.stamp_paths, module.exported_path,

@@ -650,3 +650,40 @@ or combined required observations despite unavailable logs, and distinguish
 log availability from positive-control observation. Live PID queries of an
 integrated candidate, barrier ordering and matched response/CPU acceptance
 remain separate requirements before changing production waits.
+
+## ARM wait first-use screen
+
+The opt-in `arm_wait` case is a smaller applicability screen for WFE and WFET,
+with independent default `arm_wait_controls`. It compiles the production
+timing setup into a disposable supervisor/child fixture; it does not alter
+production waits. Each primitive has three fresh children per unapplied,
+allow-default, bare deny-default and deny-default plus file-read-data profile.
+No explicit ARM wait executes before application. The timed alternative reads
+`CNTFRQ_EL0`, samples `CNTVCT_EL0` with an instruction barrier and constructs
+a checked 100 microsecond deadline in that domain. The feature sysctl is
+test equipment's pre-fork admission check, not an adopted deployment policy.
+
+After the ready handshake and same-generation native observation, the supervisor
+publishes go and remains silent for at least 150 ms: no PID inspection, waitpid,
+signal or publication. It records a second live CPU/generation endpoint, then
+leaves the child alone for another 400 ms. The child repeatedly waits until its
+own 500 ms continuous-clock cutoff, publishes its ending and waits for leave.
+The supervisor's rescue/owned reap are separate observations; rescue fails the
+screen. The reader requires the child's recorded ending within 550 ms and
+the CPU endpoint before completion. Per-pass brackets include surrounding clock
+reads; counters are diagnostic and are not a matched CPU or energy benefit.
+The temporary shared report, production-size timing region, fork and observation
+calls are declared fixture resources. No child signal handler or post-apply I/O
+is introduced. The fixture does not establish host-loss protocol, live validator
+queries, sleep/resume, migration or deployability.
+
+Use `PW_ARM_WAIT_PRIMITIVE=wfe` or `wfet` and a fresh `PW_ARM_WAIT_GATE` with
+`tests/run.sh --case runner_c_worker_harness/arm_wait`. After build and source/
+disassembly capture, `prepared.json` identifies the binary and token. The
+coordinator releases the gate after freezing identities and announcing the
+180-second maximum window. Each owned supervisor has an eight-second watchdog
+and three-second cleanup reserve. A forced group containment leaves cleanup
+unresolved; do not credit it as child reap. Raw source, receipts, conditions,
+window and ownership remain under the dispatcher. Opt-in membership reflects
+the hardware/OS-sensitive instruction trial and coordinated window; a failed
+screen remains failed. Logging is not a required observable.

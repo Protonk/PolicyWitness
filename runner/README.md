@@ -91,6 +91,9 @@ creates no validator spawn failure.
    host; at EOF it publishes the count it read and refuses a different length
    before compiling, so a delivery cut short is never applied as a shorter policy.
 3. The worker applies the policy once, then publishes arrival at each phase.
+   After a received ready byte, the ordinary host may resample first arrival
+   or done once before sleeping, under its existing clock and sample bounds.
+   This observation opportunity does not authorize collection by itself.
    The host checks successful application, identity and worker ownership, plans
    that phase's queries afresh and collects eligible queries with a fresh
    `sb_api_validator --batch` child. No eligible queries means no validator.
@@ -109,6 +112,10 @@ creates no validator spawn failure.
    The host retains cancellation, grace, termination and reaping. After a confirmed
    reap it reconciles acknowledgements published between samples, including before
    an abnormal exit, only while ownership through acknowledgement is established.
+   After the last ordinary collection, it can wait on the retained readiness pipe
+   for exit notification while keeping bounded checks of `done`. Notification
+   prompts observation; it establishes neither publication nor reap. An early
+   hangup is consumed once, with bounded sleeping checks thereafter.
 6. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
 

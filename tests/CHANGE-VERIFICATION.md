@@ -708,6 +708,35 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
   control alone does not establish integrated live queries, order, responsiveness,
   CPU reduction or actual sleep/wake behavior.
 
+### ARM wait first-use screen
+
+- **Cases:** opt-in `runner_c_worker_harness/arm_wait` and default
+  `runner_c_worker_harness/arm_wait_controls`.
+- **Selection:** `PW_ARM_WAIT_GATE` names a fresh coordinator gate path;
+  `PW_ARM_WAIT_PRIMITIVE=wfe` (default) or `wfet` selects the instruction for
+  `tests/run.sh --case runner_c_worker_harness/arm_wait`. The case prepares
+  identities and waits up to five minutes for the token in `prepared.json`.
+- **Scope:** three fresh children per profile, no explicit pre-application wait
+  warm-up, one silent observation interval and a child-owned cutoff. The
+  supervisor owns and reaps each child; watchdog rescue fails the screen.
+  Logs are not an oracle. No live-query protocol, deployment, migration,
+  sleep/resume or resource-benefit credit follows from passing this screen.
+- **Artifacts:** source copies, platform/build/disassembly evidence, prepared
+  binary hash, raw receipts, ownership and finite-window receipts, independent
+  reader result. Quiet-worker CPU interpretation additionally requires the
+  neutral reader checked by `witness_contract/worker_wait_cpu_controls`.
+
+### Worker wait CPU screen
+
+Use opt-in `witness_contract/worker_wait_cost` with the role, candidate and
+fresh gate described in the suite README. Freeze identities from `prepared.json`
+before releasing the five-minute window. The neutral reader preserves live
+held-generation, effect, counter and interval controls. `result.json` decides
+only the declared held-CPU benefit; a passing case with a false benefit result
+is a complete negative screen, not candidate acceptance. Source substitutions
+remain outside production. The activation cell has three busy processes at
+most, including its sensitivity control, and needs its own announced window.
+
 ### Worker wait pilot
 
 - **Cases:** opt-in `witness_contract/worker_wait_pilot` and default

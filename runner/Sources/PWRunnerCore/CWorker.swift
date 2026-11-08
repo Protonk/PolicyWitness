@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "242eaaf85726e7437de516e895dec198cdfddaeb669fd1ed31f7f31a7855ef84"
-    static let abiIdentity: [UInt8] = [0x24, 0x2e, 0xaa, 0xf8, 0x57, 0x26, 0xe7, 0x43, 0x7d, 0xe5, 0x16, 0xe8, 0x95, 0xde, 0xc1, 0x98, 0xcd, 0xfd, 0xda, 0xeb, 0x66, 0x9f, 0xd1, 0xed, 0x31, 0xf7, 0xf3, 0x1a, 0x78, 0x55, 0xef, 0x84]
+    static let abiIdentityHex = "cad425b12377d1f1fe0f37f9dcc6ee546024afaf372d2a2b570cd97ce538c983"
+    static let abiIdentity: [UInt8] = [0xca, 0xd4, 0x25, 0xb1, 0x23, 0x77, 0xd1, 0xf1, 0xfe, 0x0f, 0x37, 0xf9, 0xdc, 0xc6, 0xee, 0x54, 0x60, 0x24, 0xaf, 0xaf, 0x37, 0x2d, 0x2a, 0x2b, 0x57, 0x0c, 0xd9, 0x7c, 0xe5, 0x38, 0xc9, 0x83]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -867,7 +867,7 @@ struct ChildProcessCalls {
     var clock: () -> UInt64? = MonotonicDeadline.now
     var sleep: (UInt64) -> Void = sleepNs
     var waitReadable: (Int32, UInt64) -> Void = waitReadableNs
-    /// The bounded exit wait host grace uses; tests may drive it.
+    /// The bounded exit wait final sentinel polling and grace use; tests may drive it.
     var waitExit: (ExitWatch, UInt64) -> ExitWatchOutcome = waitExitNs
 }
 
@@ -1144,12 +1144,20 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         var clock = HostWaitClock(milliseconds: input.sentinelTimeoutMs, pollNs: 2_000_000, calls: processCalls)
         // Probe for a dead worker only every ~50 ms of elapsed time (every
         // 25 passes once the clock is unusable): a waitpid in the hot loop
-        // costs more than the detection latency saves.
+        // costs more than the detection latency saves. After a final-wait
+        // notification, sample on every bounded pass until publication/reap.
         var nextExitCheckNs: UInt64 = 0
         var passes = 0
+        // Once collection is finished, the already-retained ready pipe can
+        // interrupt the sentinel wait when the worker exits. Keep the same
+        // periodic publication checks: done can precede a delayed exit.
+        var finalExitWatch = ExitWatch(fd: session.readyReadFD)
         // Set by a release store and cleared by the next wait, which re-samples
         // the next phase's arrival before its first sleep.
         var resampleArrival = false
+        // Readiness precedes application and first arrival. Give that answer
+        // one bounded opportunity before attaching a whole poll period to it.
+        var resampleInitialArrival = session.readyByteReceived
         polling: while true {
             passes += 1
             if !sawApplied && session.appliedObserved {
@@ -1216,7 +1224,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             // this wait. Retain this actual stop reason; final reconciliation
             // recovers immutable publications without inventing timely done.
             let elapsed = clock.elapsedNs()
-            if elapsed.map({ $0 >= nextExitCheckNs }) ?? (passes % 25 == 1) {
+            if finalExitWatch.notified || (elapsed.map({ $0 >= nextExitCheckNs }) ?? (passes % 25 == 1)) {
                 nextExitCheckNs = (elapsed ?? 0) + 50_000_000
                 switch session.waitChild(stage: "poll") {
                 case .reaped:
@@ -1231,13 +1239,33 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             }
             // done was read above: a publication observed as the allowance
             // runs out is done, not a deadline.
+            if resampleInitialArrival {
+                resampleInitialArrival = false
+                if nextPhase == 0 {
+                    if clock.expiredAfterResampling({ session.arrived(0) || session.doneObserved },
+                                                   budgetNs: HostWaitClock.resampleBudgetNs) { break }
+                    continue
+                }
+            }
             if resampleArrival && nextPhase < input.phases.count {
                 resampleArrival = false
                 if clock.expiredAfterResampling({ session.arrived(nextPhase) }, budgetNs: HostWaitClock.resampleBudgetNs) { break }
                 continue
             }
             resampleArrival = false
-            if clock.expiredAfterSleeping() { break }
+            if nextPhase == input.phases.count && finalExitWatch.usable && !finalExitWatch.notified {
+                let (expired, outcome) = clock.expiredAfterWaiting(exit: finalExitWatch)
+                if expired { break }
+                switch outcome {
+                case .notified:
+                    // Recheck done before the owned waitpid sample. Notification
+                    // establishes neither publication nor reap, and is consumed
+                    // once so an early hangup cannot create a busy loop.
+                    finalExitWatch.notified = true
+                case .unusable: finalExitWatch.usable = false
+                case .timedOut, .none: break
+                }
+            } else if clock.expiredAfterSleeping() { break }
         }
         session.sentinelWait = clock.record(stop: session.pollStopReason, excluded: true)
     }

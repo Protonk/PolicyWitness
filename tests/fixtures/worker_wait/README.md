@@ -169,6 +169,14 @@ Any refusal still writes the receipt, then fails the build.
 
 ## Instrumented host
 
+The pilot driver's optional `--window-gate PATH` separates staging from native
+trials. The path must be absent at startup. After preparing both apps, the driver
+writes `prepared.json` with their identities and a fresh token, then waits up to
+five minutes for the coordinator to write that token to the gate. No worker trial
+runs before release; timeout or a wrong token follows normal owned cleanup.
+This lets the coordinator record exact staged identities and announce a quiet
+window after compilation and signing finish.
+
 `HostStamps.swift` is a test-only timeline recorder compiled only into the
 disposable PWRunner hosts that `host_stamps.py` builds; the builder prepends the
 literal `PWW_STAMP_DIR`, `PWW_STAMP_SWIFT_FLAGS` and `PWW_STAMP_INSPECTION`
@@ -180,7 +188,7 @@ stamp-cost words. The record path neither allocates nor faults a fresh page. At
 request start the recorder makes 16 consecutive records through the call sites'
 own `HostStamps.shared.record` expression, copies their raws to
 `stamp_cost.raws` in `stamps.json` and withdraws them from the timeline;
-adjacent differences give the per-record cost in this `-Onone` build, in situ.
+adjacent differences give the per-record cost in the selected host flavour, in situ.
 The release, activation and inbound commit stores each have a record immediately
 before them (139, 149 and 158) as well as after (141, 150 and 159). Host export
 version 2 requires the inbound pair, keyed by phase and delivery. The reader
@@ -209,7 +217,16 @@ sleep does, and a wait that returns early records an actual duration below the
 requested one. In a tree whose worker grace waits for the exit notification
 (`HostWaitClock.expiredAfterWaiting(exit:)`), a second optional patch records
 each such wait under key 5 with `HostStamps.wait`, which adds its outcome
-event. Custody passes in the actor completion
+event. The same patch records a final ordinary sentinel exit wait under key 1.
+The reader separates final key-1 waits after the last release and before the
+exit request; missing boundaries or a truncated trace leave that accounting
+unobserved. Plain sleeps and each native wait outcome stay distinct.
+Event 172 marks the end of session teardown, after its mapping, descriptor and
+spawn-state cleanup calls. Direct terminal-to-reap and terminal-to-teardown
+intervals retain the terminal publication bracket; spawn-to-teardown describes
+the host's session residence between program points. The teardown stamp does
+not establish that each native cleanup operation succeeded or that resources
+are absent from the kernel. Custody passes in the actor completion
 loop are registers; events 153/154 are appended only for passes that changed
 the custody or transfer record count.
 
@@ -241,8 +258,14 @@ bounded worker exit wait described above, so a tree without either wait builds
 unchanged; the grace program points apply to every tree. `build_host` copies a
 source tree's `runner/` (this repository's by default), applies the patches and
 compiles that tree's Meson PWRunner source list with
-`swiftc -j 2 -Onone -g -target arm64-apple-macosx<minimum>`; the shim is built
-with `clang -c -arch arm64 -mmacosx-version-min=<minimum>`. Its `host-build.json`
+`swiftc -j 2` with either `-Onone -g` (inspection, the default) or `-O`
+(optimized), and `-target arm64-apple-macosx<minimum>`; the shim is built
+with `clang -c -arch arm64 -mmacosx-version-min=<minimum>`. The builder's
+`--flavour` and pilot driver's `--host-flavour` select only these host flags;
+workers, validator and controller retain their own recipes. A pilot run uses
+the same flavour for both sides. Different-flavour diagnostics stay separate
+from implementation comparisons and do not authorize a shipped-policy change.
+Its `host-build.json`
 records the source tree, the exact argv, flavour, the tree and compiled sha256
 of every source with its patched flag, the full patch texts with whether each
 applied, the generated recorder source, the toolchain versions and the output
@@ -329,3 +352,14 @@ values written independently from the C layout, pack pages in program order,
 and require the reader to accept them. The reader treats host events 101 and 153
 as carrying earlier caller-read raws; a new `record(..., raw:)` call site in
 `HostStamps` must be added to the reader's `HOST_PRESAMPLED`.
+
+### Startup and resampling observations
+
+The host exports whether its resampling helper was instrumented. Events 183/184
+bracket each call's work before the fallback sleep, using the clock's wait key.
+The reader reports ordinary resampling before first arrival separately from
+sleep, and leaves older/uninstrumented captures unknown. This elapsed span can
+include descheduling; it is not process CPU. Missing, malformed or dropped pairs
+cannot establish zero work. Startup intervals distinguish spawn, readiness
+observation, the worker's post-application stamp and first-arrival stamp. A
+post-store stamp does not identify the instant of application or publication.

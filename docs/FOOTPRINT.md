@@ -10,6 +10,16 @@ each row; no row establishes a universal memory ceiling. Add quantities only
 when their units, backing and overlapping lifetimes support the sum; native
 memory metrics are never added to logical capacity or encoded bytes.
 
+## Examination
+
+Examine PW's footprint through three questions:
+
+1. What work, resource retention or timing obligations does PW impose unnecessarily?
+2. Can we remove them or express the condition we actually need, while preserving
+   witnessing and bounded progress?
+3. What freedom does that give the system to schedule PW, and what costs or
+   response changes do we observe?
+
 ## Provenance of measured rows
 
 Response rows fr9–fr13 describe the historical JSON/base64 implementation. Their
@@ -85,6 +95,7 @@ acknowledged gate.
 | fw1 | Release-word polling — active worker | source: [LIMITS `worker_proceed_wait`](LIMITS.md) Continuously samples release/cancellation and expiry, with batches of yield hints. Requested-action quiescence is not CPU idleness. | Arrived phase awaiting collection release. | phase arrival → release accepted, expiry sampled or cancellation observed | — |
 | fw2 | Parked actor polling — parked worker | source: Polls its activation word and can service inbound authority while parked. | Actor prepared before its next scheduled visit. | setup or previous visit completion → named activation, cutoff or exit request | — |
 | fw3 | Collection orchestration — host / validator | source: Host polls/sleeps while collecting; an eligible phase launches a separate validator. Their demand is separate from worker polling. | Ordinary and actor collection; validator only for eligible queries. | worker readiness or arrival → collection ends; validator ends independently | — |
+| fw15 | Ordinary final-completion observation — host | source: After the last collection, the retained readiness pipe can end a bounded wait on hangup. Periodic publication checks remain; notification neither establishes done nor replaces owned reap. No descriptor, thread or worker write is added; scheduling and energy effects are unmeasured. | Ordinary final wait with a retained ready pipe; unusable or consumed notification falls back to bounded sleeps. | last collection released → done observed, owned child status ends polling, or allowance expires | — |
 | fw4 | Evidence backing / host view — host | logical: 3,675,920 bytes One fixed evidence backing per worker, initialized before spawn; host and worker mappings are views of the same object. | Each ordinary worker or actor, independent of requested action count. | mapping preparation → host session teardown | — |
 | fw5 | Evidence worker view — worker | source: Aliases the evidence backing; do not add its logical capacity to the host view as a second backing object. | Each launched worker. | worker maps launch descriptor → worker process exit | — |
 | fw6 | Authority regions — host / actor workers | source: Per actor: 1152 + (inbound slots + outbound slots) × 16448 requested logical bytes, including actors with no slots. The worker maps the observed object size, which can include page padding; it remains a view of the same backing. Bearer bytes are outside the encoded reply. | Authority-bearing actor plan; one distinct backing per actor, host/worker views. | authority setup before launch → host detachment and worker exit, independently | — |
@@ -96,6 +107,7 @@ acknowledged gate.
 | fw12 | actor_3 held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,118,848,333–1,129,527,459 ns; worker:0 CPU 1,109,434,708–1,132,191,750 ns; worker:1 CPU 1,124,444,624–1,129,185,792 ns; worker:2 CPU 1,109,997,583–1,130,167,250 ns; worker aggregate 3,343,876,915–3,391,544,792 ns. Hold class 3: conservative elapsed 3,100,499,666–3,148,954,292 ns; worker:0 CPU 3,101,086,792–3,157,780,833 ns; worker:1 CPU 3,097,857,250–3,144,838,583 ns; worker:2 CPU 3,104,895,124–3,145,675,708 ns; worker aggregate 9,303,839,166–9,448,295,124 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
 | fw13 | actor_lifecycle held CPU — identified worker generations | measured: 6 holds Hold class 1: conservative elapsed 1,128,085,959–1,131,137,792 ns; worker:0 CPU 1,126,848,958–1,131,069,249 ns; worker:1 CPU 1,127,899,542–1,133,016,542 ns; worker aggregate 2,255,967,001–2,264,085,791 ns. Hold class 3: conservative elapsed 3,148,305,250–3,151,015,291 ns; worker:0 CPU 3,146,478,041–3,157,893,791 ns; worker:1 CPU 3,145,107,374–3,151,512,042 ns; worker aggregate 6,291,585,415–6,307,922,750 ns. Each worker and busy control exceeded its matched sleeping control; no idle-wait claim. Declared accounting quantum 10,000,000 ns. | Two declared duration classes, three repetitions each. Ordinary shipped app; actor instrumented host with unchanged workers. Power observations: battery power, discharging. | acknowledged gate then first endpoint batch → second endpoint batch before release | — |
 | fw14 | Held actor custody / delivery / candidate — issuer / subject / host | measured: 212 bytes Actual accepted custody length and equal settled first delivery length, not buffer capacity. Across six holds, issuer is parked after its first transfer; subject has completed H1, holds the read-bearing visit without release, and has H2 and both releases pending. Private custody remains mapped and unerased for a later transfer; D2 is unpublished. No bearer bytes were captured. | Instrumented pre-collection metadata bound to the acknowledged held gate and unchanged marker/target; named references retained. | completed first consume and held next visit → post-measurement gate release | — |
+| fw16 | Ordinary first-arrival observation — host | source: After a received ready byte, the host has one bounded resampling opportunity for first arrival or done before its first ordinary sleep. This adds local host work and can avoid a whole poll-period wait; no mapping, descriptor, thread or worker communication is added. CPU, energy and coalescing effects are unmeasured. | Ordinary execution before first collection; no initial resampling without a received ready byte. Clock, sample and remaining-allowance bounds retain the normal sleep fallback. | initial ordinary polling after readiness → arrival or done observed, or resampling bound reached | — |
 
 <!-- END GENERATED FOOTPRINT WAITING -->
 
@@ -194,6 +206,7 @@ unmapping, exit and reap are different endings; one does not establish another.
 | release, expiry or cancellation | fw1 |
 | activation, expiry or cancellation | fw2 |
 | collection completion and validator exit | fw3 |
+| terminal observation or sentinel allowance | fw15 |
 | host unmapping attempted; native success not recorded | fw4 |
 | worker exit ends its references | fw5 |
 | shared erase eligibility, host unmap and worker exit are separate | fw6 |
@@ -220,6 +233,7 @@ unmapping, exit and reap are different endings; one does not establish another.
 | recorded gate release followed by independent exits | fa8 |
 | gate release follows completed measurement | fw10, fw11, fw12, fw13 |
 | last-use erasure, native release and disposal remain distinct | fw14 |
+| first observation or bounded fallback | fw16 |
 
 <!-- END GENERATED FOOTPRINT ENDINGS -->
 
@@ -237,6 +251,7 @@ measured consumption.
 | fw1 | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`cpu_relax`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`proceed_delayed_observed_quiescence`](../tests/suites/runner_c_worker_harness/run.sh) (assertion): Selected effects remain absent across delayed release and occur afterward; no CPU measurement. |
 | fw2 | [`wait_for_activation`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`activation_named_ordinal`](../tests/suites/runner_c_worker_harness/run.sh) (assertion): Setup is published with no early action/arrival; named activation then permits the visit. |
 | fw3 | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`walkSchedule`](../runner/Sources/PWRunnerCore/ActorScheduler.swift); [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) (assertion): Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run. |
+| fw15 | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`waitExitNs`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`runCWorkerFinalWaitTests`](../runner/Tests/PWRunnerCoreTests/CWorkerFinalWaitTests.swift) (assertion): Controlled final-only notification, publication before delayed exit, owned reap, fallback and remaining allowance; not CPU, energy or coalescing measurements. |
 | fw4 | [`PWShmLayout`](../runner/Sources/PWRunnerCore/CWorker.swift); [`tearDown`](../runner/Sources/PWRunnerCore/ActorSession.swift) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh) (value): Compiled C and Swift layout constants agree; logical geometry, not residency.; [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) (assertion): Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run. |
 | fw5 | [`mmap`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`init`](../runner/Sources/PWRunnerCore/ActorSession.swift) | [`runCWorkerLifecycleTests`](../runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift) (assertion): Controlled publications, cleanup ownership and confirmed child reap; not external observation of this run. |
 | fw6 | [`PWAuthorityLayout`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift); [`ActorAuthorityRegion`](../runner/Sources/PWRunnerCore/AuthorityCustody.swift) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh) (value): Compiled C and Swift layout constants agree; logical geometry, not residency.; [`runActorAuthorityTests`](../runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift) (assertion): Custody, delivery acknowledgement/equality and quiescence-qualified teardown in component controls. |
@@ -270,5 +285,6 @@ measured consumption.
 | fw12 | [`check_measurement`](../tests/suites/witness_contract/check_held_phase_footprint.py) | [`check_measurement`](../tests/suites/witness_contract/check_held_phase_footprint.py) (receipt): Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold. |
 | fw13 | [`check_measurement`](../tests/suites/witness_contract/check_held_phase_footprint.py) | [`check_measurement`](../tests/suites/witness_contract/check_held_phase_footprint.py) (receipt): Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold. |
 | fw14 | [`check_measurement`](../tests/suites/witness_contract/check_held_phase_footprint.py) | [`check_measurement`](../tests/suites/witness_contract/check_held_phase_footprint.py) (receipt): Checks gate/effects, same-generation endpoint samples, held actor publications, skew/sleep limits and worker/busy CPU above matched sleeping control; no fixed CPU threshold. |
+| fw16 | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`expiredAfterResampling`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`runCWorkerInitialWaitTests`](../runner/Tests/PWRunnerCoreTests/CWorkerInitialWaitTests.swift) (assertion): Controlled first-arrival, delayed application, published failure, pre-application exit, missing readiness and bounded fallback decisions; not CPU, energy or coalescing measurements. |
 
 <!-- END GENERATED FOOTPRINT COVERAGE -->

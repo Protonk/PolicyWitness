@@ -30,6 +30,19 @@ spawn/mapping/polling/cleanup; internal OS-call controls inject only otherwise
 unreliable kill/wait failures and the grace wait's exit-wait outcomes.
 They independently clean up their child after a simulated unconfirmed reap.
 
+`final_wait_*|<gate>` publishes application and visits each declared phase,
+waiting for its numbered release. The final visit also waits for the test's
+file gate. `final_wait_exit` publishes completion and exits; `final_wait_linger`
+publishes it but waits for the host's exit request; `final_wait_no_done` exits
+17 without `done`. `final_wait_early_hangup` closes the ready pipe before the
+gate and otherwise follows the linger case. `final_wait_late_ready` withholds
+the ready byte until after the gate, recording that write's result in its slot
+so readiness timeout must still produce EPIPE. A `.settled` file acknowledges
+the fixture's final stores, independently of whether `done` was among them.
+The test opens the gate inside a controlled final wait or fallback sleep;
+an alarm bounds the fixture and cancellation also ends its gate waits. These
+files are test equipment, never resources of a sandboxed production worker.
+
 `reap_ack_clean|<gate>` and `reap_ack_signal|<gate>` publish arrival, then wait
 for both host release and a test-owned file gate. The host wait control opens
 that gate only after its last acknowledgement/done samples, then observes an
@@ -51,7 +64,7 @@ malformed present metadata; the ordinary reply must degrade and withhold
 comparisons. These modes use a fictional child PID to test ABI interpretation;
 production native-call and live-exec controls establish actual observations.
 
-The ready byte is sent after fixture publication for deterministic controls;
+The completed-report modes send the ready byte after publication for deterministic controls;
 real-worker readiness and deadline/grace behavior remain separate tests.
 `ready_after_<ms>` (1 to 100) and `ready_never` exercise the host's readiness
 wait itself. Their input is followed by more bytes than the pipe buffer holds,
@@ -217,3 +230,12 @@ The exec evidence family is invoked through
 items retain this fixture and the independent 58-attempt golden unchanged; each
 native invocation remains a complete observation. Copied include closures and
 native stdout/stderr live in the family's per-variant artifacts.
+
+`initial_wait_*|<gate>` separates readiness from application/first arrival with
+an independently acknowledged file gate. It publishes a ready marker before the
+ready byte, then waits for the gate or cancellation. The arrival mode publishes
+application and phase arrival, waits for release and publishes completion;
+failure publishes a failed apply and done; exit returns 17 without application;
+missing omits the byte. Controlled host clocks or fallback sleeps open the gate.
+A five-second alarm and independent parent cleanup bound the child. These cases
+apply no sandbox and establish host decisions, never timing or policy causes.

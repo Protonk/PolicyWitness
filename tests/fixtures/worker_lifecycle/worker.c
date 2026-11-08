@@ -106,6 +106,115 @@ int main(void) {
         }
         if (used == sizeof(mode) - 1) return 94;
     }
+    if (!strncmp(mode, "initial_wait_", 13)) {
+        char *gate = strchr(mode, '|');
+        if (!gate) return 99;
+        *gate++ = 0;
+        char marker[180];
+        alarm(5);
+        snprintf(marker, sizeof(marker), "%s.ready", gate);
+        int fd = open(marker, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd < 0) return 96;
+        close(fd);
+        if (strcmp(mode, "initial_wait_missing") && write(4, "R", 1) != 1) return 97;
+        while (access(gate, F_OK) != 0) {
+            if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) return 0;
+            usleep(1000);
+        }
+        int failure = !strcmp(mode, "initial_wait_failure");
+        int early_exit = !strcmp(mode, "initial_wait_exit");
+        pw_shm_phase_t *phase = &hdr->phases[0];
+        if (!early_exit) {
+            hdr->apply_rc = failure ? -1 : 0;
+            if (failure) {
+                hdr->apply_errno = EPERM;
+                pw_failure(pw_evidence(base), PW_OP_APPLY, PW_FAILURE_NATIVE,
+                           PW_NATIVE_INTEGER, -1, 1, EPERM, UINT32_MAX, 0);
+                atomic_store_explicit(&hdr->done, 1, memory_order_release);
+            }
+            else {
+                atomic_store_explicit(&hdr->applied, 1, memory_order_release);
+                atomic_store_explicit(&phase->arrived, 1, memory_order_release);
+            }
+        }
+        snprintf(marker, sizeof(marker), "%s.settled", gate);
+        fd = open(marker, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd < 0) return 96;
+        close(fd);
+        if (early_exit) return 17;
+        if (!failure) {
+            while (atomic_load_explicit(&hdr->proceed, memory_order_acquire) != 1) {
+                if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) return 0;
+                usleep(1000);
+            }
+            atomic_store_explicit(&phase->acknowledged, 1, memory_order_release);
+            atomic_store_explicit(&hdr->proceed_observed, 1, memory_order_release);
+            pw_shm_slot_t *slot = (void *)((char *)base + PW_SHM_HEADER_BYTES);
+            slot->rc = 0;
+            atomic_store_explicit(&slot->completed, 1, memory_order_release);
+            atomic_store_explicit(&phase->completed, 1, memory_order_release);
+            atomic_store_explicit(&hdr->done, 1, memory_order_release);
+        }
+        return 0;
+    }
+    if (!strncmp(mode, "final_wait_", 11)) {
+        /* Control the real final sentinel boundary with a filesystem gate.
+         * This producer applies no policy. Publication, pipe close and exit
+         * can therefore be separated without adding a production channel. */
+        char *gate = strchr(mode, '|');
+        if (!gate || !hdr->phase_count) return 99;
+        *gate++ = 0;
+        int early_hangup = !strcmp(mode, "final_wait_early_hangup");
+        int linger = !strcmp(mode, "final_wait_linger") || early_hangup;
+        int no_done = !strcmp(mode, "final_wait_no_done");
+        int late_ready = !strcmp(mode, "final_wait_late_ready");
+        if (!linger && !no_done && !late_ready && strcmp(mode, "final_wait_exit")) return 99;
+        alarm(5);
+        hdr->apply_rc = 0;
+        atomic_store_explicit(&hdr->applied, 1, memory_order_release);
+        if (!late_ready && write(4, "R", 1) != 1) return 97;
+        pw_shm_slot_t *slots = (void *)((char *)base + PW_SHM_HEADER_BYTES);
+        for (uint32_t index = 0; index < hdr->phase_count; index++) {
+            pw_shm_phase_t *phase = &hdr->phases[index];
+            atomic_store_explicit(&phase->arrived, 1, memory_order_release);
+            while (atomic_load_explicit(&hdr->proceed, memory_order_acquire) != index + 1) {
+                if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) _exit(0);
+                usleep(1000);
+            }
+            if (index + 1 == hdr->phase_count) {
+                if (early_hangup) close(4);
+                while (access(gate, F_OK)) {
+                    if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) _exit(0);
+                    usleep(1000);
+                }
+            }
+            atomic_store_explicit(&phase->acknowledged, 1, memory_order_release);
+            atomic_store_explicit(&hdr->proceed_observed, 1, memory_order_release);
+            for (uint32_t i = phase->first_slot; i < phase->end_slot; i++) {
+                slots[i].rc = 0;
+                slots[i].errno_val = 0;
+                snprintf(slots[i].observed_path, sizeof(slots[i].observed_path), "fixture-observation");
+                if (late_ready) {
+                    signal(SIGPIPE, SIG_IGN);
+                    errno = 0;
+                    slots[i].rc = write(4, "R", 1) == -1 ? 1 : 0;
+                    slots[i].errno_val = errno;
+                }
+                atomic_store_explicit(&slots[i].completed, 1, memory_order_release);
+            }
+            atomic_store_explicit(&phase->completed, 1, memory_order_release);
+        }
+        if (!no_done) atomic_store_explicit(&hdr->done, 1, memory_order_release);
+        char settled[180];
+        snprintf(settled, sizeof(settled), "%s.settled", gate);
+        int receipt = open(settled, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (receipt < 0) return 99;
+        close(receipt);
+        if (linger) {
+            while (!atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) usleep(1000);
+        }
+        _exit(no_done ? 17 : 0);
+    }
     if (!strncmp(mode, "reap_ack_", 9)) {
         char *gate = strchr(mode, '|');
         if (!gate || hdr->phase_count != 1 || hdr->step_count != 1) return 99;
