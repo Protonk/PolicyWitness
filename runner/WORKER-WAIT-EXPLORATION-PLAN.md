@@ -19,7 +19,9 @@ reopening conditions. These observations nominate work, not fresh baselines.
 
 ## Order of work
 
-Complete the [host follow-on round](#host-follow-on-round) in order: HOST-04,
+HOST-04 is accepted; its [record](../records/WORKER-WAIT-HOST-04-ACCEPTANCE.md)
+preserves the structural decision, comparison and integrated verification.
+Complete the remaining [host follow-on round](#host-follow-on-round) in order:
 HOST-05, then conditional HOST-06. Dispose of each before opening the next
 production candidate. Further host candidates require a separate scope decision.
 ARM research/native trials and all hint-batch tuning are explicitly deferred
@@ -75,28 +77,14 @@ children. Account for resources and wake activity; prevent unintended descriptor
 inheritance. Close a candidate without production changes if no material
 avoidable cost is established.
 
-**HOST-04 — ordinary final-completion detection.** Try the retained readiness
-pipe's hangup only where no further collection remains. Keep bounded shared-memory
-checks so terminal publication can end the wait before delayed exit; preserve
-cancellation, allowance, ownership, final cleanup, actual observation order and
-stop reason. Hangup is neither terminal publication nor reap. No new descriptor,
-thread, registration or post-apply worker write is in scope.
-
-Measure terminal publication to observation and to reap, whole-request latency
-and host resource residence. Following [Examination](../docs/FOOTPRINT.md#examination),
-acceptance may rest on removing the unconditional timed wait after completion:
-independent controls and live traces must show that exit notification can end
-the final wait, with no new resources and preserved bounded publication checks.
-This does not require faster detection in every pair. A quantitative speed claim
-still requires improvement beyond uncertainty in every named matched pair;
-response bounds and resolved resource/latency regressions retain the common
-acceptance rules. Report timeout wakes and fallback work separately; a wait API
-substitution alone establishes no scheduling, coalescing or energy gain. This
-interval follows the held phase and establishes no held-worker CPU reduction. Controls include
-already-exited children, publication before delayed exit, early hangup,
-missing/unusable pipes, readiness failure with late write, EINTR, clock failure
-and deadline cleanup. Actors and non-final ordinary phases are unchanged-path
-controls.
+**HOST-04 — ordinary final-completion detection: accepted.** The retained
+readiness pipe can end the ordinary final wait on notification, with bounded
+publication checks and owned reap preserved. All fifty ordinary candidate
+comparison trials ended that wait on notification; no new resource was added.
+The acceptance record retains the contrary whole-request pair, observer costs,
+fallback controls and the repaired compiler-discovery failure. This establishes
+neither a universal request-speed improvement nor CPU, energy or coalescing gains.
+Use this accepted source as the foundation for the remaining host candidates.
 
 **HOST-05 — decoder work at the collection boundary.** Profile
 `decodeValidatorFrames` in [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift).

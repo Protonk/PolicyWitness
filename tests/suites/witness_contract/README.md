@@ -107,6 +107,13 @@ terminal publication to the host's exit request, that request to the host's
 reaping sample, and the worker exit grace between its begin and finished stamps
 are program-point components (`w<actor>.terminal_to_exit_request`,
 `exit_request_to_reap`, `grace_wait`); the worker's exit itself has no stamp.
+Direct `terminal_to_reap` and `terminal_to_teardown` intervals retain the terminal
+publication bracket. `spawn_to_teardown` ends at the session's cleanup program
+point; it does not establish successful native deallocation. The ordinary
+`final_wait` record separates plain sleeps and notification/timeout/unusable
+outcomes after the last release and before the exit request. A complete zero
+means no wait was entered; missing boundaries or truncated sleep events leave
+the counts unobserved.
 Each trial counts how its worker grace waits between samples ended
 (`grace_timeouts`, `grace_notified`, `grace_unusable`, `grace_settle_sleeps`): a
 wait followed by its outcome event by that outcome, a plain sleep under the
@@ -132,7 +139,8 @@ accepted trials in one group, and the calibration receipt is accepted; fewer
 accepted trials is an incomplete pilot.
 `PW_WORKER_WAIT_PILOT_ARGS` passes driver options such as `--dry-run`,
 `--cells`, `--repetitions`, `--regimes`, `--window-seconds` and
-`--clock-pair-trials`; `--no-clock-pair` is accepted only in a dry run. A dry
+`--clock-pair-trials`; `--window-gate` lets the coordinator freeze staged identities
+and announce the window before releasing prepared trials. `--no-clock-pair` is accepted only in a dry run. A dry
 run establishes mechanics only and removes its staged apps.
 
 Comparison mode measures a baseline and a candidate as matched pairs.

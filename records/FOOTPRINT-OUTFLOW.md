@@ -314,11 +314,30 @@ would need new controlled-clock controls. Reopening it needs a workload where
 serialization is a larger share of the held interval or a cheaper accounting
 than the plan's.
 
-The approved [host follow-on round](../runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
-nominates ordinary terminal-publication detection outside the held interval
-(HOST-04), then decoder work with an explicit inspection/optimized build-flavour
-control (HOST-05), then a conditional first-arrival resampling candidate
-(HOST-06). Each needs a new comparison on accepted source; the retained timings
+HOST-04 is accepted (`1451c488`): after the last ordinary collection, the
+existing readiness pipe can end the bounded final wait on hangup. Shared-memory
+publication checks, actual stop reasons and owned reap remain distinct. An early
+hangup is consumed once; unusable or consumed notification falls back to bounded
+sleeps. No resource or worker write was added. All fifty ordinary candidate
+comparison trials ended that wait on notification, against one plain sleep in
+each baseline trial. Terminal detection and reap improved beyond uncertainty in
+every ordinary pair, and every response bound was credited. The source account
+is FOOTPRINT `fw15`; `WORKER-WAIT-HOST-04-ACCEPTANCE.md` retains exact identities,
+all 120 comparison receipts and the separate observer-effect comparison.
+
+This is a structural adoption, with no universal request-speed, CPU, energy or
+coalescing claim. One O2P idle whole-request pair was 1.970 ms slower and crossed
+the any-pair spread flag despite a shorter host session; no group worsened beyond
+spread in every pair. Instrumented/unstamped differences were variable, so no
+fixed overhead correction is justified. Integrated verification covered all 222
+default cases: one compiler-discovery equipment failure was retained and then
+passed with an SDK-aware wrapper against unchanged app bytes. The six-case
+targeted run also passed ordering mutations and all 24 held measurements.
+
+The remaining [host follow-on round](../runner/WORKER-WAIT-EXPLORATION-PLAN.md#host-follow-on-round)
+is decoder work with an explicit inspection/optimized build-flavour control
+(HOST-05), then a conditional first-arrival resampling candidate (HOST-06).
+Each needs a new comparison on accepted source; the retained timings
 nominate the work rather than establish its benefit. The roughly 25 percent
 overshoot of requested host sleeps on this equipment remains a measured
 condition, not a separate tuning candidate.

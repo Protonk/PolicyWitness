@@ -1,10 +1,10 @@
 # HOST-04: ordinary final completion
 
 This record belongs to the [worker wait exploration plan](../runner/WORKER-WAIT-EXPLORATION-PLAN.md).
-The candidate has passed its initial correctness selection and mechanics
-rehearsal. No performance comparison or adoption is credited. The decision rule
-and schedule below are frozen before comparison; exact staged identities are
-added while the prepared driver waits at its coordinator gate. Raw runs are dispatcher-owned, gitignored and local.
+Accepted after integrated qualification. The frozen decision rule and schedules
+below preceded comparison; staged identities were committed before the
+coordinator released either window. The first full run and its compiler-setup
+failure remain visible alongside the targeted repair. Raw runs are dispatcher-owned, gitignored and local.
 
 ## Candidate and claim
 
@@ -212,4 +212,50 @@ latency win. This decision does not credit lower total CPU, lower energy or
 system coalescing, and does not amend the frozen measurement rule. A future
 claim of improved whole-request performance needs its own controlled comparison.
 
-Integrated verification and the final source/build identities remain pending.
+No whole-request group worsened beyond spread in every pair. Under the existing
+reader rules that is the resolved-increase criterion; the isolated any-pair flag
+above prompted investigation and remains part of this disposition.
+
+## Integrated verification and acceptance
+
+Production integration is `1451c488`; current-behavior documentation is
+`3d4e5f6a`. The native source identity remains
+`6e8e46469c1ebf0677b799ad63adac5af20be68b20902e18450c5b6e70a8a9ba`.
+The main signed build passed before verification. The checkout also contained
+an unrelated draft plan, so no pristine whole-tree source claim is made.
+
+`host04-main-default-01` (`20261108T195934Z_bf36fffc`) completed all 222
+selected cases: 221 passed and `preflight/native_policy_controls` failed at
+Swift linker discovery, before the two intended Swift-option refusals. Its raw
+failures remain intact. The temporary compiler-cap wrapper called the toolchain
+directly without supplying an SDK when none was set. The corrected wrapper
+sets the selected macOS SDK only in that case and retains the concurrency cap.
+No repository source or app byte changed for the retry.
+
+`host04-main-targeted-01` (`20261108T201629Z_62c102f4`)
+passed all six cases: the repaired native-policy control, ordering mutations,
+ABI agreement, native observer controls, held-reader controls and 24/24 live
+held-footprint measurements. Both runs had no skips, unrun cases or system
+sleep, and their artifact-integrity checks established unchanged app bytes.
+
+The default selection includes all 587 runner assertions, validator failure and
+framing paths, phase/order effects, restrictive-profile attempts, cleanup and
+actor timing qualification. The latter covered one, three and eight actors;
+its largest total charged interval was 106 ms. The targeted retry closes the
+one equipment failure; the original full run is not relabeled all-pass.
+
+The targeted run completed in 152.190 seconds within its six-minute window. Its held case
+retains the unchanged busy-worker interpretation with a 10 ms accounting quantum;
+it does not convert final-wait latency savings into a worker CPU claim.
+
+Accepted on the structural and finite-observation evidence above. The retained
+controls cover fallbacks absent from the successful live comparison. No new
+resource, sandbox exception, worker communication or public evidence field was
+introduced. Retention is finalized with the remaining host round.
+
+| Integrated artifact / equipment | SHA-256 |
+| --- | --- |
+| `dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json` | `4372eb9e345048516729147434f06124235c9cb915f06e843d03f31aab33f267` |
+| `dist/PolicyWitness.app/Contents/Resources/Evidence/provenance.json` | `7978f15445090ad6c712860b2dacdfd192e17c5a2f0af9a60a83da462596f722` |
+| `/private/tmp/pw-host-followon-tools-v2/swiftc` | `c46dc9c6964458e43429809332a192ff8b8b3271af7e724c8068696709de66a3` |
+| `/private/tmp/pw-host-followon-tools-v2/swift` | `480fdec512a2b1075ccf0ddb3bfaba0eca6e1a33c02be99a45a2974932fee1aa` |
