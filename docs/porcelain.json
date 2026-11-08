@@ -1,0 +1,5287 @@
+{
+  "version": 1,
+  "roots": {
+    "reply": "PWRunnerRunResult",
+    "capture": "PWRunnerClientCapture"
+  },
+  "records": [
+    {
+      "name": "CompiledProfileCapture",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerProfileCapture.swift",
+      "fields": [
+        {
+          "name": "schema_version",
+          "swift_name": "schema_version",
+          "swift_type": "Int",
+          "mutable": true,
+          "default": "2",
+          "tag": 1
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "reason",
+          "swift_name": "reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "worker_pid",
+          "swift_name": "worker_pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "producer",
+          "swift_name": "producer",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "capture_stage",
+          "swift_name": "capture_stage",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "request_nonce",
+          "swift_name": "request_nonce",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "profile_type",
+          "swift_name": "profile_type",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "bytecode_length",
+          "swift_name": "bytecode_length",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "bytecode_sha256",
+          "swift_name": "bytecode_sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "bytecode_b64",
+          "swift_name": "bytecode_b64",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "source_sha256",
+          "swift_name": "source_sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 12
+        },
+        {
+          "name": "source_length",
+          "swift_name": "source_length",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 13
+        },
+        {
+          "name": "params_sha256",
+          "swift_name": "params_sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 14
+        },
+        {
+          "name": "parameter_count",
+          "swift_name": "parameter_count",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 15
+        }
+      ],
+      "id": 1
+    },
+    {
+      "name": "PWAttemptLifecycle",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+      "fields": [
+        {
+          "name": "summary",
+          "swift_name": "summary",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "boundary",
+          "swift_name": "boundary",
+          "swift_type": "PWDispositionClaim",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "result",
+          "swift_name": "result",
+          "swift_type": "PWDispositionClaim",
+          "mutable": true,
+          "tag": 3
+        }
+      ],
+      "id": 2
+    },
+    {
+      "name": "PWAuthorityCleanupReference",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "kind",
+          "swift_name": "kind",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"posix_shm_name\"",
+          "tag": 1
+        },
+        {
+          "name": "name",
+          "swift_name": "name",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "host_pid",
+          "swift_name": "host_pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "session_nonce",
+          "swift_name": "session_nonce",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "recovery_state",
+          "swift_name": "recovery_state",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"unresolved_manual\"",
+          "tag": 5
+        }
+      ],
+      "id": 3
+    },
+    {
+      "name": "PWDispositionClaim",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+      "fields": [
+        {
+          "name": "state",
+          "swift_name": "state",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "answer",
+          "swift_name": "answer",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "value",
+          "swift_name": "value",
+          "swift_type": "PWDispositionValue?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "reason",
+          "swift_name": "reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "issue",
+          "swift_name": "issue",
+          "swift_type": "Int?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "basis",
+          "swift_name": "basis",
+          "swift_type": "[String]?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 6
+        }
+      ],
+      "id": 4
+    },
+    {
+      "name": "PWDispositionIssue",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+      "fields": [
+        {
+          "name": "kind",
+          "swift_name": "kind",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "rule",
+          "swift_name": "rule",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "question",
+          "swift_name": "question",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "step_index",
+          "swift_name": "step_index",
+          "swift_type": "Int?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "observations",
+          "swift_name": "observations",
+          "swift_type": "[String]",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "detail",
+          "swift_name": "detail",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 6
+        }
+      ],
+      "id": 5
+    },
+    {
+      "name": "PWDispositionRecord",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+      "fields": [
+        {
+          "name": "questions",
+          "swift_name": "questions",
+          "swift_type": "[String: PWDispositionClaim]",
+          "mutable": true,
+          "tag": 1,
+          "wire_type": "PWDispositionRunQuestions"
+        },
+        {
+          "name": "steps",
+          "swift_name": "steps",
+          "swift_type": "[PWDispositionStep]",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "issues",
+          "swift_name": "issues",
+          "swift_type": "[PWDispositionIssue]",
+          "mutable": true,
+          "tag": 3
+        }
+      ],
+      "id": 6
+    },
+    {
+      "name": "PWDispositionStep",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerDisposition.swift",
+      "fields": [
+        {
+          "name": "index",
+          "swift_name": "index",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "slot",
+          "swift_name": "slot",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "attempt_support",
+          "swift_name": "attempt_support",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "questions",
+          "swift_name": "questions",
+          "swift_type": "[String: PWDispositionClaim]",
+          "mutable": true,
+          "tag": 5,
+          "wire_type": "PWDispositionStepQuestions"
+        }
+      ],
+      "id": 7
+    },
+    {
+      "name": "PWExecCleanupObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "state",
+          "swift_name": "state",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "group_request",
+          "swift_name": "group_request",
+          "swift_type": "PWExecSignalRequest?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "leader_fallback",
+          "swift_name": "leader_fallback",
+          "swift_type": "PWExecSignalRequest?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        }
+      ],
+      "id": 8
+    },
+    {
+      "name": "PWExecCollectionObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "stop_reason",
+          "swift_name": "stop_reason",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "leader_exit_observed",
+          "swift_name": "leader_exit_observed",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "stdout",
+          "swift_name": "stdout",
+          "swift_type": "PWExecStreamObservation",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "stderr",
+          "swift_name": "stderr",
+          "swift_type": "PWExecStreamObservation",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "deadline_kind",
+          "swift_name": "deadline_kind",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "waitid_errno",
+          "swift_name": "waitid_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "poll_errno",
+          "swift_name": "poll_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "clock_fault",
+          "swift_name": "clock_fault",
+          "swift_type": "UInt32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 8
+        }
+      ],
+      "id": 9
+    },
+    {
+      "name": "PWExecObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "collection",
+          "swift_name": "collection",
+          "swift_type": "PWExecCollectionObservation",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "cleanup",
+          "swift_name": "cleanup",
+          "swift_type": "PWExecCleanupObservation",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "reap",
+          "swift_name": "reap",
+          "swift_type": "PWExecReapObservation",
+          "mutable": true,
+          "tag": 3
+        }
+      ],
+      "id": 10
+    },
+    {
+      "name": "PWExecReapObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "stop_reason",
+          "swift_name": "stop_reason",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "last_wait",
+          "swift_name": "last_wait",
+          "swift_type": "PWExecWaitObservation",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "clock_fault",
+          "swift_name": "clock_fault",
+          "swift_type": "UInt32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        }
+      ],
+      "id": 11
+    },
+    {
+      "name": "PWExecSignalRequest",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "target",
+          "swift_name": "target",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "signal",
+          "swift_name": "signal",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 4
+        }
+      ],
+      "id": 12
+    },
+    {
+      "name": "PWExecStreamObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "eof",
+          "swift_name": "eof",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "read_errno",
+          "swift_name": "read_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "poll_revents",
+          "swift_name": "poll_revents",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        }
+      ],
+      "id": 13
+    },
+    {
+      "name": "PWExecWaitObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        }
+      ],
+      "id": 14
+    },
+    {
+      "name": "PWFileIdentity",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+      "fields": [
+        {
+          "name": "device",
+          "swift_name": "device",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "inode",
+          "swift_name": "inode",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "mode",
+          "swift_name": "mode",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "uid",
+          "swift_name": "uid",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "gid",
+          "swift_name": "gid",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 5
+        }
+      ],
+      "id": 15
+    },
+    {
+      "name": "PWHostWait",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "budget_ms",
+          "swift_name": "budget_ms",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "elapsed_ms",
+          "swift_name": "elapsed_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "stop",
+          "swift_name": "stop",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "excluded_ms",
+          "swift_name": "excluded_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "native_errno",
+          "swift_name": "native_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "clock_fault",
+          "swift_name": "clock_fault",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 6
+        }
+      ],
+      "id": 16
+    },
+    {
+      "name": "PWOwnedReapObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "pid",
+          "swift_name": "pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "native_rc",
+          "swift_name": "native_rc",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "raw_status",
+          "swift_name": "raw_status",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "stage",
+          "swift_name": "stage",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "observed_ns",
+          "swift_name": "observed_ns",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "ownership_unbroken",
+          "swift_name": "ownership_unbroken",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 6
+        },
+        {
+          "name": "departure_requested",
+          "swift_name": "departure_requested",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "capture_ordinal",
+          "swift_name": "capture_ordinal",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "default": "0",
+          "tag": 8
+        }
+      ],
+      "id": 17
+    },
+    {
+      "name": "PWOwnedReapReference",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "capture_ordinal",
+          "swift_name": "capture_ordinal",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "tag": 1
+        }
+      ],
+      "id": 18
+    },
+    {
+      "name": "PWRunnerAcquisitionAttempt",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+      "fields": [
+        {
+          "name": "ordinal",
+          "swift_name": "ordinal",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "attempt_id",
+          "swift_name": "attempt_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "started_elapsed_ms",
+          "swift_name": "started_elapsed_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "ended_elapsed_ms",
+          "swift_name": "ended_elapsed_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "outcome",
+          "swift_name": "outcome",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "control",
+          "swift_name": "control",
+          "swift_type": "PWRunnerControlObservation?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "PWRunnerTransportError?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        }
+      ],
+      "id": 19
+    },
+    {
+      "name": "PWRunnerActorActivation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "capture_ordinal",
+          "swift_name": "capture_ordinal",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "observed_ns",
+          "swift_name": "observed_ns",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        }
+      ],
+      "id": 20
+    },
+    {
+      "name": "PWRunnerActorApplication",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "state",
+          "swift_name": "state",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "basis",
+          "swift_name": "basis",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        }
+      ],
+      "id": 21
+    },
+    {
+      "name": "PWRunnerActorEquipment",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+      "fields": [
+        {
+          "name": "requested",
+          "swift_name": "requested",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 1
+        },
+        {
+          "name": "resolved",
+          "swift_name": "resolved",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "binding_ref",
+          "swift_name": "binding_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "required_entitlements",
+          "swift_name": "required_entitlements",
+          "swift_type": "[String]",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "requirements_status",
+          "swift_name": "requirements_status",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"unobserved\"",
+          "tag": 5
+        },
+        {
+          "name": "missing_requirements",
+          "swift_name": "missing_requirements",
+          "swift_type": "[String]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "execution",
+          "swift_name": "execution",
+          "swift_type": "PWRunnerEquipmentExecution",
+          "mutable": true,
+          "default": "PWRunnerEquipmentExecution()",
+          "tag": 7
+        }
+      ],
+      "id": 22
+    },
+    {
+      "name": "PWRunnerActorLaunch",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "pid",
+          "swift_name": "pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "parent_pid",
+          "swift_name": "parent_pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "environment",
+          "swift_name": "environment",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"empty\"",
+          "tag": 3
+        },
+        {
+          "name": "standard_streams",
+          "swift_name": "standard_streams",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"stdin_policy_pipe_stdout_stderr_null_device\"",
+          "tag": 4
+        },
+        {
+          "name": "inherited_descriptors",
+          "swift_name": "inherited_descriptors",
+          "swift_type": "[Int]",
+          "mutable": true,
+          "default": "[0, 3, 4]",
+          "tag": 5
+        }
+      ],
+      "id": 23
+    },
+    {
+      "name": "PWRunnerActorResult",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "index",
+          "swift_name": "index",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "mode",
+          "swift_name": "mode",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "policy_format",
+          "swift_name": "policy_format",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "policy_sha256",
+          "swift_name": "policy_sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "policy_received_sha256",
+          "swift_name": "policy_received_sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "setup_status",
+          "swift_name": "setup_status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "applied",
+          "swift_name": "applied",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "application_count",
+          "swift_name": "application_count",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 9
+        },
+        {
+          "name": "launch",
+          "swift_name": "launch",
+          "swift_type": "PWRunnerActorLaunch?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "subprocess",
+          "swift_name": "subprocess",
+          "swift_type": "PWRunnerSubprocess?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "compiled_profile",
+          "swift_name": "compiled_profile",
+          "swift_type": "CompiledProfileCapture?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 12
+        },
+        {
+          "name": "visits",
+          "swift_name": "visits",
+          "swift_type": "[Int]",
+          "mutable": true,
+          "tag": 13
+        },
+        {
+          "name": "equipment",
+          "swift_name": "equipment",
+          "swift_type": "PWRunnerActorEquipment?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 14
+        },
+        {
+          "name": "application",
+          "swift_name": "application",
+          "swift_type": "PWRunnerActorApplication?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 15
+        },
+        {
+          "name": "owned_reap",
+          "swift_name": "owned_reap",
+          "swift_type": "PWOwnedReapObservation?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 16
+        }
+      ],
+      "id": 24
+    },
+    {
+      "name": "PWRunnerAdmissionFailure",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+      "fields": [
+        {
+          "name": "origin",
+          "swift_name": "origin",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"runner_host\"",
+          "tag": 1
+        },
+        {
+          "name": "field",
+          "swift_name": "field",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "actual",
+          "swift_name": "actual",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "maximum",
+          "swift_name": "maximum",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "unit",
+          "swift_name": "unit",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "step_index",
+          "swift_name": "step_index",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "parameter_key",
+          "swift_name": "parameter_key",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "index",
+          "swift_name": "index",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        }
+      ],
+      "id": 25
+    },
+    {
+      "name": "PWRunnerAttemptPathDiagnostics",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+      "fields": [
+        {
+          "name": "observer",
+          "swift_name": "observer",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "stage",
+          "swift_name": "stage",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "input",
+          "swift_name": "input",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "realpath_resolved",
+          "swift_name": "realpath_resolved",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "parent_realpath_resolved",
+          "swift_name": "parent_realpath_resolved",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        }
+      ],
+      "id": 26,
+      "path_forms": [
+        "realpath_resolved",
+        "parent_realpath_resolved"
+      ]
+    },
+    {
+      "name": "PWRunnerAttemptResult",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "requested_kind",
+          "swift_name": "requested_kind",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "requested_action",
+          "swift_name": "requested_action",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "result_source",
+          "swift_name": "result_source",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "missing_reason",
+          "swift_name": "missing_reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "lifecycle",
+          "swift_name": "lifecycle",
+          "swift_type": "PWAttemptLifecycle?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "fresh_read",
+          "swift_name": "fresh_read",
+          "swift_type": "PWRunnerFreshRead?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "fresh_write",
+          "swift_name": "fresh_write",
+          "swift_type": "PWRunnerFreshWrite?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "exec_observation",
+          "swift_name": "exec_observation",
+          "swift_type": "PWExecObservation?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "execObservationDecodeProblem",
+          "swift_name": "execObservationDecodeProblem",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "local_only": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 10
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 11
+        },
+        {
+          "name": "outcome",
+          "swift_name": "outcome",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 12
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 13
+        },
+        {
+          "name": "requested_path",
+          "swift_name": "requested_path",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 14
+        },
+        {
+          "name": "path_diagnostics",
+          "swift_name": "path_diagnostics",
+          "swift_type": "PWRunnerAttemptPathDiagnostics?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 15
+        },
+        {
+          "name": "observed_path",
+          "swift_name": "observed_path",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 16
+        },
+        {
+          "name": "child_pid",
+          "swift_name": "child_pid",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 17
+        },
+        {
+          "name": "child_exit_code",
+          "swift_name": "child_exit_code",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 18
+        },
+        {
+          "name": "child_term_signal",
+          "swift_name": "child_term_signal",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 19
+        },
+        {
+          "name": "stdout",
+          "swift_name": "stdout",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 20
+        },
+        {
+          "name": "stderr",
+          "swift_name": "stderr",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 21
+        }
+      ],
+      "id": 27
+    },
+    {
+      "name": "PWRunnerAuthorityHost",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "run",
+          "swift_name": "run",
+          "swift_type": "PWRunnerAuthorityScope",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "regions",
+          "swift_name": "regions",
+          "swift_type": "[PWRunnerAuthorityScope]",
+          "mutable": true,
+          "default": "[]",
+          "tag": 2
+        },
+        {
+          "name": "custody",
+          "swift_name": "custody",
+          "swift_type": "[PWRunnerAuthorityScope]",
+          "mutable": true,
+          "default": "[]",
+          "tag": 3
+        }
+      ],
+      "id": 28
+    },
+    {
+      "name": "PWRunnerAuthorityOperation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "slot",
+          "swift_name": "slot",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "role",
+          "swift_name": "role",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "state",
+          "swift_name": "state",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "native_kind",
+          "swift_name": "native_kind",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "native_rc",
+          "swift_name": "native_rc",
+          "swift_type": "Int64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "detail",
+          "swift_name": "detail",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "value",
+          "swift_name": "value",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        }
+      ],
+      "id": 29
+    },
+    {
+      "name": "PWRunnerAuthorityScope",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "actor_index",
+          "swift_name": "actor_index",
+          "swift_type": "Int?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "token_ref",
+          "swift_name": "token_ref",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "token_index",
+          "swift_name": "token_index",
+          "swift_type": "Int?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "required",
+          "swift_name": "required",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "publication",
+          "swift_name": "publication",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "disposition",
+          "swift_name": "disposition",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "primary_operation",
+          "swift_name": "primary_operation",
+          "swift_type": "Int?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "operations",
+          "swift_name": "operations",
+          "swift_type": "[PWRunnerAuthorityOperation]",
+          "mutable": true,
+          "default": "[]",
+          "tag": 9
+        },
+        {
+          "name": "ownership",
+          "swift_name": "ownership",
+          "swift_type": "[String: String]",
+          "mutable": true,
+          "default": "[:]",
+          "tag": 10
+        },
+        {
+          "name": "cleanup_reference",
+          "swift_name": "cleanup_reference",
+          "swift_type": "PWAuthorityCleanupReference?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "integrity_errors",
+          "swift_name": "integrity_errors",
+          "swift_type": "[String]?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 12
+        }
+      ],
+      "id": 30
+    },
+    {
+      "name": "PWRunnerAuthoritySetup",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "host",
+          "swift_name": "host",
+          "swift_type": "PWRunnerAuthorityHost",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "workers",
+          "swift_name": "workers",
+          "swift_type": "[PWRunnerAuthorityScope]",
+          "mutable": true,
+          "tag": 2
+        }
+      ],
+      "id": 31
+    },
+    {
+      "name": "PWRunnerClientCapture",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+      "fields": [
+        {
+          "name": "kind",
+          "swift_name": "kind",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"runner_client_capture\"",
+          "tag": 1
+        },
+        {
+          "name": "protocol_version",
+          "swift_name": "protocol_version",
+          "swift_type": "Int",
+          "mutable": true,
+          "default": "PWContract.runnerProtocol",
+          "tag": 2
+        },
+        {
+          "name": "client_pid",
+          "swift_name": "client_pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "default": "Int(getpid())",
+          "tag": 3
+        },
+        {
+          "name": "clock",
+          "swift_name": "clock",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"mach_continuous_time_ns\"",
+          "tag": 4
+        },
+        {
+          "name": "clock_available",
+          "swift_name": "clock_available",
+          "swift_type": "Bool",
+          "mutable": true,
+          "default": "true",
+          "tag": 5
+        },
+        {
+          "name": "started_continuous_ns",
+          "swift_name": "started_continuous_ns",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "deadline_continuous_ns",
+          "swift_name": "deadline_continuous_ns",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "ended_continuous_ns",
+          "swift_name": "ended_continuous_ns",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "timeout_ms",
+          "swift_name": "timeout_ms",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "tag": 9
+        },
+        {
+          "name": "attempts",
+          "swift_name": "attempts",
+          "swift_type": "[PWRunnerAcquisitionAttempt]",
+          "mutable": true,
+          "default": "[]",
+          "tag": 10
+        },
+        {
+          "name": "acquisition_stop",
+          "swift_name": "acquisition_stop",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"local_error\"",
+          "tag": 11
+        },
+        {
+          "name": "submission",
+          "swift_name": "submission",
+          "swift_type": "PWRunnerSubmission",
+          "mutable": true,
+          "default": "PWRunnerSubmission()",
+          "tag": 12
+        },
+        {
+          "name": "terminal",
+          "swift_name": "terminal",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"local_error\"",
+          "tag": 13
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "PWRunnerTransportError?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 14
+        },
+        {
+          "name": "runner_reply",
+          "swift_name": "runner_reply",
+          "swift_type": "PWRunnerReplyCapture?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 15
+        },
+        {
+          "name": "submission_refusal",
+          "swift_name": "submission_refusal",
+          "swift_type": "PWRunnerControlObservation?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 16
+        }
+      ],
+      "id": 32
+    },
+    {
+      "name": "PWRunnerComparison",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+      "fields": [
+        {
+          "name": "observation",
+          "swift_name": "observation",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "observation_basis",
+          "swift_name": "observation_basis",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "operation_relation",
+          "swift_name": "operation_relation",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "target_relation",
+          "swift_name": "target_relation",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "order",
+          "swift_name": "order",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "limitations",
+          "swift_name": "limitations",
+          "swift_type": "[String]",
+          "mutable": true,
+          "tag": 6
+        }
+      ],
+      "id": 33
+    },
+    {
+      "name": "PWRunnerControlObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+      "fields": [
+        {
+          "name": "bytes_received",
+          "swift_name": "bytes_received",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "sha256",
+          "swift_name": "sha256",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "host_pid",
+          "swift_name": "host_pid",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "host_instance",
+          "swift_name": "host_instance",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "lease_ms",
+          "swift_name": "lease_ms",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "reason",
+          "swift_name": "reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        }
+      ],
+      "id": 34
+    },
+    {
+      "name": "PWRunnerDeliveryRecord",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "delivery_ref",
+          "swift_name": "delivery_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "token_ref",
+          "swift_name": "token_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "source_actor_id",
+          "swift_name": "source_actor_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "recipient_actor_id",
+          "swift_name": "recipient_actor_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 6
+        },
+        {
+          "name": "delivered_length",
+          "swift_name": "delivered_length",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "equality",
+          "swift_name": "equality",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "last_use_step_id",
+          "swift_name": "last_use_step_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        }
+      ],
+      "id": 35
+    },
+    {
+      "name": "PWRunnerEquipmentBinding",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+      "fields": [
+        {
+          "name": "binding_id",
+          "swift_name": "binding_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "role",
+          "swift_name": "role",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "source",
+          "swift_name": "source",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "implementation_identity",
+          "swift_name": "implementation_identity",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "relative_path",
+          "swift_name": "relative_path",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "path",
+          "swift_name": "path",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 6
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"refused\"",
+          "tag": 7
+        },
+        {
+          "name": "reason",
+          "swift_name": "reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "expected_sha256",
+          "swift_name": "expected_sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "expected_cdhash",
+          "swift_name": "expected_cdhash",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "sha256",
+          "swift_name": "sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "cdhash",
+          "swift_name": "cdhash",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 12
+        },
+        {
+          "name": "identifier",
+          "swift_name": "identifier",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 13
+        },
+        {
+          "name": "team_id",
+          "swift_name": "team_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 14
+        },
+        {
+          "name": "entitlements_ref",
+          "swift_name": "entitlements_ref",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 15
+        },
+        {
+          "name": "signature_osstatus",
+          "swift_name": "signature_osstatus",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 16
+        },
+        {
+          "name": "entitlements_match",
+          "swift_name": "entitlements_match",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 17
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "PWRunnerEquipmentError?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 18
+        }
+      ],
+      "id": 36
+    },
+    {
+      "name": "PWRunnerEquipmentEntitlements",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+      "fields": [
+        {
+          "name": "entitlements_id",
+          "swift_name": "entitlements_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "source",
+          "swift_name": "source",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "binding_ref",
+          "swift_name": "binding_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "raw_plist",
+          "swift_name": "raw_plist",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "PWRunnerEquipmentError?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        }
+      ],
+      "id": 37
+    },
+    {
+      "name": "PWRunnerEquipmentError",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+      "fields": [
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "domain",
+          "swift_name": "domain",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "code",
+          "swift_name": "code",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "message",
+          "swift_name": "message",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        }
+      ],
+      "id": 38
+    },
+    {
+      "name": "PWRunnerEquipmentExecution",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+      "fields": [
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"unobserved\"",
+          "tag": 1
+        },
+        {
+          "name": "pid",
+          "swift_name": "pid",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "parent_pid",
+          "swift_name": "parent_pid",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "observed_at_monotonic_ns",
+          "swift_name": "observed_at_monotonic_ns",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "path",
+          "swift_name": "path",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "cdhash",
+          "swift_name": "cdhash",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "identifier",
+          "swift_name": "identifier",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "team_id",
+          "swift_name": "team_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 8
+        },
+        {
+          "name": "entitlements_ref",
+          "swift_name": "entitlements_ref",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "native_observations",
+          "swift_name": "native_observations",
+          "swift_type": "[PWRunnerEquipmentNativeObservation]",
+          "mutable": true,
+          "default": "[]",
+          "tag": 10
+        },
+        {
+          "name": "reason",
+          "swift_name": "reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "\"not_launched\"",
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "eligible",
+          "swift_name": "eligible",
+          "swift_type": "Bool",
+          "mutable": true,
+          "default": "false",
+          "tag": 12
+        }
+      ],
+      "id": 39,
+      "conditional_null": {
+        "team_id": "identifier"
+      }
+    },
+    {
+      "name": "PWRunnerEquipmentInventory",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+      "fields": [
+        {
+          "name": "path",
+          "swift_name": "path",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"unobserved\"",
+          "tag": 2
+        },
+        {
+          "name": "sha256",
+          "swift_name": "sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "schema_version",
+          "swift_name": "schema_version",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "worker_identity",
+          "swift_name": "worker_identity",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "unsigned_worker_sha256",
+          "swift_name": "unsigned_worker_sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "seal_osstatus",
+          "swift_name": "seal_osstatus",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "reason",
+          "swift_name": "reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "PWRunnerEquipmentError?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        }
+      ],
+      "id": 40
+    },
+    {
+      "name": "PWRunnerEquipmentNativeObservation",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
+      "fields": [
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "attempted",
+          "swift_name": "attempted",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "osstatus",
+          "swift_name": "osstatus",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        }
+      ],
+      "id": 41
+    },
+    {
+      "name": "PWRunnerExtensionEvent",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
+      "fields": [
+        {
+          "name": "phase_id",
+          "swift_name": "phase_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "token_ref",
+          "swift_name": "token_ref",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "handle_ref",
+          "swift_name": "handle_ref",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "call_boundary_observed",
+          "swift_name": "call_boundary_observed",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 6
+        },
+        {
+          "name": "result_published",
+          "swift_name": "result_published",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 8
+        },
+        {
+          "name": "native_result",
+          "swift_name": "native_result",
+          "swift_type": "Int64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "unavailable_reason",
+          "swift_name": "unavailable_reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "lifecycle",
+          "swift_name": "lifecycle",
+          "swift_type": "PWAttemptLifecycle?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 12
+        },
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 13
+        },
+        {
+          "name": "family",
+          "swift_name": "family",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 14
+        },
+        {
+          "name": "target",
+          "swift_name": "target",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 15
+        },
+        {
+          "name": "extension_class",
+          "swift_name": "extension_class",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 16
+        },
+        {
+          "name": "flags",
+          "swift_name": "flags",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 17
+        },
+        {
+          "name": "delivery_ref",
+          "swift_name": "delivery_ref",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 18
+        },
+        {
+          "name": "native_nonnull",
+          "swift_name": "native_nonnull",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 19
+        },
+        {
+          "name": "token_length",
+          "swift_name": "token_length",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 20
+        }
+      ],
+      "id": 42
+    },
+    {
+      "name": "PWRunnerFileStat",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "identity",
+          "swift_name": "identity",
+          "swift_type": "PWFileIdentity?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "size",
+          "swift_name": "size",
+          "swift_type": "Int64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        }
+      ],
+      "id": 43
+    },
+    {
+      "name": "PWRunnerFreshRead",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "open_rc",
+          "swift_name": "open_rc",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "open_errno",
+          "swift_name": "open_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "read_rc",
+          "swift_name": "read_rc",
+          "swift_type": "Int64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "read_errno",
+          "swift_name": "read_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "stat_rc",
+          "swift_name": "stat_rc",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "stat_errno",
+          "swift_name": "stat_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "identity",
+          "swift_name": "identity",
+          "swift_type": "PWFileIdentity?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "close_rc",
+          "swift_name": "close_rc",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "close_errno",
+          "swift_name": "close_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "content_hex",
+          "swift_name": "content_hex",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        }
+      ],
+      "id": 44
+    },
+    {
+      "name": "PWRunnerFreshWrite",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift",
+      "fields": [
+        {
+          "name": "open_rc",
+          "swift_name": "open_rc",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "open_errno",
+          "swift_name": "open_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "truncate_rc",
+          "swift_name": "truncate_rc",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "truncate_errno",
+          "swift_name": "truncate_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "write_rc",
+          "swift_name": "write_rc",
+          "swift_type": "Int64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "write_errno",
+          "swift_name": "write_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "close_rc",
+          "swift_name": "close_rc",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "close_errno",
+          "swift_name": "close_errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "preopen_stat",
+          "swift_name": "preopen_stat",
+          "swift_type": "PWRunnerFileStat?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "opened_stat",
+          "swift_name": "opened_stat",
+          "swift_type": "PWRunnerFileStat?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "truncated_stat",
+          "swift_name": "truncated_stat",
+          "swift_type": "PWRunnerFileStat?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "written_stat",
+          "swift_name": "written_stat",
+          "swift_type": "PWRunnerFileStat?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 12
+        }
+      ],
+      "id": 45
+    },
+    {
+      "name": "PWRunnerHandleRecord",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "handle_ref",
+          "swift_name": "handle_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "delivery_ref",
+          "swift_name": "delivery_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "native_handle",
+          "swift_name": "native_handle",
+          "swift_type": "Int64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "raw_equal_handles",
+          "swift_name": "raw_equal_handles",
+          "swift_type": "[String]",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "release_step_id",
+          "swift_name": "release_step_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "release_attempted",
+          "swift_name": "release_attempted",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 9
+        }
+      ],
+      "id": 46
+    },
+    {
+      "name": "PWRunnerOrdering",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+      "fields": [
+        {
+          "name": "collection_closed_before_proceed",
+          "swift_name": "collection_closed_before_proceed",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "proceed_set",
+          "swift_name": "proceed_set",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "proceed_observed",
+          "swift_name": "proceed_observed",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "validator_disposition",
+          "swift_name": "validator_disposition",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "worker_lifetime_established",
+          "swift_name": "worker_lifetime_established",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "protocol_violations",
+          "swift_name": "protocol_violations",
+          "swift_type": "[String]",
+          "mutable": true,
+          "tag": 6
+        }
+      ],
+      "id": 47
+    },
+    {
+      "name": "PWRunnerPathDiagnostics",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerPathEvidence.swift",
+      "fields": [
+        {
+          "name": "observer",
+          "swift_name": "observer",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "stage",
+          "swift_name": "stage",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "input",
+          "swift_name": "input",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "realpath_resolved",
+          "swift_name": "realpath_resolved",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "firmlink_resolved",
+          "swift_name": "firmlink_resolved",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        }
+      ],
+      "id": 48,
+      "path_forms": [
+        "realpath_resolved",
+        "firmlink_resolved"
+      ]
+    },
+    {
+      "name": "PWRunnerPhaseResult",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+      "fields": [
+        {
+          "name": "phase_id",
+          "swift_name": "phase_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "ordinal",
+          "swift_name": "ordinal",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "action_ids",
+          "swift_name": "action_ids",
+          "swift_type": "[String]",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "arrival_observed",
+          "swift_name": "arrival_observed",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "completion_observed",
+          "swift_name": "completion_observed",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "collection_status",
+          "swift_name": "collection_status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 6
+        },
+        {
+          "name": "ordering",
+          "swift_name": "ordering",
+          "swift_type": "PWRunnerOrdering?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "validator_subprocess",
+          "swift_name": "validator_subprocess",
+          "swift_type": "PWRunnerValidatorSubprocess?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "validator_spawn_failure",
+          "swift_name": "validator_spawn_failure",
+          "swift_type": "PWRunnerSpawnFailure?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "actor_visit",
+          "swift_name": "actor_visit",
+          "swift_type": "Int?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "visit_timing",
+          "swift_name": "visit_timing",
+          "swift_type": "PWRunnerVisitTiming?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 12
+        },
+        {
+          "name": "termination_gate",
+          "swift_name": "termination_gate",
+          "swift_type": "PWRunnerTerminationGate?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 13
+        },
+        {
+          "name": "activation_observation",
+          "swift_name": "activation_observation",
+          "swift_type": "PWRunnerActorActivation?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 14
+        }
+      ],
+      "id": 49
+    },
+    {
+      "name": "PWRunnerPreparationFailure",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "stage",
+          "swift_name": "stage",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "code",
+          "swift_name": "code",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "binding_ref",
+          "swift_name": "binding_ref",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "reason",
+          "swift_name": "reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        }
+      ],
+      "id": 50
+    },
+    {
+      "name": "PWRunnerReplyCapture",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+      "fields": [
+        {
+          "name": "bytes_received",
+          "swift_name": "bytes_received",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "bytes_retained",
+          "swift_name": "bytes_retained",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "truncated",
+          "swift_name": "truncated",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "data_base64",
+          "swift_name": "data",
+          "swift_type": "Data",
+          "mutable": true,
+          "tag": 4,
+          "projection": "base64"
+        }
+      ],
+      "id": 51
+    },
+    {
+      "name": "PWRunnerReportingFailure",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+      "fields": [
+        {
+          "name": "origin",
+          "swift_name": "origin",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"runner_host\"",
+          "tag": 1
+        },
+        {
+          "name": "diagnostic",
+          "swift_name": "diagnostic",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "original_rc",
+          "swift_name": "original_rc",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "original_normalized_outcome",
+          "swift_name": "original_normalized_outcome",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "original_error",
+          "swift_name": "original_error",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "evidence_retained",
+          "swift_name": "evidence_retained",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 6
+        }
+      ],
+      "id": 52
+    },
+    {
+      "name": "PWRunnerRequestFailure",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+      "fields": [
+        {
+          "name": "code",
+          "swift_name": "code",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "path",
+          "swift_name": "path",
+          "swift_type": "[String]?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 2
+        },
+        {
+          "name": "expected_schema",
+          "swift_name": "expected_schema",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        }
+      ],
+      "id": 53
+    },
+    {
+      "name": "PWRunnerResourceTables",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "tokens",
+          "swift_name": "tokens",
+          "swift_type": "[PWRunnerTokenRecord]",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "deliveries",
+          "swift_name": "deliveries",
+          "swift_type": "[PWRunnerDeliveryRecord]",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "handles",
+          "swift_name": "handles",
+          "swift_type": "[PWRunnerHandleRecord]",
+          "mutable": true,
+          "tag": 3
+        }
+      ],
+      "id": 54
+    },
+    {
+      "name": "PWRunnerRunResult",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+      "fields": [
+        {
+          "name": "schema_version",
+          "swift_name": "schema_version",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "specimen_id",
+          "swift_name": "specimen_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "run_kind",
+          "swift_name": "run_kind",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "normalized_outcome",
+          "swift_name": "normalized_outcome",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "pid",
+          "swift_name": "pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "bundle_id",
+          "swift_name": "bundle_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "policy_format",
+          "swift_name": "policy_format",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "policy_sha256",
+          "swift_name": "policy_sha256",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "compiled_profile",
+          "swift_name": "compiled_profile",
+          "swift_type": "CompiledProfileCapture?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "sandboxed_after_apply",
+          "swift_name": "sandboxed_after_apply",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 12
+        },
+        {
+          "name": "steps",
+          "swift_name": "steps",
+          "swift_type": "[PWRunnerStepResult]",
+          "mutable": true,
+          "tag": 13
+        },
+        {
+          "name": "runner_subprocess",
+          "swift_name": "runner_subprocess",
+          "swift_type": "PWRunnerSubprocess?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 14
+        },
+        {
+          "name": "admission_failure",
+          "swift_name": "admission_failure",
+          "swift_type": "PWRunnerAdmissionFailure?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 15
+        },
+        {
+          "name": "request_failure",
+          "swift_name": "request_failure",
+          "swift_type": "PWRunnerRequestFailure?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 16
+        },
+        {
+          "name": "phases",
+          "swift_name": "phases",
+          "swift_type": "[PWRunnerPhaseResult]",
+          "mutable": true,
+          "tag": 17
+        },
+        {
+          "name": "extension_events",
+          "swift_name": "extension_events",
+          "swift_type": "[PWRunnerExtensionEvent]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 18
+        },
+        {
+          "name": "test_overrides",
+          "swift_name": "test_overrides",
+          "swift_type": "PWRunnerTestOverrides?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 19
+        },
+        {
+          "name": "reporting_failure",
+          "swift_name": "reporting_failure",
+          "swift_type": "PWRunnerReportingFailure?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 20
+        },
+        {
+          "name": "execution_form",
+          "swift_name": "execution_form",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 21
+        },
+        {
+          "name": "actors",
+          "swift_name": "actors",
+          "swift_type": "[PWRunnerActorResult]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 22
+        },
+        {
+          "name": "transfers",
+          "swift_name": "transfers",
+          "swift_type": "[PWRunnerTransferRecord]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 23
+        },
+        {
+          "name": "resources",
+          "swift_name": "resources",
+          "swift_type": "PWRunnerResourceTables?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 24
+        },
+        {
+          "name": "schedule",
+          "swift_name": "schedule",
+          "swift_type": "PWRunnerScheduleRecord?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 25
+        },
+        {
+          "name": "preparation_failure",
+          "swift_name": "preparation_failure",
+          "swift_type": "PWRunnerPreparationFailure?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 26
+        },
+        {
+          "name": "equipment_inventory",
+          "swift_name": "equipment_inventory",
+          "swift_type": "PWRunnerEquipmentInventory?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 27
+        },
+        {
+          "name": "equipment_bindings",
+          "swift_name": "equipment_bindings",
+          "swift_type": "[PWRunnerEquipmentBinding]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 28
+        },
+        {
+          "name": "equipment_entitlements",
+          "swift_name": "equipment_entitlements",
+          "swift_type": "[PWRunnerEquipmentEntitlements]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 29
+        },
+        {
+          "name": "authority_setup",
+          "swift_name": "authority_setup",
+          "swift_type": "PWRunnerAuthoritySetup?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 30
+        }
+      ],
+      "id": 55
+    },
+    {
+      "name": "PWRunnerSandboxCheckResult",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+      "fields": [
+        {
+          "name": "result_source",
+          "swift_name": "result_source",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "native_rc",
+          "swift_name": "native_rc",
+          "swift_type": "Int?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": true,
+          "tag": 2
+        },
+        {
+          "name": "missing_reason",
+          "swift_name": "missing_reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "outcome",
+          "swift_name": "outcome",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "pid",
+          "swift_name": "pid",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 6
+        },
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "filter_kind",
+          "swift_name": "filter_kind",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 8
+        },
+        {
+          "name": "filter_value",
+          "swift_name": "filter_value",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 9
+        },
+        {
+          "name": "filter_type_id",
+          "swift_name": "filter_type_id",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 10
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 11
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 12
+        },
+        {
+          "name": "path_diagnostics",
+          "swift_name": "path_diagnostics",
+          "swift_type": "PWRunnerPathDiagnostics?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 13
+        }
+      ],
+      "id": 56
+    },
+    {
+      "name": "PWRunnerScheduleRecord",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "setup_wait",
+          "swift_name": "setup_wait",
+          "swift_type": "PWHostWait?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "execution_wait",
+          "swift_name": "execution_wait",
+          "swift_type": "PWHostWait?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "lifetime_budget_ms",
+          "swift_name": "lifetime_budget_ms",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "collection_budget_ms",
+          "swift_name": "collection_budget_ms",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "cancelled",
+          "swift_name": "cancelled",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        }
+      ],
+      "id": 57
+    },
+    {
+      "name": "PWRunnerSpawnFailure",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerReply.swift",
+      "fields": [
+        {
+          "name": "origin",
+          "swift_name": "origin",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"runner_host\"",
+          "tag": 1
+        },
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"posix_spawn\"",
+          "tag": 2
+        },
+        {
+          "name": "executable_path",
+          "swift_name": "executable_path",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "return_code",
+          "swift_name": "return_code",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "diagnostic",
+          "swift_name": "diagnostic",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        }
+      ],
+      "id": 58
+    },
+    {
+      "name": "PWRunnerStepResult",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift",
+      "fields": [
+        {
+          "name": "phase_id",
+          "swift_name": "phase_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "sandbox_check",
+          "swift_name": "sandbox_check",
+          "swift_type": "PWRunnerSandboxCheckResult",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "attempt",
+          "swift_name": "attempt",
+          "swift_type": "PWRunnerAttemptResult",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "comparison",
+          "swift_name": "comparison",
+          "swift_type": "PWRunnerComparison?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        }
+      ],
+      "id": 59
+    },
+    {
+      "name": "PWRunnerSubmission",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+      "fields": [
+        {
+          "name": "state",
+          "swift_name": "state",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"not_invoked\"",
+          "tag": 1
+        },
+        {
+          "name": "invoked_elapsed_ms",
+          "swift_name": "invoked_elapsed_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        }
+      ],
+      "id": 60
+    },
+    {
+      "name": "PWRunnerSubprocess",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "pid",
+          "swift_name": "pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "term_signal",
+          "swift_name": "term_signal",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "exit_code",
+          "swift_name": "exit_code",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "partial_steps",
+          "swift_name": "partial_steps",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "worker_evidence",
+          "swift_name": "worker_evidence",
+          "swift_type": "PWWorkerEvidence?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "policy_transfer_timeout",
+          "swift_name": "policy_transfer_timeout",
+          "swift_type": "PWWorkerPolicyTransferTimeout?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "policy_transfer_error",
+          "swift_name": "policy_transfer_error",
+          "swift_type": "PWWorkerPolicyTransferError?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "ready_byte_received",
+          "swift_name": "ready_byte_received",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "done_observed",
+          "swift_name": "done_observed",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "poll_stop_reason",
+          "swift_name": "poll_stop_reason",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "exit_requested",
+          "swift_name": "exit_requested",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "termination_request",
+          "swift_name": "termination_request",
+          "swift_type": "PWRunnerTerminationRequest?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 12
+        },
+        {
+          "name": "reaped",
+          "swift_name": "reaped",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 13
+        },
+        {
+          "name": "wait_errors",
+          "swift_name": "wait_errors",
+          "swift_type": "[PWRunnerWaitError]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 14
+        },
+        {
+          "name": "cleanup_trigger",
+          "swift_name": "cleanup_trigger",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 15
+        },
+        {
+          "name": "grace_end",
+          "swift_name": "grace_end",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 16
+        },
+        {
+          "name": "collection_basis",
+          "swift_name": "collection_basis",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 17
+        },
+        {
+          "name": "ready_wait",
+          "swift_name": "ready_wait",
+          "swift_type": "PWHostWait?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 18
+        },
+        {
+          "name": "sentinel_wait",
+          "swift_name": "sentinel_wait",
+          "swift_type": "PWHostWait?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 19
+        },
+        {
+          "name": "exit_grace_wait",
+          "swift_name": "exit_grace_wait",
+          "swift_type": "PWHostWait?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 20
+        },
+        {
+          "name": "disposition",
+          "swift_name": "disposition",
+          "swift_type": "PWDispositionRecord?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 21
+        }
+      ],
+      "id": 61
+    },
+    {
+      "name": "PWRunnerTerminationGate",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
+      "fields": [
+        {
+          "name": "source_actor_id",
+          "swift_name": "source_actor_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "source_final_phase_id",
+          "swift_name": "source_final_phase_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "condition",
+          "swift_name": "condition",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"terminated\"",
+          "tag": 3
+        },
+        {
+          "name": "outcome",
+          "swift_name": "outcome",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "wait",
+          "swift_name": "wait",
+          "swift_type": "PWHostWait?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "observation",
+          "swift_name": "observation",
+          "swift_type": "PWOwnedReapReference?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "activation_eligible",
+          "swift_name": "activation_eligible",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "capture_ordinal",
+          "swift_name": "capture_ordinal",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 8
+        }
+      ],
+      "id": 62
+    },
+    {
+      "name": "PWRunnerTerminationRequest",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "signal",
+          "swift_name": "signal",
+          "swift_type": "Int32",
+          "mutable": false,
+          "tag": 1
+        },
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int32",
+          "mutable": false,
+          "tag": 2
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32?",
+          "mutable": false,
+          "json_null": false,
+          "tag": 3
+        }
+      ],
+      "id": 63
+    },
+    {
+      "name": "PWRunnerTestOverrides",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
+      "fields": [
+        {
+          "name": "worker_executable_path",
+          "swift_name": "worker_executable_path",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "worker_timeout_ms",
+          "swift_name": "worker_timeout_ms",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "actor_equipment_executable_paths",
+          "swift_name": "actor_equipment_executable_paths",
+          "swift_type": "[String: String]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "validator_executable_path",
+          "swift_name": "validator_executable_path",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "validator_total_timeout_ms",
+          "swift_name": "validator_total_timeout_ms",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "validator_io_timeout_ms",
+          "swift_name": "validator_io_timeout_ms",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "worker_post_apply_hang_ms",
+          "swift_name": "worker_post_apply_hang_ms",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "worker_post_apply_kill_signal",
+          "swift_name": "worker_post_apply_kill_signal",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "worker_pre_ready_hang_ms",
+          "swift_name": "worker_pre_ready_hang_ms",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "worker_kill_before_publish_slot",
+          "swift_name": "worker_kill_before_publish_slot",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        }
+      ],
+      "id": 64
+    },
+    {
+      "name": "PWRunnerTokenRecord",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "token_ref",
+          "swift_name": "token_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "actor_id",
+          "swift_name": "actor_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "family",
+          "swift_name": "family",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "token_length",
+          "swift_name": "token_length",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "last_use_step_id",
+          "swift_name": "last_use_step_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        }
+      ],
+      "id": 65
+    },
+    {
+      "name": "PWRunnerTransferRecord",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "phase_id",
+          "swift_name": "phase_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "source_actor_id",
+          "swift_name": "source_actor_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "recipient_actor_id",
+          "swift_name": "recipient_actor_id",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "token_ref",
+          "swift_name": "token_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "delivery_ref",
+          "swift_name": "delivery_ref",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 6
+        },
+        {
+          "name": "request_published",
+          "swift_name": "request_published",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "custody_status",
+          "swift_name": "custody_status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 8
+        },
+        {
+          "name": "copy_status",
+          "swift_name": "copy_status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 9
+        },
+        {
+          "name": "equality",
+          "swift_name": "equality",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 10
+        },
+        {
+          "name": "recipient_acknowledged",
+          "swift_name": "recipient_acknowledged",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 11
+        },
+        {
+          "name": "source_acknowledged",
+          "swift_name": "source_acknowledged",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 12
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 13
+        },
+        {
+          "name": "lifecycle",
+          "swift_name": "lifecycle",
+          "swift_type": "PWAttemptLifecycle?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 14
+        },
+        {
+          "name": "recipient_wait",
+          "swift_name": "recipient_wait",
+          "swift_type": "PWHostWait?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 15
+        }
+      ],
+      "id": 66
+    },
+    {
+      "name": "PWRunnerTransportError",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
+      "fields": [
+        {
+          "name": "stage",
+          "swift_name": "stage",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "reason",
+          "swift_name": "reason",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "domain",
+          "swift_name": "domain",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "code",
+          "swift_name": "code",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "message",
+          "swift_name": "message",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "domain_truncated",
+          "swift_name": "domain_truncated",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 6
+        },
+        {
+          "name": "message_truncated",
+          "swift_name": "message_truncated",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 7
+        }
+      ],
+      "id": 67
+    },
+    {
+      "name": "PWRunnerValidatorSubprocess",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+      "fields": [
+        {
+          "name": "phase_id",
+          "swift_name": "phase_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "ordinal",
+          "swift_name": "ordinal",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "pid",
+          "swift_name": "pid",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "term_signal",
+          "swift_name": "term_signal",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "exit_code",
+          "swift_name": "exit_code",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "reaped",
+          "swift_name": "reaped",
+          "swift_type": "Bool?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "termination_request",
+          "swift_name": "termination_request",
+          "swift_type": "PWRunnerTerminationRequest?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "wait_errors",
+          "swift_name": "wait_errors",
+          "swift_type": "[PWRunnerWaitError]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 8
+        },
+        {
+          "name": "read_error",
+          "swift_name": "read_error",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "stdout_collection_stop",
+          "swift_name": "stdout_collection_stop",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 10
+        },
+        {
+          "name": "stdout_bytes_received",
+          "swift_name": "stdout_bytes_received",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 11
+        },
+        {
+          "name": "probe_bytes_written",
+          "swift_name": "probe_bytes_written",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 12
+        },
+        {
+          "name": "probe_bytes_expected",
+          "swift_name": "probe_bytes_expected",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 13
+        },
+        {
+          "name": "io_error",
+          "swift_name": "io_error",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 14
+        },
+        {
+          "name": "decode_fault",
+          "swift_name": "decode_fault",
+          "swift_type": "PWValidatorDecodeFault?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 15
+        },
+        {
+          "name": "records",
+          "swift_name": "records",
+          "swift_type": "[ValidatorVerdict]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 16
+        },
+        {
+          "name": "expected_step_ids",
+          "swift_name": "expected_step_ids",
+          "swift_type": "[String]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 17
+        },
+        {
+          "name": "association_issues",
+          "swift_name": "association_issues",
+          "swift_type": "[PWValidatorAssociationIssue]?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 18
+        },
+        {
+          "name": "exit_grace_wait",
+          "swift_name": "exit_grace_wait",
+          "swift_type": "PWHostWait?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 19
+        }
+      ],
+      "id": 68
+    },
+    {
+      "name": "PWRunnerVisitTiming",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
+      "fields": [
+        {
+          "name": "activation_to_arrival_ms",
+          "swift_name": "activation_to_arrival_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 1
+        },
+        {
+          "name": "collection_ms",
+          "swift_name": "collection_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "arrival_to_release_ms",
+          "swift_name": "arrival_to_release_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "release_to_completion_ms",
+          "swift_name": "release_to_completion_ms",
+          "swift_type": "UInt64?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        }
+      ],
+      "id": 69
+    },
+    {
+      "name": "PWRunnerWaitError",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "stage",
+          "swift_name": "stage",
+          "swift_type": "String",
+          "mutable": false,
+          "tag": 1
+        },
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int32",
+          "mutable": false,
+          "tag": 2
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32",
+          "mutable": false,
+          "tag": 3
+        }
+      ],
+      "id": 70
+    },
+    {
+      "name": "PWValidatorAssociationIssue",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+      "fields": [
+        {
+          "name": "origin",
+          "swift_name": "origin",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"runner_host\"",
+          "tag": 1
+        },
+        {
+          "name": "kind",
+          "swift_name": "kind",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "step_id",
+          "swift_name": "step_id",
+          "swift_type": "String?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "count",
+          "swift_name": "count",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 4
+        }
+      ],
+      "id": 71
+    },
+    {
+      "name": "PWValidatorDecodeFault",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+      "fields": [
+        {
+          "name": "origin",
+          "swift_name": "origin",
+          "swift_type": "String",
+          "mutable": true,
+          "default": "\"runner_host\"",
+          "tag": 1
+        },
+        {
+          "name": "kind",
+          "swift_name": "kind",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "message",
+          "swift_name": "message",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "byte_offset",
+          "swift_name": "byte_offset",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "frame_bytes",
+          "swift_name": "frame_bytes",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 5
+        },
+        {
+          "name": "retained_bytes",
+          "swift_name": "retained_bytes",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 6
+        },
+        {
+          "name": "context_b64",
+          "swift_name": "context_b64",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "context_truncated",
+          "swift_name": "context_truncated",
+          "swift_type": "Bool",
+          "mutable": true,
+          "tag": 8
+        }
+      ],
+      "id": 72
+    },
+    {
+      "name": "PWWorkerDiagnostic",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "state",
+          "swift_name": "state",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "status",
+          "swift_name": "status",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "length",
+          "swift_name": "length",
+          "swift_type": "UInt32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "text",
+          "swift_name": "text",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        }
+      ],
+      "id": 73
+    },
+    {
+      "name": "PWWorkerEvidence",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "abi_identity",
+          "swift_name": "abi_identity",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "progress",
+          "swift_name": "progress",
+          "swift_type": "PWWorkerProgress?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "failure_publication",
+          "swift_name": "failure_publication",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "failure_state",
+          "swift_name": "failure_state",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 4
+        },
+        {
+          "name": "failure",
+          "swift_name": "failure",
+          "swift_type": "PWWorkerFailure?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "readiness",
+          "swift_name": "readiness",
+          "swift_type": "PWWorkerReadiness?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "diagnostic",
+          "swift_name": "diagnostic",
+          "swift_type": "PWWorkerDiagnostic",
+          "mutable": true,
+          "tag": 7
+        },
+        {
+          "name": "policy_read",
+          "swift_name": "policy_read",
+          "swift_type": "PWWorkerPolicyRead?",
+          "mutable": true,
+          "default": "nil",
+          "json_null": false,
+          "tag": 8
+        }
+      ],
+      "id": 74
+    },
+    {
+      "name": "PWWorkerFailure",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "code",
+          "swift_name": "code",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "native_kind",
+          "swift_name": "native_kind",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "native_result",
+          "swift_name": "native_result",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "index",
+          "swift_name": "index",
+          "swift_type": "UInt32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "detail",
+          "swift_name": "detail",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 7
+        }
+      ],
+      "id": 75
+    },
+    {
+      "name": "PWWorkerPolicyRead",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "bytes_expected",
+          "swift_name": "bytes_expected",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "bytes_received",
+          "swift_name": "bytes_received",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 2
+        }
+      ],
+      "id": 76
+    },
+    {
+      "name": "PWWorkerPolicyTransferError",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "bytes_written",
+          "swift_name": "bytes_written",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "bytes_expected",
+          "swift_name": "bytes_expected",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 3
+        }
+      ],
+      "id": 77
+    },
+    {
+      "name": "PWWorkerPolicyTransferTimeout",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "budget_ms",
+          "swift_name": "budget_ms",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "elapsed_ms",
+          "swift_name": "elapsed_ms",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "bytes_written",
+          "swift_name": "bytes_written",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "bytes_expected",
+          "swift_name": "bytes_expected",
+          "swift_type": "Int",
+          "mutable": true,
+          "tag": 4
+        }
+      ],
+      "id": 78
+    },
+    {
+      "name": "PWWorkerProgress",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "raw",
+          "swift_name": "raw",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 2
+        },
+        {
+          "name": "stage",
+          "swift_name": "stage",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "tag": 3
+        },
+        {
+          "name": "index",
+          "swift_name": "index",
+          "swift_type": "UInt32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        }
+      ],
+      "id": 79
+    },
+    {
+      "name": "PWWorkerReadiness",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift",
+      "fields": [
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int32",
+          "mutable": true,
+          "tag": 1
+        },
+        {
+          "name": "errno",
+          "swift_name": "errno",
+          "swift_type": "Int32?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        }
+      ],
+      "id": 80
+    },
+    {
+      "name": "ValidatorVerdict",
+      "source": "runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift",
+      "fields": [
+        {
+          "name": "step_id",
+          "swift_name": "stepId",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": true,
+          "tag": 1
+        },
+        {
+          "name": "operation",
+          "swift_name": "operation",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 2
+        },
+        {
+          "name": "filter_type",
+          "swift_name": "filterType",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 3
+        },
+        {
+          "name": "filter_type_id",
+          "swift_name": "filterTypeId",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 4
+        },
+        {
+          "name": "filter_value",
+          "swift_name": "filterValue",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 5
+        },
+        {
+          "name": "rc",
+          "swift_name": "rc",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 6
+        },
+        {
+          "name": "errno",
+          "swift_name": "errnoVal",
+          "swift_type": "Int?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 7
+        },
+        {
+          "name": "outcome",
+          "swift_name": "outcome",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 8
+        },
+        {
+          "name": "error",
+          "swift_name": "error",
+          "swift_type": "String?",
+          "mutable": true,
+          "json_null": false,
+          "tag": 9
+        },
+        {
+          "name": "raw_line",
+          "swift_name": "rawLine",
+          "swift_type": "String",
+          "mutable": true,
+          "tag": 10
+        }
+      ],
+      "id": 81
+    },
+    {
+      "name": "PWDispositionRunQuestions",
+      "id": 82,
+      "adapter": "questions",
+      "fields": [
+        {
+          "name": "final_status",
+          "swift_name": "final_status",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 1,
+          "json_null": false
+        },
+        {
+          "name": "stop_reason",
+          "swift_name": "stop_reason",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 2,
+          "json_null": false
+        },
+        {
+          "name": "cleanup_trigger",
+          "swift_name": "cleanup_trigger",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 3,
+          "json_null": false
+        },
+        {
+          "name": "grace_end",
+          "swift_name": "grace_end",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 4,
+          "json_null": false
+        },
+        {
+          "name": "kill_request_and_result",
+          "swift_name": "kill_request_and_result",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 5,
+          "json_null": false
+        },
+        {
+          "name": "collection_basis",
+          "swift_name": "collection_basis",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 6,
+          "json_null": false
+        },
+        {
+          "name": "progress_association",
+          "swift_name": "progress_association",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 7,
+          "json_null": false
+        }
+      ]
+    },
+    {
+      "name": "PWDispositionStepQuestions",
+      "id": 83,
+      "adapter": "questions",
+      "fields": [
+        {
+          "name": "step_boundary_reached",
+          "swift_name": "step_boundary_reached",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 1,
+          "json_null": false
+        },
+        {
+          "name": "step_result_published",
+          "swift_name": "step_result_published",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 2,
+          "json_null": false
+        },
+        {
+          "name": "step_requested_operation_applicability",
+          "swift_name": "step_requested_operation_applicability",
+          "swift_type": "PWDispositionClaim?",
+          "mutable": false,
+          "tag": 3,
+          "json_null": false
+        }
+      ]
+    }
+  ],
+  "variants": {
+    "PWDispositionValue": {
+      "1": {
+        "name": "Integer",
+        "type": "Int"
+      },
+      "2": {
+        "name": "Request",
+        "type": "PWRunnerTerminationRequest"
+      }
+    }
+  }
+}

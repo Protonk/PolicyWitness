@@ -12,9 +12,11 @@ enum RequestContractError: Error {
 /// decimal array positions. A null path withholds an overlong location; it
 /// never substitutes a shortened key that could name a different field.
 struct PWRunnerRequestFailure: Codable, Error, CustomStringConvertible {
+    // BEGIN GENERATED PORCELAIN PWRunnerRequestFailure
     var code: String
     var path: [String]?
     var expected_schema: Int?
+    // END GENERATED PORCELAIN PWRunnerRequestFailure
 
     init(code: String, path: [String]?, expected_schema: Int? = nil) {
         self.code = code
@@ -233,6 +235,7 @@ struct PWRunnerPhase: Codable {
 // reference, including host resolution and native argument admission. The
 // adjacent AGENTS.md gives the assertion recipe and rules for new controls.
 struct PWRunnerTestOverrides: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerTestOverrides
     var worker_executable_path: String?
     var worker_timeout_ms: Int?
     var actor_equipment_executable_paths: [String: String]?
@@ -243,6 +246,7 @@ struct PWRunnerTestOverrides: Codable {
     var worker_post_apply_kill_signal: Int?
     var worker_pre_ready_hang_ms: Int?
     var worker_kill_before_publish_slot: Int?
+    // END GENERATED PORCELAIN PWRunnerTestOverrides
 
     init(
         worker_executable_path: String? = nil,
@@ -480,19 +484,21 @@ struct PWRunnerProbeStep: Codable {
 /// UTF-8 lengths count payload bytes; item counts use `items`. `nul_bytes`
 /// counts embedded NULs in native C strings, whose maximum is zero.
 struct PWRunnerAdmissionFailure: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerAdmissionFailure
     var origin: String = "runner_host"
     var field: String
     var actual: Int
     var maximum: Int
     var unit: String
+    var step_id: String?
+    var step_index: Int?
+    var parameter_key: String?
+    var index: Int?
+    // END GENERATED PORCELAIN PWRunnerAdmissionFailure
     /// The offending step's ID, omitted when the step ID itself is the refused
     /// field: a refusal never echoes the string it refused. `step_index` is the
     /// step's position in `probe_plan` and accompanies every per-step refusal.
-    var step_id: String?
-    var step_index: Int?
     /// The offending parameter's key, omitted when the key itself is refused;
     /// the field name and byte count identify it.
-    var parameter_key: String?
     /// The offending argv position for exec argument refusals.
-    var index: Int?
 }

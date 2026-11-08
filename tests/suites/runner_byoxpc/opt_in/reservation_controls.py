@@ -32,6 +32,7 @@ import session
 from artifact import digest, inventory, inspect, MANIFEST
 from bundle import command, sign, signature, SERVICE, CLIENT
 from consumer import validate
+from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture, host_reply
 from neighbor_lab import save, process_identity, generation, executable_path, wait_for
 from retirement_controls import Arrangement, HOST, WORKER, FIXTURES, replace_once, worker_host_source, specimen
@@ -115,7 +116,7 @@ def build_host(scratch, out):
         'tests/fixtures/byoxpc/ReservationClientTrace.swift',
         'tests/fixtures/byoxpc/session.py', 'tests/fixtures/byoxpc/neighbor_lab.py',
         'tests/fixtures/caller_auth/bundle.py', 'tests/lib/native_sources.py',
-        'tests/lib/artifact.py', 'tests/lib/consumer.py', 'tests/lib/runner_client_capture.py',
+        'tests/lib/artifact.py', 'tests/lib/consumer.py', 'tests/lib/runner_client_capture.py', 'tests/lib/porcelain.py', 'tests/lib/porcelain_schema.py',
         'tests/lib/contract.py', 'tests/build-evidence.py']
     for relative in dependencies:
         original = ROOT / relative
@@ -344,7 +345,7 @@ class ReservationArrangement(Arrangement):
             raise AssertionError('client watchdog: ' + record['name'])
         finally:
             record['end_ns'] = time.monotonic_ns(); save(folder / 'record.json', record)
-        value = json.loads((folder / 'stdout').read_bytes())
+        value = decode_porcelain((folder / 'stdout').read_bytes(), 'capture')
         problems = validate(value) if record['public'] else validate_capture(value)
         if unsupported is None:
             assert not problems, problems
@@ -408,7 +409,7 @@ class ReservationArrangement(Arrangement):
         _, _, path = self.prepare(name)
         driver.send('submit', 'execute', credential='grant', request=str(path))
         received = driver.event('execute', 'host_reply')
-        reply = json.loads(base64.b64decode(received['data_base64'], validate=True))
+        reply = decode_porcelain(base64.b64decode(received['data_base64'], validate=True), 'reply')
         assert not validate(reply) and reply['normalized_outcome'] == 'finished', reply
         self.one_execution(name)
         assert generation(self.event(name, 'admission_claimed')['host']) == generation(owner)

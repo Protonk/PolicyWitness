@@ -227,6 +227,7 @@ echo "==> Checking contract versions"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_contract.py" --check
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_architecture.py" --check
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_footprint.py" --check
+"${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_porcelain.py" --check
 echo "==> Checking build documentation"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_build.py" --check
 echo "==> Checking host/worker identity"
@@ -440,7 +441,7 @@ echo "==> Building Rust controller + tools"
 rm -f "${CARGO_MESSAGES}"
 PW_BUILD_VERSION="${PW_VERSION}" PW_BUILD_NUMBER="${PW_BUILD_NUMBER}" \
   PW_BUILD_DESCRIBE="${PW_BUILD_DESCRIBE}" PW_BUILD_COMMIT="${PW_BUILD_COMMIT}" \
-  cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
+  cargo build --manifest-path "${RUNNER_MANIFEST}" --release --jobs 2 \
   --target "${CARGO_OUTPUT_TRIPLE}" \
   --target-dir "${CARGO_TARGET_DIR_PINNED}" \
   --message-format=json-render-diagnostics \
@@ -512,7 +513,7 @@ else
   "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-publish --root "${ROOT_DIR}"
 fi
 echo "==> Compiling native executables"
-meson compile -C "${MESON_BUILD_DIR}"
+meson compile -C "${MESON_BUILD_DIR}" -j 2
 # What Meson evaluated must be the tree: every configured target's sources
 # are compared with the repository, so a manifest that compiles a substitute
 # or a dead declaration standing in for a live one refuses here, before any

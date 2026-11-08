@@ -21,7 +21,7 @@ CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
 from blackbox import envelope_skeleton, recapture_host_reply
-from consumer import lifecycle, select, steps, validate, validate_exec_observation
+from consumer import lifecycle, select, steps, validate_fixture as validate, validate_exec_observation
 from lifecycle_adapter import read_lifecycle
 from lifecycle_oracle import check_record
 from path_diagnostics_contract import check_cases
@@ -503,7 +503,8 @@ def client_output_control(artifacts):
     (artifacts / 'client.stdout').write_bytes(result.stdout)
     (artifacts / 'client.stderr').write_bytes(result.stderr)
     assert result.returncode == 1, result
-    capture = json.loads(result.stdout)
+    from porcelain import decode
+    capture = decode(result.stdout, "capture")
     errors = validate_capture(capture)
     assert not errors, errors
     assert capture['terminal'] in ('xpc_timeout', 'acquisition_failed'), capture
@@ -603,7 +604,7 @@ def main():
         run_path = artifacts / f"{name}.json"
         run_path.write_text(json.dumps(envelope, indent=2) + "\n")
         result = subprocess.run(
-            [sys.executable, '-B', '-S', str(CHECKER), str(run_path),
+            [sys.executable, '-B', '-S', str(CHECKER), '--authored-json-fixture', str(run_path),
              str(FIXTURES / case / "expected.json")],
             capture_output=True, text=True, timeout=5,
         )

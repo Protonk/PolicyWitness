@@ -5,6 +5,7 @@ struct PWRunnerSandboxCheckResult: Codable {
     /// Result provenance. See the "Worker evidence contract" in
     /// tests/FAILURE-PROPAGATION-CONTRACT.md for native returns versus PW
     /// status and missing reasons.
+    // BEGIN GENERATED PORCELAIN PWRunnerSandboxCheckResult
     var result_source: String? = nil
     var native_rc: Int? = nil
     var missing_reason: String? = nil
@@ -18,6 +19,7 @@ struct PWRunnerSandboxCheckResult: Codable {
     var errno: Int?
     var error: String?
     var path_diagnostics: PWRunnerPathDiagnostics?
+    // END GENERATED PORCELAIN PWRunnerSandboxCheckResult
 
     init(
         rc: Int,
@@ -132,6 +134,7 @@ struct ValidatorVerdict: Codable {
         try c.encodeIfPresent(error, forKey: .error)
         try c.encode(rawLine, forKey: .rawLine)
     }
+    // BEGIN GENERATED PORCELAIN ValidatorVerdict
     var stepId: String?
     var operation: String?
     var filterType: String?
@@ -139,30 +142,35 @@ struct ValidatorVerdict: Codable {
     var filterValue: String?
     var rc: Int?
     var errnoVal: Int?
-    var outcome: String             // "allow"|"deny"|"error"|"parse_error"|"bad_filter"
+    var outcome: String
     var error: String?
-    var rawLine: String             // for debugging
+    var rawLine: String
+    // END GENERATED PORCELAIN ValidatorVerdict
 }
 
 /// Receiver-owned rejected frame context. The prefix is bytes, not repaired
 /// JSON. Offsets/lengths are exact received byte counts; at most 256 context
 /// bytes are retained. Unknown diagnostic outcome names are not decode faults.
 struct PWValidatorDecodeFault: Codable {
+    // BEGIN GENERATED PORCELAIN PWValidatorDecodeFault
     var origin: String = "runner_host"
-    var kind: String // utf8, json, structure
+    var kind: String
     var message: String
     var byte_offset: Int
     var frame_bytes: Int
     var retained_bytes: Int
     var context_b64: String
     var context_truncated: Bool
+    // END GENERATED PORCELAIN PWValidatorDecodeFault
 }
 
 struct PWValidatorAssociationIssue: Codable {
+    // BEGIN GENERATED PORCELAIN PWValidatorAssociationIssue
     var origin: String = "runner_host"
-    var kind: String // missing_id, duplicate_id, unexpected_id, unassociated
+    var kind: String
     var step_id: String? = nil
     var count: Int
+    // END GENERATED PORCELAIN PWValidatorAssociationIssue
 }
 
 /// Validator child observations. Missing host fields remain unknown.
@@ -172,6 +180,7 @@ struct PWValidatorAssociationIssue: Codable {
 struct PWRunnerValidatorSubprocess: Codable {
     /// The phase this collection served, stamped by the host from the
     /// collection it ran. Readers require agreement with the containing phase.
+    // BEGIN GENERATED PORCELAIN PWRunnerValidatorSubprocess
     var phase_id: String?
     var ordinal: Int?
     var pid: Int
@@ -190,8 +199,9 @@ struct PWRunnerValidatorSubprocess: Codable {
     var records: [ValidatorVerdict]?
     var expected_step_ids: [String]?
     var association_issues: [PWValidatorAssociationIssue]?
-    /// The measured exit-grace wait after collection closed.
     var exit_grace_wait: PWHostWait? = nil
+    // END GENERATED PORCELAIN PWRunnerValidatorSubprocess
+    /// The measured exit-grace wait after collection closed.
 
     init(pid: Int, term_signal: Int? = nil, exit_code: Int? = nil) {
         self.pid = pid

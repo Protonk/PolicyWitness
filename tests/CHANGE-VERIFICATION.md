@@ -24,6 +24,7 @@ they do not exhaust the verification relevant to a change.
 | Change or investigative question | Verification account |
 | --- | --- |
 | Admission or validator receivers | [Integrated verification guidance](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior), including the boundary and its readers. |
+| Porcelain schema or binary representation | [Independent structural controls](suites/source_drift/README.md#porcelain-structural-reader), `source_drift/generator_contract` and `preflight/build_entry_controls`; retain the applicable ordinary, ordering, actor and ending semantic controls. |
 | Limits | [Limit-change verification](AGENTS.md#verify-a-limit-change) and the [limits coverage account](../docs/LIMITS.md#grounding-and-coverage). |
 | Ordering barriers, worker wait/release, query eligibility or observers | [Required ordering controls](AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior) and [order-barrier mutations](#order-barrier-mutation-controls). |
 | Worker clock source, timebase or sample validation; OS/SDK updates or another supported machine | [Native worker clock applicability](#native-worker-clock-applicability), including its required worker-change control and environmental scope. |

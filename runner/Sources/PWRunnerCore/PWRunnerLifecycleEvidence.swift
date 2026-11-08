@@ -8,9 +8,11 @@ import Darwin
 /// An absent/null request means no request. Structurally valid values are decoded
 /// without a signal/errno allowlist. The client/controller forward this object.
 struct PWRunnerTerminationRequest: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerTerminationRequest
     let signal: Int32
     let rc: Int32
     let errno: Int32?
+    // END GENERATED PORCELAIN PWRunnerTerminationRequest
 
     init(signal: Int32, rc: Int32, errno: Int32?) {
         self.signal = signal
@@ -26,9 +28,11 @@ struct PWRunnerTerminationRequest: Codable {
 /// Unknown stage/errno values remain transportable. Empty array means no errors
 /// observed; absent/null array means unavailable.
 struct PWRunnerWaitError: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerWaitError
     let stage: String
     let rc: Int32
     let errno: Int32
+    // END GENERATED PORCELAIN PWRunnerWaitError
 
     init(stage: String, rc: Int32, errno: Int32) {
         self.stage = stage
@@ -41,24 +45,31 @@ struct PWRunnerWaitError: Codable {
 /// See tests/FAILURE-PROPAGATION-CONTRACT.md for field validity and JSON semantics.
 /// Timer observation; byte counts are writes accepted, not child reads.
 struct PWWorkerPolicyTransferTimeout: Codable {
+    // BEGIN GENERATED PORCELAIN PWWorkerPolicyTransferTimeout
     var budget_ms: Int
     var elapsed_ms: UInt64
     var bytes_written: Int
     var bytes_expected: Int
+    // END GENERATED PORCELAIN PWWorkerPolicyTransferTimeout
 }
 struct PWWorkerPolicyTransferError: Codable {
+    // BEGIN GENERATED PORCELAIN PWWorkerPolicyTransferError
     var errno: Int32
     var bytes_written: Int
     var bytes_expected: Int
+    // END GENERATED PORCELAIN PWWorkerPolicyTransferError
 }
 /// Worker publications. Numeric codes are open, never Codable enums.
 struct PWWorkerProgress: Codable {
+    // BEGIN GENERATED PORCELAIN PWWorkerProgress
     var raw: UInt32
     var operation: UInt32
     var stage: UInt32
     var index: UInt32?
+    // END GENERATED PORCELAIN PWWorkerProgress
 }
 struct PWWorkerFailure: Codable {
+    // BEGIN GENERATED PORCELAIN PWWorkerFailure
     var operation: UInt32
     var code: UInt32
     var native_kind: UInt32
@@ -66,16 +77,21 @@ struct PWWorkerFailure: Codable {
     var errno: Int32?
     var index: UInt32?
     var detail: UInt32
+    // END GENERATED PORCELAIN PWWorkerFailure
 }
 struct PWWorkerReadiness: Codable {
+    // BEGIN GENERATED PORCELAIN PWWorkerReadiness
     var rc: Int32
     var errno: Int32?
+    // END GENERATED PORCELAIN PWWorkerReadiness
 }
 struct PWWorkerDiagnostic: Codable {
+    // BEGIN GENERATED PORCELAIN PWWorkerDiagnostic
     var state: UInt32
     var status: String
     var length: UInt32?
     var text: String?
+    // END GENERATED PORCELAIN PWWorkerDiagnostic
 }
 /// The worker's EOF receipt for the policy pipe: the host's expected byte count
 /// (its immutable header input) beside the count the worker read at EOF. Present
@@ -84,8 +100,10 @@ struct PWWorkerDiagnostic: Codable {
 /// length agreement with the submission, not content identity, compilation,
 /// application or kernel effect. Absence establishes nothing about delivery.
 struct PWWorkerPolicyRead: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWWorkerPolicyRead
     var bytes_expected: Int
     var bytes_received: Int
+    // END GENERATED PORCELAIN PWWorkerPolicyRead
 }
 /// The worker's fixed source buffer less its terminating NUL (PW_SHM_POLICY_BYTES - 1),
 /// the bound on both receipt counts. Stated here because the client target compiles
@@ -94,6 +112,7 @@ struct PWWorkerPolicyRead: Codable, Equatable {
 let policyReceiptCapacityBytes = 262_143
 struct PWWorkerEvidence: Codable {
     /// Host-selected source identity, not proof that a child reached ABI validation.
+    // BEGIN GENERATED PORCELAIN PWWorkerEvidence
     var abi_identity: String
     var progress: PWWorkerProgress?
     var failure_publication: UInt32
@@ -102,6 +121,7 @@ struct PWWorkerEvidence: Codable {
     var readiness: PWWorkerReadiness?
     var diagnostic: PWWorkerDiagnostic
     var policy_read: PWWorkerPolicyRead? = nil
+    // END GENERATED PORCELAIN PWWorkerEvidence
 }
 
 /// One host wait measured on CLOCK_MONOTONIC: its allowance, the elapsed time
@@ -115,58 +135,62 @@ struct PWWorkerEvidence: Codable {
 /// backwards during the wait. A stop names when the host moved on, not when a
 /// child ended.
 struct PWHostWait: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWHostWait
     var budget_ms: Int
     var elapsed_ms: UInt64?
     var stop: String
     var excluded_ms: UInt64?
     var native_errno: Int32?
     var clock_fault: Bool
+    // END GENERATED PORCELAIN PWHostWait
 }
 
 struct PWRunnerSubprocess: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerSubprocess
     var pid: Int
-    /// JSON integers, meaningful only after waitpid returned this child's PID.
-    /// Both may be absent/null when status was not obtained; zero is a real exit.
     var term_signal: Int?
     var exit_code: Int?
     var partial_steps: Bool
-    /// Worker publication snapshot; absent before spawn.
     var worker_evidence: PWWorkerEvidence? = nil
-    /// Host transfer observation independent of any child publication.
     var policy_transfer_timeout: PWWorkerPolicyTransferTimeout? = nil
     var policy_transfer_error: PWWorkerPolicyTransferError? = nil
-    /// Host read of the ready byte; false does not prove compilation failed.
     var ready_byte_received: Bool?
+    var done_observed: Bool?
+    var poll_stop_reason: String?
+    var exit_requested: Bool?
+    var termination_request: PWRunnerTerminationRequest?
+    var reaped: Bool?
+    var wait_errors: [PWRunnerWaitError]?
+    var cleanup_trigger: String? = nil
+    var grace_end: String? = nil
+    var collection_basis: String? = nil
+    var ready_wait: PWHostWait? = nil
+    var sentinel_wait: PWHostWait? = nil
+    var exit_grace_wait: PWHostWait? = nil
+    var disposition: PWDispositionRecord? = nil
+    // END GENERATED PORCELAIN PWRunnerSubprocess
+    /// JSON integers, meaningful only after waitpid returned this child's PID.
+    /// Both may be absent/null when status was not obtained; zero is a real exit.
+    /// Worker publication snapshot; absent before spawn.
+    /// Host transfer observation independent of any child publication.
+    /// Host read of the ready byte; false does not prove compilation failed.
     /// Final acquire observation of done after cleanup, not successful application.
     /// poll_stop_reason separately retains the reason the polling stage ended.
-    var done_observed: Bool?
     /// Host string: done, child_reaped, sentinel_deadline, wait_error, policy_write_error, or policy_transfer_deadline.
     /// Identifies why polling stopped; later cleanup must not rewrite it.
     /// Only sentinel_deadline establishes exhaustion of the polling budget.
     /// Unknown strings survive decoding; they do not imply a known condition.
-    var poll_stop_reason: String?
     /// Host performed the release-store of exit_requested; not worker receipt.
-    var exit_requested: Bool?
-    var termination_request: PWRunnerTerminationRequest?
     /// True only when waitpid actually returned this PID. False is explicitly
     /// unconfirmed disposition, distinct from an absent/null observation.
-    var reaped: Bool?
-    var wait_errors: [PWRunnerWaitError]?
     /// Host facts recorded where the host acts (tests/FAILURE-PROPAGATION-CONTRACT.md,
     /// "Worker disposition record"): why exit was requested, how the exit-grace
     /// wait ended, and whether the final reads followed a confirmed reap.
     /// Absence is unreported, not observed false.
-    var cleanup_trigger: String? = nil
-    var grace_end: String? = nil
-    var collection_basis: String? = nil
     /// Measured host waits: readiness hint, publication (sentinel) and exit grace.
     /// Absent when the stage did not run.
-    var ready_wait: PWHostWait? = nil
-    var sentinel_wait: PWHostWait? = nil
-    var exit_grace_wait: PWHostWait? = nil
     /// The canonical lifecycle account, resolved once by the host. Mandatory
     /// whenever this object is present.
-    var disposition: PWDispositionRecord? = nil
 
     init(
         pid: Int,

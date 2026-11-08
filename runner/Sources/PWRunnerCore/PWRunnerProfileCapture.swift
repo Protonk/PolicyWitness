@@ -5,6 +5,7 @@ import Darwin
 /// `captured` requires a complete, checksum-verified worker capture and successful
 /// application/process completion. This is not a readback of kernel state.
 struct CompiledProfileCapture: Codable {
+    // BEGIN GENERATED PORCELAIN CompiledProfileCapture
     var schema_version: Int = 2
     var status: String
     var reason: String?
@@ -20,6 +21,7 @@ struct CompiledProfileCapture: Codable {
     var source_length: Int?
     var params_sha256: String?
     var parameter_count: Int?
+    // END GENERATED PORCELAIN CompiledProfileCapture
 }
 
 
@@ -65,10 +67,13 @@ extension CompiledProfileCapture {
             throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: problem))
         }
     }
-    func encode(to encoder: Encoder) throws {
+    func validateForReporting(codingPath: [CodingKey] = []) throws {
         if let problem = contextProblem {
-            throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: problem))
+            throw EncodingError.invalidValue(self, .init(codingPath: codingPath, debugDescription: problem))
         }
+    }
+    func encode(to encoder: Encoder) throws {
+        try validateForReporting(codingPath: encoder.codingPath)
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(schema_version, forKey: .schema_version)
         try c.encode(status, forKey: .status)

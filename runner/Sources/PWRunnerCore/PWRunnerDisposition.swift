@@ -64,41 +64,51 @@ enum PWDispositionValue: Codable, Equatable {
 }
 
 struct PWDispositionClaim: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWDispositionClaim
     var state: String
     var answer: String? = nil
     var value: PWDispositionValue? = nil
     var reason: String? = nil
     var issue: Int? = nil
     var basis: [String]? = nil
+    // END GENERATED PORCELAIN PWDispositionClaim
 }
 
 struct PWDispositionIssue: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWDispositionIssue
     var kind: String
     var rule: String
     var question: String
     var step_index: Int? = nil
     var observations: [String]
     var detail: String
+    // END GENERATED PORCELAIN PWDispositionIssue
 }
 
 struct PWDispositionStep: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWDispositionStep
     var index: Int
     var step_id: String
     var slot: String
     var attempt_support: String
     var questions: [String: PWDispositionClaim]
+    // END GENERATED PORCELAIN PWDispositionStep
 }
 
 struct PWDispositionRecord: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWDispositionRecord
     var questions: [String: PWDispositionClaim]
     var steps: [PWDispositionStep]
     var issues: [PWDispositionIssue]
+    // END GENERATED PORCELAIN PWDispositionRecord
 }
 
 struct PWAttemptLifecycle: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWAttemptLifecycle
     var summary: String
     var boundary: PWDispositionClaim
     var result: PWDispositionClaim
+    // END GENERATED PORCELAIN PWAttemptLifecycle
 }
 
 // Shared wire interpretation: the API also builds in the standalone runner client.

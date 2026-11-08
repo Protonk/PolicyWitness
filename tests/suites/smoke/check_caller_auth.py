@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
 import contract
 from blackbox import validate_step
+from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture, host_reply
 
 
@@ -36,7 +37,7 @@ def call(fixture, work, label, *, authorized=False, service=None):
                    service or fixture['service'], request], timeout=10, check=False)
     after = target.read_bytes()
     (out / 'after.bin').write_bytes(after)
-    capture = json.loads((out / 'client/stdout').read_text())
+    capture = decode_porcelain((out / 'client/stdout').read_bytes(), 'capture')
     assert not validate_capture(capture), validate_capture(capture)
     # Client transport observations carry no synthetic host result. Only exact
     # received host bytes are admitted under the response schema.

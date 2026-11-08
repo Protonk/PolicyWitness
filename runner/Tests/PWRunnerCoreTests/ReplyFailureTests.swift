@@ -393,6 +393,159 @@ private func replyObject(_ data: Data) throws -> [String: Any] {
 }
 
 func runReplyFailureTests(_ tk: TestKit) {
+    tk.group("typed reply admission and binary failure boundary") {
+        tk.run("retain normal rich and minimal binary receipts for independent readers") {
+            guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
+                throw TestFailure(message: "PW_TEST_ARTIFACTS is required for porcelain receipts")
+            }
+            let root = URL(fileURLWithPath: artifacts).appendingPathComponent("porcelain-replies", isDirectory: true)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            let normal = try replyFixture()
+            try pwRunnerPorcelainReplyData(normal).write(to: root.appendingPathComponent("normal.pwp"))
+            try pwRunnerEncodeJSON(normal).write(to: root.appendingPathComponent("normal.comparison.json"))
+            var invalid = normal
+            invalid.steps[0].phase_id = "missing"
+            try pwRunnerPorcelainReplyData(invalid).write(to: root.appendingPathComponent("rich-failure.pwp"))
+            try pwRunnerReplyData(invalid).write(to: root.appendingPathComponent("rich-failure.comparison.json"))
+            let fail: (PWRunnerRunResult) throws -> Data = { _ in
+                throw TestFailure(message: "independent minimal receipt control")
+            }
+            try pwRunnerPorcelainReplyData(normal, encode: fail).write(to: root.appendingPathComponent("minimal-failure.pwp"))
+            try pwRunnerReplyData(normal, encode: fail).write(to: root.appendingPathComponent("minimal-failure.comparison.json"))
+        }
+        tk.run("binary production writer receives an admitted typed reply") {
+            let result = try replyFixture()
+            try result.validateForReporting()
+            try expectEqual(pwRunnerPorcelainReplyData(result), try pwPorcelainEncode(result))
+        }
+        for defect in ["missing_association", "future_ordinal", "missing_acknowledgement", "failed_reap"] {
+            tk.run("typed admission rejects \(defect) before writing and preserves the observations") {
+                var result = try replyFixture()
+                switch defect {
+                case "missing_association": result.steps[0].phase_id = "missing"
+                case "future_ordinal": result.phases[0].ordinal = 99
+                case "missing_acknowledgement": result.phases[0].ordering?.proceed_observed = false
+                default:
+                    // A requested signal cannot supply an observed final status.
+                    result.runner_subprocess?.disposition?.questions["final_status"] = PWDispositionClaim(
+                        state: "supported", answer: "exit_code", value: .integer(0),
+                        basis: ["reaped", "exit_code"])
+                }
+                do { try result.validateForReporting(); throw TestFailure(message: "unsupported claim admitted") }
+                catch is EncodingError { }
+                var received: PWRunnerRunResult?
+                var writerCalls = 0
+                let marker = Data([0, 255, 0, 1])
+                let emitted = pwRunnerPorcelainReplyData(result, encode: { value in
+                    writerCalls += 1
+                    received = value
+                    return marker
+                }, minimal: { _, _ in throw TestFailure(message: "rich evidence unexpectedly discarded") })
+                try expectEqual(emitted, marker)
+                try expectEqual(writerCalls, 1, "invalid ordinary evidence must not reach the writer")
+                guard let degraded = received else { throw TestFailure(message: "missing degraded typed evidence") }
+                try expectEqual(degraded.reporting_failure?.evidence_retained, true)
+                try expectNil(degraded.steps[0].comparison)
+                try expectEqual(degraded.runner_subprocess?.reaped, false)
+                try expectNil(degraded.runner_subprocess?.exit_code)
+                var expected = result
+                expected.schema_version = degraded.schema_version
+                expected.rc = degraded.rc
+                expected.normalized_outcome = degraded.normalized_outcome
+                expected.error = degraded.error
+                expected.reporting_failure = degraded.reporting_failure
+                for index in expected.steps.indices { expected.steps[index].comparison = nil }
+                // JSON here is an independent comparison control, never admission
+                // or a conversion inside the production binary reporting path.
+                try expectEqual(try pwRunnerEncodeJSON(degraded), try pwRunnerEncodeJSON(expected))
+            }
+        }
+        tk.run("successful signal with unconfirmed reap stays unresolved") {
+            var result = try replyFixture()
+            let request = PWRunnerTerminationRequest(signal: 9, rc: 0, errno: 0)
+            result.runner_subprocess?.termination_request = request
+            result.runner_subprocess?.disposition?.questions["kill_request_and_result"]?.value = .request(request)
+            try result.validateForReporting()
+            try expectEqual(result.runner_subprocess?.reaped, false)
+            try expectEqual(result.runner_subprocess?.disposition?.questions["final_status"]?.state, "unresolved")
+            try expectNil(result.runner_subprocess?.exit_code)
+            try expectNil(result.runner_subprocess?.term_signal)
+        }
+        for location in ["reply", "actor"] {
+            tk.run("invalid \(location) compiled profile context cannot bypass typed admission through degradation") {
+                var result = try replyFixture()
+                var capture = result.compiled_profile!
+                capture.capture_stage = nil
+                if location == "reply" {
+                    result.compiled_profile = capture
+                } else {
+                    result.actors = [PWRunnerActorResult(actor_id: "A", index: 0, mode: "apply",
+                        policy_format: "sbpl", policy_sha256: nil, policy_received_sha256: nil,
+                        setup_status: "applied", applied: true, application_count: 1,
+                        launch: nil, subprocess: nil, compiled_profile: capture, visits: [])]
+                }
+                var writerCalls = 0
+                var minimalCalls = 0
+                let marker = Data([13, 0, 255])
+                let data = pwRunnerPorcelainReplyData(result, encode: { _ in
+                    writerCalls += 1
+                    throw TestFailure(message: "invalid capture reached writer")
+                }, minimal: { original, diagnostic in
+                    minimalCalls += 1
+                    try expectEqual(original.specimen_id, result.specimen_id)
+                    try expectContains(diagnostic, "compiled_profile requires worker/before_apply context")
+                    return marker
+                })
+                try expectEqual(data, marker)
+                try expectEqual(writerCalls, 0)
+                try expectEqual(minimalCalls, 1)
+            }
+        }
+        tk.run("rich writer failure retains evidence on its second attempt") {
+            let result = try replyFixture()
+            var calls = 0
+            let data = pwRunnerPorcelainReplyData(result, encode: { value in
+                calls += 1
+                if calls == 1 { throw TestFailure(message: "injected binary writer fault") }
+                try expectEqual(value.reporting_failure?.evidence_retained, true)
+                try expectEqual(value.reporting_failure?.original_error, result.error)
+                try expectEqual(value.phases[0].validator_subprocess?.records?.count,
+                    result.phases[0].validator_subprocess?.records?.count)
+                try expectNil(value.steps[0].comparison)
+                return Data([1, 0, 1])
+            })
+            try expectEqual(calls, 2)
+            try expectEqual(data, Data([1, 0, 1]))
+        }
+        tk.run("independent minimal binary report survives repeated rich writer failure") {
+            let result = try replyFixture()
+            var calls = 0
+            let bytes = pwRunnerPorcelainReplyData(result, encode: { _ in
+                calls += 1
+                throw TestFailure(message: "injected binary writer fault")
+            })
+            try expectEqual(calls, 2)
+            try expectTrue(bytes.starts(with: Data("PWP1".utf8)))
+            try expectTrue(bytes.count < (try pwPorcelainEncode(result)).count)
+        }
+        tk.run("minimal emission failure returns an undecodable empty receipt") {
+            let result = try replyFixture()
+            var richCalls = 0
+            var minimalCalls = 0
+            let data = pwRunnerPorcelainReplyData(result, encode: { _ in
+                richCalls += 1
+                throw TestFailure(message: "rich emission failed")
+            }, minimal: { original, diagnostic in
+                minimalCalls += 1
+                try expectEqual(original.specimen_id, result.specimen_id)
+                try expectContains(diagnostic, "evidence-preserving encoding also failed")
+                throw TestFailure(message: "minimal emission failed")
+            })
+            try expectEqual(richCalls, 2)
+            try expectEqual(minimalCalls, 1)
+            try expectTrue(data.isEmpty)
+        }
+    }
     tk.group("host reply failure contract") {
         tk.run("malformed request diagnostics do not echo unbounded dictionary keys") {
             let key = String(repeating: "é", count: 32_768)

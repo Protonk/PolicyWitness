@@ -845,7 +845,7 @@ def _validate_ordering(runner, phase):
     return errors
 
 
-def _validate_envelope(document):
+def _validate_envelope(document, *, allow_fixture_json=False):
     errors = []
     data = document.get('data')
     if not isinstance(data, dict):
@@ -887,7 +887,7 @@ def _validate_envelope(document):
         app = specimen.get('app_provenance')
         if app is not None and (not isinstance(app, dict) or set(app) != {'evidence_manifest_path', 'evidence_verify'}):
             errors.append('data.specimen.app_provenance carries keys other than the manifest path and verify report')
-    errors.extend(validate_client(data.get('runner_client'), data.get('runner_result')))
+    errors.extend(validate_client(data.get('runner_client'), data.get('runner_result'), allow_fixture_json=allow_fixture_json))
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None and not isinstance(diagnostics, dict):
         errors.append('data.runner_sandbox_diagnostics is not an object')
@@ -896,14 +896,14 @@ def _validate_envelope(document):
     return errors
 
 
-def validate(document):
+def validate(document, *, allow_fixture_json=False):
     """The single version error, or every shape and record error of a supported document."""
     errors = version_errors(document)
     if errors:
         return errors
     if is_envelope(document):
         validate_shape(document, 'envelope', ENVELOPE_SHAPE, errors)
-        errors.extend(_validate_envelope(document))
+        errors.extend(_validate_envelope(document, allow_fixture_json=allow_fixture_json))
         runner = _reply(document)
         if runner is not None:
             errors.extend(_validate_reply(runner))
@@ -986,3 +986,8 @@ def lifecycle(document):
             'malformed': view['malformed'],
             'projections': {k: view['projections'].get(k) for k in
                             ('process_disposition', 'termination_cause', 'stop_reason', 'disposition_integrity')}}
+
+
+def validate_fixture(document):
+    """Opt in to authored JSON host-byte fixtures; never use for a live capture."""
+    return validate(document, allow_fixture_json=True)

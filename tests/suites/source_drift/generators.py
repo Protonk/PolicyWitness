@@ -54,6 +54,8 @@ SPAN_MARKER = ('<!-- span ', '<!-- /span -->')
 def region_ownership(root, name):
     """Explicit regions and whole-file outputs; never infer ownership from a diff."""
     gen = module('owner_' + name, root / f'docs/generate_{name}.py')
+    if name == 'porcelain':
+        return gen.ownership(root)
     if name == 'contract':
         return {p: [(a, b) for a, b, _ in rs] for p, rs in gen.TARGETS.items()}, set()
     if name == 'worker_identity':
@@ -372,6 +374,8 @@ class GeneratorContractTests(receipts.TestCase):
                         data['limits'][0]['value'] += 1
                     elif name == 'footprint':
                         data['rows'][0]['title'] += ' property control'
+                    elif name == 'porcelain':
+                        data['records'][0]['fields'][0]['name'] += 'PropertyControl'
                     elif name == 'build':
                         data['steps'][2]['reads'] += ' (property control)'
                     else:
@@ -905,6 +909,9 @@ class GeneratorContractTests(receipts.TestCase):
         discovery follows a new citation, a new target document and a new native helper; a relocated fixture
         without Git loads every helper module from inside the fixture; an omitted helper is a clear refusal."""
         known = {
+            'porcelain': ['docs/porcelain.json', 'docs/generate_porcelain.py',
+                          'runner/Sources/PWRunnerCore/PWPorcelainRecords.swift',
+                          'controller/src/porcelain_records.rs', 'tests/lib/porcelain_schema.py'],
             'contract': ['docs/contract.json', 'docs/generate_contract.py', 'docs/CONTRACT.md', 'tests/lib/contract.py',
                          'controller/src/json_contract.rs', 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
                          'runner/Services/PWRunner/Info.plist'],

@@ -120,3 +120,63 @@ Pending implementation and controls. Choose pursue adoption, retain a narrower
 result, revise one bounded assumption, or close without adoption. A working binary
 codec alone is insufficient. Record source/build identities, exact test selections,
 raw receipt locations, limitations and bounded migration work before completion.
+
+## Orderly pause — 2026-11-08
+
+Paused at the user's request before any compilation or native trial. This is an
+**unfinished, unbuilt prototype checkpoint**, not an accepted implementation.
+All delegated agents were interrupted; no build/test child or native resource
+ownership was created by this exploration. Only source reads, generation and
+editorial/static checks have run. `git diff --check` passes at this checkpoint.
+
+Work present in this branch:
+
+- 83 schema records / 606 stored fields, generated Swift field regions/direct
+  writers, Rust owned records/readers/JSON projection, Python structural tables.
+- Closed Swift/Rust primitive codecs; explicit typed Swift reporting gates,
+  binary service reply path, rich degradation and independent minimal fallback.
+- Draft typed Rust admission and generic run assembly bridge (legacy Value path
+  is a test-only comparison control), direct typed envelope serialization.
+- Independent Python decoder and malformed-byte controls, generator/build/source
+  registration, binary-reader adaptations and explicit authored-JSON fixture mode.
+- Swift controls emit binary and JSON comparison receipts when run later.
+
+Resume integration before attempting a build:
+
+1. Finish root-owned client capture integration. `runner_client.rs` and client
+   emission still use the old JSON path/signatures; switch to generated capture
+   and binary readers, retaining exact bytes and typed acquisition validation.
+   `PWRunnerReplyCapture` now declares Data but its initializer/legacy tests still
+   need adaptation. Add Rust module declarations for porcelain, records and
+   admission. Do not add a JSON reconstruction adapter for old semantic readers.
+2. Resolve generator registration details: input_paths must expose relative
+   complete fixture inputs/outputs, and the drift mutation harness must match
+   the generator's __main__ call. Check current files in case the interrupted
+   agent completed these. Restore per-field source comments into schema-owned
+   documentation; the bootstrap moved some away from their declarations.
+3. Audit JSON presence rules against custom coders (explicit encodeNil and
+   conditional native_rc/team_id), path-form compaction and fixture decoding.
+   Bootstrap field aliases were corrected to inspect CodingKeys only. Generated
+   tables and runtime readers must agree on exact widths/depth/count bounds.
+4. Review typed admission's declared unconverted scopes. Actor setup/equipment,
+   exec/fresh-I/O and resource settlement may remain withheld, never silently
+   credited as migrated. Finish real typed tests; legacy Value tests cannot
+   establish the new runtime path. Account for the temporary generic bridge in
+   maintenance costs rather than making it permanent by default.
+5. Update prototype protocol/response versions through contract.json and its
+   generator; regenerate worker identity after sources/build inputs settle.
+   Check architecture/build accounts and independent readers. The build edits
+   cap Cargo and Meson jobs at two; confirm Swift frontend behavior.
+6. Run registered offline codec/generator controls, compile through the signed
+   pipeline, fix failures, then run the bounded signed slices and coordinated
+   independent/order/failure controls. Preserve receipts in managed test output.
+   No test or performance result is credited yet.
+7. Complete the maintenance-change exercises, cost account, structural-claim
+   dispositions and bounded adoption recommendation. This pause does not close
+   the experiment or authorize merging prototype implementation into main.
+
+Durable work is on `experiment/json-porcelain`; worktree is
+`/private/tmp/pw-json-porcelain`. The protocol was committed as `ca1758cb` before
+implementation. The pause commit preserves all current source independently of
+the temporary worktree. Main-checkout user changes are untouched; at pause it has
+a modified JSON-AS-PORCELAIN plan and an untracked records/DESCHEMA-PLAN.md.

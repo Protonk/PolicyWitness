@@ -11,11 +11,12 @@ def load_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def validate_run(run, expected):
+def validate_run(run, expected, *, allow_fixture_json=False):
     errors, matched = validate_run_shape(
         run, expected["steps"], policy_format=expected.get("policy_format"),
         require_sandboxed_after_apply=expected.get("require_sandboxed_after_apply") is True,
         require_policy_sha256=expected.get("require_policy_sha256") is True,
+        allow_fixture_json=allow_fixture_json,
     )
     fail = errors.append
     for step, exp in matched:
@@ -35,10 +36,14 @@ def validate_run(run, expected):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("usage: validate_run.py <run.json> <expected.json>", file=sys.stderr)
+    args = sys.argv[1:]
+    fixture = bool(args and args[0] == "--authored-json-fixture")
+    if fixture:
+        args = args[1:]
+    if len(args) != 2:
+        print("usage: validate_run.py [--authored-json-fixture] <run.json> <expected.json>", file=sys.stderr)
         return 2
-    errors = validate_run(load_json(sys.argv[1]), load_json(sys.argv[2]))
+    errors = validate_run(load_json(args[0]), load_json(args[1]), allow_fixture_json=fixture)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

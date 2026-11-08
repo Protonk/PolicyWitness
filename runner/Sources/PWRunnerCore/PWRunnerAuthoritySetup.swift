@@ -3,6 +3,7 @@ import Darwin
 
 /// Bounded authority setup observations. Bearer bytes and mapping addresses never enter these records.
 struct PWRunnerAuthorityOperation: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerAuthorityOperation
     var slot: Int
     var operation: String
     var role: String
@@ -12,16 +13,20 @@ struct PWRunnerAuthorityOperation: Codable, Equatable {
     var errno: Int32?
     var detail: String?
     var value: UInt64?
+    // END GENERATED PORCELAIN PWRunnerAuthorityOperation
 }
 struct PWAuthorityCleanupReference: Codable, Equatable {
-    var kind = "posix_shm_name"
+    // BEGIN GENERATED PORCELAIN PWAuthorityCleanupReference
+    var kind: String = "posix_shm_name"
     var name: String
     var host_pid: Int
     var session_nonce: UInt64
+    var recovery_state: String = "unresolved_manual"
+    // END GENERATED PORCELAIN PWAuthorityCleanupReference
     /// A receipt cannot establish identity after name reuse. No automatic unlink is authorized.
-    var recovery_state = "unresolved_manual"
 }
 struct PWRunnerAuthorityScope: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerAuthorityScope
     var actor_id: String? = nil
     var actor_index: Int? = nil
     var token_ref: String? = nil
@@ -34,15 +39,20 @@ struct PWRunnerAuthorityScope: Codable, Equatable {
     var ownership: [String: String] = [:]
     var cleanup_reference: PWAuthorityCleanupReference? = nil
     var integrity_errors: [String]? = nil
+    // END GENERATED PORCELAIN PWRunnerAuthorityScope
 }
 struct PWRunnerAuthorityHost: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerAuthorityHost
     var run: PWRunnerAuthorityScope
     var regions: [PWRunnerAuthorityScope] = []
     var custody: [PWRunnerAuthorityScope] = []
+    // END GENERATED PORCELAIN PWRunnerAuthorityHost
 }
 struct PWRunnerAuthoritySetup: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerAuthoritySetup
     var host: PWRunnerAuthorityHost
     var workers: [PWRunnerAuthorityScope]
+    // END GENERATED PORCELAIN PWRunnerAuthoritySetup
     mutating func bind(actorIDs: [String], tokenRefs: [String]) {
         for i in workers.indices { if let index=workers[i].actor_index, actorIDs.indices.contains(index) { workers[i].actor_id=actorIDs[index] } }
         for i in host.regions.indices { if let index=host.regions[i].actor_index, actorIDs.indices.contains(index) { host.regions[i].actor_id=actorIDs[index] } }
@@ -51,6 +61,7 @@ struct PWRunnerAuthoritySetup: Codable, Equatable {
 }
 
 struct PWOwnedReapObservation: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWOwnedReapObservation
     var pid: Int
     var native_rc: Int32
     var raw_status: Int32
@@ -59,30 +70,39 @@ struct PWOwnedReapObservation: Codable, Equatable {
     var ownership_unbroken: Bool
     var departure_requested: Bool
     var capture_ordinal: UInt64 = 0
+    // END GENERATED PORCELAIN PWOwnedReapObservation
 }
 /// Ordinals share the source child's host-observation sequence. They are not
 /// worker publications and do not count polling calls.
 struct PWRunnerActorActivation: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerActorActivation
     var capture_ordinal: UInt64
     var observed_ns: UInt64?
+    // END GENERATED PORCELAIN PWRunnerActorActivation
 }
 struct PWOwnedReapReference: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWOwnedReapReference
     var capture_ordinal: UInt64
+    // END GENERATED PORCELAIN PWOwnedReapReference
 }
 
 struct PWRunnerActorApplication: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerActorApplication
     var state: String
     var basis: String
+    // END GENERATED PORCELAIN PWRunnerActorApplication
 }
 struct PWRunnerTerminationGate: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerTerminationGate
     var source_actor_id: String
     var source_final_phase_id: String
-    var condition = "terminated"
+    var condition: String = "terminated"
     var outcome: String
     var wait: PWHostWait?
     var observation: PWOwnedReapReference?
     var activation_eligible: Bool
     var capture_ordinal: UInt64? = nil
+    // END GENERATED PORCELAIN PWRunnerTerminationGate
 }
 
 /// The terminal failure whitelist describes branches, not absent status fields.

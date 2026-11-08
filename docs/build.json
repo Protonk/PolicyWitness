@@ -325,12 +325,13 @@
         "full",
         "partial"
       ],
-      "reads": "docs/contract.json (including the runner protocol and signed service marker), docs/architecture.json and their generated copies, docs/footprint.json and its generated document",
+      "reads": "docs/contract.json (including the runner protocol and signed service marker), docs/architecture.json and their generated copies, docs/footprint.json and its generated document, docs/porcelain.json and its generated typed record declarations and codecs",
       "writes": "nothing",
       "refusals": [
         "stale_contract",
         "stale_architecture",
-        "stale_footprint"
+        "stale_footprint",
+        "stale_porcelain"
       ],
       "sources": [
         {
@@ -3283,6 +3284,49 @@
       ]
     },
     {
+      "id": "stale_porcelain",
+      "message": "stale porcelain output",
+      "kind": "propagated",
+      "steps": [
+        "check_contract"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_porcelain.py"
+        },
+        {
+          "path": "docs/generate_porcelain.py",
+          "symbol": "stale"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_entry.py",
+          "symbol": "test_build_refuses_a_stale_porcelain_copy_before_compiling",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
       "id": "stale_build_doc",
       "message": "build documentation is stale",
       "kind": "propagated",
@@ -4464,6 +4508,35 @@
       ]
     },
     {
+      "id": "inv_porcelain_check",
+      "command": "docs/generate_porcelain.py --check",
+      "step": "check_contract",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_porcelain.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
       "id": "inv_build_check",
       "command": "docs/generate_build.py --check",
       "step": "check_build_doc",
@@ -4656,6 +4729,7 @@
       "flags": [
         "--manifest-path",
         "--release",
+        "--jobs",
         "--target",
         "--target-dir",
         "--message-format",
@@ -4875,6 +4949,10 @@
           "form": "rule",
           "coverage": "textual"
         }
+      ],
+      "flags": [
+        "-C",
+        "-j"
       ]
     },
     {

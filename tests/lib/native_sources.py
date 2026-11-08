@@ -57,6 +57,8 @@ API = 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift'
 SHARED_CONTRACT_SOURCES = (
     API,
     'runner/Sources/PWRunnerCore/PWRunnerCoding.swift',
+    'runner/Sources/PWRunnerCore/PWPorcelain.swift',
+    'runner/Sources/PWRunnerCore/PWPorcelainRecords.swift',
     'runner/Sources/PWRunnerCore/PWRunnerRequest.swift',
     'runner/Sources/PWRunnerCore/PWRunnerExtension.swift',
     'runner/Sources/PWRunnerCore/PWRunnerActors.swift',

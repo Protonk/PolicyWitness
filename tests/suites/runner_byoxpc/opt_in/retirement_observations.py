@@ -119,7 +119,7 @@ def identities(out, state, pw):
     paths = ['tests/suites/runner_byoxpc/opt_in/retirement_observations.py',
              'tests/suites/runner_byoxpc/opt_in/retirement_observations.sh',
              'tests/fixtures/byoxpc/neighbor_lab.py', 'tests/fixtures/byoxpc/session.py',
-             'tests/lib/run_capture.py', 'tests/lib/consumer.py', 'tests/lib/runner_client_capture.py', 'tests/lib/contract.py',
+             'tests/lib/run_capture.py', 'tests/lib/consumer.py', 'tests/lib/runner_client_capture.py', 'tests/lib/porcelain.py', 'tests/lib/porcelain_schema.py', 'tests/lib/contract.py',
              'tests/lib/case.sh', 'tests/lib/testlib.sh', 'tests/catalog.json']
     hashes = {}
     for name in paths:

@@ -6,7 +6,9 @@
 //! envelopes are stable for diffing and hashing.
 
 use serde::Serialize;
-use serde_json::{Map, Value};
+use serde_json::Value;
+#[cfg(test)]
+use serde_json::Map;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
@@ -114,13 +116,20 @@ impl JsonResult {
 /// from git (nearest `v*` tag, commit count, `git describe --dirty`, commit
 /// hash) and passes it to cargo; a plain `cargo build` reads "unknown". It is a
 /// coordinate, not a contract: the contract numbers say how to read the JSON.
-fn build_stamp() -> Value {
-    serde_json::json!({
-        "version": option_env!("PW_BUILD_VERSION").unwrap_or("unknown"),
-        "number": option_env!("PW_BUILD_NUMBER").unwrap_or("unknown"),
-        "describe": option_env!("PW_BUILD_DESCRIBE").unwrap_or("unknown"),
-        "commit": option_env!("PW_BUILD_COMMIT").unwrap_or("unknown"),
-    })
+#[derive(Serialize)]
+struct BuildStamp {
+    commit: &'static str,
+    describe: &'static str,
+    number: &'static str,
+    version: &'static str,
+}
+fn build_stamp() -> BuildStamp {
+    BuildStamp {
+        commit: option_env!("PW_BUILD_COMMIT").unwrap_or("unknown"),
+        describe: option_env!("PW_BUILD_DESCRIBE").unwrap_or("unknown"),
+        number: option_env!("PW_BUILD_NUMBER").unwrap_or("unknown"),
+        version: option_env!("PW_BUILD_VERSION").unwrap_or("unknown"),
+    }
 }
 
 /// The wire contract versions this build was made with, embedded from
@@ -138,6 +147,7 @@ fn now_unix_ms() -> u64 {
         .as_millis() as u64
 }
 
+#[cfg(test)]
 fn sort_value(value: &mut Value) {
     match value {
         Value::Array(items) => {
@@ -160,24 +170,15 @@ fn sort_value(value: &mut Value) {
     }
 }
 
-fn envelope_value<T: Serialize>(kind: &str, result: JsonResult, data: &T) -> Result<Value, String> {
-    let mut value = serde_json::json!({
-        "schema_version": SCHEMA_VERSION,
-        "kind": kind,
-        "generated_at_unix_ms": now_unix_ms(),
-        "build": build_stamp(),
-        "result": result,
-        "data": data,
-    });
-    sort_value(&mut value);
-    #[cfg(test)]
-    footprint_test::record(footprint_test::Summary {
-        stage: Some(footprint_test::Stage::EnvelopeConstructionSorting),
-        borrowed_input: true,
-        envelope: true,
-        ..Default::default()
-    });
-    Ok(value)
+/// Presentation borrows its inputs. It never builds a second semantic tree.
+#[derive(Serialize)]
+struct Envelope<'a, T: Serialize> {
+    build: BuildStamp,
+    data: &'a T,
+    generated_at_unix_ms: u64,
+    kind: &'a str,
+    result: JsonResult,
+    schema_version: u32,
 }
 
 pub fn render_envelope<T: Serialize>(
@@ -185,16 +186,22 @@ pub fn render_envelope<T: Serialize>(
     result: JsonResult,
     data: &T,
 ) -> Result<String, String> {
-    let value = envelope_value(kind, result, data)?;
-    let text =
-        serde_json::to_string_pretty(&value).map_err(|e| format!("failed to encode JSON: {e}"))?;
+    let envelope = Envelope {
+        build: build_stamp(), data, generated_at_unix_ms: now_unix_ms(),
+        kind, result, schema_version: SCHEMA_VERSION,
+    };
+    #[cfg(test)]
+    footprint_test::record(footprint_test::Summary {
+        stage: Some(footprint_test::Stage::EnvelopeConstructionSorting),
+        borrowed_input: true, envelope: true, ..Default::default()
+    });
+    let text = serde_json::to_string_pretty(&envelope)
+        .map_err(|e| format!("failed to encode JSON: {e}"))?;
     #[cfg(test)]
     footprint_test::record(footprint_test::Summary {
         stage: Some(footprint_test::Stage::FinalRendering),
-        borrowed_input: true,
-        envelope: true,
-        rendered: Some((text.len(), text.capacity())),
-        ..Default::default()
+        borrowed_input: true, envelope: true,
+        rendered: Some((text.len(), text.capacity())), ..Default::default()
     });
     Ok(text)
 }

@@ -16,6 +16,7 @@ ROOT = HERE.parents[4]
 from witness_capture import capture
 import extension_actors as actors
 from contract import REQUEST_SCHEMA
+from porcelain import decode as decode_porcelain
 from runner_client_capture import host_reply
 import consumer
 sys.path[:0] = [str(ROOT / 'tests/fixtures/byoxpc'), str(ROOT / 'tests/fixtures/caller_auth')]
@@ -195,7 +196,7 @@ for label, role, key in [('false', 'selected', FALSE_KEY), ('absent', 'selected'
     assert state['target'].startswith('gui/') and state['target'].endswith('/' + state['service_name']), state['target']
     result = command(direct / 'capture', [client, 'run', '--timeout-ms', '10000', '--mach-service',
                      state['service_name'], request_path], timeout=30, check=False)
-    transport = json.loads((direct / 'capture/stdout').read_text())
+    transport = decode_porcelain((direct / 'capture/stdout').read_bytes(), 'capture')
     # A host runner_failed is still a successful transport (client exit 0).
     # Decode independently first: an acquisition/transport failure has no host
     # reply and must never satisfy the actor requirement-refusal assertion.

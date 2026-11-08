@@ -125,3 +125,14 @@ if test_selected "${PW_TEST_ID}"; then
   fi
   test_pass "entrypoints use direct Python and wrapper shebangs agree; weakening controls fail"
 fi
+
+PW_TEST_ID="porcelain_codec"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step porcelain "read authored binary values and malformed controls independently"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/porcelain.log"
+  if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/source_drift/porcelain_codec.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "porcelain structural reader controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "independent binary structural controls pass; semantic behavior remains separately checked" "{\"log\":\"${RUN_LOG}\"}"
+fi

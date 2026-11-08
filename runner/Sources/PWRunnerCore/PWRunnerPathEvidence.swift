@@ -2,11 +2,13 @@ import Foundation
 import Darwin
 
 struct PWFileIdentity: Codable {
+    // BEGIN GENERATED PORCELAIN PWFileIdentity
     var device: UInt64
     var inode: UInt64
     var mode: UInt32
     var uid: UInt32
     var gid: UInt32
+    // END GENERATED PORCELAIN PWFileIdentity
 }
 
 // Path forms observed by the unsandboxed runner host after orchestration.
@@ -19,11 +21,13 @@ struct PWFileIdentity: Codable {
 struct PWRunnerPathDiagnostics: Codable {
     static let formNames = ["realpath_resolved", "firmlink_resolved"]
 
+    // BEGIN GENERATED PORCELAIN PWRunnerPathDiagnostics
     var observer: String?
     var stage: String?
     var input: String
     var realpath_resolved: String?
     var firmlink_resolved: String?
+    // END GENERATED PORCELAIN PWRunnerPathDiagnostics
 
     init(
         input: String,
@@ -136,11 +140,13 @@ func decodePathForms(_ container: KeyedDecodingContainer<PathFormKey>, input: St
 struct PWRunnerAttemptPathDiagnostics: Codable {
     static let formNames = ["realpath_resolved", "parent_realpath_resolved"]
 
+    // BEGIN GENERATED PORCELAIN PWRunnerAttemptPathDiagnostics
     var observer: String?
     var stage: String?
     var input: String
     var realpath_resolved: String?
     var parent_realpath_resolved: String?
+    // END GENERATED PORCELAIN PWRunnerAttemptPathDiagnostics
 
     init(
         input: String,

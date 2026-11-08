@@ -2,6 +2,7 @@ import Foundation
 import Darwin
 
 struct PWRunnerFreshRead: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerFreshRead
     var open_rc: Int32
     var open_errno: Int32?
     var read_rc: Int64?
@@ -12,12 +13,15 @@ struct PWRunnerFreshRead: Codable {
     var close_rc: Int32?
     var close_errno: Int32?
     var content_hex: String?
+    // END GENERATED PORCELAIN PWRunnerFreshRead
 }
 struct PWRunnerFileStat: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerFileStat
     var rc: Int32
     var errno: Int32?
     var identity: PWFileIdentity?
     var size: Int64?
+    // END GENERATED PORCELAIN PWRunnerFileStat
 
     func evidenceProblem() -> String? {
         guard [-1, 0].contains(rc), rc == -1 ? errno != nil && errno! >= 0 : errno == nil,
@@ -28,6 +32,7 @@ struct PWRunnerFileStat: Codable {
     }
 }
 struct PWRunnerFreshWrite: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerFreshWrite
     var open_rc: Int32
     var open_errno: Int32?
     var truncate_rc: Int32?
@@ -40,16 +45,20 @@ struct PWRunnerFreshWrite: Codable {
     var opened_stat: PWRunnerFileStat?
     var truncated_stat: PWRunnerFileStat?
     var written_stat: PWRunnerFileStat?
+    // END GENERATED PORCELAIN PWRunnerFreshWrite
 }
 
 /// Bounded observations from the completed exec slot. Collection is frozen before
 /// termination requests; final wait facts concern only the owned leader.
 struct PWExecStreamObservation: Codable {
+    // BEGIN GENERATED PORCELAIN PWExecStreamObservation
     var eof: Bool
     var read_errno: Int32? = nil
     var poll_revents: Int32? = nil
+    // END GENERATED PORCELAIN PWExecStreamObservation
 }
 struct PWExecCollectionObservation: Codable {
+    // BEGIN GENERATED PORCELAIN PWExecCollectionObservation
     var stop_reason: String
     var leader_exit_observed: Bool
     var stdout: PWExecStreamObservation
@@ -58,32 +67,43 @@ struct PWExecCollectionObservation: Codable {
     var waitid_errno: Int32? = nil
     var poll_errno: Int32? = nil
     var clock_fault: UInt32? = nil
+    // END GENERATED PORCELAIN PWExecCollectionObservation
 }
 struct PWExecSignalRequest: Codable {
+    // BEGIN GENERATED PORCELAIN PWExecSignalRequest
     var target: Int32
     var signal: Int32
     var rc: Int32
     var errno: Int32? = nil
+    // END GENERATED PORCELAIN PWExecSignalRequest
 }
 struct PWExecCleanupObservation: Codable {
+    // BEGIN GENERATED PORCELAIN PWExecCleanupObservation
     var state: String
     var group_request: PWExecSignalRequest? = nil
     var leader_fallback: PWExecSignalRequest? = nil
+    // END GENERATED PORCELAIN PWExecCleanupObservation
 }
 struct PWExecWaitObservation: Codable {
+    // BEGIN GENERATED PORCELAIN PWExecWaitObservation
     var rc: Int32
     var errno: Int32? = nil
     var status: Int32? = nil
+    // END GENERATED PORCELAIN PWExecWaitObservation
 }
 struct PWExecReapObservation: Codable {
+    // BEGIN GENERATED PORCELAIN PWExecReapObservation
     var stop_reason: String
     var last_wait: PWExecWaitObservation
     var clock_fault: UInt32? = nil
+    // END GENERATED PORCELAIN PWExecReapObservation
 }
 struct PWExecObservation: Codable {
+    // BEGIN GENERATED PORCELAIN PWExecObservation
     var collection: PWExecCollectionObservation
     var cleanup: PWExecCleanupObservation
     var reap: PWExecReapObservation
+    // END GENERATED PORCELAIN PWExecObservation
 }
 
 extension PWRunnerAttemptResult {
@@ -176,27 +196,34 @@ struct PWRunnerAttemptResult: Codable {
     /// Submitted intent, not proof that the named native operation ran. See
     /// the "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
     /// for PW status versus missing reasons.
+    // BEGIN GENERATED PORCELAIN PWRunnerAttemptResult
     var requested_kind: String? = nil
     var requested_action: String? = nil
     var result_source: String? = nil
     var missing_reason: String? = nil
-    /// Projection of this step's disposition claims. It is the evidence for
-    /// whether a `no_completed_result`/`slot_incomplete` step started.
     var lifecycle: PWAttemptLifecycle? = nil
-    /// PW's attempt status, not a raw syscall return.
     var fresh_read: PWRunnerFreshRead? = nil
     var fresh_write: PWRunnerFreshWrite? = nil
     var exec_observation: PWExecObservation? = nil
-    // Host-local corruption diagnostic, checked by ordinary-reply encoding.
     var execObservationDecodeProblem: String? = nil
     var rc: Int
     var errno: Int?
     var outcome: String
     var error: String?
     var requested_path: String?
-    /// Host-resolved forms of the attempt target; absent for non-path attempts.
     var path_diagnostics: PWRunnerAttemptPathDiagnostics?
     var observed_path: String?
+    var child_pid: Int?
+    var child_exit_code: Int?
+    var child_term_signal: Int?
+    var stdout: String?
+    var stderr: String?
+    // END GENERATED PORCELAIN PWRunnerAttemptResult
+    /// Projection of this step's disposition claims. It is the evidence for
+    /// whether a `no_completed_result`/`slot_incomplete` step started.
+    /// PW's attempt status, not a raw syscall return.
+    // Host-local corruption diagnostic, checked by ordinary-reply encoding.
+    /// Host-resolved forms of the attempt target; absent for non-path attempts.
 
     /// Exec-attempt outputs. All five are nil for non-exec attempts and
     /// are emitted as explicit JSON null (when populated) or omitted
@@ -213,11 +240,6 @@ struct PWRunnerAttemptResult: Codable {
     /// spawn failure from a child non-zero exit. EPERM/EACCES without
     /// a child remain ambiguous: execute permissions can also prevent
     /// spawning.
-    var child_pid: Int?
-    var child_exit_code: Int?
-    var child_term_signal: Int?
-    var stdout: String?
-    var stderr: String?
 
     init(
         rc: Int,

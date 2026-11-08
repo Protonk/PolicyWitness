@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
 import contract
 from consumer import validate
+from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture, host_reply
 from neighbor_lab import ProcessWatch, generation, generation_state, process_label, save, wait_for
 
@@ -138,7 +139,8 @@ def finish(process, record):
     record['returncode'] = process.wait(timeout=45)
     record['end_ns'] = time.monotonic_ns()
     folder = Path(record['folder'])
-    raw = json.loads((folder / 'stdout').read_text())
+    raw_bytes = (folder / 'stdout').read_bytes()
+    raw = decode_porcelain(raw_bytes, 'capture') if record['direct'] else json.loads(raw_bytes)
     if record['direct']:
         assert not validate_capture(raw), validate_capture(raw)
         transport = raw

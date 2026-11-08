@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 from contract import REQUEST_SCHEMA, RESPONSE_SCHEMA
 from run_capture import RunCapture
 from request_examples import CORPUS, examples, materialize
+from porcelain import decode as decode_porcelain
 from runner_client_capture import host_reply
 
 
@@ -99,7 +100,7 @@ def main():
                                         stdout=stdout, stderr=stderr, timeout=20)
             assert request.read_bytes() == original, example['id']
             assert result.returncode == 0, example['id']
-            reply = host_reply(json.loads((case / 'reply.json').read_text()))
+            reply = host_reply(decode_porcelain((case / 'reply.json').read_bytes(), 'capture'))
             observed = effect.is_file()
             (case / 'effect.json').write_text(json.dumps(dict(observed=observed, expected=expected['xpc'] is None)) + '\n')
             if expected['xpc'] is None:
@@ -173,7 +174,7 @@ def main():
                 result = subprocess.run([str(client), 'run', '--timeout-ms', '10000', service, str(request)],
                                         stdout=stdout, stderr=stderr, timeout=20)
             assert result.returncode == 0, name
-            reply = host_reply(json.loads((case / 'reply.json').read_text()))
+            reply = host_reply(decode_porcelain((case / 'reply.json').read_bytes(), 'capture'))
             assert reply['schema_version'] == RESPONSE_SCHEMA, reply
             if error is None:
                 assert reply['normalized_outcome'] == 'finished' and effect.is_file(), reply

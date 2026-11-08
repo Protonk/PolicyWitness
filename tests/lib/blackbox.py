@@ -85,7 +85,8 @@ def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
 
 
 def validate_run_shape(run, expected_steps, *, policy_format=None,
-                       require_sandboxed_after_apply=False, require_policy_sha256=False):
+                       require_sandboxed_after_apply=False, require_policy_sha256=False,
+                       allow_fixture_json=False):
     """Return (errors, [(actual_step, expected_step), ...]) in received order.
 
     Match by ID even after an order error, so subsequent diagnostics name the
@@ -141,7 +142,7 @@ def validate_run_shape(run, expected_steps, *, policy_format=None,
             errors.append(f"runner.steps[{index}]: unexpected step_id={step_id!r}")
             continue
         matched.append((step, by_id[step_id]))
-    errors.extend(validate(run))
+    errors.extend(validate(run, allow_fixture_json=allow_fixture_json))
     return errors, matched
 
 

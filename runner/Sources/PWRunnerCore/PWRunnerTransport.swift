@@ -93,6 +93,7 @@ func pwTransportBoundedString(_ text: String, bytes: Int) -> (String, Bool) {
 }
 
 struct PWRunnerTransportError: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerTransportError
     var stage: String
     var reason: String
     var domain: String?
@@ -100,6 +101,7 @@ struct PWRunnerTransportError: Codable {
     var message: String
     var domain_truncated: Bool
     var message_truncated: Bool
+    // END GENERATED PORCELAIN PWRunnerTransportError
     init(stage: String, reason: String, message: String, error: Error? = nil) {
         self.stage = stage; self.reason = reason
         let ns = error.map { $0 as NSError }
@@ -115,6 +117,7 @@ struct PWRunnerTransportError: Codable {
 }
 
 struct PWRunnerControlObservation: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerControlObservation
     var bytes_received: Int
     var sha256: String
     var status: String?
@@ -122,6 +125,7 @@ struct PWRunnerControlObservation: Codable {
     var host_instance: String?
     var lease_ms: Int?
     var reason: String?
+    // END GENERATED PORCELAIN PWRunnerControlObservation
     init(_ data: Data, admitted: PWRunnerControlReply? = nil) {
         bytes_received = data.count
         sha256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -131,6 +135,7 @@ struct PWRunnerControlObservation: Codable {
 }
 
 struct PWRunnerAcquisitionAttempt: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerAcquisitionAttempt
     var ordinal: Int
     var attempt_id: String
     var started_elapsed_ms: UInt64?
@@ -138,18 +143,23 @@ struct PWRunnerAcquisitionAttempt: Codable {
     var outcome: String
     var control: PWRunnerControlObservation?
     var error: PWRunnerTransportError?
+    // END GENERATED PORCELAIN PWRunnerAcquisitionAttempt
 }
 
 struct PWRunnerSubmission: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerSubmission
     var state: String = "not_invoked"
     var invoked_elapsed_ms: UInt64?
+    // END GENERATED PORCELAIN PWRunnerSubmission
 }
 
 struct PWRunnerReplyCapture: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerReplyCapture
     var bytes_received: Int
     var bytes_retained: Int
     var truncated: Bool
-    var data_base64: String
+    var data: Data
+    // END GENERATED PORCELAIN PWRunnerReplyCapture
     init(_ data: Data) {
         bytes_received = data.count
         let held = data.prefix(PWRunnerTransportLimits.runnerReplyBytes)
@@ -160,6 +170,7 @@ struct PWRunnerReplyCapture: Codable {
 
 /// Optional fields are omitted when absent; absence never implies an event.
 struct PWRunnerClientCapture: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerClientCapture
     var kind: String = "runner_client_capture"
     var protocol_version: Int = PWContract.runnerProtocol
     var client_pid: Int = Int(getpid())
@@ -171,11 +182,12 @@ struct PWRunnerClientCapture: Codable {
     var timeout_ms: UInt64
     var attempts: [PWRunnerAcquisitionAttempt] = []
     var acquisition_stop: String = "local_error"
-    var submission = PWRunnerSubmission()
+    var submission: PWRunnerSubmission = PWRunnerSubmission()
     var terminal: String = "local_error"
     var error: PWRunnerTransportError?
     var runner_reply: PWRunnerReplyCapture?
     var submission_refusal: PWRunnerControlObservation?
+    // END GENERATED PORCELAIN PWRunnerClientCapture
 }
 
 /// Base64 can contain a slash in every position. Escaping those slashes would

@@ -16,13 +16,16 @@ enum PWEquipmentLimits {
 // Equipment observations are shared wire types. The host implementation lives
 // in ActorEquipment.swift; clients need no Security APIs or worker driver.
 struct PWRunnerEquipmentError: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerEquipmentError
     var operation: String
     var domain: String?
     var code: Int?
     var message: String?
+    // END GENERATED PORCELAIN PWRunnerEquipmentError
 }
 
 struct PWRunnerEquipmentInventory: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerEquipmentInventory
     var path: String
     var status: String = "unobserved"
     var sha256: String?
@@ -32,9 +35,11 @@ struct PWRunnerEquipmentInventory: Codable, Equatable {
     var seal_osstatus: Int?
     var reason: String?
     var error: PWRunnerEquipmentError?
+    // END GENERATED PORCELAIN PWRunnerEquipmentInventory
 }
 
 struct PWRunnerEquipmentBinding: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerEquipmentBinding
     var binding_id: String
     var role: String
     var source: String
@@ -53,6 +58,7 @@ struct PWRunnerEquipmentBinding: Codable, Equatable {
     var signature_osstatus: Int?
     var entitlements_match: Bool?
     var error: PWRunnerEquipmentError?
+    // END GENERATED PORCELAIN PWRunnerEquipmentBinding
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case binding_id, role, source, implementation_identity, relative_path, path, status, reason
@@ -76,6 +82,7 @@ struct PWRunnerEquipmentBinding: Codable, Equatable {
 }
 
 struct PWRunnerEquipmentEntitlements: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerEquipmentEntitlements
     var entitlements_id: String
     var source: String
     var binding_ref: String
@@ -83,15 +90,19 @@ struct PWRunnerEquipmentEntitlements: Codable, Equatable {
     var status: String
     var raw_plist: String?
     var error: PWRunnerEquipmentError?
+    // END GENERATED PORCELAIN PWRunnerEquipmentEntitlements
 }
 
 struct PWRunnerEquipmentNativeObservation: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerEquipmentNativeObservation
     var operation: String
     var attempted: Bool
     var osstatus: Int?
+    // END GENERATED PORCELAIN PWRunnerEquipmentNativeObservation
 }
 
 struct PWRunnerEquipmentExecution: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerEquipmentExecution
     var status: String = "unobserved"
     var pid: Int?
     var parent_pid: Int?
@@ -104,6 +115,7 @@ struct PWRunnerEquipmentExecution: Codable, Equatable {
     var native_observations: [PWRunnerEquipmentNativeObservation] = []
     var reason: String? = "not_launched"
     var eligible: Bool = false
+    // END GENERATED PORCELAIN PWRunnerEquipmentExecution
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case status, pid, parent_pid, observed_at_monotonic_ns, path, cdhash, identifier, team_id
@@ -124,13 +136,15 @@ struct PWRunnerEquipmentExecution: Codable, Equatable {
 }
 
 struct PWRunnerActorEquipment: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerActorEquipment
     var requested: String?
     var resolved: String
     var binding_ref: String
     var required_entitlements: [String]
     var requirements_status: String = "unobserved"
     var missing_requirements: [String]?
-    var execution = PWRunnerEquipmentExecution()
+    var execution: PWRunnerEquipmentExecution = PWRunnerEquipmentExecution()
+    // END GENERATED PORCELAIN PWRunnerActorEquipment
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case requested, resolved, binding_ref, required_entitlements, requirements_status, missing_requirements, execution

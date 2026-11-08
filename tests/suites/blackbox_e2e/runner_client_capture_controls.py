@@ -43,7 +43,7 @@ def run_capture_controls(run):
         return document
 
     check('host_reply', baseline)
-    assert host_reply(capture(baseline)) == reply
+    assert host_reply(capture(baseline), allow_fixture_json=True) == reply
     null_optionals = copy.deepcopy(baseline)
     capture(null_optionals).update(error=None, submission_refusal=None)
     capture(null_optionals)['attempts'][0].update(error=None)

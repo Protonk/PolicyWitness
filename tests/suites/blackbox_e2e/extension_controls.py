@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from lifecycle_oracle import check_record
-from consumer import validate
+from consumer import validate_fixture as validate
 from blackbox import envelope_skeleton, recapture_host_reply
 from actor_evidence import validate_actor_evidence
 

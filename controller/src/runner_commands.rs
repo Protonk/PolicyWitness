@@ -13,6 +13,7 @@ use crate::app_layout::{BUNDLE_UNENTITLED_WORKER_REL, BUNDLE_VALIDATOR_REL, BUND
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
+use crate::porcelain_records::PWRunnerRunResult;
 use crate::runner_manager::{
     self, RunnerKind, RunnerOwnership, RunnerRecord, RunnerRegistry, RunnerScope, RunnerState,
 };
@@ -31,7 +32,7 @@ struct RunnerInstallData {
 #[derive(Serialize)]
 struct RunnerVerifyData {
     runner_client: Option<RunnerClientRun>,
-    runner_result: Option<Value>,
+    runner_result: Option<PWRunnerRunResult>,
     state: RunnerState,
     runner_id: Option<String>,
     service_name: String,
@@ -543,6 +544,18 @@ fn verify_request() -> Value {
 /// read only under the current response schema. Another or a malformed version
 /// is reported as the corresponding controller outcome with a null PID, never
 /// read under other rules.
+fn project_verify_typed_reply(runner_result: Option<&PWRunnerRunResult>) -> (Option<i64>, String) {
+    match runner_result {
+        Some(reply) => match crate::run_flow::reply_version(reply) {
+            crate::run_flow::ReplyVersion::Supported => (Some(reply.pid), reply.normalized_outcome.clone()),
+            crate::run_flow::ReplyVersion::Unsupported(_) => (None, "unsupported_runner_response".into()),
+            crate::run_flow::ReplyVersion::Malformed(_) => (None, "malformed_runner_response".into()),
+        },
+        None => (None, "runner_output_not_json".into()),
+    }
+}
+
+#[cfg(test)]
 fn project_verify_reply(runner_result: Option<&Value>) -> (Option<i64>, String) {
     match runner_result.map(crate::run_flow::reply_version) {
         None => (None, "runner_output_not_json".to_string()),
@@ -639,7 +652,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
                 (None, outcome.into(), 1, Some(error))
             }
             crate::run_flow::ReplyAdmission::Admitted => {
-                let (pid, outcome) = project_verify_reply(runner_result.as_ref());
+                let (pid, outcome) = project_verify_typed_reply(runner_result.as_ref());
                 let code = if outcome == "finished" { 0 } else { 1 };
                 (pid, outcome, code, None)
             }

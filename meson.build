@@ -101,6 +101,8 @@ if get_option('xpc')
   pwrunner_contract = files(
     'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
     'runner/Sources/PWRunnerCore/PWRunnerCoding.swift',
+    'runner/Sources/PWRunnerCore/PWPorcelain.swift',
+    'runner/Sources/PWRunnerCore/PWPorcelainRecords.swift',
     'runner/Sources/PWRunnerCore/PWRunnerTransport.swift',
     'runner/Sources/PWRunnerCore/PWRunnerRequest.swift',
     'runner/Sources/PWRunnerCore/PWRunnerExtension.swift',

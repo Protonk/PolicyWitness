@@ -18,7 +18,10 @@ use std::path::{Path, PathBuf};
 use crate::app_layout::app_root_from_current_exe;
 use crate::augments::{AugmentResolution, resolve_augments};
 use crate::cli;
+#[cfg(test)]
 use crate::disposition::{RunnerExecutionDiagnostics, execution_diagnostics};
+use crate::porcelain_admission::{self, TypedRunnerExecutionDiagnostics};
+use crate::porcelain_records::{PWRunnerRunResult, PWRunnerRequestFailure};
 use crate::dossier::{
     AppProvenance, Augmentation, Binaries, HostFacts, Imports, PolicyDossier, Specimen,
 };
@@ -39,7 +42,7 @@ const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 /// null. Acquisition/submission observations belong to the client capture. The optional
 /// request_failure is included only when supplied.
 #[derive(Serialize)]
-struct ExecutionData {
+struct ExecutionData<R: ReplyRecord = PWRunnerRunResult> {
     pub specimen: Specimen,
     pub policy_check: Option<PolicyCheckCapture>,
     /// The actor form's fallback compilations, one per apply actor in request
@@ -48,9 +51,9 @@ struct ExecutionData {
     pub actor_policy_checks: Option<Vec<ActorPolicyCheck>>,
     pub timeout_ms: Option<u64>,
     pub runner_client: Option<RunnerClientRun>,
-    pub runner_result: Option<Value>,
+    pub runner_result: Option<R>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_failure: Option<Value>,
+    pub request_failure: Option<RequestFailureProjection>,
 }
 
 /// One apply actor's fallback compilation capture.
@@ -61,16 +64,16 @@ pub(crate) struct ActorPolicyCheck {
 }
 
 #[derive(Serialize)]
-struct RunData {
+struct RunData<R: ReplyRecord = PWRunnerRunResult> {
     #[serde(flatten)]
-    execution: ExecutionData,
-    runner_sandbox_diagnostics: Option<RunnerExecutionDiagnostics>,
+    execution: ExecutionData<R>,
+    runner_sandbox_diagnostics: Option<R::Diagnostics>,
 }
 
 // Execution result and diagnostics are derived only from the admitted reply.
-struct CompletedExecution {
-    data: ExecutionData,
-    diagnostics: RunnerExecutionDiagnostics,
+struct CompletedExecution<R: ReplyRecord = PWRunnerRunResult> {
+    data: ExecutionData<R>,
+    diagnostics: R::Diagnostics,
     result: json_contract::JsonResult,
     exit_code: i32,
 }
@@ -85,7 +88,8 @@ pub enum ReplyVersion {
 /// Check a reply's `schema_version` before interpreting any of its records.
 /// A missing or noninteger version is malformed; another integer is
 /// unsupported. Nothing reads a reply under a previous version's rules.
-pub fn reply_version(reply: &Value) -> ReplyVersion {
+#[cfg(test)]
+fn legacy_reply_version(reply: &Value) -> ReplyVersion {
     match reply.get("schema_version") {
         None => ReplyVersion::Malformed("runner reply carries no schema_version".to_string()),
         Some(Value::Number(n)) if n.is_i64() || n.is_u64() => {
@@ -106,6 +110,7 @@ pub fn reply_version(reply: &Value) -> ReplyVersion {
 
 /// The optional compiler receipt has its own version and context. Check it
 /// only after the outer version is admitted, without inferring application.
+#[cfg(test)]
 fn compiled_profile_problem(reply: &Value) -> Option<&'static str> {
     if reply.get("applied_profile").is_some() {
         return Some("retired applied_profile field in current runner reply");
@@ -135,13 +140,61 @@ fn compiled_profile_problem(reply: &Value) -> Option<&'static str> {
     None
 }
 
+/// The runtime representation is generated typed evidence. The Value implementation
+/// below exists only to retain historical malformed-fixture comparison controls.
+pub(crate) trait ReplyRecord: Serialize {
+    type Diagnostics: Serialize;
+    fn version(&self) -> ReplyVersion;
+    fn outcome(&self) -> &str;
+    fn error(&self) -> Option<&str>;
+    fn request_failure(&self) -> Option<RequestFailureProjection>;
+    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics;
+}
+#[derive(Serialize)]
+#[serde(untagged)]
+pub(crate) enum RequestFailureProjection {
+    Controller(crate::request_patch::RequestFailure),
+    Runner(PWRunnerRequestFailure),
+    #[cfg(test)]
+    Comparison(Value),
+}
+impl ReplyRecord for PWRunnerRunResult {
+    type Diagnostics = TypedRunnerExecutionDiagnostics;
+    fn version(&self) -> ReplyVersion {
+        if self.schema_version != i64::from(json_contract::RESPONSE_SCHEMA_VERSION) {
+            return ReplyVersion::Unsupported(self.schema_version.into());
+        }
+        match porcelain_admission::admission_problem(self) {
+            Some(problem) => ReplyVersion::Malformed(problem), None => ReplyVersion::Supported,
+        }
+    }
+    fn outcome(&self) -> &str { &self.normalized_outcome }
+    fn error(&self) -> Option<&str> { self.error.as_deref() }
+    fn request_failure(&self) -> Option<RequestFailureProjection> {
+        self.request_failure.clone().map(RequestFailureProjection::Runner)
+    }
+    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics { porcelain_admission::execution_diagnostics(reply) }
+}
+#[cfg(test)]
+impl ReplyRecord for Value {
+    type Diagnostics = RunnerExecutionDiagnostics;
+    fn version(&self) -> ReplyVersion { legacy_reply_version(self) }
+    fn outcome(&self) -> &str { self.get("normalized_outcome").and_then(Value::as_str).unwrap_or("runner_output_not_json") }
+    fn error(&self) -> Option<&str> { self.get("error").and_then(Value::as_str) }
+    fn request_failure(&self) -> Option<RequestFailureProjection> {
+        self.get("request_failure").cloned().map(RequestFailureProjection::Comparison)
+    }
+    fn diagnostics(reply: Option<&Self>) -> Self::Diagnostics { execution_diagnostics(reply) }
+}
+pub(crate) fn reply_version<R: ReplyRecord>(reply: &R) -> ReplyVersion { reply.version() }
+
 /// The dossier and any execution records available before reply admission.
-fn execution_only(
+fn execution_only<R: ReplyRecord>(
     specimen: Specimen,
     timeout_ms: Option<u64>,
     runner_client: Option<RunnerClientRun>,
-    runner_result: Option<Value>,
-) -> RunData {
+    runner_result: Option<R>,
+) -> RunData<R> {
     RunData {
         execution: ExecutionData {
             specimen,
@@ -203,8 +256,8 @@ fn bad_request(
     timeout_ms: Option<u64>,
     error: RequestError,
 ) -> Result<RunOutput, String> {
-    let mut data = execution_only(specimen, timeout_ms, None, None);
-    data.execution.request_failure = Some(json!(error.failure));
+    let mut data = execution_only::<PWRunnerRunResult>(specimen, timeout_ms, None, None);
+    data.execution.request_failure = Some(RequestFailureProjection::Controller(error.failure));
     envelope(
         json_contract::JsonResult::new(false, 1, Some("bad_request"), Some(error.message)),
         &data,
@@ -229,7 +282,7 @@ pub fn print_escaped_tool_error(error: String) -> Result<(), String> {
 /// and how the client and fallback compiler are invoked. Production binds the
 /// real ones; a test binds counting or capturing closures around them and reads
 /// the rendered envelope.
-struct RunDependencies<'a> {
+struct RunDependencies<'a, R: ReplyRecord = PWRunnerRunResult> {
     pub app_root: &'a dyn Fn() -> Result<PathBuf, String>,
     pub load_manifest: &'a dyn Fn(&Path) -> Result<EvidenceManifest, String>,
     /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
@@ -240,7 +293,7 @@ struct RunDependencies<'a> {
         &str,
         u64,
         &RunnerConnectionKind,
-    ) -> Result<(RunnerClientRun, Option<Value>), String>,
+    ) -> Result<(RunnerClientRun, Option<R>), String>,
 }
 
 impl RunDependencies<'static> {
@@ -361,7 +414,7 @@ pub(crate) enum ReplyAdmission {
     Admitted,
 }
 
-pub(crate) fn admit_reply(client: &RunnerClientRun, reply: Option<&Value>) -> ReplyAdmission {
+pub(crate) fn admit_reply<R: ReplyRecord>(client: &RunnerClientRun, reply: Option<&R>) -> ReplyAdmission {
     if let Some(error) = client
         .request_delivery
         .as_ref()
@@ -388,11 +441,8 @@ pub(crate) fn admit_reply(client: &RunnerClientRun, reply: Option<&Value>) -> Re
     }
 }
 
-fn runner_outcome(reply: Option<&Value>) -> &str {
-    reply
-        .and_then(|v| v.get("normalized_outcome"))
-        .and_then(Value::as_str)
-        .unwrap_or("runner_output_not_json")
+fn runner_outcome<R: ReplyRecord>(reply: Option<&R>) -> &str {
+    reply.map(ReplyRecord::outcome).unwrap_or("runner_output_not_json")
 }
 
 /// The independent fallback compilation, requested only for an admitted
@@ -565,7 +615,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 /// One run through production orchestration: argument admission, one manifest
 /// load, runner selection, the dossier, the held request's delivery and the
 /// reply's admission. Every exit renders the uniform `kind: "run"` envelope.
-fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
+fn run<R: ReplyRecord>(args: &[OsString], deps: &RunDependencies<R>) -> Result<RunOutput, String> {
     let host = HostFacts::collect();
     let parsed = match parse_arguments(args) {
         Arguments::Help => return Ok(RunOutput::Help),
@@ -775,15 +825,14 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     )
 }
 
-fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
-    let diagnostics = execution_diagnostics(data.runner_result.as_ref());
+fn complete_execution<R: ReplyRecord>(mut data: ExecutionData<R>) -> CompletedExecution<R> {
+    let diagnostics = R::diagnostics(data.runner_result.as_ref());
     let runner_outcome = runner_outcome(data.runner_result.as_ref()).to_string();
     if runner_outcome == "bad_request" {
         data.request_failure = data
             .runner_result
             .as_ref()
-            .and_then(|r| r.get("request_failure"))
-            .cloned();
+            .and_then(ReplyRecord::request_failure);
     }
     let ok = runner_outcome == "finished";
     let exit_code = if ok { 0 } else { 1 };
@@ -794,8 +843,7 @@ fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
     } else if let Some(v) = data
         .runner_result
         .as_ref()
-        .and_then(|v| v.get("error"))
-        .and_then(|v| v.as_str())
+        .and_then(ReplyRecord::error)
     {
         Some(v.to_string())
     } else if let Some(v) = client_output.and_then(|o| o.stdout_capture_error.as_ref()) {
@@ -817,7 +865,7 @@ fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
     }
 }
 
-fn execution_envelope(execution: CompletedExecution) -> (json_contract::JsonResult, RunData, i32) {
+fn execution_envelope<R: ReplyRecord>(execution: CompletedExecution<R>) -> (json_contract::JsonResult, RunData<R>, i32) {
     let data = RunData {
         execution: execution.data,
         runner_sandbox_diagnostics: Some(execution.diagnostics),
@@ -855,7 +903,7 @@ mod tests {
         crate::runner_client::test_client_run(runner)
     }
 
-    fn execution_data(runner: Option<Value>) -> ExecutionData {
+    fn execution_data(runner: Option<Value>) -> ExecutionData<Value> {
         ExecutionData {
             specimen: specimen(),
             policy_check: None,
@@ -1632,7 +1680,7 @@ else:
             ReplyAdmission::Admitted
         ));
         assert!(matches!(
-            admit_reply(&intact, None),
+            admit_reply::<Value>(&intact, None),
             ReplyAdmission::Admitted
         ));
         match admit_reply(&intact, Some(&unsupported)) {
@@ -1654,7 +1702,7 @@ else:
         }
         // Failed local delivery retains the outer capture opaquely, without
         // recovering a host body, policy check or diagnostics.
-        let data = execution_only(specimen(), Some(7), Some(broken), None);
+        let data = execution_only::<Value>(specimen(), Some(7), Some(broken), None);
         let text = json_contract::render_envelope(
             "run",
             json_contract::JsonResult::new(false, 2, Some("tool_error"), Some("controlled".into())),
@@ -1755,7 +1803,7 @@ else:
             };
             let client = client_run(None);
             let (outcome, error) = client.failure().unwrap();
-            let mut data = execution_only(specimen(), Some(7), Some(client), None);
+            let mut data = execution_only::<Value>(specimen(), Some(7), Some(client), None);
             data.execution.policy_check = Some(capture);
             let text = json_contract::render_envelope(
                 "run",
@@ -3139,7 +3187,7 @@ else:
             }
         }
 
-        fn field_complete_run_envelope() -> (json_contract::JsonResult, RunData) {
+        fn field_complete_run_envelope() -> (json_contract::JsonResult, RunData<Value>) {
             let target = RunnerTarget {
                 kind: RunnerKind::Byoxpc,
                 connection: RunnerConnectionKind::MachService { privileged: false },
@@ -3310,10 +3358,10 @@ else:
                     }),
                     runner_result: Some(reply),
                     // Field-complete shape fixture, including an optional refusal record.
-                    request_failure: Some(
+                    request_failure: Some(RequestFailureProjection::Comparison(
                         json!({"code": "unknown_field", "path": ["policy", "typo"],
                         "expected_schema": json_contract::REQUEST_SCHEMA_VERSION}),
-                    ),
+                    )),
                 },
                 runner_sandbox_diagnostics: Some(RunnerExecutionDiagnostics {
                     process_disposition: "clean_exit",

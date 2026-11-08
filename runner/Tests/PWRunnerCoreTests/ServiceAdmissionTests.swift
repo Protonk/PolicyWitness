@@ -8,6 +8,9 @@ private func reserveService(_ service: PWRunnerService) -> PWRunnerControlReply 
     return result!
 }
 
+// Admission ownership controls select the retained JSON comparison writer so
+// their existing semantic assertions remain independent of the prototype codec.
+// The separate default-writer control below exercises the production choice.
 private final class AdmissionObservations {
     let lock = NSLock()
     var entries = 0
@@ -24,6 +27,23 @@ private final class AdmissionObservations {
 
 func runServiceAdmissionTests(_ tk: TestKit) {
     tk.group("host semantic admission ownership") {
+        tk.run("the service defaults to a binary reply after admission") {
+            let parsed = PWRunnerRunSpec(specimen_id: "binary-default",
+                policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"))
+            let expected = PWRunnerRunResult(specimen_id: parsed.specimen_id, rc: 1,
+                normalized_outcome: NormalizedOutcome.workerSpawnFailed, pid: 42,
+                policy_format: "sbpl", steps: [])
+            var bytes: Data?
+            let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: {},
+                scheduleExpiry: { _, _ in }, orchestrate: { _, _, _, _, _ in expected })
+            let grant = reserveService(service)
+            service.runReservedSpecimen(try pwRunnerEncodeJSON(parsed), reservation: grant.reservation_id!) {
+                isResult, data in
+                if isResult { bytes = data }
+            }
+            try expectEqual(bytes, pwRunnerPorcelainReplyData(expected))
+            try expectTrue(bytes?.starts(with: Data("PWP1".utf8)) == true)
+        }
         tk.run("the accepted actor plan is constructed once and reaches orchestration") {
             let parsed = PWRunnerRunSpec(specimen_id: "single-plan", policy: nil,
                 phases: [PWRunnerPhase(phase_id: "visit", actions: [], actor_id: "A")],
@@ -46,7 +66,7 @@ func runServiceAdmissionTests(_ tk: TestKit) {
             var executions = 0, replies: [Data] = []
             let expected = PWRunnerRequestFailure(code: "wrong_owner_reference", path: ["phases", "2", "actions", "1", "extension", "token_ref"])
             let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: {}, scheduleExpiry: { _, _ in },
-                admit: { _ in .refused(expected) }, orchestrate: { _, _, _, _, _ in
+                admit: { _ in .refused(expected) }, report: { pwRunnerReplyData($0) }, orchestrate: { _, _, _, _, _ in
                     executions += 1
                     return PWRunnerRunResult(specimen_id: "unexpected", rc: 1, normalized_outcome: NormalizedOutcome.runnerFailed,
                         pid: Int(getpid()), policy_format: nil, steps: [])
@@ -64,7 +84,7 @@ func runServiceAdmissionTests(_ tk: TestKit) {
         func service(_ state: PWRunnerAdmission, _ observations: AdmissionObservations,
                      entered: DispatchSemaphore? = nil, release: DispatchSemaphore? = nil) -> PWRunnerService {
             PWRunnerService(admission: state, scheduleExit: { observations.exit() }, scheduleExpiry: { _, _ in },
-                orchestrate: { parsed, hash, bundle, _, validator in
+                report: { pwRunnerReplyData($0) }, orchestrate: { parsed, hash, bundle, _, validator in
                     observations.entry(); entered?.signal()
                     if let release { _ = release.wait(timeout: .now() + 5) }
                     return CWorkerOrchestrator.run(admitted: parsed, policyHash: hash, bundleId: bundle,
@@ -179,7 +199,7 @@ func runValidatorSelectionTests(_ tk: TestKit) {
                     probe_plan: [], _test_overrides: override.map { PWRunnerTestOverrides(validator_executable_path: $0) })
                 var selected = [String](), replies = [Data](), exits = 0
                 let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: { exits += 1 },
-                    orchestrate: { request, hash, bundle, _, validator in
+                    report: { pwRunnerReplyData($0) }, orchestrate: { request, hash, bundle, _, validator in
                         selected.append(validator)
                         return CWorkerOrchestrator.run(admitted: request, policyHash: hash, bundleId: bundle,
                             workerExecutablePath: "/nonexistent/validator-selection-worker", validatorExecutablePath: validator)

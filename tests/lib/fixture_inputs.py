@@ -25,7 +25,7 @@ import markdown_reader  # noqa: E402
 import repository_tree  # noqa: E402
 from repository_tree import directory, pattern, required  # noqa: E402
 
-GENERATORS = ('contract', 'worker_identity', 'limits', 'architecture', 'build', 'footprint')
+GENERATORS = ('contract', 'worker_identity', 'limits', 'architecture', 'build', 'footprint', 'porcelain')
 # What build.sh admits and reads before its first generator check: the script, the lock front end and its Python
 # resolver, the SDK guard, the plists and entitlements it validates, and the augment profiles it inventories.
 BUILD_ENTRY = (required('tests/lib/pytest_resources.py'), required('tests/lib/pytest_support.py'), required('build.sh'), required('tests/lib/checkout_lock.py'), required('tests/lib/checkout_lock.sh'),

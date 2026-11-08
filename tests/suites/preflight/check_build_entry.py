@@ -62,6 +62,7 @@ class BuildEntryTests(receipts.TestCase):
         """A checkout in which every check before the signing identity passes."""
         extra = (LIMITS_FILES | set(fixture_inputs.generator_inputs(ROOT, 'architecture'))
                  | set(fixture_inputs.generator_inputs(ROOT, 'footprint'))
+                 | set(fixture_inputs.generator_inputs(ROOT, 'porcelain'))
                  | set(fixture_inputs.generator_inputs(ROOT, 'build')) | set(fixture_inputs.build_script_inputs(ROOT))
                  | set(fixture_inputs.generator_inputs(ROOT, 'worker_identity')) | {'Info.plist', 'meson.build', 'meson.options'})
         return self.checkout(extra=extra)
@@ -298,6 +299,17 @@ class BuildEntryTests(receipts.TestCase):
         result, destination = self.build(root, {'IDENTITY': ''})
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('stale footprint document', result.stderr)
+        self.assertIn('Checking contract versions', result.stdout)
+        self.assertNotIn('Checking build documentation', result.stdout)
+        self.assertFalse(destination.exists())
+
+    def test_build_refuses_a_stale_porcelain_copy_before_compiling(self):
+        root = self.build_checkout()
+        document = root / 'tests/lib/porcelain_schema.py'
+        document.write_text(document.read_text() + '\n# stale control\n')
+        result, destination = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('stale porcelain output', result.stderr)
         self.assertIn('Checking contract versions', result.stdout)
         self.assertNotIn('Checking build documentation', result.stdout)
         self.assertFalse(destination.exists())

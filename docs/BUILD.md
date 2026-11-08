@@ -1086,8 +1086,10 @@ over <!-- span build.meson_options -->21<!-- /span -->
 options, <!-- span build.signing -->7<!-- /span --> signing calls
 and <!-- span build.knobs -->3<!-- /span --> knobs.
 
+Cargo and Meson compilation each use at most two concurrent jobs.
+
 Before compiling, the script runs every generator's check: limits, contract,
-architecture, this document, and the identity
+architecture, footprint, porcelain, this document, and the identity
 ([`check_banner_order`](../tests/suites/source_drift/build_rules.py) for the
 order, [`build_checks`](../tests/suites/source_drift/generators.py) for the
 set). Each writes nothing and exits 1 on a stale copy. This document's check

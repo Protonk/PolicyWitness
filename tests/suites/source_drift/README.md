@@ -233,8 +233,15 @@ bounds after peer and parent headings, code labels, images and the refusal.
 ### Generator contracts
 
 The `generator_contract` case in [generators.py](generators.py) holds these
-invariants across the six generators. Per-generator cases retain their shape,
+invariants across the registered generators. Per-generator cases retain their shape,
 stale-copy, marker and build-refusal controls.
+
+The porcelain schema, [docs/porcelain.json](../../../docs/porcelain.json),
+is rendered by [docs/generate_porcelain.py](../../../docs/generate_porcelain.py).
+It owns Swift stored-field regions and generated Swift writers, Rust records and
+readers, and Python structural tables. The hand-written Python reader checks
+wire structure independently; the existing semantic readers remain separate.
+The build refuses stale generated porcelain outputs before compilation.
 
 The footprint manifest, [docs/footprint.json](../../../docs/footprint.json),
 is rendered by [docs/generate_footprint.py](../../../docs/generate_footprint.py).
@@ -431,7 +438,7 @@ import of either package anywhere else.
   suite prints them. Declarations are a reviewed account of what is read,
   not a claim that every read is declared or an observation of subprocess
   reads: review new reads and imports against them. The generic generator
-  fixture holds the union of the six generators' inputs plus sentinel
+  fixture holds the union of the registered generators' inputs plus sentinel
   files no generator owns, and snapshots cover the whole fixture.
 - The generator contract case checks each generator's declarations against
   an independently listed set of known inputs, follows a new citation, a new
@@ -642,3 +649,15 @@ script, a wrapper and a newly added script to their checks, each named once.
 Its shell inventory is the pruned test-shell scope described under the
 invariants, checked against a fixture of its own. Runtime preservation and contained resolver refusals belong to
 `preflight/build_provenance_controls` and `contract_versions`.
+
+### Porcelain structural reader
+
+`porcelain_codec` feeds manually assembled binary values to
+[the independent Python reader](../../lib/porcelain.py). Controls reject wrong
+kinds and widths, signed and unsigned range overflow, duplicate or unordered
+tags and map keys, unknown records and variant cases, invalid UTF-8, truncated
+or trailing bytes, impossible collection counts, stale fingerprints and excess
+depth. Positive controls distinguish absent fields, explicit public nulls and
+zero, preserve full-width integers and expose uninterpreted bytes as base64.
+These establish structural admission, not witness semantics or native behavior.
+The retained log is `suites/source_drift/porcelain_codec/artifacts/porcelain.log`.

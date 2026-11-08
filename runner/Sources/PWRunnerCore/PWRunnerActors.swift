@@ -77,11 +77,13 @@ struct PWRunnerAfterTermination: Codable {
 }
 
 struct PWRunnerPreparationFailure: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerPreparationFailure
     var stage: String
     var code: String
     var actor_id: String?
     var binding_ref: String?
     var reason: String?
+    // END GENERATED PORCELAIN PWRunnerPreparationFailure
 }
 
 // MARK: - Authority exchange vocabulary (shared with the reply's readers)
@@ -107,23 +109,24 @@ enum PWTransferAck {
 
 /// Launch context the host arranged for one actor process.
 struct PWRunnerActorLaunch: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerActorLaunch
     var pid: Int
     var parent_pid: Int
     var environment: String = "empty"
     var standard_streams: String = "stdin_policy_pipe_stdout_stderr_null_device"
     var inherited_descriptors: [Int] = [0, 3, 4]
+    // END GENERATED PORCELAIN PWRunnerActorLaunch
 }
 
 /// One actor's process, policy and application account. The subprocess record
 /// is the same record a single-worker reply carries, with its disposition.
 struct PWRunnerActorResult: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerActorResult
     var actor_id: String
     var index: Int
     var mode: String
     var policy_format: String?
-    /// Host hash of the submitted (controller-resolved) source bytes.
     var policy_sha256: String?
-    /// The worker's own hash of the bytes it read before compiling, when published.
     var policy_received_sha256: String?
     var setup_status: String
     var applied: Bool?
@@ -135,10 +138,14 @@ struct PWRunnerActorResult: Codable {
     var equipment: PWRunnerActorEquipment? = nil
     var application: PWRunnerActorApplication? = nil
     var owned_reap: PWOwnedReapObservation? = nil
+    // END GENERATED PORCELAIN PWRunnerActorResult
+    /// Host hash of the submitted (controller-resolved) source bytes.
+    /// The worker's own hash of the bytes it read before compiling, when published.
 }
 
 /// Token, delivery and handle tables, keyed by the request's references.
 struct PWRunnerTokenRecord: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerTokenRecord
     var token_ref: String
     var actor_id: String
     var step_id: String
@@ -146,8 +153,10 @@ struct PWRunnerTokenRecord: Codable {
     var status: String
     var token_length: Int?
     var last_use_step_id: String?
+    // END GENERATED PORCELAIN PWRunnerTokenRecord
 }
 struct PWRunnerDeliveryRecord: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerDeliveryRecord
     var delivery_ref: String
     var token_ref: String
     var source_actor_id: String
@@ -157,8 +166,10 @@ struct PWRunnerDeliveryRecord: Codable {
     var delivered_length: Int?
     var equality: String?
     var last_use_step_id: String?
+    // END GENERATED PORCELAIN PWRunnerDeliveryRecord
 }
 struct PWRunnerHandleRecord: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerHandleRecord
     var handle_ref: String
     var delivery_ref: String
     var actor_id: String
@@ -168,11 +179,14 @@ struct PWRunnerHandleRecord: Codable {
     var raw_equal_handles: [String]
     var release_step_id: String?
     var release_attempted: Bool
+    // END GENERATED PORCELAIN PWRunnerHandleRecord
 }
 struct PWRunnerResourceTables: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerResourceTables
     var tokens: [PWRunnerTokenRecord]
     var deliveries: [PWRunnerDeliveryRecord]
     var handles: [PWRunnerHandleRecord]
+    // END GENERATED PORCELAIN PWRunnerResourceTables
 }
 
 /// Host-measured intervals of one actor-form visit, in milliseconds on the
@@ -181,26 +195,31 @@ struct PWRunnerResourceTables: Codable {
 /// charged to it. These are scheduling and publication intervals, not native
 /// call latencies.
 struct PWRunnerVisitTiming: Codable, Equatable {
+    // BEGIN GENERATED PORCELAIN PWRunnerVisitTiming
     var activation_to_arrival_ms: UInt64?
     var collection_ms: UInt64?
     var arrival_to_release_ms: UInt64?
     var release_to_completion_ms: UInt64?
+    // END GENERATED PORCELAIN PWRunnerVisitTiming
 }
 
 /// The actor form's schedule account: the measured setup and execution waits
 /// with their allowances, the shared lifetime budget, and whether the schedule
 /// was cancelled.
 struct PWRunnerScheduleRecord: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerScheduleRecord
     var setup_wait: PWHostWait?
     var execution_wait: PWHostWait?
     var lifetime_budget_ms: Int
     var collection_budget_ms: Int
     var cancelled: String?
+    // END GENERATED PORCELAIN PWRunnerScheduleRecord
 }
 
 /// One explicit transfer: an apparatus action with host and actor provenance,
 /// never a native sandbox call. No native return or errno is attached.
 struct PWRunnerTransferRecord: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerTransferRecord
     var phase_id: String
     var step_id: String
     var source_actor_id: String
@@ -215,6 +234,7 @@ struct PWRunnerTransferRecord: Codable {
     var source_acknowledged: Bool
     var status: String
     var lifecycle: PWAttemptLifecycle?
-    /// The host's wait for the recipient's acknowledgement, when a copy was made.
     var recipient_wait: PWHostWait?
+    // END GENERATED PORCELAIN PWRunnerTransferRecord
+    /// The host's wait for the recipient's acknowledgement, when a copy was made.
 }

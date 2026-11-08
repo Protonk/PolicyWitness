@@ -110,12 +110,46 @@ private func authorizedCaller(_ connection: NSXPCConnection) -> Bool {
     return true
 }
 
-/// The XPC reply boundary owns degradation, not the general-purpose encoder.
-/// The encoder parameter is an internal test seam; no request selects it.
+/// Retained JSON comparison control. Production replies use the typed binary path.
 func pwRunnerReplyData(_ result: PWRunnerRunResult,
                        encode: (PWRunnerRunResult) throws -> Data = { try pwRunnerEncodeJSON($0) }) -> Data {
-    do { return try encode(result) }
-    catch {
+    pwRunnerReportData(result, encode: encode, minimal: { result, diagnostic in
+        // Independent of Codable, the rich result writer and semantic admission.
+        let minimal: [String: Any] = [
+            "schema_version": PWContract.responseSchema, "specimen_id": result.specimen_id,
+            "run_kind": result.run_kind as Any? ?? NSNull(),
+            "rc": 1, "normalized_outcome": NormalizedOutcome.runnerReportingFailed,
+            "error": diagnostic, "pid": result.pid,
+            "bundle_id": result.bundle_id as Any? ?? NSNull(),
+            "policy_format": result.policy_format as Any? ?? NSNull(),
+            "policy_sha256": result.policy_sha256 as Any? ?? NSNull(), "steps": [], "phases": [],
+            "reporting_failure": [
+                "origin": "runner_host", "diagnostic": diagnostic,
+                "original_rc": result.rc, "original_normalized_outcome": result.normalized_outcome,
+                "original_error": result.error as Any? ?? NSNull(), "evidence_retained": false
+            ]
+        ]
+        return try JSONSerialization.data(withJSONObject: minimal, options: [.sortedKeys])
+    })
+}
+
+/// The transport boundary admits typed evidence before choosing a writer.
+/// The closures are internal failure controls; requests cannot select them.
+func pwRunnerPorcelainReplyData(_ result: PWRunnerRunResult,
+    encode: (PWRunnerRunResult) throws -> Data = { try pwPorcelainEncode($0) },
+    minimal: (PWRunnerRunResult, String) throws -> Data = { result, diagnostic in
+        try pwPorcelainEncode(PWMinimalPorcelainReply(original: result, diagnostic: diagnostic))
+    }) -> Data {
+    pwRunnerReportData(result, encode: encode, minimal: minimal)
+}
+
+private func pwRunnerReportData(_ result: PWRunnerRunResult,
+    encode: (PWRunnerRunResult) throws -> Data,
+    minimal: (PWRunnerRunResult, String) throws -> Data) -> Data {
+    do {
+        try result.validateForReporting()
+        return try encode(result)
+    } catch {
         let diagnostic: String
         if case EncodingError.invalidValue(_, let context) = error {
             diagnostic = context.debugDescription
@@ -130,32 +164,61 @@ func pwRunnerReplyData(_ result: PWRunnerRunResult,
         failed.reporting_failure = PWRunnerReportingFailure(diagnostic: diagnostic,
             original_rc: result.rc, original_normalized_outcome: result.normalized_outcome,
             original_error: result.error, evidence_retained: true)
-        for index in failed.steps.indices {
-            failed.steps[index].comparison = nil
-        }
-        do { return try encode(failed) }
-        catch {
-            // A failure even after removing derived claims must be explicit.
-            // This backstop uses only JSON-native scalars/containers, independent
-            // of every result encoder and its invariants. There are no floats,
-            // custom objects or non-string keys that JSONSerialization can reject.
+        for index in failed.steps.indices { failed.steps[index].comparison = nil }
+        do {
+            try failed.validateForReporting()
+            return try encode(failed)
+        } catch {
             let finalDiagnostic = "\(diagnostic); evidence-preserving encoding also failed: \(error)"
-            let minimal: [String: Any] = [
-                "schema_version": PWContract.responseSchema, "specimen_id": result.specimen_id,
-                "run_kind": result.run_kind as Any? ?? NSNull(),
-                "rc": 1, "normalized_outcome": NormalizedOutcome.runnerReportingFailed,
-                "error": finalDiagnostic, "pid": result.pid,
-                "bundle_id": result.bundle_id as Any? ?? NSNull(),
-                "policy_format": result.policy_format as Any? ?? NSNull(),
-                "policy_sha256": result.policy_sha256 as Any? ?? NSNull(), "steps": [], "phases": [],
-                "reporting_failure": [
-                    "origin": "runner_host", "diagnostic": finalDiagnostic,
-                    "original_rc": result.rc, "original_normalized_outcome": result.normalized_outcome,
-                    "original_error": result.error as Any? ?? NSNull(), "evidence_retained": false
-                ]
-            ]
-            return try! JSONSerialization.data(withJSONObject: minimal, options: [.sortedKeys])
+            // If even the independent scalar report fails, an empty receipt is
+            // explicitly undecodable by the client/controller. It cannot claim
+            // a successful result or evidence retention. Keep that outer failure
+            // observable instead of crashing or trying the failed rich writer again.
+            return (try? minimal(result, finalDiagnostic)) ?? Data()
         }
+    }
+}
+
+/// These backstops deliberately avoid the generated full-result writers and all
+/// rich evidence. The schema still owns their record identities and field tags.
+private struct PWMinimalPorcelainFailure: PWPorcelainWritable {
+    static var porcelainRecordID: UInt16 { PWRunnerReportingFailure.porcelainRecordID }
+    let original: PWRunnerRunResult
+    let diagnostic: String
+    func porcelainWrite() throws -> Data {
+        typealias Tag = PWRunnerReportingFailure.PorcelainTag
+        var w = PWPorcelainRecordWriter(Self.porcelainRecordID)
+        try w.field(Tag.origin, "runner_host")
+        try w.field(Tag.diagnostic, diagnostic)
+        try w.field(Tag.original_rc, original.rc)
+        try w.field(Tag.original_normalized_outcome, original.normalized_outcome)
+        try w.field(Tag.original_error, original.error)
+        try w.field(Tag.evidence_retained, false)
+        return try w.finish()
+    }
+}
+
+private struct PWMinimalPorcelainReply: PWPorcelainWritable {
+    static var porcelainRecordID: UInt16 { PWRunnerRunResult.porcelainRecordID }
+    let original: PWRunnerRunResult
+    let diagnostic: String
+    func porcelainWrite() throws -> Data {
+        typealias Tag = PWRunnerRunResult.PorcelainTag
+        var w = PWPorcelainRecordWriter(Self.porcelainRecordID)
+        try w.field(Tag.schema_version, PWContract.responseSchema)
+        try w.field(Tag.specimen_id, original.specimen_id)
+        try w.field(Tag.run_kind, original.run_kind)
+        try w.field(Tag.rc, 1)
+        try w.field(Tag.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
+        try w.field(Tag.error, diagnostic)
+        try w.field(Tag.pid, original.pid)
+        try w.field(Tag.bundle_id, original.bundle_id)
+        try w.field(Tag.policy_format, original.policy_format)
+        try w.field(Tag.policy_sha256, original.policy_sha256)
+        try w.field(Tag.steps, [PWRunnerStepResult]())
+        try w.field(Tag.phases, [PWRunnerPhaseResult]())
+        try w.field(Tag.reporting_failure, PWMinimalPorcelainFailure(original: original, diagnostic: diagnostic))
+        return try w.finish()
     }
 }
 
@@ -217,6 +280,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
     private let scheduleExpiry: (Int, @escaping () -> Void) -> Void
     private let admit: (PWRunnerRunSpec) -> SpecimenAdmission
     private let orchestrate: (AdmittedSpecimen, String, String?, String, String) -> PWRunnerRunResult
+    private let report: (PWRunnerRunResult) -> Data
 
     // These boundaries let tests observe entry and retirement without exiting
     // the test host. No request selects them; test orchestration still executes
@@ -229,6 +293,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
              DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(delay), execute: action)
          },
          admit: @escaping (PWRunnerRunSpec) -> SpecimenAdmission = admitSpecimen,
+         report: @escaping (PWRunnerRunResult) -> Data = { pwRunnerPorcelainReplyData($0) },
          orchestrate: @escaping (AdmittedSpecimen, String, String?, String, String) -> PWRunnerRunResult = {
              CWorkerOrchestrator.run(admitted: $0, policyHash: $1, bundleId: $2,
                  workerExecutablePath: $3, validatorExecutablePath: $4)
@@ -237,6 +302,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
         self.scheduleExit = scheduleExit
         self.scheduleExpiry = scheduleExpiry
         self.admit = admit
+        self.report = report
         self.orchestrate = orchestrate
         super.init()
     }
@@ -296,7 +362,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
         func replyAndExit(_ result: PWRunnerRunResult) {
-            let data = pwRunnerReplyData(result)
+            let data = report(result)
             let retire = admission.complete(owner: connectionID, token: reservation)
             reply(true, data)
             // Allow the XPC reply to flush before exiting the process.

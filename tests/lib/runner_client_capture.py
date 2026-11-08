@@ -1,4 +1,4 @@
-"""Independent admission of protocol-2 client observations and exact host bytes.
+"""Independent admission of current-protocol client observations and exact host bytes.
 
 This reader never treats a client terminal or a reservation control as a host
 RunResult. Unsupported versions stop admission before descendant inspection.
@@ -12,6 +12,7 @@ import re
 import uuid
 
 import contract
+import porcelain
 
 REPLY_BYTES = 92 * 1024 * 1024
 U64_MAX = 2**64 - 1
@@ -315,7 +316,7 @@ def validate_capture(value):
     return errors
 
 
-def validate_client(client, runner):
+def validate_client(client, runner, *, allow_fixture_json=False):
     """Check controller admission/projection without interpreting rejected bodies."""
     if client is None:
         return [] if runner is None else ['host result requires an accepted runner client capture']
@@ -376,7 +377,7 @@ def validate_client(client, runner):
             errors.append('client observations cannot supply a host result or host-byte diagnostics')
         return errors
     try:
-        parsed = host_reply(capture)
+        parsed = host_reply(capture, allow_fixture_json=allow_fixture_json)
     except ValueError:
         if runner is not None or not isinstance(reply_error, str) or not reply_error:
             errors.append('unreadable host bytes require null host result and a host-byte diagnostic')
@@ -389,7 +390,7 @@ def validate_client(client, runner):
     return errors
 
 
-def host_reply(value):
+def host_reply(value, *, allow_fixture_json=False):
     """Parse exact admitted complete host bytes, without reading host semantics."""
     errors = validate_capture(value)
     if errors:
@@ -401,8 +402,10 @@ def host_reply(value):
         raise ValueError('host reply bytes are truncated')
     try:
         raw = base64.b64decode(reply['data_base64'], validate=True)
-        def invalid_constant(text):
-            raise ValueError('non-JSON numeric constant ' + text)
-        return json.loads(raw.decode('utf-8'), parse_constant=invalid_constant)
+        if allow_fixture_json and raw.lstrip().startswith((b'{', b'[')):
+            def invalid_constant(text):
+                raise ValueError('non-JSON numeric constant ' + text)
+            return json.loads(raw.decode('utf-8'), parse_constant=invalid_constant)
+        return porcelain.decode(raw, 'reply')
     except (UnicodeDecodeError, ValueError, binascii.Error) as error:
-        raise ValueError('host reply bytes are not UTF-8 JSON: ' + str(error)) from error
+        raise ValueError('host reply bytes are not admitted porcelain: ' + str(error)) from error

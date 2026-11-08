@@ -28,12 +28,14 @@ func eligibleOrderedStep(stepId: String, query: PWRunnerSandboxCheckResult,
 /// the planner's exclusion or lifecycle limitations. It asserts nothing about
 /// agreement or disagreement between prediction and enforcement.
 struct PWRunnerComparison: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerComparison
     var observation: String
     var observation_basis: String
     var operation_relation: String
     var target_relation: String
     var order: String
     var limitations: [String]
+    // END GENERATED PORCELAIN PWRunnerComparison
 
     /// The `limitations` vocabulary: the planner's exclusion codes and the
     /// lifecycle entries. The encoder rejects any other string.
@@ -54,15 +56,17 @@ struct PWRunnerComparison: Codable {
 }
 
 struct PWRunnerStepResult: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerStepResult
     var phase_id: String
     var step_id: String
     var sandbox_check: PWRunnerSandboxCheckResult
     var attempt: PWRunnerAttemptResult
+    var comparison: PWRunnerComparison?
+    var actor_id: String?
+    // END GENERATED PORCELAIN PWRunnerStepResult
     /// Present on every step of an ordinary reply; withheld by a
     /// `runner_reporting_failed` reply.
-    var comparison: PWRunnerComparison?
     /// Actor form: the actor whose process ran this step.
-    var actor_id: String?
 
     init(
         step_id: String,
@@ -115,13 +119,15 @@ struct PWRunnerStepResult: Codable {
 /// an absent observation is unknown, not false. Policy-write failures retain
 /// partial child observations.
 struct PWRunnerOrdering: Codable {
+    // BEGIN GENERATED PORCELAIN PWRunnerOrdering
     var collection_closed_before_proceed: Bool
     var proceed_set: Bool
     var proceed_observed: Bool
     var validator_disposition: String
-    /// Ownership through acknowledgement, not the eventual cleanup outcome.
     var worker_lifetime_established: Bool
     var protocol_violations: [String]
+    // END GENERATED PORCELAIN PWRunnerOrdering
+    /// Ownership through acknowledgement, not the eventual cleanup outcome.
 
     var chainEstablished: Bool {
         collection_closed_before_proceed && proceed_set && proceed_observed

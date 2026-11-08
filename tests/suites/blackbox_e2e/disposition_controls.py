@@ -238,7 +238,7 @@ def expected_fixture_controls(out):
     import lifecycle_contract as C
     import lifecycle_oracle as O
     from lifecycle_adapter import read_lifecycle
-    from consumer import validate
+    from consumer import validate_fixture as validate
     out.mkdir(parents=True, exist_ok=True)
     fixtures = ROOT / 'tests/fixtures/disposition'
     expected = json.loads((fixtures / 'current/constructed_deadline.json').read_text())
