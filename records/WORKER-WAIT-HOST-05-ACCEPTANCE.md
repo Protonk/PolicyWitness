@@ -31,7 +31,7 @@ holds trials until exact identities are recorded and the window announced.
 Compiler concurrency is at most two; no concurrent native work is scheduled.
 
 Use the existing excluded first execution per exact staged executable and
-rapid [0, 250 ms] / idle [1000, 1250 ms] actual-gap rules. Preserve every trial,
+rapid [0, 100 ms] / idle [1000, 1250 ms] actual-gap rules. Preserve every trial,
 exclusion, contrary observation and power/load/sleep receipt. Require complete
 declared coverage and the existing 0.5 ms instrument gate; missing information
 withholds claims rather than relaxing these rules. The separate flavour blocks
@@ -93,3 +93,8 @@ while these identities are committed.
 | `tests/suites/witness_contract/worker_wait_pilot_reader.py` | `3615d6e6679d1b08d0f027c5afd7cd415dd87359ca939f695f776efe58de904c` |
 | `tests/suites/witness_contract/check_worker_wait_pilot.py` | `1d52d5f6f729ea4f9e38f1799ec60d719d43eafcd7f60b0bc3f8c0c9a1d4d1e5` |
 | `tests/fixtures/worker_wait/host_stamps.py` | `0cf559a72d2dde5c961c9ec9858250aa0331d02c061c7af62f1f46d250ac733e` |
+
+Pacing prose correction: the frozen driver schedules use a rapid eligible gap
+of [0, 100 ms], not the 250 ms initially transcribed here. The hashed schedules
+and retained trial conditions already carry 100 ms; every credited trial met
+that stricter range. No selection, exclusion or result was changed.

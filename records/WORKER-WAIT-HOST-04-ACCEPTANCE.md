@@ -112,7 +112,7 @@ prerequisite. Pin/prune decisions wait for acceptance.
   each of six cells and two regimes give 120 accepted trial obligations.
   Exactly one initial execution per staged executable is excluded; the ordinary
   and actor warm cells also establish those separate paths. Pacing uses the
-  existing rapid actual-gap range [0, 250 ms] and idle [1000, 1250 ms].
+  existing rapid actual-gap range [0, 100 ms] and idle [1000, 1250 ms].
   No excluded trial is silently replaced inside this run. AC power and low-power
   mode are recorded per trial; transitions, sleep and incomplete coverage withhold
   credit. Alternating pair order and all contrary pairs are retained.
@@ -259,3 +259,8 @@ introduced. Retention is finalized with the remaining host round.
 | `dist/PolicyWitness.app/Contents/Resources/Evidence/provenance.json` | `7978f15445090ad6c712860b2dacdfd192e17c5a2f0af9a60a83da462596f722` |
 | `/private/tmp/pw-host-followon-tools-v2/swiftc` | `c46dc9c6964458e43429809332a192ff8b8b3271af7e724c8068696709de66a3` |
 | `/private/tmp/pw-host-followon-tools-v2/swift` | `480fdec512a2b1075ccf0ddb3bfaba0eca6e1a33c02be99a45a2974932fee1aa` |
+
+Pacing prose correction: the frozen driver schedules use a rapid eligible gap
+of [0, 100 ms], not the 250 ms initially transcribed here. The hashed schedules
+and retained trial conditions already carry 100 ms; every credited trial met
+that stricter range. No selection, exclusion or result was changed.
