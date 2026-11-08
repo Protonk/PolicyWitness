@@ -5,7 +5,6 @@ The candidate changes only the selected unsuccessful tail in a retained copy of
 the worker translation unit. No source app or production source is modified.
 """
 import argparse
-import hashlib
 import importlib.util
 import json
 import os
@@ -115,6 +114,10 @@ def compare(rows, role, minimum):
             b, c = [next(r for r in pair if r['side'] == side) for side in ('baseline', 'candidate')]
             assert b['eligible'] and c['eligible'], 'missing eligible pair; no automatic replacement'
             assert b['power'] == c['power'], 'unmatched power'
+            for item in pair:
+                assert item['measurement']['repetition'] == repetition
+                assert item['measurement']['conditions']['regime'] == regime
+                assert item['measurement']['conditions']['side'] == item['side']
             bi, ci = [rate_interval(r['measurement'], role) for r in (b, c)]
             gain = bi['lower'] - ci['upper']
             pairs.append(dict(regime=regime, repetition=repetition, baseline=bi, candidate=ci,
@@ -138,6 +141,7 @@ def main():
     a = p.parse_args()
     assert not a.gate.exists()
     a.out = a.out.resolve(); a.app = a.app.resolve()
+    source_identity = staged_identity(a.app)
     mut = module('wait_cost_substitution', HERE / 'opt_in/mutations.py')
     source_path = ROOT / 'controller/tools/pw_probe_runner/pw_probe_runner.c'
     source = source_path.read_text()
@@ -164,11 +168,14 @@ def main():
         staging = a.out / 'staging' / side
         apps[side] = mut.signed_copy(source_app, staging, out, a.identity, worker)
     identities = {side: staged_identity(app) for side, app in apps.items()}
+    assert staged_identity(a.app) == source_identity, 'source app changed during staging'
     prepared = dict(version=1, role=a.role, candidate=a.candidate, identities=identities,
                     minimum_fraction=a.minimum, window_seconds=a.window, cpu_only=True,
                     source_sha256=sha256(source_path), reader_sha256=sha256(Path(__file__)),
                     neutral_reader_sha256=sha256(HERE / 'check_held_phase_footprint.py'),
                     source_app_unchanged=True,
+                    source_app_identity=source_identity,
+                    trial_watchdog_seconds=60, cleanup_reserve_seconds=60,
                     gate=str(a.gate), gate_value='begin',
                     phases='one excluded first request per exact staged app, calibration, then fixed schedule')
     save(a.out / 'prepared.json', prepared)
@@ -185,18 +192,19 @@ def main():
         for side in sides:
             app = apps[side]
             host = SimpleNamespace(pw=app / 'Contents/MacOS/policy-witness', snapshot=actor_host.snapshot) if actor_host else None
-            assert time.monotonic() - window_start + 80 < a.window
+            assert time.monotonic() - window_start + 120 < a.window
             measure(app / 'Contents/MacOS/policy-witness', a.out / 'warm' / side, a.bridge, a.helper,
                     observer, host, name, quantum, 0, 1,
                     dict(calibration=str(a.out / 'calibration.json'), phase='excluded_first_request'),
-                    checker=check_wait_measurement)
+                    checker=check_wait_measurement,watchdog_seconds=60)
         previous_cleanup = time.time_ns()
         schedule = [(regime, repetition, side) for regime in ('rapid', 'idle')
                     for repetition in range(1 if a.candidate == 'baseline' else 5)
                     for side in (sides if repetition % 2 == 0 else tuple(reversed(sides)))]
         for index, (regime, repetition, side) in enumerate(schedule):
-            assert time.monotonic() - window_start + 80 < a.window, 'insufficient watchdog/cleanup reserve'
+            assert time.monotonic() - window_start + 120 < a.window, 'insufficient watchdog/cleanup reserve'
             power_before = capture_power()
+            load_before = os.getloadavg()
             if regime == 'idle': time.sleep(1)
             directory = a.out / f'trial-{index:02d}-{regime}-{side}'
             app = apps[side]
@@ -204,11 +212,12 @@ def main():
             measurement = measure(app / 'Contents/MacOS/policy-witness', directory, a.bridge, a.helper,
                                   observer, host, name, quantum, repetition, 1,
                                   dict(calibration=str(a.out / 'calibration.json'), regime=regime, side=side),
-                                  checker=check_wait_measurement)
+                                  checker=check_wait_measurement,watchdog_seconds=60)
             cleanup = time.time_ns()
             launch = json.loads((directory / 'run/capture.json').read_text())['started_at_unix_ns']
             gap = launch - previous_cleanup
             power_after = capture_power()
+            load_after = os.getloadavg()
             power = lambda item: {key: item[key] for key in ('source', 'lowpowermode')}
             stable = power(power_before) == power(power_after) and all(power(power_before).values())
             # The next launch includes fixed input preparation and power observation.
@@ -216,10 +225,12 @@ def main():
             row = dict(regime=regime, repetition=repetition, side=side, directory=str(directory),
                        actual_gap_ns=gap, eligible_gap_ns=[low,high], eligible=bool(stable and low <= gap <= high),
                        power=power(power_before), power_before=power_before, power_after=power_after,
+                       load_before=load_before,load_after=load_after,
                        measurement=measurement)
             rows.append(row); save(a.out / 'trials.json', rows)
             previous_cleanup = cleanup
     assert {side: staged_identity(app) for side, app in apps.items()} == identities, 'staged executable changed'
+    assert staged_identity(a.app) == source_identity, 'source app changed during trials'
     result = (dict(baseline=[dict(regime=r['regime'], eligible=r['eligible'],
                                  rate=rate_interval(r['measurement'], a.role)) for r in rows])
               if a.candidate == 'baseline' else compare(rows, a.role, a.minimum))

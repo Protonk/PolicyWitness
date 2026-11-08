@@ -1,6 +1,7 @@
 """Bounded Waiting measurements with external effects, matched counters and controls."""
 import json
 import math
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -100,11 +101,18 @@ def calibrate(observer,out):
     save(out/'calibration.json',receipt); return quantum
 
 
-def measure(pw,out,bridge,helper,observer,host,name,quantum,repetition,multiplier,conditions,*,checker=check_measurement):
+def measure(pw,out,bridge,helper,observer,host,name,quantum,repetition,multiplier,conditions,*,checker=check_measurement,watchdog_seconds=0):
     out.mkdir(parents=True)
     actor_count=int(name.split('_')[-1]) if name in ('actor_1','actor_3') else None
     work=HeldWorkload(pw,out,bridge,helper,observer,actor_host=host if name!='ordinary' else None,actor_count=actor_count,lifecycle=name=='actor_lifecycle')
     row=None; primary=None
+    old_handler=None
+    if watchdog_seconds:
+        assert signal.getitimer(signal.ITIMER_REAL)==(0.0,0.0)
+        def expired(signum,frame):
+            raise TimeoutError('held measurement watchdog expired; cleanup is not benefit evidence')
+        old_handler=signal.signal(signal.SIGALRM,expired)
+        signal.setitimer(signal.ITIMER_REAL,watchdog_seconds)
     try:
         work.start()
         with observer.spawn_control('busy') as busy, observer.spawn_control('sleep') as sleeper:
@@ -140,6 +148,9 @@ def measure(pw,out,bridge,helper,observer,host,name,quantum,repetition,multiplie
     except BaseException as exc:
         primary=exc; save(out/'failure.json',dict(error=repr(exc),measurement_present=row is not None)); raise
     finally:
+        if watchdog_seconds:
+            signal.setitimer(signal.ITIMER_REAL,0)
+            signal.signal(signal.SIGALRM,old_handler)
         try: work.finish()
         except BaseException as exc:
             save(out/'cleanup-failure.json',dict(error=repr(exc)))

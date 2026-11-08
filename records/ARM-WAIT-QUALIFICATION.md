@@ -210,3 +210,16 @@ The ordinary baseline finished in 6.871 seconds, with CPU rates 1.0007 and
 1.0008 CPU-seconds/second, eligible rapid and idle pacing, 10 ms declared quantum
 and settled cleanup. These are fresh extended-hold observations, not a request
 latency or energy result.
+
+The actor baseline completed in 6.565 seconds, with parked-issuer rates
+1.0005 (rapid) and 0.9989 (idle), 10 ms quantum, eligible pacing and settled
+cleanup. Both roles therefore justify selecting 10% of one busy core as a
+worthwhile CPU reduction, separately from roughly 3.6 percentage points of
+combined endpoint allowance. No energy or scheduler-capacity threshold is
+implied.
+
+Before comparisons, the cost apparatus adds a 60-second measurement watchdog,
+a 60-second cleanup reserve, source-app invariance assertions, per-trial load
+observations and binding of pair labels to measurement metadata. The baseline
+rate calculation is unchanged. The two original baseline runs retain their
+original reader identities; every comparison side uses the revised readers.

@@ -158,13 +158,17 @@ acquired authority.
 ## 4. Establish worthwhile benefit
 
 Commit and freeze `records/ARM-WAIT-QUALIFICATION.md` before native qualification and
-`ARM-WAIT-RELEASE-ACCEPTANCE.md` / `ARM-WAIT-ACTIVATION-ACCEPTANCE.md` before
+[release acceptance](../records/ARM-WAIT-RELEASE-ACCEPTANCE.md) /
+[activation acceptance](../records/ARM-WAIT-ACTIVATION-ACCEPTANCE.md) before
 their comparisons. Record mechanism, deployment gate, workload/hold classes,
 durations, readers and the common measurement protocol. Use the
 [shared pilot](../records/WORKER-WAIT-PILOT.md) to justify a quantitative minimum
 worthwhile gain beyond detectability, then recheck its rationale on the accepted
 baseline. Historical pilot timings are not the ARM baseline. Prototype benefit
 measurements with an unresolved deployment gate cannot authorize adoption.
+A frozen benefit screen may close a role before completing protocol qualification
+when its selected worthwhile gain is absent; retain which qualification obligations
+were not attempted rather than labelling the role qualified.
 
 Use a mechanism-neutral CPU reader: the old held-footprint requirement that a
 worker exceed its sleeping control characterizes busy waiting, not a quieter

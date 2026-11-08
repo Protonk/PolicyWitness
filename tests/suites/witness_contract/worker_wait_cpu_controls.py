@@ -48,19 +48,26 @@ def main(out):
         for repetition in range(5):
             for side,receipt in (('baseline',busy),('candidate',quiet)):
                 r=copy.deepcopy(receipt);r['repetition']=repetition
+                r['conditions'].update(regime=regime,side=side)
                 rows.append(dict(regime=regime,repetition=repetition,side=side,measurement=r,
                                  eligible=True,power=dict(source='AC Power',lowpowermode='0')))
     assert compare(rows,'release',.1)['worthwhile_in_every_pair']
     noop=copy.deepcopy(rows)
-    for r in noop: r['measurement']=copy.deepcopy(busy)
+    for r in noop:
+        r['measurement']=copy.deepcopy(busy)
+        r['measurement']['repetition']=r['repetition']
+        r['measurement']['conditions'].update(regime=r['regime'],side=r['side'])
     assert not compare(noop,'release',.1)['worthwhile_in_every_pair'], 'no-op credited'
-    contrary=copy.deepcopy(rows);contrary[-1]['measurement']=copy.deepcopy(busy)
+    contrary=copy.deepcopy(noop)
+    for i in range(len(rows)-1): contrary[i]=copy.deepcopy(rows[i])
     assert not compare(contrary,'release',.1)['worthwhile_in_every_pair'], 'contrary pair concealed'
     for name,edit in {
         'missing_pair':lambda r:r.pop(),
         'duplicate_side':lambda r:r[-1].update(side='baseline'),
         'pacing_exclusion':lambda r:r[-1].update(eligible=False),
         'power_mismatch':lambda r:r[-1]['power'].update(source='Battery Power'),
+        'relabelled_repetition':lambda r:r[-1]['measurement'].update(repetition=0),
+        'relabelled_regime':lambda r:r[-1]['measurement']['conditions'].update(regime='rapid'),
         'combined_pair_faults':lambda r:(r[-1].update(eligible=False),r[0]['measurement'].update(actual_min_ns=1)),
     }.items():
         bad=copy.deepcopy(rows);edit(bad)
