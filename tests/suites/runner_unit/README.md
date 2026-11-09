@@ -103,8 +103,9 @@ retained facts, interrupted prefixes, explicit lifecycle absence and exact UTF-8
 path presentation. Typed shape companions feed the public shape golden.
 `porcelain-replies/replay.json` records the result; `porcelain-dense/sizes.json`
 separates observed 256-step binary/public sizes from conservative JSON component
-allowances. Neither is a proof of a global binary maximum. These are constructed
-reporting controls; native endings and actual pipe interruption have separate
+allowances. The authority-setup allowance belongs to this test-side presentation
+calculation; it is not a runner admission limit. Neither size account proves a
+global binary maximum. These are constructed reporting controls; native endings and actual pipe interruption have separate
 cases. Compilation uses two jobs and SwiftPM intermediates remain in case scratch.
 
 ## System sleep

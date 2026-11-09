@@ -144,10 +144,11 @@ worker syscall or a cause attribution available in ordinary PW output.
 
 Use `witness_contract/worker_attempt_in_flight_at_deadline` as the first neighbor:
 an operation blocked on a FIFO and one that returned but was never published can
-both lack a completed result. The committed
-[current-format capture](../../tests/fixtures/disposition/response23/a1_expected.json)
-and [specimen](../../tests/fixtures/disposition/response23/a1_specimen.json)
-support inspection of that neighbor now. A further departure is
+both lack a completed result. The committed historical
+[capture](../../tests/fixtures/disposition/response25/a1_expected.json) and
+[specimen](../../tests/fixtures/disposition/response25/a1_specimen.json) support
+inspection of that neighbor; current readers reject the capture's version.
+Use the live case for current-contract evidence. A further departure is
 `witness_contract/worker_post_apply_hang_seam`, where completed file effects
 survive failed run completion. Removing the kill override from the primary
 specimen is a proposed variation, not an experiment performed during planning.
