@@ -47,7 +47,6 @@ enum PWAuthoritySetupLayout {
     static let detailOffset: Int = 32
     static let reservedOffset: Int = 36
     static let valueOffset: Int = 40
-    static let encodedReserve: Int = 524288
     static let names=["issue_symbol","consume_symbol","release_symbol","core_limit","descriptor_presence",
         "fstat","page_size","object_size","mmap","descriptor_close","header_binding",
         "terminal_owned_inbound_clear","rejected_mapping_munmap"]

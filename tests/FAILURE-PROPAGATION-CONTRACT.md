@@ -992,7 +992,7 @@ oversized source when driven directly; normal CLI oversized source is a host
 source sizes and retain their separate host and child observations.
 
 `ValidatorClient.swift` owns the record acceptance rules, stated beside its
-byte-frame decoder. `PWRunnerPredictionEvidence.swift` owns the JSON representation. A complete
+byte-frame decoder. `PWRunnerPredictionEvidence.swift` owns the typed reporting fields. A complete
 allow/deny record requires native integer rc/errno, nonempty step ID/operation/
 filter type, kind, schema and outcome. Diagnostic outcomes require string error,
 but can omit native results; unfamiliar outcomes and extra raw JSON fields are
@@ -1051,8 +1051,7 @@ parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
 For the runner client and sbpl-check, the controller collects full
 `Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->272 MiB<!-- /span --> prefix per runner-client
-stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
-up to 4 MiB) and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
+stream and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
 Runner-client stdout is a protocol-versioned client capture, not a synthetic
 host result. Admission first checks the complete capture/version and its state
 invariants, then the embedded bytes and the host response's independent version.
@@ -1067,11 +1066,11 @@ being substituted with usable elapsed times.
 The capture's control hashes/counts and admitted PID/instance/lease values are
 client observations of peer messages, not independently observed process
 generations. Credentials are omitted. Host-result bytes have distinct received
-and retained counts, base64 encoding and explicit truncation. Truncated or
-malformed bytes supply no host claims; an unsupported parsed host result is
-retained without interpretation. `runner_result` contains only a parsed host
-reply, and the independent consumer checks its agreement with the accepted
-capture. Local delivery failure keeps precedence. `runner verify` uses these
+and retained counts and explicit truncation; base64 is added only in the public
+JSON projection. Truncated or malformed bytes supply no host claims; an
+unsupported host result is retained without interpretation. `runner_result`
+contains only a structurally admitted typed host reply, and the independent
+consumer checks its agreement with the accepted capture. Local delivery failure keeps precedence. `runner verify` uses these
 same admission rules. Neither unknown submission nor host-reply loss is a
 proof that no worker ran.
 
@@ -1080,8 +1079,10 @@ Each capture object's `stdout_bytes_received` and
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver
 budget (<!-- span limits.controller_output.value -->285,212,672<!-- /span --> or <!-- span limits.policy_helper_output.value -->8,388,608<!-- /span --> bytes). Locally truncated
 stdout is not parsed and has `stdout_capture_error`, distinct from
-`stdout_parse_error` for malformed JSON/UTF-8 within the cap. Text context may use
-replacement characters; accepted JSON is parsed from original untruncated bytes.
+`stdout_parse_error` for binary-frame or helper JSON decoding errors within
+the cap. The runner-client receiver preserves rejected bytes in `transport`;
+helper stdout context and stderr may use replacement characters. Decoding uses
+original untruncated bytes.
 Synthetic non-invocations have null received/retained counts. This cap is not a
 streaming allocation bound, and inner records cannot be promised when their
 outer envelope was lost. Independent `sbpl-check` admission remains
@@ -1129,8 +1130,8 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 `read_error` or `poll_error`. EOF describes observed collection completion, not
 validity of all received frames. Decoding faults coexist with these observations.
 
-The controller's runner-client and sbpl-check receivers use the same
-original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->272 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
+The controller decodes binary runner-client captures and JSON sbpl-check
+envelopes through separate receivers with explicit retention budgets: <!-- span limits.controller_output.binary -->272 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
 Received/retained byte counts precede lossy context conversion and count fully
 collected buffers. These are retention limits, not peak-memory bounds.
 `stdout_capture_error` identifies local truncation and precludes parsing the
@@ -1169,9 +1170,10 @@ causal relationship between the retained records.
 Legitimate per-step diagnostics with clean transport retain the existing run
 semantics; an unfamiliar name alone does not create a run failure.
 
-Rust subprocess controls compare complete received JSON for both capture
-paths, including unfamiliar diagnostics beside fixture-supplied failed reports. Local
-truncation precludes parsing and cannot be mistaken for diagnostic rejection.
+Rust helper subprocess controls preserve unfamiliar diagnostics beside
+fixture-supplied failed JSON reports. Separate binary capture controls preserve
+opaque reply bytes and reject malformed frames. Local truncation precludes
+decoding and cannot be mistaken for diagnostic rejection.
 These helper controls test receiver transport; they do not manufacture real
 XPC loss, helper compilation failure. The normal worker
 success/failure controls continue to establish native attribution separately.
@@ -1354,9 +1356,9 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
   encoder emits, from the field-complete fixture and the production-shaped
   documents beside it.
 - Encoder: rejects `limitations` strings outside the vocabulary above and
-  retains the `query_first`, disposition and reply-degradation checks. Swift
-  ignores unknown keys after the version gate; no strict unknown-key decoder
-  exists.
+  retains the `query_first`, disposition and reply-degradation checks. Binary
+  readers reject unknown tags, missing required fields and wrong kinds under
+  the exact schema fingerprint before semantic admission.
 - Reply degradation: `runner_reporting_failed` omits every `comparison`, even
   when `steps: []`. `evidence_retained: false` still withholds step and
   subprocess evidence.
@@ -1535,14 +1537,14 @@ Lifecycle limitations in the table come from the step's summary.
 ### Supported versions
 
 Semantic readers of runner responses and controller envelopes accept exactly
-the versions in [docs/contract.json](../docs/CONTRACT.md): the Swift decoder
-and encoder, the Rust controller (`unsupported_runner_response`,
+the versions in [docs/contract.json](../docs/CONTRACT.md): the Swift reply
+writer, the Rust controller (`unsupported_runner_response`,
 `malformed_runner_response`, with the reply retained and no runner-derived
 diagnostics; a delivery failure takes precedence as
 `tool_error`), and `tests/lib/consumer.py` (`unsupported`). Raw transport
-(`pw-runner-client` and the Rust capture) retains received bytes without
-interpreting them. Retained test output and release acceptance artifacts keep
-their bytes. Request admission and the worker ABI follow their own contracts;
+in `pw-runner-client` retains opaque host bytes; Rust separately decodes the
+capture and host reply and preserves rejected bytes without deriving claims.
+Retained test output and release acceptance artifacts keep their bytes. Request admission and the worker ABI follow their own contracts;
 the ABI's equality tripwire is independent.
 Every run of these checks selects through `tests/run.sh` by canonical case
 identity in [the catalog](catalog.json); required skips or unrun cases prevent

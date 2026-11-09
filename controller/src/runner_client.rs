@@ -14,7 +14,7 @@ use std::process::Command;
 
 use crate::app_layout::resolve_contents_macos_tool;
 use crate::runner_select::RunnerConnectionKind;
-use crate::utils::{JsonOutputCapture, RequestDelivery, now_unix_ms, run_with_stdin};
+use crate::utils::{OutputCapture, RequestDelivery, now_unix_ms, run_with_stdin};
 
 const REPLY_CAPTURE_BYTES: usize = 92 * 1024 * 1024;
 const CONTROL_BYTES: i64 = 64 * 1024;
@@ -29,7 +29,7 @@ pub struct RunnerClientRun {
     /// Local stdin delivery, never proof that the host received the specimen.
     pub request_delivery: Option<RequestDelivery>,
     #[serde(flatten)]
-    pub output: JsonOutputCapture,
+    pub output: OutputCapture,
     /// Typed admitted capture, or the exact retained bytes of a rejected frame.
     pub transport: Option<TransportCapture>,
     pub transport_admission: String,
@@ -664,7 +664,7 @@ fn parse_runner_client_output(
         ended_at_unix_ms: ended,
         exit_code: out.status.code().unwrap_or(1),
         request_delivery,
-        output: JsonOutputCapture {
+        output: OutputCapture {
             stdout_parse_error: None,
             stdout_truncated,
             stdout_capture_error: stdout_truncated.then(|| format!(
@@ -939,7 +939,7 @@ pub(crate) fn test_client_run_bytes(reply: Option<&[u8]>) -> RunnerClientRun {
             bytes_written: 2,
             error: None,
         }),
-        output: JsonOutputCapture {
+        output: OutputCapture {
             stdout_parse_error: None,
             stdout_truncated: false,
             stdout_capture_error: None,

@@ -71,7 +71,7 @@ runActorSchedulerTests(tk)
 // parked acceptance, consume after release, release and the faults between;
 // live arrival and acknowledgement waits sleep only after their re-sampling budget.
 runActorAuthorityTests(tk)
-// The actor form through the production orchestrator: assembled, encoded and decoded.
+// The actor form through the production orchestrator: assembled and encoded, with independent Python replay.
 // Static role inventory and live signature read-back binding controls.
 runActorEquipmentTests(tk)
 // Setup ownership, application uncertainty and natural-reap evidence controls.

@@ -95,12 +95,12 @@ def main():
             request = case / 'specimen.json'
             request.write_text(example['raw_request'] if 'raw_request' in example else json.dumps(specimen) + '\n')
             original = request.read_bytes()
-            with (case / 'reply.json').open('wb') as stdout, (case / 'stderr').open('wb') as stderr:
+            with (case / 'capture.pwp').open('wb') as stdout, (case / 'stderr').open('wb') as stderr:
                 result = subprocess.run([str(client), 'run', '--timeout-ms', '10000', service, str(request)],
                                         stdout=stdout, stderr=stderr, timeout=20)
             assert request.read_bytes() == original, example['id']
             assert result.returncode == 0, example['id']
-            reply = host_reply(decode_porcelain((case / 'reply.json').read_bytes(), 'capture'))
+            reply = host_reply(decode_porcelain((case / 'capture.pwp').read_bytes(), 'capture'))
             observed = effect.is_file()
             (case / 'effect.json').write_text(json.dumps(dict(observed=observed, expected=expected['xpc'] is None)) + '\n')
             if expected['xpc'] is None:
@@ -170,11 +170,11 @@ def main():
         ]:
             case = out / name; case.mkdir()
             request = case / 'specimen.json'; request.write_text(json.dumps(specimen) + '\n')
-            with (case / 'reply.json').open('wb') as stdout, (case / 'stderr').open('wb') as stderr:
+            with (case / 'capture.pwp').open('wb') as stdout, (case / 'stderr').open('wb') as stderr:
                 result = subprocess.run([str(client), 'run', '--timeout-ms', '10000', service, str(request)],
                                         stdout=stdout, stderr=stderr, timeout=20)
             assert result.returncode == 0, name
-            reply = host_reply(decode_porcelain((case / 'reply.json').read_bytes(), 'capture'))
+            reply = host_reply(decode_porcelain((case / 'capture.pwp').read_bytes(), 'capture'))
             assert reply['schema_version'] == RESPONSE_SCHEMA, reply
             if error is None:
                 assert reply['normalized_outcome'] == 'finished' and effect.is_file(), reply

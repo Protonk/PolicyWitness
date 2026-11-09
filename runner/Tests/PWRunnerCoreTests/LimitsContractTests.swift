@@ -75,7 +75,6 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "actor_termination_wait": PWActorLimits.terminationMs,
                 "authority_setup_trailer": PWAuthoritySetupLayout.bytes,
                 "authority_setup_cells": PWAuthoritySetupLayout.capacity,
-                "authority_setup_reply": PWAuthoritySetupLayout.encodedReserve,
                 "equipment_entitlement_bytes": PWEquipmentLimits.entitlementBytes,
                 "equipment_inventory_bytes": PWEquipmentLimits.inventoryBytes,
                 "equipment_diagnostic_bytes": PWEquipmentLimits.diagnosticBytes,

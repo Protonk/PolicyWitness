@@ -20,7 +20,8 @@ deterministic, and checked into the repo so tests are hermetic.
   binary reply projection control; schema version and source identity follow their
   manifests. Shape checks separately own explicit null versus omitted fields.
   `compiled_profile.json` supplies independent valid and invalid nested receipt
-  contexts to Swift decoding, Rust reply admission and Python consumer controls.
+  contexts to Rust reply admission and Python consumer controls; Swift tests
+  independently construct typed receipts and native capture bytes.
   `phase_collection.json` supplies hand-reviewed compatible and contradictory
   collection/disposition observations to the Swift encoder, Rust disposition
   reader and Python consumer/oracle controls. Accepted failures include driver
@@ -32,14 +33,14 @@ deterministic, and checked into the repo so tests are hermetic.
   equipment, application and gate projections; those are subaccount-only
   controls, not full wire-valid replies or native execution evidence.
   `exec_observation.json` supplies independent collection, signal-request and
-  final-wait combinations to Swift ordinary-reply decoding/encoding, Rust
-  disposition admission and Python consumer controls. Cases include unknown
+  final-wait combinations to Rust disposition admission and Python consumer
+  controls. Swift independently constructs corresponding typed observations. Cases include unknown
   metadata, successful signalling without reap, native versus local errors,
   signed stream masks, malformed types/ranges and conflicting branches. These
   constructed facts are not native process observations.
   `path_diagnostics.json` contains independent compact path states,
-  Unicode byte distinctions and malformed representations shared by Swift
-  encoding/decoding, Rust forwarding and Python consumer checks.
+  Unicode byte distinctions and malformed representations for Rust and Python
+  reader checks. Swift independently constructs and encodes the path states.
 - `dispatcher/`: controlled suite runners and evidence alterations exercised
   through the real `tests/run.sh` in isolated fixture repositories.
 - `release/`: independent Apple/tool responses and execution receipts for release

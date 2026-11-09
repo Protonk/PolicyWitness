@@ -167,7 +167,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectTrue(reply.phases.filter { $0.actor_id == "B" }.allSatisfy { !$0.arrival_observed })
             try retainActorReply(reply, "late-setup")
         }
-        tk.run("the corpus's principal request runs, assembles, encodes and decodes") {
+        tk.run("the corpus's principal request runs, assembles and encodes") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }
             let effect = try freshEffect()
             let parsed = try corpusRequest("actors_redelegation", effect: effect)
@@ -256,15 +256,13 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectEqual(transfers[1].status, bIssued ? "delivered" : "custody_unavailable")
             try expectEqual(reply.normalized_outcome, NormalizedOutcome.finished, reply.error ?? "")
             try expectEqual(reply.rc, 0)
-            // Encode under the reply invariants and decode again.
-            let data = try admittedReplyData(reply)
-            let decoded = reply
-            try expectEqual(decoded.actors?.map { $0.actor_id }, ["A", "B", "C"])
-            try expectEqual(decoded.phases.map { $0.actor_visit }, reply.phases.map { $0.actor_visit })
-            try expectEqual(decoded.transfers?.count, 2)
-            try expectNil(decoded.policy_sha256)
-            try expectNil(decoded.runner_subprocess)
-            try expectEqual(decoded.execution_form, "actors")
+            // Check the typed observations; retainActorReply validates and writes the
+            // binary receipt for the independent Python reader below.
+            try expectEqual(reply.actors?.map { $0.actor_id }, ["A", "B", "C"])
+            try expectEqual(reply.transfers?.count, 2)
+            try expectNil(reply.policy_sha256)
+            try expectNil(reply.runner_subprocess)
+            try expectEqual(reply.execution_form, "actors")
             try retainActorReply(reply, "complete")
             var bad = reply
             bad.extension_events![0].native_nonnull = false

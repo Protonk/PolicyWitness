@@ -42,10 +42,10 @@ retain their evidence without yielding exit 0.
 ## Fixtures
 
 Current response captures and constructed reply helpers support disposition and
-assembly tests. Phase collection controls distinguish wrong JSON types from
-optional absence, withhold unsupported projections and retain the raw reply
-through assembly. Empty spawn-failure objects exercise claim-validation scope;
-the independent full consumer owns their required-field rejection.
+assembly tests. Authored fixture deserialization and binary admission reject
+wrong types and missing required fields. Phase collection controls withhold
+unsupported projections while preserving observations through assembly; the
+independent consumer separately validates the public projection.
 
 ## Artifacts
 

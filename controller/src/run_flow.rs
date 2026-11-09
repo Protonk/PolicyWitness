@@ -796,7 +796,7 @@ mod tests {
     use super::*;
     use crate::porcelain_admission::IntegrityIssue;
     use crate::reply_fixtures::*;
-    use crate::utils::{JsonOutputCapture, RequestDelivery};
+    use crate::utils::{OutputCapture, RequestDelivery};
     #[cfg(test)]
     use serde_json::json;
 
@@ -1778,7 +1778,7 @@ else:
             let capture = PolicyCheckCapture {
                 status: status.into(),
                 tool_exit_code: if status == "ok" { 0 } else { 1 },
-                output: JsonOutputCapture::unavailable(
+                output: OutputCapture::unavailable(
                     String::new(),
                     crate::utils::HELPER_CAPTURE_BYTES,
                 ),
@@ -2737,7 +2737,7 @@ else:
                         Ok(PolicyCheckCapture {
                             status: status.into(),
                             tool_exit_code: if index == 1 { 0 } else { 1 },
-                            output: JsonOutputCapture::unavailable(
+                            output: OutputCapture::unavailable(
                                 format!("helper {index}"),
                                 crate::utils::HELPER_CAPTURE_BYTES,
                             ),
@@ -3106,7 +3106,7 @@ else:
         use crate::runner_manager::{RunnerEntitlements, RunnerSignature};
         use crate::runner_select::RunnerTarget;
         use crate::sbpl_imports::ImportRecord;
-        use crate::utils::JsonOutputCapture;
+        use crate::utils::OutputCapture;
 
         fn full_result() -> json_contract::JsonResult {
             json_contract::JsonResult {
@@ -3121,8 +3121,8 @@ else:
             }
         }
 
-        fn capture(limit: usize) -> JsonOutputCapture {
-            JsonOutputCapture {
+        fn capture(limit: usize) -> OutputCapture {
+            OutputCapture {
                 stdout_parse_error: Some("constructed".into()),
                 stdout_truncated: false,
                 stdout_capture_error: Some("constructed".into()),

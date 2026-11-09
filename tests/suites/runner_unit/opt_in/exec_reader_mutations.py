@@ -67,8 +67,7 @@ fixed_worker, fixed_api = worker.read_text(), api.read_text()
 gate = '            if completed != 1 {\n'
 absence = '        self.exec_observation = exec_observation\n'
 assert fixed_worker.count(gate) == 1 and fixed_api.count(absence) == 1, 'mutation anchors changed'
-# The retired JSON decoder no longer supplies observations. Mutate the typed
-# constructor instead: a caller with a child PID but absent metadata must not
+# Mutate the typed constructor: a caller with a child PID but absent metadata must not
 # acquire a fabricated collection/cleanup/reap account.
 invented = '''        self.exec_observation = exec_observation
             ?? (child_pid != nil ? PWExecObservation(collection: PWExecCollectionObservation(stop_reason: "leader_exit_and_eof",

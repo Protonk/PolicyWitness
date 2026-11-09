@@ -6,8 +6,6 @@
 //! record projections emit deterministic fields without a semantic JSON tree.
 
 use serde::Serialize;
-#[cfg(test)]
-use serde_json::Map;
 use serde_json::Value;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -20,63 +18,6 @@ pub const RESPONSE_SCHEMA_VERSION: u32 = 29;
 /// Required reservation RPC and client capture protocol.
 pub const RUNNER_PROTOCOL_VERSION: u32 = 4;
 // END GENERATED CONTRACT VERSIONS
-
-/// Test-only scalar observations. No payload, address, or borrowed owner is retained.
-#[cfg(test)]
-pub(crate) mod footprint_test {
-    use std::cell::RefCell;
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub enum Stage {
-        FullClientCollection,
-        CaptureParsing,
-        TypedCaptureValidationBase64Decoding,
-        HostParsing,
-        EnvelopeConstructionSorting,
-        FinalRendering,
-    }
-    #[derive(Clone, Copy, Debug, Default, serde::Serialize)]
-    pub struct Summary {
-        #[serde(skip)]
-        pub stage: Option<Stage>,
-        pub raw_stdout: Option<(usize, usize)>,
-        pub raw_stderr: Option<(usize, usize)>,
-        pub retained_stdout: Option<(usize, usize)>,
-        pub retained_stderr: Option<(usize, usize)>,
-        pub generic_base64: Option<usize>,
-        pub typed_base64: Option<usize>,
-        pub host_retained: Option<usize>,
-        pub decoded: Option<(usize, usize)>,
-        pub parsed_host: bool,
-        pub borrowed_input: bool,
-        pub envelope: bool,
-        pub rendered: Option<(usize, usize)>,
-    }
-    thread_local! { static RECORDS: RefCell<Option<Vec<Summary>>> = const { RefCell::new(None) }; }
-    pub struct Scope;
-    impl Drop for Scope {
-        fn drop(&mut self) {
-            RECORDS.with(|r| *r.borrow_mut() = None);
-        }
-    }
-    pub fn begin() -> Scope {
-        RECORDS.with(|r| {
-            assert!(r.borrow().is_none());
-            *r.borrow_mut() = Some(Vec::with_capacity(6));
-        });
-        Scope
-    }
-    pub fn take() -> Vec<Summary> {
-        RECORDS.with(|r| r.borrow_mut().take().unwrap())
-    }
-    pub fn record(summary: Summary) {
-        RECORDS.with(|r| {
-            if let Some(records) = r.borrow_mut().as_mut() {
-                assert!(records.len() < 6);
-                records.push(summary);
-            }
-        });
-    }
-}
 
 #[derive(Serialize, Clone)]
 pub struct JsonResult {
@@ -147,29 +88,6 @@ fn now_unix_ms() -> u64 {
         .as_millis() as u64
 }
 
-#[cfg(test)]
-fn sort_value(value: &mut Value) {
-    match value {
-        Value::Array(items) => {
-            for item in items {
-                sort_value(item);
-            }
-        }
-        Value::Object(map) => {
-            // Sort object keys to keep output deterministic across runs.
-            let mut entries: Vec<(String, Value)> = std::mem::take(map).into_iter().collect();
-            entries.sort_by(|a, b| a.0.cmp(&b.0));
-            let mut sorted = Map::new();
-            for (key, mut val) in entries {
-                sort_value(&mut val);
-                sorted.insert(key, val);
-            }
-            *map = sorted;
-        }
-        _ => {}
-    }
-}
-
 /// Presentation borrows its inputs. It never builds a second semantic tree.
 #[derive(Serialize)]
 struct Envelope<'a, T: Serialize> {
@@ -194,23 +112,8 @@ pub fn render_envelope<T: Serialize>(
         result,
         schema_version: SCHEMA_VERSION,
     };
-    #[cfg(test)]
-    footprint_test::record(footprint_test::Summary {
-        stage: Some(footprint_test::Stage::EnvelopeConstructionSorting),
-        borrowed_input: true,
-        envelope: true,
-        ..Default::default()
-    });
     let text = serde_json::to_string_pretty(&envelope)
         .map_err(|e| format!("failed to encode JSON: {e}"))?;
-    #[cfg(test)]
-    footprint_test::record(footprint_test::Summary {
-        stage: Some(footprint_test::Stage::FinalRendering),
-        borrowed_input: true,
-        envelope: true,
-        rendered: Some((text.len(), text.capacity())),
-        ..Default::default()
-    });
     Ok(text)
 }
 
@@ -268,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn envelope_keys_are_sorted() {
+    fn envelope_fields_and_map_payload_have_deterministic_order() {
         let payload = json!({
             "z": "last",
             "m": "middle",
@@ -306,66 +209,6 @@ mod tests {
 
         let parsed: serde_json::Value = serde_json::from_str(&text).expect("parse");
         assert_eq!(parsed["schema_version"], SCHEMA_VERSION);
-    }
-
-    #[test]
-    fn sorted_envelope_value_has_exact_pretty_bytes() {
-        let mut value = json!({
-            "schema_version": 12,
-            "result": {
-                "stdout": null, "stderr": null, "rc": null, "ok": true,
-                "normalized_outcome": "finished", "exit_code": 0,
-                "error": null, "errno": null
-            },
-            "kind": "run",
-            "generated_at_unix_ms": 123,
-            "data": {
-                "z": [{"z": "line\n\"quoted\"\\path\t", "a": [2, 1]}, false, null],
-                "a": {"z": [], "a": "雪"}
-            },
-            "build": {"version": "fixture", "number": "0", "describe": "fixed", "commit": "abc"}
-        });
-        sort_value(&mut value);
-        let text = serde_json::to_string_pretty(&value).expect("render fixed envelope");
-        let expected = r#"{
-  "build": {
-    "commit": "abc",
-    "describe": "fixed",
-    "number": "0",
-    "version": "fixture"
-  },
-  "data": {
-    "a": {
-      "a": "雪",
-      "z": []
-    },
-    "z": [
-      {
-        "a": [
-          2,
-          1
-        ],
-        "z": "line\n\"quoted\"\\path\t"
-      },
-      false,
-      null
-    ]
-  },
-  "generated_at_unix_ms": 123,
-  "kind": "run",
-  "result": {
-    "errno": null,
-    "error": null,
-    "exit_code": 0,
-    "normalized_outcome": "finished",
-    "ok": true,
-    "rc": null,
-    "stderr": null,
-    "stdout": null
-  },
-  "schema_version": 12
-}"#;
-        assert_eq!(text.as_bytes(), expected.as_bytes());
     }
 }
 

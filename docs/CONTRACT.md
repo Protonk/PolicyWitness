@@ -32,7 +32,7 @@ Current wire contracts: request schema 6, response schema 29, controller envelop
   classified observation, the submitted-scope relations, the order PW
   established and the planner's exclusion or lifecycle limitations.
 - **Controller envelope**: the top-level JSON that `policy-witness` prints.
-  The controller forwards the runner reply inside it without version coercion.
+  The controller projects the typed runner reply inside it without version coercion.
   `data.specimen` is the dossier: request path, policy augmentation and
   imports, host facts, runner and app provenance, and hashes of any selected
   binary the app manifest does not describe; the raw runner reply, transport,
@@ -355,16 +355,17 @@ checks, signed artifact provenance, and lifecycle/order tests retain those
 separate responsibilities. The hash is not a security authentication mechanism.
 
 This exact-match requirement is confined to the jointly built host/worker pair.
-The external runner XPC protocol and JSON request/response/envelope contracts
-retain their own boundaries. Validator diagnostic JSON keeps its own contract; it is consumed independently of this memory
-interface.
+The external runner XPC protocol, JSON request and public envelope, and binary
+response contracts retain their own boundaries. Validator diagnostic JSON keeps
+its own contract; it is consumed independently of this memory interface.
 
 ## Shape goldens
 
 Three goldens under `tests/fixtures/contract/` notice a change that nobody
 acknowledged, and two of them are the readers' allowlists.
 `response_shape.json` records, per object path, every key the runner reply
-can carry and its JSON type, collected from the encoded documents of
+can carry in public presentation and its JSON type, independently projected by
+the Python binary reader from the encoded documents of
 `replyShapeDocuments()` in `ContractVersionTests` (the field-complete reply
 fixture, its degraded reply, and production-shaped worker accounts resolved by
 the real builders); `runner_unit` compares the current collection with it.

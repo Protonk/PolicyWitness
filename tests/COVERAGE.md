@@ -236,7 +236,7 @@ cap, control-character round trip through the real validator, and fixture reply
 UTF-8/structure/association.
 `ValidatorEvidenceTests` covers actual driver kill/wait failures and abnormal exits
 after verdicts, byte framing across delayed multibyte writes, bounded rejected
-context, and independent I/O plus decode faults. Rust receiver tests use real
+context, and independent I/O plus decode faults. Rust helper receiver tests use real
 subprocess producers for valid oversized JSON, malformed within-cap output,
 invalid UTF-8, and multibyte prefix boundaries. The C harness separately checks
 the defensive source guard and published failure record; normal CLI oversized
@@ -253,9 +253,10 @@ diagnostics beside an observed UTF-8 receiver fault and a fixture-supplied allow
 record. That record tests preservation of native-result fields; the transcript
 producer does not call `sandbox_check`. The real worker's file change is checked
 independently.
-`DiagnosticTransportTests` supplies direct ABI/validator decoding and Codable
-controls. Rust `unfamiliar_diagnostics_survive_*_capture` tests cover runner and
-helper JSON receivers. These are transport controls; real producer
+`DiagnosticTransportTests` supplies direct ABI/validator decoding and typed
+reporting controls. Rust `unfamiliar_diagnostics_survive_helper_capture` tests
+the JSON helper receiver; binary runner capture controls separately preserve
+opaque bytes and enforce frame admission. These are transport controls; real producer
 attribution remains covered by `witness_contract/worker_progress_and_failure`,
 `witness_contract/worker_sparse_failure`, and the `failure_boundaries` cases
 listed in the [coverage ownership table](FAILURE-PROPAGATION-CONTRACT.md#coverage-audit-and-acceptance-ownership).

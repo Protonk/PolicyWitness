@@ -42,12 +42,6 @@
       "invariant": "G9",
       "kind": "literal",
       "text": "many bytes in the fixed 4096-byte text region (at most 4095 payload bytes)."
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "up to 4 MiB) and an independent                                                                     prefix per sbpl-check stream."
     }
   ]
 }

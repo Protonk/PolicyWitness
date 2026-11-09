@@ -28,8 +28,8 @@ tied to the selected source. If a helper gains an environmental read or process
 launch, update [the run inventory](README.md#what-a-run-reads-and-launches) and
 its orchestration controls.
 
-Gate replies before interpreting versioned fields. Preserve rejected parsed
-payloads and transport diagnostics without coercing versions or recovering
+Gate replies before interpreting versioned fields. Preserve rejected received
+bytes and transport diagnostics without coercing versions or recovering
 semantic claims from unsupported bodies. Keep request-delivery failures ahead
 of reply interpretation. A successful write is not proof of receipt; an
 independent fallback compile is not evidence of worker progress.

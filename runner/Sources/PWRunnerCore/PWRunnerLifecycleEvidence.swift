@@ -2,7 +2,7 @@ import Foundation
 import Darwin
 
 /// Host observation of one kill(2) request, not evidence of its delivery or cause.
-/// JSON: runner_subprocess.termination_request.{signal,rc,errno}. All numbers
+/// Public JSON: runner_subprocess.termination_request.{signal,rc,errno}. All numbers
 /// are signed 32-bit syscall values encoded as JSON integers (no units).
 /// errno is captured immediately only when rc == -1; otherwise it is absent/null.
 /// An absent/null request means no request. Structurally valid values are decoded
@@ -22,7 +22,7 @@ struct PWRunnerTerminationRequest {
 }
 
 /// One host-observed failed waitpid(2) call, including recovered interruptions.
-/// JSON: runner_subprocess.wait_errors[].{stage,rc,errno}. stage is a string
+/// Public JSON: runner_subprocess.wait_errors[].{stage,rc,errno}. stage is a string
 /// (poll, exit_grace, after_termination); rc/errno are signed 32-bit integers.
 /// Only rc == -1 produces a record, with errno captured before another call.
 /// Unknown stage/errno values remain transportable. Empty array means no errors
@@ -59,7 +59,7 @@ struct PWWorkerPolicyTransferError {
     var bytes_expected: Int
     // END GENERATED PORCELAIN PWWorkerPolicyTransferError
 }
-/// Worker publications. Numeric codes are open, never Codable enums.
+/// Worker publications. Numeric codes are open; unfamiliar values remain numeric.
 struct PWWorkerProgress {
     // BEGIN GENERATED PORCELAIN PWWorkerProgress
     var raw: UInt32

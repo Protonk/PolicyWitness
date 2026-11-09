@@ -190,8 +190,8 @@ func runReservationAdmissionTests(_ tk: TestKit) {
                 try expectEqual(captured.truncated, n > 96_468_992)
                 try expectEqual(captured.data.count, min(n, 96_468_992))
             }
-            // Escapable ASCII uses six JSON bytes per retained UTF8 byte. This
-            // field superset deliberately overcounts combinations a session emits.
+            // Fill each bounded text field. Binary text has no escape expansion;
+            // this field superset overcounts combinations a session emits.
             var error = PWRunnerTransportError(stage: "acquisition", reason: "xpc_error", message: "")
             error.domain = String(repeating: "\0", count: 128); error.code = Int.min
             error.message = String(repeating: "\0", count: 1024)

@@ -16,13 +16,8 @@ if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 
-# Swift's JSONDecoder ignores unknown keys, so without a guard the
-# decoder would happily decode the request as a valid PWRunnerRunSpec
-# with the instrumentation field silently dropped — and the run would
-# succeed. the closed request decoder runs a separate
-# JSONSerialization pass to flag the retired key and emit a clean
-# bad_request. This test is the load-bearing guard against the field
-# being silently re-accepted.
+# The closed request decoders reject unsupported keys. This case keeps the
+# retired instrumentation field from being silently dropped and re-accepted.
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 "${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json, sys
@@ -34,8 +29,7 @@ spec = {
     "probe_plan": [],
     # `instrumentation` is not a supported top-level field. The
     # runner must reject any request that carries it rather than
-    # silently dropping it (Swift's JSONDecoder ignores unknown keys
-    # by default; the rejection runs as an explicit pre-decode pass).
+    # silently dropping it. Swift checks unknown keys in its Codable initializer.
     "instrumentation": {
         "version": 1,
         "ports": [{"kind": "debug_wait", "sleep_ms": 1}],

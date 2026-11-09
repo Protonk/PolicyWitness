@@ -221,8 +221,8 @@ struct PWRunnerPhase: Codable {
 // request supplied no controls. Retain the request for that fact.
 //
 // Design rule for new keys: re-route a *condition* (a path, a deadline,
-// a hostile value), never fake a *result*. The classifier and the JSON
-// envelope assembly must still run for real; only their input is steered.
+// a hostile value), never fake a *result*. The classifier and reply
+// assembly must still run for real; only their input is steered.
 //
 // runner/README.md's "Test seam: `_test_overrides`" is the key/boundary
 // reference, including host resolution and native argument admission. The

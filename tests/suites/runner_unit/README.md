@@ -40,10 +40,10 @@ for every binary reply or a native execution footprint.
 - The fast CWorker per-exec deadline diagnostic remains here; process-group
   cleanup, output retention, and plan continuation are covered through the
   public CLI by `runner_exec_lifecycle`.
-- `ExecObservationTests` uses the shared constructed
-  `tests/fixtures/contract/exec_observation.json` cases for typed decoding,
-  ordinary-reply refusal and degraded evidence retention. The same cases run
-  through Rust disposition admission and the independent Python consumer.
+- `ExecObservationTests` constructs typed observations for ordinary-reply
+  refusal and degraded evidence retention. Corresponding authored cases in
+  `tests/fixtures/contract/exec_observation.json` run through Rust disposition
+  admission and the independent Python consumer.
   Missing metadata stays unknown; successful signalling with unconfirmed reap
   remains valid. ABI fixture modes separately pin publication gating and
   reporting failure for malformed present payloads. `CWorkerTests` checks the
@@ -65,8 +65,8 @@ for every binary reply or a native execution footprint.
   `tests/lib/lifecycle_contract.py` (every hand-reviewed example row).
 - `PathDiagnosticsTests` pins all nine combinations of compact path states,
   UTF-8 identity, and rejection of conflicting/missing representations. `tests/fixtures/contract/path_diagnostics.json` supplies
-  shared cases to Swift decoding/encoding, Rust receiver forwarding and Python
-  consumer checks. CLI integration separately checks native Unicode realpath
+  authored cases to Rust and Python reader checks. Swift independently
+  constructs typed paths and retains binary receipts for Python replay. CLI integration separately checks native Unicode realpath
   spelling through the signed app.
 - `ServiceAdmissionTests` separately checks validator selection inside nested
   and standalone bundles, including absent/non-executable local files and
@@ -245,8 +245,8 @@ runs because they require those fresh driver receipts; they are mandatory in
 the default `runner_unit` case.
 
 `CompiledProfileCaptureTests` constructs receipt bytes independently of the
-reader. The shared `contract/compiled_profile.json` cases check schema and
-producer/stage admission in Swift, Rust and Python; encoding also refuses
+reader. Swift checks typed producer/stage admission; the authored
+`contract/compiled_profile.json` cases exercise Rust and Python readers. Encoding also refuses
 context on unavailable receipts. Changed selected bytes or consumed inputs must change their digests;
 padding, unselected bytes and parameter-pair order must not. Corrupt identity,
 extent or integrity fields, failed application and incomplete/abnormal worker

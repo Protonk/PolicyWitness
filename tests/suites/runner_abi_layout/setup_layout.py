@@ -6,7 +6,6 @@ root=Path(__file__).resolve().parents[3]
 source=(root/'runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift').read_text()
 block=re.search(r'enum PWAuthoritySetupLayout \{(.*?)\n\}',source,re.S).group(1)
 values={k:int(v) for k,v in re.findall(r'static let (\w+): Int = (\d+)',block)}
-assert values.pop('encodedReserve')==524288
 compiled={k:int(v) for k,v in (line.split('=') for line in Path(sys.argv[1]).read_text().splitlines())}
 assert compiled==values,(compiled,values)
 assert compiled['bytes']==832 and compiled['capacity']==16 and compiled['cellBytes']==48

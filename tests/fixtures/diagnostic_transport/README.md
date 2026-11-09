@@ -1,7 +1,7 @@
 # Diagnostic transport inputs
 
-`cases.json` is independent expected input for direct Swift decoding, Rust JSON
-receivers and the CLI checker. `worker.h` holds separately maintained C literals
+`cases.json` is independent expected input for Swift ABI decoding and typed reporting, the Rust JSON
+helper receiver and the CLI checker. `worker.h` holds separately maintained C literals
 for the lifecycle fixture; the CLI compares the received fields to the JSON
 oracle, not to a reconstructed production classification.
 
@@ -45,8 +45,8 @@ the allow record tests forwarding of supplied native-result fields. Receiver
 faults, child disposition and the file change have their own observations; their
 coexistence with the transcript records establishes no causal relationship.
 
-Rust receiver controls use real subprocess bytes at the production parsing
-functions for runner-client and sbpl-check output. They preserve
-both JSON diagnostics alongside a fixture-supplied failed report and contrast that
-with locally truncated valid JSON. They do not force a real XPC loss or modify
+Rust sbpl-check receiver controls use real subprocess bytes at the production
+JSON parser. They preserve both diagnostics alongside a fixture-supplied failed
+report and contrast that with locally truncated valid JSON. Runner-client
+controls separately exercise binary frame admission and opaque byte retention. They do not force a real XPC loss or modify
 shipped helpers to manufacture failures.

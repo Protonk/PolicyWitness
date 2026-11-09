@@ -1587,7 +1587,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget. Actor fallback can run before host admission and can accumulate more policies than the admitted actor count. Constructed orchestration controls establish helper input order/association and preserved transport evidence, not live helper invocation."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. The JSON helper receiver accepts an explicit per-stream retention budget; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget. Actor fallback can run before host admission and can accumulate more policies than the admitted actor count. Constructed orchestration controls establish helper input order/association and preserved transport evidence, not live helper invocation."
     },
     {
       "id": "validator_fault_context",
@@ -3126,9 +3126,9 @@
       "title": "Client host reply retention",
       "value": 96468992,
       "unit": "bytes",
-      "counting": "Host result bytes retained before base64 encoding in the client capture.",
+      "counting": "Binary host result bytes retained in the client capture; base64 is added only in public JSON presentation.",
       "effect": "Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct.",
-      "control": "Fixed; must cover the informative maximal reply.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3387,31 +3387,6 @@
       "behavior": "Decoder rejects malformed or duplicate identity and retains primary and cleanup observations."
     },
     {
-      "id": "authority_setup_reply",
-      "section": "transport",
-      "title": "Authority setup encoded reserve",
-      "value": 524288,
-      "unit": "bytes",
-      "counting": "Conservative JSON allowance for host run, eight regions, thirty-two custody slots and eight workers; at most 388 operation cells.",
-      "effect": "Excess request input is refused before launch; evidence storage and output never silently truncate native observations.",
-      "control": "Fixed.",
-      "sources": [
-        {
-          "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
-          "symbol": "PWAuthoritySetupLayout"
-        }
-      ],
-      "checks": [
-        {
-          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
-          "symbol": "runLimitsContractTests",
-          "kind": "value",
-          "form": "test"
-        }
-      ],
-      "behavior": "Maximum reply model accounts for the entire setup reserve; native controls separately establish publication and ownership."
-    },
-    {
       "id": "equipment_entitlement_bytes",
       "section": "evidence",
       "title": "Equipment entitlement readback",
@@ -3434,7 +3409,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Independent readers check the fixed populations and record associations; the maximum reply model charges worst-case JSON escaping."
+      "behavior": "Independent readers check the fixed populations and record associations; the public presentation model charges worst-case JSON escaping."
     },
     {
       "id": "equipment_static_bindings",
@@ -3459,7 +3434,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Independent readers check the fixed populations and record associations; the maximum reply model charges worst-case JSON escaping."
+      "behavior": "Independent readers check the fixed populations and record associations; the public presentation model charges worst-case JSON escaping."
     },
     {
       "id": "equipment_live_inspections",
@@ -3484,7 +3459,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Independent readers check the fixed populations and record associations; the maximum reply model charges worst-case JSON escaping."
+      "behavior": "Independent readers check the fixed populations and record associations; the public presentation model charges worst-case JSON escaping."
     },
     {
       "id": "equipment_entitlement_records",
@@ -3509,7 +3484,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Independent readers check the fixed populations and record associations; the maximum reply model charges worst-case JSON escaping."
+      "behavior": "Independent readers check the fixed populations and record associations; the public presentation model charges worst-case JSON escaping."
     },
     {
       "id": "equipment_inventory_bytes",

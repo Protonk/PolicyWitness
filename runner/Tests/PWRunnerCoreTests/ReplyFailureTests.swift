@@ -282,7 +282,7 @@ func runReplyFailureTests(_ tk: TestKit) {
         }
         tk.run("maximal slash-heavy profile capture fits the documented encoding allowance") {
             // Constructed bytes test serialization only, not a compiler result.
-            // Base64 of 0xff maximizes '/' escaping in Foundation JSON.
+            // Retain a full-capacity bytecode payload and its public base64 spelling.
             let bytes = Data(repeating: 0xff, count: PWShmLayout.captureBytes)
             let receipt = CompiledProfileCapture(status: "captured", worker_pid: 42,
                 producer: "worker", capture_stage: "before_apply",

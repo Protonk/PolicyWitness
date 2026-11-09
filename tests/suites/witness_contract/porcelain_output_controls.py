@@ -1,4 +1,4 @@
-"""Bounded serial public-output interruption controls for the porcelain experiment.
+"""Bounded serial public-output interruption controls for public JSON presentation.
 
 The specimen only opens /etc/hosts for reading. No worker-created mutable
 resource needs cleanup after the intentionally incomplete public documents.

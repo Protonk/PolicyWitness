@@ -95,10 +95,11 @@ pub fn truncate_output(bytes: &[u8], limit: usize) -> (String, bool) {
     (String::from_utf8_lossy(&bytes[..limit]).to_string(), true)
 }
 
-/// Capture metadata is shared by all controller JSON receivers. Counts refer to
-/// original bytes, not the lossy text retained for human-readable context.
+/// Capture metadata shared by the binary runner-client and JSON helper receivers.
+/// Counts refer to original bytes. Only textual diagnostics use lossy conversion;
+/// rejected binary frames are retained separately by the runner-client receiver.
 #[derive(serde::Serialize)]
-pub struct JsonOutputCapture {
+pub struct OutputCapture {
     pub stdout_parse_error: Option<String>,
     pub stdout_truncated: bool,
     pub stdout_capture_error: Option<String>,
@@ -112,7 +113,7 @@ pub struct JsonOutputCapture {
     pub stderr_truncated: bool,
 }
 
-impl JsonOutputCapture {
+impl OutputCapture {
     pub fn unavailable(note: String, limit: usize) -> Self {
         Self {
             stdout_parse_error: None,
@@ -134,7 +135,7 @@ pub fn capture_json_output(
     out: &std::process::Output,
     producer: &str,
     limit: usize,
-) -> (JsonOutputCapture, Option<serde_json::Value>) {
+) -> (OutputCapture, Option<serde_json::Value>) {
     let (stdout, stdout_truncated) = truncate_output(&out.stdout, limit);
     let (stderr, stderr_truncated) = truncate_output(&out.stderr, limit);
     // Command::output collected all bytes: this is a retention cap, not a
@@ -155,22 +156,9 @@ pub fn capture_json_output(
             Err(error) => stdout_parse_error = Some(error.to_string()),
         }
     }
-    #[cfg(test)]
-    crate::json_contract::footprint_test::record(crate::json_contract::footprint_test::Summary {
-        stage: Some(crate::json_contract::footprint_test::Stage::CaptureParsing),
-        raw_stdout: Some((out.stdout.len(), out.stdout.capacity())),
-        raw_stderr: Some((out.stderr.len(), out.stderr.capacity())),
-        retained_stdout: Some((stdout.len(), stdout.capacity())),
-        retained_stderr: Some((stderr.len(), stderr.capacity())),
-        generic_base64: parsed
-            .as_ref()
-            .and_then(|v: &serde_json::Value| v["runner_reply"]["data_base64"].as_str())
-            .map(str::len),
-        ..Default::default()
-    });
     let stdout_raw = (stdout_parse_error.is_some() || stdout_truncated).then_some(stdout);
     (
-        JsonOutputCapture {
+        OutputCapture {
             stdout_parse_error,
             stdout_truncated,
             stdout_capture_error,
@@ -310,7 +298,7 @@ mod tests {
             let (complete, _) = capture_json_output(&raw, "fixture", raw.stderr.len());
             assert!(!complete.stderr_truncated);
             assert_eq!(
-                JsonOutputCapture::unavailable("unavailable".into(), limit).capture_limit_bytes,
+                OutputCapture::unavailable("unavailable".into(), limit).capture_limit_bytes,
                 limit
             );
         }

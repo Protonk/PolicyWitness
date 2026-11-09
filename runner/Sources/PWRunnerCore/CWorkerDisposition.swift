@@ -7,7 +7,7 @@ func uniquelyAssociatedWorkerSlots(_ slots: [CWorkerSlotResult]) -> [String: CWo
     Dictionary(grouping: slots, by: { $0.stepId }).compactMapValues { $0.count == 1 ? $0[0] : nil }
 }
 
-// Internal for driver-to-JSON controls. Preserve the host's observations in the
+// Internal for driver-to-reporting controls. Preserve the host's observations in the
 // authoritative subprocess object; classification does not rewrite them.
 func buildWorkerSubprocess(_ out: CWorkerOutput) -> PWRunnerSubprocess {
     buildWorkerSubprocess(out, disposition: nil)
