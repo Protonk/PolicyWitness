@@ -1,7 +1,7 @@
 import Foundation
 
 // Small, deliberately closed wire vocabulary. No Codable, reflection or JSON
-// interpretation is involved in the converted response path.
+// interpretation is involved in the response path.
 enum PWPorcelainError: Error { case invalid(String) }
 let pwPorcelainByteLimit = 128 * 1024 * 1024
 

@@ -135,18 +135,36 @@ impl<'a> RecordReader<'a> {
         Ok(Some((tag, self.cursor.value()?)))
     }
 }
-pub fn decode<T: WireRead>(data: &[u8]) -> Result<T, String> {
-    if data.len() > LIMIT || data.get(..4) != Some(b"PWP1") {
-        return Err("invalid porcelain frame".into());
+/// Why a frame was refused. A well-formed header naming another schema is a
+/// version refusal, decided before any payload byte is interpreted.
+#[derive(Debug, PartialEq)]
+pub enum FrameError {
+    UnsupportedSchema,
+    Malformed(String),
+}
+impl std::fmt::Display for FrameError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::UnsupportedSchema => f.write_str("unsupported porcelain schema"),
+            Self::Malformed(problem) => f.write_str(problem),
+        }
     }
-    if data.get(4..36) != Some(&crate::porcelain_records::FINGERPRINT) {
-        return Err("unsupported porcelain schema".into());
+}
+pub fn decode<T: WireRead>(data: &[u8]) -> Result<T, FrameError> {
+    if data.len() > LIMIT || data.get(..4) != Some(b"PWP1") || data.len() < 36 {
+        return Err(FrameError::Malformed("invalid porcelain frame".into()));
+    }
+    if data[4..36] != crate::porcelain_records::FINGERPRINT {
+        return Err(FrameError::UnsupportedSchema);
     }
     let budget = Cell::new(LIMIT);
-    let mut reader = Cursor::new(&data[36..], 0, &budget)?;
-    let value = reader.value()?;
-    reader.finish()?;
-    value.decode()
+    (|| {
+        let mut reader = Cursor::new(&data[36..], 0, &budget)?;
+        let value = reader.value()?;
+        reader.finish()?;
+        value.decode()
+    })()
+    .map_err(FrameError::Malformed)
 }
 pub fn variant<'a>(
     data: &'a [u8],
@@ -288,8 +306,21 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for OrderedMap<T> {
         d.deserialize_map(Entries(std::marker::PhantomData))
     }
 }
-// Base64 exists exclusively at the public JSON byte projection and authored JSON
-// fixture boundary. No internal field is converted through text for access.
+// Base64 and hexadecimal spellings exist exclusively at the public JSON byte
+// projection and authored JSON fixture boundary. Byte fields are stored and
+// checked as bytes; none is converted through text for access.
+pub struct Hex<'a>(pub &'a [u8]);
+impl Serialize for Hex<'_> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        const DIGITS: &[u8; 16] = b"0123456789abcdef";
+        let mut text = String::with_capacity(self.0.len() * 2);
+        for byte in self.0 {
+            text.push(DIGITS[(byte >> 4) as usize] as char);
+            text.push(DIGITS[(byte & 15) as usize] as char);
+        }
+        s.serialize_str(&text)
+    }
+}
 pub struct Base64<'a>(pub &'a [u8]);
 impl Serialize for Base64<'_> {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
@@ -316,9 +347,43 @@ impl Serialize for Base64<'_> {
     }
 }
 #[cfg(test)]
-pub fn bytes_from_json<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
+pub fn base64_from_json<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
     let text = String::deserialize(d)?;
     crate::runner_client::decode_base64(&text).map_err(serde::de::Error::custom)
+}
+#[cfg(test)]
+pub fn optional_base64_from_json<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<Vec<u8>>, D::Error> {
+    Option::<String>::deserialize(d)?
+        .map(|text| crate::runner_client::decode_base64(&text).map_err(serde::de::Error::custom))
+        .transpose()
+}
+// Authored fixtures spell bytes as the public projection does: lowercase pairs.
+#[cfg(test)]
+fn decode_hex(text: &str) -> Result<Vec<u8>, String> {
+    fn digit(byte: u8) -> Result<u8, String> {
+        match byte {
+            b'0'..=b'9' => Ok(byte - b'0'),
+            b'a'..=b'f' => Ok(byte - b'a' + 10),
+            _ => Err("invalid lowercase hexadecimal".into()),
+        }
+    }
+    if text.len() % 2 != 0 {
+        return Err("odd hexadecimal length".into());
+    }
+    text.as_bytes()
+        .chunks_exact(2)
+        .map(|pair| Ok(digit(pair[0])? << 4 | digit(pair[1])?))
+        .collect()
+}
+#[cfg(test)]
+pub fn optional_hex_from_json<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<Vec<u8>>, D::Error> {
+    Option::<String>::deserialize(d)?
+        .map(|text| decode_hex(&text).map_err(serde::de::Error::custom))
+        .transpose()
 }
 
 #[cfg(test)]
@@ -446,7 +511,25 @@ mod tests {
         length[4] ^= 1;
         assert_eq!(
             decode::<PWRunnerTerminationRequest>(&length).unwrap_err(),
-            "unsupported porcelain schema"
+            FrameError::UnsupportedSchema
         );
+        // A header cut inside the fingerprint names no schema at all.
+        assert!(matches!(
+            decode::<PWRunnerTerminationRequest>(&valid[..20]).unwrap_err(),
+            FrameError::Malformed(_)
+        ));
+    }
+    #[test]
+    fn byte_projections_spell_bytes_only_at_presentation() {
+        assert_eq!(
+            serde_json::to_value(Hex(&[0x00, 0x9f, 0xff])).unwrap(),
+            "009fff"
+        );
+        assert_eq!(serde_json::to_value(Hex(&[])).unwrap(), "");
+        assert_eq!(decode_hex("009fff").unwrap(), [0x00, 0x9f, 0xff]);
+        for bad in ["0", "0g", "0F", " 00"] {
+            assert!(decode_hex(bad).is_err(), "{bad}");
+        }
+        assert_eq!(serde_json::to_value(Base64(&[10, 20, 30])).unwrap(), "ChQe");
     }
 }

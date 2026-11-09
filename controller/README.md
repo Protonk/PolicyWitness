@@ -127,12 +127,16 @@ Current wire contracts: request schema 6, response schema 29, controller envelop
 The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
 definitions, including the [specimen dossier](../docs/PolicyWitness.md#the-specimen-dossier)
 and [comparison records](../docs/PolicyWitness.md#reading-a-comparison-record).
-The controller retains the runner reply unchanged and interprets it only after
-admitting its exact response version. Another integer version produces
-`unsupported_runner_response`; a missing or noninteger version produces
-`malformed_runner_response`. Both retain the reply with exit 1 and withhold
-runner-derived diagnostics. Request-delivery failure takes
-precedence as `tool_error`, leaving any captured reply uninterpreted.
+The controller keeps the received host bytes in the client capture and
+interprets the decoded reply only after admitting its exact response version.
+A host frame naming another schema fingerprint, or a decoded reply carrying
+another response version, produces `unsupported_runner_response`. Host bytes
+that are not one complete typed record, or a decoded record that fails
+structural admission, produce `malformed_runner_response`. Each exits 1 and
+withholds runner-derived diagnostics; `data.runner_result` holds the decoded
+record's projection when decoding succeeded and is null otherwise.
+Request-delivery failure takes precedence as `tool_error`, leaving any captured
+reply uninterpreted.
 
 `data.runner_client.transport` retains the versioned client capture: acquisition
 attempts, submission decision, structured transport errors and exact host reply
@@ -148,7 +152,9 @@ bytes and collections; binary reception and semantic admission are separate.
 The public JSON projection borrows those records. Original host bytes remain in
 the capture and become base64 only at this output boundary. A rejected client
 frame retains its exact bounded bytes in a `format: "porcelain"` capture;
-it supplies no submission claim. Authored JSON fixtures enter generated records only in tests; production reads
+it supplies no submission claim. The frame decoder reports a typed refusal:
+another schema fingerprint is a version refusal, anything else is malformed,
+and no caller classifies by diagnostic text. Authored JSON fixtures enter generated records only in tests; production reads
 the binary schema.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
@@ -163,15 +169,15 @@ delivery. Capture is null when the client was not invoked.
 admitted `xpc_error` fallback path. It retains the helper envelope and exit code
 separately and copies an admitted helper's outcome without deriving another
 verdict. It establishes neither worker progress nor the cause of a lost reply.
-Worker evidence and transfer diagnostics pass through unchanged. Likewise,
+Worker evidence and transfer diagnostics are projected without reinterpretation. Likewise,
 `runner_reporting_failed` retains the host's diagnostic and available native
 observations without per-step comparisons; `evidence_retained: false` identifies
-the minimal reply when evidence-preserving serialization also failed.
+the minimal reply when the evidence-preserving write also failed.
 
 ### Execution evidence ownership
 
 [`complete_execution`](src/run_flow.rs) derives CLI status from the admitted
-runner outcome and preserves the reply unchanged. `execution_envelope` assembles
+runner outcome and leaves the typed reply as received. `execution_envelope` assembles
 the dossier, transport, acquisition history, independent fallback compilation
 and execution diagnostics. [porcelain_admission.rs](src/porcelain_admission.rs)
 validates the carried worker disposition against supporting facts before projecting

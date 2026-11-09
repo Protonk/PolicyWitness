@@ -44,8 +44,7 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
             let forms = PWRunnerAttemptPathDiagnostics(input: input, realpath_resolved: nil,
                 parent_realpath_resolved: resolved, observer: "runner_host", stage: "after_orchestration")
             _ = try pwPorcelainEncode(forms)
-            let decoded = forms
-            try expectEqual(decoded.parent_realpath_resolved, .some(resolved))
+            try expectEqual(forms.parent_realpath_resolved, .some(resolved))
         }
         tk.run("all nine query and attempt path states retain exact UTF-8 in binary receipts") {
             guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {

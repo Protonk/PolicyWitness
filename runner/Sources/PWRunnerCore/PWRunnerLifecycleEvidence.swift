@@ -6,7 +6,8 @@ import Darwin
 /// are signed 32-bit syscall values encoded as JSON integers (no units).
 /// errno is captured immediately only when rc == -1; otherwise it is absent/null.
 /// An absent/null request means no request. Structurally valid values are decoded
-/// without a signal/errno allowlist. The client/controller forward this object.
+/// without a signal/errno allowlist. The client carries the host frame opaquely;
+/// the controller projects this record without an allowlist.
 struct PWRunnerTerminationRequest {
     // BEGIN GENERATED PORCELAIN PWRunnerTerminationRequest
     let signal: Int32

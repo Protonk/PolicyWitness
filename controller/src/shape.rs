@@ -3,8 +3,8 @@
 //! allowlists; `tests/lib/consumer.py` rejects an unknown key at a recorded
 //! path and a present key of another type.
 //!
-//! The collector mirrors the Swift reader of the reply golden
-//! (`runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift`): an array is
+//! The collector follows the same rules as the Python reader of the reply
+//! golden (`tests/suites/runner_unit/porcelain_replies.py`): an array is
 //! typed `array` and every object element contributes to the `path[]` entry; a
 //! key seen as null in one place and typed in another records the type; two
 //! different types at one path are a producer conflict. A golden type of

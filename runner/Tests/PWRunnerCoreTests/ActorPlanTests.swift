@@ -225,8 +225,7 @@ func runActorPlanTests(_ tk: TestKit) {
                 try expectTrue(reply.phases.allSatisfy { $0.collection_status == "not_reached" && $0.activation_observation == nil })
                 try expectTrue(reply.steps.isEmpty && reply.extension_events!.isEmpty && reply.resources!.tokens.isEmpty)
                 _ = try admittedReplyData(reply)
-                let decoded = reply
-                try expectEqual(decoded.preparation_failure?.code, "inconsistent_assignment")
+                try expectEqual(reply.preparation_failure?.code, "inconsistent_assignment")
             }
         }
         tk.run("empty visits retain their actor-local position before another actor's action") {

@@ -164,43 +164,6 @@ func replyShapeDocuments() throws -> [PWRunnerRunResult] {
     return documents
 }
 
-struct ShapeVerdict: Equatable {
-    let status: String   // ok, missing_golden, needs_bump, update
-    let detail: String
-}
-
-func classifyShapeChange(golden: [String: Any]?, current: [String: [String: String]],
-                         manifestVersion: Int) -> ShapeVerdict {
-    let goldenShape = golden?["shape"] as? [String: [String: String]] ?? [:]
-    guard let recorded = golden?["response_schema"] as? Int else {
-        return ShapeVerdict(status: "missing_golden", detail: "no reply shape golden")
-    }
-    if goldenShape == current && recorded == manifestVersion { return ShapeVerdict(status: "ok", detail: "") }
-    var removed: [String] = [], changed: [String] = [], added: [String] = []
-    for (path, keys) in goldenShape {
-        for (key, type) in keys {
-            guard let now = current[path]?[key] else { removed.append(path + "." + key); continue }
-            if now != type && now != "null" && type != "null" { changed.append("\(path).\(key): \(type) -> \(now)") }
-        }
-    }
-    for (path, keys) in current {
-        for key in keys.keys where goldenShape[path]?[key] == nil { added.append(path + "." + key) }
-    }
-    if !removed.isEmpty || !changed.isEmpty {
-        let detail = "reply reading rules changed (removed: \(removed.sorted()); changed: \(changed.sorted()))"
-        return manifestVersion <= recorded
-            ? ShapeVerdict(status: "needs_bump", detail: detail)
-            : ShapeVerdict(status: "update", detail: detail + "; the manifest already moved")
-    }
-    if recorded != manifestVersion {
-        return ShapeVerdict(status: "update", detail: "golden records response \(recorded); manifest says \(manifestVersion)")
-    }
-    if !added.isEmpty {
-        return ShapeVerdict(status: "update", detail: "reply shape gained fields \(added.sorted()); additive, no bump needed")
-    }
-    return ShapeVerdict(status: "update", detail: "nullable fields changed their recorded type; no bump needed")
-}
-
 func runContractVersionTests(_ tk: TestKit) {
     let root = repositoryRoot()
     tk.group("Wire contract versions") {
@@ -212,26 +175,6 @@ func runContractVersionTests(_ tk: TestKit) {
             try expectEqual(PWShmLayout.abiIdentity.count, PWShmLayout.abiIdentityBytes)
             try expectEqual(PWShmLayout.abiIdentity.map { String(format: "%02x", $0) }.joined(),
                             PWShmLayout.abiIdentityHex)
-        }
-        tk.run("shape classification separates additive, breaking and unacknowledged changes") {
-            let base: [String: [String: String]] = ["reply": ["a": "number", "b": "null"], "reply.o": ["k": "string"]]
-            func golden(_ shape: [String: [String: String]], _ version: Int) -> [String: Any] {
-                ["shape": shape, "response_schema": version]
-            }
-            try expectEqual(classifyShapeChange(golden: nil, current: base, manifestVersion: 8).status, "missing_golden")
-            try expectEqual(classifyShapeChange(golden: golden(base, 8), current: base, manifestVersion: 8).status, "ok")
-            var added = base; added["reply"]?["c"] = "string"
-            let additive = classifyShapeChange(golden: golden(base, 8), current: added, manifestVersion: 8)
-            try expectEqual(additive.status, "update"); try expectContains(additive.detail, "no bump needed")
-            var removed = base; removed["reply"]?.removeValue(forKey: "a")
-            try expectEqual(classifyShapeChange(golden: golden(base, 8), current: removed, manifestVersion: 8).status, "needs_bump")
-            try expectEqual(classifyShapeChange(golden: golden(base, 8), current: removed, manifestVersion: 9).status, "update")
-            var retyped = base; retyped["reply"]?["a"] = "string"
-            try expectEqual(classifyShapeChange(golden: golden(base, 8), current: retyped, manifestVersion: 8).status, "needs_bump")
-            var nullable = base; nullable["reply"]?["b"] = "object"
-            let refined = classifyShapeChange(golden: golden(base, 8), current: nullable, manifestVersion: 8)
-            try expectEqual(refined.status, "update"); try expectContains(refined.detail, "nullable")
-            try expectEqual(classifyShapeChange(golden: golden(base, 7), current: base, manifestVersion: 8).status, "update")
         }
         tk.run("retain admitted typed shape companions for independent presentation checks") {
             guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
@@ -255,7 +198,7 @@ func runContractVersionTests(_ tk: TestKit) {
                         captured += 1
                         try expectEqual(receipt.producer, "worker")
                         try expectEqual(receipt.capture_stage, "before_apply")
-                        try expectEqual(receipt.bytecode_b64, "ChQe")
+                        try expectEqual(receipt.bytecode, Data([10, 20, 30]))
                         try expectNil(receipt.reason)
                     } else {
                         unavailable += 1
@@ -263,7 +206,7 @@ func runContractVersionTests(_ tk: TestKit) {
                         try expectEqual(receipt.reason, "successful_application_unconfirmed")
                         try expectNil(receipt.producer)
                         try expectNil(receipt.capture_stage)
-                        try expectNil(receipt.bytecode_b64)
+                        try expectNil(receipt.bytecode)
                     }
                 }
             }

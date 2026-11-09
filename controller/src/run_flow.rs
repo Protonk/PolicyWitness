@@ -78,7 +78,7 @@ struct CompletedExecution {
 /// The version gate for a received runner reply.
 pub enum ReplyVersion {
     Supported,
-    Unsupported(serde_json::Number),
+    Unsupported(i64),
     Malformed(String),
 }
 
@@ -91,7 +91,7 @@ pub(crate) enum RequestFailureProjection {
 
 pub(crate) fn reply_version(reply: &PWRunnerRunResult) -> ReplyVersion {
     if reply.schema_version != i64::from(json_contract::RESPONSE_SCHEMA_VERSION) {
-        return ReplyVersion::Unsupported(reply.schema_version.into());
+        return ReplyVersion::Unsupported(reply.schema_version);
     }
     match porcelain_admission::admission_problem(reply) {
         Some(problem) => ReplyVersion::Malformed(problem),
@@ -702,8 +702,8 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
         Err(error) => return tool_error(specimen, timeout_ms, error),
     };
 
-    // The reply is retained unchanged on every refusal; nothing reads it
-    // before admission.
+    // A decoded reply stays in the envelope on every refusal; nothing
+    // interprets it before admission.
     let (outcome, exit_code, error) = match admit_reply(&runner_client, runner_result.as_ref()) {
         ReplyAdmission::DeliveryFailed(error) => ("tool_error", 2, error),
         ReplyAdmission::Refused { outcome, error } => (outcome, 1, error),
@@ -1633,7 +1633,7 @@ else:
         for other in [current - 1, current + 1, 1, 0, -1, i64::MAX] {
             reply.schema_version = other;
             match reply_version(&reply) {
-                ReplyVersion::Unsupported(version) => assert_eq!(version.as_i64(), Some(other)),
+                ReplyVersion::Unsupported(version) => assert_eq!(version, other),
                 _ => panic!("{other} admitted"),
             }
         }
@@ -2357,7 +2357,10 @@ else:
                 let typed = reply.and_then(|value| match serde_json::from_value(value) {
                     Ok(record) => Some(record),
                     Err(error) => {
-                        run.runner_reply_error = Some(error.to_string());
+                        run.runner_reply_error = Some(crate::runner_client::ReplyError {
+                            refusal: crate::runner_client::ReplyRefusal::Malformed,
+                            message: error.to_string(),
+                        });
                         None
                     }
                 });
@@ -2559,7 +2562,10 @@ else:
         fn refused_reply_versions_request_no_fallback_compilation() {
             // Through production admission: a reply under another response
             // version is refused before anything reads it, so no helper is
-            // requested and `policy_check` is null. The same holds for a host
+            // requested and `policy_check` is null. The "string" and "missing"
+            // rows stand for host bytes that supply no typed record: the
+            // authored JSON fails this test's fixture reader, as a wrong-kind or
+            // absent field fails the binary reader (porcelain controls). The same holds for a host
             // body naming xpc_error: only a client transport observation can
             // authorize the separate fallback compiler.
             let root = scratch("refused-reply-versions");
@@ -3352,7 +3358,10 @@ else:
                         transport_admission: "accepted".into(),
                         transport_error: Some("constructed".into()),
                         submission: "invoked".into(),
-                        runner_reply_error: Some("constructed".into()),
+                        runner_reply_error: Some(crate::runner_client::ReplyError {
+                            refusal: crate::runner_client::ReplyRefusal::Malformed,
+                            message: "constructed".into(),
+                        }),
                     }),
                     runner_result: Some(fixture_reply(reply)),
                     // Field-complete shape fixture, including an optional refusal record.
@@ -3392,9 +3401,9 @@ else:
         }
 
         /// Compare `current` with the golden at `golden_path`. Anything but `Ok`
-        /// writes the candidate beside the case artifacts and fails with the advice
-        /// the Swift reader gives: review the diff, then replace the golden, bumping
-        /// the manifest first when the verdict says so.
+        /// writes the candidate beside the case artifacts and fails with this
+        /// advice: review the diff, then replace the golden, bumping the manifest
+        /// first when the verdict says so.
         fn check_golden(
             golden_path: &Path,
             version_key: &str,

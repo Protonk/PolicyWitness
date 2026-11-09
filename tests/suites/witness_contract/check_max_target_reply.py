@@ -369,10 +369,10 @@ def run_case(pw, out, name, request, *, refused=False, measure_margin=False, **e
                            client_fraction_of_budget=round(client_bytes / budget, 4))
         if measure_margin:
             # Live capture must be present in the maximal-metadata workload; the
-            # conservative receipt allowance (base64 with every slash escaped plus
+            # receipt allowance (a full-capacity capture carried as bytes, plus
             # metadata) is recorded beside it. The capture size is the manifest's.
             capture_bytes = documented_limit('compiled_profile')
-            profile_allowance = 2 * 4 * ((capture_bytes + 2) // 3) + 4096
+            profile_allowance = capture_bytes + 4096
             capture = data['runner_result']['compiled_profile']
             assert capture['status'] == 'captured' and capture['bytecode_length'] > 0, capture
             assert host_bytes + profile_allowance <= maximum, 'host reply plus a conservative receipt allowance exceeds retention'

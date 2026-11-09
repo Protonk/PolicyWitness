@@ -506,7 +506,9 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 "attempt.fresh_read.open_rc": observed.attempt.fresh_read?.open_rc as Any? ?? NSNull(),
                 "attempt.fresh_read.stat_rc": observed.attempt.fresh_read?.stat_rc as Any? ?? NSNull(),
                 "attempt.fresh_read.read_rc": observed.attempt.fresh_read?.read_rc as Any? ?? NSNull(),
-                "attempt.fresh_read.content_hex": observed.attempt.fresh_read?.content_hex as Any? ?? NSNull(),
+                // The shared matrix spells the bytes as the public projection does.
+                "attempt.fresh_read.content_hex": observed.attempt.fresh_read?.content
+                    .map { $0.map { String(format: "%02x", $0) }.joined() } as Any? ?? NSNull(),
                 "attempt.fresh_read.close_rc": observed.attempt.fresh_read?.close_rc as Any? ?? NSNull(),
             ]
             func mismatches(_ expected: [String: Any]) -> [String] {

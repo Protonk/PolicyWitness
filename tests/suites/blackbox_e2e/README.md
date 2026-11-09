@@ -168,8 +168,9 @@ its query is read from `order` alone.
 Constructed protocol-2 client controls independently check version-first
 admission, ordered reservation attempts, bounded observations, exact base64
 host bytes, invocation without replay, and transport/host separation. Rejected
-or incomplete outer captures project unknown submission; unsupported parsed
-captures remain opaque. Clock failures preserve earlier readings without
+or incomplete client frames project unknown submission. These controls author
+a rejected capture as an object under the fixture option; live validation
+requires the raw retained bytes the controller emits. Clock failures preserve earlier readings without
 inventing missing times. Empty received host bytes differ from no reply, and
 delivery failure takes precedence over a captured response. Host-record
 mutations explicitly encode their authored record into its carrier; transport
@@ -199,8 +200,8 @@ Phase collection controls reject mistyped containers, ordering and disposition
 values without treating them as absent. An empty spawn-failure object is rejected
 by the full consumer's required-field checks; the separate lifecycle oracle checks
 claim consistency and does not certify that object's complete shape. Rust unit
-and assembly controls pin the same claim boundary, optional absence and unchanged
-raw forwarding, including degraded reporting-failure replies.
+and assembly controls pin the same claim boundary, optional absence and preserved
+observations in the public projection, including degraded reporting-failure replies.
 
 
 `comparison_controls` exercises `tests/lib/envelope_compare.py` through its CLI

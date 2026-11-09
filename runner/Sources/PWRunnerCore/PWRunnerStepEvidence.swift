@@ -8,7 +8,7 @@ func eligibleOrderedPrediction(_ query: PWRunnerSandboxCheckResult) -> Bool {
     return (query.outcome == "allow" && rc == 0) || (query.outcome == "deny" && rc == 1 && err == 0)
 }
 
-// Shared by construction and encoding: a native record must be uniquely
+// Shared by construction and reporting validation: a native record must be uniquely
 // associated with this query and target the worker whose lifetime was observed.
 // NONE has no native filter value, even if the request supplies an unused value.
 func eligibleOrderedStep(stepId: String, query: PWRunnerSandboxCheckResult,
@@ -38,7 +38,7 @@ struct PWRunnerComparison {
     // END GENERATED PORCELAIN PWRunnerComparison
 
     /// The `limitations` vocabulary: the planner's exclusion codes and the
-    /// lifecycle entries. The encoder rejects any other string.
+    /// lifecycle entries. Reporting validation rejects any other string.
     static let limitationVocabulary: Set<String> = Set([
         "query_plan:path_unresolved_at_planning", "query_plan:prediction_unavailable_pair",
         "query_plan:unrecognized_filter_kind",

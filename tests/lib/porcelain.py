@@ -3,6 +3,8 @@
 Only structural tables are generated. This reader does not call the Swift/Rust
 codec or decide witness semantics. It projects admitted records for the existing
 Python semantic readers, retaining the received bytes at their capture owner.
+Byte fields are spelled as base64 or lowercase hexadecimal, as each field's
+schema entry declares, only in this projection.
 """
 import base64
 
@@ -56,7 +58,8 @@ class Reader:
             except UnicodeDecodeError as error:
                 raise ValueError('invalid UTF-8') from error
         elif shape == 'bytes':
-            result = base64.b64encode(self.data[start:stop]).decode('ascii')
+            # Bytes have no JSON spelling here; the owning record field names it.
+            result = bytes(self.data[start:stop])
         elif shape == 'record':
             ident, cursor = self.number(start, stop, 2)
             if ident != descriptor['record'] or ident not in self.records:
@@ -69,7 +72,16 @@ class Reader:
                     raise ValueError('unknown, duplicate or unordered field tag')
                 previous = tag
                 field = fields[tag]
-                result[field['name']], cursor = self.value(cursor, stop, field['type'], depth + 1)
+                item, cursor = self.value(cursor, stop, field['type'], depth + 1)
+                if field['type'] == 'bytes':
+                    projection = field.get('projection')
+                    if projection == 'base64':
+                        item = base64.b64encode(item).decode('ascii')
+                    elif projection == 'hex':
+                        item = item.hex()
+                    else:
+                        raise ValueError('byte field lacks a public projection: ' + field['name'])
+                result[field['name']] = item
                 seen.add(tag)
             for tag, field in fields.items():
                 if tag not in seen:
@@ -115,19 +127,12 @@ class Reader:
                 raise ValueError('trailing collection payload')
         elif shape == 'variant':
             case, cursor = self.number(start, stop, 2)
-            if descriptor['variant'] != 'PWDispositionValue':
+            cases = porcelain_schema.VARIANTS.get(descriptor['variant'])
+            if cases is None:
                 raise ValueError('unknown variant')
-            if case == 1:
-                alternative = 'i64'
-            elif case == 2:
-                matches = [ident for ident, record in self.records.items()
-                           if record['name'] == 'PWRunnerTerminationRequest']
-                if len(matches) != 1:
-                    raise ValueError('unknown termination record')
-                alternative = {'record': matches[0]}
-            else:
+            if case not in cases:
                 raise ValueError('unknown variant case')
-            result, cursor = self.value(cursor, stop, alternative, depth + 1)
+            result, cursor = self.value(cursor, stop, cases[case], depth + 1)
             if cursor != stop:
                 raise ValueError('trailing variant payload')
         else:

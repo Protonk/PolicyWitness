@@ -23,10 +23,10 @@ executable; it does not build the shipped service bundle.
 | --- | --- |
 | Shared wire entry | [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift): XPC protocol, wire constants and versions; [PWRunnerCoding.swift](Sources/PWRunnerCore/PWRunnerCoding.swift): closed-object key checking and JSON encoding/decoding. These and the wire families below compile in host and client. |
 | Requests and extensions | [PWRunnerRequest.swift](Sources/PWRunnerCore/PWRunnerRequest.swift): ordinary requests, phases, overrides and refusal records; [PWRunnerExtension.swift](Sources/PWRunnerCore/PWRunnerExtension.swift): actor interventions, native event/fresh-file records and local validity rules. |
-| Attempt and path evidence | [PWRunnerAttemptEvidence.swift](Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift): native attempt records, codecs and local read/write/exec validity; [PWRunnerPathEvidence.swift](Sources/PWRunnerCore/PWRunnerPathEvidence.swift): identities, path forms and their codecs. |
-| Prediction and step evidence | [PWRunnerPredictionEvidence.swift](Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): native query and validator records, codecs and association; [PWRunnerStepEvidence.swift](Sources/PWRunnerCore/PWRunnerStepEvidence.swift): step/comparison/ordering records and ordered-query eligibility. |
+| Attempt and path evidence | [PWRunnerAttemptEvidence.swift](Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift): native attempt records and local read/write/exec validity; [PWRunnerPathEvidence.swift](Sources/PWRunnerCore/PWRunnerPathEvidence.swift): identities and path forms. |
+| Prediction and step evidence | [PWRunnerPredictionEvidence.swift](Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): native query and validator records and association; [PWRunnerStepEvidence.swift](Sources/PWRunnerCore/PWRunnerStepEvidence.swift): step/comparison/ordering records and ordered-query eligibility. |
 | Lifecycle and disposition evidence | [PWRunnerLifecycleEvidence.swift](Sources/PWRunnerCore/PWRunnerLifecycleEvidence.swift): worker publications, host waits and subprocess records; [PWRunnerDisposition.swift](Sources/PWRunnerCore/PWRunnerDisposition.swift): claims, issues, lifecycle projection and integrity validation. |
-| Reply and profile evidence | [PWRunnerReply.swift](Sources/PWRunnerCore/PWRunnerReply.swift): phase/run codecs and checks joining families; [PWRunnerProfileCapture.swift](Sources/PWRunnerCore/PWRunnerProfileCapture.swift): compiled-profile records and local validity. |
+| Reply and profile evidence | [PWRunnerReply.swift](Sources/PWRunnerCore/PWRunnerReply.swift): phase/run records and checks joining families; [PWRunnerProfileCapture.swift](Sources/PWRunnerCore/PWRunnerProfileCapture.swift): compiled-profile records and local validity. |
 | Service lifecycle | [PWRunnerService.swift](Sources/PWRunnerCore/PWRunnerService.swift): caller authorization, shared single-use admission, request handling, reply degradation and host retirement. |
 | Listener and bundle | [PWRunnerListener.swift](Sources/PWRunnerCore/PWRunnerListener.swift): listener selection; [Services/PWRunner/](Services/PWRunner/): entry point, Info.plist and entitlements. |
 | Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): admission, ordinary worker execution, per-phase collection, driver invocation and final reply sequence; [CWorkerRequestPlanning.swift](Sources/PWRunnerCore/CWorkerRequestPlanning.swift): request translation, capacity checks, refusal assembly and fresh query planning; [ActorPlan.swift](Sources/PWRunnerCore/ActorPlan.swift): the actor form's normalized reference tables; [ActorOrchestration.swift](Sources/PWRunnerCore/ActorOrchestration.swift): per-actor driver inputs, the schedule with per-phase collection, and the actor-indexed reply. |
@@ -39,14 +39,16 @@ executable; it does not build the shipped service bundle.
 
 The reply representation is owned by
 [docs/porcelain.json](../docs/porcelain.json). Its generator writes stored-field
-regions, direct Swift binary writers, owned Rust records/readers and independent
-Python structural tables. `PWPorcelain.swift` implements the closed primitive
+regions, direct Swift binary writers, owned Rust records/readers and the
+structural tables a separately written Python reader uses. `PWPorcelain.swift` implements the closed primitive
 format. `validateForReporting` runs the semantic gates before normal writing;
 rich degradation retains observations while withholding comparisons, and an
 independent minimal writer reports lost evidence. The client relays opaque host
 bytes in a binary capture. Lifecycle questions have fixed named fields; missing
 answers remain representable in incomplete evidence. Equipment metadata counts
-retained UTF-8 text directly. JSON request/control decoding, validator NDJSON
+retained UTF-8 text directly. Byte payloads (compiled-profile bytecode, rejected
+validator context, fresh-read content) are stored and written as bytes; the
+controller spells them as base64 or hexadecimal in public JSON. JSON request/control decoding, validator NDJSON
 and the equipment inventory file retain their own boundary adapters.
 
 The native [C worker](../controller/tools/pw_probe_runner/pw_probe_runner.c) and
@@ -239,10 +241,12 @@ comparison precedence remain separate from this evidence. The
 [exec field account](../docs/PolicyWitness.md#structured-exec-observations) defines
 all conditional fields and residual descendant lifetime limits.
 
-Readers and reporting validation require the current response version. If ordinary reply
-encoding fails, the service returns `runner_reporting_failed`, preserving
-available observations and withholding comparisons. If that also fails,
-`evidence_retained: false` marks the minimal reply. Full wire fields and reading
+Readers and reporting validation require the current response version. If
+reporting admission or the ordinary binary write fails, the service returns
+`runner_reporting_failed`, preserving available observations and withholding
+comparisons. If that also fails, `evidence_retained: false` marks the minimal
+reply. If even the minimal write fails, the host returns zero bytes, which the
+controller reports as `malformed_runner_response` with no host result. Full wire fields and reading
 rules belong to the [output reference](../docs/PolicyWitness.md#output-envelope).
 
 ## Test seam: `_test_overrides`

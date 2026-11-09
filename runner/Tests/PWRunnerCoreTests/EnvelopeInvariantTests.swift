@@ -19,9 +19,9 @@ private func hostShortCircuitResult(outcome: String) -> PWRunnerRunResult {
 }
 
 func runEnvelopeInvariantTests(_ tk: TestKit) {
-    tk.group("consumer evidence survives encoding without reclassification") {
+    tk.group("consumer evidence is reported without reclassification") {
         for state in ["absent", "present", "recreated"] {
-            tk.run("a fixed comparison survives \(state) path enrichment and encoding") {
+            tk.run("a fixed comparison survives \(state) path enrichment and reporting admission") {
                 let path = "/private/tmp/pw-mutation-wire-" + UUID().uuidString
                 FileManager.default.createFile(atPath: path, contents: Data("old".utf8))
                 defer { try? FileManager.default.removeItem(atPath: path) }
@@ -110,45 +110,43 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
     }
     tk.group("PWRunnerSubprocess: additive host observations") {
         tk.run("absent typed observations remain unknown") {
-            let decoded = PWRunnerSubprocess(pid: 42, exit_code: 0, partial_steps: false)
-            _ = try pwPorcelainEncode(decoded)
-            try expectEqual(decoded.exit_code, 0)
-            try expectNil(decoded.ready_byte_received)
-            try expectNil(decoded.done_observed)
-            try expectNil(decoded.poll_stop_reason)
-            try expectNil(decoded.exit_requested)
-            try expectNil(decoded.termination_request)
-            try expectNil(decoded.reaped)
-            try expectNil(decoded.wait_errors)
+            let record = PWRunnerSubprocess(pid: 42, exit_code: 0, partial_steps: false)
+            _ = try pwPorcelainEncode(record)
+            try expectEqual(record.exit_code, 0)
+            try expectNil(record.ready_byte_received)
+            try expectNil(record.done_observed)
+            try expectNil(record.poll_stop_reason)
+            try expectNil(record.exit_requested)
+            try expectNil(record.termination_request)
+            try expectNil(record.reaped)
+            try expectNil(record.wait_errors)
         }
-        tk.run("observed false and empty errors survive encoding without inventing status") {
+        tk.run("observed false and empty errors are writable without inventing status") {
             let record = PWRunnerSubprocess(pid: 42, term_signal: nil, exit_code: nil,
                 partial_steps: true, ready_byte_received: false, done_observed: false,
                 poll_stop_reason: "wait_error", exit_requested: true, reaped: false, wait_errors: [])
             _ = try pwPorcelainEncode(record)
-            let decoded = record
-            try expectEqual(decoded.ready_byte_received, false)
-            try expectEqual(decoded.done_observed, false)
-            try expectEqual(decoded.reaped, false)
-            try expectEqual(decoded.wait_errors?.count, 0)
-            try expectNil(decoded.exit_code)
-            try expectNil(decoded.term_signal)
-            try expectNil(decoded.termination_request)
+            try expectEqual(record.ready_byte_received, false)
+            try expectEqual(record.done_observed, false)
+            try expectEqual(record.reaped, false)
+            try expectEqual(record.wait_errors?.count, 0)
+            try expectNil(record.exit_code)
+            try expectNil(record.term_signal)
+            try expectNil(record.termination_request)
         }
-        tk.run("unfamiliar host observation strings and errno values survive encoding") {
+        tk.run("unfamiliar host observation strings and errno values are writable") {
             let record = PWRunnerSubprocess(pid: 42, term_signal: nil, exit_code: nil,
                 partial_steps: false, poll_stop_reason: "future_stop",
                 termination_request: PWRunnerTerminationRequest(signal: 31, rc: -1, errno: 123456),
                 reaped: false, wait_errors: [PWRunnerWaitError(stage: "future_phase", rc: -1, errno: 654321)])
             _ = try pwPorcelainEncode(record)
-            let decoded = record
-            try expectEqual(decoded.poll_stop_reason, "future_stop")
-            try expectEqual(decoded.termination_request?.signal, 31)
-            try expectEqual(decoded.termination_request?.rc, -1)
-            try expectEqual(decoded.termination_request?.errno, 123456)
-            try expectEqual(decoded.wait_errors?.first?.stage, "future_phase")
-            try expectEqual(decoded.wait_errors?.first?.rc, -1)
-            try expectEqual(decoded.wait_errors?.first?.errno, 654321)
+            try expectEqual(record.poll_stop_reason, "future_stop")
+            try expectEqual(record.termination_request?.signal, 31)
+            try expectEqual(record.termination_request?.rc, -1)
+            try expectEqual(record.termination_request?.errno, 123456)
+            try expectEqual(record.wait_errors?.first?.stage, "future_phase")
+            try expectEqual(record.wait_errors?.first?.rc, -1)
+            try expectEqual(record.wait_errors?.first?.errno, 654321)
         }
     }
 

@@ -178,7 +178,7 @@ func runLimitsContractTests(_ tk: TestKit) {
                 try expectEqual(fault.frame_bytes, count)
                 try expectEqual(fault.retained_bytes, min(count, 256))
                 try expectEqual(fault.context_truncated, count > 256)
-                try expectEqual(Data(base64Encoded: fault.context_b64), Data(repeating: 0xff, count: min(count, 256)))
+                try expectEqual(fault.context, Data(repeating: 0xff, count: min(count, 256)))
             }
         }
     }

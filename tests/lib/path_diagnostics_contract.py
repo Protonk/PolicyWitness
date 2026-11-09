@@ -1,12 +1,10 @@
-"""Shared fixture assertions used directly and after Rust receiver forwarding.
+"""Shared path-diagnostics fixture assertions for the Python reader controls.
 
 Each fixture row is one compact path-diagnostics object under the current
 contract: the small reader classifies it, and the full document validator
 sees the same object inside a constructed step.
 """
 import copy
-import json
-import sys
 
 import contract
 from consumer import PATH_FORMS, path_form, steps, validate, validate_path_diagnostics
@@ -58,7 +56,3 @@ def check_cases(cases):
     other['schema_version'] = contract.RESPONSE_SCHEMA + 1
     errors = validate(other)
     assert errors and 'unsupported' in errors[0], errors
-
-
-if __name__ == '__main__':
-    check_cases(json.load(sys.stdin))

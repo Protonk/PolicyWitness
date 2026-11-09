@@ -29,9 +29,11 @@ def record(ident, *fields):
     return tlv(6, struct.pack('<H', ident) + b''.join(fields))
 
 
-def table(descriptor='i64', optional=False, json_null=False):
-    return {1: {'name': 'Control', 'fields': {1: dict(name='observed', type=descriptor,
-             optional=optional, json_null=json_null)}}}
+def table(descriptor='i64', optional=False, json_null=False, projection=None):
+    field = dict(name='observed', type=descriptor, optional=optional, json_null=json_null)
+    if projection:
+        field['projection'] = projection
+    return {1: {'name': 'Control', 'fields': {1: field}}}
 
 
 def read(raw, records=None):
@@ -48,11 +50,22 @@ class PorcelainCodecTests(receipts.TestCase):
             ('u64', 3, struct.pack('<Q', 2**64 - 1), 2**64 - 1),
             ('bool', 1, b'\x01', True), ('bool', 1, b'\x00', False),
             ('text', 4, 'é'.encode(), 'é'),
-            ('bytes', 5, b'\xff\x00', '/wA='),
         ]:
             with self.subTest(descriptor=descriptor):
                 raw = record(1, field(1, tlv(kind, payload)))
                 self.assertEqual(read(raw, table(descriptor)), {'observed': expected})
+        # The same wire bytes are spelled by the field's declared projection;
+        # a byte field declaring none has no public value.
+        raw = record(1, field(1, tlv(5, b'\xff\x00')))
+        for projection, expected in [('base64', '/wA='), ('hex', 'ff00')]:
+            with self.subTest(projection=projection):
+                self.assertEqual(read(raw, table('bytes', projection=projection)), {'observed': expected})
+        self.assertEqual(read(record(1, field(1, tlv(5, b''))), table('bytes', projection='hex')), {'observed': ''})
+        for projection in (None, 'base32'):
+            with self.subTest(projection=projection), self.assertRaisesRegex(ValueError, 'projection'):
+                read(raw, table('bytes', projection=projection))
+        with self.assertRaisesRegex(ValueError, 'wrong value kind'):
+            read(record(1, field(1, tlv(4, b'ff00'))), table('bytes', projection='hex'))
         self.assertEqual(read(record(1), table(optional=True)), {})
         self.assertEqual(read(record(1), table(optional=True, json_null=True)), {'observed': None})
         self.assertEqual(read(record(1, field(1, tlv(2, bytes(8))))), {'observed': 0})
@@ -236,6 +249,7 @@ class PorcelainRejectedCaptureTests(receipts.TestCase):
                 self.assertEqual(client, before, 'independent admission changed retained evidence')
 
     def test_raw_rejection_controls_refuse_corrupt_receipts_and_recovered_claims(self):
+        import contract
         from runner_client_capture import validate_client
         valid = self.capture_frame()
         raw = valid[:4] + bytes([valid[4] ^ 1]) + valid[5:]
@@ -258,6 +272,15 @@ class PorcelainRejectedCaptureTests(receipts.TestCase):
                 client = copy.deepcopy(baseline); mutate(client)
                 self.assertTrue(validate_client(client, None), name)
         self.assertTrue(validate_client(baseline, dict(pid=42)), 'rejected bytes supplied a host result')
+        # A rejected capture spelled as a projected object is an authored
+        # fixture form: live validation refuses it and the fixture option
+        # admits the same classification.
+        decoded = porcelain.decode(self.capture_frame(contract.RUNNER_PROTOCOL + 1), 'capture')
+        projected = dict(self.rejected_client(b'x', 'unsupported', parse_error=None), transport=decoded,
+                         stdout_bytes_received=None, stdout_bytes_retained=None)
+        self.assertEqual(validate_client(projected, None, allow_fixture_json=True), [])
+        self.assertEqual(validate_client(projected, None),
+                         ['a rejected client capture must be retained as raw porcelain bytes'])
         # Canonical padding is checked independently, not only alphabet/length.
         client = self.rejected_client(b'a')
         client['transport']['data_base64'] = 'YR=='
@@ -316,6 +339,11 @@ class PorcelainGeneratorTests(receipts.TestCase):
                     dict(tag=1, name='child', swift_name='child', swift_type=value_type, mutable=True)]))
             data['records'][0]['fields'][0]['swift_type'] = 'Deep0'
 
+        def bytecode(data):
+            field = next(f for f in data['records'][0]['fields'] if f['name'] == 'bytecode_b64')
+            self.assertEqual((field['swift_type'], field['projection']), ('Data?', 'base64'))
+            return field
+
         mutations = [
             ('boolean_record_id', lambda d: d['records'][0].update(id=True), 'invalid record ID'),
             ('boolean_field_tag', lambda d: d['records'][0]['fields'][0].update(tag=True), 'invalid field tag'),
@@ -342,6 +370,12 @@ class PorcelainGeneratorTests(receipts.TestCase):
             ('recursive_variant', lambda d: d['variants']['PWDispositionValue']['1'].update(type='PWDispositionValue'),
              'recursive schema'),
             ('deep_record_graph', deep_graph, 'schema exceeds wire depth'),
+            # Byte fields name their public spelling; text fields cannot claim one.
+            ('bytes_without_projection', lambda d: bytecode(d).pop('projection'), 'declare a projection'),
+            ('text_with_projection', lambda d: d['records'][0]['fields'][1].update(projection='base64'),
+             'declare a projection'),
+            ('unknown_projection', lambda d: bytecode(d).update(projection='base32'), 'invalid byte projection'),
+            ('bytes_in_collection', lambda d: bytecode(d).update(swift_type='[Data]'), 'invalid byte projection'),
         ]
         for name, mutate, diagnostic in mutations:
             with self.subTest(control=name):

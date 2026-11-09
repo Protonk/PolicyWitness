@@ -4,7 +4,7 @@ use serde::Serialize;
 #[cfg(test)] use serde::Deserialize;
 use serde::ser::SerializeMap;
 use crate::porcelain::{WireRead, RecordReader};
-pub const FINGERPRINT: [u8; 32] = [217, 7, 94, 48, 17, 154, 30, 255, 192, 79, 56, 19, 249, 231, 72, 209, 172, 235, 98, 3, 122, 206, 237, 224, 75, 58, 0, 171, 55, 163, 63, 111];
+pub const FINGERPRINT: [u8; 32] = [67, 74, 19, 144, 229, 180, 222, 136, 209, 127, 152, 6, 50, 131, 252, 185, 164, 64, 39, 179, 20, 36, 31, 4, 201, 201, 140, 12, 92, 211, 255, 64];
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(Deserialize))]
 #[serde(untagged)]
@@ -37,7 +37,8 @@ pub struct CompiledProfileCapture {
     pub profile_type: Option<i64>,
     pub bytecode_length: Option<i64>,
     pub bytecode_sha256: Option<String>,
-    pub bytecode_b64: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "bytecode_b64", deserialize_with = "crate::porcelain::optional_base64_from_json"))]
+    pub bytecode: Option<Vec<u8>>,
     pub source_sha256: Option<String>,
     pub source_length: Option<i64>,
     pub params_sha256: Option<String>,
@@ -57,7 +58,7 @@ impl WireRead for CompiledProfileCapture {
         let mut profile_type: Option<i64> = None;
         let mut bytecode_length: Option<i64> = None;
         let mut bytecode_sha256: Option<String> = None;
-        let mut bytecode_b64: Option<String> = None;
+        let mut bytecode: Option<Vec<u8>> = None;
         let mut source_sha256: Option<String> = None;
         let mut source_length: Option<i64> = None;
         let mut params_sha256: Option<String> = None;
@@ -74,7 +75,7 @@ impl WireRead for CompiledProfileCapture {
                 8 => profile_type = Some(__pw_value.decode()?),
                 9 => bytecode_length = Some(__pw_value.decode()?),
                 10 => bytecode_sha256 = Some(__pw_value.decode()?),
-                11 => bytecode_b64 = Some(__pw_value.decode()?),
+                11 => bytecode = Some(__pw_value.bytes()?),
                 12 => source_sha256 = Some(__pw_value.decode()?),
                 13 => source_length = Some(__pw_value.decode()?),
                 14 => params_sha256 = Some(__pw_value.decode()?),
@@ -93,7 +94,7 @@ impl WireRead for CompiledProfileCapture {
             profile_type,
             bytecode_length,
             bytecode_sha256,
-            bytecode_b64,
+            bytecode,
             source_sha256,
             source_length,
             params_sha256,
@@ -104,7 +105,7 @@ impl WireRead for CompiledProfileCapture {
 impl Serialize for CompiledProfileCapture {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
-        if self.bytecode_b64.is_some() { map.serialize_entry("bytecode_b64", &self.bytecode_b64)?; }
+        if self.bytecode.is_some() { map.serialize_entry("bytecode_b64", &self.bytecode.as_deref().map(crate::porcelain::Base64))?; }
         if self.bytecode_length.is_some() { map.serialize_entry("bytecode_length", &self.bytecode_length)?; }
         if self.bytecode_sha256.is_some() { map.serialize_entry("bytecode_sha256", &self.bytecode_sha256)?; }
         if self.capture_stage.is_some() { map.serialize_entry("capture_stage", &self.capture_stage)?; }
@@ -2607,7 +2608,8 @@ pub struct PWRunnerFreshRead {
     pub identity: Option<PWFileIdentity>,
     pub close_rc: Option<i32>,
     pub close_errno: Option<i32>,
-    pub content_hex: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "content_hex", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub content: Option<Vec<u8>>,
 }
 impl WireRead for PWRunnerFreshRead {
     const KIND: u8 = 6;
@@ -2622,7 +2624,7 @@ impl WireRead for PWRunnerFreshRead {
         let mut identity: Option<PWFileIdentity> = None;
         let mut close_rc: Option<i32> = None;
         let mut close_errno: Option<i32> = None;
-        let mut content_hex: Option<String> = None;
+        let mut content: Option<Vec<u8>> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
                 1 => open_rc = Some(__pw_value.decode()?),
@@ -2634,7 +2636,7 @@ impl WireRead for PWRunnerFreshRead {
                 7 => identity = Some(__pw_value.decode()?),
                 8 => close_rc = Some(__pw_value.decode()?),
                 9 => close_errno = Some(__pw_value.decode()?),
-                10 => content_hex = Some(__pw_value.decode()?),
+                10 => content = Some(__pw_value.bytes()?),
                 _ => return Err("unknown field tag".into()),
             }
         }
@@ -2648,7 +2650,7 @@ impl WireRead for PWRunnerFreshRead {
             identity,
             close_rc,
             close_errno,
-            content_hex,
+            content,
         })
     }
 }
@@ -2657,7 +2659,7 @@ impl Serialize for PWRunnerFreshRead {
         let mut map = serializer.serialize_map(None)?;
         if self.close_errno.is_some() { map.serialize_entry("close_errno", &self.close_errno)?; }
         if self.close_rc.is_some() { map.serialize_entry("close_rc", &self.close_rc)?; }
-        if self.content_hex.is_some() { map.serialize_entry("content_hex", &self.content_hex)?; }
+        if self.content.is_some() { map.serialize_entry("content_hex", &self.content.as_deref().map(crate::porcelain::Hex))?; }
         if self.identity.is_some() { map.serialize_entry("identity", &self.identity)?; }
         if self.open_errno.is_some() { map.serialize_entry("open_errno", &self.open_errno)?; }
         map.serialize_entry("open_rc", &self.open_rc)?;
@@ -3093,7 +3095,7 @@ pub struct PWRunnerReplyCapture {
     pub bytes_received: i64,
     pub bytes_retained: i64,
     pub truncated: bool,
-    #[cfg_attr(test, serde(rename = "data_base64", deserialize_with = "crate::porcelain::bytes_from_json"))]
+    #[cfg_attr(test, serde(rename = "data_base64", deserialize_with = "crate::porcelain::base64_from_json"))]
     pub data: Vec<u8>,
 }
 impl WireRead for PWRunnerReplyCapture {
@@ -4491,7 +4493,8 @@ pub struct PWValidatorDecodeFault {
     pub byte_offset: i64,
     pub frame_bytes: i64,
     pub retained_bytes: i64,
-    pub context_b64: String,
+    #[cfg_attr(test, serde(rename = "context_b64", deserialize_with = "crate::porcelain::base64_from_json"))]
+    pub context: Vec<u8>,
     pub context_truncated: bool,
 }
 impl WireRead for PWValidatorDecodeFault {
@@ -4504,7 +4507,7 @@ impl WireRead for PWValidatorDecodeFault {
         let mut byte_offset: Option<i64> = None;
         let mut frame_bytes: Option<i64> = None;
         let mut retained_bytes: Option<i64> = None;
-        let mut context_b64: Option<String> = None;
+        let mut context: Option<Vec<u8>> = None;
         let mut context_truncated: Option<bool> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
@@ -4514,7 +4517,7 @@ impl WireRead for PWValidatorDecodeFault {
                 4 => byte_offset = Some(__pw_value.decode()?),
                 5 => frame_bytes = Some(__pw_value.decode()?),
                 6 => retained_bytes = Some(__pw_value.decode()?),
-                7 => context_b64 = Some(__pw_value.decode()?),
+                7 => context = Some(__pw_value.bytes()?),
                 8 => context_truncated = Some(__pw_value.decode()?),
                 _ => return Err("unknown field tag".into()),
             }
@@ -4526,7 +4529,7 @@ impl WireRead for PWValidatorDecodeFault {
             byte_offset: byte_offset.ok_or("missing PWValidatorDecodeFault.byte_offset")?,
             frame_bytes: frame_bytes.ok_or("missing PWValidatorDecodeFault.frame_bytes")?,
             retained_bytes: retained_bytes.ok_or("missing PWValidatorDecodeFault.retained_bytes")?,
-            context_b64: context_b64.ok_or("missing PWValidatorDecodeFault.context_b64")?,
+            context: context.ok_or("missing PWValidatorDecodeFault.context_b64")?,
             context_truncated: context_truncated.ok_or("missing PWValidatorDecodeFault.context_truncated")?,
         })
     }
@@ -4535,7 +4538,7 @@ impl Serialize for PWValidatorDecodeFault {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("byte_offset", &self.byte_offset)?;
-        map.serialize_entry("context_b64", &self.context_b64)?;
+        map.serialize_entry("context_b64", &crate::porcelain::Base64(&self.context))?;
         map.serialize_entry("context_truncated", &self.context_truncated)?;
         map.serialize_entry("frame_bytes", &self.frame_bytes)?;
         map.serialize_entry("kind", &self.kind)?;

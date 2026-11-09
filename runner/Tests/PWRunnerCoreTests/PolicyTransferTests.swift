@@ -159,17 +159,16 @@ func runPolicyTransferTests(_ tk: TestKit) {
             try expectContains(summary.error ?? "", "wrote 28 of 43")
             let retained = try retainTransferReply(out, result: result, name: "refused", fixture: fixture,
                                                 plan: [step], expectedVerdictCount: 1)
-            let decoded = retained
-            try expectEqual(decoded.runner_subprocess?.worker_evidence?.policy_read,
+            try expectEqual(retained.runner_subprocess?.worker_evidence?.policy_read,
                             PWWorkerPolicyRead(bytes_expected: 43, bytes_received: 28))
-            try expectEqual(decoded.steps.count, 1)
-            try expectEqual(decoded.steps[0].attempt.result_source, "synthetic")
+            try expectEqual(retained.steps.count, 1)
+            try expectEqual(retained.steps[0].attempt.result_source, "synthetic")
             // Rejected variants: a fabricated kill or exit contradicts the disposition
             // record; a receipt that disagrees with the refusal's detail, the host's
             // expectation or the capacity contradicts the receipt rules. Both the
             // typed reporting gate refuses them.
             func rejected(_ reason: String, _ mutate: (inout PWRunnerSubprocess) -> Void) throws {
-                var variant = decoded
+                var variant = retained
                 mutate(&variant.runner_subprocess!)
                 try expectThrows({ _ = try admittedReplyData(variant) }, { error in
                     try expectContains("\(error)", reason)
@@ -189,7 +188,7 @@ func runPolicyTransferTests(_ tk: TestKit) {
             // The service preserves a contradictory receipt as diagnostic evidence
             // after ordinary encoding refuses it. Retain that actual degraded reply
             // for the Rust/Python replay, which must not reject or repair its values.
-            var contradictory = decoded
+            var contradictory = retained
             contradictory.runner_subprocess?.worker_evidence?.policy_read?.bytes_received = 29
             let degradedBytes = pwRunnerPorcelainReplyData(contradictory)
             let degraded = try reportedReply(contradictory)
@@ -279,8 +278,7 @@ private func retainTransferReply(_ out: CWorkerOutput, result: CWorkerRunResult,
         steps: steps, runner_subprocess: sub,
         phases: [constructedPhase(out, ids: plan.map { $0.step_id }, hasQueries: !plan.isEmpty)])
     let bytes = try admittedReplyData(reply)
-    let decoded = reply
-    try expectEqual(decoded.runner_subprocess?.policy_transfer_timeout?.bytes_written, out.policyTransferTimeout?.bytes_written)
+    try expectEqual(reply.runner_subprocess?.policy_transfer_timeout?.bytes_written, out.policyTransferTimeout?.bytes_written)
     try bytes.write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent().appendingPathComponent("policy-transfer-\(name).pwp"))
     return reply
 }

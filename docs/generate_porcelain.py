@@ -68,8 +68,13 @@ def field_shape(field):
     return shape(field['swift_type'])
 
 
+PROJECTIONS = {'base64': 'Base64', 'hex': 'Hex'}
+
+
 def rust_name(field):
-    name = 'data' if field.get('projection') == 'base64' else field['name']
+    # A projected field's public key names its presentation; the stored bytes
+    # take the Swift property's name.
+    name = field['swift_name'] if field.get('projection') else field['name']
     return 'r#' + name if name in ('type', 'ref', 'match', 'loop') else name
 
 
@@ -108,9 +113,16 @@ def validate(schema):
         for field in fields:
             assert re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', field['name']) and not field['name'].startswith('__pw_'), 'invalid/reserved field name'
             value = field_shape(field)
+            direct = value[1] if isinstance(value, tuple) and value[0] == 'optional' else value
             while isinstance(value, tuple):
                 value = value[1]
             assert value in PRIMITIVES or value in names or value in schema['variants'], ('unknown type', value)
+            # Bytes have no JSON spelling of their own: each byte field names
+            # its public presentation, and no collection carries bare bytes.
+            assert (value == 'Data') == ('projection' in field), 'bytes fields, and only they, declare a projection'
+            if 'projection' in field:
+                assert direct == 'Data' and field['projection'] in PROJECTIONS, 'invalid byte projection'
+                assert re.fullmatch(r'[a-z_][a-z0-9_]*', field['swift_name']), 'invalid projected storage name'
 
 
     known = set(names) | set(PRIMITIVES) | set(schema['variants'])
@@ -178,8 +190,10 @@ def rust(schema, fingerprint):
         fields = [f for f in record['fields'] if not f.get('local_only')]
         lines += ['#[derive(Clone, Debug, PartialEq)]', '#[cfg_attr(test, derive(Deserialize))]', '#[cfg_attr(test, serde(deny_unknown_fields))]', f'pub struct {name} {{']
         for field in fields:
-            if field.get('projection') == 'base64':
-                lines += ['    #[cfg_attr(test, serde(rename = "data_base64", deserialize_with = "crate::porcelain::bytes_from_json"))]']
+            if field.get('projection'):
+                reader = ('optional_' if field['swift_type'].endswith('?') else '') + field['projection'] + '_from_json'
+                default = 'default, ' if field['swift_type'].endswith('?') else ''
+                lines += [f'    #[cfg_attr(test, serde({default}rename = "{field["name"]}", deserialize_with = "crate::porcelain::{reader}"))]']
             lines += [f'    pub {rust_name(field)}: {rust_type(field_shape(field))},']
         if record.get('path_forms'):
             lines += ['    #[cfg(test)]', '    #[serde(default)]', '    pub same_as_input: Vec<String>,']
@@ -210,8 +224,10 @@ def rust(schema, fingerprint):
         for field in sorted(fields, key=lambda f: f['name']):
             key=field['name']; n=rust_name(field); fs=field_shape(field)
             expr='&self.'+n
-            if field.get('projection')=='base64':
-                expr='&crate::porcelain::Base64(&self.'+n+')'
+            if field.get('projection'):
+                wrapper='crate::porcelain::'+PROJECTIONS[field['projection']]
+                expr=('&self.'+n+'.as_deref().map('+wrapper+')' if field['swift_type'].endswith('?')
+                      else '&'+wrapper+'(&self.'+n+')')
             action=f'map.serialize_entry("{key}", {expr})?;'
             if key in record.get('path_forms', []):
                 lines += [f'        let is_same = self.{n}.as_deref() == Some(self.input.as_str());',

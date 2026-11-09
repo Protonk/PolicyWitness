@@ -1595,7 +1595,7 @@
       "title": "Rejected validator frame context",
       "value": 256,
       "unit": "bytes",
-      "counting": "Retained prefix of the first rejected validator frame, measured before base64 encoding.",
+      "counting": "Retained prefix bytes of the first rejected validator frame; public JSON spells them as base64 in `context_b64`.",
       "effect": "`frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained.",
       "control": "Fixed.",
       "sources": [
@@ -1700,7 +1700,7 @@
       "title": "Optional compiled-object capture",
       "value": 1048576,
       "unit": "bytes",
-      "counting": "Raw bytecode bytes per optional compiled-object receipt before base64 encoding, separately for each opted-in apply actor.",
+      "counting": "Raw bytecode bytes per optional compiled-object receipt, separately for each opted-in apply actor; public JSON spells them as base64 in `bytecode_b64`.",
       "effect": "Oversized or unsupported objects leave capture unavailable without preventing policy application.",
       "control": "Fixed.",
       "sources": [
@@ -2868,7 +2868,7 @@
       "title": "Fresh file-read prefix",
       "value": 64,
       "unit": "bytes",
-      "counting": "At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix.",
+      "counting": "At most one read from a freshly opened descriptor; `content_hex` spells only the returned prefix bytes, in lowercase hexadecimal.",
       "effect": "Reads of longer files remain supported; the bounded result does not claim complete file contents.",
       "control": "Fixed.",
       "sources": [

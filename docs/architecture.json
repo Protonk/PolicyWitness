@@ -1616,7 +1616,7 @@
           "kind": "record",
           "facts": {
             "Owner": "client records transport; controller owns admitted typed capture or exact rejected bytes",
-            "Form": "binary frame; retained host bytes remain opaque to the client; base64 appears only in public JSON"
+            "Form": "binary frame; retained host bytes remain opaque to the client; byte fields are spelled as text only in public JSON"
           },
           "sources": [
             {
@@ -3759,7 +3759,7 @@
           "label": "docs/porcelain.json",
           "kind": "manifest",
           "facts": {
-            "Owns": "converted record fields, tags, primitive kinds and public presence rules"
+            "Owns": "typed record fields, tags, primitive kinds and public presentation rules"
           },
           "sources": [
             {

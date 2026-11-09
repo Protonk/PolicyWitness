@@ -54,7 +54,7 @@ private func assertValidatorDisposition(_ out: ValidatorOutput, expected: String
     try expectEqual(wire.termination_request?.rc, out.terminationRequest?.rc)
     try expectEqual(wire.termination_request?.errno, out.terminationRequest?.errno)
     try expectEqual(wire.wait_errors?.map { $0.errno }, out.waitErrors?.map { $0.errno })
-    FileHandle.standardOutput.write(Data("  validator JSON: ".utf8) + bytes + Data("\n".utf8))
+    print("  validator subprocess frame: \(bytes.count) bytes")
 }
 
 func runValidatorEvidenceTests(_ tk: TestKit) {
@@ -103,7 +103,7 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
             try expectEqual(bad.fault?.kind, "utf8")
             try expectEqual(bad.fault?.byte_offset, prefix.count)
             try expectEqual(bad.fault?.frame_bytes, 1)
-            try expectEqual(bad.fault?.context_b64, Data([0xff]).base64EncodedString())
+            try expectEqual(bad.fault?.context, Data([0xff]))
             try expectEqual(decodeValidatorFrames(Data("not-json\n".utf8)).fault?.kind, "json")
             let empty = decodeValidatorFrames(Data())
             try expectNil(empty.fault)

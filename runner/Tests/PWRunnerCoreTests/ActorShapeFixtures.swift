@@ -333,7 +333,7 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
         return CompiledProfileCapture(status: "captured", worker_pid: Int(outputs[index].workerPid),
             producer: "worker", capture_stage: "before_apply", request_nonce: input.captureNonce,
             profile_type: 0, bytecode_length: bytecode.count, bytecode_sha256: sha256Hex(bytecode),
-            bytecode_b64: bytecode.base64EncodedString(), source_sha256: sha256Hex(Data(input.policy.utf8)),
+            bytecode: bytecode, source_sha256: sha256Hex(Data(input.policy.utf8)),
             source_length: input.policy.utf8.count, params_sha256: consumedParamsDigest(input.params),
             parameter_count: input.params.count)
     }

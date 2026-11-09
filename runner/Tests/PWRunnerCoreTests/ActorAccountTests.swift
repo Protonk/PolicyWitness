@@ -71,9 +71,8 @@ func runActorAccountTests(_ tk: TestKit) {
                 capture_ordinal: 1, observed_ns: nil)
             try expectNil(unclockedDependent.actorExtensionEvidenceProblem())
             let encoded = try admittedReplyData(unclockedDependent)
-            let decoded = unclockedDependent
-            try expectEqual(decoded.phases[gateIndex].activation_observation?.capture_ordinal, 1)
-            try expectNil(decoded.phases[gateIndex].activation_observation?.observed_ns)
+            try expectEqual(unclockedDependent.phases[gateIndex].activation_observation?.capture_ordinal, 1)
+            try expectNil(unclockedDependent.phases[gateIndex].activation_observation?.observed_ns)
             let mutations: [(inout PWRunnerRunResult) -> Void] = [
                 { $0.actors![sourceIndex].owned_reap!.native_rc = 1 },
                 { $0.actors![sourceIndex].owned_reap!.departure_requested = true },

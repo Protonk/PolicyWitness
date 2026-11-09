@@ -170,7 +170,8 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - `<run>/suites/runner_unit/<test_id>/artifacts/pwrunner_core_tests.log`
 
 - The same artifact directory retains `worker-lifecycle-fixture` and
-  `lifecycle-fixture-build.log`; subprocess JSON is printed in the Swift log.
+  `lifecycle-fixture-build.log`; lifecycle tests write each subprocess record
+  through the binary writer and check its frame prefix.
 
 ## Run
 
@@ -203,10 +204,11 @@ return as passing cases. The wrapper also rejects any internal `SKIP` or `FAIL`
 line before crediting the summary. Missing fixture environment is a normal
 reported failure, not a force-unwrap crash.
 
-`DiagnosticTransportTests` compares direct ABI decoding and Codable forwarding
-against independent JSON inputs for two unfamiliar codes, then checks structural
-publication gates. Its validator control preserves both unfamiliar diagnostics
-and a known UTF-8 decoder fault through the actual subprocess encoder. The CLI
+`DiagnosticTransportTests` compares direct ABI decoding with independent JSON
+inputs for two unfamiliar codes, passes the typed evidence through the binary
+writer, then checks structural publication gates. Its validator control
+preserves both unfamiliar diagnostics and a known UTF-8 decoder fault through
+the subprocess builder and binary writer. The CLI
 transport witness separately exercises C publication and client/controller
 forwarding; these unit inputs do not establish native failure attribution.
 

@@ -942,7 +942,7 @@ actor may exec.
   lead to cleanup or missing results; the readiness hint can expire while the
   run continues. The nominal release margin has no expiry of its own.
 - Queries and transport describe query sizes and received output. The rows
-  identify rejected queries, truncated output and unavailable parsing. Truncated JSON is not parsed as a complete reply.
+  identify rejected queries, truncated output and unavailable parsing. Truncated output is not read as a complete capture or reply.
 - Evidence capture bounds optional evidence: child output and
   compiled-object receipts. Excess can retain a prefix with a truncation marker
   or make capture unavailable, as the row describes. Attempt
@@ -1032,7 +1032,7 @@ actor may exec.
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
 | Runner client output (`controller_output`) | 285,212,672 bytes | Captured bytes per stdout or stderr stream from the runner client. Stdout carries a binary capture with opaque host bytes. Excess is marked truncated; a truncated capture establishes neither submission nor host evidence. Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred. | Fixed per-stream retention allowance; no flag. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from each sbpl-check invocation, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
-| Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
+| Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix bytes of the first rejected validator frame; public JSON spells them as base64 in `context_b64`. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
 | Validator reply frame (`validator_reply_frame`) | 8,192 bytes | UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain. | Fixed. |
 | Validator records per query (`validator_records_per_query`) | 2 items | Retained-record allowance is twice the number of queries submitted to that phase collector, sized before writes; at most 512 records across a production run. The first excess record produces a decode fault; no excess record enters association. | Fixed. |
 | Validator reply storage per query (`validator_reply_bytes_per_query`) | 16,384 bytes | Twice the frame bound per query submitted to the phase collector, sized before writes; at most 4,194,304 retained stdout bytes across a production run. The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame. | Fixed. |
@@ -1058,13 +1058,13 @@ actor may exec.
 | --- | --- | --- | --- |
 | Exec child output per stream (`exec_stream`) | 1,023 bytes | Retained stdout or stderr bytes for each exec child. An overflow marker occupies part of this allowance. Excess output is not retained. | Fixed. |
 | Primary worker diagnostic (`worker_diagnostic`) | 4,095 bytes | Retained primary diagnostic bytes per worker, hence separately per actor. The reply reports retained length and truncation state; this is not a complete transcript. | Fixed. |
-| Optional compiled-object capture (`compiled_profile`) | 1,048,576 bytes | Raw bytecode bytes per optional compiled-object receipt before base64 encoding, separately for each opted-in apply actor. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
+| Optional compiled-object capture (`compiled_profile`) | 1,048,576 bytes | Raw bytecode bytes per optional compiled-object receipt, separately for each opted-in apply actor; public JSON spells them as base64 in `bytecode_b64`. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
 | Worker observed path (`observed_path`) | 1,023 bytes | Retained bytes in each worker-observed path. Path observation can be absent or bounded; a host-side path diagnostic is a separate observation. | Fixed. |
 | Worker attempt error text (`attempt_error`) | 255 bytes | Retained bytes in each worker attempt error message. Error text is bounded; structured result and status fields remain separate. | Fixed. |
 | Phase records per worker region (`phase_records`) | 16 items | Fixed phase records in each worker shared header. Ordinary requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records. A worker refuses a header naming more phases than its records before application. | Fixed. |
 | Authority slot storage (`authority_slot_bytes`) | 16,448 bytes | One token publication slot in an actor's authority region: a fixed header and the token buffer. A region holds one outbound slot per admitted issue and one inbound slot per admitted delivery to that actor, with distinct bounded transfer answer cells; nothing in it enters the reply. | Fixed. |
 | Phase publication storage (`phase_publications`) | 512 bytes | Sixteen fixed 32-byte phase records within each shared header, one per visit an actor can be activated in; the legacy form uses the first eight. The legacy and actor-form phase caps prevent excess publication storage. | Fixed. |
-| Fresh file-read prefix (`fresh_read_bytes`) | 64 bytes | At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix. Reads of longer files remain supported; the bounded result does not claim complete file contents. | Fixed. |
+| Fresh file-read prefix (`fresh_read_bytes`) | 64 bytes | At most one read from a freshly opened descriptor; `content_hex` spells only the returned prefix bytes, in lowercase hexadecimal. Reads of longer files remain supported; the bounded result does not claim complete file contents. | Fixed. |
 | Request-failure path depth (`request_failure_path_components`) | 8 items | Components in a retained request_failure.path, including object keys and array positions. Excess withholds the entire path as null; no shortened location is substituted. | Fixed. |
 | Request-failure path component (`request_failure_path_component`) | 63 UTF-8 bytes | Each component in a retained request_failure.path. The separate parameter_key admission-record echo has its own larger bound. Excess withholds the entire path as null; no shortened location is substituted. | Fixed. |
 | Worker authority setup trailer (`authority_setup_trailer`) | 832 bytes | 64-byte header plus sixteen 48-byte independently published operation cells. Excess request input is refused before launch; evidence storage and output never silently truncate native observations. | Fixed. |
@@ -1126,8 +1126,8 @@ actor may exec.
   closes collection with `byte_limit` and discards any incomplete cutoff frame.
 - Output budgets mark, they never silently cut. Each receiver reports the
   budget it applied in `capture_limit_bytes` (`controller_output`,
-  `policy_helper_output`). Output beyond it is marked truncated, and a
-  truncated JSON stream is not parsed as a reply.
+  `policy_helper_output`). Output beyond it is marked truncated, and
+  truncated output is never read as a complete capture or reply.
 - Capacity checking selects the first failing field after decoding. Common
   checks visit top-level metadata, actor identity and sandbox labels, phase
   actor and termination-dependency identities/lifecycle strings, then executable
@@ -1183,7 +1183,7 @@ holds `normalized_outcome`, `steps`, `runner_subprocess`, `phases`
 and the policy identity (`specimen_id`, `policy_format`, `policy_sha256`). It is
 readable on its own. The controller envelope is what `policy-witness run`
 prints: its `schema_version` is the controller envelope, `result` summarizes
-the run, and `data` carries the reply unchanged as `runner_result` beside the
+the run, and `data` carries that projection as `runner_result` beside the
 specimen dossier (`specimen`), the client transport (`runner_client`), the
 fallback compilation (`policy_check`), the controller's projections
 (`runner_sandbox_diagnostics`) and `timeout_ms`. Readers that interpret either
@@ -1309,7 +1309,7 @@ Reply fields beyond `pid` / `runner_subprocess`:
   | --- | --- |
   | Confirmed normal termination | `exit_code` present, including nonzero codes; no `term_signal` |
   | Confirmed signal termination | `term_signal` present; no `exit_code` |
-  | Final status unconfirmed | Neither status field supplies a value; the current encoder omits both |
+  | Final status unconfirmed | Neither status field supplies a value; the current projection omits both |
 
   Readers tolerate absent or null optional values. `reaped` records whether
   final status was confirmed; termination requests and wait errors are
@@ -1466,13 +1466,17 @@ its own retained reply; `stdout_parse_error` means the untruncated bytes could
 not be decoded as a supported binary capture. Records inside a lost envelope are unavailable. The
 independent fallback helper's admission refusal remains `policy_too_large`.
 
-The parsed client frame is retained in `transport`. `transport_admission`
+An admitted client frame is projected in `transport`; a rejected one is
+retained there as raw bytes. `transport_admission`
 is `accepted`, `missing`, `unsupported`, `malformed` or `delivery_failed`;
 `transport_error`
 explains rejection. The controller's `submission` projection is `invoked`,
 `not_invoked` or `unknown`. It is known only from an admitted capture.
-`runner_reply_error` reports truncated host bytes or a host body that is not
-a complete supported typed record; the retained bytes remain available inside the capture.
+`runner_reply_error` reports truncated host bytes, a host frame written under
+another typed schema, or a host body that is not a complete typed record; the
+retained bytes remain available inside the capture. A host from another build,
+such as an external runner installed before an app update, can produce the
+second case after it has executed the specimen.
 
 The admitted frame records `clock: "mach_continuous_time_ns"`,
 `clock_available`, available absolute start/deadline/end readings, `timeout_ms`,
@@ -2040,7 +2044,7 @@ If client stdout supplies no admitted capture, `data.runner_result` is null and
 the controller reports a missing, malformed or unsupported client capture; inspect the
 [capture evidence](#receiver-evidence) for empty, undecodable or truncated output.
 Client launch or request-delivery failures are `tool_error` paths. These differ
-from a captured client RPC timeout and from a parsed host reply retained
+from a captured client RPC timeout and from a received host reply retained
 but refused as `unsupported_runner_response` or `malformed_runner_response`.
 
 The controller's own outcomes (`tool_error`, client capture refusals,
@@ -2294,7 +2298,7 @@ and host reply bytes accepted before the deadline. Host PID/instance values in a
 peer-reported identities, not kernel-generation receipts. Reservation credentials
 are omitted. The controller admits the capture's protocol and state invariants
 before reading the host result. Missing or inadmissible capture means submission
-unknown, never known nonexecution. `runner_result` is null without a parsed
+unknown, never known nonexecution. `runner_result` is null without a decoded
 host reply, and no client error is represented as a host execution observation.
 
 External runners must advertise the current runner protocol in their signed

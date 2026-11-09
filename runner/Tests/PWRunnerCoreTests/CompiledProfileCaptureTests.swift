@@ -58,9 +58,9 @@ func runCompiledProfileCaptureTests(_ tk: TestKit) {
             var b = fixture()
             let first = read(b)
             try expectEqual(first.status, "captured")
-            try expectEqual(first.bytecode_b64, Data([10,20,30]).base64EncodedString())
+            try expectEqual(first.bytecode, Data([10,20,30]))
             b[28] = 99; b[147] = 88
-            try expectEqual(read(b).bytecode_b64, first.bytecode_b64)
+            try expectEqual(read(b).bytecode, first.bytecode)
             b[145] = 21
             b.replaceSubrange(96..<128, with: Array(SHA256.hash(data: Data([10,21,30]))))
             try expectEqual(read(b).status, "captured")
@@ -73,7 +73,7 @@ func runCompiledProfileCaptureTests(_ tk: TestKit) {
                 var b = fixture(); b[offset] ^= 1
                 let r = read(b)
                 try expectEqual(r.status, "unavailable")
-                try expectNil(r.bytecode_b64); try expectNil(r.bytecode_sha256)
+                try expectNil(r.bytecode); try expectNil(r.bytecode_sha256)
             }
         }
         for length: UInt32 in [0, UInt32(PWShmLayout.captureBytes + 1), UInt32.max] {
@@ -107,7 +107,7 @@ func runCompiledProfileCaptureTests(_ tk: TestKit) {
             let receipt = read(fixture())
             try receipt.validateForReporting()
             _ = try pwPorcelainEncode(receipt)
-            try expectEqual(receipt.bytecode_b64, Data([10,20,30]).base64EncodedString())
+            try expectEqual(receipt.bytecode, Data([10,20,30]))
             try expectEqual(receipt.request_nonce, nonce)
         }
         tk.run("capture nonce is required and validated before spawn") {

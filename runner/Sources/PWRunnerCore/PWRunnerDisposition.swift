@@ -237,8 +237,8 @@ private func stepClaims(_ q: PWDispositionStepQuestions) -> [(String, PWDisposit
      ("step_requested_operation_applicability", q.step_requested_operation_applicability)]
 }
 
-/// Integrity of an assembled record against the raw facts it cites. The
-/// encoder rejects a record that fails this; the degraded reply retains it
+/// Integrity of an assembled record against the raw facts it cites. Reporting
+/// validation rejects a record that fails this; the degraded reply retains it
 /// unchecked so the conflict being reported is never lost. A record that
 /// reports an observed conflict through `issues` passes.
 func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub: PWRunnerSubprocess,

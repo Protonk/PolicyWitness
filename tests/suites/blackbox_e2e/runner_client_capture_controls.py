@@ -155,9 +155,11 @@ def run_capture_controls(run):
                                 terminal='local_error', error=error('local', 'clock_error'))
     check('clock_failure_between_attempts_preserves_completed_occupied', retry_clock)
 
-    # A rejected parsed transport is retained, but no descendant can project a
-    # submission or provide host records. Validation rejects falsely admitted
-    # copies independently of the controller's classification.
+    # Authored fixture form: a rejected capture spelled as an object exercises
+    # the admission rules; the controller retains a rejected frame as raw bytes
+    # and live validation requires that. No descendant can project a submission
+    # or provide host records. Validation rejects falsely admitted copies
+    # independently of the controller's classification.
     def rejected(name, value, status='malformed', source=baseline):
         errors = validate_capture(value)
         assert errors, (name, value)
@@ -260,9 +262,9 @@ def run_capture_controls(run):
 
     for name, changes, status in [
         ('absent', {}, 'missing'),
-        ('parsed_null', {'stdout_bytes_received': 4, 'stdout_bytes_retained': 4}, 'malformed'),
+        ('retained_bytes_without_capture', {'stdout_bytes_received': 4, 'stdout_bytes_retained': 4}, 'malformed'),
         ('truncated_stdout', {'stdout_truncated': True}, 'malformed'),
-        ('invalid_outer_json', {'stdout_parse_error': 'constructed parse error'}, 'malformed'),
+        ('frame_decode_error', {'stdout_parse_error': 'constructed parse error'}, 'malformed'),
         ('capture_failed', {'stdout_capture_error': 'constructed capture error'}, 'malformed'),
     ]:
         document = copy.deepcopy(baseline)
@@ -281,13 +283,13 @@ def run_capture_controls(run):
     client(delivery)['transport'] = {'protocol_version': 999, 'anything': [False]}
     check('delivery_error_precedes_unsupported_capture', delivery)
 
-    for name, raw in [('empty', b''), ('invalid_utf8', b'\xff'), ('invalid_json', b'{'),
-                      ('non_json_constant', b'NaN')]:
+    for name, raw in [('empty', b''), ('not_a_frame_byte', b'\xff'), ('cut_fixture_json', b'{'),
+                      ('not_a_frame_text', b'NaN')]:
         document = copy.deepcopy(baseline)
         capture(document)['runner_reply'].update(bytes_received=len(raw), bytes_retained=len(raw),
             data_base64=base64.b64encode(raw).decode())
         document['data']['runner_result'] = None
-        client(document)['runner_reply_error'] = 'constructed host-byte parse refusal'
+        client(document)['runner_reply_error'] = 'constructed host-byte decode refusal'
         check('received_' + name + '_host_bytes', document)
         client(document)['runner_reply_error'] = None
         check('received_' + name + '_requires_diagnostic', document, 'unreadable host bytes')

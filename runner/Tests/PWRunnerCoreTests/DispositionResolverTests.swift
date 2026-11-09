@@ -477,7 +477,7 @@ func runDispositionResolverTests(_ tk: TestKit) {
             try expectContains(classify(workerResult: .success(out), validatorResult: nil, expectedVerdictCount: 0).error ?? "",
                                "conflicting status representation")
         }
-        tk.run("integrity: an assembled claim that contradicts its basis is rejected by the encoder, kept by the degraded reply") {
+        tk.run("integrity: an assembled claim that contradicts its basis is rejected by reporting admission, kept by the degraded reply") {
             let out = constructed(slots: [slot("a", completed: true)], progress: progressWord(10, 2))
             var record = resolveDisposition(out, plan: [probe("a")])
             record.questions.final_status = PWDispositionClaim(state: "supported", answer: "signal",

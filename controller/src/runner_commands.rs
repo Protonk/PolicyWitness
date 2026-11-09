@@ -541,9 +541,9 @@ fn verify_request() -> Value {
 }
 
 /// The verification projection of a received reply: its PID and outcome are
-/// read only under the current response schema. Another or a malformed version
-/// is reported as the corresponding controller outcome with a null PID, never
-/// read under other rules.
+/// read only under the current response schema. Another version, or a reply
+/// that fails admission, is reported as the corresponding controller outcome
+/// with a null PID, never read under other rules.
 fn project_verify_typed_reply(runner_result: Option<&PWRunnerRunResult>) -> (Option<i64>, String) {
     match runner_result {
         Some(reply) => match crate::run_flow::reply_version(reply) {

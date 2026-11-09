@@ -6,8 +6,9 @@ deterministic, and checked into the repo so tests are hermetic.
 ## Categories
 
 - `contract/`: goldens for the wire contracts: the reply shape
-  (`response_shape.json`, every key the encoder emits across the field-complete
-  fixture and its production-shaped companions, checked by `runner_unit`), the
+  (`response_shape.json`, every key the reply's public projection carries
+  across the field-complete fixture and its production-shaped companions,
+  checked by `runner_unit`), the
   controller envelope shape (`envelope_shape.json`, from the field-complete
   `kind: "run"` envelope a Rust unit test renders, with the helper envelopes it
   nests checked by the helpers' own tests) and the compiled worker ABI layout
@@ -23,11 +24,12 @@ deterministic, and checked into the repo so tests are hermetic.
   contexts to Rust reply admission and Python consumer controls; Swift tests
   independently construct typed receipts and native capture bytes.
   `phase_collection.json` supplies hand-reviewed compatible and contradictory
-  collection/disposition observations to the Swift encoder, Rust disposition
-  reader and Python consumer/oracle controls. Accepted failures include driver
+  collection/disposition observations to Swift reporting admission and the
+  Python consumer/oracle controls; Rust reply admission checks the same pairs
+  from its own typed table. Accepted failures include driver
   setup, native spawn failure and unconfirmed child cleanup.
   `evidence_types.json` supplies malformed and valid neighboring validator records
-  to all three readers, including scalar types, integer bounds and mixed-type
+  to Rust reply admission and the Python readers, including scalar types, integer bounds and mixed-type
   association issues. Its patches apply to `ordinary_phase_reply.json`, an
   authored current ordinary model. `actor_evidence.json` patches actor setup,
   equipment, application and gate projections; those are subaccount-only
@@ -39,8 +41,8 @@ deterministic, and checked into the repo so tests are hermetic.
   signed stream masks, malformed types/ranges and conflicting branches. These
   constructed facts are not native process observations.
   `path_diagnostics.json` contains independent compact path states,
-  Unicode byte distinctions and malformed representations for Rust and Python
-  reader checks. Swift independently constructs and encodes the path states.
+  Unicode byte distinctions and malformed representations for the Python
+  reader checks. Swift and Rust independently construct typed path states.
 - `dispatcher/`: controlled suite runners and evidence alterations exercised
   through the real `tests/run.sh` in isolated fixture repositories.
 - `release/`: independent Apple/tool responses and execution receipts for release

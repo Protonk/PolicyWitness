@@ -9,7 +9,7 @@ FileHandle.standardOutput.write(Data("PWRunnerCore unit tests\n".utf8))
 
 // Structural invariants of PWRunnerRunResult that the mirror-back audit signal
 // depends on (test_overrides echo, runner_subprocess present iff observed),
-// the exact response-version gate and the removed wire keys.
+// and the exact response-version gate.
 runEnvelopeInvariantTests(tk)
 // Host query planning: the shared (operation, filter_kind) exclusion set and the
 // unrecognized-filter exclusion, with literal expectations.
@@ -116,7 +116,7 @@ runListenerConfigTests(tk)
 // padding/order changes have different effects.
 runCompiledProfileCaptureTests(tk)
 // Worker disposition record: the resolver against fixture publications (C2, C5),
-// constructed interpretation cases (B2 to B6, C3, C4, D1), encoder integrity, and
+// constructed interpretation cases (B2 to B6, C3, C4, D1), reporting integrity, and
 // the mirror of tests/lib/lifecycle_contract.py's spellings and example rows.
 runDispositionResolverTests(tk)
 

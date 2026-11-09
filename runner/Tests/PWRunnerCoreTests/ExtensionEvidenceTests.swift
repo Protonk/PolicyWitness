@@ -7,7 +7,7 @@ import Foundation
 func ordinaryReadReplyFixture(published: Bool = true) -> PWRunnerRunResult {
     let identity = PWFileIdentity(device: 1, inode: 2, mode: 33188, uid: 501, gid: 20)
     let read = PWRunnerFreshRead(open_rc: 5, read_rc: 2, stat_rc: 0, identity: identity,
-                                close_rc: 0, content_hex: "5057")
+                                close_rc: 0, content: Data([0x50, 0x57]))
     var out = CWorkerOutput(workerPid: 42, readyByteReceived: true, applied: true, applyRC: 0, applyErrno: 0,
         done: published, exitCode: 0, termSignal: nil,
         slots: [CWorkerSlotResult(freshRead: published ? read : nil, stepId: "read", rc: 0, errnoVal: 0, completed: published)],
@@ -55,7 +55,7 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
                 { $0.fresh_read?.read_rc = 65 },
                 { $0.fresh_read?.read_rc = -1 },
                 { $0.fresh_read?.identity = nil },
-                { $0.fresh_read?.content_hex = "ff" },
+                { $0.fresh_read?.content = Data([0xff]) },
                 { $0.fresh_read?.close_rc = nil },
                 { $0.fresh_read?.open_errno = 13 },
                 { $0.result_source = "synthetic" },
@@ -64,7 +64,7 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
                 var reply = ordinaryReadReplyFixture(); change(&reply.steps[0].attempt)
                 var refused = false
                 do { _ = try admittedReplyData(reply) } catch { refused = true }
-                try expectTrue(refused, "encoder accepted unsupported fresh-read observations")
+                try expectTrue(refused, "reporting admission accepted unsupported fresh-read observations")
             }
         }
     }

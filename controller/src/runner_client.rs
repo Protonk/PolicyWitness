@@ -2,6 +2,7 @@
 //!
 //! Client observations are admitted before decoding any host reply. Neither a
 //! transport failure nor missing helper output authorizes another invocation.
+use crate::porcelain::FrameError;
 use crate::porcelain_records::{
     PWRunnerClientCapture as Capture, PWRunnerControlObservation as Control, PWRunnerRunResult,
     PWRunnerTransportError as TransportError,
@@ -37,7 +38,27 @@ pub struct RunnerClientRun {
     /// Unknown unless a complete current capture was admitted.
     pub submission: String,
     /// Host bytes were received but cannot be read as a complete typed reply.
-    pub runner_reply_error: Option<String>,
+    pub runner_reply_error: Option<ReplyError>,
+}
+
+/// Why received host bytes supplied no typed reply.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ReplyRefusal {
+    Truncated,
+    UnsupportedSchema,
+    Malformed,
+}
+
+/// The refusal decides the controller outcome; only the diagnostic is presented.
+#[derive(Debug)]
+pub struct ReplyError {
+    pub refusal: ReplyRefusal,
+    pub message: String,
+}
+impl Serialize for ReplyError {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.message)
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -60,12 +81,6 @@ fn serialize_rejected_bytes<S: serde::Serializer>(
 }
 
 impl TransportCapture {
-    fn reply_truncated(&self) -> bool {
-        match self {
-            Self::Typed(v) => v.runner_reply.as_ref().is_some_and(|r| r.truncated),
-            Self::Rejected { .. } => false,
-        }
-    }
     fn terminal(&self) -> Option<&str> {
         match self {
             Self::Typed(v) => Some(&v.terminal),
@@ -602,17 +617,13 @@ impl RunnerClientRun {
             ));
         }
         if let Some(error) = &self.runner_reply_error {
-            let truncated = self
-                .transport
-                .as_ref()
-                .is_some_and(TransportCapture::reply_truncated);
             return Some((
-                if truncated {
-                    "runner_reply_truncated"
-                } else {
-                    "malformed_runner_response"
+                match error.refusal {
+                    ReplyRefusal::Truncated => "runner_reply_truncated",
+                    ReplyRefusal::UnsupportedSchema => "unsupported_runner_response",
+                    ReplyRefusal::Malformed => "malformed_runner_response",
                 },
-                error.clone(),
+                error.message.clone(),
             ));
         }
         let value = self.transport.as_ref().unwrap();
@@ -696,11 +707,11 @@ fn parse_runner_client_output(
             return Err(("missing", "runner client produced no capture".into()));
         }
         let capture: Capture = crate::porcelain::decode(retained).map_err(|error| {
-            let status = if error == "unsupported porcelain schema" {
-                "unsupported"
-            } else {
-                "malformed"
+            let status = match error {
+                FrameError::UnsupportedSchema => "unsupported",
+                FrameError::Malformed(_) => "malformed",
             };
+            let error = error.to_string();
             run.output.stdout_parse_error = Some(error.clone());
             (status, error)
         })?;
@@ -721,23 +732,31 @@ fn parse_runner_client_output(
             run.transport_admission = "accepted".into();
             run.submission = capture.submission.state.clone();
             let reply = capture.runner_reply.as_ref().and_then(|raw| {
-                if raw.truncated {
-                    run.runner_reply_error = Some(
+                let (refusal, message) = if raw.truncated {
+                    (
+                        ReplyRefusal::Truncated,
                         "runner reply retention was truncated; no complete host reply is available"
                             .into(),
-                    );
-                    None
+                    )
                 } else {
                     match crate::porcelain::decode::<PWRunnerRunResult>(&raw.data) {
-                        Ok(reply) => Some(reply),
-                        Err(error) => {
-                            run.runner_reply_error = Some(format!(
-                                "runner reply is not a complete typed record: {error}"
-                            ));
-                            None
-                        }
+                        Ok(reply) => return Some(reply),
+                        // The host frame names another schema: a version
+                        // refusal, with its bytes retained in the capture.
+                        Err(FrameError::UnsupportedSchema) => (
+                            ReplyRefusal::UnsupportedSchema,
+                            "runner reply frame names an unsupported porcelain schema; \
+                             this controller reads only the schema it was built with"
+                                .into(),
+                        ),
+                        Err(FrameError::Malformed(error)) => (
+                            ReplyRefusal::Malformed,
+                            format!("runner reply is not a complete typed record: {error}"),
+                        ),
                     }
-                }
+                };
+                run.runner_reply_error = Some(ReplyError { refusal, message });
+                None
             });
             run.transport = Some(TransportCapture::Typed(capture));
             (run, reply)
@@ -1227,6 +1246,45 @@ mod binary_tests {
             };
             assert_eq!(capture.runner_reply.unwrap().data, host);
         }
+    }
+
+    #[test]
+    fn host_frame_naming_another_schema_is_a_version_refusal_with_bytes_retained() {
+        let mut other = host();
+        other[4] ^= 1;
+        // A body that is also unreadable cannot turn the version refusal into
+        // a malformed one: the fingerprint is decided first.
+        let mut other_and_cut = other.clone();
+        other_and_cut.truncate(40);
+        for host in [other, other_and_cut] {
+            let (run, reply) = parse(
+                capture(Some(&host), protocol(), 123, host.len() as i64),
+                None,
+            );
+            assert_eq!(run.transport_admission, "accepted");
+            assert_eq!(run.submission, "invoked");
+            assert!(reply.is_none());
+            let (outcome, message) = run.failure().unwrap();
+            assert_eq!(outcome, "unsupported_runner_response");
+            assert!(
+                message.contains("unsupported porcelain schema"),
+                "{message}"
+            );
+            assert!(!run.fallback_eligible());
+            // Presentation carries the diagnostic text alone.
+            assert_eq!(
+                serde_json::to_value(&run).unwrap()["runner_reply_error"],
+                message
+            );
+            let Some(TransportCapture::Typed(capture)) = run.transport else {
+                panic!("not typed");
+            };
+            assert_eq!(capture.runner_reply.unwrap().data, host);
+        }
+        // A header cut inside the fingerprint names no schema.
+        let cut = host()[..20].to_vec();
+        let (run, _) = parse(capture(Some(&cut), protocol(), 123, cut.len() as i64), None);
+        assert_eq!(run.failure().unwrap().0, "malformed_runner_response");
     }
 
     #[test]

@@ -1,4 +1,4 @@
-//! Typed evidence admission for the porcelain experiment. Raw records remain
+//! Typed evidence admission for runner replies. Raw records remain
 //! publishable when a claim fails; diagnostics never replace their native facts.
 use crate::porcelain_records::*;
 #[path = "porcelain_actor.rs"]
@@ -2731,7 +2731,7 @@ mod tests {
             profile_type: None,
             bytecode_length: None,
             bytecode_sha256: None,
-            bytecode_b64: None,
+            bytecode: None,
             source_sha256: None,
             source_length: None,
             params_sha256: None,

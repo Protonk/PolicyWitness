@@ -67,7 +67,7 @@ Host reply, client streams, final envelope, optional bytecode and logical actor
 storage remain distinct quantities. Native resident and physical-footprint
 samples stay separate and have unknown decoder-stage attribution. Required
 same-generation samples and independent exit observations cannot be replaced by
-an inspection error or a synthesized reply bound.
+an inspection error or a documented retention limit.
 
 The source-ownership receipt names binary capture bytes, fixed typed transport
 and host records, and the public JSON text, with source hashes and explicit

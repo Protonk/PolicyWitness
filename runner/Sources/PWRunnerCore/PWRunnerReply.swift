@@ -1,7 +1,7 @@
 import Foundation
 
 /// Evidence cannot support an ordinary report. This error carries a diagnostic,
-/// not an encoder context or a copy of the full observation graph.
+/// not a copy of the full observation graph.
 struct PWRunnerReportingValidationError: Error, CustomStringConvertible {
     let message: String
     var description: String { message }

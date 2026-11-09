@@ -452,10 +452,9 @@ func runOrderingTests(_ tk: TestKit) {
                     continue
                 }
                 try envelope.validateForReporting()
-                let decoded = envelope
-                try expectEqual(decoded.schema_version, PWContract.responseSchema)
-                try expectEqual(decoded.steps[0].comparison?.order, missing == "none" ? "query_first" : "unestablished", missing)
-                try expectEqual(decoded.phases.first?.ordering != nil, missing != "worker")
+                try expectEqual(envelope.schema_version, PWContract.responseSchema)
+                try expectEqual(envelope.steps[0].comparison?.order, missing == "none" ? "query_first" : "unestablished", missing)
+                try expectEqual(envelope.phases.first?.ordering != nil, missing != "worker")
             }
         }
         tk.run("NONE queries ignore the submitted unused value when matching native records") {
@@ -497,7 +496,7 @@ func runOrderingTests(_ tk: TestKit) {
                 try expectEqual(step.comparison?.limitations, [])
             }
         }
-        tk.run("encoder rejects an order or limitation string outside the vocabulary") {
+        tk.run("reporting admission rejects an order or limitation string outside the vocabulary") {
             for change in ["order", "limitation", "removed_limitation"] {
                 var envelope = orderingEnvelope(worker, validator)
                 switch change {

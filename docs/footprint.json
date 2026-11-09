@@ -649,7 +649,7 @@
         "value": null,
         "unit": null,
         "limit": "client_reply_retention",
-        "behavior": "Incoming host Data and the retained byte prefix overlap during capture. The typed capture and its binary encoded Data coexist during emit; client stdout has no newline. Base64 is deferred to controller JSON presentation. Prefix backing identity remains unestablished."
+        "behavior": "Incoming host Data and the retained byte prefix overlap during capture. The typed capture and its binary encoded Data coexist during emit; client stdout has no newline. Byte fields stay bytes in both frames; their text spellings are deferred to controller JSON presentation. Prefix backing identity remains unestablished."
       },
       "conditions": "Versioned binary client capture; host reply and capture frame are distinct byte sequences.",
       "interval": {
@@ -796,7 +796,7 @@
         "value": null,
         "unit": null,
         "limit": null,
-        "behavior": "The envelope borrows typed inputs. Generated serializers project converted records directly; public byte fields create base64 text during rendering. Pretty serialization adds a complete String while the typed inputs remain live; converted records do not pass through a generic JSON tree or recursive sorting."
+        "behavior": "The envelope borrows typed inputs. Generated serializers project typed records directly; byte fields create base64 or hexadecimal text during rendering. Pretty serialization adds a complete String while the typed inputs remain live; typed records do not pass through a generic JSON tree or recursive sorting."
       },
       "conditions": "Final envelope rendering; successful stdout adds a newline.",
       "interval": {

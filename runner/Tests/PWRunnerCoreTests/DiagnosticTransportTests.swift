@@ -46,9 +46,8 @@ func runDiagnosticTransportTests(_ tk: TestKit) {
                 }
                 let base = raw.assumingMemoryBound(to: UInt8.self)
                 guard let evidence = decodeWorkerEvidence(base) else { throw TestFailure(message: "supported ABI rejected") }
-                let decoded = evidence
-                _ = try pwPorcelainEncode(decoded)
-                guard let failure = decoded.failure else { throw TestFailure(message: "failure missing") }
+                _ = try pwPorcelainEncode(evidence)
+                guard let failure = evidence.failure else { throw TestFailure(message: "failure missing") }
                 try expectEqual(failure.operation, (f["operation"] as! NSNumber).uint32Value)
                 try expectEqual(failure.code, (f["code"] as! NSNumber).uint32Value)
                 try expectEqual(failure.native_kind, (f["native_kind"] as! NSNumber).uint32Value)
@@ -56,10 +55,10 @@ func runDiagnosticTransportTests(_ tk: TestKit) {
                 try expectEqual(failure.errno, (f["errno"] as! NSNumber).int32Value)
                 try expectEqual(failure.detail, (f["detail"] as! NSNumber).uint32Value)
                 try expectEqual(failure.index, (f["index"] as? NSNumber)?.uint32Value)
-                try expectEqual(decoded.diagnostic.text, text)
-                try expectEqual(decoded.diagnostic.length, UInt32(text.utf8.count))
-                try expectEqual(decoded.progress?.operation, (progress["operation"] as! NSNumber).uint32Value)
-                try expectEqual(decoded.progress?.index, index)
+                try expectEqual(evidence.diagnostic.text, text)
+                try expectEqual(evidence.diagnostic.length, UInt32(text.utf8.count))
+                try expectEqual(evidence.progress?.operation, (progress["operation"] as! NSNumber).uint32Value)
+                try expectEqual(evidence.progress?.index, index)
                 // Recognition and structural acceptance are independent.
                 for (publication, state): (UInt32, String) in [(0, "absent"), (2, "incomplete"), (9, "invalid")] {
                     word(e + PWShmLayout.evidenceFailurePublishedOffset, publication)

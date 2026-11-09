@@ -61,7 +61,7 @@ func replyFixture() throws -> PWRunnerRunResult {
     let value35 = PWRunnerOrdering(collection_closed_before_proceed: true, proceed_set: true, proceed_observed: true, validator_disposition: "reaped", worker_lifetime_established: true, protocol_violations: [])
     let value36 = PWRunnerTerminationRequest(signal: 9, rc: 0, errno: 1)
     let value37 = PWRunnerWaitError(stage: "exit_grace", rc: -1, errno: 10)
-    let value38 = PWValidatorDecodeFault(origin: "runner_host", kind: "structure", message: "constructed", byte_offset: 1, frame_bytes: 2, retained_bytes: 2, context_b64: "AA==", context_truncated: false)
+    let value38 = PWValidatorDecodeFault(origin: "runner_host", kind: "structure", message: "constructed", byte_offset: 1, frame_bytes: 2, retained_bytes: 2, context: Data([0]), context_truncated: false)
     let value39 = ValidatorVerdict(stepId: "s", operation: "file-read-data", filterType: "PATH", filterTypeId: 1, filterValue: "/owned", rc: 0, errnoVal: 0, outcome: "allow", error: "constructed", rawLine: "native record bytes")
     let value40 = ValidatorVerdict(stepId: "extra", operation: "file-read-data", filterType: "PATH", filterTypeId: 1, filterValue: "/elsewhere", rc: 0, errnoVal: 0, outcome: "allow", error: nil, rawLine: "unexpected native record")
     let value41 = PWValidatorAssociationIssue(origin: "runner_host", kind: "unexpected_id", step_id: "extra", count: 1)
@@ -85,7 +85,7 @@ func replyFixture() throws -> PWRunnerRunResult {
     value43.exit_grace_wait = value42
     let value44 = PWRunnerPhaseResult(phase_id: "main", ordinal: 1, action_ids: ["s"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value35, validator_subprocess: value43)
     let value45 = PWRunnerTestOverrides(worker_executable_path: "/constructed/worker", worker_timeout_ms: 1000, validator_executable_path: "/constructed/validator", validator_io_timeout_ms: 50, validator_total_timeout_ms: 100, worker_post_apply_hang_ms: 0, worker_post_apply_kill_signal: 9, worker_pre_ready_hang_ms: 0, worker_kill_before_publish_slot: 1)
-    let value46 = CompiledProfileCapture(schema_version: 2, status: "captured", reason: "constructed", worker_pid: 42, producer: "worker", capture_stage: "before_apply", request_nonce: "ffffffffffffffffffffffffffffffff", profile_type: 0, bytecode_length: 3, bytecode_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytecode_b64: "AAAA", source_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", source_length: 11, params_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", parameter_count: 1)
+    let value46 = CompiledProfileCapture(schema_version: 2, status: "captured", reason: "constructed", worker_pid: 42, producer: "worker", capture_stage: "before_apply", request_nonce: "ffffffffffffffffffffffffffffffff", profile_type: 0, bytecode_length: 3, bytecode_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytecode: Data([0, 0, 0]), source_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", source_length: 11, params_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", parameter_count: 1)
     let value47 = PWRunnerAdmissionFailure(origin: "runner_host", field: "constructed", actual: 2, maximum: 1, unit: "items", step_id: "s", step_index: 0, parameter_key: "K", index: 0)
     let value48 = PWRunnerRequestFailure(code: "unsupported_policy_format", path: ["policy", "format"], expected_schema: 4)
     let value49 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "reply-\"é\"", run_kind: "unit", rc: 1, normalized_outcome: "runner_failed", error: "original cleanup fault", pid: 42, bundle_id: "test.bundle", policy_format: "sbpl", policy_sha256: "hash", sandboxed_after_apply: true, steps: [value9], runner_subprocess: value34, phases: [value44], test_overrides: value45, compiled_profile: value46, admission_failure: value47, request_failure: value48)
@@ -280,22 +280,21 @@ func runReplyFailureTests(_ tk: TestKit) {
                 try expectFalse(diagnostic.contains(key))
             }
         }
-        tk.run("maximal slash-heavy profile capture fits the documented encoding allowance") {
+        tk.run("full-capacity profile capture travels as bytes with bounded framing") {
             // Constructed bytes test serialization only, not a compiler result.
-            // Retain a full-capacity bytecode payload and its public base64 spelling.
+            // The frame carries the payload once; base64 belongs to presentation.
             let bytes = Data(repeating: 0xff, count: PWShmLayout.captureBytes)
             let receipt = CompiledProfileCapture(status: "captured", worker_pid: 42,
                 producer: "worker", capture_stage: "before_apply",
                 request_nonce: String(repeating: "f", count: 32), profile_type: 0,
                 bytecode_length: bytes.count, bytecode_sha256: String(repeating: "f", count: 64),
-                bytecode_b64: bytes.base64EncodedString(), source_sha256: String(repeating: "f", count: 64),
+                bytecode: bytes, source_sha256: String(repeating: "f", count: 64),
                 source_length: 262_143, params_sha256: String(repeating: "f", count: 64), parameter_count: 1024)
-            let allowance = 2 * 4 * ((bytes.count + 2) / 3) + 4096
+            let allowance = bytes.count + 4096
             let encoded = try pwPorcelainEncode(receipt)
-            try expectTrue(encoded.count <= allowance)
+            try expectTrue(encoded.count > bytes.count && encoded.count <= allowance)
+            try expectTrue(encoded.range(of: bytes) != nil)
             try receipt.validateForReporting()
-            let decoded = receipt
-            try expectEqual(Data(base64Encoded: decoded.bytecode_b64!), bytes)
             var result = try replyFixture()
             let baseline = try admittedReplyData(result).count
             result.compiled_profile = receipt

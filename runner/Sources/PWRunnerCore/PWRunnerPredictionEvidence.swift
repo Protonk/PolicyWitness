@@ -75,7 +75,7 @@ struct PWValidatorDecodeFault {
     var byte_offset: Int
     var frame_bytes: Int
     var retained_bytes: Int
-    var context_b64: String
+    var context: Data
     var context_truncated: Bool
     // END GENERATED PORCELAIN PWValidatorDecodeFault
 }

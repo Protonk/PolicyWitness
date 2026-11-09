@@ -489,7 +489,7 @@ func decodeValidatorFrames(_ bytes: Data, maximumRecords: Int = 512) -> Validato
             let prefix = Data(frame.prefix(256))
             result.fault = PWValidatorDecodeFault(kind: kind, message: message,
                 byte_offset: offset, frame_bytes: frame.count, retained_bytes: prefix.count,
-                context_b64: prefix.base64EncodedString(), context_truncated: frame.count > prefix.count)
+                context: prefix, context_truncated: frame.count > prefix.count)
             return result
         }
         if frame.count > ValidatorReplyLimits.frameBytes { return reject("structure", "validator frame exceeds byte bound") }

@@ -91,11 +91,12 @@
         },
         {
           "name": "bytecode_b64",
-          "swift_name": "bytecode_b64",
-          "swift_type": "String?",
+          "swift_name": "bytecode",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 11
+          "tag": 11,
+          "projection": "base64"
         },
         {
           "name": "source_sha256",
@@ -2819,11 +2820,12 @@
         },
         {
           "name": "content_hex",
-          "swift_name": "content_hex",
-          "swift_type": "String?",
+          "swift_name": "content",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 10
+          "tag": 10,
+          "projection": "hex"
         }
       ],
       "id": 44
@@ -4919,10 +4921,11 @@
         },
         {
           "name": "context_b64",
-          "swift_name": "context_b64",
-          "swift_type": "String",
+          "swift_name": "context",
+          "swift_type": "Data",
           "mutable": true,
-          "tag": 7
+          "tag": 7,
+          "projection": "base64"
         },
         {
           "name": "context_truncated",

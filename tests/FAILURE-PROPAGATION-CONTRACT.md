@@ -100,9 +100,10 @@ observations; no per-step order is certified by this reply.
 This is the sole exception to mandatory comparisons and complete
 ordering objects. Consumers require the failure outcome, nonempty diagnostic,
 original summary and the absence of **all** comparisons before accepting that
-exception. A failure marker cannot excuse a surviving `query_first` claim. The ordinary reply invariants still reject
-an invalid assembled result when encoded directly; the service reply boundary
-alone constructs the degraded response.
+exception. A failure marker cannot excuse a surviving `query_first` claim. Reporting admission
+(`validateForReporting`) rejects an invalid assembled result independently of
+the binary writer; the service reply boundary alone constructs the degraded
+response.
 
 If even the evidence-preserving response cannot be serialized, a minimal
 reporting-failure reply retains run identity and the original summary, sets
@@ -551,19 +552,19 @@ precedence over later cleanup.
 
 ### Integrity, unknown values and degradation
 
-The encoder rejects an assembled claim that contradicts its basis, such as a
-supported final status without a successful reap or a basis token that does
+Reporting admission rejects an assembled claim that contradicts its basis, such
+as a supported final status without a successful reap or a basis token that does
 not resolve; the service reply boundary then produces the evidence-preserving
 degraded reply, which retains `runner_subprocess` and the record as assembled,
-withholds comparisons, and names the invariant in `reporting_failure`. The
-degraded encoder does not re-check the invariant, so the conflict being
+withholds comparisons, and names the invariant in `reporting_failure`. Admission
+of the degraded reply does not re-check the invariant, so the conflict being
 reported is never lost to a rejection loop. A record that reports an observed
-conflict through `issues` is valid and encodes normally. The minimal
+conflict through `issues` is valid and is written normally. The minimal
 reporting-failure reply carries no `runner_subprocess` and therefore no record,
 and says `evidence_retained: false`.
 
 Unrecognized answer, reason and summary spellings transport unchanged through
-the runner encoder, the XPC client and the controller. Only interpretations
+the host's binary writer, the XPC client and the controller. Only interpretations
 that need recognition become unresolved for the reader: an unrecognized
 final-status answer projects `process_disposition: unrecognized` and cause
 `unknown`; an unrecognized stop reason projects null; an unrecognized lifecycle
@@ -572,30 +573,33 @@ version; they report it as unsupported.
 
 ### Reader validation responsibilities
 
-The Swift response types establish field types; ordinary encoding also checks
-claim, phase, ordering and native-publication invariants. The reporting-failure
+The Swift response types establish field types; reporting admission checks
+claim, phase, ordering and native-publication invariants before the binary
+writer runs. The reporting-failure
 path retains conflicting observations and withholds comparisons as described
 above. It does not make contradictory raw observations trustworthy.
 
-The Rust controller gates the version and validates the evidence needed for its
-disposition projections. `disposition_integrity: valid` certifies those claim
-checks, not the shape of the entire response. Present non-null phase containers,
-phase records, ordering objects, validator-disposition values and spawn-failure
-objects must have their declared types; a mistyped value cannot become optional
-absence. The claim checks tolerate absent or null optional evidence without
-inventing it. Required phase and ordering fields remain the full response
-validator's responsibility. A degraded reporting-failure reply preserves the raw
+The Rust controller decodes the reply into typed records: the binary reader
+rejects unknown tags, missing required fields and wrong kinds before any
+semantic check, so a mistyped value cannot become optional absence. It then
+gates the version and validates the evidence needed for its disposition
+projections. `disposition_integrity: valid` certifies those claim checks, not
+every relationship in the response. The claim checks tolerate absent optional
+evidence without inventing it. A degraded reporting-failure reply preserves the
 phase account without using contradictory collection observations to recover
-ordinary claims; the controller always forwards the raw reply unchanged.
+ordinary claims. The controller projects an admitted typed reply into
+`data.runner_result` whatever its claim checks conclude; the received host
+bytes stay in the client capture.
 
 `tests/lib/consumer.py` combines shape-golden checks with required-field and
 semantic checks. `tests/lib/lifecycle_oracle.py` independently checks lifecycle
 claims and their supporting observations; it is not a complete response-shape
-validator. For example, an empty `validator_spawn_failure: {}` beside
-`collected`/`not_spawned` contradicts no presence claim, so Rust and the lifecycle
-oracle do not infer a native spawn result from it. The full consumer rejects it
-because the required origin, operation, executable path, nonzero return code and
-diagnostic are missing. Reader controls pin both responsibilities, including
+validator. For example, an empty `validator_spawn_failure: {}` in a public
+envelope beside `collected`/`not_spawned` contradicts no presence claim, so the
+lifecycle oracle does not infer a native spawn result from it. The full consumer
+rejects it because the required origin, operation, executable path, nonzero
+return code and diagnostic are missing. The binary record cannot omit those
+fields, and Rust admission rejects one whose call identity is invalid. Reader controls pin both responsibilities, including
 wrong-type rejection, optional absence and unchanged degraded evidence.
 
 Every semantic reader checks ownership of a phase's validator subprocess the
@@ -671,8 +675,8 @@ reporting obligations and registered test owners.
 | Test entry | Production reach and current assertions | Acceptance owner / remaining obligation |
 | --- | --- | --- |
 | `runner_unit/pwrunner_core_unit_executable`: `HostOutcomeClassifierTests.runHostOutcomeClassifierTests` | Constructed `CWorkerOutput`/validator results; pins publication, deadline, disposition and precedence rows; no OS calls or worker publication | Implemented, independently of driver tests |
-| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` and `OrderingTests.runOrderingTests` | Constructed Codable results; current ordering/eligibility, absence of the removed wire keys, exact-version rejection, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
-| Same catalog case: `ReplyFailureTests.runReplyFailureTests` | Real service reply serializer with constructed invariant faults and internal encoder failure; every stored field has encoding coverage | Preserves diagnostic evidence and original summary, withholds comparisons; explicitly reports repeated encoding failure |
+| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` and `OrderingTests.runOrderingTests` | Constructed typed results; current ordering/eligibility, exact-version rejection, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
+| Same catalog case: `ReplyFailureTests.runReplyFailureTests` | Real service reply boundary with constructed invariant faults and internal writer failure; every stored field has binary-writer coverage | Preserves diagnostic evidence and original summary, withholds comparisons; explicitly reports repeated encoding failure |
 | Same catalog case: `CWorkerTests`, `late done during grace preserves sentinel deadline` | Real worker through Swift driver; late voluntary exit with no host kill and exit 0; records `sentinel_deadline`, reaped exit 0, and no termination request through actual subprocess encoding | Driver, final done/slot snapshot and runner_timeout classifier verified |
 | Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL, `child_reaped` and encoded process facts, then calls classifier | Driver plus runner_failed classifier verified; no real sandbox kill is established |
 | Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Driver control; `witness_contract/worker_progress_and_failure` separately verifies compiler diagnostic text at the CLI boundary |
@@ -682,7 +686,7 @@ reporting obligations and registered test owners.
 | Same catalog case as `runner_unit`: `WorkerClockTests.runWorkerClockTests`; Rust `run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer` | Production C main with one substituted clock boundary through the real host driver and production orchestration with the shipped validator: setup refusal during and after policy delivery, phase-2 refusal and expiry with retained predictions, sticky provenance with independent child cleanup and local arithmetic refusals; replies cross Rust assembly, the consumer and the lifecycle oracle | Publication, transport and interpretation; companion substitutions are not native clock failures |
 | `runner_c_worker_harness/native_clock` (opt-in) | Production clock helpers in fresh processes under the original version-2 policy, bare deny-default and allow-default, beside the old `CLOCK_MONOTONIC` neighbour; retains timebase, counts, PIDs, reaps, installed disassembly and available deny records | Native applicability on the recorded machine only; actual system sleep remains untested |
 | `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle and consumer-validation groups require the current response schema; missing channels remain distinct from observed failures |
-| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
+| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. The actual subprocess assembler and binary writer preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
 | `witness_contract/worker_termination`; Rust `run_flow::tests::execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields` | CLI failed writes, repeated attempts, independent read queries, self-signal and ordered phases. Constructed replies cross production assembly with raw execution evidence retained. | Independent worker disposal and execution diagnostics; no sandbox-cause attribution |
@@ -834,9 +838,10 @@ Post-apply reporting uses only fixed memory and atomics, no new allocation or
 I/O. Early stderr emissions remain; this work does not collect that stream.
 
 Swift decodes shared memory and assembles these fields without code allowlists;
-runner JSON encodes them. The XPC client forwards reply bytes, and the controller
-retains opaque JSON within its existing capture limit. Neither reconstructs a
-typed failure. `runner_failed` summarizes any published worker failure, including
+the host writes them as typed binary records. The XPC client carries the host
+bytes opaquely in its capture, and the controller decodes them into typed
+records within its capture limit. Neither applies a code allowlist or
+reclassifies the failure. `runner_failed` summarizes any published worker failure, including
 observed apply/compile failures; the specific operation remains in the record.
 Failure records take precedence over later deadline/cleanup observations, all
 of which remain independently visible. Unknown progress alone implies no failure
@@ -923,8 +928,9 @@ completed read only, because termination can interrupt the worker between the
 receipt and the refusal. They cannot coexist in an ordinary reply with known
 progress or failure after the length check, readiness, application, completion,
 phase arrival/acknowledgement or a worker attempt result. Unknown operation
-numbers have no inferred temporal meaning. The Swift reply encoder and decoder
-and `tests/lib/consumer.py` enforce these rules; the shape golden only types them.
+numbers have no inferred temporal meaning. Swift reporting admission, Rust reply
+admission and `tests/lib/consumer.py` enforce these rules; the shape golden only
+types them.
 An evidence-preserving reporting failure retains contradictory receipt values
 and withholds every comparison under the existing reply-failure contract. The
 receipt's object structure and integer members remain required; its conflicting
@@ -1009,7 +1015,7 @@ worker normally; missing predictions remain unestablished.
 The record survives worker-summary precedence and evidence-preserving reply
 degradation. The explicit `evidence_retained: false` backstop may omit it along
 with the other observations. This optional field is additive; absence is
-unknown. The controller forwards it unchanged.
+unknown. The controller projects it without alteration.
 The live ENOENT witness checks the native code, path and call context without
 requiring English wording. Internal native-call controls exercise unfamiliar
 returns through orchestration and reply serialization; they are not policy
@@ -1271,8 +1277,10 @@ Collection status must agree with the independent validator account:
 status or confirmed cleanup. Contradictory combinations cannot support ordinary
 encoding or reader claims; a degraded reporting-failure reply can retain the
 conflict without recovering those claims. The hand-reviewed
-[collection controls](fixtures/contract/phase_collection.json) exercise the
-encoder, Rust disposition reader and both Python reader entry points; live
+[collection controls](fixtures/contract/phase_collection.json) exercise Swift
+reporting admission and both Python reader entry points, and Rust reply
+admission checks the same status and disposition pairs from its own typed
+table; live
 phase/validator controls establish the corresponding production paths.
 
 A worker publishes arrival, waits for the exact release ordinal, publishes
@@ -1355,8 +1363,8 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
   (`tests/fixtures/contract/response_shape.json`) records every key the
   encoder emits, from the field-complete fixture and the production-shaped
   documents beside it.
-- Encoder: rejects `limitations` strings outside the vocabulary above and
-  retains the `query_first`, disposition and reply-degradation checks. Binary
+- Reporting admission: rejects `limitations` strings outside the vocabulary
+  above and retains the `query_first`, disposition and reply-degradation checks. Binary
   readers reject unknown tags, missing required fields and wrong kinds under
   the exact schema fingerprint before semantic admission.
 - Reply degradation: `runner_reporting_failed` omits every `comparison`, even
@@ -1372,7 +1380,7 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
   validates `observation`, the two relations and `order` against the raw
   channel fields and `ordering`. The goldens are allowlists, not required
   sets: absence is allowed.
-- Controller: `validate_disposition` checks the lifecycle
+- Controller: `validate_lifecycle` checks the lifecycle
   entries in `comparison.limitations`, and failed validation withholds the
   projected disposition and termination cause. Every semantic projection runs
   behind the response-version gate.
@@ -1528,7 +1536,7 @@ Lifecycle limitations in the table come from the step's summary.
 | T (FIFO in flight at the deadline) | `witness_contract/worker_attempt_in_flight_at_deadline` (live, with the `a1` specimen of `tests/fixtures/disposition/`); `runner_unit` `ComparisonEvidenceTests` | OS-observed deadline, SIGKILL request and reaped signal; the lifecycle oracle |
 | M01–M07 (combined extension faults) | `witness_contract/extension_combinations` (live CLI); `runner_unit` `ComparisonEvidenceTests` (constructed comparisons) | Independent native observer records, target bytes and descriptor checks; row-specific placement, raw, comparison and cleanup assertions |
 | M08 (combined ordinary-phase faults) | `runner_unit` `PhaseProtocolTests` (production driver), `ComparisonEvidenceTests` (constructed comparison), and Rust assembly/Python consumer and lifecycle-oracle replay | Failed termination call, unconfirmed host reap, surviving validator's late EPIPE, distinct phase-local PIDs/record IDs, independently prepared fresh-read bytes and separate test cleanup |
-| Producer invariants and the shape golden | `runner_unit`: `ContractVersionTests`, `EnvelopeInvariantTests`, `OrderingTests`, `ComparisonEvidenceTests`, `ReplyFailureTests`, `DispositionResolverTests` | Constructed results; mutations must be rejected by the encoder |
+| Producer invariants and the shape golden | `runner_unit`: `ContractVersionTests`, `EnvelopeInvariantTests`, `OrderingTests`, `ComparisonEvidenceTests`, `ReplyFailureTests`, `DispositionResolverTests` | Constructed results; mutations must be rejected by reporting admission |
 | Consumer invariants | `blackbox_e2e/checker_controls` (consumer controls, client-output control, mutation-order controls); every live blackbox, menagerie, filter and witness case through `tests/lib/consumer.py` | Mutated envelopes retained beside their rejection |
 | Controller invariants (version gate, outcomes, delivery precedence, projections) | `unit/rust.unit` (`run_flow`, `runner_client`, `dossier` tests); `integration/cli.integration` | Constructed replies of other and malformed versions; live refusals |
 | Dossier (`data.specimen`) | `witness_contract/dossier_witness`; opt-in `dossier_witness_byoxpc`; `unit/rust.unit` `dossier` tests | Independently read request bytes, hashes, imports, host sysctls and manifest entries |

@@ -95,7 +95,7 @@ func runFreshWriteEvidenceTests(_ tk: TestKit) {
                 try expectEqual(result.fresh_write != nil, completed)
             }
         }
-        tk.run("valid writes, creation, open refusal and multiple syscall failures survive encoding") {
+        tk.run("valid writes, creation, open refusal and multiple syscall failures pass reporting admission") {
             for decoded in try freshWriteShapeDocuments() {
                 try expectNil(decoded.steps[0].attempt.freshWriteEvidenceProblem())
                 _ = try admittedReplyData(decoded)

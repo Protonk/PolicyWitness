@@ -46,7 +46,7 @@ pub(super) fn fresh_read_problem(a: &PWRunnerAttemptResult) -> Option<&'static s
             && r.identity.is_none()
             && r.close_rc.is_none()
             && r.close_errno.is_none()
-            && r.content_hex.is_none()
+            && r.content.is_none()
             && attempt_status(a, true, r.open_errno, "read_failed")))
         .then_some("failed fresh open cannot supply read/stat/close evidence");
     }
@@ -68,14 +68,10 @@ pub(super) fn fresh_read_problem(a: &PWRunnerAttemptResult) -> Option<&'static s
         return Some("fresh syscall failure evidence disagrees");
     }
     if count >= 0 {
-        if !r.content_hex.as_ref().is_some_and(|s| {
-            s.len() == count as usize * 2
-                && s.bytes()
-                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-        }) {
+        if r.content.as_ref().map(Vec::len) != Some(count as usize) {
             return Some("fresh read bytes disagree with native count");
         }
-    } else if r.content_hex.is_some() {
+    } else if r.content.is_some() {
         return Some("failed fresh read cannot supply content");
     }
     // Native order is stat, read, close. Preserve the first failure even when a
@@ -455,7 +451,7 @@ mod tests {
             identity: None,
             close_rc: Some(-1),
             close_errno: Some(libc::EINTR),
-            content_hex: Some("00ff".into()),
+            content: Some(vec![0x00, 0xff]),
         });
         assert!(fresh_read_problem(&a).is_none());
         let before = a.clone();
@@ -463,7 +459,7 @@ mod tests {
         assert!(fresh_read_problem(&a).is_some());
         assert_eq!(a.fresh_read, before.fresh_read);
         a = before;
-        a.fresh_read.as_mut().unwrap().content_hex = Some("00FF".into());
+        a.fresh_read.as_mut().unwrap().content = Some(vec![0x00]);
         assert_eq!(
             fresh_read_problem(&a),
             Some("fresh read bytes disagree with native count")

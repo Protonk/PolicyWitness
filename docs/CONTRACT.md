@@ -35,8 +35,9 @@ Current wire contracts: request schema 6, response schema 29, controller envelop
   The controller projects the typed runner reply inside it without version coercion.
   `data.specimen` is the dossier: request path, policy augmentation and
   imports, host facts, runner and app provenance, and hashes of any selected
-  binary the app manifest does not describe; the raw runner reply, transport,
-  diagnostics stay beside it. The same number versions the
+  binary the app manifest does not describe; the projected runner reply, the
+  client transport capture holding the received host bytes, and diagnostics
+  stay beside it. The same number versions the
   **envelope frame**: the outer object every controller-family binary prints
   (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
   `data`). It is rendered by [json_contract.rs](../controller/src/json_contract.rs),
@@ -57,16 +58,21 @@ Current wire contracts: request schema 6, response schema 29, controller envelop
 
 [porcelain.json](porcelain.json) owns response and client-capture record
 structure. `generate_porcelain.py` emits the Swift writers and stored fields,
-Rust owned records/readers/JSON projection, and independent Python structural
-tables. Request and reservation JSON and validator NDJSON retain their own
-boundaries. JSON reply fixtures are test inputs; production reply ingestion is
-binary and public JSON is projected from typed records.
+Rust owned records/readers/JSON projection, and the structural tables read by a
+separately written Python reader. All three derive from the one schema, so
+they cannot disagree with each other about structure; none of them checks the
+schema itself. Request and reservation JSON and validator NDJSON retain their
+own boundaries. JSON reply fixtures are test inputs; production reply ingestion
+is binary and public JSON is projected from typed records.
 
 A frame is `PWP1`, the SHA-256 of the schema's wire identity, and one
 root value. Values have a one-byte kind, four-byte little-endian payload length,
 and payload. Kinds are boolean, signed integer, unsigned integer, UTF-8 text,
 bytes, record, list, ordered string map and a declared variant. Integers occupy
-eight bytes; readers enforce each field's native signedness and width. Records
+eight bytes; readers enforce each field's native signedness and width. Enumerated
+values such as outcomes, states and reasons, and digests, identifiers and local
+references, travel as text; their vocabularies and formats are checked by
+semantic admission, not by the frame. Records
 begin with a two-byte identity and contain strictly increasing nonzero two-byte
 field tags followed by values. Lists/maps begin with a four-byte count; map keys
 are unique and sorted by UTF-8 bytes. Variants begin with a two-byte case tag.
@@ -77,12 +83,30 @@ required fields, incorrect kinds, invalid text, impossible lengths/counts,
 duplicates and trailing data. The [primitive reader](../controller/src/porcelain.rs)
 enforces byte and nesting budgets and charges decoded collection slots, strings
 and bytes against one logical-storage budget per frame. These are not physical
-peak-memory bounds. Complete client pipe collection still precedes its
-existing retention cap. There is no new receiver deadline or streaming claim.
+peak-memory bounds. The client capture and the host reply it carries are
+separate frames, each read under its own budget. The host writer bounds a reply
+by the frame limit, while the client retains at most its smaller
+[reply allowance](LIMITS.md); a larger reply arrives truncated and is refused
+as `runner_reply_truncated`. The controller collects the client's complete
+output before applying its retention cap; reading is not streamed and has no
+receiver deadline of its own.
 
-The public envelope projects typed records; retained raw bytes remain separate
-and become base64 only at presentation. Unsupported or malformed input cannot
-become a semantic claim. Structural admission establishes the declared shape;
+The fingerprint covers every record identity, field tag, field name, kind and
+public presentation rule, so it is exact: any edit to those, including an added
+optional field or a changed null or byte spelling, produces a different
+fingerprint. Source locations, defaults and comments are outside it. There is no negotiation and no additive compatibility at this
+layer. A controller and a host from different builds can therefore agree on
+the runner protocol and still not share a schema. That is decided only when
+the reply is read, after the host has executed the specimen: the effects have
+happened, the reply bytes are retained in the capture, and the run is refused
+as `unsupported_runner_response`. An external runner is a copy of the service
+made at installation; reinstall it from the current app when the schema moves.
+
+The public envelope projects typed records. Byte fields are carried as bytes:
+retained host reply bytes, compiled-profile bytecode and rejected validator
+context become base64, and fresh-read content becomes lowercase hexadecimal,
+only at presentation. Unsupported or malformed input cannot become a semantic
+claim. Structural admission establishes the declared shape;
 named validators separately check native operations, lifecycle, phase order,
 actor setup/equipment, owned endings and extension custody before projecting
 claims. Conflicting observations remain publishable with dependent claims withheld.
@@ -118,14 +142,23 @@ input contract.
 A reader checks a version before interpreting its record. The controller first
 admits the client's complete capture and its protocol, then the embedded host
 response independently. Missing or invalid client capture leaves submission
-unknown and never authorizes replay. Missing or
-noninteger version fields are malformed; other integer versions are
-unsupported. For an envelope, the envelope version is checked first, then any
-nonnull runner reply. An unsupported document yields one version error, with
-no downstream shape errors and no recovered claims. The controller reports an
-unsupported or malformed reply as `unsupported_runner_response` or
-`malformed_runner_response` with the reply retained; `tests/lib/consumer.py`
-reports `unsupported`. Both read the numbers through generated copies of
+unknown and never authorizes replay. For a public envelope, missing or
+noninteger version fields are malformed and other integer versions are
+unsupported; the envelope version is checked first, then any nonnull runner
+reply. An unsupported document yields one version error, with no downstream
+shape errors and no recovered claims; `tests/lib/consumer.py` reports
+`unsupported`.
+
+The controller decides a host reply in two steps. A frame naming another
+schema fingerprint is `unsupported_runner_response`, and host bytes that are
+not one complete frame of the current schema are `malformed_runner_response`;
+in both cases `runner_result` is null and the received bytes stay in the
+client capture. A decoded reply carrying another response version is
+`unsupported_runner_response`, and one that fails structural admission is
+`malformed_runner_response`; both keep the decoded record's projection in
+`runner_result` and withhold every runner-derived diagnostic.
+
+The controller and the consumer read the numbers through generated copies of
 this manifest, so a bump touches the manifest, the generated copies and the
 fixtures that carry the number. Exactly one check, in the default `smoke`
 suite, compares a built app against the manifest values; it is the check that
@@ -375,9 +408,12 @@ optional object populated; the reply inside it is opaque to that golden because
 the reply golden owns it, and the nested helper envelopes it carries
 (`data.policy_check.envelope`) is
 compared with the helper's own emitted shape by its unit tests.
-The JSON shape checks distinguish added fields (no bump needed), removed or
-changed-type fields (bump first), and a manifest that already moved while its
-golden is behind. A difference writes a candidate into the case's artifacts.
+The envelope shape check distinguishes added fields (no bump needed), removed
+or changed-type fields (bump first), and a manifest that already moved while
+its golden is behind. The reply shape check reports any difference from its
+golden without classifying it; whether the change needs a response-schema bump
+is the reviewer's decision under [the rule above](#when-a-number-moves). Either
+difference writes a candidate into the case's artifacts.
 Replacing the golden with the reviewed candidate is the acknowledgement, and
 that diff is what reviewers watch.
 

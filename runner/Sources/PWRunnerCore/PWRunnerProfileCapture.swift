@@ -16,7 +16,7 @@ struct CompiledProfileCapture {
     var profile_type: Int?
     var bytecode_length: Int?
     var bytecode_sha256: String?
-    var bytecode_b64: String?
+    var bytecode: Data?
     var source_sha256: String?
     var source_length: Int?
     var params_sha256: String?
@@ -25,8 +25,8 @@ struct CompiledProfileCapture {
 }
 
 
-// Keep context validation at the receipt boundary, including direct decoding
-// and evidence-preserving reply encoding. No absent context implies a stage.
+// Keep context validation at the receipt boundary, for ordinary and
+// evidence-preserving reporting. No absent context implies a stage.
 extension CompiledProfileCapture {
     var contextProblem: String? {
         guard schema_version == 2 else { return "unsupported compiled_profile schema_version" }

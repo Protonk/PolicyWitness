@@ -414,12 +414,11 @@ func runExecObservationTests(_ tk: TestKit) {
                 try expectEqual(comparison.observation, "succeeded", name)
                 try expectEqual(comparison.observation_basis, "spawned_child", name)
                 _ = try admittedReplyData(reply)
-                let decoded = reply
-                try expectEqual(decoded.steps[0].attempt.child_exit_code, attempt.child_exit_code)
-                try expectEqual(decoded.steps[0].attempt.exec_observation?.cleanup.state,
+                try expectEqual(reply.steps[0].attempt.child_exit_code, attempt.child_exit_code)
+                try expectEqual(reply.steps[0].attempt.exec_observation?.cleanup.state,
                                 attempt.exec_observation?.cleanup.state)
                 if name == "old_producer_absent" || name == "null_unknown" {
-                    try expectNil(decoded.steps[0].attempt.exec_observation, "absence cannot become not_requested")
+                    try expectNil(reply.steps[0].attempt.exec_observation, "absence cannot become not_requested")
                 }
             }
         }

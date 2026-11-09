@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
 from consumer import validate
+from porcelain import decode as decode_porcelain
 from runner_client_capture import validate_capture
 sys.path.insert(0, str(ROOT / "tests/fixtures/byoxpc"))
 from neighbor_lab import process_identity, generation, generation_state
@@ -40,7 +41,8 @@ def launch(name, hang=0, direct=False, timeout=30000):
     if direct: spec.pop('runner')
     if hang: spec['_test_overrides'] = dict(worker_post_apply_hang_ms=hang)
     path = out / (name + '.specimen.json'); path.write_text(json.dumps(spec, indent=2)+'\n')
-    with (out/(name+'.json')).open('w') as stdout, (out/(name+'.stderr')).open('w') as stderr:
+    # The controller prints a JSON envelope; the client prints a binary capture.
+    with (out/(name+('.pwp' if direct else '.json'))).open('wb') as stdout, (out/(name+'.stderr')).open('w') as stderr:
         argv = [str(Path(pw).parent / 'pw-runner-client'), 'run', '--timeout-ms', str(timeout), '--mach-service', service, str(path)] if direct else [pw, 'run', str(path), '--timeout-ms', str(timeout)]
         process = subprocess.Popen(argv,
             stdout=stdout, stderr=stderr, start_new_session=True)
@@ -49,7 +51,8 @@ def launch(name, hang=0, direct=False, timeout=30000):
 
 def receive(process, name, code, direct=False):
     assert process.wait(timeout=40) == code, name
-    doc = json.loads((out/(name+'.json')).read_text())
+    doc = (decode_porcelain((out/(name+'.pwp')).read_bytes(), 'capture') if direct
+           else json.loads((out/(name+'.json')).read_text()))
     problems = validate_capture(doc) if direct else validate(doc)
     assert not problems, problems
     return doc if direct else doc['data']['runner_result']

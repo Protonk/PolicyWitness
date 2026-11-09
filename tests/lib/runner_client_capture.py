@@ -49,7 +49,8 @@ def _object(value, required, optional, path, errors):
         errors.append(path + ' missing fields: ' + ', '.join(sorted(missing)))
     if extra:
         errors.append(path + ' unknown fields: ' + ', '.join(sorted(extra)))
-    # Codable omits nil fields; JSON null has the same absence semantics.
+    # The controller projection omits absent optional fields; JSON null has the
+    # same absence semantics.
     # Admission operates on a private copy, never changing retained evidence.
     for key in optional:
         if key in value and value[key] is None:
@@ -402,13 +403,18 @@ def validate_client(client, runner, *, allow_fixture_json=False):
             errors.append('incomplete or unparsed stdout cannot supply a parsed transport capture')
     elif capture is None:
         received = client.get('stdout_bytes_received')
-        # A complete parsed JSON null is malformed capture content; empty
-        # stdout supplies no parsed value. Both transport slots serialize null.
+        # Empty stdout supplies no capture and projects a null transport. A null
+        # transport beside received bytes is not a controller projection.
         expected, capture_errors = ('malformed' if _integer(received, 1) else 'missing'), []
     else:
         capture_errors = validate_capture(capture)
         expected = ('unsupported' if capture_errors and capture_errors[0].startswith('unsupported ')
                     else 'malformed' if capture_errors else 'accepted')
+        # The controller projects a typed capture only after admitting it; a
+        # rejected frame is retained as raw bytes. Authored fixtures may spell a
+        # rejected capture as an object to exercise the admission rules.
+        if capture_errors and not allow_fixture_json:
+            errors.append('a rejected client capture must be retained as raw porcelain bytes')
     if client.get('transport_admission') != expected:
         errors.append('runner client transport admission disagrees with independent admission' +
                       (': ' + '; '.join(capture_errors) if capture_errors else ''))

@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "5c99976b4a269b3924cf72d6f094277ab08960f22ab6ad306fc009b8724d278e"
-    static let abiIdentity: [UInt8] = [0x5c, 0x99, 0x97, 0x6b, 0x4a, 0x26, 0x9b, 0x39, 0x24, 0xcf, 0x72, 0xd6, 0xf0, 0x94, 0x27, 0x7a, 0xb0, 0x89, 0x60, 0xf2, 0x2a, 0xb6, 0xad, 0x30, 0x6f, 0xc0, 0x09, 0xb8, 0x72, 0x4d, 0x27, 0x8e]
+    static let abiIdentityHex = "3dcb6eafc982f5bbafca2178e913a6f0b0ef814d391d83ed923f05ffaa868d0a"
+    static let abiIdentity: [UInt8] = [0x3d, 0xcb, 0x6e, 0xaf, 0xc9, 0x82, 0xf5, 0xbb, 0xaf, 0xca, 0x21, 0x78, 0xe9, 0x13, 0xa6, 0xf0, 0xb0, 0xef, 0x81, 0x4d, 0x39, 0x1d, 0x83, 0xed, 0x92, 0x3f, 0x05, 0xff, 0xaa, 0x86, 0x8d, 0x0a]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -710,7 +710,7 @@ func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
     }
     return CompiledProfileCapture(status: "captured", worker_pid: Int(workerPid),
         producer: "worker", capture_stage: "before_apply", request_nonce: nonce, profile_type: 0,
-        bytecode_length: length, bytecode_sha256: sha256Hex(bytes), bytecode_b64: bytes.base64EncodedString(),
+        bytecode_length: length, bytecode_sha256: sha256Hex(bytes), bytecode: bytes,
         source_sha256: digest(PWShmLayout.captureSourceSha256Offset), source_length: source.utf8.count,
         params_sha256: digest(PWShmLayout.captureParamsSha256Offset), parameter_count: params.count)
 }
@@ -1418,11 +1418,11 @@ func decodeFreshRead(_ base: UnsafePointer<UInt8>) -> PWRunnerFreshRead {
         inode: UInt64(bitPattern: readI64(base, offset: PWShmLayout.slotAccessInodeOffset)),
         mode: UInt32(bitPattern: i(PWShmLayout.slotAccessModeOffset)),
         uid: UInt32(bitPattern: i(PWShmLayout.slotAccessUidOffset)), gid: UInt32(bitPattern: i(PWShmLayout.slotAccessGidOffset))) : nil
-    let content: String? = readRC >= 0 && readRC <= PWShmLayout.freshReadBytes
-        ? (0..<Int(readRC)).map { String(format: "%02x", base[PWShmLayout.slotAccessBytesOffset + $0]) }.joined() : nil
+    let content: Data? = readRC >= 0 && readRC <= PWShmLayout.freshReadBytes
+        ? Data(bytes: base.advanced(by: PWShmLayout.slotAccessBytesOffset), count: Int(readRC)) : nil
     return PWRunnerFreshRead(open_rc: opened, read_rc: readRC, read_errno: readRC < 0 ? i(PWShmLayout.slotAccessReadErrnoOffset) : nil,
         stat_rc: statRC, stat_errno: statRC != 0 ? i(PWShmLayout.slotAccessStatErrnoOffset) : nil, identity: identity,
-        close_rc: closeRC, close_errno: closeRC != 0 ? i(PWShmLayout.slotAccessCloseErrnoOffset) : nil, content_hex: content)
+        close_rc: closeRC, close_errno: closeRC != 0 ? i(PWShmLayout.slotAccessCloseErrnoOffset) : nil, content: content)
 }
 
 func decodeFreshWrite(_ slot: UnsafePointer<UInt8>) -> PWRunnerFreshWrite {

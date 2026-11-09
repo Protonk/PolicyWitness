@@ -12,7 +12,7 @@ struct PWRunnerFreshRead {
     var identity: PWFileIdentity?
     var close_rc: Int32?
     var close_errno: Int32?
-    var content_hex: String?
+    var content: Data?
     // END GENERATED PORCELAIN PWRunnerFreshRead
 }
 struct PWRunnerFileStat {
@@ -339,7 +339,7 @@ extension PWRunnerAttemptResult {
         if read.open_rc == -1 {
             guard let error = read.open_errno, error >= 0, read.read_rc == nil, read.read_errno == nil,
                   read.stat_rc == nil, read.stat_errno == nil, read.identity == nil,
-                  read.close_rc == nil, read.close_errno == nil, read.content_hex == nil,
+                  read.close_rc == nil, read.close_errno == nil, read.content == nil,
                   rc == -1, errno == (error == 0 ? nil : Int(error)), outcome == AttemptOutcome.readFailed else {
                 return "failed fresh open cannot supply read/stat/close evidence"
             }
@@ -351,9 +351,8 @@ extension PWRunnerAttemptResult {
         guard validErrno(count, read.read_errno), validErrno(Int64(stat), read.stat_errno), validErrno(Int64(close), read.close_errno),
               (stat == 0) == (read.identity != nil) else { return "fresh syscall failure evidence disagrees" }
         if count >= 0 {
-            guard let content = read.content_hex, content.utf8.count == Int(count) * 2,
-                  content.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else { return "fresh read bytes disagree with native count" }
-        } else if read.content_hex != nil { return "failed fresh read cannot supply content" }
+            guard let content = read.content, Int64(content.count) == count else { return "fresh read bytes disagree with native count" }
+        } else if read.content != nil { return "failed fresh read cannot supply content" }
         let failed = stat < 0 || count < 0 || close < 0
         let error = stat < 0 ? read.stat_errno : count < 0 ? read.read_errno : close < 0 ? read.close_errno : nil
         guard rc == (failed ? -1 : 0), errno == error.flatMap({ $0 == 0 ? nil : Int($0) }),

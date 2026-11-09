@@ -26,8 +26,8 @@ Rust unit tests and formatting for the controller crate.
 in [run_flow.rs](../../../controller/src/run_flow.rs) exercises completion,
 assembly and serialization for successful, signaled, degraded and absent-worker
 replies, including ordered phases and fresh reads. It checks the exact public
-field sets, unchanged raw reply and client observations, exit status and
-execution diagnostics. Real Swift policy-transfer and worker-clock replies
+field sets, that the projected `runner_result` reads back as the same typed
+record, the client observations, exit status and execution diagnostics. Real Swift policy-transfer and worker-clock replies
 also cross this assembly boundary and independent consumers in `runner_unit`.
 
 ## Success criteria
