@@ -49,7 +49,7 @@ FileHandle.standardOutput.write(Data("\\n\\(tk.summary())\\n".utf8))
 exit(tk.exitCode())
 ''')
 with (out/'run.log').open('w') as log:
-    run = subprocess.run([*SWIFT, 'run', '--package-path', str(package), '--scratch-path', str(scratch), 'SleepRecordControls'],
+    run = subprocess.run([*SWIFT, 'run', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(scratch), 'SleepRecordControls'],
                          stdout=subprocess.PIPE, stderr=log, timeout=300)
 stdout = run.stdout.decode()
 (out/'stdout.txt').write_text(stdout)

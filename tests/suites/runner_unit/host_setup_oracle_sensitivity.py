@@ -392,7 +392,8 @@ def main(out, scratch):
     shutil.copyfile(ROOT / "tests/suites/runner_unit/host_setup_controls.py", recipe)
     shutil.copyfile(Path(__file__), inputs / Path(__file__).name)
     shutil.copyfile(Path(__file__).with_suffix(".sh"), inputs / Path(__file__).with_suffix(".sh").name)
-    shutil.copyfile(ROOT / "tests/lib/build_receipt.py", inputs / "build_receipt.py")
+    for name in ("build_receipt.py", "porcelain_fixture.py", "porcelain.py", "porcelain_schema.py"):
+        shutil.copyfile(ROOT / "tests/lib" / name, inputs / name)
     sys.path.insert(0, str(inputs))
     save(inputs / "inventory.json", inventory(inputs))
     spec = importlib.util.spec_from_file_location("preserved_host_setup_controls", recipe)

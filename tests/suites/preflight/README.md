@@ -114,7 +114,10 @@ Offline release controls also exercise the release procedure's decision points.
 
   A Swift probe compiles unchanged host core sources once, with products in case
   scratch and source/build receipts in artifacts, and calls the real static
-  `ActorEquipmentPreparation.bind` without injected Security operations. It
+  `ActorEquipmentPreparation.bind` without injected Security operations. Binary
+  stdout retains the typed observations; an independent Python reader emits
+  `projection.json` for the binding assertions. The reader admits only the
+  fixed fixture record and current nested schema, within a 4 MiB fixture cap. It
   first binds the valid ad-hoc service, then rejects a resealed inventory with a
   well-formed incompatible worker identity as `worker_identity_mismatch`, and
   binds again after exact restoration. This checks the compiled host identity

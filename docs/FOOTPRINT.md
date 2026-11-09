@@ -23,8 +23,8 @@ Examine PW's footprint through three questions:
 ## Provenance of measured rows
 
 Response rows fr9–fr13 describe the historical JSON/base64 implementation. Their
-values are unavailable as footprint evidence for this typed/binary prototype;
-no fresh prototype measurement is asserted here. They were transcribed from run id
+values do not measure the current typed/binary implementation.
+They were transcribed from run id
 `20261107T035203Z_446642a9`, output directory
 `runs/footprint-opt-targeted-final-02`, case
 `witness_contract/response_footprint`. Its artifact inventory identifies the
@@ -121,7 +121,7 @@ presentation (fr8).
 
 A retention allowance does not bound collection memory. Historical measured
 rows used fresh controllers running the JSON implementation. The retained
-JSON-control instrumentation does not measure the prototype binary path.
+JSON-control instrumentation does not measure the current binary path.
 
 The native response rows describe single repetitions. Memory values are maxima
 among successful samples with verified lifetime coverage; resident and physical

@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
 from bundle import SERVICE, command, inventory, save, signature
 from build_receipt import record_build
+from porcelain_fixture import decode_fixture
 
 HELPERS = {'worker': 'Contents/MacOS/pw-probe-runner', 'unentitled_worker': 'Contents/MacOS/pw-probe-runner-unentitled'}
 CODE_PAGE_OFFSET = 4096
@@ -48,7 +49,7 @@ def build_binding_probe(out):
         '    .target(name: "PWRunnerCore", dependencies: ["PWCWorkerShim"],\n'
         '            swiftSettings: [.unsafeFlags(["-enable-testing"])]),\n'
         '    .executableTarget(name: "EquipmentBindingProbe", dependencies: ["PWRunnerCore"])])\n')
-    command(receipt / 'build', ['swift', 'build', '--package-path', package,
+    command(receipt / 'build', ['swift', 'build', '--jobs', '2', '--package-path', package,
             '--scratch-path', scratch, '--product', 'EquipmentBindingProbe'], timeout=300)
     return record_build(package, receipt, scratch, 'EquipmentBindingProbe', swift_command=['swift'])
 
@@ -206,7 +207,8 @@ def main(app, out, pw):
             try:
                 if fault == 'wrong_identity':
                     command(out / name / 'binding-baseline', [binding_probe, bundle])
-                    baseline = json.loads((out / name / 'binding-baseline/stdout').read_bytes())
+                    baseline = decode_fixture((out / name / 'binding-baseline/stdout').read_bytes(), 'binding')
+                    save(out / name / 'binding-baseline/projection.json', baseline)
                     assert baseline['compiled_identity'] == json.loads(original_inventory)['worker_identity'], baseline
                     assert baseline['inventory']['status'] == 'verified' and baseline['inventory']['seal_osstatus'] == 0, baseline
                     assert 'failure_reason' not in baseline and len(baseline['executable_paths']) == 1, baseline
@@ -292,7 +294,8 @@ def main(app, out, pw):
                     # source inventory. Compatibility belongs to that host's
                     # compiled layout, not the controller's build identity.
                     command(out / name / 'binding-refused', [binding_probe, bundle])
-                    refused_binding = json.loads((out / name / 'binding-refused/stdout').read_bytes())
+                    refused_binding = decode_fixture((out / name / 'binding-refused/stdout').read_bytes(), 'binding')
+                    save(out / name / 'binding-refused/projection.json', refused_binding)
                     assert refused_binding['compiled_identity'] == baseline['compiled_identity']
                     assert refused_binding['inventory']['seal_osstatus'] == 0, refused_binding
                     assert refused_binding['inventory']['status'] == 'refused', refused_binding
@@ -320,7 +323,8 @@ def main(app, out, pw):
                 assert all(code == 0 for code in restored.values()), restored
                 if fault == 'wrong_identity' and baseline is not None:
                     command(out / name / 'binding-restored', [binding_probe, bundle])
-                    restored_binding = json.loads((out / name / 'binding-restored/stdout').read_bytes())
+                    restored_binding = decode_fixture((out / name / 'binding-restored/stdout').read_bytes(), 'binding')
+                    save(out / name / 'binding-restored/projection.json', restored_binding)
                     # Security may spell the same inode through /tmp or
                     # /private/tmp. Compare those paths by filesystem identity;
                     # every other observation must be exactly restored.

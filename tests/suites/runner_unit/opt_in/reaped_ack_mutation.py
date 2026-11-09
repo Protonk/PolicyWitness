@@ -82,7 +82,7 @@ try:
         body = fixed.replace(anchor, "", 1) if mutated else fixed
         source.write_text(body)
         (OUT / (variant + ".swift")).write_text(body)
-        rc, log = run(variant, [*SWIFT, "run", "--package-path", package, "--scratch-path", scratch,
+        rc, log = run(variant, [*SWIFT, "run", "--jobs", "2", "--package-path", package, "--scratch-path", scratch,
                                "PWRunnerCoreTests"], env=environment)
         failures = [line.strip() for line in log.splitlines() if line.strip().startswith("FAIL ")]
         successes = [line.strip() for line in log.splitlines() if line.strip().startswith("ok ")]

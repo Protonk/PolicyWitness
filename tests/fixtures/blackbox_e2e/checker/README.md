@@ -5,6 +5,8 @@ with hypothetical process identities, copied carrier structure and unavailable
 artifact verification. It supports checker and comparison interpretation controls;
 it is not a live capture or signed-candidate result. Missing-path controls are
 authored by `constructed_missing_path_baseline()` in the menagerie control file.
+Its embedded host bytes are authored JSON, admitted only by the controls'
+explicit fixture option; current production transport uses binary records.
 
 The `response25/` and earlier directories contain unmodified historical live
 captures and their exact submitted requests. Current readers refuse their versions.

@@ -175,7 +175,7 @@ def consumer_controls(artifacts, current):
     def require(condition, reason):
         assert condition, reason
 
-    # The retained live run validates and its first row is read by field.
+    # The authored current run validates and its first row is read by field.
     def allowed_write(e):
         chosen = select(steps(e), step_id='fs_write_allowed', observation='succeeded', order='query_first')
         require(len(chosen) == 1 and chosen[0]['attempt']['outcome'] == 'ok', 'allowed write must be selectable by its record')

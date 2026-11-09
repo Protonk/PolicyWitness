@@ -2929,16 +2929,17 @@ MUTATIONS = [
 
 
 SELF_CHECK_RE = re.compile(r'^"\$\{PW_PYTHON\}" -B -S "\$\{ROOT_DIR\}/docs/generate_([a-z_]+)\.py" --check\n', re.M)
-SELF_CHECK_MARKERS = ('is stale', 'missing symbol', 'disagrees with the script', 'generate_worker_identity.py')
+SELF_CHECK_MARKERS = ('is stale', 'missing symbol', 'disagrees with the script',
+                      'stale porcelain output', 'generate_worker_identity.py')
 
 
 def _without_self_checks(text):
-    """Remove limits, contract, architecture, footprint, build-document and both identity checks.
+    """Remove limits, contract, architecture, footprint, porcelain, build-document and both identity checks.
 
     Their banners stay. Each of those checks compares a document or a digest with
     the script, so a mutated script fails one of them before any guard runs."""
     names = SELF_CHECK_RE.findall(text)
-    assert sorted(names) == sorted(('limits', 'contract', 'architecture', 'footprint',
+    assert sorted(names) == sorted(('limits', 'contract', 'architecture', 'footprint', 'porcelain',
                                    'build', 'worker_identity', 'worker_identity')), names
     return SELF_CHECK_RE.sub('', text)
 

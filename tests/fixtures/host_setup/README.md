@@ -39,7 +39,11 @@ A name or stale receipt alone never authorizes recovery unlink. A failed observa
 case artifacts. Each child is either already reaped by the host or independently
 terminated/reaped by the fixture, with host-reap evidence kept separate.
 
-The fixture receipt's `worker_observation` retains existing host output from
+The fixture writes existing host output directly to `<case>.json.worker.pwp`.
+The independent Python reader projects that sidecar into `worker_observation`
+in the combined receipt; `<case>.receipt.raw` retains the original scalar/event
+receipt and its explicit observation-presence flag. A missing or extra sidecar
+is a failure. The observation retains existing host output from
 either worker result branch: PID, ready-byte receipt, ready/sentinel/grace wait
 records, poll stop reason, exit request, termination request, reaping, exit code,
 termination signal, wait errors, cleanup trigger, grace end and collection basis.

@@ -10,7 +10,7 @@ Cases assert contract claims independently. The suite reads as a
 behavior specification — what PolicyWitness promises, regardless of
 the architecture behind it.
 
-## Experimental public-output interruption
+## Public-output interruption
 
 The opt-in `porcelain_output_controls` case runs one read-only specimen with
 256 `/etc/hosts` queries/opens across eight phases. Its complete positive run
@@ -22,7 +22,7 @@ stdout bytes respectively, then closes the real pipe. Each CLI must exit
 nonzero and leave an incomplete JSON document; harness timeout or cleanup
 kill cannot supply that outcome.
 
-This experimental case requires the prototype's binary transport and is opt-in
+This case exercises the binary transport and is opt-in
 because it deliberately interrupts public output. Each invocation has a
 120-second harness bound and a 60-second client allowance. Only the owned CLI
 is signalled on harness timeout. The specimen creates no mutable worker resource.

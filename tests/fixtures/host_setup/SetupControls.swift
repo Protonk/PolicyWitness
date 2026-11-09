@@ -139,8 +139,10 @@ func setup_spawn(_ pid: UnsafeMutablePointer<pid_t>, _ path: UnsafePointer<CChar
 }
 
 // Fixture receipt only: retain existing host observations without collecting
-// anything new while the child runs. Nested records use their existing encoders.
-private struct SetupWorkerObservation: Encodable {
+// anything new while the child runs. Nested records use direct binary writers.
+private struct SetupWorkerObservation: PWPorcelainWritable {
+    // Fixture-only record; independently described in tests/lib/porcelain_fixture.py.
+    static let porcelainRecordID: UInt16 = 65002
     let worker_pid: pid_t
     let ready_byte_received: Bool
     let ready_wait: PWHostWait?
@@ -156,6 +158,26 @@ private struct SetupWorkerObservation: Encodable {
     let cleanup_trigger: String?
     let grace_end: String?
     let collection_basis: String?
+
+    func porcelainWrite() throws -> Data {
+        var writer = PWPorcelainRecordWriter(Self.porcelainRecordID)
+        try writer.field(1, worker_pid)
+        try writer.field(2, ready_byte_received)
+        try writer.field(3, ready_wait)
+        try writer.field(4, sentinel_wait)
+        try writer.field(5, grace_wait)
+        try writer.field(6, poll_stop_reason)
+        try writer.field(7, exit_requested)
+        try writer.field(8, termination_request)
+        try writer.field(9, reaped)
+        try writer.field(10, exit_code)
+        try writer.field(11, term_signal)
+        try writer.field(12, wait_errors)
+        try writer.field(13, cleanup_trigger)
+        try writer.field(14, grace_end)
+        try writer.field(15, collection_basis)
+        return try writer.finish()
+    }
 
     init(_ output: CWorkerOutput) {
         worker_pid = output.workerPid
@@ -247,13 +269,15 @@ func runSetupControl(_ owner: String, _ fault: String, _ child: String, _ output
     }
     dup2(savedOut, STDOUT_FILENO); dup2(savedErr, STDERR_FILENO)
     close(savedOut); close(savedErr)
-    let workerObservationData = try JSONEncoder().encode(workerOutput.map(SetupWorkerObservation.init))
-    let workerObservation = try JSONSerialization.jsonObject(with: workerObservationData, options: [.fragmentsAllowed])
+    if let workerOutput {
+        let observation = try pwPorcelainEncode(SetupWorkerObservation(workerOutput))
+        try observation.write(to: URL(fileURLWithPath: output + ".worker.pwp"))
+    }
     let receipt: [String: Any] = ["owner": owner, "fault": fault, "events": setupEvents,
         "outcome": outcome, "fds_closed": fdsClosed, "maps_remaining": setupMaps.count,
         "strings_remaining": setupStrings.count, "handles_remaining": setupHandles,
         "names_present_before_fixture_cleanup": namesPresent, "fixture_names_removed": namesRemoved,
-        "spawn_pid": setupPID, "host_reaped": reaped, "worker_observation": workerObservation]
+        "spawn_pid": setupPID, "host_reaped": reaped, "worker_observation_present": workerOutput != nil]
     let data = try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
     try data.write(to: URL(fileURLWithPath: output))
 }

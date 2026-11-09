@@ -16,6 +16,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tests/lib"))
 from build_receipt import record_build
+from porcelain_fixture import decode_fixture
 
 SWIFT = ['swift']
 FIXTURE = ROOT / "tests/fixtures/host_setup"
@@ -124,7 +125,7 @@ def run(out, scratch):
     observer = out / "observer"; child_path = out / "child.json"
     with (out / "build.log").open("w") as log:
         subprocess.run(["clang", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter", f'-DRECEIPT_PATH="{child_path}"', str(FIXTURE / "observer.c"), "-o", str(observer)], check=True, stdout=log, stderr=log)
-        subprocess.run([*SWIFT, "build", "--package-path", str(package), "--scratch-path", str(scratch), "--product", "PWRunnerCoreTests"], check=True, stdout=log, stderr=log, timeout=180)
+        subprocess.run([*SWIFT, "build", "--jobs", "2", "--package-path", str(package), "--scratch-path", str(scratch), "--product", "PWRunnerCoreTests"], check=True, stdout=log, stderr=log, timeout=180)
     executable = record_build(package, out, scratch, "PWRunnerCoreTests", swift_command=SWIFT)
     cases = [("worker", f) for f in ("baseline", "collision", "actions_init", "attrs_init", "dup2.0", "dup2.3", "dup2.4", "strdup.0", "strdup.2", "unlink", "clear_cloexec", "nosigpipe")]
     cases += [("worker_token", "baseline"), ("worker_token", "dup2.5")]
@@ -135,7 +136,14 @@ def run(out, scratch):
         child_path.unlink(missing_ok=True)
         with (out / (name + ".log")).open("w") as log:
             subprocess.run([str(executable), owner, fault, str(observer), str(output)], check=True, stdout=log, stderr=log, timeout=15)
+        # Retain the exact scalar/event receipt and the binary sidecar before
+        # adding independent child evidence and the Python projection.
+        (out / (name + ".receipt.raw")).write_bytes(output.read_bytes())
         receipt = json.loads(output.read_text())
+        sidecar = Path(str(output) + ".worker.pwp")
+        present = receipt.pop("worker_observation_present")
+        assert type(present) is bool and sidecar.exists() == present, "worker receipt presence"
+        receipt["worker_observation"] = decode_fixture(sidecar.read_bytes(), "setup_worker") if present else None
         receipt["child"] = json.loads(child_path.read_text()) if child_path.exists() else None
         output.write_text(json.dumps(receipt, indent=2) + "\n")
         verdict = check(receipt, owner, fault)

@@ -189,7 +189,9 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             guard let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
                 throw TestFailure(message: "PW_TEST_ARTIFACTS is required")
             }
-            try bytes.write(to: URL(fileURLWithPath: artifacts).appendingPathComponent("porcelain-replies/null-query-pid.pwp"))
+            let directory = URL(fileURLWithPath: artifacts).appendingPathComponent("porcelain-replies", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try bytes.write(to: directory.appendingPathComponent("null-query-pid.pwp"))
         }
 
     }

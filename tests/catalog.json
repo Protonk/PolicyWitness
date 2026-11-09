@@ -2023,7 +2023,7 @@
         },
         {
           "id": "porcelain_output_controls",
-          "description": "Experimental typed-reply pipeline: complete dense read-only public output and nonzero incomplete documents after closing stdout at fixed prefixes",
+          "description": "Typed-reply pipeline: complete dense read-only public output and nonzero incomplete documents after closing stdout at fixed prefixes",
           "command": [
             "bash",
             "tests/suites/witness_contract/porcelain_output_controls.sh"
@@ -2382,6 +2382,7 @@
         "runner_byoxpc/BBX-001",
         "runner_byoxpc/BBX-002",
         "witness_contract/order_barrier_mutations",
+        "witness_contract/porcelain_output_controls",
         "witness_contract/dossier_witness_byoxpc",
         "runner_byoxpc/registry_recovery",
         "runner_byoxpc/default_location",

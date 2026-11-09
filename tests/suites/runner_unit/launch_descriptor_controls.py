@@ -172,7 +172,7 @@ def run(out, scratch):
     worker=app/'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
     observer=out/'observer'
     command(out,'observer-build',['clang','-Wall','-Wextra','-Werror','-I'+str(ROOT/'controller/tools/pw_probe_runner'),'-DREAL_WORKER="'+str(worker)+'"',str(HERE/'observer.c'),'-o',str(observer)])
-    command(out,'core-build',[*SWIFT,'build','--package-path',str(package),'--scratch-path',str(scratch),'--product','PWRunnerCoreTests'])
+    command(out,'core-build',[*SWIFT,'build','--jobs','2','--package-path',str(package),'--scratch-path',str(scratch),'--product','PWRunnerCoreTests'])
     binary = record_build(package, out, scratch, 'PWRunnerCoreTests', swift_command=SWIFT)
     (out/'equipment.json').write_text(json.dumps(dict(worker=str(worker),worker_sha256=digest(worker),observer_sha256=digest(observer),host_sha256=digest(binary),uname=subprocess.check_output(['uname','-a'],text=True).strip()),indent=2)+'\n')
     results=[]; receipts={}

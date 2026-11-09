@@ -87,7 +87,7 @@ do {
         mutate(package / 'Sources/PWRunnerCore/AuthorityCustody.swift',
                'return base?.advanced(by: PWAuthorityLayout.slotsOffset + index * PWAuthorityLayout.slotBytes)',
                'return base?.advanced(by: PWAuthorityLayout.slotsOffset + 0 * PWAuthorityLayout.slotBytes)', out)
-    command(out, 'build', ['swift', 'build', '--package-path', str(package), '--scratch-path', str(scratch),
+    command(out, 'build', ['swift', 'build', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(scratch),
                            '--product', 'PWRunnerCoreTests'])
     product = record_build(package, out, scratch, 'PWRunnerCoreTests', swift_command=['swift'])
     return command(out, 'run', [str(product)], expected=73 if alias else 0,
@@ -117,7 +117,7 @@ do {
         mutate(package/'Sources/PWRunnerCore/ActorScheduler.swift',
             '            if let dependency=entry.terminationDependency {\n                var gate=observeTermination',
             '            if let dependency=entry.terminationDependency, false {\n                var gate=observeTermination',out)
-    command(out,'build',['swift','build','--package-path',str(package),'--scratch-path',str(scratch),'--product','PWRunnerCoreTests'])
+    command(out,'build',['swift','build','--jobs','2','--package-path',str(package),'--scratch-path',str(scratch),'--product','PWRunnerCoreTests'])
     product=record_build(package,out,scratch,'PWRunnerCoreTests',swift_command=['swift'])
     # Copied #filePath is not the repository equipment root. Bind the exact
     # existing app explicitly and retain its identity in the fixture receipt.
