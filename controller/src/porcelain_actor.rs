@@ -9,12 +9,9 @@ fn require(out: &mut Vec<IntegrityIssue>, condition: bool, detail: &str) {
 fn bounded(s: &str, bytes: usize) -> bool {
     !s.is_empty() && s.len() <= bytes && !s.contains('\0')
 }
-fn hex(s: Option<&str>, bytes: usize) -> bool {
-    s.is_some_and(|s| {
-        s.len() == bytes
-            && s.bytes()
-                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-    })
+/// A digest is its bytes; only its length can be wrong here.
+fn digest(value: Option<&[u8]>, bytes: usize) -> bool {
+    value.is_some_and(|value| value.len() == bytes)
 }
 fn pid(p: i64) -> bool {
     (1..=i64::from(i32::MAX)).contains(&p)
@@ -613,57 +610,50 @@ fn equipment(
         require(
             out,
             inv.schema_version == Some(1)
-                && hex(inv.sha256.as_deref(), 64)
-                && hex(inv.worker_identity.as_deref(), 64)
-                && hex(inv.unsigned_worker_sha256.as_deref(), 64)
+                && digest(inv.sha256.as_deref(), 32)
+                && digest(inv.worker_identity.as_deref(), 32)
+                && digest(inv.unsigned_worker_sha256.as_deref(), 32)
                 && inv.seal_osstatus == Some(0),
             "verified equipment inventory lacks sealed identity",
         );
     }
     equipment_bounds(reply, actors, out);
-    let mut by_binding = BTreeMap::new();
+    // Rows are named by table position. A binding is identified by its role
+    // and source; a read-back by the binding row or the actor it belongs to.
+    let mut identities = BTreeSet::new();
     for b in bindings {
         require(
             out,
-            by_binding.insert(b.binding_id.as_str(), b).is_none(),
+            identities.insert((b.role.as_str(), b.source.as_str())),
             "duplicate equipment binding",
         );
     }
-    let mut by_read = BTreeMap::new();
+    let mut owners = BTreeSet::new();
     let mut dictionaries = BTreeMap::new();
-    for r in reads {
-        require(
-            out,
-            by_read.insert(r.entitlements_id.as_str(), r).is_none(),
-            "duplicate equipment read-back",
-        );
-        require(
-            out,
-            [
-                "selected",
-                "unentitled",
-                "override-selected",
-                "override-unentitled",
-            ]
-            .contains(&r.binding_ref.as_str()),
-            "entitlement read-back binding",
-        );
-        let expected = match r.source.as_str() {
-            "binding" => Some(format!("binding-{}", r.binding_ref)),
+    for (index, r) in reads.iter().enumerate() {
+        let binding = bindings.get(r.binding_ref as usize);
+        require(out, binding.is_some(), "entitlement read-back binding");
+        let owner = match r.source.as_str() {
+            "binding" => (r.actor_id.is_none()
+                && binding.is_some_and(|b| b.entitlements_ref == Some(index as u32)))
+            .then_some(("binding", r.binding_ref as usize)),
             "execution" => actors
                 .iter()
                 .position(|a| Some(a.actor_id.as_str()) == r.actor_id.as_deref())
-                .map(|i| format!("execution-{i}")),
+                .map(|i| ("execution", i)),
             _ => None,
         };
         require(
             out,
-            expected.as_deref() == Some(r.entitlements_id.as_str()),
+            owner.is_some(),
             "entitlement read-back actor or identity",
         );
+        if let Some(owner) = owner {
+            require(out, owners.insert(owner), "duplicate equipment read-back");
+        }
         if r.status == "observed" {
             if let Some(d) = r.raw_plist.as_deref().and_then(plist::Dictionary::read) {
-                dictionaries.insert(r.entitlements_id.as_str(), d);
+                dictionaries.insert(index, d);
             } else {
                 require(out, false, "invalid or oversized entitlement plist");
             }
@@ -675,12 +665,12 @@ fn equipment(
             );
         }
     }
-    for (id, b) in &by_binding {
-        let instrumented = id.starts_with("override-");
-        let role = id.strip_prefix("override-").unwrap_or(id);
+    for (index, b) in bindings.iter().enumerate() {
+        let instrumented = b.source == "test_override";
+        let role = b.role.as_str();
         require(
             out,
-            ["selected", "unentitled"].contains(&role) && b.role == role,
+            ["selected", "unentitled"].contains(&role),
             "equipment role association",
         );
         let expected = if role == "selected" {
@@ -692,8 +682,7 @@ fn equipment(
             out,
             bounded(&b.path, 1023)
                 && if instrumented {
-                    b.source == "test_override"
-                        && b.implementation_identity == "unverified_fixture"
+                    b.implementation_identity == "unverified_fixture"
                         && b.relative_path.is_none()
                         && b.expected_sha256.is_none()
                         && b.expected_cdhash.is_none()
@@ -705,25 +694,26 @@ fn equipment(
             "equipment fixed path association",
         );
         if b.status == "bound" {
-            let reference = format!("binding-{id}");
+            let own = b.entitlements_ref.map(|n| n as usize);
             require(
                 out,
                 inv.status == "verified"
-                    && hex(b.sha256.as_deref(), 64)
+                    && digest(b.sha256.as_deref(), 32)
                     && (instrumented || b.sha256 == b.expected_sha256)
-                    && hex(b.cdhash.as_deref(), 40)
+                    && digest(b.cdhash.as_deref(), 20)
                     && (instrumented || b.cdhash == b.expected_cdhash)
                     && b.signature_osstatus == Some(0)
                     && (instrumented || b.entitlements_match == Some(true))
-                    && b.entitlements_ref.as_deref() == Some(reference.as_str())
-                    && dictionaries.contains_key(reference.as_str()),
+                    && own
+                        .and_then(|n| reads.get(n))
+                        .is_some_and(|r| r.source == "binding" && r.binding_ref as usize == index)
+                    && own.is_some_and(|n| dictionaries.contains_key(&n)),
                 "bound equipment lacks inspected identity",
             );
             if role == "unentitled" && !instrumented {
                 require(
                     out,
-                    dictionaries
-                        .get(reference.as_str())
+                    own.and_then(|n| dictionaries.get(&n))
                         .is_some_and(plist::Dictionary::empty),
                     "unentitled worker carries entitlements",
                 );
@@ -737,21 +727,22 @@ fn equipment(
         }
     }
     let mut runtime_failed = false;
-    for (i, a) in actors.iter().enumerate() {
+    for a in actors.iter() {
         let Some(e) = &a.equipment else {
             require(out, false, "actor equipment selector association");
             continue;
         };
-        let bound_id = e.binding_ref.as_str();
+        // The actor names its binding row when one exists for its role.
+        let b = e.binding_ref.and_then(|n| bindings.get(n as usize));
         require(
             out,
             ["selected", "unentitled"].contains(&e.resolved.as_str())
-                && (bound_id == e.resolved || bound_id == format!("override-{}", e.resolved))
+                && (b.is_some_and(|b| b.role == e.resolved)
+                    || e.binding_ref.is_none() && !bindings.iter().any(|b| b.role == e.resolved))
                 && (e.requested.is_none() && e.resolved == "selected"
                     || e.requested.as_deref() == Some(e.resolved.as_str())),
             "actor equipment selector association",
         );
-        let b = by_binding.get(bound_id).copied();
         let required: BTreeSet<&str> = e.required_entitlements.iter().map(String::as_str).collect();
         require(
             out,
@@ -760,9 +751,9 @@ fn equipment(
                 && e.required_entitlements.iter().all(|s| bounded(s, 255)),
             "invalid actor entitlement requirements",
         );
-        let binding_ref = format!("binding-{bound_id}");
-        let granted = dictionaries
-            .get(binding_ref.as_str())
+        let static_ref = b.and_then(|b| b.entitlements_ref).map(|n| n as usize);
+        let granted = static_ref
+            .and_then(|n| dictionaries.get(&n))
             .map(plist::Dictionary::granted);
         let missing: BTreeSet<&str> = required
             .iter()
@@ -795,10 +786,10 @@ fn equipment(
             "invalid execution equipment status",
         );
         if x.status == "matched" {
-            let reference = format!("execution-{i}");
-            let read = by_read.get(reference.as_str()).copied();
-            let static_plist = dictionaries.get(binding_ref.as_str());
-            let live_plist = dictionaries.get(reference.as_str());
+            let live_ref = x.entitlements_ref.map(|n| n as usize);
+            let read = live_ref.and_then(|n| reads.get(n));
+            let static_plist = static_ref.and_then(|n| dictionaries.get(&n));
+            let live_plist = live_ref.and_then(|n| dictionaries.get(&n));
             let live_granted = live_plist.map(plist::Dictionary::granted);
             require(
                 out,
@@ -813,9 +804,9 @@ fn equipment(
                     && x.reason.is_none()
                     && x.pid.is_some_and(pid)
                     && x.pid == a.launch.as_ref().map(|l| l.pid)
-                    && x.entitlements_ref.as_deref() == Some(reference.as_str())
                     && read.is_some_and(|r| {
-                        r.binding_ref == bound_id
+                        r.source == "execution"
+                            && Some(r.binding_ref) == e.binding_ref
                             && r.actor_id.as_deref() == Some(a.actor_id.as_str())
                     })
                     && static_plist
@@ -1758,7 +1749,7 @@ fn equipment_bounds(
                     && bindings
                         .iter()
                         .filter(|b| b.source == "packaged")
-                        .map(|b| b.binding_id.as_str())
+                        .map(|b| b.role.as_str())
                         .collect::<BTreeSet<_>>()
                         == BTreeSet::from(["selected", "unentitled"]),
                 "equipment complete packaged pair or inventory refusal",
@@ -1789,7 +1780,6 @@ fn equipment_bounds(
         require(
             out,
             metadata_fits([
-                Some(b.binding_id.as_str()),
                 Some(b.role.as_str()),
                 Some(b.source.as_str()),
                 Some(b.implementation_identity.as_str()),
@@ -1797,13 +1787,8 @@ fn equipment_bounds(
                 Some(b.path.as_str()),
                 Some(b.status.as_str()),
                 b.reason.as_deref(),
-                b.expected_sha256.as_deref(),
-                b.expected_cdhash.as_deref(),
-                b.sha256.as_deref(),
-                b.cdhash.as_deref(),
                 b.identifier.as_deref(),
                 b.team_id.as_deref(),
-                b.entitlements_ref.as_deref(),
                 e.map(|e| e.operation.as_str()),
                 e.and_then(|e| e.domain.as_deref()),
                 e.and_then(|e| e.message.as_deref()),
@@ -1814,8 +1799,10 @@ fn equipment_bounds(
             out,
             b.path.starts_with('/')
                 && bounded(&b.path, 1023)
-                && b.sha256.as_deref().is_none_or(|s| hex(Some(s), 64))
-                && b.cdhash.as_deref().is_none_or(|s| hex(Some(s), 40))
+                && b.expected_sha256.as_deref().is_none_or(|s| s.len() == 32)
+                && b.expected_cdhash.as_deref().is_none_or(|s| s.len() == 20)
+                && b.sha256.as_deref().is_none_or(|s| s.len() == 32)
+                && b.cdhash.as_deref().is_none_or(|s| s.len() == 20)
                 && b.identifier.as_deref().is_none_or(|s| bounded(s, 255))
                 && b.team_id.as_deref().is_none_or(|s| bounded(s, 255))
                 && e.is_none_or(error_valid),
@@ -1860,10 +1847,8 @@ fn equipment_bounds(
                 [
                     Some(x.status.as_str()),
                     x.path.as_deref(),
-                    x.cdhash.as_deref(),
                     x.identifier.as_deref(),
                     x.team_id.as_deref(),
-                    x.entitlements_ref.as_deref(),
                     x.reason.as_deref(),
                 ]
                 .into_iter()
@@ -1880,7 +1865,7 @@ fn equipment_bounds(
             x.path
                 .as_deref()
                 .is_none_or(|s| s.starts_with('/') && bounded(s, 1023))
-                && x.cdhash.as_deref().is_none_or(|s| hex(Some(s), 40))
+                && x.cdhash.as_deref().is_none_or(|s| s.len() == 20)
                 && x.identifier.as_deref().is_none_or(|s| bounded(s, 255))
                 && x.team_id.as_deref().is_none_or(|s| bounded(s, 255)),
             "equipment execution path or identity bound",

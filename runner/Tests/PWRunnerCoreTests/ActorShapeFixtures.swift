@@ -77,7 +77,7 @@ private func actorOutput(_ input: CWorkerInput, index: Int, applies: Bool, failu
     var output = CWorkerOutput(workerPid: pid_t(100 + index), readyByteReceived: true, applied: applies, applyRC: 0, applyErrno: 0,
         done: true, exitCode: 0, termSignal: nil, slots: slots, pollStopReason: "done", exitRequested: true,
         terminationRequest: nil, reaped: true, waitErrors: [],
-        workerEvidence: PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: shapeProgress(10, 2),
+        workerEvidence: PWWorkerEvidence(abi_identity: Data(PWShmLayout.abiIdentity), progress: shapeProgress(10, 2),
             failure_publication: 0, failure_state: "absent", failure: nil,
             readiness: PWWorkerReadiness(rc: 1, errno: 0),
             diagnostic: PWWorkerDiagnostic(state: 0, status: "absent", length: 0, text: nil),
@@ -90,7 +90,7 @@ private func actorOutput(_ input: CWorkerInput, index: Int, applies: Bool, failu
     output.cleanupTrigger = "completion"; output.graceEnd = "reaped_during_grace"; output.collectionBasis = "after_confirmed_reap"
     output.actorSetup = applies ? 1 : 2
     output.activationObserved = UInt32(input.phases.last?.globalPhase ?? 0)
-    output.policyReceivedSha256 = String(repeating: "f", count: 64)
+    output.policyReceivedSha256 = Data(repeating: 0xff, count: 32)
     output.authorityStatus = 1; output.authorityDetail = 0; output.nativeSymbols = 7
     output.readyWait = PWHostWait(budget_ms: 1000, elapsed_ms: 1, stop: "received", native_errno: nil, clock_fault: false)
     output.graceWait = PWHostWait(budget_ms: 1000, elapsed_ms: 1, stop: "reaped_during_grace", native_errno: nil, clock_fault: false)
@@ -332,8 +332,8 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
         let input = captureTranslation.inputs[index]
         return CompiledProfileCapture(status: "captured", worker_pid: Int(outputs[index].workerPid),
             producer: "worker", capture_stage: "before_apply", request_nonce: input.captureNonce,
-            profile_type: 0, bytecode_length: bytecode.count, bytecode_sha256: sha256Hex(bytecode),
-            bytecode: bytecode, source_sha256: sha256Hex(Data(input.policy.utf8)),
+            profile_type: 0, bytecode_length: bytecode.count, bytecode_sha256: sha256Digest(bytecode),
+            bytecode: bytecode, source_sha256: sha256Digest(Data(input.policy.utf8)),
             source_length: input.policy.utf8.count, params_sha256: consumedParamsDigest(input.params),
             parameter_count: input.params.count)
     }
@@ -425,7 +425,7 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
     documents.append(recovery)
     var preparation = recovery
     preparation.preparation_failure = PWRunnerPreparationFailure(stage: "resolved_plan", code: "inconsistent_assignment",
-        actor_id: "A", binding_ref: "selected", reason: "constructed assignment mismatch")
+        actor_id: "A", binding_ref: 0, reason: "constructed assignment mismatch")
     preparation.steps = []; preparation.extension_events = []; preparation.transfers = []
     preparation.resources = PWRunnerResourceTables(tokens: [], deliveries: [], handles: [])
     preparation.authority_setup!.host = PWRunnerAuthorityHost(run: PWRunnerAuthorityScope(disposition: "not_attempted"))
@@ -436,25 +436,29 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
     var explicit = accounted
     let fixturePaths = ["selected":"/constructed/selected-fixture", "unentitled":"/constructed/unentitled-fixture"]
     explicit.test_overrides = PWRunnerTestOverrides(actor_equipment_executable_paths: fixturePaths)
+    // Rows are named by table index: an override row and its static read-back
+    // are appended after the packaged pair and the existing read-backs.
+    var overrideRow: [String: UInt32] = [:]
     for role in ["selected", "unentitled"] {
-        var binding = explicit.equipment_bindings!.first { $0.binding_id == role }!
-        binding.binding_id = "override-" + role; binding.source = "test_override"
+        var binding = explicit.equipment_bindings!.first { $0.role == role && $0.source == "packaged" }!
+        binding.source = "test_override"
         binding.implementation_identity = "unverified_fixture"; binding.relative_path = nil
         binding.expected_sha256 = nil; binding.expected_cdhash = nil; binding.entitlements_match = nil
-        binding.path = fixturePaths[role]!; binding.entitlements_ref = "binding-override-" + role
+        binding.path = fixturePaths[role]!; binding.entitlements_ref = UInt32(explicit.equipment_entitlements!.count)
+        overrideRow[role] = UInt32(explicit.equipment_bindings!.count)
         explicit.equipment_bindings!.append(binding)
-        explicit.equipment_entitlements!.append(PWRunnerEquipmentEntitlements(entitlements_id: binding.entitlements_ref!,
-            source: "binding", binding_ref: binding.binding_id, status: "observed", raw_plist: "<plist version=\"1.0\"><dict/></plist>"))
+        explicit.equipment_entitlements!.append(PWRunnerEquipmentEntitlements(
+            source: "binding", binding_ref: overrideRow[role]!, status: "observed", raw_plist: "<plist version=\"1.0\"><dict/></plist>"))
     }
     for index in explicit.actors!.indices {
         let role = index == 0 ? "unentitled" : "selected"
         explicit.actors![index].equipment!.requested = role
         explicit.actors![index].equipment!.resolved = role
-        explicit.actors![index].equipment!.binding_ref = "override-" + role
+        explicit.actors![index].equipment!.binding_ref = overrideRow[role]!
         explicit.actors![index].equipment!.execution.path = fixturePaths[role]!
         explicit.actors![index].equipment!.execution.parent_pid = explicit.actors![index].launch?.parent_pid
-        let readback = explicit.equipment_entitlements!.firstIndex { $0.entitlements_id == "execution-\(index)" }!
-        explicit.equipment_entitlements![readback].binding_ref = "override-" + role
+        let readback = Int(explicit.actors![index].equipment!.execution.entitlements_ref!)
+        explicit.equipment_entitlements![readback].binding_ref = overrideRow[role]!
     }
     try explicit.validateForReporting()
     documents.append(explicit)
@@ -463,7 +467,7 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
         code: -67000, message: "constructed signing readback failure")
     var bindingRefusal = preparation
     bindingRefusal.preparation_failure = PWRunnerPreparationFailure(stage: "equipment", code: "equipment_binding_refused",
-        binding_ref: "unentitled", reason: "entitlements_unreadable")
+        binding_ref: 1, reason: "entitlements_unreadable")
     bindingRefusal.equipment_bindings![1].status = "refused"
     bindingRefusal.equipment_bindings![1].reason = "entitlements_unreadable"
     bindingRefusal.equipment_bindings![1].error = signingError
@@ -481,6 +485,8 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
             message: "constructed service signature failure"))
     inventoryRefusal.equipment_bindings = []; inventoryRefusal.equipment_entitlements = []
     for index in inventoryRefusal.actors!.indices {
+        // No binding row exists, so no actor can name one.
+        inventoryRefusal.actors![index].equipment!.binding_ref = nil
         inventoryRefusal.actors![index].equipment!.requirements_status = "unobserved"
         inventoryRefusal.actors![index].equipment!.missing_requirements = nil
     }
@@ -572,37 +578,36 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
 /// Explicitly constructed signature/setup observations for encoder controls.
 /// This helper never participates in the runtime's binding or inspection path.
 func attachConstructedActorAccounts(_ reply: inout PWRunnerRunResult, plan: ActorPlan, outcome: ActorScheduleOutcome) {
-    let hash = String(repeating: "a", count: 64), cdhash = String(repeating: "b", count: 40)
+    let hash = Data(repeating: 0xaa, count: 32), cdhash = Data(repeating: 0xbb, count: 20)
     let xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict/></plist>"
     reply.equipment_inventory = PWRunnerEquipmentInventory(path: "/constructed/Contents/Resources/worker-equipment.json",
         status: "verified", sha256: hash, schema_version: 1, worker_identity: hash, unsigned_worker_sha256: hash, seal_osstatus: 0)
     reply.equipment_bindings = ["selected", "unentitled"].map { role in
         let relative = "Contents/MacOS/" + (role == "selected" ? "pw-probe-runner" : "pw-probe-runner-unentitled")
-        return PWRunnerEquipmentBinding(binding_id: role, role: role, source: "packaged", implementation_identity: "inventory_verified",
+        return PWRunnerEquipmentBinding(role: role, source: "packaged", implementation_identity: "inventory_verified",
             relative_path: relative, path: "/constructed/" + relative, status: "bound", expected_sha256: hash,
             expected_cdhash: cdhash, sha256: hash, cdhash: cdhash, identifier: "constructed.worker", team_id: "TEAM",
-            entitlements_ref: "binding-" + role, signature_osstatus: 0, entitlements_match: true)
+            entitlements_ref: role == "selected" ? 0 : 1, signature_osstatus: 0, entitlements_match: true)
     }
-    reply.equipment_entitlements = ["selected", "unentitled"].map { role in
-        PWRunnerEquipmentEntitlements(entitlements_id: "binding-" + role, source: "binding", binding_ref: role,
-            status: "observed", raw_plist: xml)
+    reply.equipment_entitlements = ["selected", "unentitled"].indices.map { index in
+        PWRunnerEquipmentEntitlements(source: "binding", binding_ref: UInt32(index), status: "observed", raw_plist: xml)
     }
     var workers: [PWRunnerAuthorityScope] = []
     for actor in plan.actors {
         let record = outcome.actors[actor.index]
         var equipment = PWRunnerActorEquipment(requested: actor.equipment, resolved: actor.equipment ?? "selected",
-            binding_ref: actor.equipment ?? "selected", required_entitlements: actor.requiredEntitlements,
+            binding_ref: actor.equipment == "unentitled" ? 1 : 0, required_entitlements: actor.requiredEntitlements,
             requirements_status: "satisfied", missing_requirements: [])
         if record.setupStatus.usable, let pid = record.pid {
-            let binding = reply.equipment_bindings!.first { $0.binding_id == equipment.binding_ref }!
+            let binding = reply.equipment_bindings![Int(equipment.binding_ref!)]
             equipment.execution = PWRunnerEquipmentExecution(status: "matched", pid: Int(pid), observed_at_monotonic_ns: 100,
                 path: binding.path, cdhash: cdhash, identifier: binding.identifier, team_id: binding.team_id,
-                entitlements_ref: "execution-\(actor.index)", native_observations:
+                entitlements_ref: UInt32(reply.equipment_entitlements!.count), native_observations:
                     ["guest_code", "dynamic_validity", "associated_static_code", "signing_information"].map {
                         PWRunnerEquipmentNativeObservation(operation: $0, attempted: true, osstatus: 0)
                     }, reason: nil, eligible: true)
-            reply.equipment_entitlements!.append(PWRunnerEquipmentEntitlements(entitlements_id: "execution-\(actor.index)",
-                source: "execution", binding_ref: equipment.binding_ref, actor_id: actor.id, status: "observed", raw_plist: xml))
+            reply.equipment_entitlements!.append(PWRunnerEquipmentEntitlements(
+                source: "execution", binding_ref: equipment.binding_ref!, actor_id: actor.id, status: "observed", raw_plist: xml))
         } else { equipment.execution.reason = record.pid == nil ? "not_launched" : "setup_unavailable" }
         reply.actors![actor.index].equipment = equipment
         workers.append(record.output?.authoritySetup ?? PWRunnerAuthorityScope(actor_id: actor.id, actor_index: actor.index,

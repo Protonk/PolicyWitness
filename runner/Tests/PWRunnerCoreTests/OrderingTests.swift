@@ -117,7 +117,7 @@ func runOrderingTests(_ tk: TestKit) {
                     calls.removeAll()
                     let parsed = PWRunnerRunSpec(specimen_id: "validator-default-" + label,
                         policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "proceed_wait"), probe_plan: [step])
-                    let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+                    let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                         workerExecutablePath: workerPath, validatorExecutablePath: selected,
                         validatorSpawn: { pid, path, actions, argv in
                             let rc = nativeValidatorSpawn(pid, path, actions, argv)
@@ -232,7 +232,7 @@ func runOrderingTests(_ tk: TestKit) {
                 var calls = 0
                 var receivedPath = ""
                 var receivedArgv = [String]()
-                let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+                let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                     workerExecutablePath: try orderingFixturePath(), validatorExecutablePath: path,
                     validatorSpawn: { _, executable, _, argv in
                         calls += 1
@@ -525,7 +525,7 @@ func runOrderingTests(_ tk: TestKit) {
                 policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "proceed_expire:50"),
                 probe_plan: [orderingStep(operation: "io_hang")],
                 _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 500))
-            let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+            let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                 workerExecutablePath: path, validatorExecutablePath: validator, validatorSpawn: gate.spawn)
             try gate.requireStarts(1)
             try expectEqual(result.normalized_outcome, NormalizedOutcome.runnerFailed)
@@ -568,7 +568,7 @@ func runOrderingTests(_ tk: TestKit) {
                 probe_plan: [orderingStep(operation: "io_hang")],
                 _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 500))
             let gate = ValidatorStartGate()
-            let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+            let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                 workerExecutablePath: path, validatorExecutablePath: path + ".validator", validatorSpawn: gate.spawn)
             try gate.requireStarts(1)
             try expectEqual(result.normalized_outcome, NormalizedOutcome.validatorNoReply)

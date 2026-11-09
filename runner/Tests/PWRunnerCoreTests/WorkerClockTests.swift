@@ -146,7 +146,7 @@ private func clockPhases(_ suffix: String, first: PWRunnerProbeStep, gateDelayMs
         policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
         phases: [PWRunnerPhase(phase_id: "first", actions: [.probe(first)]),
                  PWRunnerPhase(phase_id: "second", actions: [.probe(accessProbe("later"))])]),
-        policyHash: "test", bundleId: nil, workerExecutablePath: try clockCompanion(suffix),
+        policyHash: Data(repeating: 0xab, count: 32), bundleId: nil, workerExecutablePath: try clockCompanion(suffix),
         validatorExecutablePath: appEquipment("sb_api_validator"),
         validatorSpawn: { pid, path, actions, argv in
             launches += 1

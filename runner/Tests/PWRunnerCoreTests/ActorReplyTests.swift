@@ -91,7 +91,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectTrue(fd >= 0, "could not create owned collision")
             defer { close(fd); name.withCString { _ = shm_unlink($0) } }
             let parsed = try corpusRequest("actors_redelegation", effect: freshEffect())
-            let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: "", bundleId: "test",
+            let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(), bundleId: "test",
                 workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
             try expectTrue(reply.rc != 0)
             try expectTrue(reply.error?.contains("authority setup") == true, reply.error ?? "")
@@ -174,7 +174,7 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectTrue(parsed.isActorForm)
             try expectNil(CWorkerOrchestrator.admissionFailure(for: parsed))
             try expectNil(requestMeaningFailure(parsed))
-            let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: "", bundleId: "test",
+            let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(), bundleId: "test",
                 workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
             try expectEqual(reply.execution_form, "actors")
             try expectNil(reply.policy_sha256)
@@ -195,7 +195,7 @@ func runActorReplyTests(_ tk: TestKit) {
                 try expectEqual(actor.policy_sha256, try computePolicyHash(parsed.actors![actor.index].sandbox.policy!))
                 try expectEqual(actor.policy_received_sha256, actor.policy_sha256)
             }
-            try expectEqual(actors[0].policy_received_sha256, sha256Hex(Data()))
+            try expectEqual(actors[0].policy_received_sha256, sha256Digest(Data()))
             try expectTrue(actors.allSatisfy { $0.subprocess?.disposition != nil && $0.subprocess?.reaped == true })
             try expectEqual(actors.map { $0.visits }, [[3, 9], [1, 4, 5, 8], [2, 6, 7]])
             // Phases carry their actor and visit; every phase completed.
@@ -318,7 +318,7 @@ func runActorReplyTests(_ tk: TestKit) {
                         {"phase_id": "b", "actor_id": "broken", "actions": [{"step_id": "never", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "\(effect)"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "\(effect)"}}]}]}
             """
             let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
-            let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: "", bundleId: nil,
+            let reply = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(), bundleId: nil,
                 workerExecutablePath: equipment("pw-probe-runner"), validatorExecutablePath: equipment("sb_api_validator"), equipmentBundleURL: actorServiceBundle())
             try expectEqual(reply.normalized_outcome, NormalizedOutcome.runnerFailed)
             try expectTrue(reply.error?.hasPrefix("actor broken:") == true, reply.error ?? "")

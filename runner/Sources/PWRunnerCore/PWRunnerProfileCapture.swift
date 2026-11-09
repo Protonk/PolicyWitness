@@ -15,11 +15,11 @@ struct CompiledProfileCapture {
     var request_nonce: String?
     var profile_type: Int?
     var bytecode_length: Int?
-    var bytecode_sha256: String?
+    var bytecode_sha256: Data?
     var bytecode: Data?
-    var source_sha256: String?
+    var source_sha256: Data?
     var source_length: Int?
-    var params_sha256: String?
+    var params_sha256: Data?
     var parameter_count: Int?
     // END GENERATED PORCELAIN CompiledProfileCapture
 }

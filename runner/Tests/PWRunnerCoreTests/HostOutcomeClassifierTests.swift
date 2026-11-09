@@ -33,7 +33,7 @@ private func workerOut(
         reaped: reaped,
         waitErrors: waitErrors,
         workerEvidence: nativeFailure.map { failure in
-            PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: nil,
+            PWWorkerEvidence(abi_identity: Data(PWShmLayout.abiIdentity), progress: nil,
                 failure_publication: 1, failure_state: "published", failure: failure,
                 readiness: nil, diagnostic: PWWorkerDiagnostic(state: 0, status: "absent", length: nil, text: nil))
         }

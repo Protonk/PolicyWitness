@@ -170,7 +170,7 @@ struct PWRunnerRunResult {
     /// The legacy form's policy format and hash; absent for the actor form,
     /// whose actors carry their own.
     var policy_format: String?
-    var policy_sha256: String?
+    var policy_sha256: Data?
     var compiled_profile: CompiledProfileCapture?
     var sandboxed_after_apply: Bool?
     var steps: [PWRunnerStepResult]
@@ -204,7 +204,7 @@ struct PWRunnerRunResult {
         pid: Int,
         bundle_id: String? = nil,
         policy_format: String?,
-        policy_sha256: String? = nil,
+        policy_sha256: Data? = nil,
         sandboxed_after_apply: Bool? = nil,
         steps: [PWRunnerStepResult],
         runner_subprocess: PWRunnerSubprocess? = nil,

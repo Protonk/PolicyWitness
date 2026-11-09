@@ -81,7 +81,7 @@ struct PWRunnerPreparationFailure {
     var stage: String
     var code: String
     var actor_id: String?
-    var binding_ref: String?
+    var binding_ref: UInt32?
     var reason: String?
     // END GENERATED PORCELAIN PWRunnerPreparationFailure
 }
@@ -127,9 +127,9 @@ struct PWRunnerActorResult {
     var mode: String
     var policy_format: String?
     /// Host hash of the submitted (controller-resolved) source bytes.
-    var policy_sha256: String?
+    var policy_sha256: Data?
     /// The worker's own hash of the bytes it read before compiling, when published.
-    var policy_received_sha256: String?
+    var policy_received_sha256: Data?
     var setup_status: String
     var applied: Bool?
     var application_count: Int

@@ -195,7 +195,7 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
         assert check_record(envelope)==[],check_record(envelope)
         for role,path,actor_id,pid_key in (('unentitled',issuer,'issuer','issuer_pid'),
                                            ('selected',worker,'subject','worker_pid')):
-            binding=next(b for b in runner['equipment_bindings'] if b['binding_id']=='override-'+role)
+            position,binding=next((i,b) for i,b in enumerate(runner['equipment_bindings']) if b['role']==role and b['source']=='test_override')
             assert binding['source']=='test_override' and binding['implementation_identity']=='unverified_fixture',binding
             assert binding['status']=='bound' and binding['signature_osstatus']==0,binding
             # Security may report /tmp for an executable submitted under
@@ -206,7 +206,7 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
             actor=actors[actor_id]
             equipment=actor['equipment']
             execution=equipment['execution']
-            assert equipment['binding_ref']==binding['binding_id'] and equipment['resolved']==role,equipment
+            assert equipment['binding_ref']==position and equipment['resolved']==role,equipment
             if execution['status']=='matched':
                 assert execution['eligible'] and Path(execution['path']).samefile(path),execution
                 assert execution['pid']==actor['launch']['pid'] and execution['parent_pid']==actor['launch']['parent_pid'],execution

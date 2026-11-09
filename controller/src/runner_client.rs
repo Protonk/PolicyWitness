@@ -164,14 +164,7 @@ fn validate_error(value: &TransportError) -> Result<(), String> {
 }
 fn validate_control(value: &Control) -> Result<(), String> {
     require(value.bytes_received >= 0, "invalid control byte count")?;
-    require(
-        value.sha256.len() == 64
-            && value
-                .sha256
-                .bytes()
-                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
-        "invalid control byte hash",
-    )?;
+    require(value.sha256.len() == 32, "invalid control byte hash")?;
     let Some(status) = value.status.as_deref() else {
         return require(
             value.host_pid.is_none()
@@ -1110,7 +1103,7 @@ mod binary_tests {
             34,
             &[
                 (1, signed(200)),
-                (2, text(&"a".repeat(64))),
+                (2, value(5, &[0xaa; 32])),
                 (3, text("granted")),
                 (4, signed(42)),
                 (5, text("22222222-2222-4222-8222-222222222222")),
@@ -1435,7 +1428,7 @@ mod binary_tests {
             c.terminal = "submission_refused".into();
             c.submission_refusal = Some(Control {
                 bytes_received: 100,
-                sha256: "b".repeat(64),
+                sha256: vec![0xbb; 32],
                 status: Some("reservation_refused".into()),
                 host_pid: Some(42),
                 host_instance: Some("22222222-2222-4222-8222-222222222222".into()),

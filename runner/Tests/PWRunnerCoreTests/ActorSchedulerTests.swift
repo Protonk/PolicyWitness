@@ -509,7 +509,7 @@ func runActorSchedulerTests(_ tk: TestKit) {
                 try expectEqual(out.activationObserved, UInt32(record.index == 0 ? 3 : 4))
                 try expectEqual(out.phases.map { $0.completed }, [true, true])
                 try expectEqual(out.phases.map { $0.ownershipEstablished }, [true, true])
-                try expectEqual(out.policyReceivedSha256, sha256Hex(Data(input.actors[record.index].policy.utf8)))
+                try expectEqual(out.policyReceivedSha256, sha256Digest(Data(input.actors[record.index].policy.utf8)))
             }
             // The attempts: A's hosts reads denied and passwd readable on both visits; B the reverse.
             let aSlots = a.output!.slots, bSlots = b.output!.slots
@@ -552,7 +552,7 @@ func runActorSchedulerTests(_ tk: TestKit) {
             try expectEqual(a.output!.actorSetup, 2)
             try expectNil(a.output!.profileCapture)
             try expectTrue(readOK(a.output!.slots[0]))
-            try expectEqual(a.output!.policyReceivedSha256, sha256Hex(Data()))
+            try expectEqual(a.output!.policyReceivedSha256, sha256Digest(Data()))
             try expectEqual(b.setupStatus, .applied)
             try expectTrue(b.output!.applied && denied(b.output!.slots[0]))
         }

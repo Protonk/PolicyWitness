@@ -56,7 +56,7 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
         workerPid: 42, readyByteReceived: true, applied: true, applyRC: 0, applyErrno: 0, done: true,
         exitCode: 0, termSignal: nil, slots: [shapeSlot("first", completed: true), shapeSlot("second", completed: false)],
         pollStopReason: "done", exitRequested: true, terminationRequest: nil, reaped: true, waitErrors: [],
-        workerEvidence: PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: shapeProgress(9, 2, index: 1),
+        workerEvidence: PWWorkerEvidence(abi_identity: Data(PWShmLayout.abiIdentity), progress: shapeProgress(9, 2, index: 1),
             failure_publication: 0, failure_state: "absent", failure: nil,
             readiness: PWWorkerReadiness(rc: 1, errno: 0), diagnostic: shapeDiagnostic()))
     conflict.cleanupTrigger = "completion"
@@ -68,7 +68,7 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
         pollStopReason: "sentinel_deadline", exitRequested: true,
         terminationRequest: PWRunnerTerminationRequest(signal: 9, rc: 0, errno: nil), reaped: true,
         waitErrors: [PWRunnerWaitError(stage: "exit_grace", rc: -1, errno: 10)],
-        workerEvidence: PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: shapeProgress(10, 2),
+        workerEvidence: PWWorkerEvidence(abi_identity: Data(PWShmLayout.abiIdentity), progress: shapeProgress(10, 2),
             failure_publication: 1, failure_state: "published",
             failure: PWWorkerFailure(operation: 10, code: 1, native_kind: 1, native_result: -1, errno: 22, index: 0, detail: 0),
             readiness: PWWorkerReadiness(rc: 1, errno: 0), diagnostic: shapeDiagnostic()))

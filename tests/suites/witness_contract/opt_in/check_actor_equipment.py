@@ -63,13 +63,15 @@ def specimen(issuer='issuer', subject='subject', *, reversed_order=False, issuer
 
 
 def assert_equipment(runner, expected):
-    by_binding = {b['binding_id']: b for b in runner['equipment_bindings']}
-    by_read = {r['entitlements_id']: r for r in runner['equipment_entitlements']}
+    # References are positions in these two tables; packaged rows are found by role.
+    bindings, by_read = runner['equipment_bindings'], runner['equipment_entitlements']
+    positions = {b['role']: i for i, b in enumerate(bindings) if b['source'] == 'packaged'}
+    by_binding = {role: bindings[i] for role, i in positions.items()}
     assert runner['equipment_inventory']['status'] == 'verified'
     for actor in runner['actors']:
         role = expected[actor['actor_id']]
         equipment = actor['equipment']
-        assert equipment['resolved'] == role and equipment['binding_ref'] == role, 'actor uses a different signed worker'
+        assert equipment['resolved'] == role and equipment['binding_ref'] == positions[role], 'actor uses a different signed worker'
         binding, execution = by_binding[role], equipment['execution']
         assert binding['source'] == 'packaged' and binding['implementation_identity'] == 'inventory_verified'
         assert Path(binding['path']).samefile(expected_files[role])
@@ -82,7 +84,7 @@ def assert_equipment(runner, expected):
         expected_team = None if signatures[role]['TeamIdentifier'] == 'not set' else signatures[role]['TeamIdentifier']
         assert binding.get('team_id') == execution.get('team_id') == expected_team
         observed = by_read[execution['entitlements_ref']]
-        assert observed['source'] == 'execution' and observed['actor_id'] == actor['actor_id'] and observed['binding_ref'] == role
+        assert observed['source'] == 'execution' and observed['actor_id'] == actor['actor_id'] and observed['binding_ref'] == positions[role]
         assert plistlib.loads(observed['raw_plist'].encode()) == readbacks[role]
         assert equipment['requirements_status'] == 'satisfied' and equipment['missing_requirements'] == []
     assert len({a['launch']['pid'] for a in runner['actors']}) == len(expected)

@@ -1,5 +1,5 @@
 {
-  "response_schema" : 29,
+  "response_schema" : 30,
   "shape" : {
     "reply" : {
       "actors" : "array",
@@ -73,7 +73,7 @@
       "worker_pid" : "number"
     },
     "reply.actors[].equipment" : {
-      "binding_ref" : "string",
+      "binding_ref" : "number",
       "execution" : "object",
       "missing_requirements" : "array",
       "requested" : "string",
@@ -84,7 +84,7 @@
     "reply.actors[].equipment.execution" : {
       "cdhash" : "string",
       "eligible" : "boolean",
-      "entitlements_ref" : "string",
+      "entitlements_ref" : "number",
       "identifier" : "string",
       "native_observations" : "array",
       "observed_at_monotonic_ns" : "number",
@@ -458,10 +458,9 @@
       "worker_pid" : "number"
     },
     "reply.equipment_bindings[]" : {
-      "binding_id" : "string",
       "cdhash" : "string",
       "entitlements_match" : "boolean",
-      "entitlements_ref" : "string",
+      "entitlements_ref" : "number",
       "error" : "object",
       "expected_cdhash" : "string",
       "expected_sha256" : "string",
@@ -485,8 +484,7 @@
     },
     "reply.equipment_entitlements[]" : {
       "actor_id" : "string",
-      "binding_ref" : "string",
-      "entitlements_id" : "string",
+      "binding_ref" : "number",
       "error" : "object",
       "raw_plist" : "string",
       "source" : "string",
@@ -685,7 +683,7 @@
     },
     "reply.preparation_failure" : {
       "actor_id" : "string",
-      "binding_ref" : "string",
+      "binding_ref" : "number",
       "code" : "string",
       "reason" : "string",
       "stage" : "string"

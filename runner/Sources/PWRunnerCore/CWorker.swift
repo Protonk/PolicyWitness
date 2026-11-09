@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "3dcb6eafc982f5bbafca2178e913a6f0b0ef814d391d83ed923f05ffaa868d0a"
-    static let abiIdentity: [UInt8] = [0x3d, 0xcb, 0x6e, 0xaf, 0xc9, 0x82, 0xf5, 0xbb, 0xaf, 0xca, 0x21, 0x78, 0xe9, 0x13, 0xa6, 0xf0, 0xb0, 0xef, 0x81, 0x4d, 0x39, 0x1d, 0x83, 0xed, 0x92, 0x3f, 0x05, 0xff, 0xaa, 0x86, 0x8d, 0x0a]
+    static let abiIdentityHex = "646ca9f4704408f42cb3ce774b7375fbd5216058fb6094e6649258dc73953291"
+    static let abiIdentity: [UInt8] = [0x64, 0x6c, 0xa9, 0xf4, 0x70, 0x44, 0x08, 0xf4, 0x2c, 0xb3, 0xce, 0x77, 0x4b, 0x73, 0x75, 0xfb, 0xd5, 0x21, 0x60, 0x58, 0xfb, 0x60, 0x94, 0xe6, 0x64, 0x92, 0x58, 0xdc, 0x73, 0x95, 0x32, 0x91]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -571,7 +571,7 @@ struct CWorkerOutput {
     /// acknowledged activation and the worker's hash of the policy bytes it read.
     var actorSetup: UInt32 = 0
     var activationObserved: UInt32 = 0
-    var policyReceivedSha256: String? = nil
+    var policyReceivedSha256: Data? = nil
     /// PW_AUTHORITY_SETUP_* with its stage or reason, and the resolved native
     /// entry points (PW_NATIVE_SYMBOL_* bits); zero for legacy workers.
     var authorityStatus: UInt32 = 0
@@ -640,19 +640,21 @@ func decodeWorkerEvidence(_ base: UnsafePointer<UInt8>) -> PWWorkerEvidence? {
             policyRead = PWWorkerPolicyRead(bytes_expected: Int(expected), bytes_received: Int(received))
         }
     }
-    return PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: progress,
+    return PWWorkerEvidence(abi_identity: Data(PWShmLayout.abiIdentity), progress: progress,
         failure_publication: published, failure_state: state, failure: failure,
         readiness: readiness, diagnostic: diagnostic, policy_read: policyRead)
 }
 
 
-func sha256Hex(_ data: Data) -> String {
-    SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+/// Digests are carried and compared as their 32 bytes; hexadecimal is a
+/// presentation of them, written by the controller.
+func sha256Digest(_ data: Data) -> Data {
+    Data(SHA256.hash(data: data))
 }
 
 /// Same specified framing as the C worker, independently implemented. Sorting
 /// fixed-size pair digests avoids depending on Swift/Python Unicode sort order.
-func consumedParamsDigest(_ params: [CWorkerParam]) -> String {
+func consumedParamsDigest(_ params: [CWorkerParam]) -> Data {
     func le(_ n: Int) -> Data {
         var word = UInt32(n).littleEndian
         return withUnsafeBytes(of: &word) { Data($0) }
@@ -661,7 +663,7 @@ func consumedParamsDigest(_ params: [CWorkerParam]) -> String {
         let k = Data(p.key.utf8), v = Data(p.value.utf8)
         return Data(SHA256.hash(data: le(k.count) + k + le(v.count) + v))
     }.sorted { $0.lexicographicallyPrecedes($1) }
-    return sha256Hex(pairs.reduce(le(params.count), +))
+    return sha256Digest(pairs.reduce(le(params.count), +))
 }
 
 /// Called only for an opted-in run. A checksum, PID or actual-consumed-input
@@ -685,9 +687,7 @@ func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
         return unavailable("capture_not_complete")
     }
     func word(_ offset: Int) -> Int { Int(UInt32(bitPattern: readI32(base, offset: offset))) }
-    func digest(_ offset: Int) -> String {
-        Data(bytes: base.advanced(by: offset), count: 32).map { String(format: "%02x", $0) }.joined()
-    }
+    func digest(_ offset: Int) -> Data { Data(bytes: base.advanced(by: offset), count: 32) }
     guard word(PWShmLayout.captureStatusOffset) == 1 else { return unavailable("worker_capture_refused") }
     guard word(PWShmLayout.captureWorkerPidOffset) == Int(workerPid) else { return unavailable("capture_worker_mismatch") }
     guard let nonceBytes = captureNonceBytes(nonce),
@@ -699,18 +699,18 @@ func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
         return unavailable("capture_extent_or_type_invalid")
     }
     let bytes = Data(bytes: base.advanced(by: PWShmLayout.captureHeaderBytes), count: length)
-    guard sha256Hex(bytes) == digest(PWShmLayout.captureBytecodeSha256Offset) else {
+    guard sha256Digest(bytes) == digest(PWShmLayout.captureBytecodeSha256Offset) else {
         return unavailable("capture_bytecode_digest_mismatch")
     }
     guard word(PWShmLayout.captureSourceLengthOffset) == source.utf8.count
-        && digest(PWShmLayout.captureSourceSha256Offset) == sha256Hex(Data(source.utf8))
+        && digest(PWShmLayout.captureSourceSha256Offset) == sha256Digest(Data(source.utf8))
         && word(PWShmLayout.captureParamCountOffset) == params.count
         && digest(PWShmLayout.captureParamsSha256Offset) == consumedParamsDigest(params) else {
         return unavailable("capture_consumed_input_mismatch")
     }
     return CompiledProfileCapture(status: "captured", worker_pid: Int(workerPid),
         producer: "worker", capture_stage: "before_apply", request_nonce: nonce, profile_type: 0,
-        bytecode_length: length, bytecode_sha256: sha256Hex(bytes), bytecode: bytes,
+        bytecode_length: length, bytecode_sha256: sha256Digest(bytes), bytecode: bytes,
         source_sha256: digest(PWShmLayout.captureSourceSha256Offset), source_length: source.utf8.count,
         params_sha256: digest(PWShmLayout.captureParamsSha256Offset), parameter_count: params.count)
 }

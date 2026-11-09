@@ -42,8 +42,8 @@ for directory in ('extensions', 'directory', 'phases', 'maximum', 'redelegation'
         result = envelope['data']['runner_result']
         assert 'extensions' not in result
         if result.get('execution_form') == 'actors':
-            bindings = {b['binding_id']: b for b in result['equipment_bindings']}
-            entitlements = {e['entitlements_id']: e for e in result['equipment_entitlements']}
+            # References are positions in these two tables.
+            bindings, entitlements = result['equipment_bindings'], result['equipment_entitlements']
             for actor in result['actors']:
                 equipment = actor['equipment']
                 binding = bindings[equipment['binding_ref']]
@@ -60,7 +60,7 @@ for directory in ('extensions', 'directory', 'phases', 'maximum', 'redelegation'
                     assert Path(execution['path']).samefile(binding['path']) and execution['cdhash'] == binding['cdhash'], (path, execution, binding)
                     static = entitlements[binding['entitlements_ref']]
                     live = entitlements[execution['entitlements_ref']]
-                    assert live['source'] == 'execution' and live['actor_id'] == actor['actor_id'] and live['binding_ref'] == binding['binding_id']
+                    assert live['source'] == 'execution' and live['actor_id'] == actor['actor_id'] and live['binding_ref'] == equipment['binding_ref']
                     assert plistlib.loads(live['raw_plist'].encode()) == plistlib.loads(static['raw_plist'].encode())
         count += 1
 assert count > 0

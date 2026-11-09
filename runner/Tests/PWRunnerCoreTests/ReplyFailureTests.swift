@@ -30,7 +30,7 @@ func replyFixture() throws -> PWRunnerRunResult {
     let value12 = PWWorkerReadiness(rc: 1, errno: 0)
     let value13 = PWWorkerDiagnostic(state: 2, status: "truncated", length: 4, text: "text")
     let value14 = PWWorkerPolicyRead(bytes_expected: 1, bytes_received: 1)
-    let value15 = PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, failure_publication: 0, failure_state: "absent", readiness: value12, diagnostic: value13, policy_read: value14)
+    let value15 = PWWorkerEvidence(abi_identity: Data(PWShmLayout.abiIdentity), failure_publication: 0, failure_state: "absent", readiness: value12, diagnostic: value13, policy_read: value14)
     let value16 = PWHostWait(budget_ms: 1000, elapsed_ms: 3, stop: "received", excluded_ms: 0, native_errno: 0, clock_fault: false)
     let value17 = PWHostWait(budget_ms: 120000, elapsed_ms: 250, stop: "done", excluded_ms: 40, native_errno: 0, clock_fault: false)
     let value18 = PWHostWait(budget_ms: 1000, elapsed_ms: 1000, stop: "exhausted", excluded_ms: 0, native_errno: 4, clock_fault: true)
@@ -85,10 +85,10 @@ func replyFixture() throws -> PWRunnerRunResult {
     value43.exit_grace_wait = value42
     let value44 = PWRunnerPhaseResult(phase_id: "main", ordinal: 1, action_ids: ["s"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value35, validator_subprocess: value43)
     let value45 = PWRunnerTestOverrides(worker_executable_path: "/constructed/worker", worker_timeout_ms: 1000, validator_executable_path: "/constructed/validator", validator_io_timeout_ms: 50, validator_total_timeout_ms: 100, worker_post_apply_hang_ms: 0, worker_post_apply_kill_signal: 9, worker_pre_ready_hang_ms: 0, worker_kill_before_publish_slot: 1)
-    let value46 = CompiledProfileCapture(schema_version: 2, status: "captured", reason: "constructed", worker_pid: 42, producer: "worker", capture_stage: "before_apply", request_nonce: "ffffffffffffffffffffffffffffffff", profile_type: 0, bytecode_length: 3, bytecode_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytecode: Data([0, 0, 0]), source_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", source_length: 11, params_sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", parameter_count: 1)
+    let value46 = CompiledProfileCapture(schema_version: 2, status: "captured", reason: "constructed", worker_pid: 42, producer: "worker", capture_stage: "before_apply", request_nonce: "ffffffffffffffffffffffffffffffff", profile_type: 0, bytecode_length: 3, bytecode_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, bytecode: Data([0, 0, 0]), source_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, source_length: 11, params_sha256: ActorEquipmentSystem.digest("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", bytes: 32)!, parameter_count: 1)
     let value47 = PWRunnerAdmissionFailure(origin: "runner_host", field: "constructed", actual: 2, maximum: 1, unit: "items", step_id: "s", step_index: 0, parameter_key: "K", index: 0)
     let value48 = PWRunnerRequestFailure(code: "unsupported_policy_format", path: ["policy", "format"], expected_schema: 4)
-    let value49 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "reply-\"é\"", run_kind: "unit", rc: 1, normalized_outcome: "runner_failed", error: "original cleanup fault", pid: 42, bundle_id: "test.bundle", policy_format: "sbpl", policy_sha256: "hash", sandboxed_after_apply: true, steps: [value9], runner_subprocess: value34, phases: [value44], test_overrides: value45, compiled_profile: value46, admission_failure: value47, request_failure: value48)
+    let value49 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "reply-\"é\"", run_kind: "unit", rc: 1, normalized_outcome: "runner_failed", error: "original cleanup fault", pid: 42, bundle_id: "test.bundle", policy_format: "sbpl", policy_sha256: Data(repeating: 0xab, count: 32), sandboxed_after_apply: true, steps: [value9], runner_subprocess: value34, phases: [value44], test_overrides: value45, compiled_profile: value46, admission_failure: value47, request_failure: value48)
     return value49
 }
 
@@ -287,9 +287,9 @@ func runReplyFailureTests(_ tk: TestKit) {
             let receipt = CompiledProfileCapture(status: "captured", worker_pid: 42,
                 producer: "worker", capture_stage: "before_apply",
                 request_nonce: String(repeating: "f", count: 32), profile_type: 0,
-                bytecode_length: bytes.count, bytecode_sha256: String(repeating: "f", count: 64),
-                bytecode: bytes, source_sha256: String(repeating: "f", count: 64),
-                source_length: 262_143, params_sha256: String(repeating: "f", count: 64), parameter_count: 1024)
+                bytecode_length: bytes.count, bytecode_sha256: Data(repeating: 0xff, count: 32),
+                bytecode: bytes, source_sha256: Data(repeating: 0xff, count: 32),
+                source_length: 262_143, params_sha256: Data(repeating: 0xff, count: 32), parameter_count: 1024)
             let allowance = bytes.count + 4096
             let encoded = try pwPorcelainEncode(receipt)
             try expectTrue(encoded.count > bytes.count && encoded.count <= allowance)
@@ -390,7 +390,7 @@ func runReplyFailureTests(_ tk: TestKit) {
             // member. It makes no claim that actor apparatus belongs to an
             // ordinary execution or that a refusal coexists with effects.
             result.preparation_failure = PWRunnerPreparationFailure(stage: "equipment", code: "equipment_binding_refused",
-                actor_id: "A", binding_ref: "selected", reason: "missing")
+                actor_id: "A", binding_ref: 0, reason: "missing")
             result.equipment_inventory = PWRunnerEquipmentInventory(path: "/constructed/worker-equipment.json", status: "unobserved")
             result.equipment_bindings = []
             result.equipment_entitlements = []

@@ -719,10 +719,9 @@ final class ActorSession {
             termSignal = nil
         }
 
-        var policyReceived: String? = nil
+        var policyReceived: Data? = nil
         if loadAcquire(rawBase, offset: PWShmLayout.policyHashPublishedOffset) == 1 {
             policyReceived = Data(bytes: rawBase.advanced(by: PWShmLayout.policyReceivedSha256Offset), count: 32)
-                .map { String(format: "%02x", $0) }.joined()
         }
 
         return CWorkerOutput(

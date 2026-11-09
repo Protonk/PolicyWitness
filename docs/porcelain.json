@@ -84,10 +84,11 @@
         {
           "name": "bytecode_sha256",
           "swift_name": "bytecode_sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 10
+          "tag": 10,
+          "projection": "hex"
         },
         {
           "name": "bytecode_b64",
@@ -101,10 +102,11 @@
         {
           "name": "source_sha256",
           "swift_name": "source_sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 12
+          "tag": 12,
+          "projection": "hex"
         },
         {
           "name": "source_length",
@@ -117,10 +119,11 @@
         {
           "name": "params_sha256",
           "swift_name": "params_sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 14
+          "tag": 14,
+          "projection": "hex"
         },
         {
           "name": "parameter_count",
@@ -948,9 +951,10 @@
         {
           "name": "binding_ref",
           "swift_name": "binding_ref",
-          "swift_type": "String",
+          "swift_type": "UInt32?",
           "mutable": true,
-          "tag": 3
+          "tag": 3,
+          "json_null": true
         },
         {
           "name": "required_entitlements",
@@ -1067,24 +1071,26 @@
         {
           "name": "policy_sha256",
           "swift_name": "policy_sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
           "tag": 5,
           "doc": [
             "/// Host hash of the submitted (controller-resolved) source bytes."
-          ]
+          ],
+          "projection": "hex"
         },
         {
           "name": "policy_received_sha256",
           "swift_name": "policy_received_sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
           "tag": 6,
           "doc": [
             "/// The worker's own hash of the bytes it read before compiling, when published."
-          ]
+          ],
+          "projection": "hex"
         },
         {
           "name": "setup_status",
@@ -1958,9 +1964,10 @@
         {
           "name": "sha256",
           "swift_name": "sha256",
-          "swift_type": "String",
+          "swift_type": "Data",
           "mutable": true,
-          "tag": 2
+          "tag": 2,
+          "projection": "hex"
         },
         {
           "name": "status",
@@ -2083,13 +2090,6 @@
       "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
       "fields": [
         {
-          "name": "binding_id",
-          "swift_name": "binding_id",
-          "swift_type": "String",
-          "mutable": true,
-          "tag": 1
-        },
-        {
           "name": "role",
           "swift_name": "role",
           "swift_type": "String",
@@ -2144,34 +2144,38 @@
         {
           "name": "expected_sha256",
           "swift_name": "expected_sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 9
+          "tag": 9,
+          "projection": "hex"
         },
         {
           "name": "expected_cdhash",
           "swift_name": "expected_cdhash",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 10
+          "tag": 10,
+          "projection": "hex"
         },
         {
           "name": "sha256",
           "swift_name": "sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 11
+          "tag": 11,
+          "projection": "hex"
         },
         {
           "name": "cdhash",
           "swift_name": "cdhash",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 12
+          "tag": 12,
+          "projection": "hex"
         },
         {
           "name": "identifier",
@@ -2192,7 +2196,7 @@
         {
           "name": "entitlements_ref",
           "swift_name": "entitlements_ref",
-          "swift_type": "String?",
+          "swift_type": "UInt32?",
           "mutable": true,
           "json_null": false,
           "tag": 15
@@ -2232,13 +2236,6 @@
       "source": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
       "fields": [
         {
-          "name": "entitlements_id",
-          "swift_name": "entitlements_id",
-          "swift_type": "String",
-          "mutable": true,
-          "tag": 1
-        },
-        {
           "name": "source",
           "swift_name": "source",
           "swift_type": "String",
@@ -2248,7 +2245,7 @@
         {
           "name": "binding_ref",
           "swift_name": "binding_ref",
-          "swift_type": "String",
+          "swift_type": "UInt32",
           "mutable": true,
           "tag": 3
         },
@@ -2371,10 +2368,11 @@
         {
           "name": "cdhash",
           "swift_name": "cdhash",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 6
+          "tag": 6,
+          "projection": "hex"
         },
         {
           "name": "identifier",
@@ -2395,7 +2393,7 @@
         {
           "name": "entitlements_ref",
           "swift_name": "entitlements_ref",
-          "swift_type": "String?",
+          "swift_type": "UInt32?",
           "mutable": true,
           "json_null": false,
           "tag": 9
@@ -2453,10 +2451,11 @@
         {
           "name": "sha256",
           "swift_name": "sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 3
+          "tag": 3,
+          "projection": "hex"
         },
         {
           "name": "schema_version",
@@ -2469,18 +2468,20 @@
         {
           "name": "worker_identity",
           "swift_name": "worker_identity",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 5
+          "tag": 5,
+          "projection": "hex"
         },
         {
           "name": "unsigned_worker_sha256",
           "swift_name": "unsigned_worker_sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 6
+          "tag": 6,
+          "projection": "hex"
         },
         {
           "name": "seal_osstatus",
@@ -3257,7 +3258,7 @@
         {
           "name": "binding_ref",
           "swift_name": "binding_ref",
-          "swift_type": "String?",
+          "swift_type": "UInt32?",
           "mutable": true,
           "json_null": false,
           "tag": 4
@@ -3500,10 +3501,11 @@
         {
           "name": "policy_sha256",
           "swift_name": "policy_sha256",
-          "swift_type": "String?",
+          "swift_type": "Data?",
           "mutable": true,
           "json_null": false,
-          "tag": 10
+          "tag": 10,
+          "projection": "hex"
         },
         {
           "name": "compiled_profile",
@@ -4981,12 +4983,13 @@
         {
           "name": "abi_identity",
           "swift_name": "abi_identity",
-          "swift_type": "String",
+          "swift_type": "Data",
           "mutable": true,
           "tag": 1,
           "doc": [
             "/// Host-selected source identity, not proof that a child reached ABI validation."
-          ]
+          ],
+          "projection": "hex"
         },
         {
           "name": "progress",

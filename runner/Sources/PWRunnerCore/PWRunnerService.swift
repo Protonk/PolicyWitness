@@ -256,7 +256,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
     private let scheduleExit: () -> Void
     private let scheduleExpiry: (Int, @escaping () -> Void) -> Void
     private let admit: (PWRunnerRunSpec) -> SpecimenAdmission
-    private let orchestrate: (AdmittedSpecimen, String, String?, String, String) -> PWRunnerRunResult
+    private let orchestrate: (AdmittedSpecimen, Data, String?, String, String) -> PWRunnerRunResult
     private let report: (PWRunnerRunResult) -> Data
 
     // These boundaries let tests observe entry and retirement without exiting
@@ -271,7 +271,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
          },
          admit: @escaping (PWRunnerRunSpec) -> SpecimenAdmission = admitSpecimen,
          report: @escaping (PWRunnerRunResult) -> Data = { pwRunnerPorcelainReplyData($0) },
-         orchestrate: @escaping (AdmittedSpecimen, String, String?, String, String) -> PWRunnerRunResult = {
+         orchestrate: @escaping (AdmittedSpecimen, Data, String?, String, String) -> PWRunnerRunResult = {
              CWorkerOrchestrator.run(admitted: $0, policyHash: $1, bundleId: $2,
                  workerExecutablePath: $3, validatorExecutablePath: $4)
          }) {
@@ -378,9 +378,9 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
         }
 
         // The actor form hashes each apply actor's policy in its own driver.
-        let policyHash: String
+        let policyHash: Data
         do {
-            if parsed.isActorForm { policyHash = "" }
+            if parsed.isActorForm { policyHash = Data() }
             else {
                 guard let policy = parsed.policy else { throw PolicyHashError.missingField("policy") }
                 policyHash = try computePolicyHash(policy)

@@ -47,8 +47,10 @@ independent minimal writer reports lost evidence. The client relays opaque host
 bytes in a binary capture. Lifecycle questions have fixed named fields; missing
 answers remain representable in incomplete evidence. Equipment metadata counts
 retained UTF-8 text directly. Byte payloads (compiled-profile bytecode, rejected
-validator context, fresh-read content) are stored and written as bytes; the
-controller spells them as base64 or hexadecimal in public JSON. JSON request/control decoding, validator NDJSON
+validator context, fresh-read content) and digests are stored and written as
+bytes; the controller spells them as base64 or hexadecimal in public JSON.
+The inventory file's hexadecimal digests are decoded where that file is read.
+Equipment rows refer to each other by table index. JSON request/control decoding, validator NDJSON
 and the equipment inventory file retain their own boundary adapters.
 
 The native [C worker](../controller/tools/pw_probe_runner/pw_probe_runner.c) and
@@ -175,7 +177,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 29, controller envelope 14, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 30, controller envelope 14, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL

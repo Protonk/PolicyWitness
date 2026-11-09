@@ -41,7 +41,7 @@ enum CWorkerOrchestrator {
 
     static func run(
         parsed: PWRunnerRunSpec,
-        policyHash: String,
+        policyHash: Data,
         bundleId: String?,
         workerExecutablePath: String,
         validatorExecutablePath: String,
@@ -56,7 +56,7 @@ enum CWorkerOrchestrator {
     // orchestration, classification, assembly and encoding remain production.
     static func run(
         parsed: PWRunnerRunSpec,
-        policyHash: String,
+        policyHash: Data,
         bundleId: String?,
         workerExecutablePath: String,
         validatorExecutablePath: String,
@@ -76,7 +76,7 @@ enum CWorkerOrchestrator {
         }
     }
 
-    static func run(admitted: AdmittedSpecimen, policyHash: String, bundleId: String?,
+    static func run(admitted: AdmittedSpecimen, policyHash: Data, bundleId: String?,
                     workerExecutablePath: String, validatorExecutablePath: String,
                     validatorSpawn: @escaping ValidatorSpawnCall = nativeValidatorSpawn,
                     validatorProcessCalls: @escaping (Int) -> ChildProcessCalls = { _ in ChildProcessCalls() },

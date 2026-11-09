@@ -114,7 +114,7 @@ let policyReceiptCapacityBytes = 262_143
 struct PWWorkerEvidence {
     // BEGIN GENERATED PORCELAIN PWWorkerEvidence
     /// Host-selected source identity, not proof that a child reached ABI validation.
-    var abi_identity: String
+    var abi_identity: Data
     var progress: PWWorkerProgress?
     var failure_publication: UInt32
     var failure_state: String

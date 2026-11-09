@@ -7,14 +7,14 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 6, response schema 29, controller envelope 14, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 6, response schema 30, controller envelope 14, runner protocol 4. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
 | request schema (`request_schema`) | 6 | [`requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 29 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 30 | [`responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | controller envelope (`controller_envelope`) | 14 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 | runner protocol (`runner_protocol`) | 4 | [`runnerProtocol`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RUNNER_PROTOCOL_VERSION`](../controller/src/json_contract.rs); [`RUNNER_PROTOCOL`](../tests/lib/contract.py); [`PWRunnerProtocolVersion`](../runner/Services/PWRunner/Info.plist) |
 <!-- END GENERATED CONTRACT TABLE -->
@@ -69,10 +69,12 @@ A frame is `PWP1`, the SHA-256 of the schema's wire identity, and one
 root value. Values have a one-byte kind, four-byte little-endian payload length,
 and payload. Kinds are boolean, signed integer, unsigned integer, UTF-8 text,
 bytes, record, list, ordered string map and a declared variant. Integers occupy
-eight bytes; readers enforce each field's native signedness and width. Enumerated
-values such as outcomes, states and reasons, and digests, identifiers and local
-references, travel as text; their vocabularies and formats are checked by
-semantic admission, not by the frame. Records
+eight bytes; readers enforce each field's native signedness and width. Digests
+travel as their bytes, and a reference from one equipment row to another is an
+unsigned index into the table it names. Enumerated values such as outcomes,
+states and reasons travel as text, as do the names a request chose (step,
+phase, actor, token, delivery and handle names); their vocabularies and
+associations are checked by semantic admission, not by the frame. Records
 begin with a two-byte identity and contain strictly increasing nonzero two-byte
 field tags followed by values. Lists/maps begin with a four-byte count; map keys
 are unique and sorted by UTF-8 bytes. Variants begin with a two-byte case tag.
@@ -104,8 +106,9 @@ made at installation; reinstall it from the current app when the schema moves.
 
 The public envelope projects typed records. Byte fields are carried as bytes:
 retained host reply bytes, compiled-profile bytecode and rejected validator
-context become base64, and fresh-read content becomes lowercase hexadecimal,
-only at presentation. Unsupported or malformed input cannot become a semantic
+context become base64, and fresh-read content and every digest (SHA-256, code
+directory hash, worker identity) become lowercase hexadecimal, only at
+presentation. Unsupported or malformed input cannot become a semantic
 claim. Structural admission establishes the declared shape;
 named validators separately check native operations, lifecycle, phase order,
 actor setup/equipment, owned endings and extension custody before projecting
@@ -295,7 +298,11 @@ native-capability observations. An acquired decision does not publish another
 cell, and a scheduling summary does not replace any actor's facts.
 
 `equipment_inventory` identifies the selected service's sealed equipment
-inventory. `equipment_bindings` separates packaged roles from explicitly
+inventory. Rows of `equipment_bindings` and `equipment_entitlements` are named
+by position: a binding is identified by its `role` and `source`, and
+`binding_ref` and `entitlements_ref` are zero-based indexes into those two
+arrays. An actor's `binding_ref` is null when no binding row was produced for
+its role. `equipment_bindings` separates packaged roles from explicitly
 instrumented overrides; the latter carry `unverified_fixture` implementation
 identity and cannot establish packaged selection. `equipment_entitlements`
 contains independently associated static and live XML read-backs. Every actor's

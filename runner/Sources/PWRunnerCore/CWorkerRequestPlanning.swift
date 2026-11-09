@@ -263,7 +263,7 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
 /// checked even when a different field won admission precedence. No rejected
 /// value is shortened into an apparent submitted identity.
 func admissionRefusalReply(parsed: PWRunnerRunSpec, refused: PWRunnerAdmissionFailure,
-                           bundleId: String?, policyHash: String? = nil) -> PWRunnerRunResult {
+                           bundleId: String?, policyHash: Data? = nil) -> PWRunnerRunResult {
     var mirrored = parsed._test_overrides
     if var overrides = mirrored {
         for (key, rule) in overridePathAdmissions {

@@ -16,7 +16,6 @@
   },
   "equipment_bindings": [
     {
-      "binding_id": "selected",
       "role": "selected",
       "relative_path": "Contents/MacOS/pw-probe-runner",
       "path": "/Applications/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
@@ -27,14 +26,13 @@
       "cdhash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "identifier": "com.policywitness.selected",
       "team_id": "42D369QV8E",
-      "entitlements_ref": "binding-selected",
+      "entitlements_ref": 0,
       "signature_osstatus": 0,
       "entitlements_match": true,
       "source": "packaged",
       "implementation_identity": "inventory_verified"
     },
     {
-      "binding_id": "unentitled",
       "role": "unentitled",
       "relative_path": "Contents/MacOS/pw-probe-runner-unentitled",
       "path": "/Applications/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
@@ -45,7 +43,7 @@
       "cdhash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "identifier": "com.policywitness.unentitled",
       "team_id": "42D369QV8E",
-      "entitlements_ref": "binding-unentitled",
+      "entitlements_ref": 1,
       "signature_osstatus": 0,
       "entitlements_match": true,
       "source": "packaged",
@@ -54,31 +52,27 @@
   ],
   "equipment_entitlements": [
     {
-      "entitlements_id": "binding-selected",
       "source": "binding",
-      "binding_ref": "selected",
+      "binding_ref": 0,
       "status": "observed",
       "raw_plist": "<plist version=\"1.0\"><dict><key>required.key</key><true/></dict></plist>"
     },
     {
-      "entitlements_id": "binding-unentitled",
       "source": "binding",
-      "binding_ref": "unentitled",
+      "binding_ref": 1,
       "status": "observed",
       "raw_plist": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict/>\n</plist>\n"
     },
     {
-      "entitlements_id": "execution-0",
       "source": "execution",
-      "binding_ref": "unentitled",
+      "binding_ref": 1,
       "actor_id": "issuer",
       "status": "observed",
       "raw_plist": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict/>\n</plist>\n"
     },
     {
-      "entitlements_id": "execution-1",
       "source": "execution",
-      "binding_ref": "selected",
+      "binding_ref": 0,
       "actor_id": "subject",
       "status": "observed",
       "raw_plist": "<plist version=\"1.0\"><dict><key>required.key</key><true/></dict></plist>"
@@ -105,7 +99,7 @@
       "equipment": {
         "requested": "unentitled",
         "resolved": "unentitled",
-        "binding_ref": "unentitled",
+        "binding_ref": 1,
         "required_entitlements": [],
         "requirements_status": "satisfied",
         "missing_requirements": [],
@@ -117,7 +111,7 @@
           "cdhash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           "identifier": "com.policywitness.unentitled",
           "team_id": "42D369QV8E",
-          "entitlements_ref": "execution-0",
+          "entitlements_ref": 2,
           "native_observations": [
             {
               "operation": "guest_code",
@@ -168,7 +162,7 @@
       "equipment": {
         "requested": "selected",
         "resolved": "selected",
-        "binding_ref": "selected",
+        "binding_ref": 0,
         "required_entitlements": [
           "required.key"
         ],
@@ -182,7 +176,7 @@
           "cdhash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "identifier": "com.policywitness.selected",
           "team_id": "42D369QV8E",
-          "entitlements_ref": "execution-1",
+          "entitlements_ref": 3,
           "native_observations": [
             {
               "operation": "guest_code",

@@ -212,31 +212,40 @@ def _equipment(runner, actors):
     if inventory.get('status') == 'verified' and (not integer(inventory.get('schema_version'), 1, 1) or
             any(not hexadecimal(inventory.get(k), 64) for k in ('sha256', 'worker_identity', 'unsigned_worker_sha256')) or not integer(inventory.get('seal_osstatus'), 0, 0)):
         errors.append('verified equipment inventory lacks sealed identity')
-    by_binding, by_read, dictionaries = {}, {}, {}
+    # Rows are named by table position. A binding is identified by its role and
+    # source, a read-back by the binding row or the actor it belongs to.
+    def row_at(table, reference):
+        return obj(table[reference]) if integer(reference, 0, len(table) - 1) else None
+    identities, owners, dictionaries = set(), set(), {}
     for binding in bindings:
         row = obj(binding)
-        identity = row.get('binding_id')
-        if identity not in ('selected', 'unentitled', 'override-selected', 'override-unentitled') or identity in by_binding:
+        identity = (row.get('role'), row.get('source'))
+        if not all(isinstance(part, str) for part in identity) or identity in identities:
             errors.append('duplicate or invalid equipment binding'); continue
-        by_binding[identity] = row
-        fields = ('binding_id', 'role', 'source', 'implementation_identity', 'relative_path',
-                  'path', 'status', 'reason', 'expected_sha256', 'expected_cdhash', 'sha256',
-                  'cdhash', 'identifier', 'team_id', 'entitlements_ref')
+        identities.add(identity)
+        fields = ('role', 'source', 'implementation_identity', 'relative_path',
+                  'path', 'status', 'reason', 'identifier', 'team_id')
         error = obj(row.get('error'))
         if not _metadata_fits([row.get(k) for k in fields] + [error.get(k) for k in ('operation', 'domain', 'message')]):
             errors.append('equipment binding metadata bound')
-    for raw in reads:
+    for position, raw in enumerate(reads):
         row = obj(raw)
-        identity, role = row.get('entitlements_id'), row.get('binding_ref')
-        if not isinstance(identity, str) or identity in by_read:
-            errors.append('duplicate equipment read-back'); continue
-        by_read[identity] = row
-        if role not in ('selected', 'unentitled', 'override-selected', 'override-unentitled'):
+        binding = row_at(bindings, row.get('binding_ref'))
+        if binding is None:
             errors.append('entitlement read-back binding')
-        expected = 'binding-' + str(role) if row.get('source') == 'binding' else next((
-            'execution-' + str(i) for i, a in enumerate(actors) if obj(a).get('actor_id') == row.get('actor_id')), None) if row.get('source') == 'execution' else None
-        if expected != identity:
+        if row.get('source') == 'binding':
+            owner = ('binding', row.get('binding_ref')) if binding is not None and row.get('actor_id') is None and \
+                integer(binding.get('entitlements_ref'), position, position) else None
+        elif row.get('source') == 'execution':
+            owner = next((('execution', i) for i, a in enumerate(actors) if obj(a).get('actor_id') == row.get('actor_id')), None)
+        else:
+            owner = None
+        if owner is None:
             errors.append('entitlement read-back actor or identity')
+        elif owner in owners:
+            errors.append('duplicate equipment read-back')
+        else:
+            owners.add(owner)
         if row.get('status') == 'observed':
             text = row.get('raw_plist')
             try:
@@ -245,28 +254,30 @@ def _equipment(runner, actors):
                 value = plistlib.loads(text.encode('utf-8'))
                 if not isinstance(value, dict):
                     raise ValueError('entitlements are not a dictionary')
-                dictionaries[identity] = value
+                dictionaries[position] = value
             except Exception:
                 # XML parser failures are malformed evidence, never an observer
                 # process failure or permission-shaped native result.
                 errors.append('invalid or oversized entitlement plist')
         elif row.get('status') != 'failed' or row.get('raw_plist') is not None:
             errors.append('failed entitlement observation invents plist')
-    for identity, binding in by_binding.items():
-        role = identity.removeprefix('override-')
-        instrumented = identity.startswith('override-')
+    for position, raw in enumerate(bindings):
+        binding = obj(raw)
+        role, instrumented = binding.get('role'), binding.get('source') == 'test_override'
         expected = 'Contents/MacOS/pw-probe-runner' + ('-unentitled' if role == 'unentitled' else '')
-        if binding.get('role') != role or not bounded(binding.get('path'), 1023) or (
-                binding.get('source') != 'test_override' or binding.get('implementation_identity') != 'unverified_fixture' or any(binding.get(k) is not None for k in ('relative_path', 'expected_sha256', 'expected_cdhash')) if instrumented else
+        if role not in ('selected', 'unentitled') or not bounded(binding.get('path'), 1023) or (
+                binding.get('implementation_identity') != 'unverified_fixture' or any(binding.get(k) is not None for k in ('relative_path', 'expected_sha256', 'expected_cdhash')) if instrumented else
                 binding.get('source') != 'packaged' or binding.get('implementation_identity') != 'inventory_verified' or binding.get('relative_path') != expected):
             errors.append('equipment role or fixed path association')
         if binding.get('status') == 'bound':
-            reference = 'binding-' + identity
+            reference = binding.get('entitlements_ref')
+            own = row_at(reads, reference)
             if inventory.get('status') != 'verified' or not hexadecimal(binding.get('sha256'), 64) or not instrumented and binding.get('sha256') != binding.get('expected_sha256') or \
                     not hexadecimal(binding.get('cdhash'), 40) or not instrumented and binding.get('cdhash') != binding.get('expected_cdhash') or \
-                    not integer(binding.get('signature_osstatus'), 0, 0) or not instrumented and binding.get('entitlements_match') is not True or binding.get('entitlements_ref') != reference or reference not in dictionaries:
+                    not integer(binding.get('signature_osstatus'), 0, 0) or not instrumented and binding.get('entitlements_match') is not True or \
+                    own is None or own.get('source') != 'binding' or not integer(own.get('binding_ref'), position, position) or reference not in dictionaries:
                 errors.append('bound equipment lacks inspected identity')
-            if role == 'unentitled' and not instrumented and dictionaries.get(reference) != {}:
+            if role == 'unentitled' and not instrumented and (own is None or dictionaries.get(reference) != {}):
                 errors.append('unentitled worker carries entitlements')
         elif binding.get('status') != 'refused':
             errors.append('invalid equipment binding status')
@@ -275,16 +286,20 @@ def _equipment(runner, actors):
         actor = obj(raw)
         equipment = obj(actor.get('equipment'))
         resolved = equipment.get('resolved')
-        bound_id = equipment.get('binding_ref')
-        if resolved not in ('selected', 'unentitled') or bound_id not in (resolved, 'override-' + str(resolved)) or \
+        bound = equipment.get('binding_ref')
+        binding = row_at(bindings, bound)
+        # The actor names its binding row whenever one exists for its role.
+        associated = binding.get('role') == resolved if binding is not None else \
+            bound is None and not any(obj(b).get('role') == resolved for b in bindings)
+        if resolved not in ('selected', 'unentitled') or not associated or \
                 not (equipment.get('requested') is None and resolved == 'selected' or equipment.get('requested') == resolved):
             errors.append('actor equipment selector association')
-        binding = by_binding.get(bound_id, {}) if isinstance(bound_id, str) else {}
+        binding = binding or {}
         requirements = array(equipment.get('required_entitlements'))
         if not isinstance(equipment.get('required_entitlements'), list) or len(requirements) > 64 or \
                 any(not bounded(k, 255) for k in requirements) or len(set(k for k in requirements if isinstance(k, str))) != len(requirements):
             errors.append('invalid actor entitlement requirements')
-        static_ref, live_ref = 'binding-' + str(bound_id), 'execution-' + str(index)
+        static_ref = binding.get('entitlements_ref') if row_at(reads, binding.get('entitlements_ref')) is not None else None
         static = dictionaries.get(static_ref)
         granted = {k for k, v in static.items() if v is True} if isinstance(static, dict) else set()
         missing = [k for k in requirements if isinstance(k, str) and k not in granted]
@@ -296,18 +311,20 @@ def _equipment(runner, actors):
         elif equipment.get('requirements_status') != 'unobserved' or equipment.get('missing_requirements') is not None:
             errors.append('unobserved actor requirements invent result')
         execution = obj(equipment.get('execution'))
-        fields = ('status', 'path', 'cdhash', 'identifier', 'team_id', 'entitlements_ref', 'reason')
+        fields = ('status', 'path', 'identifier', 'team_id', 'reason')
         if not _metadata_fits([execution.get(k) for k in fields] + [obj(call).get('operation') for call in array(execution.get('native_observations'))]):
             errors.append('equipment execution metadata bound')
         status = execution.get('status')
         if status not in ('matched', 'mismatched', 'inspection_failed', 'unobserved'):
             errors.append('invalid execution equipment status')
         if status == 'matched':
-            read = by_read.get(live_ref, {})
+            read = row_at(reads, execution.get('entitlements_ref'))
+            live_ref = execution.get('entitlements_ref') if read is not None else None
+            read = read or {}
             if binding.get('status') != 'bound' or equipment.get('requirements_status') != 'satisfied' or execution.get('eligible') is not True or execution.get('reason') is not None or \
                     not integer(execution.get('pid'), 1, (1 << 31)-1) or execution.get('pid') != obj(actor.get('launch')).get('pid') or \
                     any(execution.get(k) != binding.get(k) for k in ('path', 'cdhash', 'identifier', 'team_id')) or \
-                    execution.get('entitlements_ref') != live_ref or read.get('binding_ref') != bound_id or read.get('actor_id') != actor.get('actor_id') or \
+                    read.get('source') != 'execution' or not integer(read.get('binding_ref'), bound, bound) or read.get('actor_id') != actor.get('actor_id') or \
                     static is None or dictionaries.get(live_ref) != static or \
                     not all(obj(dictionaries.get(live_ref)).get(key) is True for key in requirements if isinstance(key, str)):
                 errors.append('execution equipment does not match its owned binding')

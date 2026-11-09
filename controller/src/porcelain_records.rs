@@ -4,7 +4,7 @@ use serde::Serialize;
 #[cfg(test)] use serde::Deserialize;
 use serde::ser::SerializeMap;
 use crate::porcelain::{WireRead, RecordReader};
-pub const FINGERPRINT: [u8; 32] = [67, 74, 19, 144, 229, 180, 222, 136, 209, 127, 152, 6, 50, 131, 252, 185, 164, 64, 39, 179, 20, 36, 31, 4, 201, 201, 140, 12, 92, 211, 255, 64];
+pub const FINGERPRINT: [u8; 32] = [72, 242, 109, 148, 203, 19, 141, 216, 125, 227, 148, 11, 111, 5, 0, 90, 8, 170, 15, 51, 207, 207, 250, 142, 135, 4, 161, 1, 8, 252, 101, 156];
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(Deserialize))]
 #[serde(untagged)]
@@ -36,12 +36,15 @@ pub struct CompiledProfileCapture {
     pub request_nonce: Option<String>,
     pub profile_type: Option<i64>,
     pub bytecode_length: Option<i64>,
-    pub bytecode_sha256: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "bytecode_sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub bytecode_sha256: Option<Vec<u8>>,
     #[cfg_attr(test, serde(default, rename = "bytecode_b64", deserialize_with = "crate::porcelain::optional_base64_from_json"))]
     pub bytecode: Option<Vec<u8>>,
-    pub source_sha256: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "source_sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub source_sha256: Option<Vec<u8>>,
     pub source_length: Option<i64>,
-    pub params_sha256: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "params_sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub params_sha256: Option<Vec<u8>>,
     pub parameter_count: Option<i64>,
 }
 impl WireRead for CompiledProfileCapture {
@@ -57,11 +60,11 @@ impl WireRead for CompiledProfileCapture {
         let mut request_nonce: Option<String> = None;
         let mut profile_type: Option<i64> = None;
         let mut bytecode_length: Option<i64> = None;
-        let mut bytecode_sha256: Option<String> = None;
+        let mut bytecode_sha256: Option<Vec<u8>> = None;
         let mut bytecode: Option<Vec<u8>> = None;
-        let mut source_sha256: Option<String> = None;
+        let mut source_sha256: Option<Vec<u8>> = None;
         let mut source_length: Option<i64> = None;
-        let mut params_sha256: Option<String> = None;
+        let mut params_sha256: Option<Vec<u8>> = None;
         let mut parameter_count: Option<i64> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
@@ -74,11 +77,11 @@ impl WireRead for CompiledProfileCapture {
                 7 => request_nonce = Some(__pw_value.decode()?),
                 8 => profile_type = Some(__pw_value.decode()?),
                 9 => bytecode_length = Some(__pw_value.decode()?),
-                10 => bytecode_sha256 = Some(__pw_value.decode()?),
+                10 => bytecode_sha256 = Some(__pw_value.bytes()?),
                 11 => bytecode = Some(__pw_value.bytes()?),
-                12 => source_sha256 = Some(__pw_value.decode()?),
+                12 => source_sha256 = Some(__pw_value.bytes()?),
                 13 => source_length = Some(__pw_value.decode()?),
-                14 => params_sha256 = Some(__pw_value.decode()?),
+                14 => params_sha256 = Some(__pw_value.bytes()?),
                 15 => parameter_count = Some(__pw_value.decode()?),
                 _ => return Err("unknown field tag".into()),
             }
@@ -107,17 +110,17 @@ impl Serialize for CompiledProfileCapture {
         let mut map = serializer.serialize_map(None)?;
         if self.bytecode.is_some() { map.serialize_entry("bytecode_b64", &self.bytecode.as_deref().map(crate::porcelain::Base64))?; }
         if self.bytecode_length.is_some() { map.serialize_entry("bytecode_length", &self.bytecode_length)?; }
-        if self.bytecode_sha256.is_some() { map.serialize_entry("bytecode_sha256", &self.bytecode_sha256)?; }
+        if self.bytecode_sha256.is_some() { map.serialize_entry("bytecode_sha256", &self.bytecode_sha256.as_deref().map(crate::porcelain::Hex))?; }
         if self.capture_stage.is_some() { map.serialize_entry("capture_stage", &self.capture_stage)?; }
         if self.parameter_count.is_some() { map.serialize_entry("parameter_count", &self.parameter_count)?; }
-        if self.params_sha256.is_some() { map.serialize_entry("params_sha256", &self.params_sha256)?; }
+        if self.params_sha256.is_some() { map.serialize_entry("params_sha256", &self.params_sha256.as_deref().map(crate::porcelain::Hex))?; }
         if self.producer.is_some() { map.serialize_entry("producer", &self.producer)?; }
         if self.profile_type.is_some() { map.serialize_entry("profile_type", &self.profile_type)?; }
         if self.reason.is_some() { map.serialize_entry("reason", &self.reason)?; }
         if self.request_nonce.is_some() { map.serialize_entry("request_nonce", &self.request_nonce)?; }
         map.serialize_entry("schema_version", &self.schema_version)?;
         if self.source_length.is_some() { map.serialize_entry("source_length", &self.source_length)?; }
-        if self.source_sha256.is_some() { map.serialize_entry("source_sha256", &self.source_sha256)?; }
+        if self.source_sha256.is_some() { map.serialize_entry("source_sha256", &self.source_sha256.as_deref().map(crate::porcelain::Hex))?; }
         map.serialize_entry("status", &self.status)?;
         map.serialize_entry("worker_pid", &self.worker_pid)?;
         map.end()
@@ -1039,7 +1042,7 @@ impl Serialize for PWRunnerActorApplication {
 pub struct PWRunnerActorEquipment {
     pub requested: Option<String>,
     pub resolved: String,
-    pub binding_ref: String,
+    pub binding_ref: Option<u32>,
     pub required_entitlements: Vec<String>,
     pub requirements_status: String,
     pub missing_requirements: Option<Vec<String>>,
@@ -1051,7 +1054,7 @@ impl WireRead for PWRunnerActorEquipment {
         let mut __pw_reader = RecordReader::new(data, 22, depth, budget)?;
         let mut requested: Option<String> = None;
         let mut resolved: Option<String> = None;
-        let mut binding_ref: Option<String> = None;
+        let mut binding_ref: Option<u32> = None;
         let mut required_entitlements: Option<Vec<String>> = None;
         let mut requirements_status: Option<String> = None;
         let mut missing_requirements: Option<Vec<String>> = None;
@@ -1071,7 +1074,7 @@ impl WireRead for PWRunnerActorEquipment {
         Ok(Self {
             requested,
             resolved: resolved.ok_or("missing PWRunnerActorEquipment.resolved")?,
-            binding_ref: binding_ref.ok_or("missing PWRunnerActorEquipment.binding_ref")?,
+            binding_ref,
             required_entitlements: required_entitlements.ok_or("missing PWRunnerActorEquipment.required_entitlements")?,
             requirements_status: requirements_status.ok_or("missing PWRunnerActorEquipment.requirements_status")?,
             missing_requirements,
@@ -1149,8 +1152,10 @@ pub struct PWRunnerActorResult {
     pub index: i64,
     pub mode: String,
     pub policy_format: Option<String>,
-    pub policy_sha256: Option<String>,
-    pub policy_received_sha256: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "policy_sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub policy_sha256: Option<Vec<u8>>,
+    #[cfg_attr(test, serde(default, rename = "policy_received_sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub policy_received_sha256: Option<Vec<u8>>,
     pub setup_status: String,
     pub applied: Option<bool>,
     pub application_count: i64,
@@ -1170,8 +1175,8 @@ impl WireRead for PWRunnerActorResult {
         let mut index: Option<i64> = None;
         let mut mode: Option<String> = None;
         let mut policy_format: Option<String> = None;
-        let mut policy_sha256: Option<String> = None;
-        let mut policy_received_sha256: Option<String> = None;
+        let mut policy_sha256: Option<Vec<u8>> = None;
+        let mut policy_received_sha256: Option<Vec<u8>> = None;
         let mut setup_status: Option<String> = None;
         let mut applied: Option<bool> = None;
         let mut application_count: Option<i64> = None;
@@ -1188,8 +1193,8 @@ impl WireRead for PWRunnerActorResult {
                 2 => index = Some(__pw_value.decode()?),
                 3 => mode = Some(__pw_value.decode()?),
                 4 => policy_format = Some(__pw_value.decode()?),
-                5 => policy_sha256 = Some(__pw_value.decode()?),
-                6 => policy_received_sha256 = Some(__pw_value.decode()?),
+                5 => policy_sha256 = Some(__pw_value.bytes()?),
+                6 => policy_received_sha256 = Some(__pw_value.bytes()?),
                 7 => setup_status = Some(__pw_value.decode()?),
                 8 => applied = Some(__pw_value.decode()?),
                 9 => application_count = Some(__pw_value.decode()?),
@@ -1237,8 +1242,8 @@ impl Serialize for PWRunnerActorResult {
         map.serialize_entry("mode", &self.mode)?;
         if self.owned_reap.is_some() { map.serialize_entry("owned_reap", &self.owned_reap)?; }
         if self.policy_format.is_some() { map.serialize_entry("policy_format", &self.policy_format)?; }
-        if self.policy_received_sha256.is_some() { map.serialize_entry("policy_received_sha256", &self.policy_received_sha256)?; }
-        if self.policy_sha256.is_some() { map.serialize_entry("policy_sha256", &self.policy_sha256)?; }
+        if self.policy_received_sha256.is_some() { map.serialize_entry("policy_received_sha256", &self.policy_received_sha256.as_deref().map(crate::porcelain::Hex))?; }
+        if self.policy_sha256.is_some() { map.serialize_entry("policy_sha256", &self.policy_sha256.as_deref().map(crate::porcelain::Hex))?; }
         map.serialize_entry("setup_status", &self.setup_status)?;
         if self.subprocess.is_some() { map.serialize_entry("subprocess", &self.subprocess)?; }
         map.serialize_entry("visits", &self.visits)?;
@@ -1895,7 +1900,8 @@ impl Serialize for PWRunnerComparison {
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct PWRunnerControlObservation {
     pub bytes_received: i64,
-    pub sha256: String,
+    #[cfg_attr(test, serde(rename = "sha256", deserialize_with = "crate::porcelain::hex_from_json"))]
+    pub sha256: Vec<u8>,
     pub status: Option<String>,
     pub host_pid: Option<i64>,
     pub host_instance: Option<String>,
@@ -1907,7 +1913,7 @@ impl WireRead for PWRunnerControlObservation {
     fn read_payload(data: &[u8], depth: usize, budget: &std::cell::Cell<usize>) -> Result<Self, String> {
         let mut __pw_reader = RecordReader::new(data, 34, depth, budget)?;
         let mut bytes_received: Option<i64> = None;
-        let mut sha256: Option<String> = None;
+        let mut sha256: Option<Vec<u8>> = None;
         let mut status: Option<String> = None;
         let mut host_pid: Option<i64> = None;
         let mut host_instance: Option<String> = None;
@@ -1916,7 +1922,7 @@ impl WireRead for PWRunnerControlObservation {
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
                 1 => bytes_received = Some(__pw_value.decode()?),
-                2 => sha256 = Some(__pw_value.decode()?),
+                2 => sha256 = Some(__pw_value.bytes()?),
                 3 => status = Some(__pw_value.decode()?),
                 4 => host_pid = Some(__pw_value.decode()?),
                 5 => host_instance = Some(__pw_value.decode()?),
@@ -1944,7 +1950,7 @@ impl Serialize for PWRunnerControlObservation {
         if self.host_pid.is_some() { map.serialize_entry("host_pid", &self.host_pid)?; }
         if self.lease_ms.is_some() { map.serialize_entry("lease_ms", &self.lease_ms)?; }
         if self.reason.is_some() { map.serialize_entry("reason", &self.reason)?; }
-        map.serialize_entry("sha256", &self.sha256)?;
+        map.serialize_entry("sha256", &crate::porcelain::Hex(&self.sha256))?;
         if self.status.is_some() { map.serialize_entry("status", &self.status)?; }
         map.end()
     }
@@ -2022,7 +2028,6 @@ impl Serialize for PWRunnerDeliveryRecord {
 #[cfg_attr(test, derive(Deserialize))]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct PWRunnerEquipmentBinding {
-    pub binding_id: String,
     pub role: String,
     pub source: String,
     pub implementation_identity: String,
@@ -2030,13 +2035,17 @@ pub struct PWRunnerEquipmentBinding {
     pub path: String,
     pub status: String,
     pub reason: Option<String>,
-    pub expected_sha256: Option<String>,
-    pub expected_cdhash: Option<String>,
-    pub sha256: Option<String>,
-    pub cdhash: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "expected_sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub expected_sha256: Option<Vec<u8>>,
+    #[cfg_attr(test, serde(default, rename = "expected_cdhash", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub expected_cdhash: Option<Vec<u8>>,
+    #[cfg_attr(test, serde(default, rename = "sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub sha256: Option<Vec<u8>>,
+    #[cfg_attr(test, serde(default, rename = "cdhash", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub cdhash: Option<Vec<u8>>,
     pub identifier: Option<String>,
     pub team_id: Option<String>,
-    pub entitlements_ref: Option<String>,
+    pub entitlements_ref: Option<u32>,
     pub signature_osstatus: Option<i64>,
     pub entitlements_match: Option<bool>,
     pub error: Option<PWRunnerEquipmentError>,
@@ -2045,7 +2054,6 @@ impl WireRead for PWRunnerEquipmentBinding {
     const KIND: u8 = 6;
     fn read_payload(data: &[u8], depth: usize, budget: &std::cell::Cell<usize>) -> Result<Self, String> {
         let mut __pw_reader = RecordReader::new(data, 36, depth, budget)?;
-        let mut binding_id: Option<String> = None;
         let mut role: Option<String> = None;
         let mut source: Option<String> = None;
         let mut implementation_identity: Option<String> = None;
@@ -2053,19 +2061,18 @@ impl WireRead for PWRunnerEquipmentBinding {
         let mut path: Option<String> = None;
         let mut status: Option<String> = None;
         let mut reason: Option<String> = None;
-        let mut expected_sha256: Option<String> = None;
-        let mut expected_cdhash: Option<String> = None;
-        let mut sha256: Option<String> = None;
-        let mut cdhash: Option<String> = None;
+        let mut expected_sha256: Option<Vec<u8>> = None;
+        let mut expected_cdhash: Option<Vec<u8>> = None;
+        let mut sha256: Option<Vec<u8>> = None;
+        let mut cdhash: Option<Vec<u8>> = None;
         let mut identifier: Option<String> = None;
         let mut team_id: Option<String> = None;
-        let mut entitlements_ref: Option<String> = None;
+        let mut entitlements_ref: Option<u32> = None;
         let mut signature_osstatus: Option<i64> = None;
         let mut entitlements_match: Option<bool> = None;
         let mut error: Option<PWRunnerEquipmentError> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
-                1 => binding_id = Some(__pw_value.decode()?),
                 2 => role = Some(__pw_value.decode()?),
                 3 => source = Some(__pw_value.decode()?),
                 4 => implementation_identity = Some(__pw_value.decode()?),
@@ -2073,10 +2080,10 @@ impl WireRead for PWRunnerEquipmentBinding {
                 6 => path = Some(__pw_value.decode()?),
                 7 => status = Some(__pw_value.decode()?),
                 8 => reason = Some(__pw_value.decode()?),
-                9 => expected_sha256 = Some(__pw_value.decode()?),
-                10 => expected_cdhash = Some(__pw_value.decode()?),
-                11 => sha256 = Some(__pw_value.decode()?),
-                12 => cdhash = Some(__pw_value.decode()?),
+                9 => expected_sha256 = Some(__pw_value.bytes()?),
+                10 => expected_cdhash = Some(__pw_value.bytes()?),
+                11 => sha256 = Some(__pw_value.bytes()?),
+                12 => cdhash = Some(__pw_value.bytes()?),
                 13 => identifier = Some(__pw_value.decode()?),
                 14 => team_id = Some(__pw_value.decode()?),
                 15 => entitlements_ref = Some(__pw_value.decode()?),
@@ -2087,7 +2094,6 @@ impl WireRead for PWRunnerEquipmentBinding {
             }
         }
         Ok(Self {
-            binding_id: binding_id.ok_or("missing PWRunnerEquipmentBinding.binding_id")?,
             role: role.ok_or("missing PWRunnerEquipmentBinding.role")?,
             source: source.ok_or("missing PWRunnerEquipmentBinding.source")?,
             implementation_identity: implementation_identity.ok_or("missing PWRunnerEquipmentBinding.implementation_identity")?,
@@ -2111,20 +2117,19 @@ impl WireRead for PWRunnerEquipmentBinding {
 impl Serialize for PWRunnerEquipmentBinding {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("binding_id", &self.binding_id)?;
-        if self.cdhash.is_some() { map.serialize_entry("cdhash", &self.cdhash)?; }
+        if self.cdhash.is_some() { map.serialize_entry("cdhash", &self.cdhash.as_deref().map(crate::porcelain::Hex))?; }
         if self.entitlements_match.is_some() { map.serialize_entry("entitlements_match", &self.entitlements_match)?; }
         if self.entitlements_ref.is_some() { map.serialize_entry("entitlements_ref", &self.entitlements_ref)?; }
         if self.error.is_some() { map.serialize_entry("error", &self.error)?; }
-        if self.expected_cdhash.is_some() { map.serialize_entry("expected_cdhash", &self.expected_cdhash)?; }
-        if self.expected_sha256.is_some() { map.serialize_entry("expected_sha256", &self.expected_sha256)?; }
+        if self.expected_cdhash.is_some() { map.serialize_entry("expected_cdhash", &self.expected_cdhash.as_deref().map(crate::porcelain::Hex))?; }
+        if self.expected_sha256.is_some() { map.serialize_entry("expected_sha256", &self.expected_sha256.as_deref().map(crate::porcelain::Hex))?; }
         if self.identifier.is_some() { map.serialize_entry("identifier", &self.identifier)?; }
         map.serialize_entry("implementation_identity", &self.implementation_identity)?;
         map.serialize_entry("path", &self.path)?;
         if self.reason.is_some() { map.serialize_entry("reason", &self.reason)?; }
         if self.relative_path.is_some() { map.serialize_entry("relative_path", &self.relative_path)?; }
         map.serialize_entry("role", &self.role)?;
-        if self.sha256.is_some() { map.serialize_entry("sha256", &self.sha256)?; }
+        if self.sha256.is_some() { map.serialize_entry("sha256", &self.sha256.as_deref().map(crate::porcelain::Hex))?; }
         if self.signature_osstatus.is_some() { map.serialize_entry("signature_osstatus", &self.signature_osstatus)?; }
         map.serialize_entry("source", &self.source)?;
         map.serialize_entry("status", &self.status)?;
@@ -2136,9 +2141,8 @@ impl Serialize for PWRunnerEquipmentBinding {
 #[cfg_attr(test, derive(Deserialize))]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct PWRunnerEquipmentEntitlements {
-    pub entitlements_id: String,
     pub source: String,
-    pub binding_ref: String,
+    pub binding_ref: u32,
     pub actor_id: Option<String>,
     pub status: String,
     pub raw_plist: Option<String>,
@@ -2148,16 +2152,14 @@ impl WireRead for PWRunnerEquipmentEntitlements {
     const KIND: u8 = 6;
     fn read_payload(data: &[u8], depth: usize, budget: &std::cell::Cell<usize>) -> Result<Self, String> {
         let mut __pw_reader = RecordReader::new(data, 37, depth, budget)?;
-        let mut entitlements_id: Option<String> = None;
         let mut source: Option<String> = None;
-        let mut binding_ref: Option<String> = None;
+        let mut binding_ref: Option<u32> = None;
         let mut actor_id: Option<String> = None;
         let mut status: Option<String> = None;
         let mut raw_plist: Option<String> = None;
         let mut error: Option<PWRunnerEquipmentError> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
-                1 => entitlements_id = Some(__pw_value.decode()?),
                 2 => source = Some(__pw_value.decode()?),
                 3 => binding_ref = Some(__pw_value.decode()?),
                 4 => actor_id = Some(__pw_value.decode()?),
@@ -2168,7 +2170,6 @@ impl WireRead for PWRunnerEquipmentEntitlements {
             }
         }
         Ok(Self {
-            entitlements_id: entitlements_id.ok_or("missing PWRunnerEquipmentEntitlements.entitlements_id")?,
             source: source.ok_or("missing PWRunnerEquipmentEntitlements.source")?,
             binding_ref: binding_ref.ok_or("missing PWRunnerEquipmentEntitlements.binding_ref")?,
             actor_id,
@@ -2183,7 +2184,6 @@ impl Serialize for PWRunnerEquipmentEntitlements {
         let mut map = serializer.serialize_map(None)?;
         if self.actor_id.is_some() { map.serialize_entry("actor_id", &self.actor_id)?; }
         map.serialize_entry("binding_ref", &self.binding_ref)?;
-        map.serialize_entry("entitlements_id", &self.entitlements_id)?;
         if self.error.is_some() { map.serialize_entry("error", &self.error)?; }
         if self.raw_plist.is_some() { map.serialize_entry("raw_plist", &self.raw_plist)?; }
         map.serialize_entry("source", &self.source)?;
@@ -2244,10 +2244,11 @@ pub struct PWRunnerEquipmentExecution {
     pub parent_pid: Option<i64>,
     pub observed_at_monotonic_ns: Option<u64>,
     pub path: Option<String>,
-    pub cdhash: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "cdhash", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub cdhash: Option<Vec<u8>>,
     pub identifier: Option<String>,
     pub team_id: Option<String>,
-    pub entitlements_ref: Option<String>,
+    pub entitlements_ref: Option<u32>,
     pub native_observations: Vec<PWRunnerEquipmentNativeObservation>,
     pub reason: Option<String>,
     pub eligible: bool,
@@ -2261,10 +2262,10 @@ impl WireRead for PWRunnerEquipmentExecution {
         let mut parent_pid: Option<i64> = None;
         let mut observed_at_monotonic_ns: Option<u64> = None;
         let mut path: Option<String> = None;
-        let mut cdhash: Option<String> = None;
+        let mut cdhash: Option<Vec<u8>> = None;
         let mut identifier: Option<String> = None;
         let mut team_id: Option<String> = None;
-        let mut entitlements_ref: Option<String> = None;
+        let mut entitlements_ref: Option<u32> = None;
         let mut native_observations: Option<Vec<PWRunnerEquipmentNativeObservation>> = None;
         let mut reason: Option<String> = None;
         let mut eligible: Option<bool> = None;
@@ -2275,7 +2276,7 @@ impl WireRead for PWRunnerEquipmentExecution {
                 3 => parent_pid = Some(__pw_value.decode()?),
                 4 => observed_at_monotonic_ns = Some(__pw_value.decode()?),
                 5 => path = Some(__pw_value.decode()?),
-                6 => cdhash = Some(__pw_value.decode()?),
+                6 => cdhash = Some(__pw_value.bytes()?),
                 7 => identifier = Some(__pw_value.decode()?),
                 8 => team_id = Some(__pw_value.decode()?),
                 9 => entitlements_ref = Some(__pw_value.decode()?),
@@ -2304,7 +2305,7 @@ impl WireRead for PWRunnerEquipmentExecution {
 impl Serialize for PWRunnerEquipmentExecution {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
-        if self.cdhash.is_some() { map.serialize_entry("cdhash", &self.cdhash)?; }
+        if self.cdhash.is_some() { map.serialize_entry("cdhash", &self.cdhash.as_deref().map(crate::porcelain::Hex))?; }
         map.serialize_entry("eligible", &self.eligible)?;
         if self.entitlements_ref.is_some() { map.serialize_entry("entitlements_ref", &self.entitlements_ref)?; }
         if self.identifier.is_some() { map.serialize_entry("identifier", &self.identifier)?; }
@@ -2325,10 +2326,13 @@ impl Serialize for PWRunnerEquipmentExecution {
 pub struct PWRunnerEquipmentInventory {
     pub path: String,
     pub status: String,
-    pub sha256: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub sha256: Option<Vec<u8>>,
     pub schema_version: Option<i64>,
-    pub worker_identity: Option<String>,
-    pub unsigned_worker_sha256: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "worker_identity", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub worker_identity: Option<Vec<u8>>,
+    #[cfg_attr(test, serde(default, rename = "unsigned_worker_sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub unsigned_worker_sha256: Option<Vec<u8>>,
     pub seal_osstatus: Option<i64>,
     pub reason: Option<String>,
     pub error: Option<PWRunnerEquipmentError>,
@@ -2339,10 +2343,10 @@ impl WireRead for PWRunnerEquipmentInventory {
         let mut __pw_reader = RecordReader::new(data, 40, depth, budget)?;
         let mut path: Option<String> = None;
         let mut status: Option<String> = None;
-        let mut sha256: Option<String> = None;
+        let mut sha256: Option<Vec<u8>> = None;
         let mut schema_version: Option<i64> = None;
-        let mut worker_identity: Option<String> = None;
-        let mut unsigned_worker_sha256: Option<String> = None;
+        let mut worker_identity: Option<Vec<u8>> = None;
+        let mut unsigned_worker_sha256: Option<Vec<u8>> = None;
         let mut seal_osstatus: Option<i64> = None;
         let mut reason: Option<String> = None;
         let mut error: Option<PWRunnerEquipmentError> = None;
@@ -2350,10 +2354,10 @@ impl WireRead for PWRunnerEquipmentInventory {
             match __pw_tag {
                 1 => path = Some(__pw_value.decode()?),
                 2 => status = Some(__pw_value.decode()?),
-                3 => sha256 = Some(__pw_value.decode()?),
+                3 => sha256 = Some(__pw_value.bytes()?),
                 4 => schema_version = Some(__pw_value.decode()?),
-                5 => worker_identity = Some(__pw_value.decode()?),
-                6 => unsigned_worker_sha256 = Some(__pw_value.decode()?),
+                5 => worker_identity = Some(__pw_value.bytes()?),
+                6 => unsigned_worker_sha256 = Some(__pw_value.bytes()?),
                 7 => seal_osstatus = Some(__pw_value.decode()?),
                 8 => reason = Some(__pw_value.decode()?),
                 9 => error = Some(__pw_value.decode()?),
@@ -2381,10 +2385,10 @@ impl Serialize for PWRunnerEquipmentInventory {
         if self.reason.is_some() { map.serialize_entry("reason", &self.reason)?; }
         if self.schema_version.is_some() { map.serialize_entry("schema_version", &self.schema_version)?; }
         if self.seal_osstatus.is_some() { map.serialize_entry("seal_osstatus", &self.seal_osstatus)?; }
-        if self.sha256.is_some() { map.serialize_entry("sha256", &self.sha256)?; }
+        if self.sha256.is_some() { map.serialize_entry("sha256", &self.sha256.as_deref().map(crate::porcelain::Hex))?; }
         map.serialize_entry("status", &self.status)?;
-        if self.unsigned_worker_sha256.is_some() { map.serialize_entry("unsigned_worker_sha256", &self.unsigned_worker_sha256)?; }
-        if self.worker_identity.is_some() { map.serialize_entry("worker_identity", &self.worker_identity)?; }
+        if self.unsigned_worker_sha256.is_some() { map.serialize_entry("unsigned_worker_sha256", &self.unsigned_worker_sha256.as_deref().map(crate::porcelain::Hex))?; }
+        if self.worker_identity.is_some() { map.serialize_entry("worker_identity", &self.worker_identity.as_deref().map(crate::porcelain::Hex))?; }
         map.end()
     }
 }
@@ -3046,7 +3050,7 @@ pub struct PWRunnerPreparationFailure {
     pub stage: String,
     pub code: String,
     pub actor_id: Option<String>,
-    pub binding_ref: Option<String>,
+    pub binding_ref: Option<u32>,
     pub reason: Option<String>,
 }
 impl WireRead for PWRunnerPreparationFailure {
@@ -3056,7 +3060,7 @@ impl WireRead for PWRunnerPreparationFailure {
         let mut stage: Option<String> = None;
         let mut code: Option<String> = None;
         let mut actor_id: Option<String> = None;
-        let mut binding_ref: Option<String> = None;
+        let mut binding_ref: Option<u32> = None;
         let mut reason: Option<String> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
@@ -3278,7 +3282,8 @@ pub struct PWRunnerRunResult {
     pub pid: i64,
     pub bundle_id: Option<String>,
     pub policy_format: Option<String>,
-    pub policy_sha256: Option<String>,
+    #[cfg_attr(test, serde(default, rename = "policy_sha256", deserialize_with = "crate::porcelain::optional_hex_from_json"))]
+    pub policy_sha256: Option<Vec<u8>>,
     pub compiled_profile: Option<CompiledProfileCapture>,
     pub sandboxed_after_apply: Option<bool>,
     pub steps: Vec<PWRunnerStepResult>,
@@ -3313,7 +3318,7 @@ impl WireRead for PWRunnerRunResult {
         let mut pid: Option<i64> = None;
         let mut bundle_id: Option<String> = None;
         let mut policy_format: Option<String> = None;
-        let mut policy_sha256: Option<String> = None;
+        let mut policy_sha256: Option<Vec<u8>> = None;
         let mut compiled_profile: Option<CompiledProfileCapture> = None;
         let mut sandboxed_after_apply: Option<bool> = None;
         let mut steps: Option<Vec<PWRunnerStepResult>> = None;
@@ -3345,7 +3350,7 @@ impl WireRead for PWRunnerRunResult {
                 7 => pid = Some(__pw_value.decode()?),
                 8 => bundle_id = Some(__pw_value.decode()?),
                 9 => policy_format = Some(__pw_value.decode()?),
-                10 => policy_sha256 = Some(__pw_value.decode()?),
+                10 => policy_sha256 = Some(__pw_value.bytes()?),
                 11 => compiled_profile = Some(__pw_value.decode()?),
                 12 => sandboxed_after_apply = Some(__pw_value.decode()?),
                 13 => steps = Some(__pw_value.decode()?),
@@ -3421,7 +3426,7 @@ impl Serialize for PWRunnerRunResult {
         map.serialize_entry("phases", &self.phases)?;
         map.serialize_entry("pid", &self.pid)?;
         if self.policy_format.is_some() { map.serialize_entry("policy_format", &self.policy_format)?; }
-        if self.policy_sha256.is_some() { map.serialize_entry("policy_sha256", &self.policy_sha256)?; }
+        if self.policy_sha256.is_some() { map.serialize_entry("policy_sha256", &self.policy_sha256.as_deref().map(crate::porcelain::Hex))?; }
         if self.preparation_failure.is_some() { map.serialize_entry("preparation_failure", &self.preparation_failure)?; }
         map.serialize_entry("rc", &self.rc)?;
         if self.reporting_failure.is_some() { map.serialize_entry("reporting_failure", &self.reporting_failure)?; }
@@ -4596,7 +4601,8 @@ impl Serialize for PWWorkerDiagnostic {
 #[cfg_attr(test, derive(Deserialize))]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct PWWorkerEvidence {
-    pub abi_identity: String,
+    #[cfg_attr(test, serde(rename = "abi_identity", deserialize_with = "crate::porcelain::hex_from_json"))]
+    pub abi_identity: Vec<u8>,
     pub progress: Option<PWWorkerProgress>,
     pub failure_publication: u32,
     pub failure_state: String,
@@ -4609,7 +4615,7 @@ impl WireRead for PWWorkerEvidence {
     const KIND: u8 = 6;
     fn read_payload(data: &[u8], depth: usize, budget: &std::cell::Cell<usize>) -> Result<Self, String> {
         let mut __pw_reader = RecordReader::new(data, 74, depth, budget)?;
-        let mut abi_identity: Option<String> = None;
+        let mut abi_identity: Option<Vec<u8>> = None;
         let mut progress: Option<PWWorkerProgress> = None;
         let mut failure_publication: Option<u32> = None;
         let mut failure_state: Option<String> = None;
@@ -4619,7 +4625,7 @@ impl WireRead for PWWorkerEvidence {
         let mut policy_read: Option<PWWorkerPolicyRead> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
-                1 => abi_identity = Some(__pw_value.decode()?),
+                1 => abi_identity = Some(__pw_value.bytes()?),
                 2 => progress = Some(__pw_value.decode()?),
                 3 => failure_publication = Some(__pw_value.decode()?),
                 4 => failure_state = Some(__pw_value.decode()?),
@@ -4645,7 +4651,7 @@ impl WireRead for PWWorkerEvidence {
 impl Serialize for PWWorkerEvidence {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("abi_identity", &self.abi_identity)?;
+        map.serialize_entry("abi_identity", &crate::porcelain::Hex(&self.abi_identity))?;
         map.serialize_entry("diagnostic", &self.diagnostic)?;
         if self.failure.is_some() { map.serialize_entry("failure", &self.failure)?; }
         map.serialize_entry("failure_publication", &self.failure_publication)?;

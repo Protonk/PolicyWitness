@@ -2,7 +2,7 @@
   "schema_version": 1,
   "versions": {
     "request_schema": 6,
-    "response_schema": 29,
+    "response_schema": 30,
     "controller_envelope": 14,
     "runner_protocol": 4
   }

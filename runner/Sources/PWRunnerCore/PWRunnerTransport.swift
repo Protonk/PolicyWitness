@@ -119,7 +119,7 @@ struct PWRunnerTransportError {
 struct PWRunnerControlObservation {
     // BEGIN GENERATED PORCELAIN PWRunnerControlObservation
     var bytes_received: Int
-    var sha256: String
+    var sha256: Data
     var status: String?
     var host_pid: Int?
     var host_instance: String?
@@ -128,7 +128,7 @@ struct PWRunnerControlObservation {
     // END GENERATED PORCELAIN PWRunnerControlObservation
     init(_ data: Data, admitted: PWRunnerControlReply? = nil) {
         bytes_received = data.count
-        sha256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        sha256 = Data(SHA256.hash(data: data))
         status = admitted?.status; host_pid = admitted?.host_pid; host_instance = admitted?.host_instance
         lease_ms = admitted?.lease_ms; reason = admitted?.reason
     }

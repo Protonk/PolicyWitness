@@ -30,7 +30,7 @@ private func equipmentFixture(_ body: (URL, ActorEquipmentCalls) throws -> Void)
     // They supply no live or packaged-signature acceptance credit.
     let code: (URL) -> ActorCodeInspection = { url in
         ActorCodeInspection(code: ActorSignedCode(path: url.resolvingSymlinksInPath().path,
-            cdhash: String(repeating: "a", count: 40), identifier: "controlled-worker", teamID: "TEAM",
+            cdhash: Data(repeating: 0xaa, count: 20), identifier: "controlled-worker", teamID: "TEAM",
             entitlements: [:], entitlementsXML: equipmentEmptyXML), verificationStatus: 0)
     }
     try body(root, ActorEquipmentCalls(inspectStatic: code, inspectLive: { _ in
@@ -49,7 +49,7 @@ func runActorEquipmentTests(_ tk: TestKit) {
             // are expected for these deliberately non-identity records.
             for unit in ["x", "\"", "\\", "\n", "é"] {
                 let text = String(repeating: unit, count: 32_768 / unit.utf8.count)
-                var binding = PWRunnerEquipmentBinding(binding_id: "", role: "", source: "",
+                var binding = PWRunnerEquipmentBinding(role: "", source: "",
                     implementation_identity: text, path: "", status: "")
                 func bounded(_ value: PWRunnerEquipmentBinding) -> Bool {
                     !pwRunnerEquipmentProblems(inventory: nil, bindings: [value], entitlements: [],
@@ -64,7 +64,7 @@ func runActorEquipmentTests(_ tk: TestKit) {
             var execution = PWRunnerEquipmentExecution(status: "", identifier: String(repeating: "é", count: 16_383),
                 native_observations: [PWRunnerEquipmentNativeObservation(operation: "é", attempted: false)], reason: nil)
             func problems(_ value: PWRunnerEquipmentExecution) -> [String] {
-                let actor = PWRunnerActorEquipment(requested: nil, resolved: "selected", binding_ref: "selected",
+                let actor = PWRunnerActorEquipment(requested: nil, resolved: "selected",
                     required_entitlements: [], execution: value)
                 return pwRunnerEquipmentProblems(inventory: nil, bindings: [], entitlements: [],
                     actors: [actor], actorIDs: ["A"], actorPIDs: [nil])
@@ -85,11 +85,13 @@ func runActorEquipmentTests(_ tk: TestKit) {
                 let request = [ActorEquipmentRequest(actorID: "A", index: 0, requested: nil, requiredEntitlements: [])]
                 let complete = ActorEquipmentPreparation.bind(bundleURL: root, actors: request, calls: calls)
                 try expectNil(complete.failure)
-                try expectEqual(complete.bindings.map { $0.binding_id }, ["selected", "unentitled"])
+                try expectEqual(complete.bindings.map { $0.role }, ["selected", "unentitled"])
+                try expectEqual(complete.bindings.map { $0.source }, ["packaged", "packaged"])
+                try expectEqual(complete.actors[0].binding_ref, 0)
                 try FileManager.default.removeItem(at: root.appendingPathComponent("Contents/MacOS/pw-probe-runner-unentitled"))
                 let missing = ActorEquipmentPreparation.bind(bundleURL: root, actors: request, calls: calls)
                 try expectEqual(missing.failure?.reason, "missing")
-                try expectEqual(missing.failure?.binding_ref, "unentitled")
+                try expectEqual(missing.failure?.binding_ref, 1)
                 try expectNil(missing.executablePaths)
                 try expectEqual(missing.bindings.first?.status, "bound")
             }
@@ -148,7 +150,9 @@ func runActorEquipmentTests(_ tk: TestKit) {
                 ], overrides: ["selected": fixture.path], calls: calls)
                 try expectNil(result.failure)
                 try expectEqual(result.bindings.count, 3)
-                try expectEqual(result.actors[0].binding_ref, "override-selected")
+                // The override row follows the two packaged rows; the actor names it by index.
+                try expectEqual(result.actors[0].binding_ref, 2)
+                try expectEqual(result.bindings.map { $0.role }, ["selected", "unentitled", "selected"])
                 try expectEqual(result.bindings.last?.source, "test_override")
                 try expectEqual(result.bindings.last?.implementation_identity, "unverified_fixture")
                 try expectNil(result.bindings.last?.expected_sha256)
@@ -355,7 +359,7 @@ func runActorEquipmentTests(_ tk: TestKit) {
                     ActorEquipmentRequest(actorID: "A", index: 0, requested: nil, requiredEntitlements: [])
                 ], calls: calls)
                 try expectEqual(result.failure?.reason, "worker_identity_mismatch")
-                try expectEqual(result.failure?.binding_ref, "selected")
+                try expectEqual(result.failure?.binding_ref, 0)
                 try expectEqual(result.bindings.map { $0.status }, ["refused", "bound"])
                 try expectNil(result.executablePaths)
             }
@@ -377,7 +381,7 @@ func runActorEquipmentTests(_ tk: TestKit) {
                         ActorEquipmentRequest(actorID: "A", index: 0, requested: "unentitled", requiredEntitlements: [])
                     ], calls: calls)
                     try expectEqual(result.failure?.reason, "worker_identity_mismatch", fault)
-                    try expectEqual(result.failure?.binding_ref, "unentitled", fault)
+                    try expectEqual(result.failure?.binding_ref, 1, fault)
                     try expectNil(result.executablePaths, fault)
                     try expectEqual(result.bindings.map { $0.status }, ["bound", "refused"])
                 }
@@ -409,7 +413,7 @@ func runActorEquipmentTests(_ tk: TestKit) {
                         ActorEquipmentRequest(actorID: "A", index: 0, requested: nil, requiredEntitlements: [])
                     ], calls: calls)
                     try expectEqual(result.failure?.reason, fault == "nonexecutable" ? "not_executable" : "not_regular", fault)
-                    try expectEqual(result.failure?.binding_ref, "selected", fault)
+                    try expectEqual(result.failure?.binding_ref, 0, fault)
                     try expectEqual(selectedInspections, 0, fault)
                     try expectEqual(result.bindings.map { $0.status }, ["refused", "bound"], fault)
                     try expectNil(result.executablePaths, fault)
@@ -542,7 +546,7 @@ func runActorEquipmentTests(_ tk: TestKit) {
                 try expectNil(good.failure)
                 exact.append(0x20); try exact.write(to: path)
                 try expectThrows({ _ = try ActorEquipmentSystem.readInventory(path) })
-                try expectThrows({ _ = try ActorEquipmentManifest.decode(exact, expectedIdentity: PWShmLayout.abiIdentityHex) })
+                try expectThrows({ _ = try ActorEquipmentManifest.decode(exact, expectedIdentity: Data(PWShmLayout.abiIdentity)) })
                 let refused = ActorEquipmentPreparation.bind(bundleURL: root, actors: [], calls: calls)
                 try expectEqual(refused.failure?.reason, "inspection_failed")
                 try expectTrue(refused.bindings.isEmpty)

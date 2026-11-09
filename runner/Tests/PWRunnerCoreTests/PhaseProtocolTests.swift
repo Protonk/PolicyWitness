@@ -17,7 +17,7 @@ private func phaseRun(_ phases: [PWRunnerPhase], overrides: PWRunnerTestOverride
                       validator: String? = nil, spawn: @escaping ValidatorSpawnCall = nativeValidatorSpawn) -> PWRunnerRunResult {
     CWorkerOrchestrator.run(parsed: PWRunnerRunSpec(specimen_id: "phases",
         policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
-        phases: phases, _test_overrides: overrides), policyHash: "test", bundleId: nil,
+        phases: phases, _test_overrides: overrides), policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
         workerExecutablePath: phaseEquipment("pw-probe-runner"),
         validatorExecutablePath: validator ?? phaseEquipment("sb_api_validator"), validatorSpawn: spawn)
 }
@@ -78,7 +78,7 @@ private func ordinaryPhaseFixture() -> PWRunnerRunResult {
     let value32 = PWWorkerReadiness(rc: 0)
     let value33 = PWWorkerDiagnostic(state: 0, status: "absent")
     let value34 = PWWorkerPolicyRead(bytes_expected: 110, bytes_received: 110)
-    let value35 = PWWorkerEvidence(abi_identity: "f4b1e49962cfcde77eca533542140f3679fad25d0d92e9694e9634f4b9bf4024", progress: value31, failure_publication: 0, failure_state: "absent", readiness: value32, diagnostic: value33, policy_read: value34)
+    let value35 = PWWorkerEvidence(abi_identity: ActorEquipmentSystem.digest("f4b1e49962cfcde77eca533542140f3679fad25d0d92e9694e9634f4b9bf4024", bytes: 32)!, progress: value31, failure_publication: 0, failure_state: "absent", readiness: value32, diagnostic: value33, policy_read: value34)
     let value36 = PWHostWait(budget_ms: 1000, elapsed_ms: 419, stop: "received", clock_fault: false)
     let value37 = PWHostWait(budget_ms: 120000, elapsed_ms: 17, stop: "done", excluded_ms: 9, clock_fault: false)
     let value38 = PWHostWait(budget_ms: 1000, elapsed_ms: 0, stop: "reaped_during_grace", clock_fault: false)
@@ -166,7 +166,7 @@ private func ordinaryPhaseFixture() -> PWRunnerRunResult {
     value77.association_issues = []
     value77.exit_grace_wait = value76
     let value78 = PWRunnerPhaseResult(phase_id: "p2", ordinal: 3, action_ids: ["after"], arrival_observed: true, completion_observed: true, collection_status: "collected", ordering: value74, validator_subprocess: value77)
-    let value79 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "M01", rc: 0, normalized_outcome: "finished", pid: 94337, bundle_id: "com.policywitness.policy-witness.PWRunner", policy_format: "sbpl", policy_sha256: "5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a", sandboxed_after_apply: true, steps: [value10, value20, value30], runner_subprocess: value63, phases: [value68, value73, value78])
+    let value79 = PWRunnerRunResult(schema_version: PWContract.responseSchema, specimen_id: "M01", rc: 0, normalized_outcome: "finished", pid: 94337, bundle_id: "com.policywitness.policy-witness.PWRunner", policy_format: "sbpl", policy_sha256: ActorEquipmentSystem.digest("5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a", bytes: 32)!, sandboxed_after_apply: true, steps: [value10, value20, value30], runner_subprocess: value63, phases: [value68, value73, value78])
     return value79
 }
 
@@ -454,7 +454,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                          PWRunnerPhase(phase_id: "later", actions: [.probe(phaseProbe("later", target.path, action: "read_fresh"))])],
                 _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 500))
             let start = ValidatorStartGate()
-            var reply = CWorkerOrchestrator.run(parsed: request, policyHash: "controlled-validator", bundleId: nil,
+            var reply = CWorkerOrchestrator.run(parsed: request, policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                 workerExecutablePath: phaseEquipment("pw-probe-runner"), validatorExecutablePath: fixture + ".validator",
                 validatorSpawn: { pid, path, actions, argv in
                     if !spawned.isEmpty { FileManager.default.createFile(atPath: gate, contents: Data()) }

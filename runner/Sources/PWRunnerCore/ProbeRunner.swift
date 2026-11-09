@@ -130,7 +130,7 @@ func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
 }
 
 func requestRefusalReply(parsed: PWRunnerRunSpec, failure: PWRunnerRequestFailure,
-                         bundleId: String?, policyHash: String? = nil) -> PWRunnerRunResult {
+                         bundleId: String?, policyHash: Data? = nil) -> PWRunnerRunResult {
     PWRunnerRunResult(specimen_id: parsed.specimen_id, run_kind: parsed.run_kind,
         rc: 1, normalized_outcome: NormalizedOutcome.badRequest, error: failure.description,
         pid: Int(getpid()), bundle_id: bundleId, policy_format: parsed.policy?.format,

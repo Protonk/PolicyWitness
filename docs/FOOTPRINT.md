@@ -28,8 +28,8 @@ the run they were transcribed from: run id `20261109T001724Z_1419c6c1`, output d
 `witness_contract/response_footprint`. Its artifact inventory identifies the
 signed binaries measured; its response receipts retain the samples, transported
 bytes, conditions and observer cost. Those binaries carried compiled-profile
-bytecode, rejected validator context and fresh-read content as base64 or
-hexadecimal text inside the frame; the tree's schema carries them as bytes, so
+bytecode, rejected validator context, fresh-read content and digests as base64
+or hexadecimal text inside the frame; the tree's schema carries them as bytes, so
 a rerun's host-reply and client-stdout totals differ for workloads containing
 them. The aggregate receipt is
 `suites/witness_contract/response_footprint/artifacts/response-footprint.json`;

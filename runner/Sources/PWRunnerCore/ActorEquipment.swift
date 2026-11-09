@@ -17,13 +17,14 @@ struct ActorEquipmentBindingFailure {
     var stage = "equipment"
     var code = "equipment_binding_refused"
     var actor_id: String?
-    var binding_ref: String?
+    /// Index of the refused row in the binding table, when one was produced.
+    var binding_ref: UInt32?
     var reason: String
 }
 
 struct ActorSignedCode {
     var path: String
-    var cdhash: String
+    var cdhash: Data
     var identifier: String
     var teamID: String?
     var entitlements: [String: Any]
@@ -73,14 +74,16 @@ struct ActorEquipmentSecurityCalls {
 struct ActorEquipmentManifest: Decodable {
     var schema_version: Int
     var runner_protocol: Int
-    var worker_identity: String
-    var unsigned_worker_sha256: String
+    // The inventory file spells digests as lowercase hexadecimal; they are held
+    // and reported as bytes.
+    var worker_identity: Data
+    var unsigned_worker_sha256: Data
     var workers: [Worker]
     struct Worker: Decodable {
         var role: String
         var relative_path: String
-        var sha256: String
-        var cdhash: String
+        var sha256: Data
+        var cdhash: Data
         var identifier: String
         var team_id: String?
         var entitlements_xml: String
@@ -92,8 +95,11 @@ struct ActorEquipmentManifest: Decodable {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             role = try c.decode(String.self, forKey: .role)
             relative_path = try c.decode(String.self, forKey: .relative_path)
-            sha256 = try c.decode(String.self, forKey: .sha256)
-            cdhash = try c.decode(String.self, forKey: .cdhash)
+            guard let hash = ActorEquipmentSystem.digest(try c.decode(String.self, forKey: .sha256), bytes: 32),
+                  let code = ActorEquipmentSystem.digest(try c.decode(String.self, forKey: .cdhash), bytes: 20) else {
+                throw ActorEquipmentProblem("invalid equipment inventory row")
+            }
+            sha256 = hash; cdhash = code
             identifier = try c.decode(String.self, forKey: .identifier)
             guard c.contains(.team_id) else { throw ActorEquipmentProblem("missing team_id") }
             team_id = try c.decodeIfPresent(String.self, forKey: .team_id)
@@ -108,23 +114,23 @@ struct ActorEquipmentManifest: Decodable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schema_version = try c.decode(Int.self, forKey: .schema_version)
         runner_protocol = try c.decode(Int.self, forKey: .runner_protocol)
-        worker_identity = try c.decode(String.self, forKey: .worker_identity)
-        unsigned_worker_sha256 = try c.decode(String.self, forKey: .unsigned_worker_sha256)
+        guard let identity = ActorEquipmentSystem.digest(try c.decode(String.self, forKey: .worker_identity), bytes: 32),
+              let unsigned = ActorEquipmentSystem.digest(try c.decode(String.self, forKey: .unsigned_worker_sha256), bytes: 32) else {
+            throw ActorEquipmentProblem("incompatible equipment inventory")
+        }
+        worker_identity = identity; unsigned_worker_sha256 = unsigned
         workers = try c.decode([Worker].self, forKey: .workers)
     }
-    static func decode(_ data: Data, expectedIdentity: String) throws -> ActorEquipmentManifest {
+    static func decode(_ data: Data, expectedIdentity: Data) throws -> ActorEquipmentManifest {
         guard data.count <= ActorEquipmentLimits.inventoryBytes else { throw ActorEquipmentProblem("inventory limit") }
         let value = try pwRunnerDecodeJSON(Self.self, from: data)
         guard value.schema_version == 1, value.runner_protocol == PWContract.runnerProtocol,
               value.worker_identity == expectedIdentity,
-              ActorEquipmentSystem.hex(value.worker_identity, count: 64),
-              ActorEquipmentSystem.hex(value.unsigned_worker_sha256, count: 64),
               value.workers.count == 2, Set(value.workers.map { $0.role }) == Set(ActorEquipmentPreparation.roles) else {
             throw ActorEquipmentProblem("incompatible equipment inventory")
         }
         for row in value.workers {
             guard row.relative_path == ActorEquipmentPreparation.relativePath(row.role),
-                  ActorEquipmentSystem.hex(row.sha256, count: 64), ActorEquipmentSystem.hex(row.cdhash, count: 40),
                   !row.identifier.isEmpty, row.identifier.utf8.count <= 255,
                   row.team_id.map({ !$0.isEmpty && $0.utf8.count <= 255 }) ?? true else {
                 throw ActorEquipmentProblem("invalid equipment inventory row")
@@ -142,8 +148,19 @@ private struct ActorEquipmentProblem: Error, CustomStringConvertible {
 }
 
 enum ActorEquipmentSystem {
-    static func hex(_ value: String, count: Int) -> Bool {
-        value.utf8.count == count && value.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
+    /// The bytes of a lowercase hexadecimal digest of exactly `bytes` bytes.
+    static func digest(_ text: String, bytes: Int) -> Data? {
+        let digits = Array(text.utf8)
+        guard digits.count == bytes * 2 else { return nil }
+        func nibble(_ c: UInt8) -> UInt8? {
+            (48...57).contains(c) ? c - 48 : (97...102).contains(c) ? c - 87 : nil
+        }
+        var out = Data(capacity: bytes)
+        for index in stride(from: 0, to: digits.count, by: 2) {
+            guard let high = nibble(digits[index]), let low = nibble(digits[index + 1]) else { return nil }
+            out.append(high << 4 | low)
+        }
+        return out
     }
     static func bounded(_ value: String, limit: Int = ActorEquipmentLimits.diagnosticBytes) -> String {
         var result = "", count = 0
@@ -183,11 +200,11 @@ enum ActorEquipmentSystem {
         guard let number = value as? NSNumber else { return false }
         return CFGetTypeID(number) == CFBooleanGetTypeID() && number.boolValue
     }
-    static func hash(_ url: URL) throws -> String {
+    static func hash(_ url: URL) throws -> Data {
         let file = try FileHandle(forReadingFrom: url); defer { try? file.close() }
         var digest = SHA256()
         while let bytes = try file.read(upToCount: 1_048_576), !bytes.isEmpty { digest.update(data: bytes) }
-        return digest.finalize().map { String(format: "%02x", $0) }.joined()
+        return Data(digest.finalize())
     }
     static func readInventory(_ url: URL) throws -> Data {
         let file = try FileHandle(forReadingFrom: url); defer { try? file.close() }
@@ -203,14 +220,13 @@ enum ActorEquipmentSystem {
         }
         guard let info = information as? [String: Any],
               let path = info[kSecCodeInfoMainExecutable as String] as? URL,
-              let hash = info[kSecCodeInfoUnique as String] as? Data,
+              let cdhash = info[kSecCodeInfoUnique as String] as? Data,
               let identifier = info[kSecCodeInfoIdentifier as String] as? String else {
             return ActorCodeInspection(reason: "signing_readback_failed",
                 error: PWRunnerEquipmentError(operation: "signing_information", message: "required signature metadata absent"))
         }
         let team = info[kSecCodeInfoTeamIdentifier as String] as? String
-        let cdhash = hash.map { String(format: "%02x", $0) }.joined()
-        guard hex(cdhash, count: 40), !identifier.isEmpty, identifier.utf8.count <= 255, !identifier.contains("\0"),
+        guard cdhash.count == 20, !identifier.isEmpty, identifier.utf8.count <= 255, !identifier.contains("\0"),
               path.path.utf8.count <= 1023,
               team.map({ !$0.isEmpty && $0.utf8.count <= 255 && !$0.contains("\0") }) ?? true else {
             return ActorCodeInspection(reason: "signing_readback_failed",
@@ -280,15 +296,16 @@ final class ActorEquipmentPreparation {
     private(set) var failure: ActorEquipmentBindingFailure?
     private let requests: [ActorEquipmentRequest]
     private let calls: ActorEquipmentCalls
-    private var signedBindings: [String: ActorSignedCode] = [:]
+    /// Inspected code by binding-table index.
+    private var signedBindings: [UInt32: ActorSignedCode] = [:]
+    private let overridden: Set<String>
 
     private init(bundleURL: URL, actors: [ActorEquipmentRequest], overrides: [String: String], calls: ActorEquipmentCalls) {
         inventory = PWRunnerEquipmentInventory(path: bundleURL.appendingPathComponent(Self.inventoryRelativePath).path)
-        requests = actors; self.calls = calls
+        requests = actors; self.calls = calls; overridden = Set(overrides.keys)
+        // An actor's binding is named by table index once its row exists.
         self.actors = actors.map {
-            let role = $0.requested ?? "selected"
-            return PWRunnerActorEquipment(requested: $0.requested, resolved: role,
-                binding_ref: overrides[role] == nil ? role : "override-" + role,
+            PWRunnerActorEquipment(requested: $0.requested, resolved: $0.requested ?? "selected",
                 required_entitlements: $0.requiredEntitlements)
         }
     }
@@ -298,7 +315,7 @@ final class ActorEquipmentPreparation {
         result.prepare(bundleURL: bundleURL, overrides: overrides)
         return result
     }
-    private func refuse(_ reason: String, actor: String? = nil, binding: String? = nil) {
+    private func refuse(_ reason: String, actor: String? = nil, binding: UInt32? = nil) {
         if failure == nil { failure = ActorEquipmentBindingFailure(actor_id: actor, binding_ref: binding, reason: reason) }
     }
     private func prepare(bundleURL: URL, overrides: [String: String]) {
@@ -329,8 +346,8 @@ final class ActorEquipmentPreparation {
         }
         let manifest: ActorEquipmentManifest
         do {
-            inventory.sha256 = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
-            manifest = try ActorEquipmentManifest.decode(bytes, expectedIdentity: PWShmLayout.abiIdentityHex)
+            inventory.sha256 = Data(SHA256.hash(data: bytes))
+            manifest = try ActorEquipmentManifest.decode(bytes, expectedIdentity: Data(PWShmLayout.abiIdentity))
             inventory.schema_version = manifest.schema_version; inventory.worker_identity = manifest.worker_identity
             inventory.unsigned_worker_sha256 = manifest.unsigned_worker_sha256; inventory.status = "verified"
         } catch {
@@ -347,18 +364,20 @@ final class ActorEquipmentPreparation {
             if let path = overrides[role] { bindOne(role: role, path: path, expected: nil, bundleURL: bundleURL, hostTeam: host.teamID) }
         }
         for index in requests.indices {
-            let reference = actors[index].binding_ref
-            guard let signed = signedBindings[reference] else { continue }
+            let role = actors[index].resolved, source = overridden.contains(role) ? "test_override" : "packaged"
+            actors[index].binding_ref = bindings.firstIndex { $0.role == role && $0.source == source }.map { UInt32($0) }
+            guard let reference = actors[index].binding_ref, let signed = signedBindings[reference] else { continue }
             let missing = requests[index].requiredEntitlements.filter { !ActorEquipmentSystem.granted(signed.entitlements[$0]) }
             actors[index].missing_requirements = missing
             actors[index].requirements_status = missing.isEmpty ? "satisfied" : "unsatisfied"
             if !missing.isEmpty { refuse("requirements_unsatisfied", actor: requests[index].actorID, binding: reference) }
         }
-        if failure == nil { executablePaths = actors.map { signedBindings[$0.binding_ref]!.path } }
+        if failure == nil { executablePaths = actors.map { signedBindings[$0.binding_ref!]!.path } }
     }
     private func bindOne(role: String, path: String, expected: ActorEquipmentManifest.Worker?, bundleURL: URL, hostTeam: String?) {
-        let id = expected == nil ? "override-" + role : role
-        var row = PWRunnerEquipmentBinding(binding_id: id, role: role, source: expected == nil ? "test_override" : "packaged",
+        // The row is appended on every exit, so this is its table index.
+        let id = UInt32(bindings.count)
+        var row = PWRunnerEquipmentBinding(role: role, source: expected == nil ? "test_override" : "packaged",
             implementation_identity: expected == nil ? "unverified_fixture" : "inventory_verified",
             relative_path: expected?.relative_path, path: path, expected_sha256: expected?.sha256, expected_cdhash: expected?.cdhash)
         defer { bindings.append(row); if let reason = row.reason { refuse(reason, binding: id) } }
@@ -380,15 +399,15 @@ final class ActorEquipmentPreparation {
         row.signature_osstatus = inspected.verificationStatus
         guard let signed = inspected.code, inspected.reason == nil else {
             if inspected.reason == "entitlements_unreadable" {
-                let entID = "binding-" + id; row.entitlements_ref = entID
-                entitlements.append(PWRunnerEquipmentEntitlements(entitlements_id: entID, source: "binding", binding_ref: id,
+                row.entitlements_ref = UInt32(entitlements.count)
+                entitlements.append(PWRunnerEquipmentEntitlements(source: "binding", binding_ref: id,
                     status: "failed", error: inspected.error ?? PWRunnerEquipmentError(operation: "worker_entitlements", message: "read-back unavailable")))
             }
             row.reason = inspected.reason ?? "signature_unreadable"; row.error = inspected.error; return
         }
         row.cdhash = signed.cdhash; row.identifier = signed.identifier; row.team_id = signed.teamID
-        let entID = "binding-" + id; row.entitlements_ref = entID
-        entitlements.append(PWRunnerEquipmentEntitlements(entitlements_id: entID, source: "binding", binding_ref: id,
+        row.entitlements_ref = UInt32(entitlements.count)
+        entitlements.append(PWRunnerEquipmentEntitlements(source: "binding", binding_ref: id,
             status: "observed", raw_plist: signed.entitlementsXML))
         if let expected {
             let expectedEntitlements = try? ActorEquipmentSystem.parseEntitlements(expected.entitlements_xml)
@@ -416,20 +435,21 @@ final class ActorEquipmentPreparation {
         guard let now = calls.clock(), deadlineNs.map({ now < $0 }) ?? true else { return failed("inspection_deadline") }
         let observed = calls.inspectLive(pid); execution.native_observations = observed.observations
         execution.observed_at_monotonic_ns = calls.clock()
+        // A launched actor has a bound row; without one nothing can be associated.
+        guard let binding = actors[actorIndex].binding_ref else { return failed("ownership_unresolved") }
         guard let actual = observed.code, observed.reason == nil else {
             if observed.observations.contains(where: { $0.operation == "signing_information" && $0.attempted }) {
-                let entID = "execution-\(actorIndex)"; execution.entitlements_ref = entID
-                entitlements.append(PWRunnerEquipmentEntitlements(entitlements_id: entID, source: "execution",
-                    binding_ref: actors[actorIndex].binding_ref, actor_id: requests[actorIndex].actorID,
+                execution.entitlements_ref = UInt32(entitlements.count)
+                entitlements.append(PWRunnerEquipmentEntitlements(source: "execution",
+                    binding_ref: binding, actor_id: requests[actorIndex].actorID,
                     status: "failed", error: observed.error ?? PWRunnerEquipmentError(operation: "signing_information", message: "read-back unavailable")))
             }
             return failed(observed.reason ?? "signing_readback_failed")
         }
         execution.path = actual.path; execution.cdhash = actual.cdhash
         execution.identifier = actual.identifier; execution.team_id = actual.teamID
-        let binding = actors[actorIndex].binding_ref
-        let entID = "execution-\(actorIndex)"; execution.entitlements_ref = entID
-        entitlements.append(PWRunnerEquipmentEntitlements(entitlements_id: entID, source: "execution", binding_ref: binding,
+        execution.entitlements_ref = UInt32(entitlements.count)
+        entitlements.append(PWRunnerEquipmentEntitlements(source: "execution", binding_ref: binding,
             actor_id: requests[actorIndex].actorID, status: "observed", raw_plist: actual.entitlementsXML))
         guard let expected = signedBindings[binding] else { return failed("ownership_unresolved") }
         guard actual.path == expected.path else { return failed("executable_mismatch", mismatch: true) }

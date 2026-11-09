@@ -87,7 +87,7 @@ def apparatus_complete(envelope, runner, spec, policies):
         assert equipment['requirements_status']=='satisfied'
         assert equipment['execution']['status']=='matched' and equipment['execution']['eligible']
         assert equipment['execution']['pid']==pids[name]
-        binding=by_id(runner['equipment_bindings'],'binding_id',equipment['binding_ref'])
+        binding=runner['equipment_bindings'][equipment['binding_ref']]
         assert binding['role']==requested and binding['source']=='packaged' and binding['implementation_identity']=='inventory_verified'
         sub = actor['subprocess']
         assert sub['reaped'] is True and sub['exit_code'] == 0 and sub['pid'] == pids[name], (name, sub)

@@ -70,7 +70,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                 let parsed = PWRunnerRunSpec(specimen_id: "label-admission",
                     policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
                     probe_plan: plan)
-                let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+                let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                     workerExecutablePath: "/nonexistent-worker", validatorExecutablePath: "/nonexistent-validator")
                 try expectEqual(result.normalized_outcome, NormalizedOutcome.badRequest, field)
                 try expectEqual(result.admission_failure?.field, field)
@@ -156,7 +156,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                 probe_plan: [queryStep("s000", operation: "sysctl-read", kind: "sysctl_name", value: value),
                              queryStep("s001")])
             var spawns = 0
-            let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+            let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                 workerExecutablePath: "/nonexistent-worker", validatorExecutablePath: "/nonexistent-validator",
                 validatorSpawn: { _, _, _, _ in spawns += 1; return 0 })
             try expectEqual(spawns, 0)
@@ -209,7 +209,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                     for j in fields.indices where j > i {
                         var parsed = spec(overrides: PWRunnerTestOverrides(worker_timeout_ms: 73))
                         fields[i].1(&parsed, rejected); fields[j].1(&parsed, rejected)
-                        let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+                        let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                             workerExecutablePath: "/nonexistent-worker", validatorExecutablePath: "/nonexistent-validator")
                         try expectEqual(result.normalized_outcome, NormalizedOutcome.badRequest)
                         try expectEqual(result.admission_failure?.field, fields[i].0)
@@ -222,7 +222,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                         // receipt covers prose diagnostics as well as named fields.
                         try expectNil(data.range(of: Data(rejected.utf8)), "\(fields[i].0)+\(fields[j].0)")
                         let serviceResult = admissionRefusalReply(parsed: parsed,
-                            refused: CWorkerOrchestrator.admissionFailure(for: parsed)!, bundleId: nil, policyHash: "fixture")
+                            refused: CWorkerOrchestrator.admissionFailure(for: parsed)!, bundleId: nil, policyHash: Data(repeating: 0xab, count: 32))
                         try expectEqual(pwRunnerPorcelainReplyData(serviceResult), data, "service and direct orchestration share refusal projection")
                     }
                 }
@@ -230,7 +230,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
         }
         tk.run("direct orchestration checks worker identity before query diagnostics") {
             var step = queryStep(String(repeating: "i", count: 32_768), operation: String(repeating: "o", count: 128))
-            let result = CWorkerOrchestrator.run(parsed: spec(plan: [step]), policyHash: "fixture", bundleId: nil,
+            let result = CWorkerOrchestrator.run(parsed: spec(plan: [step]), policyHash: Data(repeating: 0xab, count: 32), bundleId: nil,
                 workerExecutablePath: "/nonexistent-worker", validatorExecutablePath: "/nonexistent-validator")
             try expectEqual(result.admission_failure?.field, "step_id")
             try expectNil(result.admission_failure?.step_id)

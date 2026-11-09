@@ -15,13 +15,13 @@ enum PolicyHashError: Error, CustomStringConvertible {
     }
 }
 
-func computePolicyHash(_ policy: PWRunnerPolicySpec) throws -> String {
+func computePolicyHash(_ policy: PWRunnerPolicySpec) throws -> Data {
     switch policy.format {
     case PWRunnerWire.policyFormatSbpl:
         guard let src = policy.sbpl_source else {
             throw PolicyHashError.missingField("sbpl_source")
         }
-        return sha256Hex(Data(src.utf8))
+        return sha256Digest(Data(src.utf8))
     default:
         throw PolicyHashError.missingField("format (expected sbpl)")
     }

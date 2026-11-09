@@ -212,7 +212,7 @@ func runActorPlanTests(_ tk: TestKit) {
             let absentBundle = FileManager.default.temporaryDirectory.appendingPathComponent("pw-no-equipment-" + UUID().uuidString)
             for invalid in malformed {
                 let reply = CWorkerOrchestrator.run(admitted: AdmittedSpecimen(request: parsed, actorPlan: invalid),
-                    policyHash: "", bundleId: "test", workerExecutablePath: "/unused-worker",
+                    policyHash: Data(), bundleId: "test", workerExecutablePath: "/unused-worker",
                     validatorExecutablePath: "/unused-validator", equipmentBundleURL: absentBundle)
                 try expectEqual(reply.preparation_failure?.stage, "resolved_plan")
                 try expectEqual(reply.preparation_failure?.code, "inconsistent_assignment")

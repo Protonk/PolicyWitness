@@ -378,6 +378,10 @@ fn decode_hex(text: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 #[cfg(test)]
+pub fn hex_from_json<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
+    decode_hex(&String::deserialize(d)?).map_err(serde::de::Error::custom)
+}
+#[cfg(test)]
 pub fn optional_hex_from_json<'de, D: serde::Deserializer<'de>>(
     d: D,
 ) -> Result<Option<Vec<u8>>, D::Error> {

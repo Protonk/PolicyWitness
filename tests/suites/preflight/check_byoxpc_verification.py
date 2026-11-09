@@ -213,7 +213,7 @@ def main(app, out, pw):
                     assert baseline['inventory']['status'] == 'verified' and baseline['inventory']['seal_osstatus'] == 0, baseline
                     assert 'failure_reason' not in baseline and len(baseline['executable_paths']) == 1, baseline
                     assert Path(baseline['executable_paths'][0]).samefile(bundle / HELPERS['worker']), baseline
-                    assert {r['binding_id']: r['status'] for r in baseline['bindings']} == {'selected': 'bound', 'unentitled': 'bound'}, baseline
+                    assert [(r['role'], r['source'], r['status']) for r in baseline['bindings']] == [('selected', 'packaged', 'bound'), ('unentitled', 'packaged', 'bound')], baseline
                 equipment = json.loads(original_inventory)
                 rows_by_role = {row['role']: row for row in equipment['workers']}
                 selected_row = rows_by_role['selected']
