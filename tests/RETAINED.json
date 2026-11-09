@@ -10,18 +10,18 @@
       "release": "v0.3.4"
     },
     {
+      "path": "runs/json-cleanup-default-01",
+      "run_id": "20261109T011114Z_e6cc7742",
+      "source": "723661bc28d60ad79b7bb5f4113d939b6f09a112",
+      "app_inventory": "artifact-integrity/before.json",
+      "reason": "Current signed app acceptance after obsolete JSON machinery cleanup: all 225 default cases passed with zero skips, unrun cases, harness errors or system sleep; inspected app unchanged. json-cleanup/index.json preserves the identified 10-case final documentation run at b07a3f55 and the unchanged previous complementary adoption run, with verified archive/file hashes and original ownership records."
+    },
+    {
       "path": "runs/porcelain-adoption-acceptance-b",
       "run_id": "20261109T001724Z_1419c6c1",
       "source": "3c6f9b957b0be7cb905dbc498ee577d8b96ab5d5",
       "app_inventory": "artifact-integrity/before.json",
-      "reason": "Typed-response adoption: porcelain-adoption/acceptance.json records 236 unique passing credits (225 default plus 11 affected controls) across b, c and the archived documentation run. Original b remains 233 pass / 4 fail: two fixture failures receive explicit replacement credits; unrelated pause qualification and absent ARM gate remain failures without adoption credit. Signed app at 2d5080d7 is unchanged. Prior-index preserves historical footprint/wait archives and contrary exploration observations with original identities/hashes; copies relocate no cleanup ownership."
-    },
-    {
-      "path": "runs/porcelain-adoption-replacement-c",
-      "run_id": "20261109T004128Z_7c2f67dc",
-      "source": "90f586ef9265102ea817b5aadb6fb459bb94ed9f",
-      "app_inventory": "artifact-integrity/before.json",
-      "reason": "Three passing replacement/additional cases: blackbox checker, reservation/no-replay and registry recovery; signed app unchanged, owned cleanup verified, no sleep or harness errors. porcelain-closeout/archive-index.json retains the complete identified 10-case final source/documentation run at e8b68bb5. Original credits and source snapshots remain explicit in the base acceptance index."
+      "reason": "Historical typed-response adoption, contrary exploration observations, and nested footprint/worker-wait evidence cited by records/FOOTPRINT-OUTFLOW.md, with original identities and hashes. Current default acceptance is json-cleanup-default-01; its json-cleanup/index.json locates the unchanged complementary porcelain-adoption-replacement-c archive. No current-build credit is claimed from these historical runs."
     }
   ]
 }
