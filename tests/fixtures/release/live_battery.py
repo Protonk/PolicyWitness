@@ -16,6 +16,7 @@ import notarize
 import release_accept
 import release_commands
 import retention
+import run_ownership
 from tools import Tools
 
 
@@ -46,7 +47,7 @@ def check(archive, out):
             assert command == ['bash', str(ROOT / 'tests/run.sh')], command
         return release_commands.command(directory, argv, **kwargs)
 
-    with retention.acceptance_output(ROOT, out):
+    with run_ownership.acceptance_output(ROOT, out, lambda: retention.protected_paths(ROOT)):
         submission = out / 'controlled-notarization'
         submission.mkdir()
         assert notarize.submit(archive, 'unused-fixture-profile', submission,
@@ -56,7 +57,7 @@ def check(archive, out):
             ok=result == 0, archive_sha256=before, calls=calls,
             controlled=['notarization', 'staple-validation', 'gatekeeper']))
         assert result == 0, (out / 'acceptance.json').read_text()
-        run = retention.read_object(out / 'tests/run.json')
+        run = run_ownership.read_object(out / 'tests/run.json')
         assert run['plan']['selection'] == dict(mode='default', cases=[], suites=[]), run['plan']['selection']
         assert run['ok'] and run['completion']['selected'] == run['completion']['completed'] > 0
         assert run['completion']['skipped'] == run['completion']['unrun'] == 0
@@ -65,7 +66,7 @@ def check(archive, out):
         # Repeat the archive binding's independent extraction, including modes.
         from release_archive import extracted_final
         with extracted_final(archive) as extracted:
-            assert artifact.inventory(extracted) == retention.read_object(out / 'tests/artifact-integrity/before.json')
+            assert artifact.inventory(extracted) == run_ownership.read_object(out / 'tests/artifact-integrity/before.json')
     print(json.dumps(dict(acceptance=str(out), run_id=run['run_id'], completion=run['completion'])))
 
 

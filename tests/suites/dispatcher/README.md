@@ -185,49 +185,31 @@ and `controls.json` remain in artifacts for inspection.
 
 ## Retention controls
 
-`retention_controls` uses independent fixture checkouts and execution receipts.
-It reuses `artifact.inventory` to compare retained files, modes, symlink targets
-and empty directories. It checks retained siblings and overlap in all directions,
-absent local retained directories, invalid/unreadable indexes, redirected paths,
-completed failed runs, interrupted and ambiguous replacement refusals, and
-read-only help/list/invalid requests. A case receipt observes that `owner.json`
-already exists when execution starts.
+`retention_controls` invokes the public dispatcher in disposable repositories.
+Independent case receipts establish that ownership precedes execution.
+Completed passing and failed output can be replaced; interrupted, ambiguous
+and unmanaged output require a fresh directory or ordinary pruning first.
+Symlink redirects and lexical path escapes are refused.
 
-Held executions prove competing operations fail even for another output path,
-independent checkouts can execute, and a killed dispatcher's case keeps the OS
-lock it was passed until the case is stopped, after which the lock is free and
-no run completion is invented. A second scenario kills the dispatcher and then
-the case process while the case's grandchild runs: the lock stays held until
-the grandchild exits, and the same scenario with a case that drops the
-descriptor (Python's default for its children) observes a free lock, which
-the control must reject. Tests inspect the stable lock inode and retain
-raw command output and receipts. The lock file must never be unlinked, including
-by cleanup: otherwise a second inode could admit a competing operation.
+Held executions prove that competing operations fail even for different output
+paths, independent checkouts can execute, and a killed dispatcher's case keeps
+its inherited lock until exit. A grandchild extends that lifetime after both
+dispatcher and case are killed; a wrapper that drops the descriptor fails the
+same control. Tests inspect the stable lock inode and independent processes.
 
-See [the output contract](../../README.md#retention-ownership-and-execution-locking)
-for the committed index fields, terminal ownership checks, default
-`tests/out/runs/default`, direct-script fallback and release-acceptance output.
+Pruning controls exercise the public preview/apply commands and Makefile
+routing. Preview writes nothing and reports a held checkout lock. Ordinary
+apply removes inactive completed, failed, interrupted and malformed-completion
+runs, including output named by an obsolete index or containing a keep marker.
+Missing or changed ownership and redirects remain blocked and byte-preserved.
+Ownership changes after preview are rechecked. Invalid selector combinations,
+removed options and invalid `APPLY` values refuse before delegation.
 
-Pruning uses these same retention and ownership checks. `--prune` previews a
-read-only snapshot; `--prune --apply` revalidates and deletes eligible completed
-runs under the lock. `--prune --apply --unfinished <name>` is the deliberate
-cleanup path for one interrupted/ambiguous managed run after inspection.
-Selection/prune combinations and unfinished removal of retained, completed or
-unmanaged output are rejected. `make prune` delegates to preview; `make prune APPLY=1` delegates to apply.
-Every other supplied `APPLY` value refuses, and there is no `clean` target.
-
-Preview briefly probes the same nonblocking lock before classification. A
-simultaneous execution can receive checkout-busy from that probe and must be
-retried after preview finishes. This safe contention window is intentional;
-preview's busy observation is a snapshot, not a reservation or readiness promise.
-
-Controls retain independent execution receipts and verify preview/apply changes,
-completed failed runs, all keep dispositions, preview under a held lock,
-`--unfinished` against each disposition, invalid indexes, retained ancestors and
-descendants, symlink redirects, lock contention, and Makefile preview/apply preservation and refusal before delegation.
-An actual directory-permission restriction forces unlink failure; the test
-checks a nonzero apply exit, the reported error and the remaining inventory.
-Standalone files and release acceptance output survive every cleanup operation.
+Release archive protection, overlap checks, numeric window selection, handoff
+binding and quarantine recovery have integrated controls in
+[preflight](../preflight/README.md). The
+[output contract](../../README.md#retention-ownership-and-execution-locking)
+describes the common policy and its ownership rules.
 
 `pytest_controls` is an opt-in control of the exec-family integration. Its external
 native peer, kernel exit observations and lock inode checks are independent of

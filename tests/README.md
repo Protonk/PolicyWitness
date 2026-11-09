@@ -20,7 +20,7 @@ choose checks, change tests, evaluate evidence and clean up output.
 | [lib/](lib/) | Shared dispatch, capture, validation, artifact and cleanup helpers. |
 | [COVERAGE.md](COVERAGE.md) and [FAILURE-PROPAGATION-CONTRACT.md](FAILURE-PROPAGATION-CONTRACT.md) | Outcome coverage and evidence ownership. |
 | [CHANGE-VERIFICATION.md](CHANGE-VERIFICATION.md) | Verification routes, control applicability, evidence limits and execution considerations. |
-| [RETAINED.json](RETAINED.json) | Committed retention index, outside disposable output. |
+| [retention.py](lib/retention.py) | Central release window, derived protection and resumable pruning. |
 | `out/` | Local run and release-acceptance evidence, including cleanup staging. |
 
 Related docs:
@@ -162,22 +162,18 @@ The catalog selects BYOXPC runner contexts.
 
 ## Retention, ownership and execution locking
 
-`tests/RETAINED.json` is the committed retention index, outside disposable output.
-It has `schema_version: 1` and a `runs` array. Each entry records `path` relative
-to `tests/out`, `run_id`, a nonempty `reason`, `source` (the full tested commit
-hash, or null when unknown), and `app_inventory` (a run-relative evidence path,
-or null when unavailable). Paths stay protected even when their directories are
-absent locally. A missing, malformed or unreadable index prevents replacement.
-Targets equal to, containing or inside a retained path are refused before any
-output is changed. Symlink redirects and path escapes are rejected.
+`tests/lib/retention.py` keeps the four newest complete local release archives
+and only the newest release's unpacked acceptance directory, including its
+nested battery. Protection comes from archive records, plus accepted unarchived
+attempts bound to the current final ZIP. There are no manual pins or retention
+settings. The archive root is this checkout's `dist/archive/`; custom `DIST_DIR`
+remains a build/test setting and is refused for release operations.
 
-An optional `release` field marks a direct managed run or acceptance directory
-for release-checkpoint cleanup: a `v<major>.<minor>.<patch>` value identifies its
-release. An omitted or null value explicitly pins the entry. The archive helper
-marks both the release battery and acceptance for expiration at a later checkpoint.
-Ordinary pruning protects all indexed entries, regardless of this field.
-Archive helpers replace the validated index atomically while holding the
-checkout lock.
+Targets equal to, containing or inside protected acceptance are refused before
+replacement. Missing working acceptance is reported, but its absent path is not
+reserved. A different owner at an existing recorded path is a refusal. Invalid
+archive records never become an empty protection set. Symlink redirects and
+path escapes are rejected.
 
 The dispatcher writes `owner.json` first, with its run ID, resolved output path
 and start time. Only a matching, valid terminal `run.json` establishes completed
@@ -185,7 +181,7 @@ output. Failed cases and ordinary Ctrl-C cancellation still produce terminal
 records and are disposable when unretained. A missing terminal record leaves an
 interrupted run; malformed or inconsistent evidence leaves ambiguous output.
 Nonempty output without ownership is unmanaged. Replacement refuses all three.
-The explicit unfinished-prune command below handles owned unfinished output.
+Ordinary pruning below removes inactive owned output regardless of completion.
 Placement under `runs/` alone does not establish ownership. Planning refusals exit 2.
 
 After read-only planning, execution takes an OS-held advisory lock on
@@ -244,7 +240,7 @@ Cargo or Swift command is local debugging of the crate or package under its
 own tool's rules: Cargo skips the two `#[ignore]` tests that only `runner_unit`
 runs, and neither command is a run of any catalog case or produces a
 `run.json`. Release acceptance, the
-battery, archiving and rotation each take the lock in turn; `make release`
+battery, archiving, publishing and pruning each take the lock in turn; `make release`
 holds no outer lock. Separate worktrees have independent locks. Help and
 `--list` remain available while a build or an execution holds the lock.
 
@@ -255,73 +251,55 @@ keeps unique directories under `tests/out/release-acceptance/run-*`; its nested
 `tests` output passes the same dispatcher checks. An outer `owner.json` and
 `acceptance.lock` protect extraction, tests and finalization as one lifetime;
 process exit releases the lock, and normal return records the completion time.
-Passing acceptance prints a suggested index entry.
+The archive records the acceptance identity and supplies its protection.
 
 ## Pruning disposable output
 
 ```sh
-tests/run.sh --prune
-tests/run.sh --prune --apply
-# After inspecting an interrupted or ambiguous managed run:
-tests/run.sh --prune --apply --unfinished <name>
 make prune
 make prune APPLY=1
 ```
 
-Preview prints a read-only JSON snapshot with `delete`, `keep: retained`,
-`keep: interrupted`, `keep: ambiguous`, and `keep: unmanaged` dispositions.
-It does not create a lock file or hold the checkout lock while classifying. If
-execution holds the lock, `checkout_busy` is true and runs without a terminal
-record are labeled `keep: active or interrupted`.
+These delegate to `tests/run.sh --prune` and `tests/run.sh --prune --apply`.
+Preview is read-only and reports the kept archive set, protected acceptance,
+eligible paths and blockers. It creates no lock file; it probes the stable
+checkout lock and holds it during classification if available. A busy checkout
+is reported and prevents classifying working runs as inactive. Apply reloads
+identities and inventories under that lock.
 
-Preview briefly takes and releases the same nonblocking lock to observe
-contention. An execution starting during that probe can receive checkout-busy
-and exit 2. The reported busy state is a snapshot and can change
-before classification or a later apply operation.
+Apply removes unprotected managed run and acceptance directories once inactive
+and free of resource-cleanup obligations. Completed failures, interrupted runs
+and malformed completion summaries are equally disposable; valid ownership is
+required independently of completion. Active acceptance has its own lifetime
+lock. Unknown ownership, redirects, unresolved pytest resources and pending
+BYOXPC cleanup block deletion and are reported. After those obligations clear,
+ordinary pruning handles the output. There is no unfinished-run selector, age
+cutoff, newest-development exception or keep list. Standalone files and unknown
+output are reported without following redirects or inventing ownership.
 
-Apply takes the checkout lock and re-evaluates eligibility. It removes only
-completed, unretained managed directories directly under `tests/out/runs/`.
-Failed cases and terminal Ctrl-C runs remain eligible; crashed runs lacking a
-terminal record remain available for inspection. `--unfinished <name>` explicitly
-removes one interrupted or ambiguous run with valid ownership after the same
-retained-overlap checks. It rejects completed, retained, unmanaged, redirected,
-or missing targets. This is the supported way to deliberately remove unfinished
-output; it preserves serialization with other mutating operations.
+The same operation runs after successful release archival. It retains the four
+newest complete archives in numeric version order and removes expired archives,
+their positively linked attempt copies and `.archived` pointers. Surviving
+archive bytes are unchanged. Unassociated attempt material is reported for
+inspection. Failed or incomplete releases cannot advance the window. Git tags
+and published assets are outside cleanup.
 
-Apply reports actual `removed` paths and `failures`; a failed deletion exits 1
-and reports the surviving path. Invalid requests, invalid indexes and checkout
-contention exit 2. `--apply` requires `--prune`, `--unfinished` also requires
-`--apply`, and pruning cannot be combined with selection or `--list`.
+A transaction stages exact inventoried targets under `tests/out/.retention/`
+before deleting them. Its journal stays with its quarantine until completion;
+it is then removed, and stdout reports the result. Cross-filesystem staging is
+refused. Rerun `make prune APPLY=1` to resume an interruption; resumption checks
+remaining bytes and preserves replacements at original paths. It finishes the
+existing transaction without also sweeping newly created output. A later call
+plans afresh. Old unfinished rotation journals or quarantine block migration.
 
-Standalone files anywhere in `tests/out`, including inventory JSON files, are
-preserved. Output outside `runs/`, including release acceptance, is reported as
-unmanaged and kept. Symlink redirects are never traversed or deleted.
-`make prune` delegates to the preview command; `make prune APPLY=1` delegates
-to `tests/run.sh --prune --apply` and follows exactly these rules. Any other
-supplied `APPLY` value, including an empty value, refuses before the pruner
-runs. Release acceptance, retained and unfinished evidence stay protected.
-
-Successful release packaging invokes `tests/lib/release_rotate.py` once, after
-verifying the new archive. It keeps that release's working acceptance and
-battery plus the newest completed local output, including failures; completion
-timestamps determine newest and ties are kept. Other owned run and acceptance
-directories can be removed, including interrupted or ambiguous output started
-before the release battery. Active acceptance, newer unfinished work, explicit
-pins, unknown ownership and pending external-runner cleanup remain protected.
-Older marked release entries are retired from the index, including absent ones.
-
-Fresh test runs never trigger cleanup of other directories. There is no schedule,
-age threshold, size threshold or off-machine backup requirement. Output may
-accumulate throughout a refactor until the next successful release packaging.
-The ordinary explicit pruner above retains its separate, more conservative
-ownership rules and does not select a newest run to keep.
-
-The durable cleanup journal lives at `dist/archive/<tag>/evidence/rotation.json`;
-staged deletions live under `tests/out/.release-rotation/`, which ordinary
-pruning preserves. Reapplying the same archived release resumes the transaction;
-completed journals are no-ops. [The release procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup)
-describes recovery.
-Scratch contents follow [.tmp/AGENTS.md](../.tmp/AGENTS.md) and are outside this operation.
+Blocked paths produce a nonzero apply result; invalid requests, unreadable
+release inventories and checkout contention are refusals. Pruning cannot be
+combined with test selection or `--list`, and `--apply` requires `--prune`.
+`make prune` rejects every supplied `APPLY` value other than `1` before invoking
+the dispatcher. Ordinary tests never trigger a sweep. Scratch follows
+[.tmp/AGENTS.md](../.tmp/AGENTS.md), outside this operation. The
+[release procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup)
+describes archive verification and the temporary historical storage inspector.
 
 ## Tiers
 
@@ -697,15 +675,14 @@ selected case within an already admitted run. Proven group absence
 and revoked launch authority allow unrelated execution while unresolved isolated
 cleanup protects only that run's output. Closure leaves the registry history and
 portable ownership receipt intact. Pruning removes closed registry records only
-after their unpinned output is eligible. Recovery audit files preserve before/after
+after their unprotected output is eligible. Recovery audit files preserve before/after
 identities and unresolved reasons. Builds share this admission check.
 
 Release acceptance captures the source/selection evidence contract before the
 battery starts. New family evidence, including the terminal ownership receipt,
 is required independently of optional fields in the result. Portable schema 3
-bundles are checked against the release's independently retained contract; older
-schema 2 bundles remain readable as historical transport evidence. Release
-verification additionally requires a positively identified historical producer
-source (checked against ZIP provenance) when no new contract exists; deleting
-the declaration and version fields does not establish historical provenance. A new acceptance
-cannot become legacy merely by deleting its family declaration or reference.
+bundles are checked against the contract captured in the release record. Missing
+contracts and older bundle formats are refused. A separate temporary storage
+inspector identifies the remaining schema-1 archives for retention; it cannot
+establish acceptance or authorize publication. Deleting a family declaration or
+reference cannot remove its independently captured obligation.

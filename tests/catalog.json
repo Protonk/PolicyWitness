@@ -135,7 +135,7 @@
           "requires": [
             "clang"
           ],
-          "description": "Release cleanup keeps the latest release and newest local output, protects active and recovery work, and resumes interrupted deletion"
+          "description": "The four-release window and current acceptance protection share resumable pruning with inactive managed output"
         }
       ]
     },
@@ -264,7 +264,7 @@
         },
         {
           "id": "retention_controls",
-          "description": "Retained inventories, managed run ownership and checkout serialization protect execution evidence"
+          "description": "Derived release protection, managed ownership and checkout serialization govern output replacement and pruning"
         },
         {
           "id": "pytest_controls",

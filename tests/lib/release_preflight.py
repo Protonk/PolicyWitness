@@ -1,8 +1,8 @@
 """Check that HEAD is a releasable source state and report the stamp build.sh will use.
 
 A release build comes from a clean tree at an annotated v<major>.<minor>.<patch>
-tag that the remote either lacks or holds identically, for a version that has no
-archive yet. `build.sh` derives the version it stamps from the nearest `v*` tag,
+tag that the remote either lacks or holds identically, for a version newer than
+the newest complete local archive. `build.sh` derives its version from the nearest `v*` tag,
 so building before tagging notarizes a build stamped with the previous version.
 --report prints the same findings as warnings and exits 0, so a rehearsal
 notarization still records what it is stamping.
@@ -14,6 +14,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+
+import retention
 
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE_TAG = re.compile(r'v\d+\.\d+\.\d+')
@@ -128,7 +130,7 @@ def inspect_baseline(root, tag):
 
 def inspect(root, *, remote='origin', dist='dist'):
     """Return (stamp, problems). The stamp mirrors build.sh; problems are release refusals."""
-    root = Path(root)
+    root = Path(root).resolve()
     describe = git(root, 'describe', '--tags', '--match', 'v[0-9]*', '--always', '--dirty')
     match = re.match(r'v(\d+\.\d+\.\d+)', describe)
     stamp = dict(head=git(root, 'rev-parse', 'HEAD'), describe=describe,
@@ -182,10 +184,33 @@ def inspect(root, *, remote='origin', dist='dist'):
             problems.append('contract surfaces remain unreleased')
     except (ValueError, OSError) as error:
         problems.append(f'contract stamps: {error}')
-    archive = root / dist / 'archive' / tag
-    if archive.exists():
-        problems.append(f'{archive} already exists; a version is released once')
+    try:
+        distribution = retention.distribution(root, dist)
+        archive = distribution / 'archive' / tag
+        if archive.exists():
+            problems.append(f'{archive} already exists; a version is released once')
+        retention.require_new_release(root, tag)
+        stamp['footprint'] = footprint_provenance(root)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        problems.append(str(exc))
     return stamp, problems
+
+
+def footprint_provenance(root):
+    found = retention.archives(root)
+    if not found:
+        return dict(status='no local archive; comparison unavailable')
+    latest = found[-1]
+    record = latest['record']
+    text = (root / 'docs/FOOTPRINT.md').read_text()
+    match = re.search(r'^## Provenance of measured rows\n(.*?)(?=^## |\Z)', text, re.M | re.S)
+    section = match.group(1) if match else ''
+    required = ('dist/archive/' + record['tag'] + '/evidence/test-runs/runs.tar.gz',
+                '`' + record['battery']['run_id'] + '`',
+                '`' + latest['manifest']['runs']['acceptance']['retained']['run_id'] + '`')
+    if any(value not in section for value in required):
+        raise ValueError('FOOTPRINT measured-row provenance must name the newest local archive and its acceptance/battery identities')
+    return dict(status='current', release=record['tag'], battery=record['battery']['run_id'])
 
 
 def main(argv=None):

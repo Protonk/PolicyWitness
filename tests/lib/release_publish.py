@@ -17,6 +17,8 @@ import shutil
 
 from artifact import digest
 import release_runs
+import retention
+import run_ownership
 
 ROOT = Path(__file__).resolve().parents[2]
 VIEW_FIELDS = 'assets,isDraft,publishedAt,tagName,targetCommitish,url'
@@ -35,7 +37,16 @@ def call(argv, *, cwd=None):
 
 
 def publish(archive_dir, *, notes=None, remote='origin', root=ROOT):
-    archive_dir, root = Path(archive_dir).resolve(), Path(root)
+    root = Path(root).resolve()
+    with run_ownership.checkout_lock(root):
+        return publish_locked(archive_dir, notes=notes, remote=remote, root=root)
+
+
+def publish_locked(archive_dir, *, notes, remote, root):
+    root = Path(root).resolve()
+    archive_dir = retention.real(archive_dir)
+    if archive_dir.parent != retention.distribution(root) / 'archive':
+        raise ValueError('publication requires the checkout distribution root dist/archive/')
     record_path = archive_dir / 'release.json'
     record = json.loads(record_path.read_text())
     release_runs.verify_release(archive_dir)

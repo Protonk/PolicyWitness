@@ -80,7 +80,7 @@ ownership and cleanup. The default battery is `tests/run.sh` or `make test`;
 Never unlink `tests/.checkout.lock`; builds and test executions in one
 checkout share it and run one at a time, so use a second worktree for
 concurrent work. Do not bypass the helpers to remove protected evidence or
-resource-cleanup records. Preserve interrupted release rotation and follow
+resource-cleanup records. Preserve interrupted retention quarantine and follow
 the [test cleanup guidance](tests/AGENTS.md#preserve-and-clean-up-output).
 
 ## Sandboxed automation harnesses

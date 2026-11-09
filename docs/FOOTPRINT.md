@@ -45,8 +45,8 @@ every file's hash, under `acceptance/tests/suites/`:
 
 Release archives are local, ignored files, so the receipts exist only in a
 checkout that kept the archive. The working copy of the acceptance stays under
-`tests/out/release-acceptance/`, listed in
-[tests/RETAINED.json](../tests/RETAINED.json), until a later release's cleanup.
+`tests/out/release-acceptance/` while it belongs to the newest archived release.
+The central policy retains the four newest complete local archives.
 These observations do not establish a performance change against another run.
 
 The generator and the footprint drift case verify the manifest's structure,
@@ -55,8 +55,10 @@ row's numbers agree with a receipt. A row changes only when someone reruns its
 case and transcribes the new receipt. The three measurement cases are default
 battery members, so each release's acceptance battery produces receipts for
 every measured row on the released binaries; the
-[release procedure](SIGNING.md#release-procedure) transcribes them after
-packaging and names that release archive here.
+[release procedure](SIGNING.md#release-procedure) transcribes them during
+preparation of the next release and names their archive here. Preflight checks
+that this provenance cites the newest local archive and its acceptance/battery
+identities; that check does not compare measured values with receipts.
 
 ## Using the rows as a baseline
 

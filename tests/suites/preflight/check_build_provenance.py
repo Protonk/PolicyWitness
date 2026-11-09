@@ -2804,7 +2804,8 @@ class RecordTests(unittest.TestCase):
 
     def test_the_archive_reader_validates_the_record_and_binds_its_outputs(self):
         valid = self.app('archive')
-        record = self.partial(json.loads((valid / prov.RECORD_PATH).read_text()))
+        full = json.loads((valid / prov.RECORD_PATH).read_text())
+        record = self.partial(copy.deepcopy(full))
 
         def archive(record, members=None, name='release.zip'):
             import zipfile
@@ -2861,6 +2862,23 @@ class RecordTests(unittest.TestCase):
         next(o for o in rehashed['outputs'] if o['rel_path'] == 'Contents/MacOS/sbpl-check')['sha256'] = hashlib.sha256(fat.read_bytes()).hexdigest()
         with self.assertRaisesRegex(ValueError, 'architectures or container'):
             prov.read_zip_record(archive(rehashed, members, 'one-slice-fat.zip'))
+        # Archive membership is independently observed from code bytes, not
+        # today's build layout. A renamed native helper still binds all facts.
+        renamed = 'Contents/MacOS/archived-runner-client'
+        prior = 'Contents/MacOS/pw-runner-client'
+        members = {rel: (valid / rel).read_bytes() for rel in prov.FULL_OUTPUTS}
+        members[renamed] = members.pop(prior)
+        for row in full['outputs'] + full['signing']['nested']:
+            if row['rel_path'] == prior:
+                row['rel_path'] = renamed
+        self.assertTrue(prov.record_shape_problems(full), 'current builds must still require the current layout')
+        data, _ = prov.read_zip_record(archive(full, members, 'captured-layout.zip'))
+        self.assertEqual(json.loads(data), full)
+        omitted = copy.deepcopy(full)
+        omitted['outputs'] = [r for r in omitted['outputs'] if r['rel_path'] != renamed]
+        omitted['signing']['nested'] = [r for r in omitted['signing']['nested'] if r['rel_path'] != renamed]
+        with self.assertRaisesRegex(ValueError, 'shipped executables'):
+            prov.read_zip_record(archive(omitted, members, 'unlisted-code.zip'))
         # Only the current schema is read: a version 1 record is refused, not interpreted, and nothing is supplied to an
         # incomplete current one.
         stale = dict(copy.deepcopy(record), schema_version=1)

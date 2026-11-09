@@ -179,15 +179,12 @@ the cleanup procedure below.
 
 ## Preserve and clean up output
 
-Keep non-release retention small: normally the current accepted default battery
-and one complementary targeted run, at most two non-release pins per checkout.
-Any additional pin needs a concrete ongoing dependency, not merely a completed
-iteration or historical interest. Remove superseded pins and prune eligible
-runs when closing work. Release-managed entries remain governed by release
-rotation. Before retiring a run, preserve any still-needed, unreplaced observation
-and unresolved resource-recovery receipts; a small identified copy may suffice.
-Such copies must retain original identities and hashes and must not imply
-relocated active ownership or process settlement.
+Keep evidence through the central release window: the four newest complete
+local archives and the newest release's unpacked acceptance. Development
+results are disposable once inactive and free of resource-cleanup obligations,
+including interrupted results. Do not add pins, keep markers or preserved
+copies to evade pruning. Cite development observations with their availability
+limits; do not describe them as retained release evidence.
 
 Follow the [retention and locking contract](README.md#retention-ownership-and-execution-locking).
 Never unlink `tests/.checkout.lock`: replacing its inode bypasses an existing
@@ -204,7 +201,7 @@ A worktree is also the way to make a disposable checkout; an rsync copy that
 omits `dist/README.md`, `dist/AGENTS.md` or `.tmp/AGENTS.md` fails the build
 and the drift suite.
 Inspect interrupted or ambiguous output before choosing a fresh directory
-or explicitly removing an owned unfinished run through the pruner.
+or applying ordinary pruning to inactive owned output.
 
 For a console transcript, capture to a temporary file outside `tests/out/runs/`
 and attach it to the completed run under the checkout lock after verifying the
@@ -214,16 +211,17 @@ of an eligible old run would unlink an already-open transcript. If execution
 never creates owned output, keep the temporary transcript for diagnosis.
 
 Use `make prune` to preview and `make prune APPLY=1` to apply ordinary cleanup.
-The [pruning reference](README.md#pruning-disposable-output) describes eligible
-output and the explicit `--unfinished` command. Do not bypass the helpers to
-remove protected evidence or resource-cleanup records. Record source provenance
-only when established; the commit adding a retention entry is not the source
-of an earlier build. Preserve established release tags on indexed release runs
-so their checkpoint cleanup remains possible.
+The [pruning reference](README.md#pruning-disposable-output) describes the
+uniform policy used explicitly and after archival. Preserve active ownership
+and unresolved resource receipts; pruning never settles machine resources.
+Record source provenance only when established. Preserve release tags, which
+also supply public surface-stamp history.
 
-Preserve `tests/out/.release-rotation/` after interrupted release cleanup.
-Resume the same archive's `release_rotate.py --apply` transaction through the
+Preserve `tests/out/.retention/` after interrupted cleanup. Resume with
+`make prune APPLY=1` through the
 [recovery procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup).
+Unfinished old rotation journals and `.release-rotation/` material are blockers
+requiring the original recovery tools, not disposable test output.
 For external runners, retain staging and durable ownership until removal is
 verified, following the [external-runner workflow](../AGENTS.md#external-runner-workflow).
 Scratch follows [.tmp/AGENTS.md](../.tmp/AGENTS.md); never move evidence there

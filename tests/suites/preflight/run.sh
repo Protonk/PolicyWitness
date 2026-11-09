@@ -34,10 +34,10 @@ fi
 
 if test_selected release_rotation_controls; then
 test_begin preflight release_rotation_controls
-test_step rotation "verify portable test evidence, pins, atomic retirement and interrupted cleanup"
+test_step rotation "verify portable evidence, the release window and interrupted pruning"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "release rotation controls failed" \
   "${ROOT_DIR}/tests/suites/preflight/check_release_rotation.py" "${PW_TEST_ARTIFACTS}"
-test_pass "portable release evidence and transactional rotation preserve pins and survive interruption"
+test_pass "portable release evidence and the release window survive interrupted pruning"
 fi
 
 if test_selected codesign.preflight; then

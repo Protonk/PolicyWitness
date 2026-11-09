@@ -200,7 +200,7 @@ class Integration:
         release_runs.pack(valid,tag='v0.0.0',source='0'*40,runs={'acceptance':(acceptance,entry)},battery=('acceptance','tests/run.json'),expected_contract=expected)
         # Each altered archive is fully repacked and re-inventoried. The expected
         # contract stays outside its source tree and mutable checksum records.
-        for name in ('engine-reference','all-hints','ownership-role','empty-operations','contract-copy'):
+        for name in ('engine-reference','all-hints','ownership-role','empty-operations','contract-copy','downgrade'):
             source=self.out/('portable-source-'+name);shutil.copytree(acceptance,source)
             result=read(source/'tests/run.json');fpath=source/'tests/suites'/F
             if name=='engine-reference':
@@ -219,11 +219,14 @@ class Integration:
             manifest=read(valid/'manifest.json');manifest['runs']['acceptance']['inventory']=artifact.inventory(source);manifest['sha256']=digest(target/'runs.tar.gz')
             for summary,origin in [('acceptance.json',source/'acceptance.json'),('battery.json',source/'tests/run.json')]:
                 shutil.copyfile(origin,target/summary);manifest['summaries'][summary]=digest(target/summary)
-            if name=='contract-copy':manifest.pop('execution_contract');manifest['schema_version']=2
+            if name=='contract-copy':manifest.pop('execution_contract')
+            elif name=='downgrade':manifest['schema_version']=2
             write(target/'manifest.json',manifest)
             try:release_runs.verify_bundle(target,expected_contract=expected)
             except (ValueError,KeyError) as exc:
                 require('checksum' not in str(exc) and 'inventory' not in str(exc),'transport failed before semantic control')
+                if name=='contract-copy':require('expected producer contract' in str(exc),'missing contract did not reach contract verification')
+                elif name=='downgrade':require('unsupported release test evidence schema' in str(exc),'downgrade did not reach format refusal')
                 write(target/'rejection.json',dict(reason=str(exc),expected_identity=anchor))
             else:raise AssertionError('portable missing evidence accepted: '+name)
             require(value_digest(expected)==anchor,'independent expectation changed')
@@ -239,9 +242,7 @@ class Integration:
             try:release_runs.producer_contract(record)
             except ValueError:pass
             else:raise AssertionError('unknown/new producer silently treated as historical')
-        historic=next(iter(release_runs.HISTORICAL_PRODUCERS))
-        require(release_runs.producer_contract(dict(schema_version=1,source_commit=historic)) is None,'positively identified historical neighbor refused')
-        self.note('outer declaration/schema deletion cannot downgrade an unknown producer to historical evidence')
+        self.note('missing outer contract is refused for every producer')
 
 
     def recovery(self):
@@ -271,7 +272,7 @@ class Integration:
                 require(build.returncode==2 and 'pytest ownership' in build.stderr and not marker.exists(),'shared build front end bypassed unresolved ownership')
                 write(root.parent/'build-admission.json',dict(returncode=build.returncode,stderr=build.stderr,launched=marker.exists()))
 
-                self.run(root,'prune',args=('--prune','--apply'))
+                self.run(root,'prune',args=('--prune','--apply'),expected=1)
                 require(out.exists(),'pruning removed an ambiguous ownership run')
             self.note('recovery disposition '+state,record=str(path),actual_launch=False)
         root=self.fixture('recovery-settled');out=root/'tests/out/runs/pending';completed_output(out)
@@ -281,12 +282,12 @@ class Integration:
             for log in command.logs:log.close()
         require(read(command.path)['state']=='quiescent_retained','missing durable settlement')
         self.run(root,'later',args=('--case','sentinel/later'))
-        self.run(root,'prune-before',args=('--prune','--apply'))
+        self.run(root,'prune-before',args=('--prune','--apply'),expected=1)
         require(out.exists(),'quiescent held output was pruned')
         self.run(root,'recover',args=('--recover-ownership','settled','--apply'))
         self.run(root,'recover-again',args=('--recover-ownership','settled','--apply'))
         self.run(root,'prune-after',args=('--prune','--apply'))
-        require(not out.exists(),'closed unpinned output not pruned')
+        require(not out.exists(),'closed unprotected output not pruned')
         self.note('post-command pre-closure recovery admits independent work and protects output until closure')
 
     def deaths(self):
@@ -316,6 +317,17 @@ class Integration:
                 out=root/'tests/out/runs/death';folder=out/'suites'/F
                 events=[json.loads(line) for line in (folder/'phases.jsonl').read_text().splitlines()]
                 require(sum(e['kind']=='item_finish' for e in events)==1,'completed/active/queued arrangement not established')
+                if mode=='both':
+                    # Native exit precedes the owner's final settlement publication.
+                    # Observe that process too before testing offline recovery;
+                    # racing its closing endpoint tests a different boundary.
+                    run_id=read(out/'owner.json')['run_id']
+                    records=[resources.validate(root,p) for p in resources.record_paths(root,run_id)]
+                    active=[r for r in records if r.get('command_pid')==pids['command']]
+                    require(len(active)==1,'active command owner identity missing')
+                    pids['owner']=active[0]['owner_pid']
+                    queue.control([select.kevent(pids['owner'],filter=select.KQ_FILTER_PROC,
+                        flags=select.KQ_EV_ADD|select.KQ_EV_ONESHOT,fflags=select.KQ_NOTE_EXIT)],0,0)
                 if mode=='interrupt':process.send_signal(signal.SIGINT)
                 else:
                     os.kill(pids['engine'],signal.SIGKILL)
@@ -323,8 +335,8 @@ class Integration:
                 with checkout_lock.preview(root) as held:require(held,'owned descendant lost lock before exit')
                 process.wait(timeout=20)
                 deadline=time.monotonic()+20
-                while len(exits)<3 and time.monotonic()<deadline:
-                    exits.update(e.ident for e in queue.control(None,3,1) if e.fflags & select.KQ_NOTE_EXIT)
+                while len(exits)<len(pids) and time.monotonic()<deadline:
+                    exits.update(e.ident for e in queue.control(None,len(pids),1) if e.fflags & select.KQ_NOTE_EXIT)
                 require(exits==set(pids.values()),'independent descendant/engine exit observation missing')
                 if mode!='both':
                     run=read(out/'run.json');parent=run['case_results'][0]

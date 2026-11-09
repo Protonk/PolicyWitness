@@ -22,7 +22,9 @@ import release_evidence
 import release_preflight
 import release_publish
 import retention
+import run_ownership
 import release_runs
+import execution_contract
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import completed_output
 import fixture_bundle
@@ -69,7 +71,6 @@ def make_repo(work):
     git(repo, 'push', '-q', 'origin', 'main')
     (repo / 'tests').mkdir(exist_ok=True)
     (repo / 'tests/catalog.json').write_text(json.dumps(dict(suites=dict(fixture=dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0','1','2'])))))
-    (repo / 'tests/RETAINED.json').write_text('{"schema_version": 1, "runs": []}\n')
     git(repo, 'add', 'tests')
     git(repo, 'commit', '--amend', '--no-edit')
     return repo
@@ -273,12 +274,7 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
         with tempfile.TemporaryDirectory(prefix='pw-release-fixture-', dir='/private/tmp') as directory:
             prepare_provenance_fixture(Path(directory))
     commit = commit or git(repo, 'rev-parse', 'HEAD')
-    # This explicitly authored fixture models a historical three-legacy-case
-    # producer. Its source identity is fixed before any archive mutation.
-    release_runs.HISTORICAL_PRODUCERS.add(commit)
-    declaration = repo.parent / 'expected-historical-producers.json'
-    known = json.loads(declaration.read_text()) if declaration.exists() else []
-    declaration.write_text(json.dumps(sorted(set(known) | {commit})))
+    expected_contract = execution_contract.defaults(repo)
     dist = repo / 'dist'
     dist.mkdir(exist_ok=True)
     archive = dist / 'PolicyWitness.zip'
@@ -315,7 +311,7 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
         tested = artifact.inventory(extracted)
     if inventory_change is not None:
         inventory_change(tested)
-    with retention.acceptance_output(repo, run_dir) as owner:
+    with run_ownership.acceptance_output(repo, run_dir, lambda: retention.protected_paths(repo)) as owner:
         owner['run_id'] = 'accept-' + version
         (run_dir / 'before.json').write_text(json.dumps(tested))
         nested = run_dir / 'tests'
@@ -326,7 +322,7 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
         nested_owner['run_id'] = 'nested-accept-' + version
         (nested / 'owner.json').write_text(json.dumps(nested_owner))
         run = json.loads((nested / 'run.json').read_text())
-        run.update(schema_version=1, run_id='nested-accept-' + version, ok=True, terminal=True,
+        run.update(schema_version=1, execution_contract=expected_contract, run_id='nested-accept-' + version, ok=True, terminal=True,
                    counts={'fail': 0, 'pass': 3, 'skip': 0, 'total': 3},
                    completion=dict(selected=3, completed=3, skipped=0, unrun=0),
                    requested_cases=[], requested_suites=[], harness_errors=[],
@@ -338,7 +334,7 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
             battery_change(run)
         (nested / 'run.json').write_text(json.dumps(run))
         (run_dir / 'acceptance.json').write_text(json.dumps(dict(
-            schema_version=2, archive=str(archive), ok=True, errors=[], extraction_dir=str(extraction),
+            schema_version=3, execution_contract=expected_contract, run_id=owner['run_id'], archive=str(archive), ok=True, errors=[], extraction_dir=str(extraction),
             battery=dict(run_id=run['run_id'], completion=run['completion'], timeout_seconds=7200, elapsed_seconds=1.0),
             sha256_before=hashlib.sha256(archive.read_bytes()).hexdigest(),
             sha256_after=hashlib.sha256(archive.read_bytes()).hexdigest())))
@@ -391,7 +387,7 @@ def check_archive(out):
     attempt_name = session.name
 
     assert release_archive.find_latest(dist) == session
-    dest, added = release_archive.archive(session, dist=dist, root=repo, notes=notes)
+    dest = release_archive.archive(session, dist=dist, root=repo, notes=notes)
     assert dest == dist / 'archive/v0.9.0'
     expected = {'PolicyWitness-0.9.0.zip', 'PolicyWitness.md', 'SHA256SUMS', 'release.json', 'evidence'}
     assert {p.name for p in dest.iterdir()} == expected, sorted(p.name for p in dest.iterdir())
@@ -416,14 +412,9 @@ def check_archive(out):
         'evidence/notarization', 'evidence/staple', 'evidence/staple-validation', 'evidence/gatekeeper',
         'evidence/re-zip', 'evidence/acceptance.json', 'evidence/release.json']
     assert all(r['original_path'].startswith('dist/evidence/' + attempt_name) for r in record['receipts'])
-    assert [e['path'] for e in added] == ['release-acceptance/run-0-9-0']
-    assert added[0]['run_id'] == 'accept-0.9.0' and added[0]['app_inventory'] == 'before.json'
-    assert all(e['release'] == 'v0.9.0' for e in added)
-    assert all(e['source'] == record['source_commit'] and '0.9.0' in e['reason'] and 'default battery' in e['reason'] for e in added)
-    retained = retention.load_index(repo)
-    assert retained == [repo / 'tests/out/release-acceptance/run-0-9-0']
+    assert retention.protected_paths(repo) == [repo / 'tests/out/release-acceptance/run-0-9-0']
     _, manifest = release_runs.verify_release(dest)
-    assert manifest['schema_version'] == 2 and set(manifest['runs']) == {'acceptance'}, manifest
+    assert manifest['schema_version'] == 3 and set(manifest['runs']) == {'acceptance'}, manifest
     assert manifest['battery'] == dict(role='acceptance', path='tests/run.json'), manifest['battery']
     assert set(manifest['summaries']) == {'acceptance.json', 'battery.json'}
     assert json.loads((dest / release_runs.BUNDLE / 'battery.json').read_text())['run_id'] == 'nested-accept-0.9.0'
@@ -496,7 +487,6 @@ def check_archive(out):
         if mutate is not None:
             mutate(repo2, dist2, session2)
         before = sorted(str(p.relative_to(dist2)) for p in dist2.rglob('*'))
-        retained_before = (repo2 / 'tests/RETAINED.json').read_text()
         try:
             release_archive.archive(session2, dist=dist2, root=repo2,
                                     notes=None if mutate is not None else scenario / 'absent.md')
@@ -505,7 +495,6 @@ def check_archive(out):
         else:
             raise AssertionError(f'{name}: archive was allowed')
         assert sorted(str(p.relative_to(dist2)) for p in dist2.rglob('*')) == before, name
-        assert (repo2 / 'tests/RETAINED.json').read_text() == retained_before, name
 
     # The nested battery must be a passing, unchanged, default run against the extracted
     # app, and its recorded inventory must equal the archived ZIP's fresh extraction in
@@ -629,11 +618,12 @@ def check_publish(out, repo, dest, notes):
     (dest / 'release.json').write_text(json.dumps(record, indent=2) + '\n')
 
     copy = work / 'corrupt-evidence'
+    copy = copy / 'dist/archive/v0.9.0'
     shutil.copytree(dest, copy)
     (copy / release_runs.BUNDLE / 'runs.tar.gz').write_bytes(b'corrupt')
     with patch.object(release_publish, 'run', github):
         try:
-            release_publish.publish(copy, root=repo)
+            release_publish.publish(copy, root=copy.parents[2])
         except ValueError as exc:
             assert 'test evidence archive checksum mismatch' in str(exc), exc
         else:
@@ -657,7 +647,9 @@ def check_publish(out, repo, dest, notes):
     # Mismatched digests or bytes stop before origin is recorded.
     for mode, needle in (('digest_mismatch', 'GitHub digest'), ('corrupt_download', 'downloaded bytes differ')):
         copy = work / mode
+        copy = copy / 'dist/archive/v0.9.0'
         shutil.copytree(dest, copy)
+        shutil.copytree(repo / '.git', copy.parents[2] / '.git')
         unpublished = json.loads((copy / 'release.json').read_text())
         unpublished['origin'] = None
         (copy / 'release.json').write_text(json.dumps(unpublished, indent=2) + '\n')
@@ -666,7 +658,7 @@ def check_publish(out, repo, dest, notes):
         broken.release, broken.assets = github.release, dict(github.assets)
         with patch.object(release_publish, 'run', broken):
             try:
-                release_publish.publish(copy, root=repo)
+                release_publish.publish(copy, root=copy.parents[2])
             except ValueError as exc:
                 assert needle in str(exc), (mode, exc)
             else:
@@ -684,6 +676,7 @@ def check_publish(out, repo, dest, notes):
 
     # An archive without portable test evidence is refused before any push or GitHub operation.
     bundleless = work / 'bundleless'
+    bundleless = bundleless / 'dist/archive/v0.9.0'
     shutil.copytree(dest, bundleless)
     unverified = json.loads((bundleless / 'release.json').read_text())
     unverified.pop('test_evidence')
@@ -692,7 +685,7 @@ def check_publish(out, repo, dest, notes):
     refusing = GitHub(work / 'bundleless.jsonl')
     with patch.object(release_publish, 'run', refusing):
         try:
-            release_publish.publish(bundleless, root=repo)
+            release_publish.publish(bundleless, root=bundleless.parents[2])
         except ValueError as exc:
             assert 'no verified portable test evidence' in str(exc), exc
         else:
@@ -702,19 +695,20 @@ def check_publish(out, repo, dest, notes):
     # A supported neighbor has verified and published above. Change only this
     # copy's format number and repair the outer hash to reach format admission.
     unsupported = work / 'unsupported-format'
+    unsupported = unsupported / 'dist/archive/v0.9.0'
     shutil.copytree(dest, unsupported)
     manifest_path = unsupported / release_runs.BUNDLE / 'manifest.json'
     manifest = json.loads(manifest_path.read_text())
     manifest['schema_version'] = 1
-    retention.atomic_json(manifest_path, manifest)
+    run_ownership.atomic_json(manifest_path, manifest)
     record = json.loads((unsupported / 'release.json').read_text())
     record['test_evidence']['sha256'] = artifact.digest(manifest_path)
-    retention.atomic_json(unsupported / 'release.json', record)
+    run_ownership.atomic_json(unsupported / 'release.json', record)
     before = artifact.inventory(unsupported)
     refusing = GitHub(work / 'unsupported-format.jsonl')
     with patch.object(release_publish, 'run', refusing):
         try:
-            release_publish.publish(unsupported, root=repo)
+            release_publish.publish(unsupported, root=unsupported.parents[2])
         except ValueError as exc:
             assert 'unsupported release test evidence schema' in str(exc), exc
         else:

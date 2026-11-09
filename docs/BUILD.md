@@ -453,7 +453,7 @@ only and does not remove either cache or the distribution directory.
 
 ### The checkout lock
 
-`build.sh`, the test dispatcher, release acceptance, archiving and rotation
+`build.sh`, the test dispatcher, release acceptance, archiving, publishing and pruning
 each hold `tests/.checkout.lock` for their own duration: an advisory lock on
 the file's inode, never on a replaced file, so the file is never unlinked.
 Acquisition, nested admission and protected launches belong to
@@ -537,14 +537,14 @@ gone. Processes an owner starts outside its protected launch never receive
 the descriptor. Nothing unlocks explicitly, because an explicit unlock by one
 sharer would end the hold for all of them; descriptors are closed and the
 operating system releases the lock when none remains. The dispatcher holds
-its scope the same way ([`checkout_lock`](../tests/lib/retention.py)) and
+its scope the same way ([`checkout_lock`](../tests/lib/run_ownership.py)) and
 passes the descriptor to each case it runs, so a killed dispatcher's case
 keeps the lock until it and its descendants exit. A claim names one
 checkout: an owner of another checkout takes that checkout's lock itself, so
 separate worktrees have independent locks.
 
 Known gap: this is a managed-entrypoint guarantee for builds, the battery,
-acceptance, archiving and rotation; it does not serialize arbitrary direct
+acceptance, archiving, publishing and pruning; it does not serialize arbitrary direct
 tool invocations, and Cargo's own locking does not protect a shell deletion
 made before Cargo starts. A protected descendant that outlives its command
 keeps the lock until it exits. The witness establishes preservation from the
@@ -579,7 +579,7 @@ a run of the `unit`, `integration` or `runner_unit` case, which only
 
 Direct Meson work uses a separate build directory, as [native
 compilation](#native-compile-with-meson) shows. `make release` holds no outer
-lock of its own: its nested build, acceptance, battery, archive and rotation
+lock of its own: its nested build, acceptance, battery, archive and pruning
 phases each acquire and release the lock in turn, and separate worktrees
 have independent locks.
 

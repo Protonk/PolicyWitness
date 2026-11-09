@@ -6,7 +6,7 @@
 | `PolicyWitness.zip` | ZIP from that build; release acceptance is recorded separately. |
 | `PolicyWitness.md` | Standalone user guide from the same build. |
 | `evidence/` | Dated release attempts, each with an index and named command receipts. An archived attempt is moved into its release archive and leaves an `<attempt>.archived` pointer. |
-| `archive/v<version>/` | One preserved release per packaged version, created by `tests/lib/release_archive.py`. |
+| `archive/v<version>/` | One of the four newest complete local releases, created by `tests/lib/release_archive.py`. |
 
 Each archive contains a versioned release ZIP, the guide, `SHA256SUMS`, the
 `release.json` release record, and supporting `evidence/` (the moved attempt,
@@ -26,12 +26,19 @@ Portable test evidence lives under `evidence/test-runs/`: `runs.tar.gz` holds
 the complete acceptance directory with its nested battery; `manifest.json`
 inventories and hashes it; standalone JSON summaries are addressed relative to the
 archive by `release.json`. Raw receipts keep their original paths as provenance.
-Current release tools accept only schema-2 evidence bundles.
-`evidence/rotation.json` records cleanup of older managed test output, including
-enough state to resume an interrupted deletion. Successful packaging keeps the
-latest release's working acceptance and battery plus the newest completed local
-output. Explicit pins and pending resource cleanup remain protected. Historical
-release archives stay local; cleanup does not archive every development run or
-require an off-machine backup. Scratch follows [.tmp/AGENTS.md](../.tmp/AGENTS.md).
+Current release verification accepts portable bundle schema 3 with a captured
+execution contract; `release.json` uses schema 2. The newest archive protects
+its unpacked acceptance and nested battery. Ordinary pruning removes expired
+archives and their positively linked attempts/pointers, plus inactive owned
+non-release output regardless of completion. Unknown ownership and unresolved
+resource cleanup block deletion. There are no manual pins or retention knobs.
+The fixed archive root is this checkout's `dist/archive/`.
+
+Interrupted cleanup is journaled under `tests/out/.retention/`; resume with
+`make prune APPLY=1`. The journal is removed on completion and surviving archives
+are unchanged. The temporary historical storage inspector classifies known
+schema-1 archives until the last such archive and dependent quarantine expire;
+it does not admit them for publishing. Git tags and published assets survive
+local expiry. Scratch follows [.tmp/AGENTS.md](../.tmp/AGENTS.md).
 
 See [signing and releases](../docs/SIGNING.md) for the evidence format and procedure.

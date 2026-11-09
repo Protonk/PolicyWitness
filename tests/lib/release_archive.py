@@ -8,8 +8,8 @@ bytes, and the ZIP must be stamped exactly at the annotated tag v<version>. The
 acceptance's nested default battery run must have passed against the extracted
 app, whose inventory must equal a fresh extraction of the archived ZIP in full,
 modes included. The acceptance directory, battery inside, is packed with
-portable summaries and a verified file inventory, retained, and explicitly opts
-into release rotation.
+portable summaries and a verified file inventory. The newest archive supplies
+its acceptance protection to the central retention policy.
 Publishing is the separate release_publish.py step, which fills `origin` afterwards.
 """
 import argparse
@@ -30,8 +30,8 @@ import zipfile
 from artifact import digest, inventory
 import build_provenance
 import retention
+import run_ownership
 import release_runs
-import release_cleanup
 import signer_check
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,31 +45,19 @@ def git(root, *args):
 
 def load_attempt(attempt):
     attempt = release_runs.real_path(attempt)
-    record = retention.read_object(attempt / 'release.json')
-    acceptance = retention.read_object(attempt / 'acceptance.json')
-    notarization = retention.read_object(attempt / 'notarization/result.json')
+    record = run_ownership.read_object(attempt / 'release.json')
+    acceptance = run_ownership.read_object(attempt / 'acceptance.json')
+    notarization = run_ownership.read_object(attempt / 'notarization/result.json')
     return attempt, record, acceptance, notarization
 
 
 def find_latest(dist):
     """The one attempt whose accepted archive is the current final ZIP."""
-    final = Path(dist) / 'PolicyWitness.zip'
-    if not final.is_file():
-        raise ValueError(f'no final archive at {final}')
-    final_hash = digest(final)
-    base = Path(dist) / 'evidence'
-    matches = []
-    for candidate in sorted(p for p in base.iterdir() if p.is_dir()) if base.is_dir() else []:
-        try:
-            _, record, acceptance, notarization = load_attempt(candidate)
-        except (OSError, ValueError):
-            continue
-        if (record.get('archive') == str(final.resolve()) and acceptance.get('ok') is True
-                and acceptance.get('sha256') == final_hash and notarization.get('state') == 'accepted'):
-            matches.append(candidate)
+    dist = retention.distribution(Path(dist).absolute().parent, dist)
+    matches = retention.handoffs(dist.parent)
     if len(matches) != 1:
-        raise ValueError(f'expected exactly one accepted attempt for {final}; found {len(matches)}')
-    return matches[0]
+        raise ValueError(f'expected exactly one accepted attempt for {dist}; found {len(matches)}')
+    return matches[0][0]
 
 
 @contextlib.contextmanager
@@ -100,16 +88,15 @@ def outer_seal_facts(app):
 def battery_record(root, acceptance_run, accepted, final_inventory):
     """The acceptance's nested default battery: a passing default run against the extracted
     app, whose recorded inventory equals the archived ZIP's fresh extraction in full."""
-    path = retention.bounded_path(root, acceptance_run / 'tests')
-    run = retention.read_object(path / 'run.json')
+    path = run_ownership.bounded_path(root, acceptance_run / 'tests')
+    run = run_ownership.read_object(path / 'run.json')
     problems = []
     expected_contract = accepted.get('execution_contract')
     current_contract = execution_contract.defaults(root)
-    if expected_contract is not None or current_contract['required_families'] or accepted.get('schema_version', 0) >= 3:
-        if expected_contract != current_contract:
-            problems.append('acceptance lacks the independently expected producer/selection contract')
-        else:
-            problems += execution_contract.problems(run, expected_contract, lambda name: read(contained(path, path / name)))
+    if expected_contract != current_contract:
+        problems.append('acceptance lacks the independently expected producer/selection contract')
+    else:
+        problems += execution_contract.problems(run, expected_contract, lambda name: read(contained(path, path / name)))
     if run.get('ok') is not True or run.get('terminal') is not True:
         problems.append('battery run is not a completed passing run')
     counts, completion = run.get('counts') or {}, run.get('completion') or {}
@@ -126,48 +113,31 @@ def battery_record(root, acceptance_run, accepted, final_inventory):
     extraction = accepted.get('extraction_dir')
     if not isinstance(extraction, str) or integrity.get('app') != str(Path(extraction) / 'PolicyWitness.app'):
         problems.append('battery did not run against the extracted app')
-    if retention.disposition(path) != 'completed':
+    if run_ownership.disposition(path) != 'completed':
         problems.append('battery has no matching managed completion record')
     inventory = 'artifact-integrity/before.json'
-    tested = retention.read_object(path / inventory) if (path / inventory).is_file() else None
+    tested = run_ownership.read_object(path / inventory) if (path / inventory).is_file() else None
     # Full equality: every path's mode, every file's hash, every symlink's
     # target. Both sides are extractions of the same ZIP by the same tool, so a
     # difference, a mode bit included, is a defect or tampering.
     if tested != final_inventory:
         problems.append('battery inventory differs from the archived ZIP extraction')
-    if (acceptance_run / 'before.json').is_file() and retention.read_object(acceptance_run / 'before.json') != tested:
+    if (acceptance_run / 'before.json').is_file() and run_ownership.read_object(acceptance_run / 'before.json') != tested:
         problems.append('battery inventory differs from the acceptance inventory')
     if problems:
         raise ValueError('; '.join(problems))
     return dict(path=str(path.relative_to(root / 'tests/out')), run_id=run['run_id'], app_inventory=inventory)
 
 
-def retain(root, entries):
-    """Caller holds the checkout lock; validate before atomic replacement."""
-    path = root / 'tests/RETAINED.json'
-    retention.load_index(root)
-    index = retention.read_object(path)
-    existing = {entry['path']: entry for entry in index['runs']}
-    for entry in entries:
-        prior = existing.get(entry['path'])
-        if prior and any(prior[k] != entry[k] for k in ('run_id', 'source', 'app_inventory')):
-            raise ValueError(f'retained run identity differs: {entry["path"]}')
-    added = [entry for entry in entries if entry['path'] not in existing]
-    index['runs'] += added
-    retention.write_index(root, index)
-    return added
-
-
 def archive(attempt, *, dist, root=ROOT, notes=None):
     root = Path(root).resolve()
-    with retention.checkout_lock(root):
+    with run_ownership.checkout_lock(root):
         return archive_locked(attempt, dist=dist, root=root, notes=notes)
 
 
 def archive_locked(attempt, *, dist, root, notes):
-    retention.load_index(root)
     attempt, record, acceptance, notarization = load_attempt(attempt)
-    dist = release_runs.real_path(dist)
+    dist = retention.distribution(root, dist)
     problems = []
     if notarization.get('state') != 'accepted':
         problems.append(f"notarization state is {notarization.get('state')!r}, not accepted")
@@ -210,17 +180,18 @@ def archive_locked(attempt, *, dist, root, notes):
             problems.append(f"ZIP was built from {info.get('PWBuildCommit')}, but {tag} names {commit}")
         if info.get('PWBuildDescribe') != tag:
             problems.append(f"ZIP was built at {info.get('PWBuildDescribe')!r}, not exactly at {tag}")
+    retention.require_new_release(root, tag)
     dest = dist / 'archive' / tag
     if dest.exists():
         problems.append(f'{dest} already exists; a version is archived once')
     try:
-        acceptance_run = retention.bounded_path(root, Path(acceptance['path']).parent)
-        accepted = retention.read_object(acceptance_run / 'acceptance.json')
-        acceptance_owner = release_cleanup.describe(acceptance_run)
+        acceptance_run = run_ownership.bounded_path(root, Path(acceptance['path']).parent)
+        accepted = run_ownership.read_object(acceptance_run / 'acceptance.json')
+        acceptance_owner = run_ownership.describe(acceptance_run)
         if (accepted.get('ok') is not True or accepted.get('sha256_before') != final_hash
                 or accepted.get('sha256_after') != final_hash
                 or acceptance_owner['disposition'] != 'completed'
-                or retention.disposition(acceptance_run / 'tests') != 'completed'):
+                or run_ownership.disposition(acceptance_run / 'tests') != 'completed'):
             raise ValueError('acceptance has no matching successful completion and ZIP hashes')
         acceptance_entry = dict(
             path=str(acceptance_run.relative_to(root / 'tests/out')),
@@ -245,20 +216,13 @@ def archive_locked(attempt, *, dist, root, notes):
         raise ValueError('; '.join(problems))
 
     name = f'PolicyWitness-{version}.zip'
-    entries = [acceptance_entry]
-    retention.index_paths(root, dict(schema_version=1, runs=entries))
-    existing = retention.read_object(root / 'tests/RETAINED.json')['runs']
-    for entry in entries:
-        for prior in existing:
-            if prior['path'] == entry['path'] and any(prior[k] != entry[k] for k in ('run_id', 'source', 'app_inventory')):
-                raise ValueError(f'retained run identity differs: {entry["path"]}')
     relative_attempt = attempt.relative_to(root) if root in attempt.parents else attempt
     receipts = [dict(original_path=str(relative_attempt / step), archived_path=f'evidence/{step}')
                 for step in STEPS if (attempt / step).is_dir()]
     receipts += [dict(original_path=str(relative_attempt / item), archived_path=f'evidence/{item}')
                  for item in ('acceptance.json', 'release.json')]
     archived = dict(
-        schema_version=2 if accepted.get('execution_contract') is not None else 1, execution_contract=accepted.get('execution_contract'), version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
+        schema_version=2, execution_contract=accepted['execution_contract'], version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
         source_commit=commit, origin=None, archive=name, sha256=final_hash, guide='PolicyWitness.md',
         notarization_submission_id=notarization.get('submission_id'),
         submitted_sha256=record.get('submitted_sha256'),
@@ -294,17 +258,16 @@ def archive_locked(attempt, *, dist, root, notes):
         (evidence / 'provenance.json').write_bytes(record_bytes)
         archived['test_evidence'] = release_runs.pack(staged / release_runs.BUNDLE, tag=tag, source=commit,
                                                     runs=runs, battery=('acceptance', 'tests/run.json'), expected_contract=archived['execution_contract'])
-        retention.atomic_json(staged / 'release.json', archived)
+        run_ownership.atomic_json(staged / 'release.json', archived)
         release_runs.verify_release(staged)
         release_runs.sync_tree(staged)
         if dest.exists():
             raise ValueError(f'{dest} already exists; a version is archived once')
         staged.rename(dest)
-        retention.sync_directory(dest.parent)
-    added = retain(root, entries)
+        run_ownership.sync_directory(dest.parent)
     attempt.with_name(attempt.name + '.archived').write_text(f'{dest / "evidence"}\n')
     shutil.rmtree(attempt)
-    return dest, added
+    return dest
 
 
 def main(argv=None):
@@ -320,16 +283,11 @@ def main(argv=None):
     dist = args.dist if args.dist.is_absolute() else ROOT / args.dist
     try:
         attempt = find_latest(dist) if args.latest else args.attempt
-        dest, added = archive(attempt, dist=dist, root=ROOT, notes=args.notes)
+        dest = archive(attempt, dist=dist, root=ROOT, notes=args.notes)
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as exc:
         parser.exit(1, f'STOP: {exc}\n')
     print(dest)
     print((dest / 'SHA256SUMS').read_text(), end='')
-    for entry in added:
-        print(f"retained {entry['path']} ({entry['run_id']})")
-    if added:
-        print('Commit the retention index: git commit tests/RETAINED.json -m '
-              f'"Retain the {json.loads((dest / "release.json").read_text())["version"]} release evidence"')
     return 0
 
 

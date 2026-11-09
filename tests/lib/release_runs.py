@@ -3,7 +3,7 @@
 Archive members are inspected as streams, never extracted. Symlinks are recorded
 without following them. Original paths remain provenance, not archive lookups.
 
-Schemas 2 (historical transport) and 3 (source-bound family obligations) verify. It packs the acceptance directory alone and declares
+Only portable schema 3 verifies. It packs the acceptance directory alone and declares
 the battery as the dispatcher run nested inside it (`tests/run.json`).
 Schema 3 requires an independently supplied producer contract; unsupported bundles remain unchanged.
 """
@@ -19,29 +19,18 @@ import zipfile
 
 import artifact
 import build_provenance
-import retention
+import run_ownership as ownership
 
 BUNDLE = 'evidence/test-runs'
-# Positive historical producer identities, read from the already accepted release
-# records and independently checked against the ZIP's build provenance below.
-# Absence of a new declaration is never evidence that a new producer was legacy.
-HISTORICAL_PRODUCERS = {
-    '50802056dfdf6ef55d36d49c40512603594e65ae',
-    '9d35671e1e3e6a09e5c766cd6db73cc1d402fc8a',
-    '1046c77bcb862eb9bcf231a2215af86613225371',
-    '2717a7495b9c7508a91d09246adab0ae32871143',
-    '3c98b39601f2e475bfbcc7d639c6cdcff79b95af',
-    '1bf0341cd06c48122af1635e8aa8cac77517d9e1',
-}
 
 
 def producer_contract(record):
-    expected = record.get('execution_contract')
-    if expected is None and (record.get('schema_version') != 1 or
-                             record.get('source_commit') not in HISTORICAL_PRODUCERS):
-        raise ValueError('release lacks required producer contract and positive historical source identity')
+    import execution_contract
+    if record.get('schema_version') != 2 or not isinstance(record.get('execution_contract'), dict):
+        raise ValueError('release requires a current record and producer execution contract')
+    expected = record['execution_contract']
+    execution_contract.validate_contract(expected)
     return expected
-
 
 
 def sync_tree(path):
@@ -56,7 +45,7 @@ def sync_tree(path):
                 os.fsync(fd)
             finally:
                 os.close(fd)
-    retention.sync_directory(path)
+    ownership.sync_directory(path)
 
 
 def real_path(path):
@@ -66,9 +55,11 @@ def real_path(path):
     return path
 
 
-def pack(destination, *, tag, source, runs, battery, expected_contract=None):
+def pack(destination, *, tag, source, runs, battery, expected_contract):
     """Caller holds the checkout lock. runs maps roles to (directory, entry); battery is
     (role, relative path) naming the dispatcher run.json inside that role."""
+    import execution_contract
+    execution_contract.validate_contract(expected_contract)
     role, relative = battery
     snapshots = {}
     for name, (path, entry) in runs.items():
@@ -92,12 +83,11 @@ def pack(destination, *, tag, source, runs, battery, expected_contract=None):
         if artifact.digest(target) != entry['sha256']:
             raise ValueError(f'{name} changed while archiving')
         summaries[name] = artifact.digest(target)
-    manifest = dict(schema_version=3 if expected_contract is not None else 2, tag=tag, source_commit=source,
+    manifest = dict(schema_version=3, tag=tag, source_commit=source,
                     archive=archive.name, sha256=artifact.digest(archive),
                     runs=snapshots, battery=dict(role=role, path=relative), summaries=summaries)
-    if expected_contract is not None:
-        manifest['execution_contract'] = expected_contract
-    retention.atomic_json(destination / 'manifest.json', manifest)
+    manifest['execution_contract'] = expected_contract
+    ownership.atomic_json(destination / 'manifest.json', manifest)
     verify_bundle(destination, expected_contract=expected_contract)
     for role, (path, _) in runs.items():
         if artifact.inventory(path) != snapshots[role]['inventory']:
@@ -107,29 +97,47 @@ def pack(destination, *, tag, source, runs, battery, expected_contract=None):
 
 def battery_source(manifest):
     """The required battery's role and path in a supported bundle manifest."""
-    if manifest.get('schema_version') not in (2, 3):
-        raise ValueError('unsupported release test evidence schema; expected schema 2 or 3')
+    if manifest.get('schema_version') != 3:
+        raise ValueError('unsupported release test evidence schema; expected schema 3')
     declared = manifest.get('battery')
     if not isinstance(declared, dict):
-        raise ValueError('a schema 2 or 3 evidence manifest declares its battery')
+        raise ValueError('a schema 3 evidence manifest declares its battery')
     if declared != dict(role='acceptance', path='tests/run.json'):
-        raise ValueError('a schema 2 or 3 battery must be acceptance/tests/run.json')
+        raise ValueError('a schema 3 battery must be acceptance/tests/run.json')
     return declared['role'], declared['path']
 
 
-def verify_bundle(destination, *, expected_contract=None):
+def verify_bundle(destination, *, expected_contract):
     destination = real_path(destination)
-    manifest = retention.read_object(destination / 'manifest.json')
+    manifest = ownership.read_object(destination / 'manifest.json')
     battery = battery_source(manifest)
     if manifest.get('archive') != 'runs.tar.gz' or set(manifest.get('runs', {})) != {'acceptance'}:
         raise ValueError('invalid release test evidence manifest')
+    verify_transport(destination, manifest, battery)
+    import execution_contract
+    if not isinstance(expected_contract, dict):
+        raise ValueError('portable evidence requires the independently expected producer contract')
+    execution_contract.validate_contract(expected_contract)
+    if manifest.get('execution_contract') != expected_contract:
+        raise ValueError('portable evidence requires the independently expected producer contract')
+    with tarfile.open(destination / 'runs.tar.gz', 'r:gz') as zipped:
+        def load(name):
+            return json.loads(zipped.extractfile('acceptance/tests/' + str(ownership.relative_path(name))).read())
+        errors = execution_contract.problems(load('run.json'), expected_contract, load)
+    if errors:
+        raise ValueError('; '.join(errors))
+    return manifest
+
+
+def verify_transport(destination, manifest, battery):
+    """Check declared archive members and summary copies without interpreting test semantics."""
     archive = real_path(destination / 'runs.tar.gz')
     if artifact.digest(archive) != manifest['sha256']:
         raise ValueError('release test evidence archive checksum mismatch')
     expected = {}
     for role, run in manifest['runs'].items():
         for relative, entry in run['inventory'].items():
-            name = role if relative == '.' else role + '/' + str(retention.relative_path(relative))
+            name = role if relative == '.' else role + '/' + str(ownership.relative_path(relative))
             expected[name] = entry
     found = {}
     with tarfile.open(archive, 'r:gz') as zipped:
@@ -167,25 +175,13 @@ def verify_bundle(destination, *, expected_contract=None):
         if (artifact.digest(summary) != manifest['summaries'][name]
                 or manifest['summaries'][name] != manifest['runs'][role]['inventory'][relative]['sha256']):
             raise ValueError(f'{name[:-5]} summary checksum mismatch')
-    if expected_contract is not None or manifest['schema_version'] == 3:
-        import execution_contract
-        if expected_contract is None or manifest.get('execution_contract') != expected_contract:
-            raise ValueError('portable evidence requires the independently expected producer contract')
-        with tarfile.open(archive, 'r:gz') as zipped:
-            def load(name):
-                return json.loads(zipped.extractfile('acceptance/tests/' + str(retention.relative_path(name))).read())
-            errors = execution_contract.problems(load('run.json'), expected_contract, load)
-        if errors:
-            raise ValueError('; '.join(errors))
-    return manifest
 
-
-def verify_release(archive):
-    """Verify portable evidence and its binding to the exact accepted ZIP."""
+def verify_assets(archive):
+    """Bind the release assets, source stamp, provenance and portable manifest."""
     archive = real_path(archive)
-    record = retention.read_object(archive / 'release.json')
+    record = ownership.read_object(archive / 'release.json')
     tag = record['tag']
-    if tag != 'v' + record['version'] or not retention.RELEASE_TAG.fullmatch(tag):
+    if tag != 'v' + record['version'] or not ownership.RELEASE_TAG.fullmatch(tag):
         raise ValueError('invalid archived release version')
     name = 'PolicyWitness-' + record['version'] + '.zip'
     if record['archive'] != name or record['guide'] != 'PolicyWitness.md':
@@ -227,18 +223,33 @@ def verify_release(archive):
     if (reference.get('path') != BUNDLE + '/manifest.json'
             or artifact.digest(real_path(archive / reference['path'])) != reference.get('sha256')):
         raise ValueError('release has no verified portable test evidence')
+    return record
+
+
+def verify_release(archive):
+    """Verify current portable evidence against its archived producer contract."""
+    archive = real_path(archive)
+    record = verify_assets(archive)
+    tag = record['tag']
     expected_contract = producer_contract(record)
     manifest = verify_bundle(archive / BUNDLE, expected_contract=expected_contract)
     if manifest['tag'] != tag or manifest['source_commit'] != record['source_commit']:
         raise ValueError('test evidence belongs to a different release')
-    accepted = retention.read_object(archive / BUNDLE / 'acceptance.json')
+    accepted = ownership.read_object(archive / BUNDLE / 'acceptance.json')
     if (record['acceptance']['path'] != BUNDLE + '/acceptance.json'
             or accepted.get('ok') is not True or accepted.get('sha256_before') != record['sha256']
             or accepted.get('sha256_after') != record['sha256']):
         raise ValueError('archived acceptance does not support the ZIP')
     role, relative = battery_source(manifest)
-    battery = retention.read_object(archive / BUNDLE / 'battery.json')
+    battery = ownership.read_object(archive / BUNDLE / 'battery.json')
     entry = manifest['runs'][role]['retained']
+    with tarfile.open(archive / BUNDLE / 'runs.tar.gz', 'r:gz') as packed:
+        owner = json.loads(packed.extractfile('acceptance/owner.json').read())
+    original_acceptance = str(ownership.relative_path(entry['path']))
+    if (owner.get('kind') != 'release_acceptance' or owner.get('run_id') != entry.get('run_id')
+            or not str(owner.get('out_dir', '')).endswith('/tests/out/' + original_acceptance)
+            or record['acceptance'].get('original_path') != original_acceptance + '/acceptance.json'):
+        raise ValueError('archived acceptance owner differs from its release identity')
     reference = record.get('battery')
     if not isinstance(reference, dict):
         raise ValueError('archived battery does not support the release')

@@ -57,10 +57,10 @@ fi
 
 if test_selected retention_controls; then
 test_begin dispatcher retention_controls
-test_step retention "observe retained inventories, ownership, replacement and checkout serialization"
+test_step retention "observe managed output pruning, ownership, replacement and checkout serialization"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "retention controls failed" \
   "${ROOT_DIR}/tests/suites/dispatcher/check_retention.py" "${PW_TEST_ARTIFACTS}"
-test_pass "retained evidence and incomplete runs survive output replacement"
+test_pass "ownership and checkout serialization govern replacement and pruning"
 fi
 
 if test_selected pytest_controls; then

@@ -9,12 +9,12 @@
 #   build     Compile, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app.
 #   test      Run the default battery against $(DIST_DIR)/PolicyWitness.app into
 #             tests/out/runs/default. Does not build.
-#   prune     Preview eligible test runs; APPLY=1 removes them. Nothing else.
+#   prune     Preview expired archives and disposable test output; APPLY=1 removes them.
 #   notarize  The rehearsable lower-level chain: preflight report, fresh build,
 #             submit, staple, validate, Gatekeeper, re-zip, accept the final ZIP
 #             (the default battery runs inside acceptance, against its contents).
-#   release   The whole procedure: strict preflight, notarize, archive, rotate
-#             older test output. Spends one notarization submission.
+#   release   Strict preflight, notarize, archive, then ordinary pruning.
+#             Spends one notarization submission. Releases use this checkout's dist/.
 #   publish   Push the tag and create the GitHub release from an archive.
 #
 # Variables (set on the command line, e.g. make release NOTARY_KEYCHAIN_PROFILE=...)
@@ -27,8 +27,8 @@
 #                            both Cargo release areas before compiling. notarize
 #                            and release enforce 1 and refuse any other value.
 #   NOTARY_KEYCHAIN_PROFILE  notarytool keychain profile; notarize and release need it.
-#   DIST_DIR                 Where the app, ZIP, guide, evidence/ and archive/ land,
-#                            and where test looks for the app.
+#   DIST_DIR                 Build/rehearsal output and where test looks for the app.
+#                            release and publish require the checkout's dist/.
 #   PW_APP_DIR               Environment, not a make variable: an app for test other
 #                            than DIST_DIR's. PW_TEST_OUT_DIR likewise names the run
 #                            directory; both are described in tests/README.md.
@@ -55,7 +55,7 @@
 #   last line ("Error N").
 #
 # Boundaries
-#   build.sh, acceptance (with its battery), archiving and rotation each hold
+#   build.sh, acceptance (with its battery), archiving, publishing and pruning each hold
 #   tests/.checkout.lock for their own duration; a build and a battery in one
 #   checkout are mutually exclusive, and release holds no outer lock of its own.
 #   Only notarize and publish send anything: notarize uploads the ZIP to Apple
@@ -94,18 +94,19 @@ build:
 	@echo "==> [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app"
 	DIST_DIR="$(DIST_DIR)" IDENTITY="$(IDENTITY)" $(if $(PW_FRESH_BUILD),PW_FRESH_BUILD="$(PW_FRESH_BUILD)",) ./build.sh
 
-# prune: preview by default. The pruner removes only completed,
-# owned, unretained direct children of tests/out/runs/ and keeps release
-# acceptance, retained and unfinished output. dist/ and .tmp/ are untouched.
-# Older runs are otherwise retired only when a release is packaged (see release).
+# prune: preview by default. Keep four complete release archives and only the
+# newest unpacked acceptance, plus a verified handoff. Remove other inactive
+# owned output regardless of completion, along with expired archives and their
+# linked attempts/pointers. Active work, unknown ownership and resource cleanup
+# block deletion. The same operation follows archival; .tmp/ is outside it.
 # The phase line goes to stderr: stdout is the pruner's JSON report, which the
 # dispatcher retention control reads back.
 prune:
 ifeq ($(origin APPLY),undefined)
-	@echo "==> [prune] preview eligible runs under tests/out/runs" >&2
+	@echo "==> [prune] preview expired archives and disposable test output" >&2
 	@./tests/run.sh --prune
 else ifeq ($(APPLY),1)
-	@echo "==> [prune] remove eligible runs under tests/out/runs" >&2
+	@echo "==> [prune] remove expired archives and disposable test output" >&2
 	@./tests/run.sh --prune --apply
 else
 	@echo "ERROR: APPLY must be 1 when supplied; omit APPLY to preview" >&2
@@ -176,10 +177,9 @@ notarize:
 # the preflight verified, never from VERSION. The default battery ran inside
 # acceptance, against the final ZIP's extracted contents; release_archive.py
 # stages and verifies the archive, binds that battery to the ZIP by inventory
-# and retains the acceptance run; release_rotate.py then retires older
-# working test output. A rotation failure leaves the release complete: resume
-# with `tests/lib/python.sh tests/lib/release_rotate.py $(DIST_DIR)/archive/v<version> --apply`.
-# Commit the tests/RETAINED.json change afterwards either way.
+# and protects the acceptance run through the archive. Ordinary pruning then
+# applies the four-release window and removes inactive disposable test output.
+# An interrupted cleanup resumes with `make prune APPLY=1`.
 release:
 	@if [ -z "$(NOTARY_KEYCHAIN_PROFILE)" ]; then \
 		echo "ERROR: set NOTARY_KEYCHAIN_PROFILE to your notarytool keychain profile name"; \
@@ -196,8 +196,8 @@ release:
 	  echo "==> [release] archive $(DIST_DIR)/archive/v$$version"; \
 	  tests/lib/python.sh tests/lib/release_archive.py --latest --dist "$(DIST_DIR)" \
 	    $(if $(RELEASE_NOTES),--notes "$(RELEASE_NOTES)",); \
-	  echo "==> [release] clean up older working test output"; \
-	  tests/lib/python.sh tests/lib/release_rotate.py "$(DIST_DIR)/archive/v$$version" --apply
+	  echo "==> [release] prune expired releases and disposable test output"; \
+	  tests/run.sh --prune --apply
 
 # publish: the only outward step. release_publish.py verifies the archive,
 # including its portable test evidence, pushes the tag if the remote lacks it,

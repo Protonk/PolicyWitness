@@ -13,7 +13,7 @@ def install_runner(source, destination, suites, *, signed_fixtures=False):
                      'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh',
                      'tests/lib/cargo_config.py', 'tests/lib/vendor/tomli/__init__.py', 'tests/lib/vendor/tomli/_parser.py',
                      'tests/lib/vendor/tomli/_re.py', 'tests/lib/vendor/tomli/_types.py', 'tests/lib/vendor/tomli/LICENSE',
-                     'tests/RETAINED.json'):
+                     'tests/lib/run_ownership.py', 'tests/lib/release_runs.py', 'tests/lib/historical_release_storage.py'):
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source / relative, target)

@@ -1,362 +1,493 @@
-"""Run ownership, retained evidence, and the stable checkout execution lock.
+"""Four local release archives, current acceptance, and one resumable prune policy.
 
-Never unlink .checkout.lock: an open lock belongs to its inode, so replacing
-that file would let later operations run concurrently with its current holder.
+No discretionary pins, age cutoffs, completion requirements or retention knobs.
+Ownership, active locks and unresolved resource cleanup remain deletion blockers.
 """
-from contextlib import contextmanager
-import fcntl
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import re
-import sys
-import tempfile
-import time
+import plistlib
+import zipfile
+import shutil
 import uuid
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import checkout_lock as ownership  # noqa: E402
+import artifact
+import run_ownership as ownership
 
-RUN_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}')
-RELEASE_TAG = re.compile(r'v\d+\.\d+\.\d+')
-
-
-def unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f'duplicate JSON key: {key}')
-        result[key] = value
-    return result
+ARCHIVE_COUNT = 4
+QUARANTINE = 'tests/out/.retention'
+CONTAINERS = ('runs', 'release-acceptance')
 
 
-def read_object(path):
-    if path.is_symlink() or not path.is_file():
-        raise ValueError(f'expected a regular JSON file: {path}')
-    value = json.loads(path.read_text(), object_pairs_hook=unique_object)
-    if not isinstance(value, dict):
-        raise ValueError(f'expected a JSON object: {path}')
-    return value
+def version(tag):
+    if not isinstance(tag, str) or not ownership.RELEASE_TAG.fullmatch(tag):
+        raise ValueError(f'invalid release tag: {tag!r}')
+    return tuple(map(int, tag[1:].split('.')))
 
 
-def relative_path(value):
-    if not isinstance(value, str) or not value:
-        raise ValueError('expected a nonempty relative path')
-    path = PurePosixPath(value)
-    if path.is_absolute() or '..' in path.parts or str(path) != value or value == '.':
-        raise ValueError(f'invalid relative path: {value!r}')
-    return path
-
-
-def bounded_path(root, path):
-    base = root / 'tests/out'
-    path = Path(path)
-    if not path.is_absolute():
-        path = root / path
-    if '..' in path.parts or (path != base and base not in path.parents):
-        raise ValueError(f'output path must remain within {base}: {path}')
-    if path.resolve() != path:
-        raise ValueError(f'symlink redirects are not allowed in output paths: {path}')
-    return path
-
-
-def index_paths(root, index):
-    """Validate an index before installing it, as well as when reading it."""
-    try:
-        if type(index.get('schema_version')) is not int or index['schema_version'] != 1 or not isinstance(index.get('runs'), list):
-            raise ValueError('expected schema_version 1 and a runs array')
-        paths = []
-        for entry in index['runs']:
-            required = {'path', 'run_id', 'reason', 'source', 'app_inventory'}
-            if (not isinstance(entry, dict) or not required <= set(entry)
-                    or set(entry) - required - {'release'}):
-                raise ValueError('invalid retained entry fields')
-            path = bounded_path(root, root / 'tests/out' / relative_path(entry['path']))
-            if path.exists() and not path.is_dir():
-                raise ValueError(f'retained path is not a directory: {path}')
-            if path in paths:
-                raise ValueError(f'duplicate retained path: {path}')
-            if not isinstance(entry['run_id'], str) or not RUN_ID.fullmatch(entry['run_id']):
-                raise ValueError('invalid retained run_id')
-            if not isinstance(entry['reason'], str) or not entry['reason'].strip():
-                raise ValueError('retained reason is required')
-            if entry['source'] is not None and (not isinstance(entry['source'], str)
-                    or not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', entry['source'])):
-                raise ValueError('source must be a full commit hash or null')
-            if entry['app_inventory'] is not None:
-                bounded_path(root, path / relative_path(entry['app_inventory']))
-            release = entry.get('release')
-            if release is not None:
-                if not isinstance(release, str) or not RELEASE_TAG.fullmatch(release):
-                    raise ValueError('release must be a release tag or null (a pin)')
-                if (len(Path(entry['path']).parts) != 2
-                        or Path(entry['path']).parts[0] not in ('runs', 'release-acceptance')):
-                    raise ValueError('only direct managed runs or acceptance output can opt into release rotation')
-                if not RUN_ID.fullmatch(Path(entry['path']).name):
-                    raise ValueError('invalid release run directory name')
-            paths.append(path)
-        return paths
-    except (OSError, ValueError, TypeError, KeyError) as exc:
-        raise ValueError(f'invalid retention index tests/RETAINED.json: {exc}') from exc
-
-
-def load_index(root):
-    try:
-        index = read_object(root / 'tests/RETAINED.json')
-    except (OSError, ValueError) as exc:
-        raise ValueError(f'invalid retention index tests/RETAINED.json: {exc}') from exc
-    return index_paths(root, index)
-
-
-def atomic_json(path, value):
-    """Install complete JSON on the same filesystem; never follow an output link."""
-    if path.is_symlink() or path.parent.resolve() != path.parent:
+def real(path):
+    path = Path(path).absolute()
+    if '..' in path.parts or path.resolve() != path:
         raise ValueError(f'symlink redirects are not allowed: {path}')
-    fd, name = tempfile.mkstemp(prefix='.' + path.name + '-', dir=path.parent)
-    temporary = Path(name)
-    try:
-        with os.fdopen(fd, 'w') as stream:
-            if path.exists():
-                os.fchmod(stream.fileno(), path.stat().st_mode & 0o7777)
-            stream.write(json.dumps(value, indent=2) + '\n')
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        sync_directory(path.parent)
-    finally:
-        temporary.unlink(missing_ok=True)
+    return path
 
 
-def sync_directory(path):
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+def distribution(root, dist=None):
+    expected = real(Path(root) / 'dist')
+    actual = expected if dist is None else real(Path(root) / dist)
+    if actual != expected:
+        raise ValueError('releases require the checkout distribution root dist/')
+    return expected
 
 
-def write_index(root, index):
-    """Caller holds checkout_lock across read, validation and replacement."""
-    index_paths(root, index)
-    atomic_json(root / 'tests/RETAINED.json', index)
+def old_transactions(root):
+    pending = real(root / 'tests/out/.release-rotation')
+    if pending.exists() and any(pending.iterdir()):
+        raise ValueError('unfinished old release quarantine; resolve with the original recovery tools')
+    base = distribution(root) / 'archive'
+    for archive in sorted(base.iterdir()) if base.exists() else []:
+        if archive.is_symlink():
+            raise ValueError(f'symlink redirects are not allowed: {archive}')
+        receipt = archive / 'evidence/rotation.json'
+        if os.path.lexists(receipt) and ownership.read_object(real(receipt)).get('state') != 'complete':
+            raise ValueError(f'unfinished old release journal: {receipt}')
 
 
-def overlaps(path, other):
-    return path == other or path in other.parents or other in path.parents
+def archives(root, *, verify=False):
+    """Read identities cheaply for protection; fully verify before destructive planning."""
+    import release_runs
+    root = Path(root)
+    old_transactions(root)
+    base = real(distribution(root) / 'archive')
+    found = []
+    for path in sorted(base.iterdir()) if base.exists() else []:
+        real(path)
+        if path.name.startswith('.'):
+            continue  # An unpublished staging directory cannot advance the window.
+        order = version(path.name)
+        record = ownership.read_object(path / 'release.json')
+        manifest_path = real(path / release_runs.BUNDLE / 'manifest.json')
+        manifest = ownership.read_object(manifest_path)
+        if (record.get('tag') != path.name or record.get('version') != path.name[1:]
+                or record.get('archive') != 'PolicyWitness-' + path.name[1:] + '.zip'
+                or record.get('guide') != 'PolicyWitness.md'
+                or record.get('test_evidence') != dict(path=release_runs.BUNDLE + '/manifest.json', sha256=artifact.digest(manifest_path))
+                or manifest.get('tag') != path.name or manifest.get('source_commit') != record.get('source_commit')):
+            raise ValueError(f'inconsistent release archive: {path}')
+        for name in (record['archive'], record['guide'], 'SHA256SUMS', release_runs.BUNDLE + '/runs.tar.gz'):
+            if not real(path / name).is_file():
+                raise ValueError(f'incomplete release archive: {path / name}')
+        if manifest.get('schema_version') == 1:
+            import historical_release_storage
+            historical_release_storage.inspect(path, record, manifest, verify=verify)
+        else:
+            release_runs.battery_source(manifest)
+            if manifest.get('execution_contract') != release_runs.producer_contract(record):
+                raise ValueError('archive producer contract differs from portable evidence')
+            if verify:
+                release_runs.verify_release(path)
+        found.append(dict(path=path, record=record, manifest=manifest, order=order))
+    return sorted(found, key=lambda r: r['order'])
 
 
-def retained_overlap(path, retained):
-    return next((other for other in retained if overlaps(path, other)), None)
+def require_new_release(root, tag):
+    found = archives(root, verify=True)
+    if found and version(tag) <= found[-1]['order']:
+        raise ValueError(f'{tag} must be newer than completed local release {found[-1]["record"]["tag"]}; a version is released once')
 
 
-def disposition(path):
-    """Classify a real directory from ownership and terminal evidence, not location."""
-    owner_path = path / 'owner.json'
-    if not os.path.lexists(owner_path):
-        return 'unmanaged'
-    try:
-        owner = valid_owner(path)
-        started = owner['started_at_unix_ms']
-        if not os.path.lexists(path / 'run.json'):
-            return 'interrupted'
-        run = read_object(path / 'run.json')
-        finished = run['finished_at_unix_ms']
-        completion = run['completion']
-        if (type(run.get('schema_version')) is not int or run['schema_version'] != 1 or run.get('terminal') is not True
-                or run.get('run_id') != owner['run_id'] or run.get('started_at_unix_ms') != started
-                or type(finished) is not int or finished < started
-                or run.get('duration_ms') != finished - started or type(run.get('ok')) is not bool
-                or run['configuration']['out_dir'] != str(path)
-                or not isinstance(completion, dict)
-                or set(completion) != {'selected', 'completed', 'skipped', 'unrun'}
-                or any(type(v) is not int or v < 0 for v in completion.values())
-                or completion['selected'] != sum(completion[k] for k in ('completed', 'skipped', 'unrun'))):
-            return 'ambiguous'
-        cases, selected = run['case_results'], run['plan']['cases']
-        if (not isinstance(cases, list) or not isinstance(selected, list)
-                or len(cases) != completion['selected'] or len(selected) != len(cases)
-                or run['plan']['configuration'] != run['configuration']
-                or sorted(c['id'] for c in cases) != sorted(c['id'] for c in selected)
-                or len({c['id'] for c in cases}) != len(cases)
-                or any(c['state'] not in ('completed', 'skipped', 'unrun') for c in cases)
-                or any(completion[state] != sum(c['state'] == state for c in cases)
-                       for state in ('completed', 'skipped', 'unrun'))):
-            return 'ambiguous'
-        return 'completed'
-    except (OSError, ValueError, KeyError, TypeError):
-        return 'ambiguous'
+def handoffs(root):
+    """Select accepted unarchived attempts by the same final-ZIP predicate as archival."""
+    dist = distribution(root)
+    final = real(dist / 'PolicyWitness.zip')
+    digest = artifact.digest(final) if final.is_file() else None
+    base = real(dist / 'evidence')
+    matches = []
+    for path in sorted(base.iterdir()) if base.exists() else []:
+        real(path)
+        if not path.is_dir():
+            continue
+        accepted_path = path / 'acceptance.json'
+        if not accepted_path.exists():
+            continue
+        accepted = ownership.read_object(accepted_path)
+        if accepted.get('ok') is not True:
+            continue
+        record = ownership.read_object(path / 'release.json')
+        notarization = ownership.read_object(path / 'notarization/result.json')
+        if (record.get('archive') == str(final) and accepted.get('sha256') == digest
+                and digest is not None and notarization.get('state') == 'accepted'):
+            matches.append((path, accepted))
+    if len(matches) > 1:
+        raise ValueError('ambiguous accepted release handoff')
+    return matches
 
 
-def replacement_allowed(root, out, retained):
-    from pytest_resources import guard
-    guard(root, purpose='disposal', target=out)
-    bounded_path(root, out)
-    protected = retained_overlap(out, retained)
-    if protected:
-        raise ValueError(f'output overlaps retained path {protected}; choose a fresh output directory')
-    if out.exists():
-        if not out.is_dir():
-            raise ValueError(f'output is not a directory: {out}')
-        # A newly created empty directory has no evidence to replace.
-        if not any(out.iterdir()):
-            return
-        state = disposition(out)
-        if state != 'completed':
-            remedy = ('inspect it or use --prune --apply --unfinished <name>'
-                      if state in ('interrupted', 'ambiguous') else 'choose a fresh output directory')
-            raise ValueError(f'refusing replacement of {state} output {out}; {remedy}')
+def protected_paths(root, found=None):
+    root = Path(root)
+    found = archives(root) if found is None else found
+    protected = []
+    if found:
+        latest = found[-1]
+        entry = latest['manifest']['runs']['acceptance']['retained']
+        relative = ownership.relative_path(entry['path'])
+        if len(relative.parts) != 2 or relative.parts[0] != 'release-acceptance':
+            raise ValueError('release acceptance must name one managed acceptance directory')
+        path = ownership.bounded_path(root, root / 'tests/out' / relative)
+        record = latest['record']
+        if (record['acceptance']['original_path'] != str(relative) + '/acceptance.json'
+                or entry.get('release') != record['tag'] or entry.get('source') != record['source_commit']):
+            raise ValueError('release acceptance identity differs from its archive')
+        if path.exists():
+            if ownership.valid_owner(path)['run_id'] != entry['run_id']:
+                raise ValueError('release acceptance owner differs from its archive')
+            protected.append(path)
+    for attempt, accepted in handoffs(root):
+        receipt = ownership.bounded_path(root, Path(accepted['path']))
+        if receipt.name != 'acceptance.json' or receipt.parent.parent != root / 'tests/out/release-acceptance':
+            raise ValueError('handoff must name a managed acceptance receipt')
+        owner = ownership.valid_owner(receipt.parent)
+        local = ownership.read_object(receipt)
+        if (owner.get('kind') != 'release_acceptance' or local.get('run_id') != owner['run_id']
+                or local.get('ok') is not True or local.get('sha256_before') != accepted['sha256']
+                or local.get('sha256_after') != accepted['sha256']):
+            raise ValueError(f'inconsistent accepted handoff: {attempt}')
+        protected.append(receipt.parent)
+    return protected
 
 
-@contextmanager
-def checkout_lock(root, *, preview=False, purpose='execution'):
-    """Own tests/.checkout.lock for the block; a preview only observes whether it is held.
-
-    Acquisition, nested admission under an inherited claim and the busy
-    refusal belong to tests/lib/checkout_lock.py; this yields that owner's
-    scope, so a caller that launches protected children passes the held
-    descriptor through it. Nothing unlocks explicitly: closing the last
-    descriptor releases the lock. A preview yields whether the lock is busy
-    and holds it for the block when it was free, without an owner record.
-    """
-    if preview:
-        with ownership.preview(root) as busy:
-            yield busy
-        return
-    with ownership.owned(root, purpose=purpose) as scope:
-        yield scope
-
-
-def valid_owner(path):
-    owner = read_object(path / 'owner.json')
-    if (type(owner.get('schema_version')) is not int or owner['schema_version'] != 1 or owner.get('out_dir') != str(path)
-            or not isinstance(owner.get('run_id'), str) or not RUN_ID.fullmatch(owner['run_id'])
-            or type(owner.get('started_at_unix_ms')) is not int or owner['started_at_unix_ms'] < 0):
-        raise ValueError(f'no valid managed run ownership: {path}')
-    return owner
-
-
-@contextmanager
-def acceptance_output(root, out):
-    """Own acceptance through extraction, nested tests and final receipts.
-
-    Creation takes the checkout lock. A separate lifetime lock protects the
-    outer operation while allowing its child dispatcher to take that same
-    checkout lock. Release cleanup probes the lifetime lock without blocking.
-    """
-    with checkout_lock(root):
-        bounded_path(root, out)
-        replacement_allowed(root, out, load_index(root))
-        out.mkdir(parents=True)  # Acceptance always uses a fresh directory.
-        fd = os.open(out / 'acceptance.lock', os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            owner = dict(schema_version=1, kind='release_acceptance', run_id='accept-' + uuid.uuid4().hex,
-                         out_dir=str(out), started_at_unix_ms=time.time_ns() // 1_000_000)
-            atomic_json(out / 'owner.json', owner)
-        except BaseException:
-            os.close(fd)
-            raise
-    try:
-        yield owner
-    finally:
-        try:
-            owner.update(terminal=True, finished_at_unix_ms=time.time_ns() // 1_000_000)
-            atomic_json(out / 'owner.json', owner)
-        finally:
-            os.close(fd)
-
-
-def prune_rows(root, retained, *, busy=False):
-    base = bounded_path(root, root / 'tests/out')
-    runs = bounded_path(root, base / 'runs')
-    rows = []
-    if runs.exists():
-        if not runs.is_dir():
-            raise ValueError(f'managed runs root is not a directory: {runs}')
-        for path in sorted(runs.iterdir()):
-            # Files are outside the pruning interface. Links are reported but
-            # never traversed or removed, even when they point to a directory.
-            if path.is_symlink():
-                rows.append(dict(path=str(path.relative_to(base)), disposition='keep: unmanaged', reason='symlink redirect'))
+def cleanup_blocker(root, path):
+    """Inspect actual case receipts, never nested fixtures or historical process IDs."""
+    import pytest_resources
+    pytest_resources.guard(root, purpose='disposal', target=path)
+    owner = ownership.valid_owner(path)
+    tests = path / 'tests' if owner.get('kind') == 'release_acceptance' else path
+    suites = tests / 'suites'
+    real(tests)
+    real(suites)
+    if not suites.exists():
+        return None
+    for suite in suites.iterdir():
+        real(suite)
+        if not suite.is_dir():
+            continue
+        for case in suite.iterdir():
+            real(case)
+            if not case.is_dir():
                 continue
-            if not path.is_dir():
-                continue
-            protected = retained_overlap(path, retained)
-            state = disposition(path)
-            decision = ('keep: retained' if protected else 'delete' if state == 'completed'
-                        else 'keep: active or interrupted' if busy and state == 'interrupted'
-                        else 'keep: ' + state)
-            from pytest_resources import guard
-            try:
-                guard(root, purpose='disposal', target=path)
-            except (OSError, ValueError) as exc:
-                decision = 'keep: ownership unresolved'
-                rows.append(dict(path=str(path.relative_to(base)), disposition=decision, reason=str(exc)))
-            else:
-                rows.append(dict(path=str(path.relative_to(base)), disposition=decision))
-    if base.exists():
-        for path in sorted(base.iterdir()):
-            if path == runs or not path.is_dir():
-                continue
-            rows.append(dict(path=str(path.relative_to(base)), disposition='keep: unmanaged',
-                             reason='outside tests/out/runs', retained=bool(retained_overlap(path, retained))))
-    return rows
+            artifacts = real(case / 'artifacts')
+            session = artifacts / 'session.json'
+            if os.path.lexists(session):
+                state = ownership.read_object(session)
+                if state.get('removed') is not True or state.get('cleanup_error'):
+                    return f'pending external-runner cleanup: {session.relative_to(path)}'
+            if suite.name == 'runner_byoxpc' and case.name == 'registry_recovery':
+                receipt = artifacts / 'controls.json'
+                if not receipt.exists() or ownership.read_object(receipt).get('cleanup_verified') is not True:
+                    return 'pending registry recovery cleanup'
+    return None
 
 
-def unfinished_row(root, name, retained):
-    if not isinstance(name, str) or not RUN_ID.fullmatch(name) or name in ('.', '..'):
-        raise ValueError('--unfinished requires one direct run directory name')
-    path = bounded_path(root, root / 'tests/out/runs' / name)
-    if retained_overlap(path, retained):
-        raise ValueError(f'cannot remove retained output: {path}')
-    if not path.is_dir():
-        raise ValueError(f'no managed run directory: {path}')
-    from pytest_resources import guard
-    guard(root, purpose='disposal', target=path)
-    valid_owner(path)
-    state = disposition(path)
-    if state not in ('interrupted', 'ambiguous'):
-        raise ValueError(f'--unfinished requires interrupted or ambiguous managed output; got {state}: {path}')
-    return dict(path='runs/' + name, disposition='delete', previous_disposition='keep: ' + state)
+def snapshot(path):
+    return artifact.inventory(path) if path.is_dir() else {'.': dict(mode=path.lstat().st_mode, sha256=artifact.digest(path))}
 
 
-def prune(root, *, apply=False, unfinished=None):
-    """Preview a read-only snapshot; apply re-evaluates under the checkout lock."""
-    import shutil
-    retained = load_index(root)
-    if unfinished is not None:
-        unfinished_row(root, unfinished, retained)
+def candidate(root, path, kind):
+    if kind == 'run':
+        identity = ownership.valid_owner(path)
+    elif kind == 'archive':
+        record = ownership.read_object(path / 'release.json')
+        identity = {k: record[k] for k in ('tag', 'source_commit', 'sha256')}
+    elif kind == 'pointer':
+        identity = dict(destination=path.read_text().strip())
     else:
-        prune_rows(root, retained)
-    if not apply:
-        with checkout_lock(root, preview=True) as busy:
-            pass
-        return {'schema_version': 1, 'apply': False, 'checkout_busy': busy,
-                'runs': prune_rows(root, retained, busy=busy), 'removed': [], 'failures': []}
-    with checkout_lock(root, purpose='disposal'):
-        retained = load_index(root)
-        rows = ([unfinished_row(root, unfinished, retained)] if unfinished is not None
-                else prune_rows(root, retained))
-        result = {'schema_version': 1, 'apply': True, 'checkout_busy': False,
-                  'runs': rows, 'removed': [], 'failures': []}
-        for row in rows:
-            if row['disposition'] != 'delete':
+        identity = dict(release_record=artifact.digest(path / 'release.json')) if (path / 'release.json').exists() else {}
+    return dict(path=str(path.relative_to(root)), kind=kind, identity=identity, inventory=snapshot(path), state='planned')
+
+
+def working_output(root):
+    """Find owned roots anywhere in tests/out, never descending into owned evidence."""
+    base = real(root / 'tests/out')
+    blocked = []
+    found = []
+    def visit(path):
+        try:
+            real(path)
+            if not path.is_dir():
+                raise ValueError('unmanaged standalone output')
+            if os.path.lexists(path / 'owner.json'):
+                owner = ownership.valid_owner(path)
+                found.append((path, owner))
+                return  # Nested fixture records are content, not cleanup authority.
+            if (path.parent in (base / name for name in CONTAINERS)
+                    or any(os.path.lexists(path / name) for name in ('run.json', 'acceptance.json', 'suites'))):
+                raise ValueError('missing managed output owner')
+            children = list(path.iterdir())
+            if not children:
+                return  # Empty structural containers carry no evidence.
+            for child in children:
+                visit(child)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            blocked.append(dict(path=str(path.relative_to(root)), reason=str(exc)))
+    if base.exists():
+        for child in base.iterdir():
+            if child.name not in ('.retention', '.release-rotation', 'pytest-owners'):
+                visit(child)
+    return found, blocked
+
+
+def linked_attempts(root, expired, kept):
+    """Use archived pointer destinations, release stamps, hashes or submission IDs."""
+    base = real(distribution(root) / 'evidence')
+    selected, blocked = [], []
+    all_records = expired + kept
+    for path in sorted(base.iterdir()) if base.exists() else []:
+        try:
+            real(path)
+            tags = set()
+            if path.is_file() and path.suffix == '.archived':
+                destination = Path(path.read_text().strip())
+                for row in all_records:
+                    if destination == row['path'] / 'evidence':
+                        tags.add(row['record']['tag'])
+            elif path.is_dir():
+                release = path / 'release.json'
+                if release.exists():
+                    value = ownership.read_object(release)
+                    build = value.get('build') or {}
+                    for row in all_records:
+                        record = row['record']
+                        if value.get('submitted_sha256') in {record.get('submitted_sha256'), record['sha256']} - {None}:
+                            tags.add(record['tag'])
+                    submitted = real(path / 'notarization/submitted.zip')
+                    if build and submitted.is_file():
+                        if artifact.digest(submitted) != value.get('submitted_sha256'):
+                            raise ValueError('attempt submitted ZIP checksum mismatch')
+                        with zipfile.ZipFile(submitted) as zipped:
+                            info = plistlib.loads(zipped.read('PolicyWitness.app/Contents/Info.plist'))
+                        if any(info.get(k) != v for k,v in build.items()):
+                            raise ValueError('attempt submitted ZIP source differs from its record')
+                        tag = build.get('PWBuildDescribe')
+                        if tag == 'v' + str(build.get('CFBundleShortVersionString')) and tag in {r['record']['tag'] for r in all_records}:
+                            tags.add(tag)
+                # A successful notarytool lookup has a durable command/result pair.
+                command = path / 'command/command.json'
+                if command.exists():
+                    value = ownership.read_object(real(command))
+                    argv = value.get('argv', [])
+                    if (argv[:3] == ['/usr/bin/xcrun', 'notarytool', 'info'] and len(argv) > 3
+                            and value.get('returncode') == 0 and not value.get('interrupted') and not value.get('timed_out')):
+                        result = ownership.read_object(real(path / 'command/stdout'))
+                        if result.get('id') != argv[3]:
+                            raise ValueError('notarization lookup identity mismatch')
+                        for row in all_records:
+                            if result['id'] == row['record'].get('notarization_submission_id'):
+                                tags.add(row['record']['tag'])
+                for name in ('notarization/result.json', 'notarization/info.json'):
+                    receipt = path / name
+                    if receipt.exists():
+                        value = ownership.read_object(real(receipt))
+                        identity = value.get('submission_id') or value.get('id')
+                        for row in all_records:
+                            if identity and identity == row['record'].get('notarization_submission_id'):
+                                tags.add(row['record']['tag'])
+            if len(tags) > 1:
+                raise ValueError('attempt has conflicting release associations')
+            if tags and tags <= {r['record']['tag'] for r in expired}:
+                selected.append(candidate(root, path, 'pointer' if path.is_file() else 'attempt'))
+            elif not tags:
+                blocked.append(dict(path=str(path.relative_to(root)), reason='unassociated release evidence'))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            blocked.append(dict(path=str(path.relative_to(root)), reason=str(exc)))
+    return selected, blocked
+
+
+def plan(root, *, busy=False):
+    root = Path(root)
+    found = archives(root, verify=True)
+    kept, expired = found[-ARCHIVE_COUNT:], found[:-ARCHIVE_COUNT]
+    protected = protected_paths(root, found)
+    selected, blocked = linked_attempts(root, expired, kept)
+    selected += [candidate(root, row['path'], 'archive') for row in expired]
+    rows = []
+    missing = []
+    if found:
+        relative = found[-1]['manifest']['runs']['acceptance']['retained']['path']
+        if not (root / 'tests/out' / relative).exists():
+            missing.append('tests/out/' + relative)
+    working, unknown = working_output(root)
+    blocked += unknown
+    rows += [dict(path=str(Path(row['path']).relative_to('tests/out')), disposition='keep: blocked', reason=row['reason']) for row in unknown]
+    for path, owner in working:
+        try:
+            if ownership.retained_overlap(path, protected):
+                rows.append(dict(path=str(path.relative_to(root / 'tests/out')), disposition='keep: release'))
                 continue
-            path = root / 'tests/out' / row['path']
-            try:
-                # Recheck directly before removing, including index edits.
-                retained = load_index(root)
-                if unfinished is not None:
-                    unfinished_row(root, unfinished, retained)
-                else:
-                    replacement_allowed(root, path, retained)
-                    if disposition(path) != 'completed':
-                        raise ValueError('run no longer has valid completion evidence')
-                from pytest_resources import guard, retire_closed
-                guard(root, purpose='disposal', target=path)
-                shutil.rmtree(path)
-                retire_closed(root, path)
-                result['removed'].append(row['path'])
-            except (OSError, ValueError) as exc:
-                result['failures'].append({'path': row['path'], 'error': str(exc)})
+            if busy:
+                raise ValueError('checkout is active')
+            if path.parent.name == 'release-acceptance' and owner.get('kind') != 'release_acceptance':
+                raise ValueError('unrecognized acceptance owner')
+            if owner.get('kind') == 'release_acceptance' and ownership.acceptance_busy(path):
+                raise ValueError('active acceptance')
+            reason = cleanup_blocker(root, path)
+            if reason:
+                raise ValueError(reason)
+            selected.append(candidate(root, path, 'run'))
+            rows.append(dict(path=str(path.relative_to(root / 'tests/out')), disposition='delete'))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            blocked.append(dict(path=str(path.relative_to(root)), reason=str(exc)))
+            rows.append(dict(path=str(path.relative_to(root / 'tests/out')), disposition='keep: blocked', reason=str(exc)))
+    return dict(schema_version=1, kept=[r['record']['tag'] for r in kept],
+                protected=[str(p.relative_to(root)) for p in protected], targets=selected,
+                blocked=blocked, runs=rows, missing_acceptance=missing)
+
+
+def target_path(root, relative):
+    relative = ownership.relative_path(relative)
+    parts = relative.parts
+    valid = (len(parts) >= 3 and parts[:2] == ('tests', 'out')
+             and parts[2] not in ('.retention', '.release-rotation', 'pytest-owners')
+             and (len(parts) > 3 or parts[2] not in CONTAINERS)
+             or len(parts) == 3 and parts[:2] == ('dist', 'archive') and ownership.RELEASE_TAG.fullmatch(parts[2])
+             or len(parts) == 3 and parts[:2] == ('dist', 'evidence') and ownership.RUN_ID.fullmatch(parts[2]))
+    if not valid:
+        raise ValueError('invalid retention transaction target')
+    return real(root / relative)
+
+
+def pending(root):
+    base = real(root / QUARANTINE)
+    entries = list(base.iterdir()) if base.exists() else []
+    if len(entries) > 1:
+        raise ValueError('multiple retention quarantines require inspection')
+    if entries and (not re.fullmatch('[0-9a-f]{32}', entries[0].name) or not entries[0].is_dir()):
+        raise ValueError('unrecognized retention quarantine')
+    return real(entries[0]) if entries else None
+
+
+def apply_journal(root, directory):
+    """Stage all exact targets before deleting; resume only inventoried quarantine bytes."""
+    import pytest_resources
+    receipt = directory / 'journal.json'
+    if not any(directory.iterdir()):
+        directory.rmdir()  # Final journal unlink completed before a crash.
+        ownership.sync_directory(directory.parent)
+        return []
+    journal = ownership.read_object(receipt)
+    if (journal.get('schema_version') != 1 or journal.get('root') != str(root)
+            or journal.get('transaction') != directory.name or journal.get('state') not in ('staging', 'deleting', 'complete')):
+        raise ValueError('invalid retention journal identity')
+    rows = journal['targets']
+    if not isinstance(rows, list) or not rows:
+        raise ValueError('invalid retention journal targets')
+    for row in rows:
+        if (not isinstance(row, dict) or not isinstance(row.get('inventory'), dict)
+                or not isinstance(row.get('path'), str) or row.get('kind') not in ('run', 'archive', 'attempt', 'pointer')):
+            raise ValueError('invalid retention journal target identity')
+        prefix = {'run': 'tests/out/', 'archive': 'dist/archive/',
+                  'attempt': 'dist/evidence/', 'pointer': 'dist/evidence/'}[row['kind']]
+        if not row['path'].startswith(prefix) or row['kind'] == 'pointer' and not row['path'].endswith('.archived'):
+            raise ValueError('retention journal target kind differs from its path')
+    paths = [target_path(root, row['path']) for row in rows]
+    if any(ownership.overlaps(a, b) for i,a in enumerate(paths) for b in paths[i+1:]):
+        raise ValueError('overlapping retention journal targets')
+    protected = protected_paths(root)
+    if any(ownership.retained_overlap(p, protected) for p in paths):
+        raise ValueError('retention transaction overlaps current release protection')
+    if journal['state'] == 'staging':
+        for i, (row, source) in enumerate(zip(rows, paths)):
+            target = real(directory / str(i))
+            if row['state'] == 'staged':
+                if not target.exists() or snapshot(target) != row['inventory']:
+                    raise ValueError('staged retention bytes changed')
+                continue
+            if row['state'] != 'planned':
+                raise ValueError('invalid staging state')
+            if target.exists():
+                if snapshot(target) != row['inventory']:
+                    raise ValueError('quarantine differs from planned bytes')
+            else:
+                if not source.exists() or snapshot(source) != row['inventory']:
+                    raise ValueError('retention target changed since planning')
+                if row['kind'] == 'run':
+                    owner = ownership.valid_owner(source)
+                    if owner.get('kind') == 'release_acceptance' and ownership.acceptance_busy(source):
+                        raise ValueError('active acceptance')
+                    reason = cleanup_blocker(root, source)
+                    if reason:
+                        raise ValueError(reason)
+                if source.stat().st_dev != directory.stat().st_dev:
+                    raise ValueError('retention quarantine cannot cross filesystems')
+                source.rename(target)
+                ownership.sync_directory(source.parent)
+                ownership.sync_directory(directory)
+            row['state'] = 'staged'
+            ownership.atomic_json(receipt, journal)
+        journal['state'] = 'deleting'
+        ownership.atomic_json(receipt, journal)
+    for i, (row, source) in enumerate(zip(rows, paths)):
+        target = real(directory / str(i))
+        if row['state'] == 'removed':
+            if target.exists():
+                raise ValueError('removed quarantine target reappeared')
+            continue
+        if row['state'] not in ('staged', 'deleting'):
+            raise ValueError('invalid deletion state')
+        pytest_resources.guard(root, purpose='disposal', target=source)
+        if target.exists():
+            remaining = snapshot(target)
+            if (row['state'] == 'staged' and remaining != row['inventory']
+                    or any(row['inventory'].get(k) != v for k,v in remaining.items())):
+                raise ValueError('quarantined bytes changed; deletion refused')
+            row['state'] = 'deleting'
+            ownership.atomic_json(receipt, journal)
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+            ownership.sync_directory(directory)
+        elif row['state'] != 'deleting':
+            raise ValueError('quarantine disappeared before deletion')
+        # Never retire a replacement's ownership at the original path.
+        if row['kind'] == 'run' and not source.exists():
+            pytest_resources.retire_closed(root, source)
+        row['state'] = 'removed'
+        ownership.atomic_json(receipt, journal)
+    journal['state'] = 'complete'
+    ownership.atomic_json(receipt, journal)
+    if set(p.name for p in directory.iterdir()) != {'journal.json'}:
+        raise ValueError('unexpected quarantine contents')
+    receipt.unlink()
+    directory.rmdir()
+    ownership.sync_directory(directory.parent)
+    return [row['path'] for row in rows]
+
+
+def prune(root, *, apply=False):
+    root = real(root)
+    with ownership.checkout_lock(root, preview=not apply, purpose='disposal') as busy:
+        old_transactions(root)
+        directory = pending(root)
+        removed = []
+        if directory:
+            if not apply:
+                return dict(apply=False, checkout_busy=busy, pending=str(directory), runs=[], removed=[], failures=[])
+            removed += apply_journal(root, directory)
+            return dict(apply=True, checkout_busy=False, resumed=True, removed=removed, runs=[], failures=[])
+        result = plan(root, busy=bool(busy) if not apply else False)
+        if apply and result['targets']:
+            base = real(root / QUARANTINE)
+            base.mkdir(parents=True, exist_ok=True)
+            directory = base / uuid.uuid4().hex
+            directory.mkdir()
+            ownership.sync_directory(base)
+            journal = dict(schema_version=1, root=str(root), transaction=directory.name,
+                           state='staging', targets=result['targets'])
+            ownership.atomic_json(directory / 'journal.json', journal)
+            removed += apply_journal(root, directory)
+        result.update(apply=apply, checkout_busy=bool(busy) if not apply else False, removed=removed,
+                      failures=result['blocked'] if apply else [])
+        # Inventories live only in the transaction, not in the console report.
+        result['targets'] = [{k:v for k,v in row.items() if k != 'inventory'} for row in result['targets']]
         return result

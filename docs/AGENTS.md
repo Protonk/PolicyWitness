@@ -67,7 +67,10 @@ to change a measured row, rerun its case, transcribe the new receipt and
 update that section, rather than editing numbers in place. A release's
 acceptance battery runs every measurement case; the
 [release procedure](SIGNING.md#release-procedure) transcribes all measured rows
-from its archive, which then is the source the section names.
+from its archive during preparation of the next release, before committing and
+tagging. Name the source archive and acceptance/battery identities; preflight
+checks their freshness, not the numerical transcription. No post-tag footprint
+commit is required.
 
 Run the generator with `--check` and the `source_drift` suite through the
 dispatcher after edits. Review shared backing versus views and distinguish

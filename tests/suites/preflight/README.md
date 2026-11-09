@@ -370,7 +370,7 @@ Offline release controls also exercise the release procedure's decision points.
   lightweight tag, a remote holding a different tag, an unreachable remote and
   an existing archive, and must only warn under `--report`. Archiving must
   refuse a hash, acceptance, notarization, tag, guide, notes or battery
-  mismatch without touching the distribution or the retention index, and on
+  mismatch without touching the distribution, and on
   success must move the attempt, write the checksums and provenance record,
   pack and verify complete test evidence with portable summaries, and retain
   the acceptance run with the default battery nested inside it. The battery
@@ -379,7 +379,7 @@ Offline release controls also exercise the release procedure's decision points.
   file hash and a single changed mode bit are each refused by name, as are a
   failed, skipped, selected or mutated battery. Selection checks include the
   recorded plan mode: an all-case run has empty explicit selectors but is not
-  a default run. Both archive formats reject that substitution. The generated schema-2 record carries the
+  a default run. Current bundle verification rejects that substitution. The generated schema-2 release record carries the
   provenance writer's two sealed notes as independent literals, and both the
   ZIP's member and the archived copy keep them through verification; a release
   record without a provenance object and a version 1 record bound
@@ -396,26 +396,26 @@ Offline release controls also exercise the release procedure's decision points.
   and dirty-tree decisions and stamps must agree across names; a retained
   comparison receipt distinguishes the source state from the branch label.
 - `release_rotation_controls` creates successive releases in real fixture
-  repositories. It verifies compressed files and symlink targets independently,
-  reads a detached archive after deleting its source runs, and observes that
-  cleanup keeps the latest release plus the newest completed local output,
-  including failed runs and completion-time ties. Older owned development,
-  acceptance and abandoned output is removed. Explicit pins, active acceptance,
-  newer unfinished work, pending resource cleanup, unknown output (acceptance
-  output without its owner record and lifetime lock among it) and scratch
-  survive. The new archive must verify. Corrupt new archives and symlink redirects
-  stop unsafe cleanup. Names, filesystem timestamps and sizes do not choose newest.
-  Abrupt child exits after rename, index replacement, partial deletion and
-  completed deletion must resume from the journal without deleting a replacement
-  at the original path. Competing processes must respect the stable checkout
-  lock, and a failed atomic index replacement must preserve its prior bytes.
-  Current-format rotation retires older owned acceptance and separately retained
-  battery output while leaving historical archive bytes unchanged. Unsupported
-  evidence formats are refused by bundle/release verification and rotation
-  before any index, journal or output change. The publication controls also
-  require format refusal before any external command or archive change. These
-  controls change a current fixture's format number and rebind its manifest hash;
-  unchanged current-format evidence still verifies, publishes and recovers.
+  repositories and independently inspects stored files and symlink targets.
+  Detached current-format evidence verifies after its working output is gone
+  and the checkout catalog changes; the packed acceptance owner must match its
+  recorded identity. Temporary historical storage controls bind schema-1
+  identities, assets and inventories while refusing malformed or relabeled data.
+  Inventories from empty through six releases establish the four-release
+  window, numeric patch/minor ordering, exact surviving archive bytes and
+  removal of expired pointers and positively linked attempts. Current preflight
+  and direct archival reject old versions after their archive paths expire.
+  Footprint provenance checks distinguish current, stale and wrong run identities.
+  The current acceptance and accepted unarchived handoff remain protected;
+  wrong ZIP hashes, changed owners and ambiguous attempts cannot manufacture
+  protection. Active acceptance and pending resource receipts block deletion.
+  Once those obligations clear, ordinary pruning removes the output. A failed
+  archive copy cannot advance protection or remove working evidence.
+  Abrupt child exits after rename, staging, partial deletion, pointer deletion
+  and completed deletion resume from quarantine while preserving replacements at original
+  paths. Competing processes respect the stable checkout lock. Unfinished old
+  journals or quarantine block the new planner. Unsupported portable formats
+  remain refusals, separately from temporary historical storage inspection.
 
 ## Fixtures
 

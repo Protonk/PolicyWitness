@@ -179,12 +179,6 @@ def check(out):
         assert 'selected_cases' not in record, 'acceptance names its own case list'
         assert record['battery']['timeout_seconds'] == 7200, record['battery']
         if mode == 'valid':
-            line = next(line for line in (work / 'stdout').read_text().splitlines()
-                        if line.startswith('Suggested tests/RETAINED.json entry: '))
-            entry = json.loads(line.split(': ', 1)[1])
-            assert entry == dict(path=str(work.relative_to(ROOT / 'tests/out')),
-                                 run_id='release-fixture', reason='Release ZIP acceptance with the default battery',
-                                 source=None, app_inventory='before.json')
             assert record['battery']['completion'] == dict(selected=3, completed=3, skipped=0, unrun=0), record['battery']
             assert record['battery']['run_id'] == 'release-fixture' and record['battery']['elapsed_seconds'] == 12.5, record['battery']
         if mode in ('selected', 'all'):

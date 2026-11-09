@@ -190,16 +190,18 @@ rebuilt never supplies them.
 ## Release procedure
 
 Run commands from the repository root, outside an automation sandbox. First
+transcribe the preceding release's footprint receipts as described below,
 render and review the pending surface stamps, then include them with the
 complete reviewed release change in one commit and create the annotated tag.
-For the v0.3.6 cutover, that commit includes the implementation, new generators,
-tests and documentation together. Build from that clean tagged tree: only this state emits
+Build from that clean tagged tree: only this state emits
 `release:vX.Y.Z`; an untagged or dirty build emits a development contract.
 `tests/lib/release_preflight.py` refuses an untagged or dirty tree, a lightweight
 or ambiguous release tag, scoped bytes that differ from the tag even when the
 Git index hides the edit, stale surface tables or remaining `unreleased` rows,
 a remote holding a different tag of that name, or an existing
-`dist/archive/<tag>/`.
+`dist/archive/<tag>/`. New releases must increase numerically beyond the newest
+complete local archive, including after older archives expire. Release
+operations require this checkout's `dist/` root.
 It also refuses added or rewritten sites in the committed
 [prose baseline](../tests/fixtures/docs/prose_baseline.json) and added or rewritten
 entries in the committed [build baseline](../tests/fixtures/docs/build_baseline.json),
@@ -207,19 +209,17 @@ compared with the nearest preceding annotated release tag. A preceding release
 without a baseline is recorded as such; `--report` turns growth refusals into warnings.
 
 ```sh
-tests/lib/python.sh docs/generate_contract_stamps.py --release v0.3.6
+tests/lib/python.sh docs/generate_contract_stamps.py --release v0.3.7
 git status --short
 git diff
 # After checking that the tree contains only the intended release change:
 git add -A
 git diff --cached
-git commit -m "Adopt release-stamped contracts for v0.3.6"
-git tag -a v0.3.6 -m "PolicyWitness 0.3.6"
+git commit -m "Prepare PolicyWitness v0.3.7"
+git tag -a v0.3.7 -m "PolicyWitness 0.3.7"
 tests/lib/python.sh docs/generate_contract_stamps.py --check
 make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' RELEASE_NOTES=/path/to/notes.md
-# transcribe the measured footprint rows from the archive (below), then:
-git commit tests/RETAINED.json docs/footprint.json docs/FOOTPRINT.md -m "Retain the 0.3.6 release evidence"
-make publish VERSION=0.3.6
+make publish VERSION=0.3.7
 ```
 
 `make release` runs the preflight, then the `make notarize` chain below (a
@@ -243,22 +243,25 @@ battery's recorded inventory of the extracted app to equal a fresh extraction
 of the archived ZIP in full (every mode, hash and symlink target), and exposes
 the completed archive by rename. The attempt's receipts end up under
 `evidence/`, with a `<attempt>.archived` pointer under `dist/evidence/`.
-The acceptance working directory, battery inside, is added to `tests/RETAINED.json`.
-Finally, `tests/lib/release_rotate.py` removes eligible older working test output
-as described below.
+The newest archive supplies protection for its acceptance working directory,
+battery inside. Finally, ordinary pruning applies the release window and removes
+eligible working test output as described below.
 
 The default battery includes the three footprint measurement cases
 (`witness_contract/response_footprint`, `witness_contract/held_phase_footprint`
 and `run_effects/aftermath_footprint`), so the archived acceptance holds the
 receipts behind every measured row of [FOOTPRINT](FOOTPRINT.md), taken on the
-released binaries. After `make release`, transcribe those rows into
-[footprint.json](footprint.json) from the case artifacts inside
-`evidence/test-runs/runs.tar.gz` (`acceptance/tests/suites/<suite>/<case>/artifacts/`),
-name that archive in FOOTPRINT's provenance section, regenerate, and commit the
-footprint change together with the retention index. The tagged commit cannot
-contain its own measurements, so the commit after the tag carries them. With
-the rows citing the release archive, no measured row depends on an explicit pin.
-The build, acceptance (with its battery), archiving and rotation each hold the
+released binaries. During preparation of release N+1, transcribe release N's
+rows into [footprint.json](footprint.json) from the case artifacts inside
+`evidence/test-runs/runs.tar.gz` (`acceptance/tests/suites/<suite>/<case>/artifacts/`).
+Name N's archive and acceptance/battery identities in FOOTPRINT's provenance
+section and regenerate the document before committing and tagging N+1.
+Preflight requires that provenance to cite the newest complete local archive;
+it checks attribution freshness, not agreement of the measured values with
+receipts. With no local archive, the comparison is explicitly unavailable.
+The tagged tree reports the previous release's measurements, and main may lag
+until the next preparation. No post-tag retention or footprint commit is
+required. The build, acceptance (with its battery), archiving and pruning hold the
 checkout lock for their own duration; `make release` holds no outer lock, so
 run no other build or battery in the checkout while it runs. The notarization
 submission is the only remote step in `make release`.
@@ -268,7 +271,7 @@ submission is the only remote step in `make release`.
 Each archive contains `evidence/test-runs/runs.tar.gz` with the full acceptance
 directory under `acceptance/`, the default battery's dispatcher run nested at
 `acceptance/tests/`. Its `manifest.json` (`schema_version` 3) records the
-retention entry, per-file hashes, modes and symlink targets, which file inside
+original acceptance identity, per-file hashes, modes and symlink targets, which file inside
 the acceptance is the battery summary, and checksums of the compressed archive
 and the standalone `acceptance.json` and `battery.json` summaries.
 `release.json` binds that manifest by SHA-256. Its `acceptance.path` and
@@ -276,78 +279,72 @@ and the standalone `acceptance.json` and `battery.json` summaries.
 `original_path` records the former location under `tests/out`. Schema 3 also
 binds the selected families to the producer's execution contract, captured before
 the battery starts and retained independently in `release.json`. Verification,
-publication and rotation require each family's selection, phase account and
+publication and pruning require each family's selection, phase account and
 terminal ownership receipt against that contract. Passing item reports alone
 do not establish complete execution or resolved ownership.
 
-Historical schema 2 bundles remain readable. A release without an execution
-contract must have a positively recognized historical producer source, checked
-against the archived ZIP's provenance; missing new fields do not establish that
-an archive is historical. Other evidence-bundle formats are unsupported.
-Stored archives are not migrated or rewritten. Original
-command receipts retain their original paths. Verification reads the portable
-copy directly, independently of the working test directories.
+Only portable bundle schema 3 is accepted for archive verification and
+publication, with a mandatory captured execution contract in the schema-2
+`release.json`. Those are different format counters. Rereading an archive uses
+its captured contract, not today's catalog. Unsupported bundles are not
+converted or rewritten. Original command receipts retain their original paths;
+verification reads the portable copy independently of working test directories.
+Provenance verification derives the executable inventory from the ZIP's actual
+Mach-O members, excluding debug companions by file type. It checks every named
+output's hashes, load commands and signature facts against those bytes, without
+requiring the current checkout's executable names. Current-build validation
+continues to require the current build layout.
 
-Successful release packaging is the automatic cleanup checkpoint. Test output
-accumulates during development until the next packaged release or explicit
-manual pruning.
+Successful archival is followed by ordinary pruning, the same operation as
+`make prune APPLY=1`. It keeps the four newest complete local archives in
+numeric version order and only the newest archive's unpacked acceptance, with
+its battery. Accepted unarchived attempts matching the current final ZIP
+protect their acceptance until archival or established supersession. There are
+no manual pins, newest-development exception, completion requirement or age
+cutoff. Expired archives, positively linked attempts and archived pointers are
+removed together. Publish while the local archive remains in the window; an
+unpublished archive can expire too. Git history, annotated tags and published
+assets remain intact. No backup or remote deletion is involved.
 
-Cleanup keeps the new release's working acceptance, battery inside, plus the newest
-completed local output under `tests/out/runs/` or `tests/out/release-acceptance/`.
-The recorded completion timestamp determines newest, including failed runs;
-ties are all kept. Starting cleanup for an older release while a newer one is
-indexed is refused. Explicit manual pins remain protected exceptions.
+Every unprotected managed run is disposable once inactive and free of resource
+cleanup obligations. An interrupted run or malformed completion summary is not
+an exemption. Ownership is checked independently; unknown ownership, redirects,
+active acceptance, unresolved pytest ownership and pending external-runner
+cleanup remain blockers. The checkout lock and acceptance lifetime locks
+establish inactivity; timestamps do not. Pruning never removes machine
+services to settle an obligation.
 
-The release retention entry carries `"release": "v<version>"`, making it
-eligible at a later release checkpoint. An omitted or null `release` is an
-explicit pin. Release entries should carry their established tag. Do not
-infer ownership from directory names or reason text. Absent older rotating
-entries are retired from the index too; absent pins remain protected.
+Cleanup verifies current portable evidence before mutation. A temporary
+`historical_release_storage.py` inspector recognizes the six schema-1 producers
+for storage classification only, binding their assets, manifests and original
+run identities. It does not restore historical acceptance or publication.
+Remove that inspector and its positive controls once the last schema-1 archive
+and dependent quarantine expire. Unsupported or corrupt storage blocks cleanup.
 
-Older owned runs and acceptance output are disposable at the checkpoint.
-Interrupted or ambiguous output with valid ownership is eligible when it started
-before the new release battery. Newer unfinished work survives until a later
-checkpoint. Acceptance holds a separate lifetime lock through extraction, its
-nested dispatcher, final checks and receipts, so even work outside the nested
-tests stays protected. Acceptance output without its owner record and lifetime
-lock is unknown ownership. Unknown ownership, symlink redirects, explicit pins,
-overlaps, and pending external-runner cleanup are kept with reported reasons.
-Session removal and registry-recovery receipts must establish cleanup before
-their output can be removed; release cleanup never removes machine services.
-
-The new release's portable evidence must verify before cleanup begins. Older
-development output is not automatically archived before deletion, and historical
-release archives are not modified. There is no off-machine evidence backup,
-monitoring, or backup prerequisite. `.tmp` is outside test cleanup and follows
-[its disposable-scratch policy](../.tmp/AGENTS.md), preserving that policy file.
-
-Cleanup holds `tests/.checkout.lock` through planning, atomic retention
-replacement and deletion. It records ownership and file inventories in
-`evidence/rotation.json`, then renames eligible directories into a private
-transaction under `tests/out/.release-rotation/`. Only after staging does it
-retire their index entries and delete the quarantined copies. That directory
-is outside ordinary pruning. The journal survives interruption, including a
-partial deletion; resumption rechecks the new archive, pins and remaining bytes.
-It never deletes a replacement run at an original path. Keep the quarantine and
-journal together until completion. A later checkpoint refuses to start while
-an earlier transaction still has quarantined output; resume that transaction first.
-
-Set `RELEASE_ARCHIVE` to the path of the current-format release archive, then
-preview or resume just this last step:
+Apply holds `tests/.checkout.lock`, journals the exact target inventories inside
+`tests/out/.retention/`, and renames targets into that quarantine before deletion.
+Both distribution and test output must permit same-filesystem staging. Surviving
+archives receive no writes. The journal supports partial-deletion recovery;
+resumption rechecks remaining bytes and preserves replacements at original
+paths. Once complete, the journal and transaction directory are removed. Stdout
+reports the result; no permanent deletion-receipt archive is kept.
 
 ```sh
-tests/lib/python.sh tests/lib/release_rotate.py "$RELEASE_ARCHIVE"
-tests/lib/python.sh tests/lib/release_rotate.py "$RELEASE_ARCHIVE" --apply
+make prune
+make prune APPLY=1
 ```
 
-Preview is read-only. `--apply` either creates a journal or resumes its existing
-transaction; a completed journal is a no-op, so later test runs cannot trigger
-another sweep under the same release. Resume a failed cleanup through the same
-journal. An unsupported evidence format cannot be a new or resumed cleanup
-checkpoint. Evidence archives, including the test evidence bundle, remain local,
-ignored files.
+Preview is read-only. Apply resumes a leftover transaction before any fresh
+pruning; a separate later call plans afresh. Keep the journal and quarantine
+together until completion. Unfinished journals from the old rotation procedure
+or leftover `.release-rotation/` output block the new planner and require the
+original recovery tools. Scratch remains outside cleanup under
+[its own guidance](../.tmp/AGENTS.md).
 
 ### Publication
+
+Publication holds the checkout lock while reading and updating its archive, so
+pruning cannot retire those bytes during publication.
 
 `make publish` is the outward step. `tests/lib/release_publish.py` pushes the
 tag if the remote lacks it, creates the GitHub release once from the archived
@@ -396,7 +393,7 @@ directories hold raw receipts. Missing steps have no recorded result.
 | Re-zip | Replaces ZIP with the stapled app | ZIP creation succeeds |
 | Accept archive | Extracts a disposable copy, checks it, and runs the default battery against it through `tests/run.sh` with no selectors under its fixed two-hour bound | `acceptance.json` has `ok: true` for the final ZIP's SHA-256 and a `battery` summary; the nested `tests/run.json` passes with no skips, unrun cases or harness errors and an unchanged app |
 | Archive (`make release`) | Verifies staged assets, receipts, the record copied from the accepted ZIP with the final controller hash and seal facts, the battery's inventory against a fresh extraction of the ZIP, and portable test evidence; retains the acceptance run | `dist/archive/v<version>/release.json` with `origin: null`, a `provenance` object bound to the ZIP and a `battery` naming the nested run |
-| Cleanup (`make release`) | Keeps the release and newest local evidence; retires older owned output under the checkout lock | `evidence/rotation.json` records a completed transaction |
+| Cleanup (`make release`) | Keeps the four newest archives and only the newest unpacked acceptance; prunes other inactive owned output under the checkout lock | The apply report lists removals and blockers; completed quarantine is removed |
 | Publish (`make publish`) | Pushes the tag, creates the release, verifies uploads | `release.json` records `origin` and `evidence/github-release.json` exists |
 
 `notarize.py` owns only submission and one bounded wait. It preserves the input
@@ -549,7 +546,7 @@ to the local macOS environment and Gatekeeper state at acceptance time.
 `dist/archive/<version>/` contains exact release assets, `SHA256SUMS`, a
 `release.json` release record, and supporting `evidence/`, including the
 embedded provenance record copied from the accepted ZIP, the portable test
-bundle and the rotation receipt when produced by these helpers. `make release`
+bundle. Completed rotation receipts in older archives remain historical evidence. `make release`
 creates one per version through `tests/lib/release_archive.py`. Provenance
 records distinguish a verified published asset (`origin.kind: github_release`,
 written by `make publish`) from locally retained material. Check Git separately

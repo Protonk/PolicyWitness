@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 import uuid
 import retention
+import run_ownership
 import execution_contract
 from pytest_support import read, contained
 
@@ -83,9 +84,11 @@ def archive_layout(archive):
 
 
 def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
-    retention.replacement_allowed(ROOT, out / 'tests', retention.load_index(ROOT))
+    run_ownership.replacement_allowed(ROOT, out / 'tests', retention.protected_paths(ROOT))
     report = dict(schema_version=3, execution_contract=execution_contract.defaults(ROOT), archive=str(archive), ok=False, errors=[],
                   battery=dict(timeout_seconds=BATTERY_TIMEOUT_SECONDS))
+    if (out / 'owner.json').exists():
+        report['run_id'] = run_ownership.valid_owner(out)['run_id']
     save(out / 'acceptance.json', report)
     staging, app, before = None, None, None
     completed = False
@@ -173,11 +176,6 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         report['ok'] = completed and not report['errors']
         save(out / 'acceptance.json', report)
     print(f'Release acceptance: {out / "acceptance.json"}', flush=True)
-    if report['ok']:
-        run_id = retention.valid_owner(out)['run_id'] if (out / 'owner.json').exists() else run['run_id']
-        entry = dict(path=str(out.relative_to(ROOT / 'tests/out')), run_id=run_id,
-                     reason='Release ZIP acceptance with the default battery', source=None, app_inventory='before.json')
-        print('Suggested tests/RETAINED.json entry: ' + json.dumps(entry, sort_keys=True), flush=True)
     for error in report['errors']:
         print(f'STOP: {error}', file=sys.stderr)
     return 0 if report['ok'] else 1
@@ -199,7 +197,7 @@ def main():
     try:
         if args.evidence_dir:
             release_evidence.check_archive(args.evidence_dir, archive)
-        with retention.acceptance_output(ROOT, out):
+        with run_ownership.acceptance_output(ROOT, out, lambda: retention.protected_paths(ROOT)):
             result = accept(archive, out)
             if args.evidence_dir:
                 release_evidence.record_acceptance(args.evidence_dir, out / 'acceptance.json')

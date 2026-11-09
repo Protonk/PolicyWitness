@@ -113,8 +113,8 @@ producer; T's retained baseline is the
 `release-0.2.4-default` run of `worker_attempt_in_flight_at_deadline`.
 Acceptance against the candidate’s producer contract is the `witness_contract/comparison_matrix`
 case itself, whose per-run artifacts (`matrix-summary.json`, the three raw
-envelopes and `direct-controls.json`) are the receipts; the retained battery
-runs registered in `tests/RETAINED.json` carry them.
+envelopes and `direct-controls.json`) are the receipts; release archives carry them when their acceptance battery includes that case.
+Development runs are disposable and are not retained references.
 
 The `query` column in each row is a test column, not a record field: it is
 `sandbox_check.outcome` when `result_source` is `validator` and the outcome

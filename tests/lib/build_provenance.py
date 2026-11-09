@@ -2021,7 +2021,7 @@ def record_shape():
 RECORD_SHAPE = record_shape()
 
 
-def record_shape_problems(record):
+def record_shape_problems(record, *, expected_outputs=None):
     """Every way a record departs from the documented shape of the current schema version: required fields present and
     not null, exact types, bounds, the variant's compilers and outputs, permitted unknowns only where the field policy
     allows them, and signing claims that repeat the outputs' own. Every output must be described as the output target
@@ -2065,7 +2065,7 @@ def record_shape_problems(record):
     elif swift != dict(status='not applicable', reason='partial build: the XPC pieces were not compiled'):
         problems.append('record.toolchain.compilers.swift is not the partial build\'s not-applicable entry')
     paths = [o['rel_path'] for o in record['outputs']]
-    expected = FULL_OUTPUTS if full else PARTIAL_OUTPUTS
+    expected = expected_outputs if expected_outputs is not None else FULL_OUTPUTS if full else PARTIAL_OUTPUTS
     if sorted(paths) != sorted(expected) or len(set(paths)) != len(paths):
         problems.append(f"record.outputs name {sorted(paths)}, not the {'full' if full else 'partial'} build's shipped executables")
     for output in record['outputs']:
@@ -2203,7 +2203,8 @@ def read_zip_record(archive):
     and every nested output it names must hash to its recorded value. Load
     commands, architectures, containers and signatures are observed on temporary
     copies of the named executables, never trusted from the record. A record of
-    any other version is refused."""
+    any other version is refused. Output membership comes from the archived ZIP,
+    independently of both the record and the current checkout build layout."""
     import zipfile
     import signer_check
     with zipfile.ZipFile(archive) as zipped:
@@ -2231,7 +2232,36 @@ def read_zip_record(archive):
             raise ValueError('the accepted ZIP carries an unreadable provenance record')
         if not isinstance(data, dict) or data.get('schema_version') != SCHEMA_VERSION:
             raise ValueError('the accepted ZIP carries an unsupported provenance record')
-        problems = record_shape_problems(data)
+        # Scan the actual archived code, including unlisted/renamed members. Debug
+        # companions are excluded by their Mach-O type, not their filenames.
+        output_paths = []
+        seen = set()
+        with tempfile.TemporaryDirectory(prefix='pw-archive-layout-') as temporary:
+            probe_path = Path(temporary) / 'member'
+            for member in zipped.infolist():
+                name = member.filename
+                if name in seen:
+                    raise ValueError('the accepted ZIP repeats a member')
+                seen.add(name)
+                if not name.startswith('PolicyWitness.app/') or member.is_dir():
+                    continue
+                relative = name[len('PolicyWitness.app/'):]
+                if str(Path(relative)) != relative or Path(relative).is_absolute() or '..' in Path(relative).parts:
+                    raise ValueError('the accepted ZIP contains an unsafe member path')
+                with zipped.open(member) as source:
+                    magic = source.read(4)
+                    if magic not in output_target.THIN_MAGICS and magic not in output_target.FAT_MAGICS:
+                        continue
+                    with probe_path.open('wb') as destination:
+                        destination.write(magic)
+                        shutil.copyfileobj(source, destination)
+                header = output_target.header(probe_path)
+                if header is not None and header.get('filetype') != output_target.MH_DSYM:
+                    output_paths.append(relative)
+        for output in data.get('outputs', []) if isinstance(data.get('outputs'), list) else []:
+            if isinstance(output, dict) and isinstance(output.get('rel_path'), str) and output['rel_path'] not in output_paths:
+                raise ValueError(f"the accepted ZIP lacks {output['rel_path']}, which its provenance record names")
+        problems = record_shape_problems(data, expected_outputs=output_paths)
         if problems:
             raise ValueError('the accepted ZIP carries an invalid provenance record: ' + '; '.join(problems[:5]))
         with tempfile.TemporaryDirectory(prefix='pw-archive-provenance-') as temporary:

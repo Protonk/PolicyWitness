@@ -1,5 +1,6 @@
-"""Real files, portable archives, abrupt exits and competing processes test rotation."""
+"""Archive windows, portable evidence and interrupted cleanup, observed on real files."""
 import hashlib
+import copy
 import json
 import os
 from pathlib import Path
@@ -7,18 +8,19 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import plistlib
+import zipfile
 from unittest.mock import patch
 
 from check_release_publish import ROOT, git, make_repo, make_dist, completed_output
 import artifact
+import historical_release_storage
+import execution_contract
 import release_archive
-import release_cleanup
-import release_rotate
+import release_preflight
 import release_runs
 import retention
-
-# The acceptance directory basename of each fixture release; the battery runs nested inside it.
-OLD_ACCEPTANCE = 'run-0-9-0'
+import run_ownership
 
 
 def reject(call, needle):
@@ -31,71 +33,40 @@ def reject(call, needle):
 
 
 def make_release(repo, version):
-    """A release archived as the current archiver writes it: the acceptance directory, with
-    the default battery nested inside, is the one retained run and the one packed role."""
     git(repo, 'tag', '-a', 'v' + version, '-m', 'fixture ' + version)
     dist, attempt = make_dist(repo, version=version)
-    clock = 100 + int(version.split('.')[-1]) * 100
     acceptance = repo / 'tests/out/release-acceptance' / ('run-' + version.replace('.', '-'))
-    set_times(acceptance / 'tests', clock, clock + 1)
-    owner = retention.read_object(acceptance / 'owner.json')
-    owner.update(started_at_unix_ms=clock, finished_at_unix_ms=clock + 1)
-    retention.atomic_json(acceptance / 'owner.json', owner)
     (acceptance / 'payload.bin').write_bytes(b'original\x00\xff')
     (acceptance / 'empty').mkdir()
     (acceptance / 'outside-link').symlink_to(repo / 'outside')
-    archive, _ = release_archive.archive(attempt, dist=dist, root=repo)
+    archive = release_archive.archive(attempt, dist=dist, root=repo)
     return archive, acceptance
-
-
-def set_times(path, started, finished=None, *, ok=True):
-    owner = retention.read_object(path / 'owner.json')
-    owner['started_at_unix_ms'] = started
-    retention.atomic_json(path / 'owner.json', owner)
-    if finished is None:
-        (path / 'run.json').unlink(missing_ok=True)
-    else:
-        run = retention.read_object(path / 'run.json')
-        run.update(started_at_unix_ms=started, finished_at_unix_ms=finished,
-                   duration_ms=finished - started, ok=ok)
-        retention.atomic_json(path / 'run.json', run)
-
-
-def local_run(repo, name, started, finished=None, *, ok=True):
-    path = repo / 'tests/out/runs' / name
-    completed_output(path)
-    set_times(path, started, finished, ok=ok)
-    return path
 
 
 def fixture(out, name):
     work = out / name
     work.mkdir()
     repo = make_repo(work)
-    (repo / 'outside').write_bytes(b'do not follow or delete this symlink target')
-    (repo / '.tmp').mkdir()
-    (repo / '.tmp/scratch').write_bytes(b'not release rotation')
+    (repo / 'outside').write_bytes(b'outside evidence')
     old, previous = make_release(repo, '0.9.0')
     new, current = make_release(repo, '0.9.1')
     return repo, old, previous, new, current
 
 
-def change_entry(repo, path, change):
-    value = retention.read_object(repo / 'tests/RETAINED.json')
-    entry = next(e for e in value['runs'] if e['path'] == str(path.relative_to(repo / 'tests/out')))
-    change(entry)
-    with retention.checkout_lock(repo):
-        retention.write_index(repo, value)
-
-
 def portable(out):
     repo, old, previous, new, _ = fixture(out, 'portable')
+    captured = run_ownership.read_object(old / 'release.json')['execution_contract']
+    catalog = run_ownership.read_object(repo / 'tests/catalog.json')
+    catalog['suites']['fixture']['cases'].append('later-case')
+    run_ownership.atomic_json(repo / 'tests/catalog.json', catalog)
+    assert execution_contract.defaults(repo) != captured
+    assert release_runs.verify_release(old)[0]['execution_contract'] == captured
     original = artifact.inventory(previous)
     copy = out / 'detached-release'
     shutil.copytree(old, copy, symlinks=True)
     shutil.rmtree(repo / 'tests/out')
     _, manifest = release_runs.verify_release(copy)
-    assert manifest['schema_version'] == 2 and set(manifest['runs']) == {'acceptance'}, manifest
+    assert manifest['schema_version'] == 3 and set(manifest['runs']) == {'acceptance'}, manifest
     assert manifest['runs']['acceptance']['inventory'] == original
     assert manifest['battery'] == dict(role='acceptance', path='tests/run.json'), manifest['battery']
     # Independently inspect every stored file and symlink. No live test path is used.
@@ -116,8 +87,87 @@ def portable(out):
     assert (copy / record['acceptance']['path']).is_file()
     assert (copy / record['battery']['path']).is_file()
     assert json.loads((copy / record['battery']['path']).read_text())['run_id'] == record['battery']['run_id']
+    manifest_path = copy / release_runs.BUNDLE / 'manifest.json'
+    original_manifest = manifest_path.read_bytes()
+    original_record = (copy / 'release.json').read_bytes()
+    manifest['runs']['acceptance']['retained']['run_id'] = 'different-owner'
+    run_ownership.atomic_json(manifest_path, manifest)
+    record['test_evidence']['sha256'] = artifact.digest(manifest_path)
+    run_ownership.atomic_json(copy / 'release.json', record)
+    reject(lambda: release_runs.verify_release(copy), 'acceptance owner differs')
+    manifest_path.write_bytes(original_manifest)
+    (copy / 'release.json').write_bytes(original_record)
     (copy / release_runs.BUNDLE / 'runs.tar.gz').write_bytes(b'corrupt')
     reject(lambda: release_runs.verify_release(copy), 'checksum mismatch')
+
+
+def historical_storage(out):
+    """Storage recognition never grants historical evidence current acceptance."""
+    root = out / 'historical'; root.mkdir()
+    archive = root / 'dist/archive/v0.3.3'
+    bundle = archive / release_runs.BUNDLE; bundle.mkdir(parents=True)
+    source = '1bf0341cd06c48122af1635e8aa8cac77517d9e1'
+    record = dict(schema_version=1, tag='v0.3.3', version='0.3.3', source_commit=source,
+                  archive='PolicyWitness-0.3.3.zip', guide='PolicyWitness.md')
+    manifest = dict(schema_version=1, tag='v0.3.3', source_commit=source,
+                    archive='runs.tar.gz', runs={}, summaries={})
+    with tarfile.open(bundle / 'runs.tar.gz', 'w:gz') as packed:
+        for role in ('acceptance', 'battery'):
+            relative = ('release-acceptance/' if role == 'acceptance' else 'runs/') + role
+            path = root / 'tests/out' / relative; path.mkdir(parents=True)
+            summary = 'acceptance.json' if role == 'acceptance' else 'run.json'
+            # Deliberately not valid current acceptance or default-battery evidence.
+            (path / summary).write_text(json.dumps(dict(run_id=role, historical_storage=True)))
+            (path / 'owner.json').write_text(json.dumps(dict(schema_version=1, run_id=role, out_dir=str(path))))
+            entry = dict(path=relative, run_id=role, source=source, release='v0.3.3')
+            manifest['runs'][role] = dict(retained=entry, inventory=artifact.inventory(path))
+            packed.add(path, arcname=role)
+            shutil.copy2(path / summary, bundle / (role + '.json'))
+            manifest['summaries'][role + '.json'] = artifact.digest(bundle / (role + '.json'))
+            record[role] = dict(path=release_runs.BUNDLE + '/' + role + '.json',
+                                original_path=relative + '/acceptance.json' if role == 'acceptance' else relative)
+            if role == 'battery': record[role]['run_id'] = role
+    manifest['sha256'] = artifact.digest(bundle / 'runs.tar.gz')
+    with zipfile.ZipFile(archive / record['archive'], 'w') as zipped:
+        zipped.writestr('PolicyWitness.app/Contents/Info.plist', plistlib.dumps(dict(
+            PWBuildCommit=source, PWBuildDescribe=record['tag'], CFBundleShortVersionString=record['version'])))
+    (archive / 'PolicyWitness.md').write_text('historical guide')
+    record['sha256'] = artifact.digest(archive / record['archive'])
+    (archive / 'SHA256SUMS').write_text(''.join(artifact.digest(archive / name) + '  ' + name + '\n'
+                                            for name in (record['archive'], 'PolicyWitness.md')))
+    def write():
+        run_ownership.atomic_json(bundle / 'manifest.json', manifest)
+        record['test_evidence'] = dict(path=release_runs.BUNDLE + '/manifest.json', sha256=artifact.digest(bundle / 'manifest.json'))
+        run_ownership.atomic_json(archive / 'release.json', record)
+    write()
+    before = artifact.inventory(root)
+    assert retention.archives(root, verify=True)[0]['record'] == record
+    assert artifact.inventory(root) == before
+    reject(lambda: release_runs.producer_contract(record), 'producer execution contract')
+    reject(lambda: release_runs.verify_bundle(bundle, expected_contract={}), 'expected schema 3')
+    original_record, original_manifest = copy.deepcopy(record), copy.deepcopy(manifest)
+    for mutation, diagnostic in (
+        ('source', 'unrecognized historical'), ('layout', 'historical run identity'),
+        ('summary', 'summary checksum'), ('bundle', 'archive checksum'),
+        ('relabel', 'must be acceptance/tests/run.json')):
+        record, manifest = copy.deepcopy(original_record), copy.deepcopy(original_manifest)
+        if mutation == 'source':
+            record['source_commit'] = manifest['source_commit'] = 'f' * 40
+        elif mutation == 'layout': manifest['runs']['battery']['retained']['path'] = '../escape'
+        elif mutation == 'summary': manifest['summaries']['battery.json'] = '0' * 64
+        elif mutation == 'bundle': manifest['sha256'] = '0' * 64
+        else:
+            record['schema_version'] = 2
+            manifest.update(schema_version=3, battery=dict(role='battery', path='run.json'))
+        write()
+        if mutation == 'layout': diagnostic = 'invalid relative path'
+        reject(lambda: retention.archives(root, verify=True), diagnostic)
+    record, manifest = original_record, original_manifest; write()
+    summary = bundle / 'battery.json'; saved = summary.read_bytes()
+    summary.unlink(); summary.symlink_to(root / 'tests/out/runs/battery/run.json')
+    reject(lambda: retention.archives(root, verify=True), 'symlink redirects')
+    summary.unlink(); summary.write_bytes(saved)
+    assert retention.archives(root, verify=True)
 
 
 def battery_contract(out):
@@ -128,356 +178,226 @@ def battery_contract(out):
     archive, acceptance = make_release(repo, '0.9.0')
     battery = acceptance / 'tests'
     record, manifest = release_runs.verify_release(archive)
-    run = retention.read_object(battery / 'run.json')
+    run = run_ownership.read_object(battery / 'run.json')
     run['plan']['selection']['mode'] = 'all'
-    retention.atomic_json(battery / 'run.json', run)
+    run_ownership.atomic_json(battery / 'run.json', run)
     runs = {role: (repo / 'tests/out' / value['retained']['path'], value['retained'])
             for role, value in manifest['runs'].items()}
     shutil.rmtree(archive / release_runs.BUNDLE)
-    with retention.checkout_lock(repo):
+    with run_ownership.checkout_lock(repo):
         reference = release_runs.pack(archive / release_runs.BUNDLE, tag=record['tag'],
                                       source=record['source_commit'], runs=runs,
-                                      battery=('acceptance', 'tests/run.json'))
+                                      battery=('acceptance', 'tests/run.json'), expected_contract=record['execution_contract'])
     record['test_evidence'] = reference
-    retention.atomic_json(archive / 'release.json', record)
+    run_ownership.atomic_json(archive / 'release.json', record)
     reject(lambda: release_runs.verify_release(archive), 'not the default selection')
     # Malformed references must produce a refusal, not an uncaught TypeError.
     record['battery'] = None
-    retention.atomic_json(archive / 'release.json', record)
+    run_ownership.atomic_json(archive / 'release.json', record)
     reject(lambda: release_runs.verify_release(archive), 'does not support the release')
-    manifest = retention.read_object(archive / release_runs.BUNDLE / 'manifest.json')
+    manifest = run_ownership.read_object(archive / release_runs.BUNDLE / 'manifest.json')
     manifest['battery']['path'] = 'acceptance.json'
-    retention.atomic_json(archive / release_runs.BUNDLE / 'manifest.json', manifest)
-    reject(lambda: release_runs.verify_bundle(archive / release_runs.BUNDLE),
+    run_ownership.atomic_json(archive / release_runs.BUNDLE / 'manifest.json', manifest)
+    reject(lambda: release_runs.verify_bundle(archive / release_runs.BUNDLE, expected_contract=record['execution_contract']),
            'must be acceptance/tests/run.json')
 
 
-def unsupported_format(out):
-    repo, old, previous, new, current = fixture(out, 'unsupported-format')
-    release_runs.verify_release(new)
-    manifest_path = new / release_runs.BUNDLE / 'manifest.json'
-    manifest = retention.read_object(manifest_path)
-    manifest['schema_version'] = 1
-    retention.atomic_json(manifest_path, manifest)
-    record = retention.read_object(new / 'release.json')
-    record['test_evidence']['sha256'] = artifact.digest(manifest_path)
-    retention.atomic_json(new / 'release.json', record)
-    before = artifact.inventory(repo)
-    lock = repo / 'tests/.checkout.lock'
-    lock_inode = lock.stat().st_ino
-    diagnostic = 'unsupported release test evidence schema'
-    reject(lambda: release_runs.verify_bundle(new / release_runs.BUNDLE), diagnostic)
-    reject(lambda: release_runs.verify_release(new), diagnostic)
-    reject(lambda: release_rotate.rotate(new, root=repo, apply=True), diagnostic)
-    # Taking the checkout lock refreshes its owner record before format admission.
-    after = artifact.inventory(repo)
-    changes = artifact.changes(before, after)
-    assert set(changes) <= {'tests/.checkout.lock'}, changes
-    assert after['tests/.checkout.lock']['mode'] == before['tests/.checkout.lock']['mode']
-    assert lock.stat().st_ino == lock_inode
-    assert previous.is_dir() and current.is_dir()
-    assert not (new / 'evidence/rotation.json').exists()
-    release_runs.verify_release(old)  # The unchanged current-format neighbor still verifies.
+
+def windows(out):
+    work = out / 'windows'; work.mkdir()
+    repo = make_repo(work)
+    versions = ['0.3.7', '0.3.8', '0.3.9', '0.3.10', '0.4.0', '0.4.1']
+    assert retention.prune(repo)['kept'] == []
+    entries = []
+    for i, version in enumerate(versions):
+        archive, acceptance = make_release(repo, version)
+        entries.append((archive, acceptance))
+        before = artifact.inventory(repo)
+        report = retention.prune(repo)
+        assert artifact.inventory(repo) == before, 'preview wrote files'
+        assert report['kept'] == ['v' + v for v in versions[max(0,i-3):i+1]]
+        archives = {row['path'] for row in report['targets'] if row['kind'] == 'archive'}
+        assert archives == {'dist/archive/v' + v for v in versions[:max(0,i-3)]}
+    survivors = {p: artifact.inventory(p) for p,_ in entries[-4:]}
+    historical = repo / 'dist/archive/v0.3.3'
+    shutil.copytree(out / 'historical/dist/archive/v0.3.3', historical)
+    # Positively linked superseded copies expire; unrelated material cannot borrow a name.
+    linked = repo / 'dist/evidence/superseded'; linked.mkdir()
+    record = run_ownership.read_object(entries[0][0] / 'release.json')
+    (linked / 'release.json').write_text(json.dumps(dict(submitted_sha256=record['sha256'])))
+    (linked / 'duplicate.zip').write_bytes(b'fixture bytes')
+    unrelated = repo / 'dist/evidence/unrelated'; unrelated.mkdir()
+    (unrelated / 'file').write_text('unassociated')
+    before_unrelated = artifact.inventory(unrelated)
+    result = retention.prune(repo, apply=True)
+    assert not linked.exists() and artifact.inventory(unrelated) == before_unrelated
+    assert any('unassociated' in row['reason'] for row in result['failures'])
+    assert sorted((p.name for p in (repo / 'dist/archive').iterdir()), key=retention.version) == ['v' + v for v in versions[-4:]]
+    assert not historical.exists() and retention.pending(repo) is None, 'last historical storage obligation did not expire'
+    assert [p.exists() for _,p in entries] == [False]*5 + [True]
+    for path, inventory in survivors.items():
+        assert artifact.inventory(path) == inventory, 'cleanup changed surviving archive bytes'
+    for pointer in (repo / 'dist/evidence').glob('*.archived'):
+        assert Path(pointer.read_text().strip()).is_dir(), 'dangling archived pointer'
+    for tag in ('v0.3.7', 'v0.3.11', 'v0.4.1'):
+        reject(lambda: retention.require_new_release(repo, tag), 'must be newer')
+    retention.require_new_release(repo, 'v0.4.2')
+    # Both strict preflight and direct archival use the same monotonic guard.
+    git(repo, 'checkout', '--detach', 'v0.3.7')
+    _, problems = release_preflight.inspect(repo)
+    assert any('must be newer' in p for p in problems), problems
+    dist, attempt = make_dist(repo, version='0.3.7')
+    reject(lambda: release_archive.archive(attempt, dist=dist, root=repo), 'must be newer')
+    reject(lambda: retention.distribution(repo, repo / 'alternate'), 'checkout distribution root')
+    # Fresh provenance cites the archive's captured identities, not current measurements.
+    latest = run_ownership.read_object(entries[-1][0] / 'release.json')
+    manifest = run_ownership.read_object(entries[-1][0] / release_runs.BUNDLE / 'manifest.json')
+    footprint = repo / 'docs/FOOTPRINT.md'
+    prefix = '## Provenance of measured rows\n'
+    valid = prefix + 'dist/archive/v0.4.1/evidence/test-runs/runs.tar.gz\n`' + latest['battery']['run_id'] + '`\n`' + manifest['runs']['acceptance']['retained']['run_id'] + '`\n'
+    footprint.write_text(valid)
+    assert release_preflight.footprint_provenance(repo)['status'] == 'current'
+    for changed in (valid.replace('v0.4.1','v0.3.10'), valid.replace(latest['battery']['run_id'],'wrong'), valid.replace(manifest['runs']['acceptance']['retained']['run_id'],'wrong')):
+        footprint.write_text(changed)
+        reject(lambda: release_preflight.footprint_provenance(repo), 'measured-row provenance')
 
 
-def ordinary(out):
-    repo, old, previous, new, current = fixture(out, 'ordinary')
-    # Old working output can be retained separately from its acceptance without
-    # making its archive an input to this release's cleanup.
-    separate = local_run(repo, 'release-0.9.0-default', 100, 101)
-    old_record = retention.read_object(old / 'release.json')
-    index = retention.read_object(repo / 'tests/RETAINED.json')
-    index['runs'].append(dict(path='runs/release-0.9.0-default',
-                             run_id=retention.read_object(separate / 'run.json')['run_id'],
-                             reason='separately retained battery output',
-                             source=old_record['source_commit'], app_inventory=None,
-                             release='v0.9.0'))
-    with retention.checkout_lock(repo):
-        retention.write_index(repo, index)
-    loose = local_run(repo, 'zzz-old-development', 120, 121)
-    latest = local_run(repo, 'aaa-newest-failed', 300, 301, ok=False)
-    os.utime(loose, (999999999, 999999999))
-    os.utime(latest, (1, 1))  # Neither name nor filesystem mtime establishes recency.
-    accepted = artifact.inventory(current)
-    old_archive = artifact.inventory(old)
-    before = artifact.inventory(repo)
-    preview = release_rotate.rotate(new, root=repo)
-    assert before == artifact.inventory(repo), 'preview changed files'
-    assert {r['path'] for r in preview['runs']} == {
-        'release-acceptance/' + OLD_ACCEPTANCE, 'runs/release-0.9.0-default', 'runs/zzz-old-development'}
-    assert preview['newest'] == ['runs/aaa-newest-failed']
-    lock_inode = (repo / 'tests/.checkout.lock').stat().st_ino
-    result = release_rotate.rotate(new, root=repo, apply=True)
-    assert result['state'] == 'complete' and result['runs'][0]['state'] == 'removed'
-    assert not previous.exists() and not separate.exists()
-    assert current.is_dir() and latest.is_dir() and not loose.exists()
-    assert artifact.inventory(old) == old_archive, 'rotation rewrote the historical archive'
-    assert artifact.inventory(current) == accepted
-    assert (repo / '.tmp/scratch').read_bytes() == b'not release rotation'
-    assert (repo / 'outside').read_bytes().startswith(b'do not follow')
-    assert (repo / 'tests/.checkout.lock').stat().st_ino == lock_inode
-    retained = retention.read_object(repo / 'tests/RETAINED.json')['runs']
-    assert len(retained) == 1 and retained[0]['release'] == 'v0.9.1' and retained[0]['path'] == 'release-acceptance/run-0-9-1'
-    completed_output(previous)  # A replacement at the old path is not part of this transaction.
-    assert release_rotate.rotate(new, root=repo, apply=True) == result
-    assert previous.is_dir()
-
-
-def protections(out):
-    for name in ('omitted_release', 'pin', 'wrong_owner', 'overlap'):
-        repo, _, previous, new, _ = fixture(out, name)
-        if name == 'omitted_release':
-            change_entry(repo, previous, lambda e: e.pop('release'))
-        elif name == 'pin':
-            change_entry(repo, previous, lambda e: e.update(release=None))
-        elif name == 'wrong_owner':
-            change_entry(repo, previous, lambda e: e.update(run_id='different'))
-        else:
-            value = retention.read_object(repo / 'tests/RETAINED.json')
-            value['runs'].append(dict(path='release-acceptance', run_id='manual', reason='pin the subtree', source=None, app_inventory=None))
-            with retention.checkout_lock(repo):
-                retention.write_index(repo, value)
-        before, index_before = artifact.inventory(previous), (repo / 'tests/RETAINED.json').read_bytes()
-        result = release_rotate.rotate(new, root=repo)
-        assert 'release-acceptance/' + OLD_ACCEPTANCE not in {r['path'] for r in result['runs']}, name
-        assert artifact.inventory(previous) == before and (repo / 'tests/RETAINED.json').read_bytes() == index_before
-    repo, _, previous, new, _ = fixture(out, 'corrupt-new')
-    original_index = (repo / 'tests/RETAINED.json').read_bytes()
-    (new / release_runs.BUNDLE / 'runs.tar.gz').write_bytes(b'corrupt')
-    reject(lambda: release_rotate.rotate(new, root=repo, apply=True), 'checksum mismatch')
-    assert previous.is_dir() and (repo / 'tests/RETAINED.json').read_bytes() == original_index
-    assert not (new / 'evidence/rotation.json').exists()
-    repo, _, _, new, _ = fixture(out, 'newer-release')
-    make_release(repo, '0.9.2')
-    reject(lambda: release_rotate.rotate(new, root=repo, apply=True), 'newer release')
-    repo, _, previous, new, _ = fixture(out, 'quarantine-link')
-    outside = repo.parent / 'external'
-    outside.mkdir()
-    (outside / 'canary').write_bytes(b'untouched')
-    (repo / 'tests/out/.release-rotation').symlink_to(outside)
-    reject(lambda: release_rotate.rotate(new, root=repo, apply=True), 'symlink redirects')
-    assert previous.is_dir() and list(outside.iterdir()) == [outside / 'canary']
-    repo, _, previous, new, _ = fixture(out, 'run-link')
-    moved = previous.rename(repo.parent / 'external-run')
-    previous.symlink_to(moved)
-    reject(lambda: release_rotate.rotate(new, root=repo, apply=True), 'symlink redirects')
-    assert (moved / 'payload.bin').read_bytes() == b'original\x00\xff'
-
-
-def checkpoint_policy(out):
-    repo, old, previous, new, current = fixture(out, 'checkpoint-policy')
-    # Cleanup does not back up every old development run. Acceptance output
-    # without its owner record and lifetime lock is not recognized: it is kept
-    # with its reason, and its retention entry stays.
-    unrecognized = previous
-    (unrecognized / 'owner.json').unlink()
-    (unrecognized / 'acceptance.lock').unlink()
-    change_entry(repo, unrecognized, lambda e: e.update(run_id='nested-accept-0.9.0'))
-    unrecognized_inventory = artifact.inventory(unrecognized)
-    history = artifact.inventory(old)
-    failed = local_run(repo, 'old-failed', 120, 121, ok=False)
-    abandoned = local_run(repo, 'abandoned', 130)
-    ambiguous = local_run(repo, 'ambiguous', 140, 141)
-    (ambiguous / 'run.json').write_text('{unfinished')
-    recent = local_run(repo, 'recent-unfinished', 220)
-    pending = local_run(repo, 'pending-cleanup', 150, 151)
-    session = pending / 'suites/runner_byoxpc/runner_install/artifacts/session.json'
-    session.parent.mkdir(parents=True)
-    retention.atomic_json(session, dict(removed=False, cleanup_error='service still present'))
-    registry = local_run(repo, 'registry-cleanup', 160)
-    (registry / 'suites/runner_byoxpc/registry_recovery/artifacts').mkdir(parents=True)
-    finished_cleanup = local_run(repo, 'finished-cleanup', 170, 171)
-    cleared = finished_cleanup / 'suites/runner_byoxpc/runner_install/artifacts/session.json'
-    cleared.parent.mkdir(parents=True)
-    retention.atomic_json(cleared, dict(removed=True))
-    unmanaged = repo / 'tests/out/runs/unmanaged'
-    unmanaged.mkdir()
-    (unmanaged / 'notes').write_text('no ownership')
-    stray = repo / 'tests/out/standalone.json'
-    stray.write_text('{}')
-    newest = local_run(repo, 'newest-failed', 300, 301, ok=False)
-    tied = local_run(repo, 'same-recorded-completion', 290, 301)
-    # A missing older indexed run should not remain a permanent index entry.
-    value = retention.read_object(repo / 'tests/RETAINED.json')
-    older = next(e for e in value['runs'] if e['release'] == 'v0.9.0')
-    value['runs'].append(dict(older, path='runs/absent-old'))
-    with retention.checkout_lock(repo):
-        retention.write_index(repo, value)
-    result = release_rotate.rotate(new, root=repo, apply=True)
-    assert all(not p.exists() for p in (failed, abandoned, ambiguous, finished_cleanup))
-    assert all(p.is_dir() for p in (current, recent, pending, registry, unmanaged, newest, tied))
-    assert stray.read_text() == '{}'
-    assert result['newest'] == ['runs/newest-failed', 'runs/same-recorded-completion']
-    assert artifact.inventory(unrecognized) == unrecognized_inventory
-    assert dict(path='release-acceptance/' + OLD_ACCEPTANCE, reason='acceptance ownership has no lifetime lock') in result['kept'], result['kept']
-    retained = retention.read_object(repo / 'tests/RETAINED.json')['runs']
-    assert len(retained) == 2 and [e['run_id'] for e in retained if e['path'] == 'release-acceptance/' + OLD_ACCEPTANCE] == ['nested-accept-0.9.0']
-    assert artifact.inventory(old) == history
-
-
-def acceptance_lifetime(out):
-    repo, _, _, new, _ = fixture(out, 'acceptance-lifetime')
+def blockers_and_handoff(out):
+    repo, old, previous, new, current = fixture(out, 'blockers')
+    for path in (current, current / 'tests', current.parent):
+        reject(lambda: run_ownership.replacement_allowed(repo, path, retention.protected_paths(repo)), 'overlaps retained')
+    idle = repo / 'tests/out/runs/interrupted'; completed_output(idle)
+    (idle / 'run.json').unlink()
+    session = idle / 'suites/runner_byoxpc/control/artifacts/session.json'
+    session.parent.mkdir(parents=True); session.write_text('{"removed":false}')
+    report = retention.prune(repo, apply=True)
+    assert idle.exists() and any('pending external' in r['reason'] for r in report['failures'])
+    session.write_text('{"removed":true}')
+    assert 'tests/out/runs/interrupted' in retention.prune(repo, apply=True)['removed']
     active = repo / 'tests/out/release-acceptance/active'
-    command = [sys.executable, '-B', '-S', __file__, '--hold-acceptance', str(repo), str(active)]
-    child = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    try:
-        assert child.stdout.readline() == b'ready\n'
-        preview = release_rotate.rotate(new, root=repo)
-        assert any(r['path'] == 'release-acceptance/active' and r['reason'] == 'active acceptance'
-                   for r in preview['kept'])
-        assert active.exists()
-    finally:
-        child.kill()
-        child.communicate(timeout=10)
-    assert release_cleanup.describe(active)['disposition'] == 'interrupted'
-    release_rotate.rotate(new, root=repo, apply=True)
-    assert not active.exists(), 'abandoned owned acceptance survived the release checkpoint'
-    # Normal lifetime completion is recorded even when acceptance raises.
-    finished = repo / 'tests/out/release-acceptance/finished-failure'
-    try:
-        with retention.acceptance_output(repo, finished):
-            raise ValueError('controlled acceptance failure')
-    except ValueError:
-        pass
-    assert release_cleanup.describe(finished)['disposition'] == 'completed'
-    assert not release_cleanup.acceptance_busy(finished)
+    with run_ownership.acceptance_output(repo, active, lambda: retention.protected_paths(repo)):
+        assert any('active acceptance' in r['reason'] for r in retention.prune(repo)['blocked'])
+    assert 'tests/out/release-acceptance/active' in retention.prune(repo, apply=True)['removed']
+    # Interrupted after acceptance, before archive: derive protection from existing receipts.
+    git(repo, 'tag', '-a', 'v0.9.2', '-m', 'next')
+    dist, attempt = make_dist(repo, version='0.9.2')
+    handoff = repo / 'tests/out/release-acceptance/run-0-9-2'
+    assert handoff in retention.protected_paths(repo)
+    retention.prune(repo, apply=True)
+    assert handoff.exists() and current.exists()
+    pointer = attempt / 'acceptance.json'; original = pointer.read_bytes()
+    data = json.loads(original); data['sha256'] = '0'*64; pointer.write_text(json.dumps(data))
+    assert handoff not in retention.protected_paths(repo), 'foreign final hash manufactured protection'
+    pointer.write_bytes(original)
+    owner = handoff / 'owner.json'; saved = owner.read_bytes()
+    data = json.loads(saved); data['run_id'] = 'changed'; owner.write_text(json.dumps(data))
+    reject(lambda: retention.prune(repo), 'inconsistent accepted handoff')
+    owner.write_bytes(saved)
+    duplicate = attempt.with_name(attempt.name + '-duplicate'); shutil.copytree(attempt, duplicate)
+    reject(lambda: retention.prune(repo), 'ambiguous accepted release handoff')
+    shutil.rmtree(duplicate)
+    # Copy failure leaves both current acceptance and unarchived handoff intact.
+    with patch.object(release_runs, 'pack', side_effect=OSError('controlled pack failure')):
+        reject(lambda: release_archive.archive(attempt, dist=dist, root=repo), 'controlled pack failure')
+    assert not (dist / 'archive/v0.9.2').exists() and current.exists() and handoff.exists()
+    archived = release_archive.archive(attempt, dist=dist, root=repo)
+    retention.prune(repo, apply=True)
+    assert archived.exists() and handoff.exists() and not current.exists()
+    # Old recovery state is a blocker, never silently interpreted as a new journal.
+    receipt = old / 'evidence/rotation.json'; receipt.write_text('{"state":"staging"}')
+    reject(lambda: retention.prune(repo, apply=True), 'unfinished old release journal')
+    receipt.write_text('{"state":"complete"}')
+    pending = repo / 'tests/out/.release-rotation'; pending.mkdir()
+    (pending / 'old').touch()
+    reject(lambda: retention.prune(repo), 'unfinished old release quarantine')
 
 
 def crash(repo, mode):
-    """Exit abruptly at one boundary while rotating the previous release's acceptance directory."""
-    # Parent-authored fixture provenance is outside the archive being changed.
-    release_runs.HISTORICAL_PRODUCERS.update(json.loads((repo.parent / 'expected-historical-producers.json').read_text()))
-    archive = repo / 'dist/archive/v0.9.1'
-    rename, write, remove = Path.rename, retention.write_index, shutil.rmtree
+    rename, write, remove, unlink = Path.rename, run_ownership.atomic_json, shutil.rmtree, Path.unlink
     def interrupted_rename(path, target):
         result = rename(path, target)
-        if path.name == OLD_ACCEPTANCE:
+        if path.name == 'run-0-9-0':
             os._exit(91)
         return result
-    def interrupted_index(root, value):
-        write(root, value)
-        os._exit(92)
+    def interrupted_write(path, value):
+        write(path, value)
+        if path.name == 'journal.json' and value.get('state') == 'deleting':
+            os._exit(92)
     def interrupted_delete(path, *args, **kwargs):
-        if Path(path).name != OLD_ACCEPTANCE:
-            return remove(path, *args, **kwargs)
-        if mode == 'partial':
-            (Path(path) / 'payload.bin').unlink()
-            os._exit(93)
-        remove(path, *args, **kwargs)
-        os._exit(94)
+        if (Path(path) / 'payload.bin').exists():
+            if mode == 'partial':
+                (Path(path) / 'payload.bin').unlink()
+                os._exit(93)
+            remove(path, *args, **kwargs)
+            os._exit(94)
+        return remove(path, *args, **kwargs)
+    def interrupted_pointer(path, *args, **kwargs):
+        pointer = (path.parent.parent == repo / retention.QUARANTINE and path.name.isdigit()
+                   and path.is_file() and path.read_text().endswith('/dist/archive/v0.9.0/evidence\n'))
+        result = unlink(path, *args, **kwargs)
+        if pointer:
+            os._exit(95)
+        return result
     target, attribute, replacement = {
         'rename': (Path, 'rename', interrupted_rename),
-        'index': (retention, 'write_index', interrupted_index),
+        'staged': (run_ownership, 'atomic_json', interrupted_write),
         'partial': (shutil, 'rmtree', interrupted_delete),
         'deleted': (shutil, 'rmtree', interrupted_delete),
+        'pointer': (Path, 'unlink', interrupted_pointer),
     }[mode]
     with patch.object(target, attribute, replacement):
-        release_rotate.rotate(archive, root=repo, apply=True)
-    raise AssertionError('crash boundary was not reached')
+        retention.prune(repo, apply=True)
+    raise AssertionError('crash boundary not reached')
 
 
 def interrupted(out):
-    for mode, code in (('rename', 91), ('index', 92), ('partial', 93), ('deleted', 94)):
-        repo, _, previous, new, current = fixture(out, 'crash-' + mode)
-        process = subprocess.run([sys.executable, '-B', '-S', __file__, '--crash', str(repo), mode],
-                                 capture_output=True, timeout=30)
-        assert process.returncode == code, (mode, process.stderr)
-        (repo.parent / 'crash.json').write_text(json.dumps(dict(mode=mode, returncode=process.returncode)))
-        receipt = retention.read_object(new / 'evidence/rotation.json')
-        row = next(r for r in receipt['runs'] if r['path'] == 'release-acceptance/' + OLD_ACCEPTANCE)
-        quarantine = repo / 'tests/out' / row['quarantine']
+    for mode, code in [('rename',91),('staged',92),('partial',93),('deleted',94),('pointer',95)]:
+        repo, old, previous, new, current = fixture(out, 'crash-' + mode)
+        if mode == 'pointer':
+            for version in ('0.9.2', '0.9.3', '0.9.4'):
+                _, current = make_release(repo, version)
+        before = artifact.inventory(new)
+        process = subprocess.run([sys.executable, '-B', '-S', __file__, '--crash', str(repo), mode], capture_output=True, timeout=60)
+        assert process.returncode == code, (mode,process.stderr)
+        quarantine = retention.pending(repo)
+        journal = run_ownership.read_object(quarantine / 'journal.json')
+        index = next(i for i,r in enumerate(journal['targets']) if r['path'].endswith('/run-0-9-0'))
+        target = quarantine / str(index)
         if mode == 'rename':
-            original_index = (repo / 'tests/RETAINED.json').read_bytes()
-            (quarantine / 'payload.bin').write_bytes(b'changed after interruption')
-            reject(lambda: release_rotate.rotate(new, root=repo, apply=True), 'quarantined evidence differs')
-            assert (repo / 'tests/RETAINED.json').read_bytes() == original_index
-            assert (quarantine / 'payload.bin').read_bytes() == b'changed after interruption'
-            (quarantine / 'payload.bin').write_bytes(b'original\x00\xff')
-        if mode in ('partial', 'deleted'):
-            completed_output(previous)
-            replacement = artifact.inventory(previous)
-        result = release_rotate.rotate(new, root=repo, apply=True)
-        assert result['state'] == 'complete' and not quarantine.exists() and current.is_dir()
-        if mode in ('partial', 'deleted'):
-            assert artifact.inventory(previous) == replacement, 'resume deleted a replacement run'
-        else:
-            assert not previous.exists()
-    repo, _, previous, new, _ = fixture(out, 'stale-pin')
-    with patch.object(release_rotate, 'apply_journal', side_effect=OSError('pause before mutation')):
-        reject(lambda: release_rotate.rotate(new, root=repo, apply=True), 'pause before mutation')
-    change_entry(repo, previous, lambda e: e.update(release=None))
-    reject(lambda: release_rotate.rotate(new, root=repo, apply=True), 'retention changed')
-    assert previous.is_dir()
-
-    # A later release cannot orphan an earlier transaction's quarantine by
-    # treating the old indexed original as merely absent.
-    repo, _, _, new, _ = fixture(out, 'successive-checkpoints')
-    process = subprocess.run([sys.executable, '-B', '-S', __file__, '--crash', str(repo), 'rename'],
-                             capture_output=True, timeout=30)
-    assert process.returncode == 91, process.stderr
-    newer, current = make_release(repo, '0.9.2')
-    reject(lambda: release_rotate.rotate(newer, root=repo, apply=True), 'unfinished release cleanup')
-    assert not (newer / 'evidence/rotation.json').exists()
-    release_rotate.rotate(new, root=repo, apply=True)
-    release_rotate.rotate(newer, root=repo, apply=True)
-    assert current.is_dir()
-    assert all(e['release'] == 'v0.9.2' for e in retention.read_object(repo / 'tests/RETAINED.json')['runs'])
-
-
-def atomic_and_locking(out):
+            (target / 'payload.bin').write_bytes(b'changed')
+            reject(lambda: retention.prune(repo, apply=True), 'quarantine differs')
+            (target / 'payload.bin').write_bytes(b'original\x00\xff')
+        completed_output(previous)
+        replacement = artifact.inventory(previous)
+        result = retention.prune(repo, apply=True)
+        assert result['resumed'] and retention.pending(repo) is None
+        assert artifact.inventory(previous) == replacement, 'resume deleted replacement at original path'
+        assert artifact.inventory(new) == before and current.exists()
+        for pointer in (repo / 'dist/evidence').glob('*.archived'):
+            assert Path(pointer.read_text().strip()).is_dir(), 'resumption left a dangling archived pointer'
     repo, _, previous, new, _ = fixture(out, 'locking')
-    index_path = repo / 'tests/RETAINED.json'
-    original = index_path.read_bytes()
-    replace = os.replace
-    def fail_index(src, dst):
-        if Path(dst) == index_path:
-            raise OSError('atomic replacement failed')
-        return replace(src, dst)
-    with retention.checkout_lock(repo), patch.object(os, 'replace', fail_index):
-        reject(lambda: retention.write_index(repo, dict(schema_version=1, runs=[])), 'atomic replacement failed')
-    assert index_path.read_bytes() == original
-    with retention.checkout_lock(repo):
-        command = [sys.executable, '-B', '-S', '-P', '-c',
-            'import sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); '
-            'import release_rotate; release_rotate.rotate(Path(sys.argv[2]),root=Path(sys.argv[3]),apply=True)',
-            str(ROOT / 'tests/lib'), str(new), str(repo)]
-        before = artifact.inventory(repo)
-        result = subprocess.run(command, capture_output=True, timeout=30)
-        assert result.returncode != 0 and b'checkout busy' in result.stderr
-        assert artifact.inventory(repo) == before
-    assert previous.is_dir() and index_path.read_bytes() == original
-    # Copy/verification failures cannot create a final archive or retire anything.
-    git(repo, 'tag', '-a', 'v0.9.2', '-m', 'fixture')
-    dist, attempt = make_dist(repo, version='0.9.2')
-    with patch.object(release_runs, 'pack', side_effect=OSError('copy failed')):
-        reject(lambda: release_archive.archive(attempt, dist=dist, root=repo), 'copy failed')
-    assert attempt.is_dir() and not (dist / 'archive/v0.9.2').exists()
-    assert index_path.read_bytes() == original
+    with run_ownership.checkout_lock(repo):
+        env = {k:v for k,v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
+        result = subprocess.run([sys.executable,'-B','-S','-c',
+            'import sys;from pathlib import Path;sys.path.insert(0,sys.argv[1]);import retention;retention.prune(Path(sys.argv[2]),apply=True)',
+            str(ROOT / 'tests/lib'),str(repo)],env=env,capture_output=True,timeout=30)
+        assert result.returncode and b'checkout busy' in result.stderr
+    assert previous.exists()
 
 
 def main(out):
     out.mkdir(parents=True, exist_ok=True)
     portable(out)
+    historical_storage(out)
     battery_contract(out)
-    unsupported_format(out)
-    ordinary(out)
-    protections(out)
-    checkpoint_policy(out)
-    acceptance_lifetime(out)
+    windows(out)
+    blockers_and_handoff(out)
     interrupted(out)
-    atomic_and_locking(out)
-    print('release cleanup controls passed: latest release and newest local output, '
-          'acceptance lifetime, abandoned output, resource cleanup, pins, atomic retention, '
-          'unsupported-format refusal and four abrupt-exit recovery boundaries')
+    print('release retention controls passed: exact window, current evidence, derived protection, resource blockers and crash recovery')
 
 
 if __name__ == '__main__':
     if sys.argv[1] == '--crash':
         crash(Path(sys.argv[2]), sys.argv[3])
-    elif sys.argv[1] == '--hold-acceptance':
-        with patch.object(retention.time, 'time_ns', return_value=1_000_000):
-            with retention.acceptance_output(Path(sys.argv[2]), Path(sys.argv[3])):
-                print('ready', flush=True)
-                sys.stdin.read()
     else:
-        main(Path(sys.argv[1]))
+        main(Path(sys.argv[1]).resolve())

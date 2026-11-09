@@ -12,6 +12,7 @@ import uuid
 sys.dont_write_bytecode = True
 from suite_run import execute, save
 import retention
+import run_ownership
 
 
 def catalog(root):
@@ -142,7 +143,7 @@ def resolve_config(root, env):
         raise ValueError('controller must resolve inside the selected app bundle')
     if any(named_app != app for named_app in bin_apps) or (bins and bins[0] != binary):
         raise ValueError('PW_APP_DIR and controller override identify different artifacts')
-    out = retention.bounded_path(root, path('PW_TEST_OUT_DIR', 'tests/out/runs/default', resolve=False))
+    out = run_ownership.bounded_path(root, path('PW_TEST_OUT_DIR', 'tests/out/runs/default', resolve=False))
     base = root / 'tests/out'
     if out != base and base not in out.parents:
         raise ValueError(f'PW_TEST_OUT_DIR must resolve within {base}; got {out}')
@@ -176,13 +177,12 @@ def main():
                      'PW_TEST_OUT_DIR defaults to tests/out/runs/default; only completed, unretained output can be replaced. PW_TEST_RUN_ID labels evidence. '
                      'PW_TEST_QUIET=1 suppresses routine case messages. Relative paths are repository-relative. '
                      'Use --all --list to discover cases, suites, prerequisites, and skip contracts.')
-    parser.add_argument('--prune', action='store_true', help='preview dispositions of managed run output')
+    parser.add_argument('--prune', action='store_true', help='preview archive retention and disposable test output')
     parser.add_argument('--apply', action='store_true', help='apply the prune plan under the checkout lock')
-    parser.add_argument('--unfinished', metavar='NAME', help='deliberately remove one interrupted or ambiguous managed run with --prune --apply')
     parser.add_argument('--recover-ownership', metavar='RUN_ID', help='inspect a pytest command ownership run; --apply attempts justified recovery')
     args = parser.parse_args()
     if args.recover_ownership:
-        if args.prune or args.unfinished or args.suite or args.case or args.all or args.list:
+        if args.prune or args.suite or args.case or args.all or args.list:
             parser.error('ownership recovery cannot be combined with selection/prune')
         from pytest_resources import recover
         result = recover(root, args.recover_ownership, apply=args.apply)
@@ -190,13 +190,11 @@ def main():
         return 1 if result['unresolved'] else 0
     if args.apply and not args.prune:
         parser.error('--apply requires --prune')
-    if args.unfinished is not None and not args.apply:
-        parser.error('--unfinished requires --prune --apply')
     if args.prune:
         if args.suite or args.case or args.all or args.list:
             parser.error('--prune cannot be combined with selection or --list')
         try:
-            report = retention.prune(root, apply=args.apply, unfinished=args.unfinished)
+            report = retention.prune(root, apply=args.apply)
         except (ValueError, OSError) as exc:
             parser.error(str(exc))
         print(json.dumps(report, indent=2, sort_keys=True))
@@ -243,10 +241,10 @@ def main():
         return 0
     out = Path(config['out_dir'])
     try:
-        retention.replacement_allowed(root, out, retention.load_index(root))
-        with retention.checkout_lock(root) as scope:
+        run_ownership.replacement_allowed(root, out, retention.protected_paths(root))
+        with run_ownership.checkout_lock(root) as scope:
             # A planner may have raced an earlier holder; check again under lock.
-            retention.replacement_allowed(root, out, retention.load_index(root))
+            run_ownership.replacement_allowed(root, out, retention.protected_paths(root))
             if out.exists():
                 shutil.rmtree(out)
             out.mkdir(parents=True)
