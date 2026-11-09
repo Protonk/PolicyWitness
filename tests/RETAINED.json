@@ -2,14 +2,6 @@
   "schema_version": 1,
   "runs": [
     {
-      "path": "release-acceptance/run-ced77adc14c247a59f2f33da5322562e",
-      "run_id": "accept-b0a46df595e346ec91a377f3c7fa5da9",
-      "reason": "PolicyWitness 0.3.5 release ZIP acceptance: signatures, staple, Gatekeeper, the default battery against the extracted app with no skips, unrun cases or harness errors, and unchanged archive and extracted app; archived as v0.3.5.",
-      "source": "dcc843b8835ac9154151f9567543dc8b754c2407",
-      "app_inventory": "before.json",
-      "release": "v0.3.5"
-    },
-    {
       "path": "runs/release-contracts-doc-review-26",
       "run_id": "20261109T181445Z_edc64c42",
       "reason": "Complementary targeted documentation/test sweep on build 25: 23 cases pass, including 601 native tests and opt-in reservation checks. Its generator failure is replaced by the complete passing preflight/release rehearsal in run 31; the earlier replacement is preserved there.",
@@ -22,6 +14,14 @@
       "reason": "Complete build-refusal validation: 88 controls and sequences, 16 guard-bypass demonstrations, and a tagged synthetic-release default battery with all 229 cases passing. Carries original review checkpoints and selected superseded failure/replacement receipts. Controlled Apple responses in the rehearsal do not establish notarization.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "release-acceptance/run-037c2f300b5f44f186b75c91facb15ec",
+      "run_id": "accept-b9249da88e604c44a251ab5cf2c5947b",
+      "reason": "PolicyWitness 0.3.6 release ZIP acceptance: signatures, staple, Gatekeeper, the default battery against the extracted app with no skips, unrun cases or harness errors, and unchanged archive and extracted app; archived as v0.3.6.",
+      "source": "cbf5f298baff0d39a14a58019e779321d08791ad",
+      "app_inventory": "before.json",
+      "release": "v0.3.6"
     }
   ]
 }

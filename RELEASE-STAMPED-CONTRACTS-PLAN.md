@@ -1,11 +1,12 @@
 # Release-stamped contracts
 
-Status: independent-review repairs implemented and validated. The complete
-build-refusal rehearsal passes, including 88 controls and sequences, 16 bypass
-demonstrations and all 229 cases in a tagged synthetic-release default battery.
-The annotated `v0.3.5` release is the comparison baseline; `v0.3.6` is the
-single-commit cutover. Actual notarization and archive acceptance follow the
-release commit/tag. Publication remains a separate step.
+Status: implemented and prepared for publication as `v0.3.6`, using annotated
+`v0.3.5` as the comparison baseline. The single cutover commit is `cbf5f298`.
+The full build-refusal rehearsal passes; the actual notarized release ZIP passes
+all 229 default-battery cases. The archive, portable evidence and exact supplied
+release notes are verified. Release measurements and retention are recorded in
+the following evidence commit; all ten post-release source-drift cases pass.
+Publication remains a separate step and has not been performed.
 
 Review progress and retained evidence are recorded in the
 [implementation review checkpoint](records/2026-11-09-release-stamped-contracts-review.md).

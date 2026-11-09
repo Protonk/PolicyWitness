@@ -1,9 +1,9 @@
 # Release-stamped contracts: review checkpoint
 
 The implementation and documentation reviews are complete. The full build-refusal
-rehearsal passes, including its tagged default battery. The user authorized
-preparation of v0.3.6 with supplied release notes, stopping before publication.
-The actual release archive still requires its own notarization and acceptance.
+rehearsal and the actual v0.3.6 release acceptance pass. The notarized archive and
+its portable evidence are verified, with the user's exact supplied release notes.
+Preparation is complete; publication has not been performed.
 
 ## Documentation and test review corrections
 
@@ -286,3 +286,40 @@ run 30, selected run-29 failures and terminal summaries, and console transcripts
 The original failed outcomes remain unchanged. These copies do not relocate
 active resource ownership or establish process settlement. Release-managed
 retention is handled by the release archive's rotation transaction.
+
+## Release preparation completed
+
+Annotated `v0.3.6` names cutover commit
+`cbf5f298baff0d39a14a58019e779321d08791ad`, containing the implementation,
+generators, tests, documentation and all 13 surface stamps together. The clean
+tagged tree and the final ZIP's extracted binary report `release:v0.3.6`.
+
+`make release` completed with the supplied notes and Developer ID identity.
+Apple accepted submission `2625899a-9b47-4dd8-b3b8-984824186321`; staple
+validation and Gatekeeper passed. Actual acceptance
+`accept-b9249da88e604c44a251ab5cf2c5947b` contains default battery
+`20261109T214743Z_63091daa`: all 229 cases pass, including 601 native core
+tests, with no skips, unrun cases, harness errors, sleep overlap or app changes.
+
+The [release archive](../dist/archive/v0.3.6/release.json) binds the accepted ZIP,
+guide, provenance and portable test evidence. The ZIP SHA-256 is
+`64fa7afbcda3e839edcedd561dd9e2bb72d1ee920745352b885821c3f472cc52`.
+Archived release notes are byte-identical to the supplied text. Independent
+verification passed outside the automation sandbox after sandboxed signature
+inspection disagreed with the recorded seal facts; the archive was unchanged.
+The rotation transaction completed, preserving the v0.3.6 acceptance and the
+two explicit review pins. The v0.3.5 archive remains intact.
+
+Measured footprint rows and logical actor geometry were transcribed from the
+archive's 33 measurement receipts. Their conditions now record battery power
+and discharging, as observed. Post-release source-drift run
+`20261109T221201Z_15a27782` passes all ten cases without sleep overlap,
+skips, unrun cases or harness errors. Its [preserved receipt](../tests/out/runs/release-contracts-release-preflight-31/review-checkpoint/release-preparation/source-drift-32/run.json)
+and [copy manifest](../tests/out/runs/release-contracts-release-preflight-31/review-checkpoint/release-preparation/copies.json)
+retain original identity and hashes before ordinary pruning. This checkpoint
+also retains the release transcript, archive verification and transcription aid.
+Final runner list and reconcile report no registrations, pending cleanup,
+candidates or inspection errors.
+
+The remaining outward step is `make publish VERSION=0.3.6`. No tag push or
+GitHub release creation has been performed.
