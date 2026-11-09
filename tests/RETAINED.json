@@ -10,25 +10,18 @@
       "release": "v0.3.4"
     },
     {
-      "path": "runs/host06-main-default-01",
-      "run_id": "20261108T212111Z_e990d462",
-      "reason": "Retained 222-case production baseline: no skips, unrun cases, harness errors or recorded sleep. Native identity aaa8056c79c242fde5740449049246e3ed88facdc2c8efd143f6344c856da8e5 and signed app built at f6877809 remain unchanged. Includes accepted HOST-04/HOST-06 and 597 runner assertions. This historical battery is not a run of the expanded default catalog; subsequent test-only changes are verified by worker-wait-closeout-01.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/worker-wait-closeout-01",
-      "run_id": "20261108T224956Z_565f0e6d",
-      "source": null,
+      "path": "runs/porcelain-adoption-acceptance-b",
+      "run_id": "20261109T001724Z_1419c6c1",
+      "source": "3c6f9b957b0be7cb905dbc498ee577d8b96ab5d5",
       "app_inventory": "artifact-integrity/before.json",
-      "reason": "21 focused closeout cases pass with unchanged app, no harness errors or recorded sleep: signing, all source/document contracts, dispatcher, ARM oracle, neutral/historical CPU readers and native observer. worker-wait-closeout/archive-index.json verifies thirteen historical archives, including former host06 targeted evidence with its nested host/pilot/review archives, ARM first-use screens and assembler failure, two fresh baselines and all four negative CPU comparisons. Four comparisons replay exactly with frozen readers. Copies add no case credits and relocate no cleanup ownership; unrelated planning edits prevent a pristine whole-tree commit claim."
+      "reason": "Typed-response adoption: porcelain-adoption/acceptance.json records 236 unique passing credits (225 default plus 11 affected controls) across b, c and the archived documentation run. Original b remains 233 pass / 4 fail: two fixture failures receive explicit replacement credits; unrelated pause qualification and absent ARM gate remain failures without adoption credit. Signed app at 2d5080d7 is unchanged. Prior-index preserves historical footprint/wait archives and contrary exploration observations with original identities/hashes; copies relocate no cleanup ownership."
     },
     {
-      "path": "runs/porcelain-acceptance-a",
-      "run_id": "20261108T200617Z_d5eb9abd",
-      "reason": "Typed porcelain adoption dependency: 41 passing coordinated experimental cases, native order mutations, independent binary/degradation/output controls and identified copies of contrary earlier observations. Additional prototype pin is required until the bounded adoption decision is implemented; inherited production pins remain separate.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
+      "path": "runs/porcelain-adoption-replacement-c",
+      "run_id": "20261109T004128Z_7c2f67dc",
+      "source": "90f586ef9265102ea817b5aadb6fb459bb94ed9f",
+      "app_inventory": "artifact-integrity/before.json",
+      "reason": "Three passing replacement/additional cases: blackbox checker, reservation/no-replay and registry recovery; signed app unchanged, owned cleanup verified, no sleep or harness errors. porcelain-closeout/archive-index.json retains the complete identified 10-case final source/documentation run at e8b68bb5. Original credits and source snapshots remain explicit in the base acceptance index."
     }
   ]
 }
