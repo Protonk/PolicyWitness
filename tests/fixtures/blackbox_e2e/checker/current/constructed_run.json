@@ -36,7 +36,6 @@
       "stdout_bytes_retained": 13608,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
-      "stdout_raw": null,
       "stdout_truncated": false,
       "submission": "invoked",
       "transport": {
@@ -674,5 +673,5 @@
     "stderr": null,
     "stdout": null
   },
-  "schema_version": 13
+  "schema_version": 14
 }

@@ -10,7 +10,7 @@ use serde_json::Value;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-pub const SCHEMA_VERSION: u32 = 13;
+pub const SCHEMA_VERSION: u32 = 14;
 /// The accepted request contract, independent of implementation revisions.
 pub const REQUEST_SCHEMA_VERSION: u32 = 6;
 /// The one runner response schema this controller reads; any other version is refused.

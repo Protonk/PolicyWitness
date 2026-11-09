@@ -1,5 +1,5 @@
 {
-  "controller_envelope": 13,
+  "controller_envelope": 14,
   "shape": {
     "envelope": {
       "build": "object",
@@ -186,7 +186,6 @@
       "stdout_bytes_retained": "number",
       "stdout_capture_error": "string",
       "stdout_parse_error": "string",
-      "stdout_raw": "string",
       "stdout_truncated": "boolean",
       "submission": "string",
       "transport": "object",

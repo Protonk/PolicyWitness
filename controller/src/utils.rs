@@ -96,8 +96,9 @@ pub fn truncate_output(bytes: &[u8], limit: usize) -> (String, bool) {
 }
 
 /// Capture metadata shared by the binary runner-client and JSON helper receivers.
-/// Counts refer to original bytes. Only textual diagnostics use lossy conversion;
-/// rejected binary frames are retained separately by the runner-client receiver.
+/// Counts refer to original bytes. Only textual diagnostics use lossy conversion.
+/// Unread stdout is retained by its receiver in its own form: the runner-client
+/// receiver keeps a rejected frame as bytes, the helper receiver as text.
 #[derive(serde::Serialize)]
 pub struct OutputCapture {
     pub stdout_parse_error: Option<String>,
@@ -108,9 +109,33 @@ pub struct OutputCapture {
     pub stderr_bytes_received: Option<usize>,
     pub stderr_bytes_retained: Option<usize>,
     pub capture_limit_bytes: usize,
-    pub stdout_raw: Option<String>,
     pub stderr: String,
     pub stderr_truncated: bool,
+}
+
+/// The JSON helper receiver's capture: the shared metadata and the retained
+/// text of a stdout that was truncated or did not parse.
+#[derive(serde::Serialize)]
+pub struct TextOutputCapture {
+    #[serde(flatten)]
+    pub capture: OutputCapture,
+    pub stdout_raw: Option<String>,
+}
+
+impl std::ops::Deref for TextOutputCapture {
+    type Target = OutputCapture;
+    fn deref(&self) -> &OutputCapture {
+        &self.capture
+    }
+}
+
+impl TextOutputCapture {
+    pub fn unavailable(note: String, limit: usize) -> Self {
+        Self {
+            capture: OutputCapture::unavailable(note, limit),
+            stdout_raw: None,
+        }
+    }
 }
 
 impl OutputCapture {
@@ -124,7 +149,6 @@ impl OutputCapture {
             stderr_bytes_received: None,
             stderr_bytes_retained: None,
             capture_limit_bytes: limit,
-            stdout_raw: None,
             stderr: note,
             stderr_truncated: false,
         }
@@ -135,7 +159,7 @@ pub fn capture_json_output(
     out: &std::process::Output,
     producer: &str,
     limit: usize,
-) -> (OutputCapture, Option<serde_json::Value>) {
+) -> (TextOutputCapture, Option<serde_json::Value>) {
     let (stdout, stdout_truncated) = truncate_output(&out.stdout, limit);
     let (stderr, stderr_truncated) = truncate_output(&out.stderr, limit);
     // Command::output collected all bytes: this is a retention cap, not a
@@ -158,18 +182,20 @@ pub fn capture_json_output(
     }
     let stdout_raw = (stdout_parse_error.is_some() || stdout_truncated).then_some(stdout);
     (
-        OutputCapture {
-            stdout_parse_error,
-            stdout_truncated,
-            stdout_capture_error,
-            stdout_bytes_received: Some(out.stdout.len()),
-            stdout_bytes_retained: Some(out.stdout.len().min(limit)),
-            stderr_bytes_received: Some(out.stderr.len()),
-            stderr_bytes_retained: Some(out.stderr.len().min(limit)),
-            capture_limit_bytes: limit,
+        TextOutputCapture {
+            capture: OutputCapture {
+                stdout_parse_error,
+                stdout_truncated,
+                stdout_capture_error,
+                stdout_bytes_received: Some(out.stdout.len()),
+                stdout_bytes_retained: Some(out.stdout.len().min(limit)),
+                stderr_bytes_received: Some(out.stderr.len()),
+                stderr_bytes_retained: Some(out.stderr.len().min(limit)),
+                capture_limit_bytes: limit,
+                stderr,
+                stderr_truncated,
+            },
             stdout_raw,
-            stderr,
-            stderr_truncated,
         },
         parsed,
     )

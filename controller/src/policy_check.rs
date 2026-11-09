@@ -11,7 +11,7 @@ use std::process::Command;
 
 use crate::app_layout::resolve_contents_macos_tool;
 use crate::json_contract::SCHEMA_VERSION;
-use crate::utils::{OutputCapture, capture_json_output, run_with_stdin};
+use crate::utils::{TextOutputCapture, capture_json_output, run_with_stdin};
 
 /// The helper envelope kind the capture reads.
 const HELPER_KIND: &str = "sbpl_check";
@@ -24,7 +24,7 @@ pub struct PolicyCheckCapture {
     pub status: String,
     pub tool_exit_code: i32,
     #[serde(flatten)]
-    pub output: OutputCapture,
+    pub output: TextOutputCapture,
     /// The parsed helper output, retained unchanged whenever untruncated
     /// stdout parsed, supported or not.
     pub envelope: Option<Value>,
@@ -35,7 +35,7 @@ impl PolicyCheckCapture {
         PolicyCheckCapture {
             status: "unavailable".to_string(),
             tool_exit_code: 1,
-            output: OutputCapture::unavailable(error, crate::utils::HELPER_CAPTURE_BYTES),
+            output: TextOutputCapture::unavailable(error, crate::utils::HELPER_CAPTURE_BYTES),
             envelope: None,
         }
     }

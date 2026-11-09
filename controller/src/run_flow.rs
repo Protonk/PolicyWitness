@@ -796,7 +796,7 @@ mod tests {
     use super::*;
     use crate::porcelain_admission::IntegrityIssue;
     use crate::reply_fixtures::*;
-    use crate::utils::{OutputCapture, RequestDelivery};
+    use crate::utils::RequestDelivery;
     #[cfg(test)]
     use serde_json::json;
 
@@ -1778,7 +1778,7 @@ else:
             let capture = PolicyCheckCapture {
                 status: status.into(),
                 tool_exit_code: if status == "ok" { 0 } else { 1 },
-                output: OutputCapture::unavailable(
+                output: crate::utils::TextOutputCapture::unavailable(
                     String::new(),
                     crate::utils::HELPER_CAPTURE_BYTES,
                 ),
@@ -2743,7 +2743,7 @@ else:
                         Ok(PolicyCheckCapture {
                             status: status.into(),
                             tool_exit_code: if index == 1 { 0 } else { 1 },
-                            output: OutputCapture::unavailable(
+                            output: crate::utils::TextOutputCapture::unavailable(
                                 format!("helper {index}"),
                                 crate::utils::HELPER_CAPTURE_BYTES,
                             ),
@@ -3137,9 +3137,15 @@ else:
                 stderr_bytes_received: Some(0),
                 stderr_bytes_retained: Some(0),
                 capture_limit_bytes: limit,
-                stdout_raw: Some("{}".into()),
                 stderr: String::new(),
                 stderr_truncated: false,
+            }
+        }
+
+        fn text_capture(limit: usize) -> crate::utils::TextOutputCapture {
+            crate::utils::TextOutputCapture {
+                capture: capture(limit),
+                stdout_raw: Some("{}".into()),
             }
         }
 
@@ -3328,7 +3334,7 @@ else:
                     policy_check: Some(PolicyCheckCapture {
                         status: "ok".into(),
                         tool_exit_code: 0,
-                        output: capture(crate::utils::HELPER_CAPTURE_BYTES),
+                        output: text_capture(crate::utils::HELPER_CAPTURE_BYTES),
                         envelope: Some(sbpl_check_envelope()),
                     }),
                     actor_policy_checks: Some(vec![ActorPolicyCheck {
@@ -3336,7 +3342,7 @@ else:
                         policy_check: PolicyCheckCapture {
                             status: "ok".into(),
                             tool_exit_code: 0,
-                            output: capture(crate::utils::HELPER_CAPTURE_BYTES),
+                            output: text_capture(crate::utils::HELPER_CAPTURE_BYTES),
                             envelope: Some(sbpl_check_envelope()),
                         },
                     }]),

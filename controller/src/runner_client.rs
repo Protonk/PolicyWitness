@@ -686,7 +686,6 @@ fn parse_runner_client_output(
             stderr_bytes_received: Some(out.stderr.len()),
             stderr_bytes_retained: Some(stderr_retained.len()),
             capture_limit_bytes: limit,
-            stdout_raw: None,
             stderr: String::from_utf8_lossy(stderr_retained).into_owned(),
             stderr_truncated: out.stderr.len() > limit,
         },
@@ -967,7 +966,6 @@ pub(crate) fn test_client_run_bytes(reply: Option<&[u8]>) -> RunnerClientRun {
             stderr_bytes_received: Some(30),
             stderr_bytes_retained: Some(30),
             capture_limit_bytes: crate::utils::RUNNER_CAPTURE_BYTES,
-            stdout_raw: None,
             stderr: "fixed runner-client diagnostic".into(),
             stderr_truncated: false,
         },
@@ -1227,7 +1225,6 @@ mod binary_tests {
         assert_eq!(capture.runner_reply.unwrap().data, host);
         assert_eq!(run.output.stdout_bytes_received, Some(count));
         assert_eq!(run.output.stdout_bytes_retained, Some(count));
-        assert!(run.output.stdout_raw.is_none());
     }
 
     #[test]
@@ -1306,7 +1303,6 @@ mod binary_tests {
             assert_ne!(run.transport_admission, "accepted");
             assert_eq!(run.submission, "unknown");
             assert!(reply.is_none() && run.runner_reply_error.is_none());
-            assert!(run.output.stdout_raw.is_none());
             assert!(!run.fallback_eligible());
             let Some(TransportCapture::Rejected { data_base64, .. }) = run.transport else {
                 panic!("no raw rejection");
@@ -1348,7 +1344,8 @@ mod binary_tests {
         let json = serde_json::to_value(&bad).unwrap();
         assert_eq!(json["transport"]["format"], "porcelain");
         assert_eq!(json["transport"]["data_base64"], "AP8A");
-        assert!(json["stdout_raw"].is_null());
+        // The client receiver retains a rejected frame as bytes, never as text.
+        assert!(json.get("stdout_raw").is_none());
     }
     #[test]
     fn typed_capture_semantics_reject_conflicts_without_repair() {
