@@ -73,7 +73,8 @@ output replacement and pruning interact; a custom `DIST_DIR` must not silently
 create release evidence that the dispatcher cannot protect.
 
 Order complete archived releases numerically by `(major, minor, patch)` across
-the archive root. Keep up to four when fewer are available. Require the archive
+the archive root. Keep the four newest, or every complete archive when four or
+fewer exist. Require the archive
 directory, release record, asset identity and evidence manifest to agree.
 Ignore staging directories as release candidates, and report unrecognized or
 inconsistent material without deleting it. Publication is not required to enter
@@ -88,8 +89,10 @@ cannot remove the new acceptance before the archive protects it. Interrupted
 handoffs require ownership recovery; they do not become manual pins.
 
 The newest complete archived release supplies the protected acceptance path
-and run identity. Protect the whole parent directory, including its nested
-battery, from both cleanup and dispatcher output replacement. Preserve
+and run identity. Protect that acceptance directory as a whole (the directory
+holding the recorded `acceptance.json`, not the `release-acceptance/`
+container), including its nested battery, from both cleanup and dispatcher
+output replacement. Preserve
 ancestor/descendant overlap checks. A missing protected working path remains
 reserved and is reported; a different owner at that path must not be treated as
 the release's acceptance. An empty archive inventory in a fresh checkout is a
@@ -140,9 +143,15 @@ must not overwrite an earlier receipt. Recheck the retained release set if
 archival advanced after preview.
 
 Existing completed `evidence/rotation.json` files remain historical receipts.
-Before removing the old index machinery, detect and resolve any unfinished old
-transaction through its original recovery path. Do not reinterpret an old
-journal under the new policy or remove `tests/.checkout.lock`.
+An unfinished old transaction can only be resumed by the current
+`release_rotate.py` and index, so check for one before the implementation
+replaces them: every archive journal must report completion and
+`tests/out/.release-rotation/` must be empty. Resolve any exception with the
+current tools first. The current verifier refuses the schema-1 archives, so an
+unfinished journal in one of them could not be resumed and is a stop for
+review. Afterwards the new planner treats an unfinished old journal or leftover
+quarantine as a blocker. Do not reinterpret an old journal under the new policy
+or remove `tests/.checkout.lock`.
 
 ## Historical formats and evidence dependencies
 
@@ -202,9 +211,9 @@ controls for the mechanisms that survive.
 | The window is exact | Inventories with zero through six releases retain at most four complete archives; five-to-four and six-to-four transitions select the right versions. Test numeric ordering across `0.3.9`/`0.3.10` and a minor-version boundary. Failed attempts and incomplete archives never displace a release. |
 | Only current acceptance is protected | Dispatcher replacement and pruning refuse its parent, child and exact path. Older acceptance and all settled development output become eligible, even the newest development run. Missing paths and changed owners are distinguished. |
 | Linked copies are selected by evidence | Matching pointers, superseded assets and known attempt receipts expire together. Similar names, unrelated files, tracked historical fixtures, the current app and remote assets are untouched. |
-| Historical inspection is bounded | Recognized schema-1 storage can be classified without passing current semantic acceptance; malformed identities, hashes, layouts and redirects block mutation. Surviving archive bytes remain unchanged. |
+| Historical inspection is bounded | Recognized schema-1 storage can be classified without passing current semantic acceptance; malformed identities, hashes, layouts and redirects block mutation. Surviving archive bytes remain unchanged, apart from the transaction receipt added to the release that holds it. |
 | Preview is read-only | Independent before/after inventories show no writes, including when no archive exists or a blocker is encountered. |
-| Apply is serialized and recoverable | Real competing processes respect the stable lock; abrupt exits after staging, policy recheck, partial deletion and pointer cleanup resume correctly. A replacement at an original path survives. Unfinished old transactions block migration. |
+| Apply is serialized and recoverable | Real competing processes respect the stable lock; abrupt exits after staging, policy recheck, partial deletion and pointer cleanup resume correctly. A replacement at an original path survives. An unfinished old journal or leftover old quarantine blocks apply. |
 | Publication and acceptance still bind exact bytes | Failed archive construction cannot advance protection or delete evidence. A prune competing with the acceptance-to-archive handoff preserves its evidence. The default extracted-app battery remains the release acceptance source; publishing still verifies its archive. |
 
 Run the affected `dispatcher/retention_controls`,
@@ -215,11 +224,14 @@ Exercise the release sequence in its existing controlled fixture environment;
 do not notarize or publish merely to test retention. Credit the exact commands,
 source state and results before permitting destructive migration.
 
-Implement the policy, callers, fixtures and documentation together, then:
+Confirm that no old cleanup transaction is unfinished before the implementation
+replaces its recovery path. Implement the policy, callers, fixtures and
+documentation together, then:
 
 1. Refresh the local inventory under the new preview. Check every old pin for
    active ownership or resource-recovery obligations, without converting it to
-   another indefinite pin. Resolve any unfinished old cleanup transaction.
+   another indefinite pin. Confirm the preview reports no old journal or
+   quarantine blocker.
 2. Review the explicit cutoff and window decisions. With the observed inventory,
    retire releases before `v0.3.1`, then `v0.3.1` and `v0.3.2`, retaining
    `v0.3.3` through `v0.3.6`. If another release exists, recompute the window.
@@ -228,7 +240,8 @@ Implement the policy, callers, fixtures and documentation together, then:
    blockers as incomplete cleanup rather than silently expanding the policy.
 4. Verify the surviving archive set, the current acceptance identity, pointer
    targets and completed transaction receipt. Confirm no unexpected quarantine
-   remains and that the remaining archives' inventories are unchanged.
+   remains and that the remaining archives' inventories are unchanged apart
+   from the receipt added to the release that holds it.
 
 Completion means the tracked manual index and its live consumers are gone,
 one policy governs replacement and cleanup, the required controls pass, and the
