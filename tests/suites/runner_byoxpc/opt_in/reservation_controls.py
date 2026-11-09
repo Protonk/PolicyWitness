@@ -282,7 +282,7 @@ class Driver:
         self.event('open-' + connection, 'opened')
 
     def reserve(self, tag='grant', connection='owner', lease_ms=5000):
-        self.send('reserve', tag, connection, lease_ms=lease_ms)
+        self.send('reserve', tag, connection, lease_ms=lease_ms, protocol_version=contract.RUNNER_PROTOCOL)
         return self.event(tag, 'control_reply')
 
 

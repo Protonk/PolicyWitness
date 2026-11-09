@@ -1085,17 +1085,17 @@
       "title": "ordinary_small",
       "subject": {
         "kind": "allocation",
-        "owner": "historical JSON controller",
+        "owner": "controller",
         "backing": null
       },
       "quantity": {
         "evidence": "measured",
-        "value": 9441,
+        "value": 8773,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 13,428 bytes; final envelope 32,056 bytes. Sampled maximum resident 6,766,592 bytes and physical footprint 1,573,200 bytes; 36 successful samples over 52,777,333 ns, starting 1,310,875\u20132,938,375 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Binary host reply bytes; binary client stdout 9,399 bytes; final JSON envelope 31,160 bytes. Sampled maximum resident 6,782,976 bytes and physical footprint 1,573,200 bytes; 25 successful samples over 39,710,041 ns, starting 1,623,917\u20131,741,459 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1114,7 +1114,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution."
         }
       ]
     },
@@ -1124,17 +1124,17 @@
       "title": "independent_query",
       "subject": {
         "kind": "allocation",
-        "owner": "historical JSON controller",
+        "owner": "controller",
         "backing": null
       },
       "quantity": {
         "evidence": "measured",
-        "value": 1826061,
+        "value": 1843088,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 2,435,594 bytes; final envelope 4,737,776 bytes. Sampled maximum resident 32,784,384 bytes and physical footprint 27,378,048 bytes; 132 successful samples over 180,653,250 ns, starting 1,345,041\u20131,511,667 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Binary host reply bytes; binary client stdout 1,843,714 bytes; final JSON envelope 4,760,474 bytes. Sampled maximum resident 22,544,384 bytes and physical footprint 16,810,368 bytes; 88 successful samples over 140,551,417 ns, starting 1,590,625\u20131,676,250 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1153,7 +1153,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution."
         }
       ]
     },
@@ -1163,17 +1163,17 @@
       "title": "eight_phase_maximum",
       "subject": {
         "kind": "allocation",
-        "owner": "historical JSON controller",
+        "owner": "controller",
         "backing": null
       },
       "quantity": {
         "evidence": "measured",
-        "value": 1830379,
+        "value": 1845155,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 2,441,354 bytes; final envelope 4,751,566 bytes. Sampled maximum resident 32,882,688 bytes and physical footprint 27,476,352 bytes; 144 successful samples over 195,090,375 ns, starting 1,115,000\u20131,470,625 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Binary host reply bytes; binary client stdout 1,845,781 bytes; final JSON envelope 4,771,260 bytes. Sampled maximum resident 23,347,200 bytes and physical footprint 17,580,416 bytes; 104 successful samples over 165,882,042 ns, starting 1,319,750\u20131,687,125 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1192,7 +1192,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution."
         }
       ]
     },
@@ -1202,17 +1202,17 @@
       "title": "actor_maximum",
       "subject": {
         "kind": "allocation",
-        "owner": "historical JSON controller",
+        "owner": "controller",
         "backing": null
       },
       "quantity": {
         "evidence": "measured",
-        "value": 603360,
+        "value": 516677,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 805,324 bytes; final envelope 1,904,251 bytes. Sampled maximum resident 21,577,728 bytes and physical footprint 16,138,624 bytes; 290 successful samples over 419,666,542 ns, starting 1,230,500\u20132,019,083 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Binary host reply bytes; binary client stdout 517,303 bytes; final JSON envelope 1,788,661 bytes. Sampled maximum resident 12,976,128 bytes and physical footprint 7,225,704 bytes; 146 successful samples over 242,850,584 ns, starting 1,251,708\u20132,096,625 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1231,7 +1231,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution."
         }
       ]
     },
@@ -1241,17 +1241,17 @@
       "title": "control_character_exec",
       "subject": {
         "kind": "allocation",
-        "owner": "historical JSON controller",
+        "owner": "controller",
         "backing": null
       },
       "quantity": {
         "evidence": "measured",
-        "value": 9491475,
+        "value": 3013085,
         "unit": "bytes",
         "limit": null,
-        "behavior": "Host reply bytes; client stdout 12,656,146 bytes; final envelope 22,740,137 bytes. Sampled maximum resident 91,095,040 bytes and physical footprint 85,737,928 bytes; 572 successful samples over 780,180,041 ns, starting 1,107,416\u20131,567,709 ns apart against a requested 1,000,000 ns cadence."
+        "behavior": "Binary host reply bytes; binary client stdout 3,013,711 bytes; final JSON envelope 14,102,277 bytes. Sampled maximum resident 38,993,920 bytes and physical footprint 33,227,136 bytes; 433 successful samples over 695,770,833 ns, starting 1,210,791\u20131,791,000 ns apart against a requested 1,000,000 ns cadence."
       },
-      "conditions": "Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded.",
+      "conditions": "Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim.",
       "interval": {
         "starts": "first successful generation-qualified sample",
         "ends": "last successful generation-qualified sample",
@@ -1270,7 +1270,7 @@
           "symbol": "main",
           "kind": "receipt",
           "form": "test",
-          "pins": "Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold."
+          "pins": "Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution."
         }
       ]
     },

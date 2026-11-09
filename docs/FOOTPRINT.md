@@ -22,29 +22,34 @@ Examine PW's footprint through three questions:
 
 ## Provenance of measured rows
 
-Response rows fr9–fr13 describe the historical JSON/base64 implementation. Their
-values do not measure the current typed/binary implementation.
-They were transcribed from run id
-`20261107T035203Z_446642a9`, output directory
-`runs/footprint-opt-targeted-final-02`, case
+Response rows fr9–fr13 describe the current typed/binary implementation. They
+were transcribed from run id `20261109T001724Z_1419c6c1`, output directory
+`runs/porcelain-adoption-acceptance-b`, case
 `witness_contract/response_footprint`. Its artifact inventory identifies the
 signed binaries measured; its response receipts retain the samples, transported
-bytes, conditions and observer cost.
+bytes, conditions and observer cost. The aggregate receipt is
+`suites/witness_contract/response_footprint/artifacts/response-footprint.json`;
+each workload directory retains its exact host frame and public envelope.
+These observations do not establish a performance change against another run.
+
+Logical actor geometry in fr14 retains the response workload from run id
+`20261107T035203Z_446642a9`, output directory
+`runs/footprint-opt-targeted-final-02`. It does not measure residency.
 
 The other measured rows retain observations from run id
 `20261106T210300Z_381f3d39`, output directory
 `footprint-targeted-20261106-01`, cases `witness_contract/held_phase_footprint`
 and `run_effects/aftermath_footprint`. That run is archived as
 `historical-footprint-measurements.tar.gz`, with an index of file hashes beside
-it, under `optimization-evidence/` in the retained response run above. The
+it, under `optimization-evidence/` in that historical response run. The
 archive preserves the original run identity and binary hashes; those rows do
 not describe the later response run's binaries.
 
-[tests/RETAINED.json](../tests/RETAINED.json) lists the run holding the identified
-copy below. Test output is gitignored, so these receipts and the archive exist
-only in a checkout that retained them.
+[tests/RETAINED.json](../tests/RETAINED.json) lists retained runs, including the
+run holding the historical copy below. Test output is gitignored, so these
+receipts and the archive exist only in a checkout that retained them.
 
-The response run and its two historical evidence directories are preserved
+The historical response run and its two evidence directories are preserved
 byte-for-byte in `footprint-opt-targeted-final-02.tar.gz` under
 `tests/out/runs/worker-wait-review-final-01/worker-wait-review/archives/`.
 `worker-wait-review/archive-index.json` records the original run identity and file
@@ -119,17 +124,19 @@ capture and stdout (fr5), the controller’s raw streams (fr1), typed capture or
 rejected bytes (fr6), retained host bytes and typed reply (fr7), and JSON
 presentation (fr8).
 
-A retention allowance does not bound collection memory. Historical measured
-rows used fresh controllers running the JSON implementation. The retained
-JSON-control instrumentation does not measure the current binary path.
+A retention allowance does not bound collection memory. Measured response rows
+use fresh controllers running the binary implementation. The source ownership
+account identifies representations and bounds; it does not observe allocation
+overlap or decoder stages.
 
 The native response rows describe single repetitions. Memory values are maxima
 among successful samples with verified lifetime coverage; resident and physical
 footprint maxima can occur in different samples and are not added. A sampled
 maximum cannot show a peak shorter than the spacing between sample starts, and
 samples cannot locate parser stages. A later failed inspection stays a failed
-inspection, not zero memory. Unit assertions establish representation
-coexistence at their own boundaries, in a separate process.
+inspection, not zero memory. Unit assertions establish typed admission, retained
+bytes and borrowed serialization at their own boundaries, in a separate process;
+they do not measure allocation or residency.
 
 <!-- BEGIN GENERATED FOOTPRINT RESPONSE -->
 
@@ -143,11 +150,11 @@ coexistence at their own boundaries, in a separate process.
 | fr6 | Typed capture and rejected bytes — controller | source: The complete raw Output is borrowed while binary decoding allocates owned typed fields. An admitted capture survives into envelope rendering; rejected retained bytes are kept without lossy text conversion. No generic capture JSON tree is built. | Production capture admission; received counts, retained counts and submission evidence remain separate. | binary capture decoding → typed capture or rejected-byte last use during presentation | — |
 | fr7 | Retained host bytes and typed reply — controller | source: The admitted capture owns retained host bytes while binary decoding creates typed reply fields. Both survive into final rendering. Decoded collection slots and owned text/byte lengths consume a per-document budget; this is not a process-memory ceiling. | Complete admitted capture and host frame; malformed host bytes remain retained beside a decode diagnostic. | host binary decoding → capture and typed reply last use during rendering | — |
 | fr8 | Borrowed envelope and rendered JSON — controller | source: The envelope borrows typed inputs. Generated serializers project converted records directly; public byte fields create base64 text during rendering. Pretty serialization adds a complete String while the typed inputs remain live; converted records do not pass through a generic JSON tree or recursive sorting. | Final envelope rendering; successful stdout adds a newline. | envelope construction → print returns and CLI exits | — |
-| fr9 | ordinary_small — historical JSON controller | measured: 9,441 bytes Host reply bytes; client stdout 13,428 bytes; final envelope 32,056 bytes. Sampled maximum resident 6,766,592 bytes and physical footprint 1,573,200 bytes; 36 successful samples over 52,777,333 ns, starting 1,310,875–2,938,375 ns apart against a requested 1,000,000 ns cadence. | Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
-| fr10 | independent_query — historical JSON controller | measured: 1,826,061 bytes Host reply bytes; client stdout 2,435,594 bytes; final envelope 4,737,776 bytes. Sampled maximum resident 32,784,384 bytes and physical footprint 27,378,048 bytes; 132 successful samples over 180,653,250 ns, starting 1,345,041–1,511,667 ns apart against a requested 1,000,000 ns cadence. | Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
-| fr11 | eight_phase_maximum — historical JSON controller | measured: 1,830,379 bytes Host reply bytes; client stdout 2,441,354 bytes; final envelope 4,751,566 bytes. Sampled maximum resident 32,882,688 bytes and physical footprint 27,476,352 bytes; 144 successful samples over 195,090,375 ns, starting 1,115,000–1,470,625 ns apart against a requested 1,000,000 ns cadence. | Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
-| fr12 | actor_maximum — historical JSON controller | measured: 603,360 bytes Host reply bytes; client stdout 805,324 bytes; final envelope 1,904,251 bytes. Sampled maximum resident 21,577,728 bytes and physical footprint 16,138,624 bytes; 290 successful samples over 419,666,542 ns, starting 1,230,500–2,019,083 ns apart against a requested 1,000,000 ns cadence. | Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
-| fr13 | control_character_exec — historical JSON controller | measured: 9,491,475 bytes Host reply bytes; client stdout 12,656,146 bytes; final envelope 22,740,137 bytes. Sampled maximum resident 91,095,040 bytes and physical footprint 85,737,928 bytes; 572 successful samples over 780,180,041 ns, starting 1,107,416–1,567,709 ns apart against a requested 1,000,000 ns cadence. | Historical JSON/base64 control measurement; unavailable as typed-transport evidence. Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; battery power, discharging; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr9 | ordinary_small — controller | measured: 8,773 bytes Binary host reply bytes; binary client stdout 9,399 bytes; final JSON envelope 31,160 bytes. Sampled maximum resident 6,782,976 bytes and physical footprint 1,573,200 bytes; 25 successful samples over 39,710,041 ns, starting 1,623,917–1,741,459 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr10 | independent_query — controller | measured: 1,843,088 bytes Binary host reply bytes; binary client stdout 1,843,714 bytes; final JSON envelope 4,760,474 bytes. Sampled maximum resident 22,544,384 bytes and physical footprint 16,810,368 bytes; 88 successful samples over 140,551,417 ns, starting 1,590,625–1,676,250 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr11 | eight_phase_maximum — controller | measured: 1,845,155 bytes Binary host reply bytes; binary client stdout 1,845,781 bytes; final JSON envelope 4,771,260 bytes. Sampled maximum resident 23,347,200 bytes and physical footprint 17,580,416 bytes; 104 successful samples over 165,882,042 ns, starting 1,319,750–1,687,125 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr12 | actor_maximum — controller | measured: 516,677 bytes Binary host reply bytes; binary client stdout 517,303 bytes; final JSON envelope 1,788,661 bytes. Sampled maximum resident 12,976,128 bytes and physical footprint 7,225,704 bytes; 146 successful samples over 242,850,584 ns, starting 1,251,708–2,096,625 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim. | first successful generation-qualified sample → last successful generation-qualified sample | — |
+| fr13 | control_character_exec — controller | measured: 3,013,085 bytes Binary host reply bytes; binary client stdout 3,013,711 bytes; final JSON envelope 14,102,277 bytes. Sampled maximum resident 38,993,920 bytes and physical footprint 33,227,136 bytes; 433 successful samples over 695,770,833 ns, starting 1,210,791–1,791,000 ns apart against a requested 1,000,000 ns cadence. | Single repetition on macOS-26.7.1-arm64-arm-64bit-Mach-O; AC power, charged; no indicated sleep overlap. Worker, host, exec-child and observer demand excluded. No stage attribution or comparative performance claim. | first successful generation-qualified sample → last successful generation-qualified sample | — |
 | fr14 | Actor backing and page-padded views — host / actor workers | logical: 30,995,584 bytes Logical evidence-plus-authority backing capacity, counted once; separate private custody 524,288 bytes. Issuer authority requested 132,736 bytes, worker mapped 147,456 bytes; subject requested 264,320 bytes, mapped 278,528 bytes. Observed page size 16,384 bytes explains padding. These are capacities/view lengths, not reply bytes or measured residency. | Historical JSON response workload geometry; no fresh typed-transport memory observation. Actor maximum response workload; distinct backing per actor. Source geometry and native worker mapping metadata corroborate each other. | actor setup → owner-specific teardown | — |
 
 <!-- END GENERATED FOOTPRINT RESPONSE -->
@@ -272,11 +279,11 @@ measured consumption.
 | fa4 | [`inventory`](../tests/suites/run_effects/check_installs_nothing.py) | [`main`](../tests/suites/run_effects/check_installs_nothing.py) (assertion): Registry digest/reported registry and plist-directory inventory remain unchanged in this scoped control. |
 | fa5 | [`observe_survivor`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) | [`main`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) (assertion): Same-generation descendant answers after CLI return; later fixture release is separate. |
 | fa6 | [`close`](../tests/lib/run_capture.py); [`cleanup`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) | [`main`](../tests/suites/runner_exec_lifecycle/check_closed_streams_leader_exit.py) (assertion): Survivor observation precedes owned cleanup; failures retain cleanup ownership. |
-| fr9 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold. |
-| fr10 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold. |
-| fr11 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold. |
-| fr12 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold. |
-| fr13 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Historical JSON-control receipt validation only; no typed/binary transport measurement. Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold. |
+| fr9 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution. |
+| fr10 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution. |
+| fr11 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution. |
+| fr12 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution. |
+| fr13 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Validates same-generation successful native samples, lifetime/units, exact binary host bytes and independent public projection; sampled values have no fixed threshold or stage attribution. |
 | fr14 | [`main`](../tests/suites/witness_contract/check_response_footprint.py) | [`main`](../tests/suites/witness_contract/check_response_footprint.py) (receipt): Validates same-generation successful native samples, lifetime/units and exact transported representations; sampled values have no fixed threshold. |
 | fa7 | [`validate_receipt`](../tests/suites/run_effects/check_aftermath_footprint.py) | [`validate_receipt`](../tests/suites/run_effects/check_aftermath_footprint.py) (assertion): Requires held-state/generation binding, exact inventory and primary-before-intervention order; process exits do not prove mapping disposal or reap. |
 | fa8 | [`validate_receipt`](../tests/suites/run_effects/check_aftermath_footprint.py) | [`validate_receipt`](../tests/suites/run_effects/check_aftermath_footprint.py) (assertion): Requires held-state/generation binding, exact inventory and primary-before-intervention order; process exits do not prove mapping disposal or reap. |

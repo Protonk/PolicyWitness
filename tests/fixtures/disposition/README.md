@@ -5,6 +5,8 @@ two-step deadline model. It uses hypothetical process identities and targets,
 current carrier structure and unavailable artifact verification. Rust and Python
 controls accept its supported disposition and reject named contradictions; it
 establishes interpretation rather than live reachability.
+Its embedded host bytes are authored JSON, admitted only by the controls'
+explicit fixture option; current production transport uses binary records.
 
 `response25/a1_expected.json` and its exact `a1_specimen.json` request are
 unmodified historical captures from the deadline witness. Current readers refuse

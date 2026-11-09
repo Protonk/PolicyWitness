@@ -17,7 +17,8 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[4]
-sys.path[:0] = [str(ROOT / 'tests/fixtures/byoxpc'), str(ROOT / 'tests/fixtures/caller_auth')]
+sys.path[:0] = [str(ROOT / 'tests/lib'), str(ROOT / 'tests/fixtures/byoxpc'), str(ROOT / 'tests/fixtures/caller_auth')]
+import contract
 import session
 from bundle import command as native_command, signature as native_signature, SERVICE
 
@@ -216,8 +217,9 @@ try:
     remove(service, skip=True)
     observations.append('skip-bootstrap completes installation; pending status and specimen rejection; pending removal')
 
-    for label, marker in [('missing', None), ('string', '3'), ('real', 3.0),
-                          ('boolean', True), ('old', 2), ('future', 4)]:
+    for label, marker in [('missing', None), ('string', str(contract.RUNNER_PROTOCOL)),
+                          ('real', float(contract.RUNNER_PROTOCOL)), ('boolean', True),
+                          ('old', contract.RUNNER_PROTOCOL - 1), ('future', contract.RUNNER_PROTOCOL + 1)]:
         service, bundle, plist = prepare()
         info_path = bundle / 'Contents/Info.plist'
         info = plistlib.loads(info_path.read_bytes())
@@ -339,7 +341,7 @@ try:
     service, bundle, plist = prepare()
     installed = install(bundle, live=True)
     assert installed['bootstrapped'] and installed['state'] == 'installed'
-    assert installed['runner']['protocol_version'] == 3
+    assert installed['runner']['protocol_version'] == contract.RUNNER_PROTOCOL
     data(['runner', 'verify', '--service-name', service])
     # A constructed historical registry record on a current host proves that
     # the execution gate does not prevent inspection or owned cleanup. It does
