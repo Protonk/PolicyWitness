@@ -82,10 +82,10 @@ dispatcher and pytest records, rotation journal, shell and drift reports,
 notarization and prune reports, `worker-equipment.json`, `Evidence/manifest.json`,
 the validator NDJSON marker, repository manifests under `docs/*.json`, and the
 investigative fixtures' receipt versions. The worker ABI identity and its
-generator remain exactly as they are. The JSON representation experiment in
-[JSON-AS-PORCELAIN-PLAN.md](JSON-AS-PORCELAIN-PLAN.md) is separate; any reader
-or producer it generates inherits this identity rather than minting one, and
-whichever of the two lands second adapts the reply root.
+generator remain exactly as they are. The
+[typed response representation](docs/CONTRACT.md#typed-response-transport) is
+separate. This plan adapts its generated reply and capture roots to the common
+identity; readers and producers do not mint another contract identity.
 
 ## Decisions
 

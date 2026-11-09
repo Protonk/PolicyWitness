@@ -21,7 +21,7 @@ later change does not discover either role by accident.
 
 | Direction | Rows | Demand mechanism | Possible bounded change |
 | --- | --- | --- | --- |
-| [2](#direction-2-remove-one-redundant-capture-conversion-copy) | fr6–fr7 | Generic capture is cloned into a typed capture while raw output and decoded host bytes coexist. | Remove one redundant conversion copy while preserving the generic capture retained for diagnostics. |
+| [2](#direction-2-remove-one-redundant-capture-conversion-copy) | fr6–fr7 | Raw bytes and owned typed records coexist for evidence and presentation. | Schema-owned response representation adopted; further borrowing or streaming remains separate. |
 | [3](#direction-3-pace-the-sandboxed-workers-waits) | fw1–fw2 | Active and parked workers continuously poll protocol words. | Introduce a bounded paced wait, separately from serialization changes. |
 | [4](#direction-4-right-size-the-evidence-region) | fw4–fw5 | Every worker initializes fixed evidence capacity even for a small request. | Investigate right-sized evidence only in a separate ABI change. |
 | [5](#direction-5-authority-region-and-custody-sizing-or-disposal) | fw6–fw7 | Per-actor authority regions and per-token private buffers are allocated before launch; erased bytes can remain allocated. | Investigate tighter admitted-plan capacities or earlier safe disposal separately. |
@@ -34,98 +34,32 @@ or claim of incidental structure is established by this candidate list alone.
 
 Rows: fr6–fr7.
 
-### Present mechanism
+### Disposition: schema-owned response representation
 
-[`capture_json_output`](../controller/src/utils.rs) makes the lossy retained
-text for both streams, counts received and retained bytes from the raw stream
-lengths, and parses the generic `Value` from the raw bytes only when stdout
-was not truncated. The lossy stdout text is kept only when parsing failed or
-retention truncated. [`parse_runner_client_output`](../controller/src/runner_client.rs)
-then admits in a fixed order: request-delivery failure, capture or parse error,
-missing capture, integer `protocol_version`, version equality, typed capture
-(`deny_unknown_fields`), `validate_capture`, strict base64 decoding, retention
-truncation, and finally the host JSON parse. The typed capture is produced by
-`serde_json::from_value(value.clone())`: `from_value` consumes its argument, and
-the clone is what keeps the generic `Value` intact. That generic `Value` lives
-on as `run.transport` and is rendered into the envelope on every path.
+[Typed response transport](../docs/CONTRACT.md#typed-response-transport) owns the
+adopted boundary. One schema defines 83 records, their stored fields, binary
+representation and public JSON projection. Swift constructs and validates typed
+records; the client relays host bytes; Rust admits typed evidence and projects
+JSON. Lifecycle questions have named fields. Response-only JSON coders and the
+generic response validators are retired.
 
-### Proposed direction
+Named admission covers fresh reads and writes, exec, actor setup/equipment and
+application, scheduling and endings, and extension custody. Unsupported claims
+remain separate from retained observations. Equipment metadata counts retained
+UTF-8 text directly, with native counts bounded separately. Ordinary reporting,
+evidence-preserving degradation and independent minimal reporting have distinct
+controls.
 
-Deserialize the typed capture by reference from the generic `Value`, or
-otherwise remove the whole-tree clone, while keeping the generic capture
-retained for diagnostics and for the envelope.
+The accepted benefit is schema ownership and explicit access to evidence, not a
+comparative performance result. [FOOTPRINT](../docs/FOOTPRINT.md#response-storage-and-transport)
+records current representation lifetimes and descriptive samples. Raw host bytes
+and their owned interpretation deliberately coexist. Full pipe collection still
+precedes retention limits; no streaming, reception deadline or process-memory
+ceiling follows from the frame and decoded-storage budgets.
 
-### Promises the direction must keep
-
-Capture admission order, exact received and retained counts, receiver-loss
-versus malformed-JSON attribution, unrepaired invalid UTF-8, the raw reply
-preserved beside its interpretation, and malformed transport evidence are
-promises. The present overlap is an implementation fact. Borrowed
-deserialization must not silently extend buffer lifetimes or weaken admission.
-
-### Evidentiary risks
-
-Protective roles the present habit may have:
-
-- The generic `Value` is the preserved raw transport record. The clone is the
-  only reason it survives typed conversion. An implementation that removes the
-  copy by moving the `Value` out of `run.transport` drops the transport record
-  from every successful envelope, and no admission test notices, because
-  admission still succeeds. The reader of the envelope loses the client's own
-  account of acquisition, submission and reply.
-- Version gating before typed interpretation requires a generic parse that
-  exists separately from the typed one. A single-pass typed parse would report
-  an unsupported protocol as malformed, which is a different attribution: the
-  controller rules require rejected payloads to be preserved without coercing
-  versions.
-- Counts are taken from the raw bytes before lossy conversion, and the parse
-  reads raw bytes, never the lossy text. Any restructuring that parses from the
-  retained `String` repairs invalid UTF-8 into accepted JSON; the existing
-  `invalid_utf8_is_not_repaired_into_accepted_json` and
-  `multibyte_cut_counts_bytes_before_lossy_conversion` controls are the guards,
-  and both must stay in the selected verification.
-- Typed fields that borrow from the generic `Value` tie the typed capture's
-  lifetime to it and invite holding the raw `Output` longer than fr1 states.
-  The ending "raw Output drops on caller return" is a documented fact that
-  would then be false.
-
-Ways the present habit may obstruct witnessing:
-
-- Raw streams, lossy text, generic `Value`, typed capture, decoded host bytes
-  and the parsed host reply coexist on the largest replies, and the retention
-  cap is a retention cap, not a streaming limit. The controller's peak is set by
-  what the client emits, not by what PW retains. A memory failure in the
-  controller could lose the run's durable envelope. No such failure has been
-  observed.
-- The opposite habit would be worse for evidence: collecting every byte is what
-  makes `stdout_bytes_received` exact and lets the oversized-producer control
-  distinguish receiver loss from a malformed reply. A streaming cut that stopped
-  reading would block or break the client's pipe and change what the client
-  did. That boundary is outside this direction and should stay outside it.
-
-### Before crediting a result
-
-The three receiver controls above, `valid_oversized_producer_is_receiver_loss_not_malformed_json`,
-`response_footprint_success_boundaries`, the failure-boundary and blackbox
-consumer controls, and the response footprint case.
-
-### Representation experiment disposition
-
-The [JSON-as-porcelain exploration](../JSON-AS-PORCELAIN-PLAN.md) supports a
-broader adoption follow-on on `experiment/json-porcelain`: one 83-record schema
-owns converted stored fields, binary transport and typed readers, while public
-JSON is projected at the controller. The demonstrated gain is maintenance and
-explicit ownership; no speed, energy or physical-memory improvement is claimed.
-Raw host bytes and owned interpretation deliberately coexist. A closed codec
-stays within the exploration's maintenance budget without adding an internal
-stringify/parse adapter.
-
-This does not accept a production migration. Full semantic families, Swift
-lifecycle dictionary removal, equipment's JSON-size gate and retirement of old
-comparison coders remain bounded adoption work. The smaller capture-copy option
-has not received an independent performance disposition; it is unnecessary as a
-prerequisite to this structural direction. Existing FOOTPRINT JSON measurements
-cannot be credited to the typed prototype.
+The smaller capture-copy proposal is superseded by this representation change;
+it has no independent performance disposition. Future borrowing or streaming
+work needs its own ownership and evidence argument.
 
 ## Direction 3: pace the sandboxed worker's waits
 
@@ -224,7 +158,7 @@ with a hash index in `worker-wait-evidence/` in the identified copy of
 `worker-wait-review-final-01/worker-wait-review/archives/` tree, now in
 `host06-main-targeted-01`'s `host-followon/archives/worker-wait-review-final-01.tar.gz`.
 That former retained run is itself preserved in
-`tests/out/runs/worker-wait-closeout-01/worker-wait-closeout/archives/host06-main-targeted-01.tar.gz`.
+`tests/out/runs/porcelain-adoption-acceptance-b/porcelain-adoption/prior/worker-wait-evidence/archives/host06-main-targeted-01.tar.gz`.
 The nested archive indexes and source snapshot of the retired review identify
 these copies and file hashes. This evidence is gitignored
 and available only in the local checkout. The early `worker-wait-native-01`
@@ -458,35 +392,32 @@ a real alarm exercises watchdog cleanup. Generic logging is not an oracle.
 
 ### Retention and reopening
 
-The worker and ARM plans, shared pilot and completed acceptance records are
-retired after explicit dispositions. Their frozen definitions and source
-identities remain in Git history and the local evidence snapshot. The retained
-production default battery remains `host06-main-default-01` (222 cases); it is
-not relabelled as a new run of the expanded default catalog. The focused closeout
-run passed all 21 selected cases: signing, source/document contracts, dispatcher,
-ARM oracle, neutral/historical CPU readers and native observer. It recorded no
-sleep or harness errors. The production app inventory is identical to the
-retained baseline. No new full-default-battery claim is made.
+The completed worker and ARM plans and acceptance records are retired. Their
+frozen definitions and source identities remain in Git history and the local
+evidence snapshot. Current functional acceptance is recorded separately from
+these historical wait observations.
 
-The complementary retained run is `worker-wait-closeout-01`. Its
-`worker-wait-closeout/archive-index.json` locates thirteen verified historical
-archives, including the former `host06-main-targeted-01` with its twelve host
-archives and nested pilot/review evidence, both ARM first-use screens, the
-pre-trial assembler failure, two fresh baselines and all four CPU comparisons.
-Original run IDs, file hashes, source copies, binaries, disassembly, conditions,
-claims and ownership receipts remain intact. Copies do not relocate cleanup
-ownership or add passing cases. Evidence is gitignored and local to this checkout.
-The four CPU comparisons replay identically with their frozen readers.
-Archive-index SHA-256 is
+The retained porcelain adoption run contains
+`porcelain-adoption/prior/worker-wait-evidence/archive-index.json`, which locates
+thirteen unchanged historical archives. These include the former
+`host06-main-targeted-01` with its twelve host archives and nested pilot/review
+evidence, both ARM first-use screens, the pre-trial assembler failure, two fresh
+baselines and all four CPU comparisons. Original run IDs, hashes, source copies,
+binaries, disassembly, conditions, claims and ownership receipts remain intact.
+Copies add no case credits and relocate no cleanup ownership. Evidence is
+ignored by Git and local to this checkout.
+
+The four CPU comparisons replayed identically with their frozen readers at
+worker-wait closeout. Archive-index SHA-256 is
 `3ca6a9f9065344c28acc726eaae0cc5c655236db7d62c09319b6485e9f18143b`;
 replay SHA-256 is
 `1cfeaf9a44f6d8b912138e6e73843f817c064b6361191c90e7a7b7b62fb54505`.
 The preserved public SDK header has SHA-256
 `4fc509ff0ba41255900b7fe3efa679590b7f05b7ddfafc113404c440f73d9a5a`.
-`tests/RETAINED.json` pins only the production baseline and complementary
-closeout run, alongside the unchanged release-managed entry. The supported
-pruner removed exactly the thirteen verified archived originals with no failures;
-its preview and apply receipts are attached to the closeout run.
+[tests/RETAINED.json](../tests/RETAINED.json) identifies the current containing
+runs. `porcelain-adoption/prior-index.json` verifies the subsequent copy and
+preserves the original closeout identity. This relocation changes no measured
+result or qualification disposition.
 
 Reopening ARM needs a newly justified benefit observable (for example reliable
 energy evidence) or changed-equipment evidence, plus a defensible deployment
@@ -671,7 +602,7 @@ mapping disposal need their own observations, separate from process exit.
 ## Assertion owners
 
 Relevant assertion owners include the [controller boundary test](../controller/src/runner_client.rs)
-(`response_footprint_success_boundaries`), [native response checker](../tests/suites/witness_contract/check_response_footprint.py),
+(`independent_binary_records_reach_typed_storage_without_text_conversion`), [native response checker](../tests/suites/witness_contract/check_response_footprint.py),
 [held-phase checker](../tests/suites/witness_contract/check_held_phase_footprint.py),
 [worker proceed and activation controls](../tests/suites/runner_c_worker_harness/run.sh),
 [layout agreement](../tests/suites/runner_abi_layout/run.sh), and

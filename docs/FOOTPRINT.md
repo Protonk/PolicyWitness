@@ -54,7 +54,12 @@ byte-for-byte in `footprint-opt-targeted-final-02.tar.gz` under
 `tests/out/runs/worker-wait-review-final-01/worker-wait-review/archives/`.
 `worker-wait-review/archive-index.json` records the original run identity and file
 hashes. This identified copy replaces the original output directory; it does
-not change the provenance or quantities of these measurements.
+not change the provenance or quantities of these measurements. The containing
+archive chain is retained under
+`tests/out/runs/porcelain-adoption-acceptance-b/porcelain-adoption/prior/worker-wait-evidence/`;
+its `archive-index.json` locates the containing host archive and its nested
+review archive. `porcelain-adoption/prior-index.json` verifies the copied files
+without changing their original identities or cleanup ownership.
 
 The generator and the footprint drift case verify the manifest's structure,
 its citations and the freshness of the rendered copy. Nothing verifies that a
